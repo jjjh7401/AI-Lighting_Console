@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>런북 박자 배치 진행안</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ivory:#FAF9F5;--paper:#FFFFFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;
+  --g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;
+  --ok:#5E8C4A;--part:#C99A2E;--no:#B84A3E;--probe:#4A6FA5;
+  --sans:"Pretendard",system-ui,-apple-system,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",monospace;
+  --max-width:960px;--radius-panel:12px;--radius-row:8px;--border:1.5px solid var(--g300);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ivory:#1C1B19;--paper:#262522;--slate:#F0EEE6;--oat:#3A3631;--g100:#2E2C28;--g300:#4A4740;--g500:#A09E96;--g700:#D1CFC5;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.65;font-size:16px}
+.wrap{max-width:var(--max-width);margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;margin:0 0 6px;font-weight:700}
+h2{font-size:21px;margin:40px 0 8px;padding-top:12px;border-top:var(--border)}
+h3{font-size:17px;margin:20px 0 6px}
+.meta{color:var(--g500);font-size:14px}
+.lead{background:var(--g100);border-radius:var(--radius-row);padding:10px 14px;margin:8px 0 14px;color:var(--g700)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:18px 0}
+.kpi{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:14px}
+.kpi b{display:block;font-size:26px;line-height:1.2}
+.kpi span{font-size:14px;color:var(--g500)}
+.kpi.ok b{color:var(--ok)}.kpi.part b{color:var(--part)}.kpi.no b{color:var(--no)}.kpi.probe b{color:var(--probe)}
+.verdict{background:var(--paper);border:2px solid var(--clay);border-radius:var(--radius-panel);padding:16px 18px;margin:16px 0}
+.verdict ol{margin:6px 0 0;padding-left:20px}
+table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:var(--radius-row);overflow:hidden;font-size:14.5px;margin:8px 0}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--g300);vertical-align:top}
+th{background:var(--g100);font-weight:600}
+code{font-family:var(--mono);font-size:13px;background:var(--g100);padding:1px 5px;border-radius:4px;word-break:break-all}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;color:#fff;white-space:nowrap}
+.t-ok{background:var(--ok)}.t-part{background:var(--part)}.t-no{background:var(--no)}.t-probe{background:var(--probe)}
+.spec{background:var(--paper);border:var(--border);border-left:6px solid var(--clay);border-radius:var(--radius-panel);padding:14px 16px;margin:12px 0}
+.spec.s2{border-left-color:var(--olive)}.spec.s3{border-left-color:var(--probe)}
+.spec h3{margin-top:0}
+.ms{display:grid;grid-template-columns:56px 1fr;gap:4px 10px;font-size:14.5px;margin-top:8px}
+.ms b{color:var(--clay-d)}
+.see{font-size:14px;color:var(--g700);background:var(--g100);border-radius:6px;padding:6px 10px;margin-top:8px}
+.ex{border:1px dashed var(--g500);border-radius:var(--radius-row);padding:10px 14px;margin:10px 0;font-size:14.5px}
+.ex b{color:var(--clay-d)}
+pre.mermaid{background:var(--paper);border:var(--border);border-radius:var(--radius-panel);padding:12px;text-align:center}
+.check li{margin:4px 0}
+@media (max-width:640px){th,td{padding:7px 6px;font-size:13.5px}.ms{grid-template-columns:44px 1fr}}
+@media print{body{background:#fff}.spec,.kpi,table{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>런북 박자 배치 — 되는 것, 안 되는 것, 앞으로 할 일</h1>
+<p class="meta">2026-10-10 · 팩토리 리드 · 기준 origin/main <code>88ecfb9d</code>(PR #569 머지 직후) · 대상 곡 LOVE ATTACK</p>
+
+<div class="lead">감독님이 디자인한 런북 화면을 실제 앱으로 만들 때, 지금 있는 기능으로 되는 것과 새로 만들어야 하는 것을 근거와 함께 나누고, 그 일을 SPEC(앱을 만들기 전에 쓰는 작업 명세서) 단위로 묶어 순서를 정했습니다.</div>
+
+<div class="kpis">
+  <div class="kpi ok"><b>11</b><span>지금 되는 것 (실기·코드로 확인)</span></div>
+  <div class="kpi part"><b>3</b><span>일부만 되는 것</span></div>
+  <div class="kpi no"><b>7</b><span>아직 없는 것 (새로 만들기)</span></div>
+  <div class="kpi probe"><b>9</b><span>콘솔에서 아직 안 잰 것</span></div>
+</div>
+
+<div class="verdict">
+<b>결론</b>
+<ol>
+<li><b>화면은 전부 만들 수 있습니다.</b> 타임라인, 역할 줄, 오른쪽 편집창, 2D 무대, 재생과 음악 연동 모두 막는 기술 장벽이 없습니다.</li>
+<li><b>화면을 채울 내용 중 두 가지가 비어 있습니다.</b> 곡을 마디 단위로 분석하는 일과, 역할×마디 배치를 앱이 스스로 짜는 일입니다. 이 둘은 새 SPEC으로 만듭니다.</li>
+<li><b>콘솔로 보내는 쪽은 절반쯤 확인됐습니다.</b> 남은 확인은 이미 계획이 있는 SPEC-LDBEAT-001의 첫 단계(M1 프로브)에서 합니다.</li>
+<li><b>권하는 순서:</b> LOVE ATTACK은 손으로 짠 배치가 이미 있으니, 먼저 그 배치로 화면과 콘솔 송신을 완성하고(LDBEAT), 그다음 분석과 자동 배치로 넘어갑니다.</li>
+</ol>
+</div>
+
+<h2>1. 지금 되는 것</h2>
+<div class="lead">실기 콘솔에서 해 봤거나 코드에 이미 있어서 확인한 것만 적었습니다. 「근거」 칸의 t516, t520 같은 번호는 그 확인을 한 작업 카드이고, 결과 문서가 저장소에 있습니다.</div>
+<table>
+<thead><tr><th style="width:38%">항목</th><th>근거</th><th style="width:22%">런북에서 쓰이는 곳</th></tr></thead>
+<tbody>
+<tr><td><span class="tag t-ok">됨</span> 장비 86대 위치·기울기 읽기 (10.3초)</td><td>t525 · <code>.moai/reports/t525/verdict.md</code></td><td>2D 무대 그림</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 장비 이름으로 역할 추정 + 감독 확인</td><td><code>server/design/rig.py</code> RIG_LAYER_ROLES</td><td>역할 줄 나누기</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 시퀀스·큐를 콘솔에 쓰고 타임코드에 붙이기</td><td><code>server/looks/songcue.py:634-641</code></td><td>콘솔로 보내기</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 타임코드 트랙 2개</td><td>t516 실기</td><td>역할별 트랙</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 큐 바로 가기(Goto)·끄기(Off)</td><td>t520 실기 §16-2 (1번 큐까지)</td><td>▶ 콘솔 미리보기</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 페이저 + 박자에 맞춘 속도(스피드마스터 15 = 112.35 BPM) + 마디 길이(Measure)</td><td>t516 · t519 실기</td><td>펄스·무빙 효과</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 효과를 프리셋으로 저장</td><td>t513 실기 <code>Store Preset p.n /Universal</code></td><td>효과 프리셋 번호</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 승인한 명령과 실제로 보낸 명령이 같은지 대조</td><td><code>.moai/reports/t512/approval_vs_sent.py</code> — 지금은 확인용 스크립트라 앱 안으로 옮겨야 함</td><td>⇪ 반영 승인</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 콘솔 이름 영문으로 바꾸기(한글 제거)</td><td><code>songcue.py:683</code> <code>_ascii_label</code></td><td>프리셋·큐 이름</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 곡 BPM, 구간(벌스·후렴) 나누기</td><td><code>server/audio/analyze.py</code></td><td>상단 개요 지도</td></tr>
+<tr><td><span class="tag t-ok">됨</span> 화면 동작 — 타임라인, 편집창, 재생, ±10초, 음악 동기</td><td>시안 <code>reports/ldbeat-runbook-ui-proposal-20261008.html</code>에서 실제로 동작</td><td>화면 전체</td></tr>
+</tbody></table>
+
+<h2>2. 일부만 되는 것</h2>
+<div class="lead">기능은 있지만 끝까지 닿지 않는 것들입니다. 무엇이 막고 있는지와 고칠 방법을 같이 적었습니다.</div>
+<table>
+<thead><tr><th style="width:22%">항목</th><th style="width:24%">지금</th><th>막힌 이유와 고칠 것</th></tr></thead>
+<tbody>
+<tr><td><span class="tag t-part">일부</span> 그룹 소속</td><td>그룹마다 앞 2대만 읽힘</td><td>콘솔 안에서 앱의 질문에 답하는 프로그램(응답기)이 긴 답을 240글자에서 자릅니다(<code>console/lua/copilot_responder.lua:43</code>). 긴 값을 나눠 보내게 고치면 됩니다. 읽은 2대는 8대 모두 맞았습니다.</td></tr>
+<tr><td><span class="tag t-part">일부</span> 무대 앞뒤 방향</td><td>장비 이름으로 추정</td><td>FOH 쪽을 객석으로 봤습니다. 콘솔에서 직접 읽는 방법은 아직 찾지 않았습니다.</td></tr>
+<tr><td><span class="tag t-part">일부</span> 앱의 재생 방식</td><td>「손으로 GO」와 「시간 지정」 두 가지만</td><td><code>server/director/emit.py:51</code>이 타임코드 방식을 거부합니다. 기존 경로는 그대로 두고 박자 배치 전용으로 새로 만드는 쪽을 권합니다.</td></tr>
+</tbody></table>
+
+<h2>3. 아직 없는 것 — 새로 만들어야 함</h2>
+<div class="lead">시안에 보이는 내용 중에는 제가 손으로 짜서 넣은 것이 있습니다. 앱이 그걸 스스로 만들려면 아래 일곱 가지가 필요합니다. 1번과 2번이 가장 큽니다.</div>
+<table>
+<thead><tr><th style="width:4%">#</th><th style="width:30%">없는 것</th><th>지금 상태</th><th style="width:16%">담을 SPEC</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="tag t-no">없음</span> 곡을 마디 단위로 분석</td><td>비트 시각은 BPM을 계산할 때만 쓰고 저장하지 않습니다. 마디 첫 박(다운비트)을 찾는 코드는 0개입니다. LOVE ATTACK은 사람이 따로 분석했습니다.</td><td>새 SPEC ②</td></tr>
+<tr><td>2</td><td><span class="tag t-no">없음</span> 역할×마디 배치를 앱이 스스로 짜기</td><td>LOVE ATTACK 배치는 리드가 손으로 짰습니다(<code>reports/effect-arrangement-rules-20261007.md</code> §4).</td><td>새 SPEC ③</td></tr>
+<tr><td>3</td><td><span class="tag t-no">없음</span> 역할별 시퀀스 여러 개 + 타임코드 트랙 여러 개로 보내기</td><td>지금은 시퀀스 1개를 타임코드 1개에 붙입니다.</td><td>LDBEAT M4</td></tr>
+<tr><td>4</td><td><span class="tag t-no">없음</span> 역할×마디 데이터를 저장할 칸</td><td>곡 저장소 세 곳 모두 이 칸이 없습니다.</td><td>LDBEAT M2</td></tr>
+<tr><td>5</td><td><span class="tag t-no">없음</span> 마디·역할 단위 문장 편집</td><td><code>cue_sheet_edit.py</code>는 큐 하나 단위만 다룹니다.</td><td>LDBEAT M3</td></tr>
+<tr><td>6</td><td><span class="tag t-no">없음</span> AI 제안 카드(색 프리셋 만들기, 격자 고치기 → 「적용」)</td><td>효과 프리셋 도구와 조준 도구만 있습니다.</td><td>LDBEAT M3</td></tr>
+<tr><td>7</td><td><span class="tag t-no">없음</span> 앱이 프리셋을 만들고 큐가 번호로 가리키는 흐름</td><td>프리셋 저장은 되지만 런북에서 이어지는 흐름은 없습니다.</td><td>LDBEAT M2·M4</td></tr>
+</tbody></table>
+
+<h2>4. 콘솔에서 아직 안 잰 것</h2>
+<div class="lead">「될 것 같다」와 「해 봤다」는 다릅니다. 아래 아홉 가지는 아직 콘솔에서 해 보지 않았습니다. LDBEAT의 첫 단계(M1)에서 작은 시험으로 하나씩 확인하고, 실패한 기능은 화면에서 잠가 둡니다.</div>
+<table>
+<thead><tr><th>안 잰 것</th><th style="width:30%">필요한 이유</th></tr></thead>
+<tbody>
+<tr><td><span class="tag t-probe">확인</span> 타임코드 트랙 3개 이상 (최대 6개 필요)</td><td>역할마다 트랙 하나</td></tr>
+<tr><td><span class="tag t-probe">확인</span> Goto 2번 이후 큐, 여러 시퀀스 동시에 Goto</td><td>마디 미리보기</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 프리셋을 고치면 그걸 쓰는 큐가 따라 바뀌는지</td><td>프리셋 한 번 고쳐 전체 반영</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 효과 프리셋이 박자 속도(스피드마스터 15·Measure)를 기억하는지</td><td>효과를 박자에 묶기</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 위치 프리셋 위에 상대값 움직임 효과 얹기</td><td>무빙 효과</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 타임코드를 곡 중간부터 재생</td><td>「이 마디부터 음악과 재생」</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 큐 하나에 그룹 하나 + Step 2 저장</td><td>역할 분리 (t520에서 한 효과만 남은 원인)</td></tr>
+<tr><td><span class="tag t-probe">확인</span> 같은 그룹을 두 시퀀스가 나눠 쓰기(밝기 / 위치)</td><td>무빙 밝기·위치 분담</td></tr>
+<tr><td><span class="tag t-probe">확인</span> circle·발리후 모양</td><td>무빙 모양 종류</td></tr>
+</tbody></table>
+
+<h2>5. SPEC 진행안 — 세 개로 나눕니다</h2>
+<div class="lead">한 번에 다 만들면 어디서 틀렸는지 찾기 어려워서, 감독님이 눈으로 확인할 수 있는 단계마다 끊었습니다. 각 SPEC이 끝날 때 감독님이 무엇을 보게 되는지를 함께 적었습니다.</div>
+
+<pre class="mermaid">
+flowchart LR
+  A["① SPEC-LDBEAT-001 개정<br/>손으로 짠 LOVE ATTACK 배치로<br/>화면 + 편집 + 콘솔 송신"] --> B["② SPEC-LDBARMAP-001 새로<br/>곡을 마디 단위로 분석"]
+  B --> C["③ SPEC-LDARRANGE-001 새로<br/>규칙 + 마디 지도 + 무대로<br/>배치 초안 자동 생성"]
+  C -->|초안이 런북에 뜸| A
+</pre>
+<noscript><p><b>흐름:</b> ① LDBEAT(손 데이터로 화면·송신 완성) → ② LDBARMAP(마디 분석) → ③ LDARRANGE(배치 자동 생성). ③이 만든 초안은 ①에서 만든 런북 화면에 그대로 뜹니다.</p></noscript>
+
+<div class="spec">
+<h3>① SPEC-LDBEAT-001 — 런북 박자 배치 (개정)</h3>
+<div>상태: draft · 계획은 이미 머지됨(PR #568). 그 뒤 감독님과 정한 내용을 반영해 계획을 고칩니다.</div>
+<div class="ms">
+<b>M1</b><span>콘솔 확인 시험(4절의 아홉 가지) + 응답기가 긴 값을 나눠 보내게 고치기 → 그룹 색까지 무대에 칠하기</span>
+<b>M2</b><span>역할×마디 격자 화면과 저장 칸, 콘솔 패치에서 그린 2D 무대, 프리셋 표시</span>
+<b>M3</b><span>고치는 세 가지 방법 — 목록에서 고르기 / 정해진 문장 / AI 제안 → 「적용」</span>
+<b>M4</b><span>박자 전용 송신 — 역할별 시퀀스 + 타임코드 트랙 여러 개, 승인한 것과 보낸 것이 같은지 대조</span>
+<b>M5·M6</b><span>확인 안 된 모양에 ⚠ 표시, BPM 자동 설정 범위 정리</span>
+</div>
+<div class="see"><b>개정에 넣을 것:</b> 프리셋 방식(색·위치·효과는 각자의 프리셋 풀, 밝기는 값 또는 디머 프리셋) · 고치는 세 길 · 콘솔 이름은 영문만 · 화면 결정(타임라인 접기, 전환 버튼, 오른쪽 편집창, 2D 무대, 재생 ±10초) · 무대는 콘솔 패치를 읽어 그림(t525) · 응답기 긴 값 읽기.</div>
+<div class="see"><b>끝나면 보는 것:</b> LOVE ATTACK 0~25마디를 런북에서 보고, 고치고, 콘솔로 보내 무대에서 확인.</div>
+</div>
+
+<div class="spec s2">
+<h3>② SPEC-LDBARMAP-001 — 마디 지도 (새로)</h3>
+<div>지금 SPEC-LDRHYTHM-001에 「나중 단계 후보」로만 적혀 있는 일을 독립 SPEC으로 꺼냅니다.</div>
+<div class="ms">
+<b>하는 일</b><span>비트, 마디 첫 박, 마디 경계, 마디별 변화(킥이 들어옴, 빌드, 드롭)를 찾아서 저장</span>
+<b>검증</b><span>LOVE ATTACK을 사람이 분석한 결과(112.35 BPM, 후렴 18·46마디, 드롭 63~66마디)와 대조 — 맞는 비율을 숫자로</span>
+</div>
+<div class="see"><b>끝나면 보는 것:</b> 새 곡을 넣으면 런북 상단 개요에 마디 지도가 뜸.</div>
+</div>
+
+<div class="spec s3">
+<h3>③ SPEC-LDARRANGE-001 — 배치 자동 생성 (새로)</h3>
+<div class="ms">
+<b>하는 일</b><span>확정된 배치 규칙 + ②의 마디 지도 + 콘솔에서 읽은 무대 패치로 역할×마디 초안을 만듦. 규칙은 곡마다 바꿀 수 있는 기본값</span>
+<b>지키는 것</b><span>스트로브는 정말 강한 순간에만, 보통 2층·큰 곳만 3층, 진한 색 — 감독님이 확정한 규칙 그대로</span>
+<b>검증</b><span>LOVE ATTACK 초안을 손으로 짠 배치와 나란히 놓고 감독님 눈으로 판정</span>
+</div>
+<div class="see"><b>끝나면 보는 것:</b> 새 곡의 배치 초안이 런북에 자동으로 뜨고, 감독님은 고치기만 하면 됨.</div>
+</div>
+
+<div class="ex"><b>예시 — 마디 하나가 단계마다 어떻게 바뀌는지</b> (설명용 가정이고, 실제 배치 값이 아닙니다)<br>
+지금: 리드가 「17마디 3박부터 BACK 펄스를 더 잘게」 같은 변화를 손으로 정해 시안에 넣습니다.<br>
+① 뒤: 감독님이 런북에서 그 칸을 눌러 펄스 길이를 고치고 ⇪ 반영을 누르면 콘솔 시퀀스가 바뀝니다.<br>
+② 뒤: 앱이 17마디 3박에 「빌드 시작」 표시를 스스로 붙입니다.<br>
+③ 뒤: 앱이 그 표시를 보고 「빌드에서는 BACK 펄스를 잘게」라는 규칙대로 초안을 직접 만듭니다.</div>
+
+<h2>6. 감독님 결정이 필요한 것</h2>
+<div class="lead">LDBEAT 계획을 고치기 전에 정해 주셔야 계획에 그대로 들어갑니다. 각 항목에 제 권고를 적었습니다.</div>
+<table>
+<thead><tr><th style="width:4%">#</th><th>결정</th><th style="width:40%">권고</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>진행 순서 — LDBEAT 먼저(손 데이터), 그다음 분석·자동 배치</td><td>예. 손 데이터가 있어서 분석을 기다리지 않아도 됩니다</td></tr>
+<tr><td>2</td><td>박자 배치 전용 송신 경로를 새로 만들지</td><td>새로 만듭니다. 기존 송신(<code>emit.py</code>)은 건드리지 않습니다</td></tr>
+<tr><td>3</td><td>앱이 만든 이 곡의 프리셋·시퀀스를 다시 쓸 때 덮어써도 되는지</td><td>앱이 정한 번호대(예: 280~287, 4.21~)만 허용합니다</td></tr>
+<tr><td>4</td><td>AI 제안은 항상 「적용」을 눌러야 반영되는지</td><td>예</td></tr>
+<tr><td>5</td><td>콘솔 미리보기(Goto·Off) 승인을 시작할 때 한 번만 받을지</td><td>예. 쓰기 명령은 매번 승인을 받습니다</td></tr>
+</tbody></table>
+
+<h2>7. 바로 다음 순서</h2>
+<ol class="check">
+<li>6절의 결정 1~5를 확인받습니다.</li>
+<li>레인에 SPEC-LDBEAT-001 개정 카드를 냅니다(계획 문서만 고치고 코드는 손대지 않습니다).</li>
+<li>독립 검토(plan-audit)를 통과시킵니다.</li>
+<li>감독님 착수 승인을 받고 M1 확인 시험을 시작합니다. 콘솔에 쓰는 시험은 「실행」 신호를 받은 뒤에만 합니다.</li>
+<li>②·③ SPEC 계획은 LDBEAT M2 무렵에 시작합니다. 화면의 데이터 모양이 정해져야 분석 결과를 어떤 형태로 저장할지 정할 수 있어서입니다.</li>
+</ol>
+
+<h3>직접 확인해 볼 것</h3>
+<ul class="check">
+<li>t525 무대 그림(<code>reports/ldbeat-stage-from-patch-20261010.html</code>)이 실제 무대와 맞는지</li>
+<li>4절의 아홉 가지 중 「이건 꼭 돼야 한다」는 항목이 있는지 — 그 항목부터 시험합니다</li>
+</ul>
+
+</div>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+mermaid.initialize({startOnLoad:true,theme:"base",themeVariables:{primaryColor:"#FAF9F5",primaryTextColor:"#141413",primaryBorderColor:"#D97757",lineColor:"#87867F",secondaryColor:"#E3DACC",tertiaryColor:"#F0EEE6"}});
+</script>
+</body>
+</html>
