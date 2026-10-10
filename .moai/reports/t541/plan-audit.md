@@ -212,3 +212,69 @@ D2(iteration 1, `acceptance.md:138`) — **RESOLVED**, 증거 위 재실행.
 1. (필수, D3) `spec.md:40`에 D1과 동일한 패턴의 만료 고지를 추가한다 — 한 줄 편집, REQ/AC 문면·개수 영향 없음.
 2. D3 교정 후 재확인은 동일 grep 1회(`spec.md` 전체, HISTORY 제외)로 충분 — 이번에는 출력에 남는 줄이 하나도 없어야 한다.
 3. 전체 3회 iteration cap(plan-auditor Retry Loop Contract) 기준으로 이번이 iteration 2이므로, iteration 3에서 D3가 또 남으면 stagnation 플래그(동일 카테고리 결함 3회차 무진전)로 격상해 사용자 개입을 권고한다.
+
+---
+
+## Iteration 3 (final, delta re-audit, 커밋 `a792369f`)
+
+범위: iteration 2의 D3 교정분(`git show HEAD` = `a792369f`)만. Reasoning context ignored per M1 Context Isolation. 코디네이터 지시에 따라 LDARRANGE 자체의 REQ-001/AC-015/plan.md 문면은 이번에도 점수 산정 제외(t529 HISTORY blanket 만료 고지로 이미 커버).
+
+**Verdict: PASS**
+**Overall Score: 1.00** (Tier M 통과선 0.80 대비 여유 확보)
+
+### D3 Regression Check
+
+| 결함 | 상태 | 증거 |
+|---|---|---|
+| D3 (`spec.md:40`, §1 배경) | **RESOLVED** | `git diff HEAD~1 HEAD -- .moai/specs/SPEC-LDBARMAP-001/spec.md` 확인 — "SPEC-LDARRANGE-001, 아직 존재하지 않음 — 이 plan-phase에서 `ls .moai/specs/`로 확인" → "SPEC-LDARRANGE-001 — 최초 작성 시점에는 없었다(이 plan-phase에서 `ls .moai/specs/`로 확인), 같은 날 PR #570으로 생겼다, 카드 t541 만료 고지" — 현재 사실과 모순 없음, D1(line 117 패턴)과 동일한 인라인 만료 고지 형식으로 통일됨. |
+
+### 전수 재스캔 (출력 절단 없음) — spec.md·plan.md·acceptance.md 3개 파일
+
+HISTORY 표 범위(`spec.md:20-33`)를 제외한 전체 라인에서 패턴 `존재하지 않\|아직 없\|미작성\|없음\|미정\|확정되지 않\|열려 있`을 전수 조회(절단 없이 전체 출력 확인):
+
+```bash
+$ awk 'NR<20 || NR>33' .moai/specs/SPEC-LDBARMAP-001/spec.md | grep -n '존재하지 않\|아직 없\|미작성\|없음\|미정\|확정되지 않\|열려 있'
+$ grep -n '...' .moai/specs/SPEC-LDBARMAP-001/plan.md
+$ grep -n '...' .moai/specs/SPEC-LDBARMAP-001/acceptance.md
+```
+
+**결과 — LDARRANGE 부재 또는 저장 모양 미정을 현재시제·무고지로 단언하는 줄 0건.** 매칭된 모든 줄을 개별 심사:
+
+- `spec.md` 매칭 5건 전부 적격: Tier 근거(line 22, "확정됐다"는 긍정 서술) · LDRHYTHM 후보 상태(line 35, 다른 SPEC의 범위-후보 상태, LDARRANGE/저장과 무관) · §4 Out of Scope(line 103, D1 인라인 고지 보유) · 옵션 B 기각 서술(line 129, 이미 기각된 과거 옵션) · M4 확정 내용(line 130, "확정됐다" 긍정 서술).
+- `plan.md` 매칭 1건(line 22): "시간 추정 없음" — 완전 무관(마일스톤 제목), 오탐.
+- `acceptance.md` 매칭 5건 전부 적격: 근거-없음 사건 처리(line 100, 무관) · 일반화 픽스처 서술(line 125, 무관) · AC-011 "교정 이력" 블록쿠트(line 130, 자체 "만료됐다" 명시) · M1 코드 부재 서술(line 162, 무관) · 저장 인터페이스 체크리스트 항목(line 180, "상위됨(superseded)" 인라인 고지 보유).
+
+**비공허성 교차 확인(코디네이터 제시 방법 독립 재현)**: 같은 패턴을 `00fb1a55~1`(이 카드 착수 전 pristine) 버전의 `spec.md`에 동일하게 돌리면 HISTORY 바깥에서 **3건**이 걸린다 — line 25(§1 배경, 지금의 40행), line 71(REQ-LDBARMAP-011 근거 칸, 지금의 86행), line 102(§4 Out of Scope, 지금의 117행) — 전부 "아직 존재하지 않음"을 무고지 현재시제로 단언. 이 3곳은 모두 iteration 1~3에서 순서대로 교정됐다(REQ-011은 iteration 1에서, §4는 iteration 1에서, §1은 iteration 2~3에서). 스캔 방법이 교정 전/후를 실제로 가른다는 점이 재확인됨 — 공허한 검사가 아니다.
+
+### Must-Pass Results (최종)
+
+- [PASS] MP-1 REQ 번호 일관성 — REQ-LDBARMAP-001~016 연속·중복 없음(불변).
+- [PASS] MP-2 EARS/GEARS 형식 — REQ-LDBARMAP-011·REQ-LDARRANGE-001 모달 절 불변.
+- [PASS] MP-3 YAML frontmatter — 구조 불변, version만 갱신.
+- [N/A] MP-4 언어 중립성 — 해당 없음.
+- [N/A] MP-5 D7 교차-SPEC 재조정 — 참조 SPEC 전부 draft/in-progress, BLOCKING 없음.
+- [N/A] MP-6 D8 크로스플랫폼 — `syscall` 미등장.
+- [N/A] MP-7 [NEEDS CLARIFICATION] 게이트 — plan.md 0건.
+
+### Category Scores (최종)
+
+| Dimension | Score | Rubric Band | Evidence |
+|-----------|-------|-------------|----------|
+| Clarity | 1.0 | 모든 문장이 단일 해석 | AC-LDBARMAP-011 세 조건 모두 리터럴 명령 보유(D2), §1·§4의 LDARRANGE 참조 모두 인라인 만료 고지 통일(D1·D3) |
+| Completeness | 1.0 | 전수 재스캔 결과 미교정 잔존 0건 | 위 전수 재스캔 결과 |
+| Testability | 1.0 | 세 검사 모두 완전 이진 판정 가능 | 검사 1·2·3 전부 리터럴 명령으로 재현 가능, iteration 1~3에서 반복 재현(회귀 없음) |
+| Traceability | 1.0 | 모든 REQ가 AC를 가지며 고아 없음 | 불변 |
+
+조화평균 = **1.0** — Tier M 통과선(0.80) 상회.
+
+### Defects Found (최종 요약)
+
+D1(`spec.md:117`) — RESOLVED (iteration 1에서 발견, iteration 2에서 교정 확인)
+D2(`acceptance.md:138`) — RESOLVED (iteration 1에서 발견, iteration 2에서 교정 확인, 회귀 없음)
+D3(`spec.md:40`) — RESOLVED (iteration 2에서 발견, iteration 3에서 교정 확인)
+
+No defects remain. 전수 재스캔(절단 없음)으로 LDBARMAP 3파일(spec/plan/acceptance) 전체에서 "LDARRANGE 부재" 또는 "저장 모양 미정"을 현재시제·무고지로 단언하는 줄이 0건임을 확인했다.
+
+## Recommendation (최종)
+
+PASS. 근거: (1) 위 Must-Pass 7개 전부 PASS/N/A, (2) Category Scores 조화평균 1.0, (3) D1/D2/D3 전부 RESOLVED + 회귀 없음(각 재실행 결과가 이전 iteration과 동일), (4) 전수 재스캔(절단 없음, 2개 독립 방법론으로 교차 확인)으로 잔존 결함 0건. 이 카드(t541)의 부분 감사는 여기서 종료 — `SPEC-LDBARMAP-001`의 표준 review-N iteration 체계(현재 iteration 9까지 기록됨)와는 별도 트랙이었으므로, 이 부분 감사 결과를 그 SPEC의 다음 정기 plan-audit(iteration 10, REQ-LDBARMAP-010/AC-LDBARMAP-010·§5 대상)에 선행 조건으로 추가할 필요는 없다(본 감사 범위와 겹치지 않음).

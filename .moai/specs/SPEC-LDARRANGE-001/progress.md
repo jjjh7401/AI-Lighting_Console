@@ -30,6 +30,14 @@
 - **plan-audit 재실행 필요**: REQ·AC가 구속하는 뜻(생성기의 새 역할 발명 금지·STROBE 게이팅 조건·그룹 번호 주소만 사용) 자체는 바뀌지 않았으나, 그 뜻을 표현하는 **인용 어휘**(어느 어휘가 "정본"이고 어느 것이 "교정 전 1차 표기"인지)가 바뀌었다 — 직전 카드(t529 ③)는 "뜻이 같으므로 재실행 없음"으로 판단했지만, 이번 변경은 REQ-LDARRANGE-002·007·acceptance.md AC-014의 검증 **대상 집합**(허용 라벨 집합·금지 라벨 집합) 자체를 교체했으므로 같은 논리가 적용되지 않는다. 다음 run-phase 착수 전 plan-auditor를 다시 돌려야 한다(`.moai/reports/plan-audit/SPEC-LDARRANGE-001-review-3.md` 또는 다음 가용 iteration 번호).
 - plan-audit iteration 3/3 (`.moai/reports/plan-audit/SPEC-LDARRANGE-001-review-3.md`, gitignore — 결과를 여기 옮긴다): **PASS 0.81** (Clarity 0.75 · Completeness 1.0 · Testability 0.75 · Traceability 0.75), must-pass 7/7. iter2(0.86) 대비 하락 → STOP 신호 + 3회 상한 도달. 하락 원인 D1(차단): t533 이 REQ-002 에 흡수한 "겹치는 그룹 트랙 금지"를 검증하는 AC 가 0건(`grep -c 겹치 acceptance.md plan.md` → 0/0, 오케스트레이터 재확인). **델타 교정**: AC-LDARRANGE-014 에 겹침 카운트 == 0 검사를 추가(AC 수 16 그대로, §A.1 추적표 REQ-002→AC-014 기존 행이 덮음). 4회차 감사는 상한 초과라 돌리지 않았다 — 교정은 D1 처방 그대로의 한 절 추가. 나머지 두 소견(REQ-002 다중 shall not 묶음 — iter1 D2 와 같은 Tier M 상한 우선 결정, 7종 어휘 인용 순서)은 선택 사항이라 반영 안 함.
 
+## 마디 지도 입력 모양 맞춤 (카드 t541, 2026-10-10)
+
+- **주장**: §5 항목 1의 미러 문단이 생산자 `SPEC-LDBARMAP-001` M4 확정 모양(PR #585 `364ab000`)과 같은 문면이다. spec.md v0.2.0→0.2.1. REQ·AC 문면 변경 0(REQ-LDARRANGE-001의 구속 — 실제 지도 **데이터** 없이 생성하지 않음 — 그대로 유효: 서버 저장 배선은 있으나 오디오→`timeline["bar_map"]` 진입 경로가 아직 없다).
+- **바뀐 곳**: §5 항목 1 머리·본문(「생산자 쪽 확정, 소비 방식만 열림」), 입력 모양 문단(`schema_version`·`first_beat_offset` 추가, `time_signature` `[분자, 분모]` 일반형, `start_beat` 1~분자, 일반화 규칙 승계), §2 입력 1, §1 만료 고지, HISTORY.
+- **증거**: 생산자 쪽 AC-LDBARMAP-011 검사 3(두 SPEC §5 범위에서 확정 필드 8개 각각 ≥1줄) — 이 트리 LDARRANGE `1 1 1 1 1 2 1 3`(8개 모두 ≥1). 대조: 교정 전(origin/main `ef854b0a`) 이 SPEC §5 에서 `schema_version`/`first_beat_offset` → `0` — 검사 3이 갈라짐을 잡는다.
+- **감사**: 부분 plan-audit(LDBARMAP 쪽과 한 묶음) 1차 FAIL 0.80 → 2차 FAIL → 3차 **PASS 1.00** — `.moai/reports/t541/plan-audit.md`.
+- **미검증·남은 것**: 이 SPEC 자신의 REQ-LDARRANGE-001·AC-LDARRANGE-015·plan.md:6·:46 의 「LDBARMAP 존재하지 않음」 문면은 t529 HISTORY 일괄 만료 고지에 맡기고 고치지 않았다(카드 범위 밖) — 다음 개정 때 인라인 고지 후보.
+
 ## §E.2 Run-phase Evidence
 
 _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
