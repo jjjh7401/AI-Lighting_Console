@@ -44,9 +44,7 @@ class TestOffsetPagingArray:
     def _harness(self) -> ResponderHarness:
         members = self._members()
         return ResponderHarness(
-            extra_env=table_props_env(
-                "{ TBL = " + _array_literal(members) + " }", order=["TBL"]
-            )
+            extra_env=table_props_env("{ TBL = " + _array_literal(members) + " }", order=["TBL"])
         )
 
     def test_all_86_members_reassemble_across_pages(self):
@@ -55,9 +53,7 @@ class TestOffsetPagingArray:
         collected: list[str] = []
         offset = 0
         for _ in range(100):  # loop-prevention — pages must be far fewer than this
-            payload = _read(
-                harness, f"props pg{offset} TBL {TABLE_PROBE_PATH} offset={offset}"
-            )
+            payload = _read(harness, f"props pg{offset} TBL {TABLE_PROBE_PATH} offset={offset}")
             assert payload["ok"] is True, payload
             item = payload["reads"][0]
             assert item["offset"] == offset, item
@@ -120,9 +116,7 @@ class TestOffsetPagingMultiNameRejected:
 
     def test_two_names_with_offset_is_rejected(self):
         harness = ResponderHarness(
-            extra_env=table_props_env(
-                '{ A = { 1, 2 }, B = { 3, 4 } }', order=["A", "B"]
-            )
+            extra_env=table_props_env("{ A = { 1, 2 }, B = { 3, 4 } }", order=["A", "B"])
         )
         payload = _read(harness, f"props m1 A,B {TABLE_PROBE_PATH} offset=0")
         assert payload["ok"] is False, payload
@@ -130,9 +124,7 @@ class TestOffsetPagingMultiNameRejected:
         assert "offset paging takes exactly one property name" in payload["error"]
 
     def test_single_name_with_offset_is_accepted(self):
-        harness = ResponderHarness(
-            extra_env=table_props_env('{ A = { 1, 2 } }', order=["A"])
-        )
+        harness = ResponderHarness(extra_env=table_props_env("{ A = { 1, 2 } }", order=["A"]))
         payload = _read(harness, f"props m2 A {TABLE_PROBE_PATH} offset=0")
         assert payload["ok"] is True, payload
 
@@ -168,11 +160,7 @@ class TestOffsetPagingObjectShaped:
 
     def test_hash_table_paginates_by_whole_entries(self):
         entries = {f"k{i:02d}": f"value-{i:02d}" for i in range(10)}
-        props_lua = (
-            "{ TBL = { "
-            + ", ".join(f'{k} = "{v}"' for k, v in entries.items())
-            + " } }"
-        )
+        props_lua = "{ TBL = { " + ", ".join(f'{k} = "{v}"' for k, v in entries.items()) + " } }"
         harness = ResponderHarness(extra_env=table_props_env(props_lua, order=["TBL"]))
         # 엔트리 1~2개만 들어가는 예산으로 강제로 여러 페이지를 만든다
         # (전체 10개 기본 예산(1900)에선 한 페이지에 다 들어가 버린다 —
@@ -181,9 +169,7 @@ class TestOffsetPagingObjectShaped:
         collected: dict[str, str] = {}
         offset = 0
         for _ in range(50):
-            payload = _read(
-                harness, f"props h{offset} TBL {TABLE_PROBE_PATH} offset={offset}"
-            )
+            payload = _read(harness, f"props h{offset} TBL {TABLE_PROBE_PATH} offset={offset}")
             assert payload["ok"] is True, payload
             item = payload["reads"][0]
             window = json.loads(item["v"])
@@ -199,11 +185,7 @@ class TestOffsetPagingObjectShaped:
     def test_zero_fitting_entries_returns_empty_container_not_a_stall(self):
         """엔트리 하나도 못 들어가면 빈 컨테이너 + truncated=true — 무한루프 없음."""
         entries = {f"k{i:02d}": "V" * 100 for i in range(5)}
-        props_lua = (
-            "{ TBL = { "
-            + ", ".join(f'{k} = "{v}"' for k, v in entries.items())
-            + " } }"
-        )
+        props_lua = "{ TBL = { " + ", ".join(f'{k} = "{v}"' for k, v in entries.items()) + " } }"
         harness = ResponderHarness(extra_env=table_props_env(props_lua, order=["TBL"]))
         harness.config["max_payload"] = 60  # wrapper 조차 못 드는 예산
         payload = _read(harness, f"props h2 TBL {TABLE_PROBE_PATH} offset=0")
