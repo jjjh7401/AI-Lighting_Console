@@ -26,24 +26,41 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 - `82d2b877` — `props <id> <Name> <path> offset=<n>` 엔트리 단위 나눠 읽기. 응답 전체가 `max_payload`(1900) 안에 들도록 엔트리를 담고 `offset`·`total`·`truncated` 를 붙인다. 토큰 없는 요청은 1.6.5 와 바이트 동일.
 - `fef93ed6` — `EXPECTED_RESPONDER_VERSION` 1.6.5→1.6.6, console/lua 지문 재고정.
 - 오프라인 증거: `uv run --quiet pytest server/ -q` → `14555 passed, 35 skipped` @ `fef93ed6` (`.moai/state/verify/t531/full_suite_fef93ed6.txt`). 86개 배열을 나눠 읽어 다시 맞추면 86개 전부 돌아온다(`server/tests/test_lua_responder_props_paging.py`).
-- 실기: **미배치.** `ping` → `1.6.5` (2026-10-10). 배치는 감독 붙여넣기(t104 실측: 재임포트는 OK 를 받고도 안 바뀜). `group_members.py` 는 1.6.5 에서 실행 거부(`.moai/reports/t531/group_members_refusal.txt`). AC-LDBEAT-009(b) 는 **미실행**.
-- 🔴 이 브랜치를 콘솔 1.6.6 배치 전에 main 에 머지하면 게이트가 모든 새 실행을 막는다(`server/safety/gate.py:675`, 버전 불일치).
+- 실기: 처음엔 미배치(`ping` → `1.6.5`, `group_members.py` 실행 거부 — `.moai/reports/t531/group_members_refusal.txt`). 감독 ASCII 붙여넣기 뒤 **`ping` → `1.6.6`**(`r4_ping_after_ascii_paste.txt`, 마무리 때 다시 `1.6.6` — `live/final_leftovers.txt`). AC-LDBEAT-009(b)(나눠 읽기로 그룹 소속 읽기)는 **여전히 미실행** — 실기 프로브에 집중했다.
+- 🔴 머지하면 main 의 `EXPECTED_RESPONDER_VERSION` 이 1.6.6 이 된다(`server/safety/gate.py:675`). 이 콘솔은 1.6.6 이라 통과하지만, **1.6.5 응답기를 쓰는 다른 콘솔·쇼 파일은 게이트가 새 실행을 막는다** — 쇼를 다시 열면 응답기도 쇼 파일에 든 판으로 돌아갈 수 있다(쇼 저장 0, 아래 남은 객체 참조). 다시 붙여넣기 안내: `deploy-1.6.6-paste.md`.
 
-**프로브 9항목 (REQ-LDBEAT-001~003)** — 설계 `.moai/reports/t531/probe-design.md`, 커밋 `abdd407d`
+**프로브 9+2항목 최종 표 (REQ-LDBEAT-001~003)** — 설계 `.moai/reports/t531/probe-design.md`(커밋 `abdd407d`), ⑩⑪ 은 v3 재승인 때 추가. 승인 문면: 1·2차 `approval-list.md`, v3 `approval-v3-package.md`. 근거 경로는 `.moai/reports/t531/` 기준.
 
-| 항목 | 프로브 | 가짜 콘솔 리허설 | 실기 전부-거절 | 실기 실행 | 판정 |
-|---|---|---|---|---|---|
-| ① 타임코드 트랙 ≥3(목표 6) | `p1_tc_tracks.py` (TC 30) | exit 0, 막힌 줄 0 | 9/9 거절 | `live/p1/` | **통과(구조)** — `4fdce816` 기록 |
-| ② Goto 2번 이후·여러 시퀀스 동시 | `p2_goto_multi.py` (쓰기 0) | exit 0 | 거절 | `live/p2_on/` | **미확인** — 줄은 전부 OK, CURRENTCUE 221.3·226.3·11.1 은 「마지막으로 간 큐」일 뿐 켜짐 증거 아님(아래 정정), 눈 미확인 — `4fdce816` 기록 |
-| ③ 프리셋 수정 전파 | `p3_preset_propagation.py` (v2: 4.301 / v3: 4.302, 시퀀스 300) | v3 exit 0 | v3 4/4 거절 | v2 `live/p3_a/` 묶음 1만 · v3 `live/p3_b/`·`p3_c/` 21줄 OK | v2 **거절(Illegal object)** → v3 **기계: 프리셋 수정은 먹음, 큐는 거의 그대로(참조 가설)** · 무대 전파는 미측정(재생 줄 없음) |
-| ④ 효과 프리셋의 SM15·Measure | `p4_effect_speedmaster_measure.py` (21.301, 시퀀스 301) | exit 0 | 거절 | `live/p4_a/` 19줄 OK · `live/p4_off/` 끄기 OK | **미확인** — 감독 눈: 「다 같이 깜빡임」(번갈아 아님). 디머 페이저는 재생, Step 2 는 안 살아남음, SM15·Measure 는 눈으로 판정 불가 |
-| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | v3 exit 0 | v3 거절 | `live/p5_a/` 14줄 OK · `live/p5_off/` | **움직임 없음** — 감독 눈 「멈춰 있음」(문법은 받음) |
-| ⑥ 타임코드 중간 재생 | `p6_mid_start.py` (TC 31) | exit 0 | 거절 | `live/p6_a/` | **미확인 — 문법 불명**(`Goto Time 5 Timecode 31` → User Canceled Command) — `4fdce816` 기록 |
-| ⑦ 큐 하나 그룹 하나 + Step 2 | `p7_single_selection_step2.py` (시퀀스 303, 대조 큐 포함) | exit 0 | 거절 | `live/p7_a/`·`p7_b/` | 큐1: **다 같이 깜빡임(번갈아 아님), ④보다 느림** · 큐2: **두 그룹 다 깜빡임** — 선택 둘 각각 Step 2 가 함께 남음 |
-| ⑧ 같은 그룹 두 시퀀스 분담 | `p8_shared_group_two_sequences.py` (시퀀스 304·305) | exit 0 | 거절 | `live/p8_a/` 17줄 OK · `live/p8_off/` | **통과** — 감독 눈 「켜지고 틸트가 조금 기울어짐」(304.1·305.1 동시 재생) |
-| ⑩ 디머 위상 펼침(번갈아) | `p10_dimmer_phase_spread.py` (시퀀스 309) | exit 0 | 3/3 거절 | `live/p10_a/` 11줄 OK · `live/p10_off/` | **통과** — 감독 눈 「물결처럼 차례로」(디머 페이저 + `Phase 0 Thru 180` 이 Group 11 선택에서 먹음). 엄밀한 홀짝 번갈아는 미측정 |
-| ⑪ t520 줄 순서 재현 | `p11_t520_step_order.py` (시퀀스 310) | exit 0 | 3/3 거절 | `live/p11_a/` 15줄 OK | **눈 판정 대기**(켜 둔 채) · 큐 크기 ⑦ 큐2 와 같음(4272) |
-| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | v3 exit 0 | v3 거절 | `live/p9_a/` 41줄 OK · `live/p9_off/` | wave: **움직임 없음**(감독 「멈춰 있음」) · circle·발리후: **눈 미확인**(문면상 볼 틈 없음) |
+판정 갈래: **통과** = 감독 눈 또는 구조 되읽기로 확인 · **부분** = 기계로 일부만 확인 · **미확인** = 판정 근거 없음 · **움직임 없음** = 문법은 받았지만 기대한 효과가 안 보임.
+
+| 항목 | 판정 | 무엇을 봤나 | 근거 |
+|---|---|---|---|
+| ① 타임코드 트랙 ≥3(목표 6) | **통과(구조)** | TC 30 에 시퀀스 트랙 6개(228→233) | `live/p1/` · `live/p1_readback.txt` |
+| ② Goto 2번 이후·여러 시퀀스 동시 | **미확인** | 줄은 전부 OK. CURRENTCUE 는 켜짐 증거가 아니고(아래 정정) 눈 미확인 | `live/p2_on/` · `live/p2_readback.txt` |
+| ③ 프리셋 수정 전파 | **부분** | v2 `Attribute 'Color' At Preset` 거절 → v3 `At Preset` 받음. 프리셋 4.302 크기 2068→1852(수정 먹음), 큐 300.1 4292→4296(참조 가설). 무대 전파는 재생 줄이 없어 미측정 | `live/p3_a/` · `p3_b/` · `p3_c/` · `p3_before_edit.txt` · `p3_after_edit.txt` |
+| ④ 효과 프리셋의 SM15·Measure | **미확인** | 감독 「다 같이 깜빡임」. 박자 속도는 번갈아가 없어 눈으로 못 가림 | `live/p4_a/` · `p4_held_readback.txt` · `p4_off/` |
+| ⑤ 위치 프리셋 위 상대값(원) | **움직임 없음** | 감독 「멈춰 있음」 | `live/p5_a/` · `p5_readback.txt` · `p5_off/` |
+| ⑥ 타임코드 중간 재생 | **미확인 — 문법 불명** | `Goto Time 5 Timecode 31` → User Canceled Command, CURSOR 0.00 | `live/p6_a/` · `p6_after_goto.txt` |
+| ⑦ 큐에 선택 + Step 2 | **부분(결과 기록)** | 큐1 「다 같이 깜빡임, ④보다 느림」(번갈아 아님) · 큐2 「두 그룹 다 깜빡임」 | `live/p7_a/` · `p7_b/` · `p7_c/` |
+| ⑧ 같은 그룹 두 시퀀스 분담 | **통과** | 감독 「켜지고 틸트가 조금 기울어짐」 | `live/p8_a/` · `p8_readback.txt` · `p8_off/` |
+| ⑨ circle·발리후·wave | wave **움직임 없음** · circle·발리후 **미확인** | wave 감독 「멈춰 있음」. circle·발리후는 재생 묶음이 바로 꺼서 볼 틈 없음 | `live/p9_a/` · `p9_readback.txt` · `p9_off/` |
+| ⑩ 디머 위상 펼침(추가) | **통과** | 감독 「물결처럼 차례로」 — `Group 11` 에서 디머 페이저 + `Phase 0 Thru 180` 먹음. 엄밀한 홀짝 번갈아는 미측정 | `live/p10_a/` · `p10_readback.txt` · `p10_off/` |
+| ⑪ t520 줄 순서 재현(추가) | **통과(가설 반증)** | 감독 「둘 다 깜빡임」. 큐 크기 ⑦ 큐2 와 바이트 동일(4272) → Step 2 위치는 t520 실패 원인 아님 | `live/p11_a/` · `p11_readback.txt` · `p11_off/` |
+
+**콘솔에 남은 새 객체(읽어서 확인, `live/final_leftovers.txt`)** — 쇼 저장 0 이라 쇼를 다시 열면 사라진다. 지우지 않았다(삭제는 승인 범위 밖).
+
+| 풀 | 번호 | 이름 |
+|---|---|---|
+| 타임코드 | 30 | `LDBEAT M1 - P1 six tracks` |
+| 타임코드 | 31 | `LDBEAT M1 - P6 mid-start` |
+| Color 프리셋(4) | 301 | `LDBEAT M1 - P3 propagation` — **빈 것**(v2 거절 뒤 남음) |
+| Color 프리셋(4) | 302 | `LDBEAT M1 - P3 propagation#2` |
+| All 프리셋(21) | 301 | `LDBEAT M1 - P4 SM15 MEASURE` |
+| 시퀀스 | 300~310 | `LDBEAT M1 - P3 …` ~ `LDBEAT M1 - P11 …` (11개) |
+
+모든 시퀀스는 끄기(`Off`) 묶음까지 보냈다 — 켜진 채 남은 것 없음(각 `live/*_off/`).
+
+**다음 시험 설계안(실행 X)** — ⑤⑨ 정지 원인 가르기: `.moai/reports/t531/next-probe-design.md`. wave 를 기준으로 크기·속도·기준을 하나씩 바꾸고 디머를 넣으며, t516 A2 그대로를 양성 대조로 둔다. 실행은 재승인.
 
 **실기 2026-10-10 (응답기 1.6.6, 쇼 저장 0)**
 
@@ -74,7 +91,8 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
   - **리드 가설 「상대값 한 단계면 정적 오프셋」은 t516 A2 실측으로 반증**(리드 동의, 2026-10-10).
 - ⑩ v3: 11줄 OK(`live/p10_a/`). `Attribute 'Dimmer' At Phase 0 Thru 180` 을 콘솔이 받았다(끝값 180 문법 확인). 큐 크기 309.1 = 3608 vs ⑦ 큐1(303.1, 위상 줄 없음) = 3568 → +40(`p10_readback.txt`) — 위상이 큐에 들어갔다는 해석과 맞음(가설). 감독 판정(리드 전달): **「물결처럼 차례로」 → 통과**. 끄기 `Off Sequence 309` OK(`live/p10_off/`).
   - ⑤⑨ 정지 원인 후보 중 「Group 선택이라 페이저·위상이 안 먹는다」는 **약해졌다** — 같은 `Group 11` 선택에서 디머 페이저와 위상 펼침은 먹었다. 남는 차이는 위치 속성 쪽(크기·기준 프리셋 호출·속도). **엄밀한 홀짝 번갈아(0/180/0/180)는 여전히 미측정** — `Thru` 는 고르게 나누는 범위라 물결로 나왔다.
-- ⑪ v3: 15줄 OK(`live/p11_a/`). 큐 크기 310.1 = **4272**, ⑦ 큐2(303.2) = **4272** — 바이트까지 같다(`p11_readback.txt`). 줄 순서(Step 2 한 번 뒤 재선택)를 바꿔도 콘솔이 같은 내용으로 저장했다는 해석과 맞음(**가설** — 크기 같음 ≠ 내용 같음). 감독 판정 대기.
+- ⑪ v3: 15줄 OK(`live/p11_a/`). 큐 크기 310.1 = **4272**, ⑦ 큐2(303.2) = **4272** — 바이트까지 같다(`p11_readback.txt`). 줄 순서(Step 2 한 번 뒤 재선택)를 바꿔도 콘솔이 같은 내용으로 저장했다는 해석과 맞음(**가설** — 크기 같음 ≠ 내용 같음). 감독 판정(리드 전달): **「둘 다 깜빡임」** → Step 2 위치(줄 순서)는 t520 실패 원인이 아니다(큐 바이트 동일과 일치). 끄기 `Off Sequence 310` OK(`live/p11_off/`).
+  - t520 실패 원인 후보로 남은 것(**가설**): 선택 형태(`Fixture` 목록 + 서브픽스처 `.1`, 선택 다섯) · 속성 섞임(디머 + Pan/Tilt, 선택마다 Phase·Measure·SpeedMaster).
 - ⑦ 보충(위치는 ⑦ 아래가 맞으나 기록 순서대로 둔다):
   - 「번갈아」의 근거 조사(t516·t519·t520 문서): **Step 2 하나로 장비가 번갈아 켜진 실측은 없다.** t516 이 확인한 것은 「페이저 실행(Dimmer 0↔100 2단계) 됨」(`t516/verdict.md:14`)으로, 번갈아인지 다 같이인지는 적혀 있지 않다. t520 의 SIDE 번갈이는 Step 2 가 아니라 **두 목록에 엇갈린 단계 값(0/100 · 100/0)** 을 준 설계였고(`t520/verdict.md:160`), §8 「2박마다 번갈아 켜짐」(`:220`)은 감독이 볼 것 — 기대이고, 실기에선 깜빡임 자체가 안 나왔다(`:693`). 위상 펼침(`Phase 0 Thru 360`)은 상대값 Tilt 한 단계에서 확인됐다(`t520/verdict.md:169`, t516 v4 A2) — 디머 2단계에는 안 쟀다.
   - 리드 가설(미측정): Step 2 는 값 두 개를 시간축에 놓을 뿐이고, 장비별 번갈아는 선택 전체에 위상을 펼쳐야(예: `Phase 0 Thru 180`) 나온다. 위 근거와 모순은 없다.
@@ -85,7 +103,7 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 - 실기 쇼 상태(읽기): 시퀀스 1-15·210·219·220-233·1999·2000, 타임코드 1·2·7·8·9·19·20·21 — t520 기록의 시퀀스 250번대·TC 22/23 은 없다(`r0_pools.txt`·`r0b_pools.txt`). Speed15 `NORMEDVALUE` 69.
 - 리허설은 게이트 심사만 증명한다 — 가짜 콘솔은 명령의 콘솔 의미를 흉내 내지 않는다.
 - 미측정 문법(설계 당시): ③ 프리셋 수정 줄, ⑥ `Goto Time 5 Timecode 31`, ④·⑤·⑨ 그룹 선택 프리셋 호출. → 실기 뒤: `Attribute '<X>' At Preset` 은 거절, `At Preset` 은 받음, `Store Preset … /Merge` 받음, ⑥ 은 여전히 문법 불명.
-- **통과 판정은 ①(구조)·⑧·⑩(감독 눈) 셋이다.** ②④ 미확인, ③ 기계 부분(무대 전파 미측정), ⑤⑨ 움직임 없음, ⑥ 미확인, ⑦ 결과 기록(번갈아 아님·두 그룹 다 깜빡임), ⑪ 눈 판정 대기 — REQ-LDBEAT-001 게이트상 M4 송신은 ①⑧ 말고 어떤 항목에도 기대지 못한다.
+- **통과 판정은 ①(구조)·⑧·⑩·⑪(감독 눈) 넷이다.** ②④ 미확인, ③⑦ 부분, ⑤⑨ 움직임 없음(⑨ circle·발리후 미확인), ⑥ 미확인 — REQ-LDBEAT-001 게이트상 M4 송신은 ①⑧⑩⑪ 말고 어떤 항목에도 기대지 못한다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
