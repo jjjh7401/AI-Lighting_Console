@@ -1,0 +1,25 @@
+{"step": "off_D2p", "t": 0.065, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 335", "reasons": ["reference-invoking command"]}]}
+{"step": "off_D2p", "t": 0.131, "kind": "exec", "command": "Off Sequence 335", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T548D2p",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/335"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_D2p": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 335"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

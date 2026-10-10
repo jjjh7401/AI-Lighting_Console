@@ -1,0 +1,27 @@
+{
+  "item": "T548D2p",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/335"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "t0_tilted_lit": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; Attribute 'Tilt' At 45"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

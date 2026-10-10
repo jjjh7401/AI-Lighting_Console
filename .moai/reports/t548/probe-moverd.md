@@ -103,3 +103,20 @@ uv run python $R/probe_moverd.py $R/live/D1_off --approve $R/denyall --only off_
 - 묶음 6: t0_tilted_lit → t0_clear → store_D2p(seq 335) → play_D2p → off_D2p → final_clear.
 - 리허설 6/6 통과 · 실기 전부-거절: preflight `responder_ok`, 335 비어 있음, 쓰기 감사 rejected 6 / executed 0, 읽기 감사 executed 4, 문면 리허설과 동일, 금지 줄 0, Store 는 `Sequence 335 Cue 1` 한 줄.
 - 승인 목록 `approval_t548_d2p.txt` — 26줄, sha256 `51fa4d5ad9cb1d88b86adc57a489c9a37491e36d6c374137999417f16ec4e0f6`.
+
+### D2' 실기 (리드 「실행」 2026-10-11, sha256 51fa4d5a…e0f6 보내기 전 재확인 일치)
+
+> 이 프로브의 기준은 `Tilt At 45` 이지 결정 ②의 프리셋 2.1 이 아니다. Pan 이 보이는지만 재는 시험이고 앱 형태가 아니다.
+
+| 묶음 | 보낸 줄 | 콘솔 응답 | 쓰기 감사 | 판정 |
+|---|---|---|---|---|
+| t0_tilted_lit | `ChangeDestination Root` · `ClearAll` · `Group 12 ; Attribute 'Dimmer' At 70` · `… 'Dimmer2' At 70` · `Group 12 ; Attribute 'Tilt' At 45` — 00:51:00 | 5줄 `OK` | approved 1 → executed 5 | **기울어짐** — 2.1 정지 프레임 대비 바닥 스폿이 무대 앞 가장자리 → 무대 중앙 쪽으로 이동(리드 캡처) |
+| D2p (seq 335) | store_D2p 17줄(Tilt 45 기준 + Pan ±30 2단계 + 곡선 + `Phase 0 Thru 360` + `Speed 56`) · play_D2p — 00:51:31 | 18줄 `OK` · 335 전송 전 비어 있음 | approved 2 → executed 18 | **움직임** — 프레임 변화 3.7~5.1%, 차이 그림에 빔이 좌우로 쓸림(리드 캡처) |
+| off_D2p | `Off Sequence 335` — 00:52:00 | `OK` | approved 1 → executed 1 | — |
+| 마무리 | `ClearAll` — 00:52:01 | `OK` | approved 1 → executed 1 | — |
+
+### D2' 결론
+
+- 결정 ①(wave 에 Pan 축)은 MOVER-D 를 움직인다 — 단 **기준이 기울어 있을 때**. 2.1(빔 거의 수직 아래)에서는 Pan 이 빔 축 회전으로만 나타나 판정 불가였다(D2).
+- 앱 구현에 남는 점: Pan 물결 칸의 기준 위치 프리셋이 수직에 가까우면 움직임이 무대에서 안 보인다. 이 시험의 기준(Tilt 45)은 가시성 확인용이며 결정 ②(칸의 position_preset_no)의 앱 형태가 아니다.
+- 콘솔에 남은 것: 시퀀스 331~335(모두 Off), 프로그래머 비움, 쇼 저장 0 — 쇼를 다시 열면 사라진다.

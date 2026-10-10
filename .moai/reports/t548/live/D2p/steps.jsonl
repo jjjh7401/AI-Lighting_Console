@@ -1,0 +1,20 @@
+{"step": "store_D2p", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": []}, {"command": "Group 12 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Group 12 ; Attribute 'Pan' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Pan' At Relative 30", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"command": "Step 1 At Decel -100", "reasons": []}, {"command": "Step 2 At Accel -100", "reasons": []}, {"command": "Step 2 At Decel -100", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Pan' At Speed 56", "reasons": []}, {"command": "Store Sequence 335 Cue 1 'T548 - D2p pan wave 2 beats tilted base'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 335 Property 'Name' 'T548 - D2p pan wave 2 beats tilted base'", "reasons": []}]}
+{"step": "store_D2p", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.2, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.266, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer2' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.333, "kind": "exec", "command": "Group 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.399, "kind": "exec", "command": "Group 12 ; Attribute 'Pan' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.466, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.532, "kind": "exec", "command": "Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.6, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.665, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.732, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.798, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.866, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.933, "kind": "exec", "command": "Attribute 'Pan' At Speed 56", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 0.999, "kind": "exec", "command": "Store Sequence 335 Cue 1 'T548 - D2p pan wave 2 beats tilted base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 1.065, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D2p", "t": 1.132, "kind": "exec", "command": "Set Sequence 335 Property 'Name' 'T548 - D2p pan wave 2 beats tilted base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_D2p", "t": 1.199, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 335", "reasons": ["reference-invoking command"]}]}
+{"step": "play_D2p", "t": 1.266, "kind": "exec", "command": "Goto Cue 1 Sequence 335", "fired": true, "ok": true, "detail": "OK"}
