@@ -1,0 +1,33 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; At Preset 2.1",
+      "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07",
+      "ClearAll",
+      "Group 11 ; At Preset 2.4",
+      "Store Sequence 321 Cue 2 'T538 POS04' CueFade 0.54",
+      "ClearAll",
+      "Group 11 ; At Preset 2.5",
+      "Store Sequence 321 Cue 3 'T538 POS05' CueFade 1.07",
+      "ClearAll",
+      "Group 11 ; At Preset 2.3",
+      "Store Sequence 321 Cue 4 'T538 POS03' CueFade 0.54",
+      "ClearAll",
+      "Set Cue 1 Sequence 321 Property 'TrigType' 'Follow'",
+      "Set Cue 2 Sequence 321 Property 'TrigType' 'Follow'",
+      "Set Cue 3 Sequence 321 Property 'TrigType' 'Follow'",
+      "Set Cue 4 Sequence 321 Property 'TrigType' 'Follow'",
+      "Set Sequence 321 Property 'Name' 'T538 - B2 follow loop'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 321"
+    ],
+    "approved": true
+  }
+]
