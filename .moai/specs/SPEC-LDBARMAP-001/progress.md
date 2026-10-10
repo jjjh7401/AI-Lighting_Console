@@ -632,6 +632,13 @@ fast-forward 병합해 시작했다. 위 pytest/ruff 출력은 M4 커밋 전 작
 - 이 곡에만 맞는 것 점검: bar_map_store.py 상수 0 — t535 문턱은 bar_map.py
   에 「한 곡 보정」 꼬리표로 남아 있음, 두 번째 곡 대조 전 완료 아님.
 
+#### 레인 재검증(origin/main 병합 뒤, 레인 직접 실행)
+
+- 병합: `git merge origin/main` — 충돌 0, 들어온 파일 5개 전부 `SPEC-LDBEAT-001`·`.moai/reports/t537/` 문서(`session.py` 무변경).
+- `uv run pytest -q` (위 6개 파일) → `656 passed in 59.07s`, exit 0. `ruff check`/`ruff format --check` (변경 4파일) → `All checks passed!` / `4 files already formatted`.
+- 돌연변이 대조(검사가 헛돌지 않는지): ① `bar_map_store.py:318` `start_beat` 상한을 `numerator`→`99`, ② `session.py:9021` `_draft_history.record(timeline)`→`pass` 로 바꾸고 새 테스트 2파일 실행 → `7 failed, 70 passed`(①은 `test_validator_rejects_start_beat_above_numerator` 등 2건, ②는 되돌리기·일반화 픽스처 5건이 잡음). `git checkout --` 로 원상복구, `git status` 깨끗함 확인.
+- `session.py` 범위: hunk 2개(`@@ -36,6 +36,7 @@` import 1줄, `@@ -8986,6 +8987,65 @@` 메서드 2개) — 기존 줄 변경 0. import 위치는 리드 승인안(42행 아래)과 달리 38행 아래(ruff I001 정렬 때문), 리드에 보고.
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
