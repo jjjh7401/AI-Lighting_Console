@@ -128,3 +128,87 @@ No other defects found within this commit's diff scope.
 1. (필수, D1) `spec.md:117`에 만료 고지를 추가해 "LDARRANGE 부재" 단언을 §1·§4·REQ-LDBARMAP-011과 같은 수준으로 현재화한다. 한 줄 편집으로 충분하며 REQ/AC 문면·개수에는 영향 없다.
 2. (선택, D2) AC-LDBARMAP-011 검사 3에 리터럴 grep 루프를 추가해 검사 1·2와 같은 수준의 기계적 실행 가능성을 맞춘다.
 3. D1 교정 후, 이 부분 감사의 재확인은 `grep -n '존재하지 않\|아직 없\|미정' .moai/specs/SPEC-LDBARMAP-001/spec.md`로 HISTORY/만료 고지 바깥에 잔존 단언이 없는지만 다시 확인하면 된다(전체 재감사 불필요 — delta 재감사).
+
+---
+
+## Iteration 2 (delta re-audit, 커밋 `d28f5702`)
+
+범위: iteration 1의 D1/D2 교정분(`git show HEAD` = `d28f5702`)만. Reasoning context ignored per M1 Context Isolation. 코디네이터 지시에 따라 LDARRANGE 자체의 REQ-001/AC-015/plan.md:6,46 문면은 **점수 산정에서 제외**(t529 HISTORY blanket 만료 고지로 이미 커버, REQ-LDARRANGE-001의 구속 — "실제 마디 지도 데이터 없이 생성하지 않음" — 은 여전히 참이므로 정당).
+
+**Verdict: FAIL**
+**Overall Score: N/A (must-pass 비동등 사유 — 아래 ## Regression Check 참조)**
+
+### Regression Check
+
+| 결함 | 상태 | 증거 |
+|---|---|---|
+| D1 (`spec.md:117`) | **RESOLVED** | `git diff HEAD~1 HEAD -- .moai/specs/SPEC-LDBARMAP-001/spec.md` 확인 — `(아직 존재하지 않음)` → `(만료 고지, 카드 t541: 최초 작성 시점에는 그 SPEC이 존재하지 않았다 — 같은 날 PR #570으로 생겼다.)`. 현재 117행 전문: "마디 지도(이 SPEC의 산출물)를 입력받아 역할별 배치를 자동으로 짜는 것은 `SPEC-LDARRANGE-001`의 몫이다 — 이 SPEC은 지도만 만든다. (만료 고지, 카드 t541: ...)" — 현재 사실과 모순 없음. |
+| 코디네이터가 iteration 1 누락으로 지적한 `plan.md:9` | **RESOLVED** | `git diff HEAD~1 HEAD -- .moai/specs/SPEC-LDBARMAP-001/plan.md` 확인 — `(역할×마디 자동 배치, 아직 존재하지 않음)` → `(역할×마디 자동 배치 — 최초 작성 시점에는 없었고 같은 날 PR #570으로 생겼다, 카드 t541 만료 고지)`. **인정**: 이 줄은 iteration 1 보고서의 check 항목 4(plan.md 포함 전체 재스캔)가 포괄해야 했는데 당시 grep을 `spec.md`로만 좁혀 실행해 놓쳤다 — iteration 1 self-critique로 기록한다. |
+| D2 (`acceptance.md` AC-LDBARMAP-011 검사 3) | **RESOLVED** | 아래 § D2 재실행 참조 — 리터럴 명령 추가 확인, 재실행 결과 iteration 1과 동일(회귀 없음). |
+
+### D2 재실행 — AC-LDBARMAP-011 검사 3 (양쪽 spec.md)
+
+`acceptance.md:138`에 추가된 명령(현재 문면):
+```
+실행 명령(저장소 루트, 각 파일에 대해): for f in schema_version bpm time_signature first_beat_offset 'bars\[\]' beats_ms 'events\[\]' start_beat; do sed -n '/^## 5\./,$p' <spec.md> | grep -c "$f"; done — 출력 8줄이 모두 1 이상.
+```
+
+실제 실행(순서: schema_version·bpm·time_signature·first_beat_offset·bars[]·beats_ms·events[]·start_beat):
+
+```
+=== SPEC-LDBARMAP-001/spec.md ===
+2
+1
+1
+2
+1
+2
+1
+3
+
+=== SPEC-LDARRANGE-001/spec.md ===
+1
+1
+1
+1
+1
+2
+1
+3
+```
+
+8줄 전부 ≥1 — **PASS**, iteration 1에서 수동으로 구성한 임시 명령의 결과와 **완전히 동일**(회귀 없음, 비공허성 재확인 불필요 — 필드 집합·범위를 건드리지 않았으므로).
+
+### 전체 재스캔 — spec.md·plan.md·acceptance.md 3개 파일, HISTORY/만료-고지 바깥의 "LDARRANGE 부재" 또는 "저장 모양 미정" 잔존 단언
+
+```bash
+$ grep -n '존재하지 않\|아직 없\|미정\|확정되지 않\|열려 있' .moai/specs/SPEC-LDBARMAP-001/{spec,plan,acceptance}.md
+```
+
+- **`plan.md`**: 0건 바깥(기존 매칭 없음, line 9 패턴 교정 뒤 재확인 — 깨끗).
+- **`acceptance.md`**: 매칭 2건 — 둘 다 적격. ① line 130 "교정 이력" 블록쿠트는 "최초 문면은 ... 이 단언은 만료됐다"로 스스로 명시적으로 만료 표시된 과거 인용. ② line 162 "이 plan-phase 시점(코드가 아직 없음)"은 M1 코드 부재(검출 로직 미구현)를 가리키는 서술로, LDARRANGE 존재 여부·bar-map 저장 모양과 무관(범위 밖).
+- **`spec.md`**: HISTORY(line 25~32) 제외 매칭 중 **1건 미교정 잔존**:
+
+  > **`.moai/specs/SPEC-LDBARMAP-001/spec.md:40`** (`## 1. 배경` 절, HISTORY 아님, 만료 고지 없음)
+  > > ... ③ 역할×마디 자동 배치(**`SPEC-LDARRANGE-001`, 아직 존재하지 않음** — 이 plan-phase에서 `ls .moai/specs/`로 확인) 이전이다.
+
+  이 문장은 iteration 1 HISTORY row(`spec.md:27`)가 "만료 고지: REQ-LDBARMAP-011 근거 칸과 **§1**·§4의 '`SPEC-LDARRANGE-001` 아직 존재하지 않음'은 최초 작성 시점의 사실이다"라고 **§1을 명시적으로 지목**하며 이미 해소됐다고 적어 놓았지만, 실제로 §1 본문(line 40)에는 그 만료 고지가 인라인으로 붙어 있지 않다 — HISTORY 표의 블랑켓 선언과 본문 문장이 분리된 채로 방치됐다. 117행(D1)·plan.md:9와 **같은 결함 범주**(같은 날 PR #570으로 해소된 사실을 아직 과거시제로 교정하지 않음)이며, 두 iteration 모두 이 자리를 놓쳤다 — **iteration 1 self-critique**: 당시 §1을 포함해 `spec.md` 전체를 grep했고 line 40이 출력에 실제로 찍혔는데도(1차 보고서 §4 grep 로그 참조), line 117만 결함으로 추출하고 line 40을 넘겼다. 같은 카테고리의 복수 인스턴스를 전수 확인하지 않은 전형적 누락.
+
+### Stagnation / Must-Pass 재평가
+
+- D1·D2는 **온전히 해소**됐고 회귀 없음(위 재실행 결과 iteration 1과 바이트 수준 동일).
+- 그러나 **같은 결함 범주의 미교정 인스턴스(spec.md:40)가 여전히 존재** — Retry Loop Contract의 "불완전 교정" 범주에 해당한다. 엄밀히는 D1(line 117)과 다른 식별자이므로 "동일 결함 3회 연속 불변(stagnation)"은 아니지만, HISTORY 표가 이미 "해소됐다"고 선언한 자리에 실제 교정이 빠진 것이므로 — **PASS 보류**.
+- Must-pass(MP-1~MP-7)는 iteration 1과 동일하게 전부 PASS/N/A — 이 결함은 must-pass 항목이 아니라 Completeness/Consistency 차원의 블로킹 결함(M6 분류: blocking)이다.
+
+### Defects Found (iteration 2, delta)
+
+D3. `spec-staleness-background-section` — `.moai/specs/SPEC-LDBARMAP-001/spec.md:40` (`## 1. 배경`) — "SPEC-LDARRANGE-001, 아직 존재하지 않음"이 HISTORY가 이미 만료 처리했다고 선언한 것과 달리 본문에 인라인 만료 고지 없이 현재시제로 남아 있음 — 현재 사실(LDARRANGE는 PR #570으로 이미 존재)과 모순. — Severity: major — Class: blocking — Required fix: line 117과 동일한 패턴으로 `(만료 고지, 카드 t541: 최초 작성 시점에는 그 SPEC이 존재하지 않았다 — 같은 날 PR #570으로 생겼다.)`를 인라인 부가하거나, 문장 자체를 "이전이다" → "이전이었다(이제는 PR #570으로 존재, §4 참조)" 식으로 현재화한다.
+
+D1(iteration 1, `spec.md:117`) — **RESOLVED**, 증거 위 표.
+D2(iteration 1, `acceptance.md:138`) — **RESOLVED**, 증거 위 재실행.
+
+### Recommendation (iteration 2)
+
+1. (필수, D3) `spec.md:40`에 D1과 동일한 패턴의 만료 고지를 추가한다 — 한 줄 편집, REQ/AC 문면·개수 영향 없음.
+2. D3 교정 후 재확인은 동일 grep 1회(`spec.md` 전체, HISTORY 제외)로 충분 — 이번에는 출력에 남는 줄이 하나도 없어야 한다.
+3. 전체 3회 iteration cap(plan-auditor Retry Loop Contract) 기준으로 이번이 iteration 2이므로, iteration 3에서 D3가 또 남으면 stagnation 플래그(동일 카테고리 결함 3회차 무진전)로 격상해 사용자 개입을 권고한다.

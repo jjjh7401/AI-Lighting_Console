@@ -37,7 +37,7 @@ related_specs: [SPEC-LDRHYTHM-001, SPEC-LDBEAT-001]
 
 ## 1. 배경 — 곡은 BPM 숫자 하나로만 조명에 닿는다
 
-`reports/ldbeat-feasibility-roadmap-20261010.md`(리드, 2026-10-10)가 "없는 것"으로 적은 첫 항목: 「마디 단위 곡 분석 — `analyze.py` 비트 시각은 BPM 계산에만 쓰고 저장 안 함, 다운비트 생산자 0(LDRHYTHM REQ-012 재확인)」. 이 SPEC은 이 보고서 §5 진행 순서의 **②**다 — ① LDBEAT(손으로 짠 LOVE ATTACK 배치를 화면+송신으로 완성) 다음, ③ 역할×마디 자동 배치(SPEC-LDARRANGE-001, 아직 존재하지 않음 — 이 plan-phase에서 `ls .moai/specs/`로 확인) 이전이다.
+`reports/ldbeat-feasibility-roadmap-20261010.md`(리드, 2026-10-10)가 "없는 것"으로 적은 첫 항목: 「마디 단위 곡 분석 — `analyze.py` 비트 시각은 BPM 계산에만 쓰고 저장 안 함, 다운비트 생산자 0(LDRHYTHM REQ-012 재확인)」. 이 SPEC은 이 보고서 §5 진행 순서의 **②**다 — ① LDBEAT(손으로 짠 LOVE ATTACK 배치를 화면+송신으로 완성) 다음, ③ 역할×마디 자동 배치(SPEC-LDARRANGE-001 — 최초 작성 시점에는 없었다(이 plan-phase에서 `ls .moai/specs/`로 확인), 같은 날 PR #570으로 생겼다, 카드 t541 만료 고지) 이전이다.
 
 이 plan-phase가 이 plan-phase 자신의 재측정으로 확정한 것 [잰 값]:
 
