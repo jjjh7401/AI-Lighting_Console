@@ -1124,6 +1124,7 @@ export default function App() {
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
+            sections={state.songTimeline.timeline?.sections}
           />
         </div>
       ) : runbookMode ? (

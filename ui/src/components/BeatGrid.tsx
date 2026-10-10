@@ -365,6 +365,10 @@ export interface BeatGridProps {
    * 채운다) — 넘기지 않으면(또는 번호가 이 표에 없으면) 그 칸은 항상
    * 중립(미정)으로 보인다. 임의 색으로 지어내 칠하지 않는다. */
   colorPresetHex?: Readonly<Record<string, string>>;
+  /** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠(REQ-LDBEAT-004(a)). 이미
+   * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
+   * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
+  sections?: readonly BeatGridSectionLite[];
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -457,12 +461,73 @@ export function sceneMemoForBar(
   return memos.find((memo) => memo.bar === rowStart) ?? null;
 }
 
+/** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠를 derive하는 데 필요한
+ * 최소 필드. `ui/src/protocol.ts`의 `SongTimelineSection`은 상위집합이라
+ * 그대로 넘겨도 된다(구조적 타이핑). */
+export interface BeatGridSectionLite {
+  label: string;
+  start_ms: number;
+  palette_primary_hex?: string | null;
+}
+
+export interface BeatGridSectionBlock {
+  label: string;
+  startBar: number;
+  /** 배타적 — 다음 구간이 시작하는 마디(또는 표시 범위 끝+1). */
+  endBar: number;
+  hex: string | null;
+}
+
+/** 구간 레이블(`sections[].label`, 이미 서버가 보내는 값)을 `start_ms`
+ * → 그 곡 BPM(`secondsPerBar`, `barToSeconds`의 역수 관계 — REQ-LDBEAT-
+ * 005(b)와 같은 환산)으로 마디 위치로 옮긴다. 추측·보간 없음: 둘 중
+ * 하나라도 없으면(구간 데이터 없음, BPM 미확정) 빈 배열 — 호출부가 숫자
+ * 띠로 조용히 떨어진다(지어내지 않음). 표시 범위(`rangeStart`~`rangeEnd`)
+ * 밖으로 완전히 벗어난 구간은 뺀다. */
+export function deriveSectionBlocks(
+  sections: readonly BeatGridSectionLite[] | undefined,
+  secondsPerBar: number | null | undefined,
+  rangeStart: number,
+  rangeEnd: number,
+): BeatGridSectionBlock[] {
+  if (!sections || sections.length === 0) return [];
+  if (!secondsPerBar || !Number.isFinite(secondsPerBar) || secondsPerBar <= 0) return [];
+  const withBars = sections
+    .map((section) => ({
+      label: section.label,
+      startBar: Math.max(0, Math.round(section.start_ms / 1000 / secondsPerBar)),
+      hex: section.palette_primary_hex ?? null,
+    }))
+    .sort((a, b) => a.startBar - b.startBar);
+  const blocks: BeatGridSectionBlock[] = [];
+  for (let i = 0; i < withBars.length; i++) {
+    const current = withBars[i];
+    const next = withBars[i + 1];
+    const blockEnd = next ? next.startBar : rangeEnd + 1;
+    const clippedStart = Math.max(current.startBar, rangeStart);
+    const clippedEnd = Math.min(blockEnd, rangeEnd + 1);
+    if (clippedStart > rangeEnd || clippedEnd <= clippedStart) continue;
+    blocks.push({ label: current.label, startBar: clippedStart, endBar: clippedEnd, hex: current.hex });
+  }
+  return blocks;
+}
+
+/** 곡 전체 지도 위 SCENE 메모 배지의 가로 위치(%) — 표시 범위 안에서
+ * `bar`의 상대 위치다. flexbox 기반 구간 띠는 정확한 픽셀 경계를 미리
+ * 알 수 없어서(브라우저가 레이아웃한다), 오버레이는 퍼센트로 둔다. */
+export function barPercentInRange(bar: number, rangeStart: number, rangeEnd: number): number {
+  const span = rangeEnd - rangeStart + 1;
+  if (span <= 0) return 0;
+  return ((bar - rangeStart) / span) * 100;
+}
+
 export function BeatGrid({
   grid,
   fixtures = [],
   probeResults,
   secondsPerBar = null,
   colorPresetHex,
+  sections,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -524,6 +589,13 @@ export function BeatGrid({
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
   const viewBar = selected?.bar ?? grid.bar_range.start;
   const viewBarSceneMemo = sceneMemoForBar(grid.scene_memos, viewBar);
+  // t537 레이아웃 교정 — 곡 전체 지도 구간 띠(데이터 없으면 빈 배열, 호출부가
+  // 숫자 띠로 떨어진다) + SCENE 메모 오버레이의 퍼센트 위치 헬퍼.
+  const sectionBlocks = useMemo(
+    () => deriveSectionBlocks(sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end),
+    [sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end],
+  );
+  const barPercent = (bar: number) => barPercentInRange(bar, grid.bar_range.start, grid.bar_range.end);
   // 카드 t534 — 재생 위치를 마디로 환산(음원 동기가 없으면 null, 지어내지
   // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
@@ -556,23 +628,54 @@ export function BeatGrid({
         </span>
       </header>
 
-      {/* ① 곡 전체 지도 — 0~25마디 표시 범위를 한 줄로. SCENE 메모가 있는
-          행은 「미정」 표식을 단다(t537 ②, 리드 지시) — 역할·효과 혼성이라
-          트랙에 못 옮긴 §4 값이 있다는 뜻이다. */}
+      {/* ① 곡 전체 지도 — 시안처럼 구간(인트로/벌스/코러스…) 블록 띠(REQ-
+          LDBEAT-004(a)). 구간 레이블은 `timeline.sections`(서버가 이미
+          보내는 값)에서, 블록 경계는 `start_ms`를 그 곡 BPM(`secondsPerBar`)
+          으로 마디 환산해 derive한다(지어내지 않음 — REQ-LDBEAT-005(b)와
+          같은 환산) — 그 데이터가 없으면(secondsPerBar 미확정 등) 기존
+          7칸 숫자 띠로 조용히 떨어진다(추측 대신 "아는 만큼만"). SCENE
+          메모가 걸린 마디는 그 위에 퍼센트 위치로 겹쳐 그린 「미정」
+          배지로 보여준다(t537 ②, 리드 지시). 시안처럼 "전체 곡 중 지금
+          보는 범위를 강조"는 전체 곡 길이(마디 수) 데이터가 아직 없어
+          못 했다 — 지도 자체가 그 표시 범위(0~25마디)다(§Gaps). */}
       <div className="beat-grid-overview" role="img" aria-label="곡 전체 지도">
-        {BEAT_GRID_BAR_ROWS.map(([start, end]) => {
-          const memo = sceneMemoForBar(grid.scene_memos, start);
-          return (
+        <div className="beat-grid-overview-track">
+          {sectionBlocks.length > 0
+            ? sectionBlocks.map((block) => (
+                <span
+                  key={`${block.label}-${block.startBar}`}
+                  className={`beat-grid-overview-section${
+                    viewBar >= block.startBar && viewBar < block.endBar ? " is-current" : ""
+                  }`}
+                  style={{ flexGrow: block.endBar - block.startBar, background: block.hex ?? undefined }}
+                  title={`${block.label} · ${block.startBar}~${block.endBar - 1}마디`}
+                >
+                  {block.label}
+                </span>
+              ))
+            : BEAT_GRID_BAR_ROWS.map(([start, end]) => (
+                <span
+                  key={start}
+                  className={`beat-grid-overview-section${barRowIndex(viewBar) === barRowIndex(start) ? " is-current" : ""}`}
+                  style={{ flexGrow: end - start + 1 }}
+                  title={`${start}~${end}마디`}
+                >
+                  {start}
+                </span>
+              ))}
+        </div>
+        <div className="beat-grid-overview-memos">
+          {grid.scene_memos.map((memo) => (
             <span
-              key={start}
-              className={`beat-grid-ov-cell${barRowIndex(viewBar) === barRowIndex(start) ? " is-current" : ""}${memo ? " has-scene-memo" : ""}`}
-              title={memo ? `${start}~${end}마디 · ${memo.text}` : `${start}~${end}마디`}
+              key={memo.bar}
+              className="beat-grid-overview-memo-marker"
+              style={{ left: `${barPercent(memo.bar)}%` }}
+              title={memo.text}
             >
-              {start}
-              {memo && <span className="beat-grid-scene-memo-badge">미정</span>}
+              ⚠ 미정
             </span>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       <div className="beat-grid-toolbar">
@@ -608,8 +711,11 @@ export function BeatGrid({
       {/* ② 그룹-트랙 타임라인 — 마디 시간축 위 칸 막대(카드 t534, REQ-LDBEAT-004).
           곡 전체 지도·자(마디 눈금)는 `.beat-grid-lanes` 스크롤 안에서
           `position:sticky`로 위에 고정되고, 폴더는 좌우 스크롤 + 한 화면
-          고정 높이(REQ-LDBEAT-004(b)). */}
-      <div className="beat-grid-body">
+          고정 높이(REQ-LDBEAT-004(b)). t537 레이아웃 교정 — 타임라인과
+          큐 편집 칸을 한 줄(`.beat-grid-mid`)에 나란히(시안 `.mid` =
+          `.lanes`+`.sidepane`), 무대·한눈에는 그 아래 별도 띠(아래
+          `.beat-grid-insp`)로 뺐다. */}
+      <div className="beat-grid-mid">
         <div className="beat-grid-lanes" role="table" aria-label="콘솔 그룹 트랙 타임라인">
           {/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`). */}
           <div className="beat-grid-ruler-row">
@@ -744,65 +850,8 @@ export function BeatGrid({
           )}
         </div>
 
-        {/* ③ 상세 창 — 2D 무대 + 이 마디 한눈에. */}
-        <div className="beat-grid-detail">
-          <div className="beat-grid-stage-pane">
-            <h5>무대 (2D)</h5>
-            {stageBounds ? (
-              <svg viewBox={`0 0 ${STAGE_VIEW_W} ${STAGE_VIEW_H}`} className="beat-grid-stage">
-                {fixtures.map((fixture) => {
-                  const { cx, cy } = projectFixture(fixture, stageBounds);
-                  return (
-                    <circle
-                      key={fixture.fid}
-                      cx={cx}
-                      cy={cy}
-                      r={3}
-                      fill={fixtureDisplayColor(fixture, grid.tracks)}
-                      opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
-                    >
-                      <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
-                    </circle>
-                  );
-                })}
-              </svg>
-            ) : (
-              <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
-            )}
-            <p className="beat-grid-stage-note">
-              위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
-              (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
-            </p>
-          </div>
-
-          <div className="beat-grid-glance-pane">
-            <h5>이 마디 한눈에 — {viewBar}마디</h5>
-            {/* t537 ② — 이 행에 걸린 SCENE 메모(§4 역할·효과 혼성 값, 트랙에
-                못 옮긴 자리)를 표 위에 그대로 보여준다 — 추측해 채우지 않고
-                「미정」으로 남긴 이유를 그 자리에서 읽을 수 있게 한다. */}
-            {viewBarSceneMemo && (
-              <p className="beat-grid-scene-memo-note">
-                ⚠ {viewBarSceneMemo.text}
-                <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.source_ref})</span>
-              </p>
-            )}
-            <table className="beat-grid-glance-table">
-              <tbody>
-                {grid.tracks.map((track) => {
-                  const cue = cueForBar(track, viewBar);
-                  return (
-                    <tr key={track.group_name}>
-                      <td>{track.group_name}</td>
-                      <td>{cue ? cue.label : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 큐 편집 칸 — 시안처럼 "오른쪽 칸에 늘 있음"(선택 전엔 빈 안내).
+        {/* 큐 편집 칸 — 시안처럼 "타임라인 바로 오른쪽에 늘 있음"(선택 전엔
+            빈 안내, t537 레이아웃 교정 — `.beat-grid-mid`의 두 번째 칸).
             M2/M3 경계: 값 표시는 읽기 전용이고, 밝기/위치/색/들어올 때
             네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)) — 편집 반영은 M3. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
@@ -909,6 +958,65 @@ export function BeatGrid({
             </p>
           )}
         </aside>
+      </div>
+
+      {/* ③ 하단 띠 — 2D 무대(왼쪽) + 이 마디 한눈에(오른쪽), 시안 `.insp`와
+          같은 자리(타임라인 아래, 고정 높이, t537 레이아웃 교정). */}
+      <div className="beat-grid-insp">
+        <div className="beat-grid-stage-pane">
+          <h5>무대 (2D)</h5>
+          {stageBounds ? (
+            <svg viewBox={`0 0 ${STAGE_VIEW_W} ${STAGE_VIEW_H}`} className="beat-grid-stage">
+              {fixtures.map((fixture) => {
+                const { cx, cy } = projectFixture(fixture, stageBounds);
+                return (
+                  <circle
+                    key={fixture.fid}
+                    cx={cx}
+                    cy={cy}
+                    r={3}
+                    fill={fixtureDisplayColor(fixture, grid.tracks)}
+                    opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
+                  >
+                    <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
+                  </circle>
+                );
+              })}
+            </svg>
+          ) : (
+            <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
+          )}
+          <p className="beat-grid-stage-note">
+            위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
+            (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
+          </p>
+        </div>
+
+        <div className="beat-grid-glance-pane">
+          <h5>이 마디 한눈에 — {viewBar}마디</h5>
+          {/* t537 ② — 이 행에 걸린 SCENE 메모(§4 역할·효과 혼성 값, 트랙에
+              못 옮긴 자리)를 표 위에 그대로 보여준다 — 추측해 채우지 않고
+              「미정」으로 남긴 이유를 그 자리에서 읽을 수 있게 한다. */}
+          {viewBarSceneMemo && (
+            <p className="beat-grid-scene-memo-note">
+              ⚠ {viewBarSceneMemo.text}
+              <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.source_ref})</span>
+            </p>
+          )}
+          <table className="beat-grid-glance-table">
+            <tbody>
+              {grid.tracks.map((track) => {
+                const cue = cueForBar(track, viewBar);
+                return (
+                  <tr key={track.group_name}>
+                    <td>{track.group_name}</td>
+                    <td>{cue ? cue.label : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 하단 명령 입력 — M3 배선 전까지 제출 두 경로 모두 비활성. */}
