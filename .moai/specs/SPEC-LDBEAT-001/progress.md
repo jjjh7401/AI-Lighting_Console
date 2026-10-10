@@ -179,6 +179,20 @@ $ git diff --stat origin/main -- ui/src/components/CueSheetTimeline.tsx 'CueShee
 - **클릭 상호작용 자체의 DOM 시험** — `BeatGrid`는 훅을 쓰므로(RunbookMode/DashBoard와 다른 관례) 이 프로젝트의 무-jsdom 시험대로는 렌더/클릭을 단위 시험할 수 없다(기존 M2도 같은 경계) — 선택·클릭 동작은 헤드리스 캡처(`implemented_selected.png`, `?select=` 쿼리로 버튼 클릭을 흉내)로만 확인했고, 자동화된 회귀 시험은 아니다.
 - **1280px보다 좁은 화면에서의 좌우 스크롤 체감** — 헤드리스 캡처는 고정 뷰포트 한 장이라, 실제 좌우 스크롤로 26마디 전체를 넘겨 보는 느낌(줄 이름 칸이 계속 고정되는지)은 스크린샷 여러 장을 비교하지 않는 한 직접 보지 못했다 — CSS `position:sticky`가 맞게 동작한다는 것은 브라우저 표준 동작에 근거한 것이지, 스크롤하며 눈으로 확인한 것은 아니다.
 
+### t537 ① plan 개정
+
+기준 `640235f5`(origin/main, PR#581 = 카드 t534 포함). 작업 내용: plan-phase 개정뿐 — 코드 diff 0줄, 콘솔 접촉 0건. 감독 결정(2026-10-10, 리드 경유) 「전체 화면 + 속성별 값」을 spec.md/plan.md/acceptance.md에 반영했다.
+
+- **App.tsx 금지 완화**: REQ-LDBEAT-004(a)(g)를 교정 — 박자 격자는 런북 모드 안의 **독립 전체화면 뷰**이고(기존 5블록 사이 블록이 아니다), `App.tsx`의 `runbookMode` 참 분기 안에 그 뷰로의 전환을 추가하는 것은 더 이상 범위 밖이 아니다. 코파일럿 **메인** 화면(`runbookMode` 거짓)은 그대로 PRESERVE. `CueSheetTimeline*`·`emit*`·`songcue*`·`cue_sheet_edit*`·`console/lua/**`도 그대로 금지.
+- **칸 데이터 구조화**: REQ-LDBEAT-006에 (i)~(iii) 신설 — `BeatGridCue`를 단일 `label`에서 밝기(`brightness`: 값/디머 프리셋/디머 효과 중 정확히 하나)·`position_preset_no`·`color_preset_no`·`effect_preset_no`·들어올 때(`entry`: 페이드초+MIB)로 구조화한다. 레거시 `{bar,label}` 칸은 다섯 필드를 전부 미정(`null`)으로 두고 `label`만 그대로 보여준다(파싱·추측 금지). REQ-LDBEAT-004(h) 겹침 거절(트랙 레벨 `group_name` 비교)은 이 칸 레벨 변경과 독립임을 재확인(`server/design/beat_grid.py` 재독).
+- **미정 하드룰**: REQ-LDBEAT-015(f) 신설 — 배치 규칙서(§2~§4)·t525류 실측 출처 없는 프리셋 번호는 지어내지 않고 미정(`null`)으로 남긴다. **실측**: `reports/effect-arrangement-rules-20261007.md` §4(0~25마디 격자) 전수 재독 — 프리셋 **번호는 0개**(전부 정성 서술). §2 "그룹(선택 하나)" 칸의 숫자(Group 4/7/11/12)는 트랙의 콘솔 그룹 번호이지 칸 레벨 프리셋 번호가 아니다. `server/design/beat_grid.py` `_love_attack_tracks()`의 기존 30개 큐(BACK 7·SIDE-ALL 7·MOVER-U 7·MOVER-D 7·BLIND 2·STROBE 0)는 전부 `label` 자유 텍스트뿐이라 이 규칙과 충돌하지 않는다 — M3/M7 구조화 시 30개 전부의 네 프리셋 필드는 미정에서 시작(지어낸 번호 0건). `reports/ldbeat-runbook-ui-proposal-20261008.html`의 `P` 객체(`4.21`·`2.41`·`1.31` 등)는 그 시안 자신이 지어낸 예시 데이터이고 배치 규칙서의 출처가 아니다 — 베끼면 이 규칙 위반.
+- **M1 상태 실시간 읽기**: REQ-LDBEAT-003(b) 신설 — 화면의 M1 9항목 판정은 `progress.md`를 읽어 오는 살아있는 소스여야 하며, 손으로 옮긴 TS 상수(`ui/src/components/beatGridM1Probes.ts`, 카드 t534 신설)로 영구히 대체하는 것은 금지다 — 이 바로 위 M2 후속 절이 스스로 적어 둔 "M1 프로브 상수가 낡을 수 있음" 위험을 REQ로 못박았다.
+- **plan.md**: §A 범위·§B 위험(12·13 신설)·§D 제약(2건 신설)·§E M7 신설(전체화면 전환 + 칸 구조화 + M1 실시간 읽기 + 막대 채우기 미정 렌더 규칙 + 시안 대조 캡처, 결정 번복 비용 순)·§F 안티패턴(4건 신설)·§G 교차 참조(`beat_grid.py`/`protocol.ts`/`beatGridM1Probes.ts` 좌표 추가)를 갱신했다.
+- **acceptance.md**: AC-LDBEAT-003(d)·AC-LDBEAT-009(c)·AC-LDBEAT-016(e) 하위 시나리오 신설(새 AC-ID 없음, 16/16 유지), §A.1에 REQ-006→AC-016(e) 추가 매핑, §D DoD에 5개 항목 신설.
+- **REQ/AC 총량 불변** — REQ 15개(기존 REQ-003/004/006/015에 하위 절만 추가), AC 16개(기존 AC에 하위 시나리오만 추가). version 0.2.1→0.3.0. plan-audit 재실행 필요(다음 run-phase 착수 전).
+- **배치 규칙서 §4 측정 결과(이 개정의 핵심 실측)**: 프리셋 번호 기재 0개 / 미정 대상 30개 큐 × 4필드(brightness preset/position/color/effect) = 최대 120개 필드 슬롯, 전부 미정으로 시작해야 함(배치 규칙서가 준 숫자가 전무하므로).
+- **열지 못한 결정**: §5 항목 6(전체화면 전환 트리거의 정확한 UI 모양 — 탭/버튼/자리)은 입력 보고서에 명시가 없어 M2(phase ②)가 director와 확정하도록 열어 두었다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
