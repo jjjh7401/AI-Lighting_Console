@@ -1004,6 +1004,18 @@ export function BeatGrid({
                           value: selectedCue.effect_kind ? `${effectValue} (${selectedCue.effect_kind})` : effectValue,
                         });
                       }
+                      // t548 — 앱 2단계 무빙(REQ-LDBEAT-006(vi))과 근거 등급(vii)은
+                      // 값이 있는 칸에서만 보인다. 경고 둘은 거절이 아니라 표시다.
+                      if (selectedCue.app_movement) {
+                        rows.push({ field: "앱 무빙", value: formatAppMovementField(selectedCue.app_movement) });
+                      }
+                      if (selectedCue.evidence) {
+                        rows.push({ field: "근거", value: formatEvidenceField(selectedCue.evidence) });
+                      }
+                      const axisConflict = appMovementAxisConflictWarning(selectedCue);
+                      if (axisConflict) rows.push({ field: "같은 축", value: axisConflict });
+                      const panOnly = panOnlyVerticalBaseWarning(selectedCue);
+                      if (panOnly) rows.push({ field: "기준 위치", value: panOnly });
                     }
                     return rows.map((row) => (
                       <div className="beat-grid-cue-field" key={row.field}>

@@ -171,10 +171,13 @@ $ cd ui && npx tsc --noEmit
   `period_value` 둘 다 `None`으로 남겼다 — M9+에서 실기 프로브로 확정될 때까지
   이 칸의 명령은 `app_movement_commands`가 "period_value가 양의 정수가
   아닙니다" 사유로 거절한다(의도된 동작, 지어내지 않음).
-- MOVER-D 두 칸(app_movement)의 실기 **쓰기**는 범위 밖이다 — 라이브
-  프로브는 리허설+전부-거절까지만 실행했고(`.moai/reports/t548/
-  probe-moverd.md` "실행 명령" 절은 "리드 「실행」 뒤에만"으로 막혀 있다),
-  실제 Store/화면 확인은 이번 M8 run-phase에 포함되지 않는다.
+- 이 에미터(`app_movement_commands`)가 낸 명령은 콘솔에 보내지 않았다 — 이번
+  M8 run-phase 의 콘솔 쓰기는 0줄이다. (정정, 오케스트레이터: 이전 문면의
+  「라이브 프로브는 리허설+전부-거절까지만」은 틀렸다. MOVER-D 실기 프로브는
+  2026-10-11 리드 「실행」 뒤 콘솔에서 실행돼 Dimmer2 필요·틸트 웨이브·원·
+  기울인 자리 팬 웨이브 움직임을 확인했다 — `reports/t548-moverd-probe-20261011.md`.
+  그 프로브는 손으로 쓴 승인 목록이었고, 이 에미터의 출력과 바이트 대조는 하지
+  않았다.)
 - `app_movement_commands`가 `shape != "wave"`인 경우(sweep/flyout/circle/
   ballyhoo) 명시적으로 거절한다(추측 구현 금지) — 이 M8의 LOVE ATTACK
   데이터는 네 목표 칸 모두 `shape="wave"`뿐이라 다른 shape 경로는 실기로
@@ -187,12 +190,13 @@ $ cd ui && npx tsc --noEmit
   실제로 전부 승인까지 받았으므로 이 해석차가 현재 데이터에서는 드러나지
   않는다 — 향후 "measured인데 미승인"인 칸이 생기면 이 규칙의 엄격함을
   재확인해야 한다.
-- UI 쪽 `appMovementAxisConflictWarning`/`panOnlyVerticalBaseWarning`은
-  순수 함수로만 시험했다 — 실제 셀 편집 패널(JSX)에 이 경고를 렌더링해
-  배선하는 것은 이 M8 작업에서 **하지 않았다**(배차서는 "표시 추가" +
-  "순수 함수 단위시험"을 요구했고, 이 저장소에 DOM 시험대가 없어
-  `sceneMemoMarkers`와 같이 함수만 내보냈다 — 실제 JSX 배선은 이 리포트가
-  관측하지 않은 추가 작업이다).
+- UI 표시 네 함수(`formatAppMovementField`·`formatEvidenceField`·
+  `appMovementAxisConflictWarning`·`panOnlyVerticalBaseWarning`)는 순수 함수로
+  시험했다. (정정, 오케스트레이터: 구현 직후에는 네 함수 모두 정의만 있고 화면
+  어디에서도 불리지 않았다 — `grep` 호출처 0건. 오케스트레이터가 칸 편집 패널
+  `BeatGrid.tsx` 의 행 목록에 「앱 무빙」·「근거」·「같은 축」·「기준 위치」 네
+  행으로 배선했다.) 이 저장소엔 DOM 시험대가 없어 실제 화면 렌더는 눈으로
+  확인하지 않았다 — 타입 검사와 vitest 로만 확인했다.
 - `brightness_value_commands`/`dimmer_attribute_names`는 이번 4개 목표
   칸(app_movement) 자체에는 쓰이지 않는다(그 칸들은 `brightness`가 미정) —
   리드 추가 지시가 요구한 Dimmer-패밀리 전수 출력은 단위시험으로만
