@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import io
+import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -412,13 +413,28 @@ _KICK_ENTRY_LOW_BAND_RATIO = 2.0
 #: 위 킥 진입 문턱과 같은 이유로 0.45로 낮췄다(두 정답지 소스 모두 7/7 재현).
 _BREAK_LOW_BAND_RATIO = 0.45
 
-#: 브레이크 — 또는 마디 안 온셋 개수가 이 값 이하(단위: 개). 저역 문턱의 여유
-#: 신호다(지도 보고서 §2.1 "타악 온셋 6개(평소 15 안팎)"도 온셋 개수를 함께
-#: 언급한다) — ``onset_count`` 를 재지 못한 특징(예: 지도 보고서 수치표 기반
-#: 고정 픽스처, 온셋 열이 없다)에는 적용하지 않는다(``onset_count is None`` 이면
-#: 이 OR 분기를 건너뛴다 — 그렇지 않으면 "0"을 "온셋 0개"로 잘못 읽어 모든
-#: 마디가 브레이크로 분류되는 결함이 생긴다).
-_BREAK_MAX_ONSET_COUNT = 2
+#: 브레이크 — 또는 (저역이 이 배수 이하 AND 마디 안 온셋 개수가 곡 자신의 온셋
+#: 중앙값 대비 이 비율 이하)인 마디(단위: 배 / 무단위 비율, 카드 t535 교정).
+#:
+#: **왜 바뀌었나(실측, 계기 척도 불일치)**: 이전 버전은 온셋 개수에 절대 상수
+#: (≤2개)를 썼다 — 그 상수는 지도 보고서 §2.1 "타악 온셋 6개(평소 15 안팎)"의
+#: 척도에서 따왔는데, 그 "평소 15 안팎"은 보고서 전용 온셋 계기
+#: (``measure_music_map.py``, 이 저장소에 없음)의 눈금이다. 이 모듈의
+#: ``librosa.onset.onset_detect``는 같은 곡에서 **마디당 중앙값 4개**(실측,
+#: LOVE ATTACK 82마디)를 낸다 — 다른 계기가 다른 척도로 "온셋 개수"를 재는데도
+#: 절대 상수를 그대로 썼더니, 저역이 전혀 낮지 않은(≈1.0배, 즉 조용하지 않은)
+#: 마디까지 온셋 하나만으로 브레이크로 잘못 분류됐다(실측: 15건의 브레이크
+#: 검출 중 14건이 이 온셋 분기만으로 나왔고, 그중 다수가 저역 0.9~1.2배 구간
+#: — 지도 보고서 "순간" 칸 근거와 대조한 정밀도는 8/18 ≈ 44.4%, AC-LDBARMAP-007
+#: 정밀도 문턱 70% 에 크게 못 미친다, progress.md §E.2 M3 "리드 재측정 메모").
+#: 진짜 킥 멈춤은 저역**과** 온셋이 **함께** 떨어진다(음악적으로 당연하다 —
+#: 타악이 빠지면 저역도 온셋도 같이 준다) — 그래서 온셋을 절대 상수가 아니라
+#: 곡 자신의 온셋 중앙값(``statistics.median``, ``onset_count`` 를 잰 마디만
+#: 대상) 대비 비율로 재고, 저역 완화(dip)와 **AND** 로 묶는 쪽으로 고쳤다.
+#: 두 상수 모두 이 SPEC이 처음 도입한다(실음원 실측으로 고름, "과적합 가드"
+#: 절과 같은 원칙 — 이 두 곡 한정 숫자가 아니라 척도 불일치를 바로잡는 비율).
+_BREAK_DIP_LOW_BAND_RATIO = 0.7
+_BREAK_ONSET_FRACTION_OF_MEDIAN = 0.25
 
 #: 빌드업 — 큰 히트 직전에 음량이 이 마디 수 이상 연속 상승(단위: 마디).
 #: 지도 보고서 §1 순간 규칙표("큰 히트 직전에 음량이 3마디 이상 연달아 오름")를
@@ -453,8 +469,8 @@ class BarFeatures:
     이면 이 특징을 재지 못했다는 뜻이고, 드롭 분류만 건너뛴다(킥 진입·빌드업·
     브레이크는 영향받지 않는다). ``onset_count`` 도 ``None`` 이면(예: 지도 보고서
     수치표만으로 합성한 고정 픽스처 — 온셋 열이 없다) 브레이크 판정에서 그
-    분기만 건너뛴다(``_BREAK_MAX_ONSET_COUNT`` 주석 참조) — "0개"로 잘못 읽지
-    않는다.
+    마디는 온셋 중앙값 계산과 온셋 기반 분기 양쪽에서 제외된다(``_BREAK_DIP_LOW_BAND_RATIO``
+    주석 참조) — "0개"로 잘못 읽지 않는다.
     """
 
     bar: int
@@ -612,11 +628,20 @@ def classify_bar_events(features: Sequence[BarFeatures]) -> list[BarEvent]:
     kick_bars = sorted(
         bar for bar, f in by_bar.items() if f.low_band_norm >= _KICK_ENTRY_LOW_BAND_RATIO
     )
+    # 온셋 중앙값은 ``onset_count`` 를 실제로 잰 마디만으로 계산한다 — None을
+    # "0개"로 섞으면 중앙값이 왜곡된다(카드 t535, _BREAK_DIP_LOW_BAND_RATIO 주석 참조).
+    measured_onsets = [f.onset_count for f in by_bar.values() if f.onset_count is not None]
+    median_onset = statistics.median(measured_onsets) if measured_onsets else None
     break_bars = sorted(
         bar
         for bar, f in by_bar.items()
         if f.low_band_norm <= _BREAK_LOW_BAND_RATIO
-        or (f.onset_count is not None and f.onset_count <= _BREAK_MAX_ONSET_COUNT)
+        or (
+            median_onset is not None
+            and f.onset_count is not None
+            and f.low_band_norm <= _BREAK_DIP_LOW_BAND_RATIO
+            and f.onset_count <= _BREAK_ONSET_FRACTION_OF_MEDIAN * median_onset
+        )
     )
     drop_bars = sorted(
         bar

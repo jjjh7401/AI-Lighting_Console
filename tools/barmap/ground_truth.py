@@ -1,6 +1,7 @@
-"""정답지 파서 — 지도 보고서 부록 A(82마디) + acceptance.md AC-007(7개 사건).
+"""정답지 파서 — 지도 보고서 부록 A(82마디) + acceptance.md AC-007(7개 사건) +
+부록 A "순간" 칸의 정밀도 증거 표시(카드 t535).
 
-두 표 모두 정규식으로 원문 마크다운에서 직접 파싱한다(하드코딩 사본을 두지 않는다
+세 표 모두 정규식으로 원문 마크다운에서 직접 파싱한다(하드코딩 사본을 두지 않는다
 — 정답지가 바뀌면 이 파서가 다시 읽어 저절로 반영된다).
 
 REQ-LDBARMAP-004/005/007/008/009 근거.
@@ -185,6 +186,66 @@ def parse_events(acceptance_path: Path = DEFAULT_ACCEPTANCE_PATH) -> list[TruthE
             f"정답지 표 형식이 바뀌었는지 확인하세요: {events}"
         )
     return events
+
+
+#: acceptance.md AC-LDBARMAP-007 정밀도 조건의 증거 종류 2개(카드 t535,
+#: 2026-10-10) — 점 사건(point event)만. ``build``·``drop``은 이 정밀도
+#: 조건의 분모 밖이다(§ 정밀도 조건 "분모(모집단)" 참조).
+_PRECISION_EVIDENCE_KINDS = ("break", "kick_entry")
+
+
+def parse_precision_evidence(
+    report_path: Path = DEFAULT_REPORT_PATH,
+) -> dict[str, frozenset[int]]:
+    """부록 A "순간" 칸에서 AC-LDBARMAP-007 정밀도 조건의 증거 표시를 뽑는다
+    (카드 t535 — 정규식으로 원문에서 직접 파싱, acceptance.md의 표를 하드코딩
+    사본으로 베끼지 않는다. acceptance.md § 정밀도 조건의 표 자체가 "이 표는
+    부록 A '순간' 칸의 한 시점 스냅샷이다"라고 밝히므로, 스냅샷이 아니라
+    원본을 읽는다).
+
+    규칙(acceptance.md AC-LDBARMAP-007 § 근거 있음 판정과 동일):
+
+    * ``break`` — "순간" 칸에 "브레이크" 또는 "킥 빠짐"이 있는 마디.
+    * ``kick_entry`` — "큰 히트"가 있는 마디, **합집합** "상승 진입"이 있으면서
+      "빌드업"이 **없는** 마디(17마디 제외 규칙 — acceptance.md § "17마디
+      제외" 교정. 17마디는 "상승 진입(음량 119%) · 빌드업"으로 겹쳐 적혀
+      있지만 빌드업 1(14~17마디)의 꼬리 마디이지 kick_entry 시작이 아니다).
+
+    돌려주는 값은 각 종류의 증거 마디 번호 집합(1-base, frozenset — 순서
+    무의미, 멤버십만 쓴다).
+    """
+    text = report_path.read_text(encoding="utf-8")
+    marker = "## 부록 A."
+    idx = text.find(marker)
+    if idx < 0:
+        raise ValueError(f"'{marker}' 절을 찾지 못했습니다: {report_path}")
+    section = text[idx:]
+
+    evidence: dict[str, set[int]] = {kind: set() for kind in _PRECISION_EVIDENCE_KINDS}
+    for line in section.splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 9 or not re.fullmatch(r"[0-9]+", cells[0]):
+            continue
+        bar = int(cells[0])
+        moment = cells[8]
+        if not moment:
+            continue
+        if "브레이크" in moment or "킥 빠짐" in moment:
+            evidence["break"].add(bar)
+        if "큰 히트" in moment:
+            evidence["kick_entry"].add(bar)
+        if "상승 진입" in moment and "빌드업" not in moment:
+            evidence["kick_entry"].add(bar)
+
+    for kind in _PRECISION_EVIDENCE_KINDS:
+        if not evidence[kind]:
+            raise ValueError(
+                f"부록 A '순간' 칸에서 '{kind}' 증거를 하나도 못 찾았습니다 — "
+                f"파싱 누락 의심: {report_path}"
+            )
+    return {kind: frozenset(bars) for kind, bars in evidence.items()}
 
 
 def shift_downbeats(downbeats: list[float], shift_sec: float) -> list[float]:
