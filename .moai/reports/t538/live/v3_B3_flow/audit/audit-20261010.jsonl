@@ -1,0 +1,18 @@
+{"ts": "2026-10-10T13:38:22.998228+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 322"], "held": ["Goto Cue 1 Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:23.064593+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:27.131757+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:27.197753+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:31.264432+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:31.330785+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:35.397941+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 322"], "held": ["Goto Cue 1 Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:35.463692+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:39.530861+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:39.597316+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:43.664133+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:43.730338+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:47.797654+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 322"], "held": ["Goto Cue 1 Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:47.863141+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:51.931316+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:51.996078+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T13:38:56.064298+00:00", "event": "approved", "commands": ["Go+ Sequence 322"], "held": ["Go+ Sequence 322"], "kind": "t538_b3_flow"}
+{"ts": "2026-10-10T13:38:56.129441+00:00", "event": "executed", "command": "Go+ Sequence 322", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

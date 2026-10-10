@@ -1,0 +1,20 @@
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping bd64b026"
+<<< {"id": "bd64b026", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.6"}
+
+>>> state:ShowData/DataPools/Default/Sequences@40
+    wire: Plugin "CopilotResponder" "state 2cbc3a40 ShowData/DataPools/Default/Sequences offset=40"
+<<< {"children": [{"class": "Sequence", "i": 309, "name": "LDBEAT M1 - P10 dimmer phase spread"}, {"class": "Sequence", "i": 310, "name": "LDBEAT M1 - P11 t520 step order"}, {"class": "Sequence", "i": 311, "name": "T538 - A0 A2 replay"}, {"class": "Sequence", "i": 312, "name": "T538 - A0 two step T4"}, {"class": "Sequence", "i": 313, "name": "T538 - A1 group 11"}, {"class": "Sequence", "i": 314, "name": "T538 - A2 relative 12"}, {"class": "Sequence", "i": 315, "name": "T538 - A3 base preset 2-1"}, {"class": "Sequence", "i": 316, "name": "T538 - A4 no base"}, {"class": "Sequence", "i": 317, "name": "T538 - A5 pan tilt circle"}, {"class": "Sequence", "i": 318, "name": "T538 - A6a fx preset 21-2 PT-CIRCLE"}, {"class": "Sequence", "i": 319, "name": "T538 - A6b fx preset 21-5 TILT-SWEEP"}, {"class": "Sequence", "i": 320, "name": "T538 - B1 position cues"}, {"class": "Sequence", "i": 321, "name": "T538 - B2 follow loop"}, {"class": "Sequence", "i": 322, "name": "T538 - B3 MIB"}], "id": "2cbc3a40", "kind": "state", "node": {"childCount": 57, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 40, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21
+    wire: Plugin "CopilotResponder" "state 2ee11bc6 ShowData/DataPools/Default/PresetPools/21"
+<<< {"children": [{"class": "Preset", "i": 1, "name": "DIM-PULSE"}, {"class": "Preset", "i": 2, "name": "PT-CIRCLE"}, {"class": "Preset", "i": 3, "name": "DIM-CHASE"}, {"class": "Preset", "i": 4, "name": "DIM-BREATHE"}, {"class": "Preset", "i": 5, "name": "TILT-SWEEP"}, {"class": "Preset", "i": 6, "name": "DIM-TWINKLE"}, {"class": "Preset", "i": 7, "name": "Finale Slam"}, {"class": "Preset", "i": 301, "name": "LDBEAT M1 - P4 SM15 MEASURE"}], "id": "2ee11bc6", "kind": "state", "node": {"childCount": 8, "class": "Presets", "enumeration": "ok", "name": "All 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21", "truncated": false, "v": 1}
+
+>>> prop:Selection|COUNTTOTALSELECTED
+    wire: Plugin "CopilotResponder" "prop 7276d302 Selection COUNTTOTALSELECTED"
+<<< {"id": "7276d302", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+>>> state:ShowData/DataPools/Default/Sequences@54
+    wire: Plugin "CopilotResponder" "state 60823ece ShowData/DataPools/Default/Sequences offset=54"
+<<< {"children": [{"class": "Sequence", "i": 323, "name": "T538 - A5b pan tilt circle curve"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "60823ece", "kind": "state", "node": {"childCount": 57, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 54, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}
