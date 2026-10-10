@@ -22,7 +22,7 @@ path segment not found`** 로 비어 있음을 실측으로 재확인했다(2026
 | 항목 | 새 번호 | 명령 줄(핵심) | 되읽기 | PASS/FAIL | 감독 관찰 | 문법 출처 / 미측정 | 위험 |
 |---|---|---|---|---|---|---|---|
 | ① TC 트랙≥3(목표6) | TC 30 | `Store Timecode 30` → `Store Timecode 30.1` → `Assign Sequence 228..233 At Timecode 30.1.<1..6>` | `state Timecodes/30/1` 자식 수=7, 각 Track `TARGET` | 자식 7개 + TARGET 순서 228..233 | 불필요 | t516 rhythm_probe.py `tc_a`(트랙 2개) 그대로, 6개로 확장 | 낮음 — 새 TC 1개, 기존 시퀀스 참조만 |
-| ② 2번째 넘는 Goto + 복수 시퀀스 | 없음(기존만) | `Goto Cue 3 Sequence 228` / `Goto Cue 1 Sequence 11` / `Goto Cue 1 Sequence 12` → `Off ×3` | 각 `CURRENTCUE` | 셋 다 요청 큐로 읽힘 | 필수 — 세 시퀀스 동시 혼선/우선순위 | t516 control_probe.py `Goto Cue N Sequence S` 그대로 | 매우 낮음 — 쓰기 0 |
+| ② 2번째 넘는 Goto + 복수 시퀀스 | 없음(기존만) | `Goto Cue 3 Sequence 221` / `Goto Cue 3 Sequence 226` / `Goto Cue 1 Sequence 11` → `Off ×3` | 각 `CURRENTCUE` | 셋 다 요청 큐로 읽힘 | 필수 — 세 시퀀스 동시 혼선/우선순위 | t516 control_probe.py `Goto Cue N Sequence S` 그대로 | 매우 낮음 — 쓰기 0 |
 | ③ 프리셋 수정→큐 전파 | Color 4.301(새) · Seq 300(새) | 4.9 베이스 recall→Store Preset 4.301 → Seq 300 Cue1 이 4.301 참조 → **edit_preset**(4.5 로 교체 후 `/Merge`) | edit 전/후 Seq300 Cue1 `PRESETDATA`/`MEMORYFOOTPRINT` 대조 | 값이 달라지면 전파 확인 | 필수 — 큐 활성 중 즉시 반영되는지 | 🔴 edit_preset 의 `/Merge` 줄 미측정(일반 추정) | 중간 — Store Preset 1개, 기존 프리셋 미변경 |
 | ④ 이펙트 프리셋+SpeedMaster15+Measure **(수정판)** | Preset 21.301(새) · Seq 301(새, recall 전용) | `Group 4`→`At 0`/`Step 2`/`At 100`/`At Measure 1`/`At SpeedMaster 15`→`Store Preset 21.301 '…' /Universal`→`Label Preset 21.301 '…'` → `Group 4`→`At Preset 21.301`→`Store Sequence 301 Cue 1` | introspect+props(PresetPools/21/301, 후보명 NAME/SPEED/MEASURE/SPEEDMASTER/NORMEDVALUE/PRESETDATA — 실제 존재 속성은 live 가 답함), `Goto Cue 1 Sequence 301` | 어떤 속성명이 실존하는지 기록(부재도 결과) + 감독이 112.35BPM 대비 점멸 속도 판단 | 필수(속도 숫자만으론 부족) | **t513 `run6_A1/rebuilt_sent.txt:20-34`**(`Store Preset 21.7 'Finale Slam' /Universal` 두-단계 페이저) 의 타이밍 줄만 t516 `phaser_cue` 형태(Measure+SpeedMaster)로 교체. 🔴 recall(`Group 4`→`At Preset 21.301`)은 t513 이 실측한 Fixture-선택 recall(`<fids> ; At Preset 4.9`)을 Group 선택으로 대체 — 미측정 | 낮음 — **Master 3.15 는 읽기만, 쓰지 않음**(재생 전 NORMEDVALUE≠69 면 전부 중단) |
 | ⑤ 포지션 프리셋+relative | Seq 302(새) | `Group 13` → `Attribute 'Position' At Preset 2.1` → relative 페이저(Pan±12/Tilt±8,Phase0/90,Speed60) → Store | `PAN`/`TILT` 읽기(중심값) | 중심값=베이스와 같은 방향 | 필수(중심-추종 여부는 관찰) | position_fx.py `_relative_phaser_lines`(circle) 상수 재사용. 🔴 Fixture 선택 대신 Group 선택(픽스처ID 미확보) | 낮음 |
@@ -61,8 +61,8 @@ path segment not found`** 로 비어 있음을 실측으로 재확인했다(2026
 - **그룹 SELECTIONDATA 자체 내용**(그룹 1~18 의 실제 멤버 목록)은 1.6.6 전엔 잴 수
   없다 — docs/runbooks/console-channel-facts.md 가 이미 "안 풀린 축"으로 적어 둔 것과
   같은 이유.
-- live 실행 전 재확인 필요: ②의 `Sequence 228` 큐 3 이 실제로 존재하는지(큐 개수
-  미확인) — r0b_pools.txt 엔 시퀀스 이름만 있고 큐 수는 없다.
+- ②의 대상 큐 수는 실측했다(2026-10-10, `r2_seq228.txt`): 228 은 큐 1 하나뿐이라 대상에서
+  뺐고, 큐 1~3 이 있는 221·226 으로 바꿨다.
 
 ## 리허설 결과 요약 (deliverable 3)
 
@@ -97,7 +97,7 @@ P4 는 다른 여덟과 달리 `main_cli` 범용 러너가 아니라 전용 `run
 
 ## 라이브 실행 전 사람이 재확인할 것 (설계 산출물, 이 세션은 실행하지 않음)
 
-1. ②의 `Sequence 228` 큐 3 존재 여부를 `state Sequences/228` 로 먼저 잰다.
+1. ②의 대상(221 큐 3·226 큐 3·11 큐 1)이 그대로인지 `state Sequences/<n>` 로 다시 읽는다.
 2. ③⑥의 🔴 미측정 문법 줄은 단독으로 더 작게 쪼개 먼저 쏴 본다(거절되면 그 항목은
    "그런 명령이 없다"로 답하고 범위 밖 처리).
 3. r1_free_slots.txt 를 **다시** 읽어 12개 번호가 여전히 비어 있는지 재확인한다

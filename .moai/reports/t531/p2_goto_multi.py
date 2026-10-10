@@ -3,7 +3,7 @@
 기존 시퀀스만 쓴다 — 쓰기 0, 신규 객체 0. free_slots 는 비어 있다(쓸 새 번호가 없다).
 
 PASS/FAIL: 세 Goto 각각의 송신 결과 ok, 직후 ``CURRENTCUE`` 가 요청한 큐로
-읽히는가(시퀀스 228 큐 3, 11 큐 1, 12 큐 1). 감독 관찰: 세 시퀀스가 동시에
+읽히는가(시퀀스 221 큐 3, 226 큐 3, 11 큐 1). 감독 관찰: 세 시퀀스가 동시에
 무대에 걸리는지(혼선·우선순위) — 기계 판독은 "셋 다 CURRENTCUE 가 맞다"까지만
 답한다.
 
@@ -18,7 +18,8 @@ import sys
 sys.path.insert(0, ".moai/reports/t531")
 from m1_common import main_cli  # noqa: E402
 
-TARGETS = ((228, 3), (11, 1), (12, 1))  # (시퀀스, 큐) — 228 은 큐 1~? 중 2번째를 넘긴 3
+# (시퀀스, 큐) — 221·226 은 큐 1·2·3 이 있다(실측 r2_seq228.txt). 228 은 큐 1 하나뿐이라 뺐다.
+TARGETS = ((221, 3), (226, 3), (11, 1))
 
 
 def build_plan() -> list[tuple[str, list[str]]]:
@@ -36,9 +37,9 @@ if __name__ == "__main__":
             build_plan=build_plan,
             free_slots=[],
             extra_notes=[
-                "쓰기 0 — 기존 시퀀스 228·11·12 의 Goto/Off 뿐.",
-                "228 큐 3 이 실제로 존재하는지는 r0b_pools.txt 에 큐 개수가 안 적혀 있어 미확인 — "
-                "live 실행 전 `state Sequences/228` 로 큐 수를 먼저 재라.",
+                "쓰기 0 — 기존 시퀀스 221·226·11 의 Goto/Off 뿐.",
+                "큐 수 실측(2026-10-10, r2_seq228.txt): "
+                "221·226 = 큐 1~3, 11 = 큐 1, 228 = 큐 1 뿐.",
             ],
         )
     )
