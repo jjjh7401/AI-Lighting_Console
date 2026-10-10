@@ -1,0 +1,16 @@
+props:ShowData/DataPools/Default/Sequences/320/3|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/4|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/5|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/6|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/3/1|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/4/1|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/5/1|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/320/6/1|NAME,MEMORYFOOTPRINT,REFERENCES
+props:ShowData/DataPools/Default/Sequences/321/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/321/4/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/321/5/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/321/6/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/322/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/322/4/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/322/5/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/322/6/1|NAME,MEMORYFOOTPRINT

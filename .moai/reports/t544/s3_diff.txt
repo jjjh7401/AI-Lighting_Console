@@ -1,0 +1,21 @@
+== fields where values differ among 2.1..2.6 ==
+INDEX | 2.1=1 | 2.2=2 | 2.3=3 | 2.4=4 | 2.5=5 | 2.6=6
+NO | 2.1=1 | 2.2=2 | 2.3=3 | 2.4=4 | 2.5=5 | 2.6=6
+NAME | 2.1=POS01 보컬 센터 페이스 · 합성좌표 | 2.2=POS02 무대 전체 커버 · 합성좌표 | 2.3=POS03 밴드 라인 백 · 합성좌표 | 2.4=POS04 틸트업 스타트 (무대 안쪽) · 합성좌표 | 2.5=POS05 팬아웃 종점 (객석 상단) · 합성좌표 | 2.6=POS06 센터 집중 (브리지) · 합성좌표
+MEMORYFOOTPRINT | 2.1=1568 | 2.2=2200 | 2.3=2360 | 2.4=2432 | 2.5=2896 | 2.6=2468
+DOSHUFFLE | 2.1={"Property":"DOSHUFFLE","Target":"Preset 2.1"} | 2.2={"Property":"DOSHUFFLE","Target":"Preset 2.2"} | 2.3={"Property":"DOSHUFFLE","Target":"Preset 2.3"} | 2.4={"Property":"DOSHUFFLE","Target":"Preset 2.4"} | 2.5={"Property":"DOSHUFFLE","Target":"Preset 2.5"} | 2.6={"Property":"DOSHUFFLE","Target":"Preset 2.6"}
+STOREDDATA | 2.1= | 2.2=Selective | 2.3=Selective | 2.4=Selective | 2.5=Selective | 2.6=Selective
+OWNDATAPRESENT | 2.1=false | 2.2=true | 2.3=true | 2.4=true | 2.5=true | 2.6=true
+OWNNONCOOKEDDATAPRESENT | 2.1=false | 2.2=true | 2.3=true | 2.4=true | 2.5=true | 2.6=true
+REFERENCES | 2.1= | 2.2= | 2.3= | 2.4=3154120427:4022770912409374208,3154120440:402277091240937420 | 2.5=3154120429:7911774472216531968,3154120442:791177447221653196 | 2.6=
+SWAPPROTECT | 2.1=!property not readable: SWAPPROTECT | 2.2=!property not readable: SWAPPROTECT | 2.3=!property not readable: SWAPPROTECT | 2.4=!property not readable: SWAPPROTECT | 2.5=None | 2.6=!property not readable: SWAPPROTECT
+
+== fields that split grown(2.4,2.5) from control(2.2,2.3,2.6) ==
+INDEX grown {'4', '5'} control {'3', '6', '2'}
+NO grown {'4', '5'} control {'3', '6', '2'}
+NAME grown {'POS05 팬아웃 종점 (객석 상단) · 합성좌표', 'POS04 틸트업 스타트 (무대 안쪽) · 합성좌표'} control {'POS06 센터 집중 (브리지) · 합성좌표', 'POS03 밴드 라인 백 · 합성좌표', 'POS02 무대 전체 커버 · 합성좌표'}
+MEMORYFOOTPRINT grown {'2432', '2896'} control {'2468', '2360', '2200'}
+DOSHUFFLE grown {'{"Property":"DOSHUFFLE","Target":"Preset 2.4"}', '{"Property":"DOSHUFFLE","Target":"Preset 2.5"}'} control {'{"Property":"DOSHUFFLE","Target":"Preset 2.3"}', '{"Property":"DOSHUFFLE","Target":"Preset 2.2"}', '{"Property":"DOSHUFFLE","Target":"Preset 2.6"}'}
+REFERENCES grown {'3154120429:7911774472216531968,3154120442:7911774472216531968,3154120455:7911774472216531968', '3154120427:4022770912409374208,3154120440:4022770912409374208'} control {''}
+
+read-failed fields: 17 ['APPEARANCE', 'AUTOFIX', 'AUTOPREPOS', 'AUTOSTART', 'AUTOSTOMP', 'AUTOSTOP', 'EXECUTORDISPLAYMODE', 'GUID', 'INITIALMATRICKS', 'INPUTFILTER', 'OFFFADE', 'OFFWHENOVERRIDDEN', 'OUTPUTFILTER', 'PREVIEWCOPY', 'SOFTLTP', 'SWAPPROTECT', 'USEEXECUTORTIME']

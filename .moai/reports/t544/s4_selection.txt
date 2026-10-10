@@ -1,0 +1,40 @@
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 3d0df1ae SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "3d0df1ae", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/2|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 5961d6d9 SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/2"
+<<< {"id": "5961d6d9", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/2", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/3|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 1d7436ff SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"id": "1d7436ff", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 5414a85a SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "5414a85a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": "3154120427:4022770912409374208,3154120440:4022770912409374208"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/5|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 6d07d7d6 SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"id": "6d07d7d6", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": "3154120429:7911774472216531968,3154120442:7911774472216531968,3154120455:7911774472216531968"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/6|SELECTIONDATA,REFERENCES
+    wire: Plugin "CopilotResponder" "props 5529cada SELECTIONDATA,REFERENCES ShowData/DataPools/Default/PresetPools/2/6"
+<<< {"id": "5529cada", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/6", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}, {"n": "REFERENCES", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Groups/11|NAME,SELECTIONDATA
+    wire: Plugin "CopilotResponder" "props 4b12ddcc NAME,SELECTIONDATA ShowData/DataPools/Default/Groups/11"
+<<< {"id": "4b12ddcc", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Groups/11", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "MOVER-U"}, {"n": "SELECTIONDATA", "ok": true, "t": "table", "truncated": true, "v": "[{\"grid\":{\"inv\":0,\"x\":0,\"x_inv\":0,\"y\":0,\"y_inv\":0,\"z\":0,\"z_inv\":0},\"sf_index\":30},{\"grid\":{\"inv\":0,\"x\":1,\"x_inv\":0,\"y\":0,\"y_inv\":0,\"z\":0,\"z_inv\":0},\"sf_index\":31}]"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/320
+    wire: Plugin "CopilotResponder" "state aac422b4 ShowData/DataPools/Default/Sequences/320"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "T538 POS01"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "T538 POS04"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "T538 POS05"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "T538 POS03"}], "id": "aac422b4", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T538 - B1 position cues"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/320", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/321
+    wire: Plugin "CopilotResponder" "state ad838ea4 ShowData/DataPools/Default/Sequences/321"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "T538 POS01"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "T538 POS04"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "T538 POS05"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "T538 POS03"}], "id": "ad838ea4", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T538 - B2 follow loop"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/322
+    wire: Plugin "CopilotResponder" "state c132fcff ShowData/DataPools/Default/Sequences/322"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "T538 POS02 lit"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "T538 dark"}, {"class": "Cue", "cueNo": 2.5, "i": 5, "name": "T538 POS05 reveal Move"}, {"class": "Cue", "cueNo": 3, "i": 6, "name": "T538 POS05 reveal"}], "id": "c132fcff", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T538 - B3 MIB"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/322", "truncated": false, "v": 1}

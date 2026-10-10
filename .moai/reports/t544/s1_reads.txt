@@ -1,0 +1,65 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t544
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t544
+Installed 97 packages in 173ms
+
+>>> ping
+    wire: Plugin "CopilotResponder" "ping be625b5d"
+<<< {"id": "be625b5d", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.6"}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props 972d1df4 NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "972d1df4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS01 보컬 센터 페이스 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1568"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "false"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/2|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props 3ce40e63 NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/2"
+<<< {"id": "3ce40e63", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS02 무대 전체 커버 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2200"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/3|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props bd6049f3 NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"id": "bd6049f3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS03 밴드 라인 백 · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2360"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props 00dfcc94 NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "00dfcc94", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2432"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/5|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props 9df9e0b1 NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"id": "9df9e0b1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2896"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/6|NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA
+    wire: Plugin "CopilotResponder" "props e98dd08f NAME,MEMORYFOOTPRINT,OWNDATAPRESENT,STOREDDATA ShowData/DataPools/Default/PresetPools/2/6"
+<<< {"id": "e98dd08f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS06 센터 집중 (브리지) · 합성좌표"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2468"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}], "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/2/1
+    wire: Plugin "CopilotResponder" "introspect 7e41e5fc ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "7e41e5fc", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/2/3
+    wire: Plugin "CopilotResponder" "introspect 71a8e287 ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "71a8e287", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/2/4
+    wire: Plugin "CopilotResponder" "introspect 1fb0e110 ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "1fb0e110", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/2/5
+    wire: Plugin "CopilotResponder" "introspect 976955ff ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "976955ff", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/1
+    wire: Plugin "CopilotResponder" "state 04d30372 ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"children": [], "id": "04d30372", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "POS01 보컬 센터 페이스 · 합성좌표"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/3
+    wire: Plugin "CopilotResponder" "state 569ebb4d ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"children": [], "id": "569ebb4d", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "POS03 밴드 라인 백 · 합성좌표"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/4
+    wire: Plugin "CopilotResponder" "state 0e745732 ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"children": [], "id": "0e745732", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/5
+    wire: Plugin "CopilotResponder" "state ebacdcda ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"children": [], "id": "ebacdcda", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "truncated": false, "v": 1}
