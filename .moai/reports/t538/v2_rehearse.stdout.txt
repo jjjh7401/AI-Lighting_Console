@@ -1,0 +1,429 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/312", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/312", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/312)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/313", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/313", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/313)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/314", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/314", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/314)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/315", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/315", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/315)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/316", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/316", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/316)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/317", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/317", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/317)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/318", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/318", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/318)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/319", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/319", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/319)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/320", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/320", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/320)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/321", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/321", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/321)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/322", "t": 0.002, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/322", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/322)"}
+{"step": "store_A0", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30"
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.002, "kind": "exec", "command": "Store Sequence 312 Cue 1 'T538 - A0 two step T4'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A0", "t": 0.003, "kind": "exec", "command": "Set Sequence 312 Property 'Name' 'T538 - A0 two step T4'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A0", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 312", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 312': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A0", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 312", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A0", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 312", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 312': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A0", "t": 0.003, "kind": "exec", "command": "Off Sequence 312", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Group 11 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 112", "rea
+{"step": "store_A1", "t": 0.003, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.003, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.003, "kind": "exec", "command": "Group 11 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.003, "kind": "exec", "command": "Group 11 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Store Sequence 313 Cue 1 'T538 - A1 group 11'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A1", "t": 0.004, "kind": "exec", "command": "Set Sequence 313 Property 'Name' 'T538 - A1 group 11'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A1", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 313", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 313': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A1", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 313", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A1", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 313", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 313': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A1", "t": 0.004, "kind": "exec", "command": "Off Sequence 313", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 12"
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Store Sequence 314 Cue 1 'T538 - A2 relative 12'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A2", "t": 0.005, "kind": "exec", "command": "Set Sequence 314 Property 'Name' 'T538 - A2 relative 12'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A2", "t": 0.005, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 314", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 314': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A2", "t": 0.005, "kind": "exec", "command": "Goto Cue 1 Sequence 314", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A2", "t": 0.005, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 314", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 314': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A2", "t": 0.006, "kind": "exec", "command": "Off Sequence 314", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "reason
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "Store Sequence 315 Cue 1 'T538 - A3 base preset 2-1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.006, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A3", "t": 0.007, "kind": "exec", "command": "Set Sequence 315 Property 'Name' 'T538 - A3 base preset 2-1'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A3", "t": 0.007, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 315", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 315': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A3", "t": 0.007, "kind": "exec", "command": "Goto Cue 1 Sequence 315", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A3", "t": 0.007, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 315", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 315': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A3", "t": 0.007, "kind": "exec", "command": "Off Sequence 315", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute '
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.007, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.008, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.008, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.008, "kind": "exec", "command": "Store Sequence 316 Cue 1 'T538 - A4 no base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.008, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A4", "t": 0.008, "kind": "exec", "command": "Set Sequence 316 Property 'Name' 'T538 - A4 no base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A4", "t": 0.008, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 316", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 316': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A4", "t": 0.008, "kind": "exec", "command": "Goto Cue 1 Sequence 316", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A4", "t": 0.008, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 316", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 316': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A4", "t": 0.008, "kind": "exec", "command": "Off Sequence 316", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.008, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt
+{"step": "store_A5", "t": 0.008, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.008, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Pan' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Store Sequence 317 Cue 1 'T538 - A5 pan tilt circle'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5", "t": 0.009, "kind": "exec", "command": "Set Sequence 317 Property 'Name' 'T538 - A5 pan tilt circle'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A5", "t": 0.009, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 317", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 317': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A5", "t": 0.009, "kind": "exec", "command": "Goto Cue 1 Sequence 317", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A5", "t": 0.01, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 317", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 317': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A5", "t": 0.01, "kind": "exec", "command": "Off Sequence 317", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "At Preset 21.2", "reasons": []}, {"command": "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "reasons": []}]}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "At Preset 21.2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.01, "kind": "exec", "command": "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A6a", "t": 0.01, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 318", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 318': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A6a", "t": 0.01, "kind": "exec", "command": "Goto Cue 1 Sequence 318", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A6a", "t": 0.01, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 318", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 318': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A6a", "t": 0.011, "kind": "exec", "command": "Off Sequence 318", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "At Preset 21.5", "reasons": []}, {"command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "reasons": []}]}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "At Preset 21.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.011, "kind": "exec", "command": "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A6b", "t": 0.011, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 319", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 319': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_A6b", "t": 0.011, "kind": "exec", "command": "Goto Cue 1 Sequence 319", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_A6b", "t": 0.011, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 319", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 319': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_A6b", "t": 0.011, "kind": "exec", "command": "Off Sequence 319", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Store Sequence 320 Cue 1 'T538 POS01'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.4", "reasons": []}, {"command": "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54", "reaso
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Store Sequence 320 Cue 1 'T538 POS01'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Group 11 ; At Preset 2.4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Group 11 ; At Preset 2.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Store Sequence 320 Cue 3 'T538 POS05' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.012, "kind": "exec", "command": "Group 11 ; At Preset 2.3", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.013, "kind": "exec", "command": "Store Sequence 320 Cue 4 'T538 POS03' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.013, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.013, "kind": "exec", "command": "Set Sequence 320 Property 'Name' 'T538 - B1 position cues'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B1_c1", "t": 0.013, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B1_c1", "t": 0.013, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B1_c2", "t": 0.013, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B1_c2", "t": 0.013, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B1_c3", "t": 0.013, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B1_c3", "t": 0.013, "kind": "exec", "command": "Goto Cue 3 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B1_c4", "t": 0.013, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 4 Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B1_c4", "t": 0.013, "kind": "exec", "command": "Goto Cue 4 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_B1", "t": 0.013, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 320", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 320': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_B1", "t": 0.013, "kind": "exec", "command": "Off Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.4", "reasons": []}, {"command": "Store Sequence 321 Cue 2 'T538 POS04' CueFade 
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Group 11 ; At Preset 2.4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Store Sequence 321 Cue 2 'T538 POS04' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.014, "kind": "exec", "command": "Group 11 ; At Preset 2.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Store Sequence 321 Cue 3 'T538 POS05' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Group 11 ; At Preset 2.3", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Store Sequence 321 Cue 4 'T538 POS03' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Set Cue 1 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Set Cue 2 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Set Cue 3 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Set Cue 4 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.015, "kind": "exec", "command": "Set Sequence 321 Property 'Name' 'T538 - B2 follow loop'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B2", "t": 0.015, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 321", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 321': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B2", "t": 0.015, "kind": "exec", "command": "Goto Cue 1 Sequence 321", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_B2", "t": 0.015, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 321", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 321': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_B2", "t": 0.015, "kind": "exec", "command": "Off Sequence 321", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.2", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Store Sequence 322 Cue 1 'T538 POS02 lit'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 5
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Store Sequence 322 Cue 1 'T538 POS02 lit'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Store Sequence 322 Cue 2 'T538 dark' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "Store Sequence 322 Cue 2.5 'T538 POS05 reveal Move' CueFade 1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.016, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.017, "kind": "exec", "command": "Set Cue 2.5 Sequence 322 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.017, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.017, "kind": "exec", "command": "Store Sequence 322 Cue 3 'T538 POS05 reveal' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.017, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B3", "t": 0.017, "kind": "exec", "command": "Set Sequence 322 Property 'Name' 'T538 - B3 MIB'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B3_c1", "t": 0.017, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B3_c1", "t": 0.017, "kind": "exec", "command": "Goto Cue 1 Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B3_go_dark", "t": 0.017, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B3_go_dark", "t": 0.017, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B3_go_reveal", "t": 0.017, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_B3_go_reveal", "t": 0.017, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_B3", "t": 0.017, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 322", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 322': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_B3", "t": 0.017, "kind": "exec", "command": "Off Sequence 322", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538v2",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322"
+  ],
+  "occupied_before": [],
+  "notes": [
+    "A0′ = T4(감독 「물결처럼 움직임」) 몸통을 시퀀스로 저장. A0′ 가 안 움직이면 저장·재생 경로 쪽 — 나머지 중단.",
+    "A6·B 문면은 mover_probe.py 와 같고 번호만 다름."
+  ],
+  "bundles": {
+    "store_A0": true,
+    "play_A0": true,
+    "off_A0": true,
+    "store_A1": true,
+    "play_A1": true,
+    "off_A1": true,
+    "store_A2": true,
+    "play_A2": true,
+    "off_A2": true,
+    "store_A3": true,
+    "play_A3": true,
+    "off_A3": true,
+    "store_A4": true,
+    "play_A4": true,
+    "off_A4": true,
+    "store_A5": true,
+    "play_A5": true,
+    "off_A5": true,
+    "store_A6a": true,
+    "play_A6a": true,
+    "off_A6a": true,
+    "store_A6b": true,
+    "play_A6b": true,
+    "off_A6b": true,
+    "store_B1": true,
+    "play_B1_c1": true,
+    "play_B1_c2": true,
+    "play_B1_c3": true,
+    "play_B1_c4": true,
+    "off_B1": true,
+    "store_B2": true,
+    "play_B2": true,
+    "off_B2": true,
+    "store_B3": true,
+    "play_B3_c1": true,
+    "play_B3_go_dark": true,
+    "play_B3_go_reveal": true,
+    "off_B3": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 312 Cue 1 'T538 - A0 two step T4'",
+        "ClearAll",
+        "Set Sequence 312 Property 'Name' 'T538 - A0 two step T4'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 312"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 312"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 313 Cue 1 'T538 - A1 group 11'",
+        "ClearAll",
+        "Set Sequence 313 Property 'Name' 'T538 - A1 group 11'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 313"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 313"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -12",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 314 Cue 1 'T538 - A2 relative 12'",
+        "ClearAll",
+        "Set Sequence 314 Property 'Name' 'T538 - A2 relative 12'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 314"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 314"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 315 Cue 1 'T538 - A3 base preset 2-1'",
+        "ClearAll",
+        "Set Sequence 315 Property 'Name' 'T538 - A3 base preset 2-1'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 315"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 315"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112",
+        "Store Sequence 316 Cue 1 'T538 - A4 no base'",
+        "ClearAll",
+        "Set Sequence 316 Property 'Name' 'T538 - A4 no base'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 316"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 316"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504

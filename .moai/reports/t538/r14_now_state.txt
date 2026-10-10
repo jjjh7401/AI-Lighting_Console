@@ -1,0 +1,24 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/311
+    wire: Plugin "CopilotResponder" "state ccb5dc84 ShowData/DataPools/Default/Sequences/311"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "T538 - A0 A2 replay"}], "id": "ccb5dc84", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "T538 - A0 A2 replay"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/311", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/311/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 2cdae6b3 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/311/3"
+<<< {"id": "2cdae6b3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/311/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 - A0 A2 replay"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3760"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/311|CURRENTCUE,PRIORITY,SEQUMIBMODE,SPEEDMASTER,RATEMASTER,SPEEDSCALE,PLAYBACKMASTER
+    wire: Plugin "CopilotResponder" "props b0e19150 CURRENTCUE,PRIORITY,SEQUMIBMODE,SPEEDMASTER,RATEMASTER,SPEEDSCALE,PLAYBACKMASTER ShowData/DataPools/Default/Sequences/311"
+<<< {"id": "b0e19150", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/311", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 311.1"}, {"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}, {"n": "SEQUMIBMODE", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "RATEMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDSCALE", "ok": true, "t": "string", "v": "One"}, {"n": "PLAYBACKMASTER", "ok": true, "t": "string", "v": "None"}], "truncated": false, "v": 1}
+
+>>> prop:Selection|COUNTTOTALSELECTED
+    wire: Plugin "CopilotResponder" "prop 5b015129 Selection COUNTTOTALSELECTED"
+<<< {"id": "5b015129", "kind": "prop", "ok": true, "path": "Selection", "property": "COUNTTOTALSELECTED", "v": 1, "value": "0"}
+
+>>> state:ShowData/DataPools/Default/Pages
+    wire: Plugin "CopilotResponder" "state bb88a4fc ShowData/DataPools/Default/Pages"
+<<< {"children": [{"class": "Page", "i": 1, "name": "Page 1"}], "id": "bb88a4fc", "kind": "state", "node": {"childCount": 1, "class": "Pages", "enumeration": "ok", "name": "Pages"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Pages", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Pages/1
+    wire: Plugin "CopilotResponder" "state 86455122 ShowData/DataPools/Default/Pages/1"
+<<< {"children": [{"class": "Executor", "i": 105, "name": "DinoDino"}, {"class": "Executor", "i": 106, "name": "DinoDino"}, {"class": "Executor", "i": 107, "name": "DinoSync"}, {"class": "Executor", "i": 108, "name": "DinoFull"}], "id": "86455122", "kind": "state", "node": {"childCount": 4, "class": "Page", "enumeration": "ok", "name": "Page 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Pages/1", "truncated": false, "v": 1}

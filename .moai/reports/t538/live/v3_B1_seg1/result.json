@@ -1,0 +1,128 @@
+{
+  "marks": [
+    {
+      "label": "c2_23_1",
+      "ok": true,
+      "t": 0.13
+    },
+    {
+      "label": "c3_23_1",
+      "ok": true,
+      "t": 4.26
+    },
+    {
+      "label": "c2_23_2",
+      "ok": true,
+      "t": 8.4
+    },
+    {
+      "label": "c3_23_2",
+      "ok": true,
+      "t": 12.53
+    },
+    {
+      "label": "c2_23_3",
+      "ok": true,
+      "t": 16.66
+    },
+    {
+      "label": "c3_23_3",
+      "ok": true,
+      "t": 20.8
+    },
+    {
+      "label": "c2_23_4",
+      "ok": true,
+      "t": 24.93
+    },
+    {
+      "label": "c3_23_4",
+      "ok": true,
+      "t": 29.06
+    },
+    {
+      "label": "c2_23_5",
+      "ok": true,
+      "t": 33.2
+    },
+    {
+      "label": "c3_23_5",
+      "ok": true,
+      "t": 37.33
+    }
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

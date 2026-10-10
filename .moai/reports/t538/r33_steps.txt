@@ -1,0 +1,4 @@
+ping
+state:ShowData/DataPools/Default/Sequences@40
+state:ShowData/DataPools/Default/PresetPools/21
+prop:Selection|COUNTTOTALSELECTED

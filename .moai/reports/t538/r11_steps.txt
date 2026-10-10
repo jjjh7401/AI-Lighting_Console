@@ -1,0 +1,4 @@
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3
+introspect:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1

@@ -1,0 +1,26 @@
+[
+  {
+    "commands": [
+      "Off Sequence 311"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ClearAll"
+    ],
+    "approved": true
+  }
+]

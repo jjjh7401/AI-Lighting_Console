@@ -1,0 +1,4 @@
+state:Patch/FixtureTypes/11/DMXModes
+state:Patch/FixtureTypes/11/DMXModes/1
+state:Patch/FixtureTypes/11/AttributeDefinitions
+state:Patch/FixtureTypes/11/AttributeDefinitions/1

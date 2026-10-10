@@ -1,0 +1,21 @@
+{"step": "c1_1", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c1_1", "t": 0.133, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_1", "t": 3.203, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_1", "t": 3.268, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c1_2", "t": 6.336, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c1_2", "t": 6.403, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_2", "t": 9.471, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_2", "t": 9.537, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c1_3", "t": 12.605, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c1_3", "t": 12.672, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_3", "t": 15.739, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_3", "t": 15.806, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c1_4", "t": 18.873, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c1_4", "t": 18.94, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_4", "t": 22.007, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_4", "t": 22.073, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c1_5", "t": 25.141, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c1_5", "t": 25.206, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+{"step": "c2_5", "t": 28.275, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "c2_5", "t": 28.341, "kind": "exec", "command": "Goto Cue 2 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
+[{"label": "c1_1", "ok": true, "t": 0.13}, {"label": "c2_1", "ok": true, "t": 3.27}, {"label": "c1_2", "ok": true, "t": 6.4}, {"label": "c2_2", "ok": true, "t": 9.54}, {"label": "c1_3", "ok": true, "t": 12.67}, {"label": "c2_3", "ok": true, "t": 15.81}, {"label": "c1_4", "ok": true, "t": 18.94}, {"label": "c2_4", "ok": true, "t": 22.07}, {"label": "c1_5", "ok": true, "t": 25.21}, {"label": "c2_5", "ok": true, "t": 28.34}]

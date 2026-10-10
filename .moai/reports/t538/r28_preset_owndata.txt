@@ -1,0 +1,24 @@
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 1c50ca56 NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "1c50ca56", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS01 보컬 센터 페이스 · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "false"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": ""}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1568"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/2|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 00fd7d15 NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/2"
+<<< {"id": "00fd7d15", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS02 무대 전체 커버 · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2200"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/3|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e4e20ffe NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/3"
+<<< {"id": "e4e20ffe", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS03 밴드 라인 백 · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2360"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 4f2e9d12 NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "4f2e9d12", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2432"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/5|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 0a02bfef NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/5"
+<<< {"id": "0a02bfef", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2896"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/6|NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props de5cc622 NAME,OWNDATAPRESENT,STOREDDATA,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/2/6"
+<<< {"id": "de5cc622", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "POS06 센터 집중 (브리지) · 합성좌표"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "2468"}], "truncated": false, "v": 1}

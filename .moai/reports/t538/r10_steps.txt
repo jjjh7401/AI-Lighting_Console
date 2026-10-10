@@ -1,0 +1,5 @@
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@10
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@20
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@30
+state:Patch/FixtureTypes/11/DMXModes/1/DMXChannels@40

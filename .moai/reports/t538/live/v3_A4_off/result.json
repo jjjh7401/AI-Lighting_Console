@@ -1,0 +1,34 @@
+{
+  "item": "T538v3",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322",
+    "ShowData/DataPools/Default/Sequences/323"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_A4": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 316"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

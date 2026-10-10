@@ -1,0 +1,12 @@
+
+>>> state:Patch/DmxUniverses/2/1
+    wire: Plugin "CopilotResponder" "state 2778fdfc Patch/DmxUniverses/2/1"
+<<< {"children": [], "id": "2778fdfc", "kind": "state", "node": {"childCount": 0, "class": "DMX", "enumeration": "ok", "name": "DMX 2"}, "offset": 0, "ok": true, "path": "Patch/DmxUniverses/2/1", "truncated": false, "v": 1}
+
+>>> introspect:Patch/DmxUniverses/2/1
+    wire: Plugin "CopilotResponder" "introspect cb1e962d Patch/DmxUniverses/2/1"
+<<< {"class": "DMX", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}], "id": "cb1e962d", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/DmxUniverses/2/1", "source": "property_accessors", "total": 15, "truncated": false, "v": 1}
+
+>>> introspect:Patch/RTChannels/1
+    wire: Plugin "CopilotResponder" "introspect 748a45aa Patch/RTChannels/1"
+<<< {"class": "RTChannel", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "FID", "t": "UInt32"}, {"n": "IDTYPE", "t": "UInt32"}, {"n": "CID", "t": "UInt32"}, {"n": "CHANNELNAME", "t": "String"}, {"n": "DEFAULT", "t": "UInt32"}, {"n": "DEFAULTPRESET", "t": "Handle"}, {"n": "HIGHLIGHT", "t": "UInt32"}, {"n": "HIGHLIGHTPRESET", "t": "Handle"}, {"n": "LOWLIGHT", "t": "UInt32"}, {"n": "LOWLIGHTPRESET", "t": "Handle"}, {"n": "COARSE", "t": "Custom"}, {"n": "FINE", "t": "Custom"}], "id": "748a45aa", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/RTChannels/1", "source": "property_accessors", "total": 29, "truncated": true, "v": 1}

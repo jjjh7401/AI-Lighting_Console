@@ -1,0 +1,57 @@
+{
+  "item": "T538v3",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322",
+    "ShowData/DataPools/Default/Sequences/323"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_B1": true,
+    "play_B1_c1": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Store Sequence 320 Cue 1 'T538 POS01'",
+        "ClearAll",
+        "Group 11 ; At Preset 2.4",
+        "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54",
+        "ClearAll",
+        "Group 11 ; At Preset 2.5",
+        "Store Sequence 320 Cue 3 'T538 POS05' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.3",
+        "Store Sequence 320 Cue 4 'T538 POS03' CueFade 0.54",
+        "ClearAll",
+        "Set Sequence 320 Property 'Name' 'T538 - B1 position cues'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 320"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

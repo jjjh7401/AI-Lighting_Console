@@ -1,0 +1,28 @@
+
+>>> props:ShowData/Masters/2/1|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 353d4ecd NAME,NORMEDVALUE ShowData/Masters/2/1"
+<<< {"id": "353d4ecd", "kind": "props", "ok": true, "path": "ShowData/Masters/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Master"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/6|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 1ef6ca63 NAME,NORMEDVALUE ShowData/Masters/2/6"
+<<< {"id": "1ef6ca63", "kind": "props", "ok": true, "path": "ShowData/Masters/2/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Rate"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/8|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props e22d74db NAME,NORMEDVALUE ShowData/Masters/2/8"
+<<< {"id": "e22d74db", "kind": "props", "ok": true, "path": "ShowData/Masters/2/8", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ProgramTime"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/10|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props c9726dd5 NAME,NORMEDVALUE ShowData/Masters/2/10"
+<<< {"id": "c9726dd5", "kind": "props", "ok": true, "path": "ShowData/Masters/2/10", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "ExecutorTime"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/1/6|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props ff8b39fa NAME,NORMEDVALUE ShowData/Masters/1/6"
+<<< {"id": "ff8b39fa", "kind": "props", "ok": true, "path": "ShowData/Masters/1/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Rate"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/1/7|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 4b111c7a NAME,NORMEDVALUE ShowData/Masters/1/7"
+<<< {"id": "4b111c7a", "kind": "props", "ok": true, "path": "ShowData/Masters/1/7", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Speed"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "50"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/UserProfiles/1@15
+    wire: Plugin "CopilotResponder" "state cd7ee099 ShowData/UserProfiles/1 offset=15"
+<<< {"children": [{"class": "GridColumnRegistry", "i": 16, "name": "GridColumnRegistry"}, {"class": "StatusCenter", "i": 17, "name": "StatusCenter"}, {"class": "PreviewSettings", "i": 18, "name": "PreviewSettings"}, {"class": "MessageNotificationSettings", "i": 19, "name": "MessageNotificationSettings"}], "id": "cd7ee099", "kind": "state", "node": {"childCount": 19, "class": "UserProfile", "enumeration": "ok", "name": "Default"}, "offset": 15, "ok": true, "path": "ShowData/UserProfiles/1", "truncated": false, "v": 1}

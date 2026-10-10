@@ -1,0 +1,152 @@
+{
+  "marks": [
+    {
+      "label": "c2_23_1",
+      "ok": true,
+      "t": 0.13
+    },
+    {
+      "label": "c3_23_1",
+      "ok": true,
+      "t": 3.27
+    },
+    {
+      "label": "c2_23_2",
+      "ok": true,
+      "t": 6.4
+    },
+    {
+      "label": "c3_23_2",
+      "ok": true,
+      "t": 9.53
+    },
+    {
+      "label": "c2_23_3",
+      "ok": true,
+      "t": 12.67
+    },
+    {
+      "label": "c3_23_3",
+      "ok": true,
+      "t": 15.8
+    },
+    {
+      "label": "c3_34_1",
+      "ok": true,
+      "t": 23.93
+    },
+    {
+      "label": "c4_34_1",
+      "ok": true,
+      "t": 27.06
+    },
+    {
+      "label": "c3_34_2",
+      "ok": true,
+      "t": 30.2
+    },
+    {
+      "label": "c4_34_2",
+      "ok": true,
+      "t": 33.33
+    },
+    {
+      "label": "c3_34_3",
+      "ok": true,
+      "t": 36.46
+    },
+    {
+      "label": "c4_34_3",
+      "ok": true,
+      "t": 39.6
+    }
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 3 Sequence 320"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 4 Sequence 320"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

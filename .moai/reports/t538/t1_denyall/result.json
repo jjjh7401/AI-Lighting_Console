@@ -1,0 +1,26 @@
+{
+  "item": "T538-T1",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "t1_mspeed": false,
+    "t1_clear": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

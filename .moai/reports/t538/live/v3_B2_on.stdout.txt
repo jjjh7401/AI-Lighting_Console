@@ -1,0 +1,84 @@
+{"step": "store_B2", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.4", "reasons": []}, {"command": "Store Sequence 321 Cue 2 'T538 POS04' CueFade 
+{"step": "store_B2", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.199, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.266, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.332, "kind": "exec", "command": "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.466, "kind": "exec", "command": "Group 11 ; At Preset 2.4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.533, "kind": "exec", "command": "Store Sequence 321 Cue 2 'T538 POS04' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.6, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.666, "kind": "exec", "command": "Group 11 ; At Preset 2.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.733, "kind": "exec", "command": "Store Sequence 321 Cue 3 'T538 POS05' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.8, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.866, "kind": "exec", "command": "Group 11 ; At Preset 2.3", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.933, "kind": "exec", "command": "Store Sequence 321 Cue 4 'T538 POS03' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 0.999, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 1.065, "kind": "exec", "command": "Set Cue 1 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 1.132, "kind": "exec", "command": "Set Cue 2 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 1.199, "kind": "exec", "command": "Set Cue 3 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 1.266, "kind": "exec", "command": "Set Cue 4 Sequence 321 Property 'TrigType' 'Follow'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B2", "t": 1.333, "kind": "exec", "command": "Set Sequence 321 Property 'Name' 'T538 - B2 follow loop'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B2", "t": 1.401, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 321", "reasons": ["reference-invoking command"]}]}
+{"step": "play_B2", "t": 1.466, "kind": "exec", "command": "Goto Cue 1 Sequence 321", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538v3",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/312",
+    "ShowData/DataPools/Default/Sequences/313",
+    "ShowData/DataPools/Default/Sequences/314",
+    "ShowData/DataPools/Default/Sequences/315",
+    "ShowData/DataPools/Default/Sequences/316",
+    "ShowData/DataPools/Default/Sequences/317",
+    "ShowData/DataPools/Default/Sequences/318",
+    "ShowData/DataPools/Default/Sequences/319",
+    "ShowData/DataPools/Default/Sequences/320",
+    "ShowData/DataPools/Default/Sequences/321",
+    "ShowData/DataPools/Default/Sequences/322",
+    "ShowData/DataPools/Default/Sequences/323"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_B2": true,
+    "play_B2": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Store Sequence 321 Cue 1 'T538 POS01' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.4",
+        "Store Sequence 321 Cue 2 'T538 POS04' CueFade 0.54",
+        "ClearAll",
+        "Group 11 ; At Preset 2.5",
+        "Store Sequence 321 Cue 3 'T538 POS05' CueFade 1.07",
+        "ClearAll",
+        "Group 11 ; At Preset 2.3",
+        "Store Sequence 321 Cue 4 'T538 POS03' CueFade 0.54",
+        "ClearAll",
+        "Set Cue 1 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 2 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 3 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Cue 4 Sequence 321 Property 'TrigType' 'Follow'",
+        "Set Sequence 321 Property 'Name' 'T538 - B2 follow loop'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 321"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

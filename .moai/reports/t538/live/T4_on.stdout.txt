@@ -1,0 +1,39 @@
+{"step": "t4_prog", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "
+{"step": "t4_prog", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.199, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.266, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.332, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.399, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.466, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.532, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t4_prog", "t": 0.6, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538-T4T5",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "t4_prog": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "At Preset 21.5",
+      "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'",
+      "ClearAll",
+      "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 319"
+    ],
+    "approved": true
+  }
+]

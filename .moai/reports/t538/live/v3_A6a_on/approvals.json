@@ -1,0 +1,20 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "At Preset 21.2",
+      "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'",
+      "ClearAll",
+      "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 318"
+    ],
+    "approved": true
+  }
+]

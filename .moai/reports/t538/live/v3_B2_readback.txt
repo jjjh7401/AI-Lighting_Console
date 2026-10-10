@@ -1,0 +1,24 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/321
+    wire: Plugin "CopilotResponder" "state 22879eb3 ShowData/DataPools/Default/Sequences/321"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "T538 POS01"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "T538 POS04"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "T538 POS05"}, {"class": "Cue", "cueNo": 4, "i": 6, "name": "T538 POS03"}], "id": "22879eb3", "kind": "state", "node": {"childCount": 6, "class": "Sequence", "enumeration": "ok", "name": "T538 - B2 follow loop"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/3|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props f07392c5 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/321/3"
+<<< {"id": "f07392c5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS01"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Follow"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/4|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 5c585d25 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/321/4"
+<<< {"id": "5c585d25", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS04"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Follow"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/5|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 84b4c98a NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/321/5"
+<<< {"id": "84b4c98a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS05"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Follow"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321/6|NAME,TRIGTYPE,TRIGTIME
+    wire: Plugin "CopilotResponder" "props 53081a11 NAME,TRIGTYPE,TRIGTIME ShowData/DataPools/Default/Sequences/321/6"
+<<< {"id": "53081a11", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321/6", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "T538 POS03"}, {"n": "TRIGTYPE", "ok": true, "t": "string", "v": "Follow"}, {"n": "TRIGTIME", "ok": true, "t": "number", "v": "0.0"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|WRAPAROUND,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 19e731b2 WRAPAROUND,CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "19e731b2", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "WRAPAROUND", "ok": true, "t": "boolean", "v": "true"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.3"}], "truncated": false, "v": 1}

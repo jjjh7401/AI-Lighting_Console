@@ -1,0 +1,10 @@
+{"step": "store_A6b", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "At Preset 21.5", "reasons": []}, {"command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "reasons": []}]}
+{"step": "store_A6b", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.199, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.266, "kind": "exec", "command": "At Preset 21.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.333, "kind": "exec", "command": "Store Sequence 319 Cue 1 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6b", "t": 0.466, "kind": "exec", "command": "Set Sequence 319 Property 'Name' 'T538 - A6b fx preset 21-5 TILT-SWEEP'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A6b", "t": 0.533, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 319", "reasons": ["reference-invoking command"]}]}
+{"step": "play_A6b", "t": 0.599, "kind": "exec", "command": "Goto Cue 1 Sequence 319", "fired": true, "ok": true, "detail": "OK"}

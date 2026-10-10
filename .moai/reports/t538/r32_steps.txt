@@ -1,0 +1,3 @@
+props:ShowData/DataPools/Default/Sequences/322/6|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/322/4|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/322|CURRENTCUE,SEQUMIBMODE,WRAPAROUND

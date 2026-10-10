@@ -1,0 +1,10 @@
+{"step": "store_A6a", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "At Preset 21.2", "reasons": []}, {"command": "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "reasons": []}]}
+{"step": "store_A6a", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.199, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.266, "kind": "exec", "command": "At Preset 21.2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.333, "kind": "exec", "command": "Store Sequence 318 Cue 1 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A6a", "t": 0.466, "kind": "exec", "command": "Set Sequence 318 Property 'Name' 'T538 - A6a fx preset 21-2 PT-CIRCLE'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A6a", "t": 0.533, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 318", "reasons": ["reference-invoking command"]}]}
+{"step": "play_A6a", "t": 0.599, "kind": "exec", "command": "Goto Cue 1 Sequence 318", "fired": true, "ok": true, "detail": "OK"}

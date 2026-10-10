@@ -1,0 +1,2 @@
+{"step": "play_B3_go_dark", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Go+ Sequence 322", "reasons": ["reference-invoking command"]}]}
+{"step": "play_B3_go_dark", "t": 0.133, "kind": "exec", "command": "Go+ Sequence 322", "fired": true, "ok": true, "detail": "OK"}

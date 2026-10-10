@@ -1,0 +1,40 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/228/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 77016c95 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/228/3"
+<<< {"id": "77016c95", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/228/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L0 Static 100"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3616"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/229/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 63e9224d NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/229/3"
+<<< {"id": "63e9224d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/229/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L1 Pulse Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3656"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/232/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 53c1ef1a NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/232/3"
+<<< {"id": "53c1ef1a", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/232/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L4 Tilt Wave Speed 112"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4188"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/233/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 739fb161 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/233/3"
+<<< {"id": "739fb161", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/233/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "L5 Tilt Wave Speedmaster"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4220"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/302/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props be79396d NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/302/3"
+<<< {"id": "be79396d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/302/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P5 relative-on-preset"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3780"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/305/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 8077a1fd NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/305/3"
+<<< {"id": "8077a1fd", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/305/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P8 pantilt-only"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3780"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 489e207b NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/308/3"
+<<< {"id": "489e207b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P9 wave"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3760"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/309/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props a97c1c92 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/309/3"
+<<< {"id": "a97c1c92", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/309/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P10 dimmer phase spread"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3608"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/311/3
+    wire: Plugin "CopilotResponder" "state 47b947de ShowData/DataPools/Default/Sequences/311/3"
+<<< {"children": [{"class": "Part", "i": 1, "name": "T538 - A0 A2 replay"}], "id": "47b947de", "kind": "state", "node": {"childCount": 1, "class": "Cue", "enumeration": "ok", "name": "T538 - A0 A2 replay"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/311/3", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/Sequences/311/3
+    wire: Plugin "CopilotResponder" "introspect 27be912c ShowData/DataPools/Default/Sequences/311/3"
+<<< {"class": "Cue", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "NO", "t": "CueNumber"}, {"n": "RELEASE", "t": "UInt32"}, {"n": "ASSERT", "t": "UInt32"}, {"n": "ALLOWDUPLICATES", "t": "UInt32"}, {"n": "TRIGTYPE", "t": "UInt8"}, {"n": "TRIGTIME", "t": "Int64Time"}, {"n": "TRIGSOUND", "t": "UInt8"}, {"n": "MIBPREFERENCE", "t": "UInt8"}, {"n": "BREAK", "t": "Handle"}], "id": "27be912c", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/311/3", "source": "property_accessors", "total": 23, "truncated": false, "v": 1}

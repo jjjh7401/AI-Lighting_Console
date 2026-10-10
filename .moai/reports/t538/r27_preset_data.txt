@@ -1,0 +1,12 @@
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/1|PRESETDATA,STOREDDATA,OWNDATAPRESENT,VALUESMODE,PRESETMODE,MEMORYTYPE,FEATUREGROUP
+    wire: Plugin "CopilotResponder" "props 99f8d6a7 PRESETDATA,STOREDDATA,OWNDATAPRESENT,VALUESMODE,PRESETMODE,MEMORYTYPE,FEATUREGROUP ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"id": "99f8d6a7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "reads": [{"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": ""}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "false"}, {"n": "VALUESMODE", "ok": true, "t": "string", "v": "Normal"}, {"n": "PRESETMODE", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYTYPE", "ok": true, "t": "string", "v": "Compressed"}, {"n": "FEATUREGROUP", "ok": true, "t": "string", "v": "Position"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|PRESETDATA,STOREDDATA,OWNDATAPRESENT,VALUESMODE,PRESETMODE,MEMORYTYPE,FEATUREGROUP
+    wire: Plugin "CopilotResponder" "props 7e7405d4 PRESETDATA,STOREDDATA,OWNDATAPRESENT,VALUESMODE,PRESETMODE,MEMORYTYPE,FEATUREGROUP ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "7e7405d4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}, {"n": "STOREDDATA", "ok": true, "t": "string", "v": "Selective"}, {"n": "OWNDATAPRESENT", "ok": true, "t": "boolean", "v": "true"}, {"n": "VALUESMODE", "ok": true, "t": "string", "v": "Normal"}, {"n": "PRESETMODE", "ok": true, "t": "string", "v": "Selective"}, {"n": "MEMORYTYPE", "ok": true, "t": "string", "v": "Compressed"}, {"n": "FEATUREGROUP", "ok": true, "t": "string", "v": "Position"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/2/4|SELECTIONDATA
+    wire: Plugin "CopilotResponder" "props 14ac80bb SELECTIONDATA ShowData/DataPools/Default/PresetPools/2/4"
+<<< {"id": "14ac80bb", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/4", "reads": [{"n": "SELECTIONDATA", "ok": true, "t": "table", "v": "{}"}], "truncated": false, "v": 1}

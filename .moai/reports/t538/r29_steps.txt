@@ -1,0 +1,6 @@
+state:ShowData/DataPools/Default/Sequences/321
+props:ShowData/DataPools/Default/Sequences/321/3|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/321/4|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/321/5|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/321/6|NAME,TRIGTYPE,TRIGTIME
+props:ShowData/DataPools/Default/Sequences/321|WRAPAROUND,CURRENTCUE

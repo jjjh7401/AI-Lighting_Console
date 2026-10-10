@@ -1,0 +1,23 @@
+{"step": "store_A5b", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Pan' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"command": "Step 1 At Decel -100", "reasons": []}, {"command": "Step 2 At Accel -100", "reasons": []}, {"command": "Step 2 At Decel -100", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 112", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 112", "reasons": []}, {"command": "Store Sequence 323 Cue 1 'T538 - A5b pan tilt circle curve'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 323 Property 'Name' 'T538 - A5b pan tilt circle curve'", "reasons": []}]}
+{"step": "store_A5b", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.199, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.266, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.333, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.4, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.466, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.532, "kind": "exec", "command": "Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.599, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.666, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.733, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.799, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.866, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.933, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 0.999, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 1.066, "kind": "exec", "command": "Attribute 'Pan' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 1.133, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 1.199, "kind": "exec", "command": "Store Sequence 323 Cue 1 'T538 - A5b pan tilt circle curve'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 1.266, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_A5b", "t": 1.333, "kind": "exec", "command": "Set Sequence 323 Property 'Name' 'T538 - A5b pan tilt circle curve'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_A5b", "t": 1.401, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 323", "reasons": ["reference-invoking command"]}]}
+{"step": "play_A5b", "t": 1.466, "kind": "exec", "command": "Goto Cue 1 Sequence 323", "fired": true, "ok": true, "detail": "OK"}

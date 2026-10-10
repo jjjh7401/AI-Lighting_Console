@@ -1,0 +1,43 @@
+{
+  "item": "T538-T1",
+  "free_slots": [],
+  "occupied_before": [],
+  "planned": {
+    "t1_mspeed": [
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"
+    ],
+    "t1_clear": [
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "311 켜 둔 상태 전제. 감독 판정 뒤 t1_clear."
+  ],
+  "bundles": {
+    "t1_mspeed": true,
+    "t1_clear": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

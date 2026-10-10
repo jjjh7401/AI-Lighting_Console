@@ -1,0 +1,12 @@
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3|NAME,DEFAULT,HIGHLIGHT,LOWLIGHT,COARSE,FINE
+    wire: Plugin "CopilotResponder" "props a70f69a0 NAME,DEFAULT,HIGHLIGHT,LOWLIGHT,COARSE,FINE Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3"
+<<< {"id": "a70f69a0", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_PositionMSpeed"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<000000>"}, {"n": "HIGHLIGHT", "ok": true, "t": "number", "v": "2147483647"}, {"n": "LOWLIGHT", "ok": true, "t": "number", "v": "2147483647"}, {"n": "COARSE", "ok": true, "t": "number", "v": "5"}, {"n": "FINE", "ok": true, "t": "string", "v": "None"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2|NAME,DEFAULT,COARSE,FINE
+    wire: Plugin "CopilotResponder" "props 5bec23f4 NAME,DEFAULT,COARSE,FINE Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2"
+<<< {"id": "5bec23f4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Main Module_Tilt"}, {"n": "DEFAULT", "ok": true, "t": "string", "v": "<800080>"}, {"n": "COARSE", "ok": true, "t": "number", "v": "3"}, {"n": "FINE", "ok": true, "t": "number", "v": "4"}], "truncated": false, "v": 1}
+
+>>> introspect:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1
+    wire: Plugin "CopilotResponder" "introspect 028a3f97 Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1"
+<<< {"class": "ChannelSet", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "NOTE", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "TYPE", "t": "String"}, {"n": "DMXFROM", "t": "UInt32"}, {"n": "DMXTO", "t": "UInt32"}, {"n": "WHEELSLOTINDEX", "t": "UInt32"}, {"n": "PHYSICALFROM", "t": "Double"}, {"n": "PHYSICALTO", "t": "Double"}, {"n": "HASPHYSICAL", "t": "UInt8"}], "id": "028a3f97", "kind": "introspect", "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1", "source": "property_accessors", "total": 22, "truncated": false, "v": 1}

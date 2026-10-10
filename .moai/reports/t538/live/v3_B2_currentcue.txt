@@ -1,0 +1,32 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props f993bb96 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "f993bb96", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.2"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 4e920d9e CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "4e920d9e", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 04a6cbe3 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "04a6cbe3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props aeade8dd CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "aeade8dd", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.4"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 5fb70688 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "5fb70688", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.4"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props e41fba98 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "e41fba98", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 8a664bd1 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "8a664bd1", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/321|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 55ea3d24 CURRENTCUE ShowData/DataPools/Default/Sequences/321"
+<<< {"id": "55ea3d24", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/321", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 321.1"}], "truncated": false, "v": 1}

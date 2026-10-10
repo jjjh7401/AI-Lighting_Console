@@ -1,0 +1,8 @@
+props:ShowData/DataPools/Default/Sequences/311/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/228/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/229/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/232/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/305/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/308/3/1|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/309/3/1|NAME,MEMORYFOOTPRINT
+introspect:ShowData/DataPools/Default/Sequences/311/3/1

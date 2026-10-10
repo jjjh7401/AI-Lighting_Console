@@ -1,0 +1,57 @@
+{"step": "t3_off311", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 311", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 311': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "t3_off311", "t": 0.001, "kind": "exec", "command": "Off Sequence 311", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attr
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_prog", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Speed 112", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t3_clear", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "t3_clear", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538-T3",
+  "free_slots": [],
+  "occupied_before": [],
+  "notes": [
+    "Store 0줄. 감독 판정 뒤 t3_clear."
+  ],
+  "bundles": {
+    "t3_off311": true,
+    "t3_prog": true,
+    "t3_clear": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 311"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
