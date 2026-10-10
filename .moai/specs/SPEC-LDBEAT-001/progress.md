@@ -193,6 +193,20 @@ $ git diff --stat origin/main -- ui/src/components/CueSheetTimeline.tsx 'CueShee
 - **배치 규칙서 §4 측정 결과(이 개정의 핵심 실측)**: 프리셋 번호 기재 0개 / 미정 대상 30개 큐 × 4필드(brightness preset/position/color/effect) = 최대 120개 필드 슬롯, 전부 미정으로 시작해야 함(배치 규칙서가 준 숫자가 전무하므로).
 - **열지 못한 결정**: §5 항목 6(전체화면 전환 트리거의 정확한 UI 모양 — 탭/버튼/자리)은 입력 보고서에 명시가 없어 M2(phase ②)가 director와 확정하도록 열어 두었다.
 
+### t537 ① 개정 2 — plan-audit 독립 감사 FAIL(0.55) 대응
+
+`.moai/reports/t537/plan-audit.md` — MP-2(GEARS 형식) FAIL + Clarity/Completeness/Testability/Traceability 전부 0.50. 코드 diff 0줄, 콘솔 접촉 0건.
+
+- **D1(blocking)**: REQ-LDBEAT-006(i)·(ii)가 트리거 없는 평서문 부속 요구를 다시 들여온 재발(iteration 1/2와 같은 패턴) — (i-1)~(i-7)·(ii-1)~(ii-5) 라벨 하위 절로 재구조화(새 REQ-ID 없음).
+- **D2(blocking)**: `reports/effect-arrangement-rules-20261007.md:98-115`(§4) 전수 재독 결과 프리셋 번호는 0개지만 밝기 퍼센트·마디 단위 페이드 힌트는 명시돼 있다는 것을 실측 — `entry.fade_seconds`를 `entry.fade_bars`(마디 수)로 바꾸고 `source_ref` 필드를 신설해, 실제 30개 큐 중 §4가 숫자로 준 네 자리(BACK@7/18/22마디·BLIND@18마디, 전부 `brightness.value_percent`)만 전사하고 나머지는 미정으로 남기는 규칙을 REQ-LDBEAT-006(i-4)~(i-7)에 명시. acceptance.md에 전사값 기대표(§A 보충)와 AC-LDBEAT-016(f)를 신설.
+- **D3·D4(blocking)**: §A.1의 과잉 매핑 주장을 AC-LDBEAT-016(g)(레거시 읽기+label-파싱 부재 grep)·(h)(겹침 독립성)·AC-LDBEAT-009(d)(M1 실패-경로)로 맞췄다.
+- **D5(blocking, minor)**: AC-LDBEAT-009(c) 검증 수단에 빌드 타임 생성 경로 조건부 문구 추가.
+- **D6(blocking, minor)**: AC-LDBEAT-016(g)에 label-파싱 함수 부재 grep 추가.
+- **D7·D8(optional)**: "656행"→"655행", HISTORY의 "AC-LDBEAT-016(f)" 오기→"(e)" 정정.
+- **D9(optional)**: REQ-LDBEAT-006(i-3)에 `effect_kind` 필드 신설(색/혼합 효과 풀 구분), §5 열린 결정 7항 추가.
+- plan.md M7 (1)의 데이터 모양 블록을 `fade_bars`/`effect_kind`/`source_ref`로 갱신.
+- **REQ 15개·AC 16개 총량 불변.** plan-audit 재감사(D1~D9 delta 스코프) 요청.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
