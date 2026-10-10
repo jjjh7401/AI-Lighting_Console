@@ -94,9 +94,10 @@ class TestDefaultBeatGrid:
         assert by_name["FOH"]["group_no_confirmed"] is True
         assert by_name["WASH-ALL"]["group_no"] == 10
         assert by_name["WASH-ALL"]["group_no_confirmed"] is True
-        # STROBE는 이 plan-phase 증거 어디에도 번호가 없다 — 지어내지 않는다.
-        assert by_name["STROBE"]["group_no"] is None
-        assert by_name["STROBE"]["group_no_confirmed"] is False
+        # STROBE는 plan-phase 증거에 번호가 없어 비워 뒀다가 t543 실측으로 15
+        # (SELECTIONDATA 611~614).
+        assert by_name["STROBE"]["group_no"] == 15
+        assert by_name["STROBE"]["group_no_confirmed"] is True
 
     def test_layer_role_labels_come_from_the_shared_rig_resolver(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)

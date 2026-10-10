@@ -56,7 +56,15 @@ class TestStructuredCueFields:
 
     def test_every_other_cue_has_no_value_percent_and_no_source_ref(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
-        known = {("BACK", 7), ("BACK", 18), ("BACK", 22), ("BLIND", 18)}
+        known = {
+            ("BACK", 7),
+            ("BACK", 18),
+            ("BACK", 22),
+            ("BLIND", 18),
+            # 카드 t543 — 역할 매칭(감독 결정 2026-10-10)으로 옮긴 워시 칸 둘.
+            ("WASH-ALL", 7),
+            ("WASH-ALL", 14),
+        }
         # 카드 t543 — FOH bar 7 「FOH 켬」은 §4 출처 행은 있지만 밝기 숫자가 없다.
         foh_on = ("FOH", 7)
 
@@ -71,7 +79,21 @@ class TestStructuredCueFields:
                     assert cue["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
                     continue
                 assert cue["source_ref"] is None
-        assert checked == 31  # FOH 1 + WASH-ALL 0 + 7+7+7+7+2+0
+        assert checked == 33  # FOH 1 + WASH-ALL 2 + 7+7+7+7+2+0
+
+    def test_wash_cells_carry_section_4_values(self) -> None:
+        # 카드 t543 — §4 「라벤더 워시 40%(2마디 번짐)」·「워시 25% 덜어냄」.
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        wash = next(t for t in grid["tracks"] if t["group_name"] == "WASH-ALL")
+        by_bar = {c["bar"]: c for c in wash["cues"]}
+
+        assert sorted(by_bar) == [7, 14]
+        assert by_bar[7]["brightness"]["value_percent"] == 40
+        assert by_bar[7]["entry"]["fade_bars"] == 2
+        assert by_bar[7]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
+        assert by_bar[14]["brightness"]["value_percent"] == 25
+        assert by_bar[14]["entry"]["fade_bars"] is None
+        assert by_bar[14]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:108"
 
     def test_no_cue_anywhere_invents_a_preset_number(self) -> None:
         # REQ-LDBEAT-015(f) — §4에 프리셋 번호가 0개이므로 30개 큐 전부
@@ -85,15 +107,18 @@ class TestStructuredCueFields:
                 assert cue["color_preset_no"] is None
                 assert cue["effect_preset_no"] is None
 
-    def test_entry_fade_bars_is_none_for_all_thirty_cues(self) -> None:
-        # §4의 마디 단위 페이드 힌트는 전부 SCENE 열에만 있고 SCENE은
-        # 트랙이 아니다(대응 큐 없음) — entry.fade_bars는 전수 None.
+    def test_entry_fade_bars_is_none_except_the_wash_cell_that_states_one(self) -> None:
+        # §4의 마디 단위 페이드 힌트는 전부 SCENE 열에만 있다 — 그중 트랙으로
+        # 옮겨진 것은 WASH-ALL bar 7 「2마디 번짐」 하나뿐(카드 t543).
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
 
         for track in grid["tracks"]:
             for cue in track["cues"]:
-                assert cue["entry"]["fade_bars"] is None
                 assert cue["entry"]["mib_mode"] is None
+                if (track["group_name"], cue["bar"]) == ("WASH-ALL", 7):
+                    assert cue["entry"]["fade_bars"] == 2
+                    continue
+                assert cue["entry"]["fade_bars"] is None
 
     def test_label_is_preserved_verbatim_for_display(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
@@ -156,12 +181,13 @@ class TestSceneMemos:
     """리드 추가 지시(2026-10-10) — SCENE 열 값은 역할·효과 혼성 트랙으로
     지어내지 않고 메모로 떨어진다. 겹침 검증 로직과는 독립이다."""
 
-    def test_all_six_scene_values_become_memos(self) -> None:
+    def test_the_four_unassigned_scene_values_stay_memos(self) -> None:
+        # 카드 t543 — bar 7·14 는 FOH·WASH-ALL 트랙으로 옮겨져 메모에서 빠졌다.
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
 
-        assert len(grid["scene_memos"]) == 6
+        assert len(grid["scene_memos"]) == 4
         bars = sorted(memo["bar"] for memo in grid["scene_memos"])
-        assert bars == [0, 7, 11, 14, 18, 22]
+        assert bars == [0, 11, 18, 22]
 
     def test_each_memo_carries_the_verbatim_section_4_text_and_source_line(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
@@ -169,8 +195,8 @@ class TestSceneMemos:
 
         assert "BACK 차가운 실루엣 30%" in by_bar[0]["text"]
         assert by_bar[0]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:104"
-        assert "워시 25% 덜어냄" in by_bar[14]["text"]
-        assert by_bar[14]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:108"
+        assert "틴트 한 단계" in by_bar[11]["text"]
+        assert by_bar[11]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:107"
 
     def test_scene_memos_are_a_separate_list_outside_track_cues(self) -> None:
         # 메모는 트랙 큐에 끼워넣지 않는다 — BACK 트랙은 여전히 7개 큐뿐이다
@@ -225,92 +251,93 @@ class TestSceneCellAssignmentRule:
         )
         assert verdict == "track"
 
-    def test_love_attack_section_4_scene_cells_all_classify_as_memo(self) -> None:
-        # beat_grid_data/love_attack.yaml 주석(2026-10-10 전수 재검토)이
-        # 수동으로 판단한 여섯 자리를 이 순수 함수로 재도출한다 — 아래
-        # 입력(named_group/confirmed_track_group_names/
-        # group_has_existing_cue_at_bar)은 §4 원문 + YAML 주석이 적은 근거를
-        # 그대로 옮긴 **이 테스트 전용** 데이터이고, `beat_grid.py`의
-        # 함수 로직에는 올라가지 않는다(리그 전용 상수를 app 로직에 더하지
-        # 않는다).
-        # 카드 t543 — FOH(3)·WASH-ALL(10) 이 콘솔 실측으로 확인된 트랙이 됐다.
-        love_attack_confirmed_tracks = [
-            "FOH",
-            "WASH-ALL",
-            "BACK",
-            "SIDE-ALL",
-            "MOVER-U",
-            "MOVER-D",
-            "BLIND",
-        ]
-        section_4_scene_inputs: dict[int, dict[str, object]] = {
-            # bar 0 — BACK을 직접 부르고 그룹 번호도 확인돼 있지만, 그
-            # 마디에 이미 펄스 큐("앞박 1회")가 있어 조건 3이 거짓.
-            0: {
-                "named_group": "BACK",
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": True,
-            },
-            # bar 7 — 「워시」 부분: 칸이 부르는 이름은 "WASH" 이고 확인된
-            # 트랙은 "WASH-ALL" 이다 — 바이트 일치가 아니라 조건 2가 거짓
-            # (카드 t543, 워시 = WASH-ALL 로 읽을지는 리드 결정). 같은 칸의
-            # 「FOH 켬」 부분은 아래에서 따로 "track" 으로 잰다.
-            7: {
-                "named_group": "WASH",
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": False,
-            },
-            # bar 11/14/18/22 — 칸 자체가 그룹 이름을 부르지 않는다(조건 1이
-            # 거짓).
-            11: {
-                "named_group": None,
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": False,
-            },
-            14: {
-                "named_group": None,
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": False,
-            },
-            18: {
-                "named_group": None,
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": False,
-            },
-            22: {
-                "named_group": None,
-                "confirmed_track_group_names": love_attack_confirmed_tracks,
-                "group_has_existing_cue_at_bar": False,
-            },
+    def test_love_attack_section_4_scene_cells_classify_to_the_yaml_layout(self) -> None:
+        # §4 SCENE 칸 여섯 자리를 순수 함수로 재도출해 YAML 배치와 대조한다.
+        # 아래 입력(칸이 부르는 그룹/역할, 그 자리 기존 큐 여부)은 §4 원문을
+        # 옮긴 **이 테스트 전용** 데이터다 — 리그 전용 상수는 앱 로직에 없다.
+        # 확인된 트랙의 이름·역할은 YAML 을 로더로 읽은 값에서 가져온다.
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        confirmed = [t for t in grid["tracks"] if t["group_no_confirmed"]]
+        names = [t["group_name"] for t in confirmed]
+        roles = [t["layer_role"] for t in confirmed]
+
+        def verdict(*, group=None, role=None, occupied=False):
+            return classify_scene_cell_assignment(
+                named_group=group,
+                confirmed_track_group_names=names,
+                group_has_existing_cue_at_bar=occupied,
+                named_role=role,
+                confirmed_track_roles=roles,
+            )
+
+        # 칸 하나가 여러 부분(예: bar 7 「라벤더 워시 40% · FOH 켬」)을 가질 수 있다.
+        cell_parts: dict[int, list[str]] = {
+            # BACK 을 부르지만 그 마디에 BACK 펄스 큐가 이미 있다(조건 3 거짓).
+            0: [verdict(group="BACK", occupied=True)],
+            # 「라벤더 워시」 → 역할 wash, 「FOH 켬」 → 그룹 FOH(카드 t543).
+            7: [verdict(role="wash"), verdict(group="FOH")],
+            11: [verdict()],  # 「틴트 한 단계」 — 그룹·역할을 부르지 않는다
+            14: [verdict(role="wash")],  # 「워시 25% 덜어냄」
+            18: [verdict()],  # 「핑크 70% 끊어 바꿈」 — 부르지 않는다
+            22: [verdict()],  # 「핑크→피치」 — 부르지 않는다
         }
 
-        derived_verdicts = {
-            bar: classify_scene_cell_assignment(**inputs)  # type: ignore[arg-type]
-            for bar, inputs in section_4_scene_inputs.items()
-        }
-        assert all(verdict == "memo" for verdict in derived_verdicts.values())
+        assert cell_parts[7] == ["track", "track"]
+        assert cell_parts[14] == ["track"]
+        expected_memo_bars = sorted(
+            bar for bar, parts in cell_parts.items() if all(v == "memo" for v in parts)
+        )
+        assert expected_memo_bars == [0, 11, 18, 22]
+        assert sorted(memo["bar"] for memo in grid["scene_memos"]) == expected_memo_bars
 
-        # 카드 t543 — bar 7 칸의 「FOH 켬」은 FOH 를 바이트로 부르고, FOH(3)가
-        # 확인된 트랙이며, 그 자리에 기존 큐가 없다 → "track". YAML 의 FOH
-        # 트랙이 바로 그 큐 하나를 싣는다.
+        # 옮겨진 부분은 YAML 의 해당 트랙에 실제로 있다.
+        by_name = {t["group_name"]: [c["bar"] for c in t["cues"]] for t in grid["tracks"]}
+        assert by_name["FOH"] == [7]
+        assert by_name["WASH-ALL"] == [7, 14]
+
+    def test_role_match_requires_exactly_one_track_with_that_role(self) -> None:
+        # 규칙 확장(감독 결정 2026-10-10) — 역할 이름을 부르는 칸은 그 역할의
+        # 확인된 트랙이 정확히 하나일 때만 트랙으로 간다. 리그 무관 가짜 이름.
+        one = classify_scene_cell_assignment(
+            named_group=None,
+            confirmed_track_group_names=["A", "B"],
+            group_has_existing_cue_at_bar=False,
+            named_role="wash",
+            confirmed_track_roles=["wash", "back"],
+        )
+        two = classify_scene_cell_assignment(
+            named_group=None,
+            confirmed_track_group_names=["A", "B"],
+            group_has_existing_cue_at_bar=False,
+            named_role="wash",
+            confirmed_track_roles=["wash", "wash"],
+        )
+        none = classify_scene_cell_assignment(
+            named_group=None,
+            confirmed_track_group_names=["A"],
+            group_has_existing_cue_at_bar=False,
+            named_role="wash",
+            confirmed_track_roles=["back"],
+        )
+        occupied = classify_scene_cell_assignment(
+            named_group=None,
+            confirmed_track_group_names=["A"],
+            group_has_existing_cue_at_bar=True,
+            named_role="wash",
+            confirmed_track_roles=["wash"],
+        )
+        assert (one, two, none, occupied) == ("track", "memo", "memo", "memo")
+
+    def test_group_name_match_is_not_widened(self) -> None:
+        # 그룹 이름 경로는 여전히 바이트 일치 — "WASH" 는 "WASH-ALL" 이 아니다.
         assert (
             classify_scene_cell_assignment(
-                named_group="FOH",
-                confirmed_track_group_names=love_attack_confirmed_tracks,
+                named_group="WASH",
+                confirmed_track_group_names=["WASH-ALL"],
                 group_has_existing_cue_at_bar=False,
             )
-            == "track"
+            == "memo"
         )
-        foh = next(
-            t for t in default_beat_grid(LOVE_ATTACK_TITLE)["tracks"] if t["group_name"] == "FOH"
-        )
-        assert [(c["bar"], c["label"]) for c in foh["cues"]] == [(7, "FOH 켬")]
-
-        # 이 순수 함수가 도출한 "전부 memo"가, YAML이 실제로 싣고 있는
-        # scene_memos의 bar 집합과 바이트 단위로 일치하는지 확인한다.
-        grid = default_beat_grid(LOVE_ATTACK_TITLE)
-        yaml_memo_bars = sorted(memo["bar"] for memo in grid["scene_memos"])
-        assert yaml_memo_bars == sorted(section_4_scene_inputs.keys())
 
 
 class TestOverlapIndependentOfCellStructuring:

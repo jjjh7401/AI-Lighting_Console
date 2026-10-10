@@ -88,6 +88,16 @@ $ ruff check (변경 파일 + 이 폴더) → All checks passed!
 2. **STROBE 그룹 번호.** 콘솔 실측으로 **15**(611~614)가 확인됐다. 데이터 파일엔 아직 `null` 이다 — 이 카드 범위(WASH·FOH) 밖이라 넣지 않았다.
 3. ③ 기입표를 감독께 어떤 형식으로 드릴지(지금은 markdown).
 
+## 후속 — 리드 결정 반영 (2026-10-10, 같은 카드)
+
+| 결정 | 반영 |
+|---|---|
+| (1) 감독 「워시 = WASH-ALL」 — 문자열 말고 층 역할로 | `classify_scene_cell_assignment` 에 `named_role`·`confirmed_track_roles` 선택 인자. 칸이 역할을 부르고 그 역할의 확인된 트랙이 **정확히 하나**일 때만 트랙으로, 둘 이상이거나 없으면 메모. 그룹 이름 비교(`"WASH"`≠`"WASH-ALL"`)는 그대로. bar 7·14 워시 → WASH-ALL 큐(40%·2마디 번짐 / 25%). 메모 6 → 4 |
+| (2) STROBE 15 | `group_no: 15`, `group_no_confirmed: true` (611~614 실측) |
+| (3) PR (트랙 데이터만) + 제안표 | PR 은 이 커밋들. 제안표는 `proposal-table.md`(번호는 yaml 에 넣지 않음) |
+
+검증: `pytest server/tests -k "beat_grid or runbook or ldbeat or timeline"` → **206 passed, 2 skipped**. 역할 경로를 끈 몽키패치로 돌리면 새 시험 2개가 FAIL — 시험이 확장을 실제로 잰다. 기입표는 다시 뽑아 큐 **33개**(WASH-ALL 2 추가), 큐 없는 트랙은 STROBE 뿐. `progress.md` 에 「규칙 확장, 감독 결정 2026-10-10」 기록 — spec.md REQ-006(iv-2) 문면 개정은 manager-spec 몫으로 남김.
+
 ## 안 잰 것
 
 - 프리셋 **내용**(어느 장비에 어떤 값). 이름만 읽었다. 이름이 실제 모양·색과 다를 수 있다(t538: `21.2 PT-CIRCLE` 은 원이 아님).

@@ -455,6 +455,17 @@ $ git diff edc537db -- ui/src/App.tsx
 
 **plan-audit iteration 3 FAIL(0.60) D1/D2/D4/D5 보강(같은 카드)** — D1: `BeatGrid.tsx`에 순수함수 `sceneMemoMarkers(memos, visibleBarRange)` 신설("이 마디 한눈에" 패널이 실제로 그리는 배지+§4 원문+`source_ref` derivation, DOM 없이 단언)해 `BeatGrid.test.tsx`에 LOVE ATTACK 여섯 메모+가짜 다른 곡 메모 단위시험 5개 추가(85개로 증가). D2: `TestOverlapIndependentOfCellStructuring`에 `inspect.signature`/`inspect.getsource` 기반 `scene_memos` 매개변수·참조 부재 단언 + LOVE ATTACK 실제 데이터로 메모·큐 공유 마디(겹침 자리)가 있어도 `validate_beat_grid_tracks`가 그대로 PASS하는 행동시험 2개 추가. D4: REQ-LDBEAT-006(iv-2) "세 조건" 규칙을 파라미터화한 순수함수 `classify_scene_cell_assignment`(`beat_grid.py`) 신설 + 조건별 독립 단위시험 4개와 LOVE ATTACK §4 SCENE 여섯 자리 재도출 대조시험 1개(`TestSceneCellAssignmentRule`, `test_beat_grid_t537.py` 21→28개). D5: `love_attack_data/love_attack.yaml` 주석의 "나머지 셋(11~13·18~21·22~25)"을 bar 14 포함 "나머지 넷(11~13·14~17·18~21·22~25)"으로 정정. 전수 재검증: `pytest` 58 passed·`ruff check`/`format --check` 2 files 통과·`tsc --noEmit` 0·`vitest`(BeatGrid/RunbookMode/App) 131 passed. D3(AC-016(m) 인용 테스트 파일 정정)는 acceptance.md 편집이 범위 밖이라 보류.
 
+### 데이터 채우기 — FOH·WASH-ALL·STROBE 트랙 + 규칙 확장 (카드 t543, lane-3, 브랜치 `WT-ldbeat-data-fill`)
+
+감독 결정 2026-10-10 「데이터 채우기 먼저」. 콘솔 읽기 전용(쓰기 0, 응답기 1.6.6). 증거 `.moai/reports/t543/verdict.md`.
+
+- **콘솔 실측**: 프리셋 풀 14개·그룹 18개 목록(`r1_pools.json`), 그룹 18개 SELECTIONDATA 전량(1.6.6 props 나눠 읽기, `r2_group_members.jsonl`) → 패치 SUBFIXTUREINDEX 로 fid 대응(`r4_group_fids.txt`, 18개 모두 이름과 일치, unknown 0). t525 의 「그룹당 앞 2대」 한계는 1.6.6 에서 풀렸다.
+- **데이터**: `love_attack.yaml` 에 FOH(G3, 111~118)·WASH-ALL(G10, 401~410·421~430) 트랙 추가(시안 ROLES 순서), STROBE `group_no` 15(611~614). 그룹 번호는 데이터 파일에만 — 코드 상수 0.
+- **규칙 확장, 감독 결정 2026-10-10** — REQ-LDBEAT-006(iv-2) 「세 조건」의 조건 1·2를 넓혔다: 칸이 그룹 이름 대신 **층 역할**(예: 「워시」 → `wash`)을 부르면, 확인된 트랙 중 그 역할(공용 판정기 `resolve_layer_role`)을 가진 트랙이 **정확히 하나**일 때만 그 트랙 큐로 옮긴다. 둘 이상이거나 없으면 메모로 남는다. 그룹 이름 문자열 비교는 넓히지 않았다(`"WASH"` ≠ `"WASH-ALL"` 그대로). 구현: `classify_scene_cell_assignment(named_role=, confirmed_track_roles=)` 선택 인자(기존 호출 동작 불변). 결과: bar 7 「라벤더 워시 40%(2마디 번짐)」·bar 14 「워시 25% 덜어냄」 → WASH-ALL 큐, bar 7 「FOH 켬」 → FOH 큐(기존 세 조건), 메모 6 → 4(0·11·18·22). 이 확장은 spec.md REQ-LDBEAT-006(iv-2) 문면에 아직 반영되지 않았다 — 문면 개정은 manager-spec 몫.
+- **검증**: `pytest server/tests -k "beat_grid or runbook or ldbeat or timeline"` → 206 passed, 2 skipped. 역할 경로를 끈 몽키패치에서 새 시험 2개 FAIL(`test_love_attack_section_4_scene_cells_classify_to_the_yaml_layout`, `test_role_match_requires_exactly_one_track_with_that_role`) — 시험이 확장을 실제로 잰다. `ruff check`·`format --check` 통과.
+- **색 프리셋 값**: 4.1·4.2 필드 135개 읽기 — 색 값 칸 없음(`PRESETDATA ""`, `SELECTIONDATA {}`). `colorPresetHex` 막힘 유지(빗금).
+- **안 잰 것**: 화면(`ui/`)에서 새 트랙이 어떻게 보이는지 브라우저로 안 봄. 전체 시험은 CI 에 맡김.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
