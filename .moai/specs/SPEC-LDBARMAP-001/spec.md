@@ -2,7 +2,7 @@
 id: SPEC-LDBARMAP-001
 title: "마디 지도 — 오프라인 박자·다운비트·마디 경계·마디별 변화 검출"
 version: "0.1.0"
-status: draft
+status: in-progress
 created: 2026-10-10
 updated: 2026-10-10
 author: jaihyun
