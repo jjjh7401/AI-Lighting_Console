@@ -1,0 +1,25 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; At Preset 2.1",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 30",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 315 Cue 1 'T538 - A3 base preset 2-1'",
+      "ClearAll",
+      "Set Sequence 315 Property 'Name' 'T538 - A3 base preset 2-1'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 315"
+    ],
+    "approved": true
+  }
+]
