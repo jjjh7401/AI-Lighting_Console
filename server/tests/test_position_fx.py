@@ -79,13 +79,21 @@ class TestAbBundles:
 
 class TestBaseBundles:
     def test_circle_full_bundle(self):
-        # Circle Base = index 4 -> 2.45; quarter-cycle axis offset, both axes timed.
+        # Circle Base = index 4 -> 2.45; two ±steps (t540), sine curve per step,
+        # quarter-cycle axis offset — the t538 A5b 「동그란 원」 shape.
         assert build("circle") == (
             "ChangeDestination Root",
             "ClearAll",
             "Fixture 11 + 12 + 13 ; At Preset 2.45",
+            "Attribute 'Pan' At Relative -12",
+            "Attribute 'Tilt' At Relative -8",
+            "Step 2",
             "Attribute 'Pan' At Relative 12",
             "Attribute 'Tilt' At Relative 8",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
             "Attribute 'Pan' At Phase 0",
             "Attribute 'Tilt' At Phase 90",
             "Attribute 'Pan' At Speed 60",
@@ -101,8 +109,15 @@ class TestBaseBundles:
             "ChangeDestination Root",
             "ClearAll",
             "Fixture 11 + 12 + 13 ; At Preset 2.46",
+            "Attribute 'Pan' At Relative -20",
+            "Attribute 'Tilt' At Relative -10",
+            "Step 2",
             "Attribute 'Pan' At Relative 20",
             "Attribute 'Tilt' At Relative 10",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
             "Attribute 'Pan' At Phase 0 Thru 360",
             "Attribute 'Tilt' At Phase 0 Thru 360",
             "Attribute 'Pan' At Speed 120",
@@ -118,7 +133,13 @@ class TestBaseBundles:
             "ChangeDestination Root",
             "ClearAll",
             "Fixture 11 + 12 + 13 ; At Preset 2.44",
+            "Attribute 'Tilt' At Relative -12",
+            "Step 2",
             "Attribute 'Tilt' At Relative 12",
+            "Step 1 At Accel -100",
+            "Step 1 At Decel -100",
+            "Step 2 At Accel -100",
+            "Step 2 At Decel -100",
             "Attribute 'Tilt' At Phase 0 Thru 360",
             "Attribute 'Tilt' At Speed 60",
             "Store Sequence 201 Cue 1 'Wave'",
@@ -192,3 +213,47 @@ class TestRefusals:
     def test_quoted_or_empty_label_is_refused(self, label):
         with pytest.raises(SpatialPointingError, match="empty or carries a quote"):
             build("sweep", label=label)
+
+
+class TestTwoStepPhaser:
+    """Card t540 — a base effect must be a real phaser: two steps, not one.
+
+    grandMA3 only builds a phaser from two or more steps (MA Phasers manual;
+    rulebook 33_effect_editors.md:21-22; server/fx/schema.py MIN_STEPS=2). The
+    one-step ``At Relative`` bundle moved the beams once and then froze
+    (t538 T3/A0 live, director: 「숫자가 멈춰 있음」). The two-step ±value
+    shape moved (t538 T4/A0'/A1/A3), and a circle only reads round with the
+    per-step curve lines (t538 A5b, director: 「동그란 원」).
+    """
+
+    BASE_EFFECTS = ("circle", "ballyhoo", "wave")
+
+    @pytest.mark.parametrize("effect", BASE_EFFECTS)
+    def test_bundle_opens_exactly_one_second_step(self, effect):
+        assert build(effect).count("Step 2") == 1
+
+    @pytest.mark.parametrize("effect", BASE_EFFECTS)
+    def test_each_moving_axis_swings_minus_then_plus_around_step_two(self, effect):
+        commands = list(build(effect))
+        step_two = commands.index("Step 2")
+        before = [line for line in commands[:step_two] if "At Relative" in line]
+        after = [line for line in commands[step_two:] if "At Relative" in line]
+        assert before and len(before) == len(after)
+        for minus, plus in zip(before, after, strict=True):
+            assert minus.replace("At Relative -", "At Relative ") == plus
+
+    @pytest.mark.parametrize("effect", BASE_EFFECTS)
+    def test_base_position_is_recalled_before_the_phaser(self, effect):
+        # t538 A4: without a base position the phaser orbits the default
+        # (vertical) aim, so the recall line must lead the step run.
+        commands = list(build(effect))
+        recall = next(i for i, line in enumerate(commands) if "At Preset 2." in line)
+        first_relative = next(i for i, line in enumerate(commands) if "At Relative" in line)
+        assert recall < first_relative
+
+    @pytest.mark.parametrize("effect", BASE_EFFECTS)
+    def test_every_step_carries_the_sine_curve(self, effect):
+        commands = build(effect)
+        for step in (1, 2):
+            assert f"Step {step} At Accel -100" in commands
+            assert f"Step {step} At Decel -100" in commands
