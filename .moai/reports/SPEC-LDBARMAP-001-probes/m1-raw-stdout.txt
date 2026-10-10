@@ -1,0 +1,283 @@
+[정답지] 다운비트 82개, 사건 7개 (REQ-LDBARMAP-004/008/009)
+
+=== 음성 대조군(REQ-LDBARMAP-005) ===
+양성 대조군(정답지 vs 정답지): 82/82 (100.0%, 허용오차 ±60ms)  (기대: 100%)
+음성 대조군 1(1박=0.534s 밀림): 0/82 (0.0%, 허용오차 ±60ms)  (기대: <10%, AC-LDBARMAP-002)
+음성 대조군 2(1마디=2.136s 밀림): 0/82 (0.0%, 허용오차 ±60ms)  (기대: <10%, AC-LDBARMAP-003)
+
+=== 후보 검출기 실행 ===
+
+--- 후보 A-hop512-onset-accent(순환) (elapsed 1.37s) ---
+raw_bpm=112.347  bpm_error=0.003%
+chosen_phase=3  phase_scores={0: 4.855165481567383, 1: 4.487048149108887, 2: 4.728041172027588, 3: 5.371266841888428}
+downbeat_hit(chosen)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase0)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase1)=82/82 (100.0%, 허용오차 ±60ms)
+bar_boundary_hit=0/82 (0.0%, 허용오차 ±60ms)
+event_recall=EventRecallResult(matched=0, total=7, rate_pct=0.0, matches=[(1, '빌드업 1', None), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])
+bpm_multiple_check.trap_triggered=False
+bpm_multiple_check.rationale=원시 추정치(112.35)가 절반(56.175)·두 배(224.69) 함정 상수와 1% 이내로 일치하지 않는다 — 함정이 발동하지 않았으므로 보정 없이 원시 추정치를 그대로 쓴다. 격자 정합도는 투명성을 위해 기록한다(원시 0.29 / 절반 0.29 / 두 배 0.31).
+
+--- 후보 B-hop256-harmonic-change (elapsed 3.47s) ---
+raw_bpm=112.347  bpm_error=0.003%
+chosen_phase=0  phase_scores={0: 0.0688478823115186, 1: 0.029898867930895016, 2: 0.0374215112792121, 3: 0.03722432734053812}
+downbeat_hit(chosen)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase0)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase1)=80/82 (97.6%, 허용오차 ±60ms)
+bar_boundary_hit=0/82 (0.0%, 허용오차 ±60ms)
+event_recall=EventRecallResult(matched=1, total=7, rate_pct=14.285714285714285, matches=[(1, '빌드업 1', 14), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])
+bpm_multiple_check.trap_triggered=False
+bpm_multiple_check.rationale=원시 추정치(112.35)가 절반(56.175)·두 배(224.69) 함정 상수와 1% 이내로 일치하지 않는다 — 함정이 발동하지 않았으므로 보정 없이 원시 추정치를 그대로 쓴다. 격자 정합도는 투명성을 위해 기록한다(원시 0.26 / 절반 0.29 / 두 배 0.30).
+
+--- 후보 C-plp-lowband-jump (elapsed 0.53s) ---
+raw_bpm=224.694  bpm_error=99.995%
+chosen_phase=2  phase_scores={0: 0.0006656426233448714, 1: 0.02268430191399225, 2: 0.06631692846689553, 3: -0.08966687300423265}
+downbeat_hit(chosen)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase0)=0/82 (0.0%, 허용오차 ±60ms)
+downbeat_hit(phase1)=0/82 (0.0%, 허용오차 ±60ms)
+bar_boundary_hit=0/82 (0.0%, 허용오차 ±60ms)
+event_recall=EventRecallResult(matched=1, total=7, rate_pct=14.285714285714285, matches=[(1, '빌드업 1', 14), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])
+bpm_multiple_check.trap_triggered=True
+bpm_multiple_check.rationale=원시 추정치(224.69)가 두 배 함정 상수(224.69)와 1% 이내로 일치 — 격자 정합도(원시 0.28 / 절반 0.29 / 두 배 0.29)를 비교해 절반(112.35)으로 보정했다. 지도 보고서 §1의 선례(두 배 격자가 8분음표를 짚는 것으로 추정)를 따라, 정합도가 더 높다는 이유만으로 더 촘촘한 격자를 채택하지 않는다.
+
+총 실행 시간: 6.78s
+
+=== JSON ===
+{
+  "controls": {
+    "positive_control": "82/82 (100.0%, 허용오차 ±60ms)",
+    "negative_control_1beat": "0/82 (0.0%, 허용오차 ±60ms)",
+    "negative_control_1bar": "0/82 (0.0%, 허용오차 ±60ms)"
+  },
+  "candidates": [
+    {
+      "name": "A-hop512-onset-accent(순환)",
+      "circular": true,
+      "hop_length": 512,
+      "phase_method": "onset-accent",
+      "raw_bpm": 112.34714673913075,
+      "bpm_error_rate_pct": 0.002539618041161035,
+      "bpm_multiple_check": {
+        "raw_bpm": 112.34714673913075,
+        "half_bpm": 56.173573369565375,
+        "double_bpm": 224.6942934782615,
+        "grid_lock_raw": 0.2878787878787879,
+        "grid_lock_half": 0.2904040404040404,
+        "grid_lock_double": 0.3055555555555556,
+        "trap_triggered": false,
+        "adopted_bpm": 112.34714673913075,
+        "rationale": "원시 추정치(112.35)가 절반(56.175)·두 배(224.69) 함정 상수와 1% 이내로 일치하지 않는다 — 함정이 발동하지 않았으므로 보정 없이 원시 추정치를 그대로 쓴다. 격자 정합도는 투명성을 위해 기록한다(원시 0.29 / 절반 0.29 / 두 배 0.31)."
+      },
+      "chosen_phase": 3,
+      "phase_scores": {
+        "0": 4.855165481567383,
+        "1": 4.487048149108887,
+        "2": 4.728041172027588,
+        "3": 5.371266841888428
+      },
+      "downbeat_hit_rate": {
+        "chosen_phase": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase0": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase1": "82/82 (100.0%, 허용오차 ±60ms)"
+      },
+      "bar_boundary_hit_rate": "0/82 (0.0%, 허용오차 ±60ms)",
+      "event_recall": "EventRecallResult(matched=0, total=7, rate_pct=0.0, matches=[(1, '빌드업 1', None), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])",
+      "event_matches": [
+        [
+          1,
+          "빌드업 1",
+          null
+        ],
+        [
+          2,
+          "빌드업 2",
+          null
+        ],
+        [
+          3,
+          "큰 히트(후렴 진입) 1",
+          null
+        ],
+        [
+          4,
+          "큰 히트(후렴 진입) 2",
+          null
+        ],
+        [
+          5,
+          "킥 멈춤 1",
+          null
+        ],
+        [
+          6,
+          "킥 멈춤 2",
+          null
+        ],
+        [
+          7,
+          "킥 멈춤 3",
+          null
+        ]
+      ],
+      "n_downbeats_detected": 81,
+      "n_truth_downbeats": 82,
+      "grid_fit_ratio": null,
+      "raw_peak_count": null,
+      "elapsed_sec": 1.37
+    },
+    {
+      "name": "B-hop256-harmonic-change",
+      "circular": false,
+      "hop_length": 256,
+      "phase_method": "harmonic-change",
+      "raw_bpm": 112.34714673913042,
+      "bpm_error_rate_pct": 0.002539618041451956,
+      "bpm_multiple_check": {
+        "raw_bpm": 112.34714673913042,
+        "half_bpm": 56.17357336956521,
+        "double_bpm": 224.69429347826085,
+        "grid_lock_raw": 0.2620320855614973,
+        "grid_lock_half": 0.29411764705882354,
+        "grid_lock_double": 0.2967914438502674,
+        "trap_triggered": false,
+        "adopted_bpm": 112.34714673913042,
+        "rationale": "원시 추정치(112.35)가 절반(56.175)·두 배(224.69) 함정 상수와 1% 이내로 일치하지 않는다 — 함정이 발동하지 않았으므로 보정 없이 원시 추정치를 그대로 쓴다. 격자 정합도는 투명성을 위해 기록한다(원시 0.26 / 절반 0.29 / 두 배 0.30)."
+      },
+      "chosen_phase": 0,
+      "phase_scores": {
+        "0": 0.0688478823115186,
+        "1": 0.029898867930895016,
+        "2": 0.0374215112792121,
+        "3": 0.03722432734053812
+      },
+      "downbeat_hit_rate": {
+        "chosen_phase": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase0": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase1": "80/82 (97.6%, 허용오차 ±60ms)"
+      },
+      "bar_boundary_hit_rate": "0/82 (0.0%, 허용오차 ±60ms)",
+      "event_recall": "EventRecallResult(matched=1, total=7, rate_pct=14.285714285714285, matches=[(1, '빌드업 1', 14), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])",
+      "event_matches": [
+        [
+          1,
+          "빌드업 1",
+          14
+        ],
+        [
+          2,
+          "빌드업 2",
+          null
+        ],
+        [
+          3,
+          "큰 히트(후렴 진입) 1",
+          null
+        ],
+        [
+          4,
+          "큰 히트(후렴 진입) 2",
+          null
+        ],
+        [
+          5,
+          "킥 멈춤 1",
+          null
+        ],
+        [
+          6,
+          "킥 멈춤 2",
+          null
+        ],
+        [
+          7,
+          "킥 멈춤 3",
+          null
+        ]
+      ],
+      "n_downbeats_detected": 82,
+      "n_truth_downbeats": 82,
+      "grid_fit_ratio": null,
+      "raw_peak_count": null,
+      "elapsed_sec": 3.47
+    },
+    {
+      "name": "C-plp-lowband-jump",
+      "circular": false,
+      "hop_length": 512,
+      "phase_method": "lowband-jump",
+      "raw_bpm": 224.69429347825553,
+      "bpm_error_rate_pct": 99.99492076391236,
+      "bpm_multiple_check": {
+        "raw_bpm": 224.69429347825553,
+        "half_bpm": 112.34714673912777,
+        "double_bpm": 449.38858695651106,
+        "grid_lock_raw": 0.28378378378378377,
+        "grid_lock_half": 0.2882882882882883,
+        "grid_lock_double": 0.2927927927927928,
+        "trap_triggered": true,
+        "adopted_bpm": 112.34714673912777,
+        "rationale": "원시 추정치(224.69)가 두 배 함정 상수(224.69)와 1% 이내로 일치 — 격자 정합도(원시 0.28 / 절반 0.29 / 두 배 0.29)를 비교해 절반(112.35)으로 보정했다. 지도 보고서 §1의 선례(두 배 격자가 8분음표를 짚는 것으로 추정)를 따라, 정합도가 더 높다는 이유만으로 더 촘촘한 격자를 채택하지 않는다."
+      },
+      "chosen_phase": 2,
+      "phase_scores": {
+        "0": 0.0006656426233448714,
+        "1": 0.02268430191399225,
+        "2": 0.06631692846689553,
+        "3": -0.08966687300423265
+      },
+      "downbeat_hit_rate": {
+        "chosen_phase": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase0": "0/82 (0.0%, 허용오차 ±60ms)",
+        "phase1": "0/82 (0.0%, 허용오차 ±60ms)"
+      },
+      "bar_boundary_hit_rate": "0/82 (0.0%, 허용오차 ±60ms)",
+      "event_recall": "EventRecallResult(matched=1, total=7, rate_pct=14.285714285714285, matches=[(1, '빌드업 1', 14), (2, '빌드업 2', None), (3, '큰 히트(후렴 진입) 1', None), (4, '큰 히트(후렴 진입) 2', None), (5, '킥 멈춤 1', None), (6, '킥 멈춤 2', None), (7, '킥 멈춤 3', None)])",
+      "event_matches": [
+        [
+          1,
+          "빌드업 1",
+          14
+        ],
+        [
+          2,
+          "빌드업 2",
+          null
+        ],
+        [
+          3,
+          "큰 히트(후렴 진입) 1",
+          null
+        ],
+        [
+          4,
+          "큰 히트(후렴 진입) 2",
+          null
+        ],
+        [
+          5,
+          "킥 멈춤 1",
+          null
+        ],
+        [
+          6,
+          "킥 멈춤 2",
+          null
+        ],
+        [
+          7,
+          "킥 멈춤 3",
+          null
+        ]
+      ],
+      "n_downbeats_detected": 92,
+      "n_truth_downbeats": 82,
+      "grid_fit_ratio": 0.2882882882882883,
+      "raw_peak_count": 666,
+      "elapsed_sec": 0.53
+    }
+  ],
+  "truth_downbeat_count": 82,
+  "truth_event_count": 7,
+  "target_bpm": 112.35,
+  "duration_sec": 197.16063492063492
+}
