@@ -14,7 +14,7 @@
 3. **배치 규칙 9개를 전역 상수로 하드코딩하면 REQ-LDARRANGE-004를 어긴다.** `palette_mode`(`section_palette.py:236-267`)가 이미 "곡별 선택 상태 필드"의 선례를 보였다 — 규칙 적용 로직을 설계할 때 처음부터 "이 곡의 규칙 적용 방식" 필드를 데이터 모델에 넣는다. 나중에 전역 상수를 걷어내는 재작업보다, 처음부터 곡별 상태로 설계하는 쪽이 싸다.
 4. **AI 제안 카드를 "LDDESIGN의 PLAN CUE 생성기를 그대로 포팅"으로 생각하지 마라.** `REQ-LDDESIGN-092/094/095`의 대상은 큐 카드 **하나**다. 이 SPEC의 대상은 역할×마디 **전체 초안**(여러 역할 × 여러 마디 구간에 걸친 값 집합)이다 — "포팅"이 아니라 "일반화"가 필요하다. 구체적으로, 승인이 칸마다 쪼개지면 안 된다(REQ-LDBEAT-012가 LDBEAT M4 쪽에서 이미 경계한 것과 같은 함정) — 이 SPEC의 AI 제안 카드는 초안 **전체**에 1개의 「적용」/거절 단위를 갖는다(REQ-LDARRANGE-009/010, acceptance.md AC-LDARRANGE-007).
 5. **"느린 곡" 기준을 생성기 안에 수치로 박아 넣고 넘어가지 마라(§5 항목 3).** 배치 규칙서 원문에는 수치가 없다 — 감독의 "발라드처럼 느린 곡"이라는 질적 판단을 생성기가 혼자 수치화하면, 그 수치가 틀렸을 때 디버깅 대상이 "생성기 버그"가 아니라 "애초에 합의 안 된 임계값"이 된다. M1에서 이 결정을 명시적으로 받는다.
-6. **역할 어휘를 `server/design/rig.py`의 `RIG_LAYER_ROLES`(key/back/effect/audience/side/wash/mover)와 혼동하지 마라.** 이 SPEC·LDBEAT가 쓰는 역할 6종(SCENE/BACK PULSE/SIDE CHASE/MOVER-U MOVE/MOVER-D MOVE/ACCENT)은 `rig.py`의 역할 어휘와 **다른 분류축**이다(`rig.py`는 장비 종류·물리적 레이어, LDBEAT/LDARRANGE의 역할은 음악적 기능). 이 plan-phase가 `rig.py:51-59`를 재확인했다 — 두 어휘를 뒤섞어 "같은 역할 이름이니 같은 것"으로 코드를 짜면 조용히 틀린다.
+6. **재작성(카드 t533 — `SPEC-LDBEAT-001` v0.2.0이 트랙 모양을 재교정해 이 위험의 방향이 뒤집혔다).** **이제 LDBEAT·LDARRANGE의 역할 어휘는 `server/design/rig.py`의 `RIG_LAYER_ROLES`(key/back/side/wash/mover/effect/audience)와 같은 어휘다 — 섞지 않도록 지키던 축이 사라졌으니, 둘을 다시 분리하는 코드를 짜지 마라.** LDBEAT v0.2.0(PR #572, 카드 t526)이 트랙 모양을 재교정해, 이전 시안의 역할 6종(SCENE/BACK PULSE/SIDE CHASE/MOVER-U MOVE/MOVER-D MOVE/ACCENT — 장비와 효과를 섞은 임시 이름)을 철회하고, "줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나" + 그 줄에 붙는 `rig.py`의 7개 층 역할 이름표로 바꿨다(REQ-LDBEAT-004). 이 SPEC도 그 교정을 그대로 따른다(REQ-LDARRANGE-002) — 생성기가 실제로 구분해야 할 축은 "트랙 정체성(= 콘솔 그룹)"과 "효과(펄스·체이스·스윕·웨이브·STROBE·BLIND, 큐 안의 내용일 뿐)"이지, 더 이상 "음악적 역할 축" 대 "장비 축"이 아니다. 배치 규칙서 §2의 역할 6종은 그 문서의 교정 전 1차 표기일 뿐이며 "콘솔 그룹별 배치"로 읽는다(값은 바뀌지 않는다) — 생성기 코드에서 트랙 식별자로 쓰지 않는다.
 
 ## §C 사전 점검 (run-phase 착수 직전)
 
@@ -24,8 +24,8 @@ git rev-parse HEAD
 # 전제 SPEC 상태 재확인 — LDBARMAP 존재 여부, LDBEAT 진행 상태
 ls .moai/specs/ | grep -i "LDBARMAP\|LDBEAT"
 grep -n "^status:" .moai/specs/SPEC-LDBEAT-001/spec.md
-# 역할 어휘 불변 재확인(LDBEAT REQ-004와 LDARRANGE 양쪽이 같은 6종을 쓰는지)
-grep -n "SCENE / BACK PULSE / SIDE CHASE / MOVER-U MOVE / MOVER-D MOVE / ACCENT" .moai/specs/SPEC-LDBEAT-001/spec.md
+# 역할 어휘 재확인(카드 t533 — LDBEAT REQ-LDBEAT-004가 v0.2.0에서 콘솔 그룹 트랙 + 7종 역할 이름표로 재교정했는지, LDARRANGE가 그 어휘를 쓰는지)
+grep -n "key/back/side/wash/mover/effect/audience\|RIG_LAYER_ROLES" .moai/specs/SPEC-LDBEAT-001/spec.md
 # RG5 그룹-주소 함수 위치 재확인(이름·줄 번호가 바뀌지 않았는지)
 grep -n "^def _role_group_numbers\|^def _effect_group_numbers" server/design/song_cue_render.py
 # palette_mode 곡별 선택 선례 재확인
@@ -67,7 +67,7 @@ grep -n "max_prop_value" console/lua/copilot_responder.lua
 
 되돌리기 비용은 낮다(기존 패턴을 그대로 가져오는 일) — 그러나 **"재사용 == 그대로 import해서 끝"이 아니라, 역할→그룹 매핑을 이 SPEC이 새로 선언해야 한다**는 것이 핵심이다(LDBEAT REQ-LDBEAT-009가 겪은 것과 같은 함정 — "매핑은 새로, 매핑 뒤 로직은 본뜬다").
 
-- 역할 6종(SCENE/BACK PULSE/SIDE CHASE/MOVER-U MOVE/MOVER-D MOVE/ACCENT) → 그룹 번호의 매핑을 이 SPEC이 선언한다 — `reports/effect-arrangement-rules-20261007.md` §2 표(역할별 그룹 선택)가 그 매핑의 1차 소스다.
+- **재교정(카드 t533).** 콘솔 그룹 트랙(`SPEC-LDBEAT-001` REQ-LDBEAT-004 — 줄 하나 = 콘솔 그룹 하나, 7개 층 역할 이름표 key/back/side/wash/mover/effect/audience) → 그룹 번호의 매핑을 이 SPEC이 선언한다 — `reports/effect-arrangement-rules-20261007.md` §2 표(역할별 그룹 선택 — 교정 전 1차 표기, "콘솔 그룹별 배치"로 읽는다)가 그 그룹 선택 값의 1차 소스다.
 - `_role_group_numbers`/`_effect_group_numbers`(`song_cue_render.py:815,890`)와 같은 모양의 함수(또는 그 함수 자체를 호출하는 얇은 래퍼)로 멤버십 전수 없이 그룹 번호 주소만 쓰는 생성 경로를 만든다.
 - 커맨드 미리보기에 "멤버 N대" 같은 단정적 서술이 들어가지 않는지 자체 점검한다(REQ-LDARRANGE-012).
 
@@ -101,7 +101,7 @@ grep -n "max_prop_value" console/lua/copilot_responder.lua
 - **배치 규칙 9개의 수치를 전역 상수로 박아 다른 곡에도 적용되게 하지 마라** — REQ-LDARRANGE-004.
 - **AI 제안 카드 승인을 칸 단위로 쪼개지 마라** — REQ-LDARRANGE-009. 초안 전체에 1개 단위.
 - **"느린 곡" 임계값을 합의 없이 생성기 안에 숫자로 박지 마라** — §5 항목 3. M1에서 감독과 확정한다.
-- **LDBEAT·LDARRANGE의 역할 어휘(SCENE/BACK PULSE/…)를 `rig.py`의 `RIG_LAYER_ROLES`(key/back/effect/audience/side/wash/mover)와 섞지 마라** — §B 위험 6. 서로 다른 분류축이다.
+- **배치 규칙서 §2의 역할 6종(SCENE/BACK PULSE/…)을 생성기의 트랙 식별자로 쓰지 마라** — §B 위험 6(카드 t533에서 반전). 이제 LDBEAT·LDARRANGE의 역할 어휘는 `rig.py`의 `RIG_LAYER_ROLES`(key/back/side/wash/mover/effect/audience)와 **같은** 어휘다 — 6종은 교정 전 1차 표기일 뿐이다.
 - **이 SPEC의 생성 로직에 콘솔 쓰기 호출을 넣지 마라** — REQ-LDARRANGE-003. 송신은 LDBEAT M4의 몫이다.
 - **LDBARMAP·LDBEAT 양쪽이 아직 run-phase에 진입하지 않은 상태에서 이 SPEC의 run-phase를 먼저 밀어붙이지 마라** — §B 위험 1. 재작업 비용이 반복된다.
 
@@ -115,6 +115,6 @@ grep -n "max_prop_value" console/lua/copilot_responder.lua
 - `.moai/specs/SPEC-LDDESIGN-001/spec.md` REQ-LDDESIGN-092,094,095(AI 제안→「적용」 원칙의 출처, 큐 단위 선례).
 - `server/design/song_cue_render.py:661,815,890` — RG5 그룹-주소 함수(재사용 대상).
 - `server/design/section_palette.py:236-267`, `server/web/session.py:7685-7902` — `palette_mode`(곡별 선택 메커니즘 선례).
-- `server/design/rig.py:51-59` — `RIG_LAYER_ROLES`(이 SPEC의 역할 어휘와 다른 분류축 — 혼동 금지).
+- `server/design/rig.py:51-59` — `RIG_LAYER_ROLES`(이 SPEC·LDBEAT가 쓰는 역할 어휘의 출처 — 7종, key/back/side/wash/mover/effect/audience; 카드 t533에서 정정).
 - `server/audio/analyze.py:352-390` — 비트 시각 미저장 재확인.
 - `console/lua/copilot_responder.lua:43` — `max_prop_value`(그룹 소속 전수 확인을 막는 응답기 한도 — 범위 밖 전제).
