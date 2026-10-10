@@ -25,7 +25,7 @@ LOVE ATTACK 한 곡을 대상으로, 오프라인 분석으로 비트·다운비
 
 ### M1 — 계기 보정 (우선순위 High)
 
-후보 검출기(예: `librosa.beat.beat_track`의 변형, 온셋 기반 다운비트 추정, 자기상관 기반 마디 길이 추정 등 2개 이상)를 LOVE ATTACK에 실행하고, 지도 보고서(`reports/loveattack-music-map-20261006.md`) 대비 REQ-LDBARMAP-004의 네 지표로 채점한다. 음성 대조군(REQ-LDBARMAP-005 — 날조/이동 격자)을 반드시 포함한다. 코드 diff 0줄 — 측정·채점 스크립트만 작성하고 `.moai/reports/SPEC-LDBARMAP-001-probes/`에 둔다.
+후보 검출기(예: `librosa.beat.beat_track`의 변형, 온셋 기반 다운비트 추정, 자기상관 기반 마디 길이 추정 등 2개 이상)를 LOVE ATTACK에 실행하고, 지도 보고서(`reports/loveattack-music-map-20261006.md`) 대비 REQ-LDBARMAP-004의 지표 (1)~(4)로 채점한다. 음성 대조군(REQ-LDBARMAP-005 — 날조/이동 격자)을 반드시 포함한다. 코드 diff 0줄 — 측정·채점 스크립트만 작성하고 `.moai/reports/SPEC-LDBARMAP-001-probes/`에 둔다.
 
 - 산출물: 후보별 채점표(BPM 오차율·다운비트 적중률·마디 경계 적중률·마디별 이벤트 재현율), 음성 대조군 결과, 감독 검토용 판정서.
 - 통과 조건: acceptance.md AC-LDBARMAP-001~006 전부 PASS인 후보가 최소 1개 존재(plan-audit iteration 2 D-NEW-1 교정 — AC-003 신설로 밀린 번호 재반영. 이 범위는 M1 완전성(001)·음성 대조군 1·2(002/003)·BPM 배수 함정(004)·다운비트 적중률(005)·마디 경계 적중률(006)을 모두 포함한다 — M1 자신이 "REQ-LDBARMAP-004의 네 지표로 채점한다"고 적은 대로, 마디 경계 적중률도 빠짐없이 들어간다).
@@ -46,7 +46,7 @@ LOVE ATTACK 한 곡을 대상으로, 오프라인 분석으로 비트·다운비
 REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 분류하는 로직을 M2 모듈 위에 얹는다. (범위 축소 반영, 카드 t530: M3의 마디 인덱싱은 M2가 "자동 비트 격자 + 사람이 지정한 첫 박 오프셋"으로 파생한 다운비트·마디 경계를 그대로 쓴다 — M3 자신이 별도의 위상 판단을 하지 않는다.)
 
 - 산출물: 이벤트 분류 함수 + 테스트(지도 보고서 §2.1/§2.3의 라벨 대비 재현율 AC-LDBARMAP-007 — plan-audit iteration 2 D-NEW-1 교정: AC-003 삽입으로 밀린 번호를 반영, AC-006은 마디 경계 적중률이지 이벤트 재현율이 아니다).
-- 통과 조건: AC-LDBARMAP-007 PASS.
+- 통과 조건: AC-LDBARMAP-007 PASS — 재현율 조건(7개 사건 중 5개 이상 적중, 70% 이상)과 정밀도 조건(카드 t535 신설, 2026-10-10 — 실제 오디오 경로(②)에서 `measured` 등급 `break`·`kick_entry` 점 사건 전체 대비 부록 A "순간" 칸 근거 ±1마디 내 적중 비율 70% 이상, 미달 사건은 `.moai/reports/SPEC-LDBARMAP-001-probes/m3-ear-check-candidates.md`에 감독 귀 확인 후보로 출력) 둘 다 PASS.
 
 ### M4 — 저장 인터페이스 배선 (우선순위 Medium, §B 결정 선행 필요)
 
