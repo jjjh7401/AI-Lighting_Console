@@ -285,6 +285,179 @@ def test_detect_beat_grid_synthetic_click_track_records_bpm_check_rationale(
     assert check.double_bpm == pytest.approx(check.raw_bpm * 2.0)
 
 
+# ---------------------------------------------------------------------------
+# REQ-LDBARMAP-006(재설계, 카드 t547) — 추정 비트 격자 기준 단측 부호검정.
+# AC-LDBARMAP-004a~d. 고정 전역 격자 비교(옛 설계)는 BPM 추정 오차에 흔들리고
+# (`.moai/reports/t547/red_repro.py` — 정확한 BPM 을 받으면 112→224 로 거짓
+# 두 배를 낸다), 새 설계는 검출기 자신의 비트 격자를 기준틀로 쓴다.
+# ---------------------------------------------------------------------------
+
+_SIGN_TEST_SAMPLE_RATE = 22050
+
+
+def _render_click_pattern(bpm: float, duration_sec: float, pattern: list[list[float]], seed: int):
+    """REQ-LDBARMAP-006 시험용 합성 클릭 — ``.moai/reports/t547/probe_synth.py``
+    의 ``render``/``click`` 과 같은 식(의도적 중복, 생산 코드가 탐침 스크립트를
+    import 하지 않는다). ``pattern`` 은 한 박을 n등분한 자리별 세기 목록이다.
+
+    plan-audit D5 교정 — 각 호출이 ``seed`` 로 독립된 RNG 를 새로 만든다. 케이스
+    마다 자기만의 시드로 렌더하라는 것(난수를 공유하지 않음)이지, 여러 케이스가
+    같은 숫자값을 쓰라는 뜻이 아니다 — 아래 호출마다 다른 ``seed`` 를 쓴다.
+    """
+    import numpy as np
+
+    sr = _SIGN_TEST_SAMPLE_RATE
+    rng = np.random.default_rng(seed)
+
+    def click(sig, t, amp):
+        i = int(t * sr)
+        n = int(0.03 * sr)
+        if i + n < len(sig):
+            sig[i : i + n] += amp * np.exp(-np.arange(n) / (0.004 * sr)) * rng.standard_normal(n)
+
+    sig = np.zeros(int(duration_sec * sr))
+    beat = 60.0 / bpm
+    k = 0
+    t = 0.5
+    while t < duration_sec - 1:
+        pat = pattern[k % len(pattern)]
+        for j, amp in enumerate(pat):
+            if amp > 0:
+                click(sig, t + j * beat / len(pat), amp)
+        t += beat
+        k += 1
+    return (sig + 0.001 * rng.standard_normal(len(sig))).astype(np.float32)
+
+
+def _bpm_check_for_pattern(bpm: float, pattern: list[list[float]], seed: int):
+    """패턴을 렌더하고 박 추적 + 온셋 강도 환경으로 ``_check_bpm_half_double`` 을
+    직접 호출한다(REQ-LDBARMAP-006). 회귀 BPM(정확한 추정, t546 PR #593 이후
+    ``analyze()`` 가 쓰는 값)을 쓴다 — ``probe_synth.py``·``probe_sign.py`` 와
+    같은 선택이고, 옛 설계의 결함이 실제로 드러나는 입력이다(median BPM 으로는
+    드러나지 않는다, `.moai/reports/t547/red_repro.py` 참조)."""
+    import librosa
+    import numpy as np
+
+    from server.audio.analyze import _HOP_LENGTH, _tempo_from_beat_regression
+
+    y = _render_click_pattern(bpm, 90.0, pattern, seed)
+    beat_times = librosa.beat.beat_track(
+        y=y, sr=_SIGN_TEST_SAMPLE_RATE, hop_length=_HOP_LENGTH, units="time"
+    )[1]
+    envelope = librosa.onset.onset_strength(y=y, sr=_SIGN_TEST_SAMPLE_RATE, hop_length=_HOP_LENGTH)
+    raw_bpm, _ = _tempo_from_beat_regression(np, beat_times)
+    return bar_map_module._check_bpm_half_double(
+        np, float(raw_bpm), beat_times, envelope, _SIGN_TEST_SAMPLE_RATE
+    )
+
+
+@pytest.mark.parametrize("true_bpm", [224, 240])
+def test_ac004a_synthetic_true_double_tracked_as_half_adopts_double(true_bpm: float) -> None:
+    """AC-LDBARMAP-004a — 실제로는 두 배인데 추적기가 절반으로(잘못) 짚은 합성
+    신호는 새 설계의 단측 부호검정으로 두 배 채택(adopt_double)된다."""
+    check = _bpm_check_for_pattern(true_bpm, [[1.0]], seed=547)
+    assert check.raw_bpm < true_bpm  # 추적기가 실제로 절반쯤을 짚었는지 확인(~112/~120)
+    assert check.p_mid >= bar_map_module._SIGN_TEST_ALPHA
+    assert check.w_mid >= bar_map_module._MID_SYMMETRY
+    assert check.outcome == bar_map_module._OUTCOME_ADOPT_DOUBLE
+    assert not check.ambiguous
+    assert check.adopted_bpm == pytest.approx(check.raw_bpm * 2.0)
+    assert check.rationale
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        [[1.0, 0.3]],  # 균일 세기 박 + 8분음표 하이햇 0.3
+        [[1.0, 0.3], [0.6, 0.3], [1.0, 0.3], [0.6, 0.3]],  # 킥/스네어 1.0/0.6 + 8분 0.3
+    ],
+)
+def test_ac004b_eighth_hihat_density_does_not_cause_false_double(
+    pattern: list[list[float]],
+) -> None:
+    """AC-LDBARMAP-004b — 8분음표 하이햇이 섞여도(밀도 편향) 거짓 두 배가 나오지
+    않는다 — 옛 고정 격자 비교의 결함(`.moai/reports/t547/red_repro.py` 가 재현한
+    결함)이 새 설계에서는 사라진다."""
+    check = _bpm_check_for_pattern(112, pattern, seed=547)
+    assert check.p_mid < bar_map_module._SIGN_TEST_ALPHA
+    assert check.outcome == bar_map_module._OUTCOME_KEEP
+    assert not check.ambiguous
+    assert check.adopted_bpm == pytest.approx(check.raw_bpm)
+    assert check.rationale
+
+
+def test_ac004d_loud_eighth_hihat_keeps_with_ambiguous_flag() -> None:
+    """AC-LDBARMAP-004d — 세기 0.7(강함)의 8분음표 하이햇은 판정 경계 가까이
+    있지만(plan-audit D5), keep + ambiguous=True 로 안정적으로 떨어진다
+    (`.moai/reports/t547/d5.txt` — 11개 시드 전부 같은 경로, 문턱 조정 없음)."""
+    check = _bpm_check_for_pattern(112, [[1.0, 0.7]], seed=547)
+    assert check.outcome == bar_map_module._OUTCOME_KEEP
+    assert check.ambiguous is True
+    assert check.p_mid >= bar_map_module._SIGN_TEST_ALPHA
+    assert check.w_mid < bar_map_module._MID_SYMMETRY
+    assert check.adopted_bpm == pytest.approx(check.raw_bpm)
+
+
+def test_half_candidate_is_never_auto_adopted_for_true_half_tracked_as_double() -> None:
+    """절반 후보는 이 판정으로 자동 채택되지 않는다 — 실제로는 56 BPM인데
+    추적기가 112로(두 배로) 짚은 합성 신호도 outcome=keep 이고, 보정된 BPM이
+    추적된 값(~112)에 머문다 — 56쪽(절반)으로는 결코 보정되지 않는다."""
+    check = _bpm_check_for_pattern(56, [[1.0, 0.3]], seed=547)
+    assert check.raw_bpm > 100.0  # 추적기가 실제로 두 배(~112)를 짚었는지 확인
+    assert check.outcome == bar_map_module._OUTCOME_KEEP
+    assert check.adopted_bpm == pytest.approx(check.raw_bpm)
+    assert check.adopted_bpm != pytest.approx(check.raw_bpm / 2.0)
+
+
+def test_check_bpm_half_double_fewer_than_two_beats_is_ambiguous_keep() -> None:
+    """박이 2개 미만이면 쌍을 지을 수 없다 — keep + ambiguous, 근거에 사유를 남긴다."""
+    import numpy as np
+
+    check = bar_map_module._check_bpm_half_double(
+        np, 112.0, np.asarray([0.5], dtype=float), np.zeros(10, dtype=float), 22050
+    )
+    assert check.outcome == bar_map_module._OUTCOME_KEEP
+    assert check.ambiguous is True
+    assert check.adopted_bpm == pytest.approx(112.0)
+    assert check.n_pairs == 0
+    assert check.rationale
+
+
+@pytest.mark.skipif(
+    not LOVE_ATTACK_MP3_PATH.exists(),
+    reason=f"로컬 전용 — 원곡 부재: {LOVE_ATTACK_MP3_PATH}",
+)
+def test_ac004c_real_love_attack_sign_test_keeps_local_only() -> None:
+    """AC-LDBARMAP-004c — 로컬 전용. LOVE ATTACK 실제 트랙 전체에 부호검정을
+    적용하면 outcome=keep 이고 보정된 BPM 이 112.35(±0.5%) 범위 안에 있다
+    (순환 아님 — 실제 오디오로 재확인, `.moai/reports/t547/probe_sign.txt` 참고
+    실측: p_mid=2.34e-38, n=326, 같은 결론)."""
+    import io
+
+    import librosa
+    import numpy as np
+    import soundfile as sf
+
+    from server.audio.analyze import _HOP_LENGTH, _tempo_from_beat_regression
+
+    audio_bytes = LOVE_ATTACK_MP3_PATH.read_bytes()
+    samples, sample_rate = sf.read(io.BytesIO(audio_bytes), dtype="float32", always_2d=True)
+    mono = np.ascontiguousarray(samples.mean(axis=1), dtype=np.float32)
+
+    beat_times = librosa.beat.beat_track(
+        y=mono, sr=sample_rate, hop_length=_HOP_LENGTH, units="time"
+    )[1]
+    envelope = librosa.onset.onset_strength(y=mono, sr=sample_rate, hop_length=_HOP_LENGTH)
+    reg_bpm, _ = _tempo_from_beat_regression(np, beat_times)
+
+    check = bar_map_module._check_bpm_half_double(
+        np, float(reg_bpm), beat_times, envelope, sample_rate
+    )
+    assert check.outcome == bar_map_module._OUTCOME_KEEP
+    assert check.adopted_bpm == pytest.approx(112.35, rel=0.005)
+    assert check.p_mid < bar_map_module._SIGN_TEST_ALPHA
+
+
 def test_detect_beat_grid_garbage_bytes_returns_failure_not_raise() -> None:
     result = detect_beat_grid(b"this is not an audio file, just garbage bytes \x00\x01\x02")
     assert isinstance(result, BeatGridFailure)

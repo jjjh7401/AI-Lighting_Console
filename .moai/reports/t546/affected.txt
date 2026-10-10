@@ -1,0 +1,48 @@
+........................................................................ [  5%]
+.......F................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+........................................................................ [ 29%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 46%]
+........................................................................ [ 52%]
+........................................................................ [ 58%]
+........................................................................ [ 64%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+............................................................ss.......... [ 81%]
+........................................................................ [ 87%]
+........................................................................ [ 93%]
+........................................................................ [ 99%]
+.......                                                                  [100%]
+=================================== FAILURES ===================================
+_______ test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016 _______
+
+    @pytest.mark.skipif(
+        not LOVE_ATTACK_MP3_PATH.exists(),
+        reason=f"로컬 전용 — 원곡 부재: {LOVE_ATTACK_MP3_PATH}",
+    )
+    def test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016() -> None:
+        """로컬 전용 회귀 — 실제 LOVE ATTACK mp3로 다시 재도 BPM·격자·AC-016이 재현된다."""
+        audio_bytes = LOVE_ATTACK_MP3_PATH.read_bytes()
+        result = detect_beat_grid(audio_bytes)
+        assert isinstance(result, BeatGridResult)
+    
+>       assert result.bpm == pytest.approx(112.35, rel=0.005)
+E       assert 224.0038398648805 == 112.35 ± 0.56175
+E         
+E         comparison failed
+E         Obtained: 224.0038398648805
+E         Expected: 112.35 ± 0.56175
+
+server/tests/test_audio_bar_map.py:390: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t546/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_audio_bar_map.py::test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016
+1 failed, 1228 passed, 2 skipped, 13596 deselected, 1 warning in 42.33s

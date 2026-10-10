@@ -1,0 +1,13 @@
+median_bpm (what detect_beat_grid currently feeds)=112.34714673913075
+regression_bpm (accurate - what analyze() uses since PR #593)=112.0003538634348
+
+--- OLD _check_bpm_half_double fed the MEDIAN bpm (via detect_beat_grid today) ---
+adopted_bpm=112.34714673913075 trap_triggered=False
+원시 추정치(112.347)가 절반·두 배 후보보다 격자 정합도에서 뚜렷하게 낮지 않다(원시 0.27 / 절반 0.27 / 두 배 0.28) — 함정이 발동하지 않았으므로 보정 없이 그대로 쓴다.
+
+--- OLD _check_bpm_half_double fed the ACCURATE regression bpm (reproduces the defect) ---
+adopted_bpm=224.0007077268696 trap_triggered=True
+원시 추정치(112.000)의 두 배(224.001)가 격자 정합도에서 0.50 더 높다(원시 0.50 vs 두 배 1.00). 더 촘촘한 격자는 점 밀도 때문에 구조적으로 정합도가 높아지는 경향이 있어 문턱을 절반(0.05)보다 높게(0.2) 두었다 — 그래도 그 문턱을 넘었으므로 원시 추정이 실제 박의 절반 빠르기를 짚은 것으로 보고 두 배로 보정한다.
+
+ASSERTION (this is what the NEW design must satisfy): adopted_bpm should stay near 112.000, NOT 224.001
+OLD CODE RESULT: adopted_bpm=224.001 -- DEFECT REPRODUCED (false double)

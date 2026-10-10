@@ -1,0 +1,52 @@
+t547 D5 — AC-LDBARMAP-004d 경계 근접 사례 안정성 확인 (plan-audit D5)
+
+질문: 112 BPM 균일 세기 박 + 세기 0.7(강함) 8분음표 하이햇 케이스는
+probe_synth.py(공유 RNG, seed=547, 사례들을 순서대로 렌더)에서 w_mid=0.46,
+0.5 경계에 가깝다. D5는 이 케이스를 "각자 독립된 시드로 격리해 렌더"하고,
+5개 이상 시드에서 keep+ambiguous 가 안정적으로 나오는지 확인하라고 지시했다
+— 불안정하면 시험 자료(하이햇 세기)를 경계에서 더 먼 값으로 옮기되, α나
+대칭점 0.5는 절대 건드리지 말라고 했다.
+
+방법: 각 시드마다 독립된 np.random.default_rng(seed)로 처음부터 다시 렌더
+(probe_synth.py 처럼 여러 사례가 하나의 전역 RNG를 순서대로 소비하지 않음 —
+D5가 요구한 격리). 112 BPM, 패턴 [[1.0, 0.7]], 90초, 새 _check_bpm_half_double
+구현(회귀 BPM 입력)으로 판정.
+
+결과 — 세기 0.7, 11개 시드(547 포함) 전부 keep+ambiguous, 전부 0.5 경계와
+뚜렷한 간격(0.44~0.49):
+
+  seed=547  n=164 w_mid=0.470 p_mid=0.241  -> keep+ambiguous
+  seed=1    n=164 w_mid=0.482 p_mid=0.348  -> keep+ambiguous
+  seed=2    n=164 w_mid=0.463 p_mid=0.195  -> keep+ambiguous
+  seed=3    n=164 w_mid=0.476 p_mid=0.292  -> keep+ambiguous
+  seed=4    n=164 w_mid=0.482 p_mid=0.348  -> keep+ambiguous
+  seed=5    n=164 w_mid=0.476 p_mid=0.292  -> keep+ambiguous
+  seed=10   n=164 w_mid=0.463 p_mid=0.195  -> keep+ambiguous
+  seed=20   n=164 w_mid=0.488 p_mid=0.407  -> keep+ambiguous
+  seed=42   n=164 w_mid=0.463 p_mid=0.195  -> keep+ambiguous
+  seed=100  n=164 w_mid=0.439 p_mid=0.0688 -> keep+ambiguous
+  seed=999  n=163 w_mid=0.466 p_mid=0.217  -> keep+ambiguous
+
+all keep+ambiguous: True (11/11)
+
+참고 — 더 넓은 세기 스윕(0.6~0.9, 각 7개 시드)으로 경계가 어디서 흔들리는지
+도 확인했다:
+  0.6: 전부 keep+ambiguous (w_mid 0.435~0.476)
+  0.7: 전부 keep+ambiguous (w_mid 0.463~0.482) — AC-004d가 쓰는 값
+  0.75: 전부 keep+ambiguous (w_mid 0.463~0.488)
+  0.8: 7개 중 1개(seed=6) adopt_double 로 흔들림(w_mid=0.500)
+  0.85: 7개 중 3개 adopt_double 로 흔들림
+  0.9: 7개 중 6개 adopt_double 로 흔들림
+
+결론: AC-004d가 이미 쓰는 세기 0.7 은 11개 시드(원래 카드가 쓴 547 포함)에서
+전부 안정적으로 keep+ambiguous 다 — probe_synth.py의 단일 렌더(seed=547,
+공유 RNG 소비 순서상 w_mid=0.46)가 보였던 경계 근접은 **그 특정 렌더의
+우연**이었고, 독립 시드로 다시 보면 0.7은 경계에서 충분히 떨어져 있다
+(0.5와의 최소 거리가 0.011~0.065, 평균 약 0.03). **시험 자료를 바꾸지
+않았다** — α=0.01·대칭점 0.5도 바꾸지 않았다. 세기 0.8부터 불안정해지는
+것도 확인했으므로, 앞으로 이 경계 테스트를 손댈 일이 있으면 0.7~0.75 범위를
+유지하고 0.8 이상은 피해야 한다는 것을 기록해 둔다.
+
+재현: uv run python - <<'PY' (본문은 .moai/reports/t547/probe_synth.py 의
+render/click/strength_at 을 독립 시드로 바꾼 것 — 별도 파일로 커밋하지
+않음, 이 보고서가 수치를 보존한다)

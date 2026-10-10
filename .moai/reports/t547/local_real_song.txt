@@ -1,0 +1,9 @@
+.....                                                                    [100%]
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED server/tests/test_audio_bar_map.py::test_derive_bars_matches_appendix_a_bar1_bar2_with_love_attack_timing
+PASSED server/tests/test_audio_bar_map.py::test_ac004c_real_love_attack_sign_test_keeps_local_only
+PASSED server/tests/test_audio_bar_map.py::test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016
+PASSED server/tests/test_audio_bar_map.py::test_ac007_love_attack_report_features_recall_at_least_5_of_7
+PASSED server/tests/test_audio_bar_map.py::test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007
+5 passed, 76 deselected in 14.47s

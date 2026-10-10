@@ -1,0 +1,11 @@
+song                        med      reg |  outcome@med adopt@med amb@med |  outcome@reg adopt@reg amb@reg
+LOVE ATTACK.mp3         112.347  112.002 |         keep   112.347   False |         keep   112.002   False
+Club Diver.mp3          139.675  140.026 |         keep   139.675   False |         keep   140.026   False
+Cut and Run.mp3         107.666  107.666 |         keep   107.666   False |         keep   107.666   False
+Ice cream.mp3           100.446  100.446 |         keep   100.446   False |         keep   100.446   False
+Let's Dance.mp3         119.681  120.030 |         keep   119.681   False |         keep   120.030   False
+LoveMe.mp3               99.384   99.994 |         keep    99.384   False |         keep    99.994   False
+Morning.mp3             117.454  117.454 |         keep   117.454   False |         keep   117.454   False
+Rain.mp3                 76.014   76.013 |         keep    76.014   False |         keep    76.013   False
+Too Cool.mp3            161.499  160.003 |         keep   161.499   False |         keep   160.003   False
+scott-buckley-neon.mp3  120.185  120.185 |         keep   120.185   False |         keep   120.185   False
