@@ -20,7 +20,8 @@ TITLE = {
     "v3": "# t531 M1 v3 — 프리셋 호출 형태 교체 승인 대조 (이전 줄 → 새 줄)",
 }[MODE]
 SOURCE = {
-    "v2": "v1 = 감독 1차 승인 문면(`denyall_v1/`), v2 = 그룹 교체 뒤 실기 전부-거절 문면(`denyall/`).",
+    "v2": "v1 = 감독 1차 승인 문면(`denyall_v1/`), v2 = 그룹 교체 뒤 실기 전부-거절 문면"
+    "(`denyall/`).",
     "v3": "v2 = 2차 승인 문면(`denyall_v2/`), v3 = `Attribute '<X>' At Preset` → `At Preset`"
     " 뒤 실기 전부-거절 문면(`denyall/`).",
 }[MODE]
