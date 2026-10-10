@@ -1,0 +1,666 @@
+{
+ "ping": true,
+ "responder_version": "1.6.6",
+ "datapools": {
+  "path": "ShowData/DataPools/Default",
+  "node": {
+   "childCount": 16,
+   "class": "Pool",
+   "enumeration": "ok",
+   "name": "Default"
+  },
+  "pages": 1,
+  "children": [
+   {
+    "class": "Worlds",
+    "i": 1,
+    "name": "Worlds"
+   },
+   {
+    "class": "Filters",
+    "i": 2,
+    "name": "Filters"
+   },
+   {
+    "class": "GeneratorTypes",
+    "i": 3,
+    "name": "GeneratorTypes"
+   },
+   {
+    "class": "PresetPools",
+    "i": 4,
+    "name": "PresetPools"
+   },
+   {
+    "class": "Groups",
+    "i": 5,
+    "name": "Groups"
+   },
+   {
+    "class": "Sequences",
+    "i": 6,
+    "name": "Sequences"
+   },
+   {
+    "class": "Plugins",
+    "i": 7,
+    "name": "Plugins"
+   },
+   {
+    "class": "Macros",
+    "i": 8,
+    "name": "Macros"
+   },
+   {
+    "class": "Quickeys",
+    "i": 9,
+    "name": "Quickeys"
+   },
+   {
+    "class": "MAtricks",
+    "i": 10,
+    "name": "MAtricks"
+   },
+   {
+    "class": "Configurations",
+    "i": 11,
+    "name": "Configurations"
+   },
+   {
+    "class": "Pages",
+    "i": 12,
+    "name": "Pages"
+   },
+   {
+    "class": "Layouts",
+    "i": 13,
+    "name": "Layouts"
+   },
+   {
+    "class": "Timecodes",
+    "i": 14,
+    "name": "Timecodes"
+   },
+   {
+    "class": "Timers",
+    "i": 15,
+    "name": "Timers"
+   },
+   {
+    "class": "Shapes",
+    "i": 16,
+    "name": "Shapes"
+   }
+  ]
+ },
+ "preset_pools": {
+  "path": "ShowData/DataPools/Default/PresetPools",
+  "node": {
+   "childCount": 14,
+   "class": "PresetPools",
+   "enumeration": "ok",
+   "name": "PresetPools"
+  },
+  "pages": 1,
+  "children": [
+   {
+    "class": "Presets",
+    "i": 1,
+    "name": "Dimmer"
+   },
+   {
+    "class": "Presets",
+    "i": 2,
+    "name": "Position"
+   },
+   {
+    "class": "Presets",
+    "i": 3,
+    "name": "Gobo"
+   },
+   {
+    "class": "Presets",
+    "i": 4,
+    "name": "Color"
+   },
+   {
+    "class": "Presets",
+    "i": 5,
+    "name": "Beam"
+   },
+   {
+    "class": "Presets",
+    "i": 6,
+    "name": "Focus"
+   },
+   {
+    "class": "Presets",
+    "i": 7,
+    "name": "Control"
+   },
+   {
+    "class": "Presets",
+    "i": 8,
+    "name": "Shapers"
+   },
+   {
+    "class": "Presets",
+    "i": 9,
+    "name": "Video"
+   },
+   {
+    "class": "Presets",
+    "i": 21,
+    "name": "All 1"
+   },
+   {
+    "class": "Presets",
+    "i": 22,
+    "name": "All 2"
+   },
+   {
+    "class": "Presets",
+    "i": 23,
+    "name": "All 3"
+   },
+   {
+    "class": "Presets",
+    "i": 24,
+    "name": "All 4"
+   },
+   {
+    "class": "Presets",
+    "i": 25,
+    "name": "All 5"
+   }
+  ]
+ },
+ "presets": {
+  "1": {
+   "path": "ShowData/DataPools/Default/PresetPools/1",
+   "node": {
+    "childCount": 7,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Dimmer"
+   },
+   "pages": 1,
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "풀"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "쇼 하이 OLD"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "미드"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "로우"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "잔광"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "아웃"
+    },
+    {
+     "class": "Preset",
+     "i": 7,
+     "name": "쇼 하이"
+    }
+   ]
+  },
+  "2": {
+   "path": "ShowData/DataPools/Default/PresetPools/2",
+   "node": {
+    "childCount": 16,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Position"
+   },
+   "pages": 2,
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "POS01 보컬 센터 페이스 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "POS02 무대 전체 커버 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "POS03 밴드 라인 백 · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "POS06 센터 집중 (브리지) · 합성좌표"
+    },
+    {
+     "class": "Preset",
+     "i": 21,
+     "name": "Home"
+    },
+    {
+     "class": "Preset",
+     "i": 22,
+     "name": "Wall"
+    },
+    {
+     "class": "Preset",
+     "i": 23,
+     "name": "Audience"
+    },
+    {
+     "class": "Preset",
+     "i": 24,
+     "name": "Center"
+    },
+    {
+     "class": "Preset",
+     "i": 25,
+     "name": "Vocal DSC"
+    },
+    {
+     "class": "Preset",
+     "i": 26,
+     "name": "Fan Out"
+    },
+    {
+     "class": "Preset",
+     "i": 27,
+     "name": "Fan In"
+    },
+    {
+     "class": "Preset",
+     "i": 28,
+     "name": "Cross"
+    },
+    {
+     "class": "Preset",
+     "i": 29,
+     "name": "Ring Out"
+    },
+    {
+     "class": "Preset",
+     "i": 30,
+     "name": "Ring In"
+    }
+   ]
+  },
+  "3": {
+   "path": "ShowData/DataPools/Default/PresetPools/3",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Gobo"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "4": {
+   "path": "ShowData/DataPools/Default/PresetPools/4",
+   "node": {
+    "childCount": 13,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Color"
+   },
+   "pages": 1,
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "골드 앰버 (=P1)"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "핫 핑크 (=P4)"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "딥 퍼플 (=P5)"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "터쿼이즈 (=P6)"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "선셋 오렌지 (=P7)"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "딥 블루"
+    },
+    {
+     "class": "Preset",
+     "i": 7,
+     "name": "웜 화이트 (=P2)"
+    },
+    {
+     "class": "Preset",
+     "i": 8,
+     "name": "뉴트럴 화이트 (=P3)"
+    },
+    {
+     "class": "Preset",
+     "i": 9,
+     "name": "Breathe Warm"
+    },
+    {
+     "class": "Preset",
+     "i": 10,
+     "name": "Wave CM"
+    },
+    {
+     "class": "Preset",
+     "i": 32,
+     "name": "Preset 32"
+    },
+    {
+     "class": "Preset",
+     "i": 301,
+     "name": "LDBEAT M1 - P3 propagation"
+    },
+    {
+     "class": "Preset",
+     "i": 302,
+     "name": "LDBEAT M1 - P3 propagation#2"
+    }
+   ]
+  },
+  "5": {
+   "path": "ShowData/DataPools/Default/PresetPools/5",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Beam"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "6": {
+   "path": "ShowData/DataPools/Default/PresetPools/6",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Focus"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "7": {
+   "path": "ShowData/DataPools/Default/PresetPools/7",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Control"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "8": {
+   "path": "ShowData/DataPools/Default/PresetPools/8",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Shapers"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "9": {
+   "path": "ShowData/DataPools/Default/PresetPools/9",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "Video"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "21": {
+   "path": "ShowData/DataPools/Default/PresetPools/21",
+   "node": {
+    "childCount": 8,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 1"
+   },
+   "pages": 1,
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "DIM-PULSE"
+    },
+    {
+     "class": "Preset",
+     "i": 2,
+     "name": "PT-CIRCLE"
+    },
+    {
+     "class": "Preset",
+     "i": 3,
+     "name": "DIM-CHASE"
+    },
+    {
+     "class": "Preset",
+     "i": 4,
+     "name": "DIM-BREATHE"
+    },
+    {
+     "class": "Preset",
+     "i": 5,
+     "name": "TILT-SWEEP"
+    },
+    {
+     "class": "Preset",
+     "i": 6,
+     "name": "DIM-TWINKLE"
+    },
+    {
+     "class": "Preset",
+     "i": 7,
+     "name": "Finale Slam"
+    },
+    {
+     "class": "Preset",
+     "i": 301,
+     "name": "LDBEAT M1 - P4 SM15 MEASURE"
+    }
+   ]
+  },
+  "22": {
+   "path": "ShowData/DataPools/Default/PresetPools/22",
+   "node": {
+    "childCount": 1,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 2"
+   },
+   "pages": 1,
+   "children": [
+    {
+     "class": "Preset",
+     "i": 1,
+     "name": "Piano Solo"
+    }
+   ]
+  },
+  "23": {
+   "path": "ShowData/DataPools/Default/PresetPools/23",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 3"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "24": {
+   "path": "ShowData/DataPools/Default/PresetPools/24",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 4"
+   },
+   "pages": 1,
+   "children": []
+  },
+  "25": {
+   "path": "ShowData/DataPools/Default/PresetPools/25",
+   "node": {
+    "childCount": 0,
+    "class": "Presets",
+    "enumeration": "ok",
+    "name": "All 5"
+   },
+   "pages": 1,
+   "children": []
+  }
+ },
+ "groups": {
+  "path": "ShowData/DataPools/Default/Groups",
+  "node": {
+   "childCount": 18,
+   "class": "Groups",
+   "enumeration": "ok",
+   "name": "Groups"
+  },
+  "pages": 1,
+  "children": [
+   {
+    "class": "Group",
+    "i": 1,
+    "name": "ALL"
+   },
+   {
+    "class": "Group",
+    "i": 2,
+    "name": "KEY"
+   },
+   {
+    "class": "Group",
+    "i": 3,
+    "name": "FOH"
+   },
+   {
+    "class": "Group",
+    "i": 4,
+    "name": "BACK"
+   },
+   {
+    "class": "Group",
+    "i": 5,
+    "name": "SIDE-L"
+   },
+   {
+    "class": "Group",
+    "i": 6,
+    "name": "SIDE-R"
+   },
+   {
+    "class": "Group",
+    "i": 7,
+    "name": "SIDE-ALL"
+   },
+   {
+    "class": "Group",
+    "i": 8,
+    "name": "WASH-U"
+   },
+   {
+    "class": "Group",
+    "i": 9,
+    "name": "WASH-D"
+   },
+   {
+    "class": "Group",
+    "i": 10,
+    "name": "WASH-ALL"
+   },
+   {
+    "class": "Group",
+    "i": 11,
+    "name": "MOVER-U"
+   },
+   {
+    "class": "Group",
+    "i": 12,
+    "name": "MOVER-D"
+   },
+   {
+    "class": "Group",
+    "i": 13,
+    "name": "MOVER-ALL"
+   },
+   {
+    "class": "Group",
+    "i": 14,
+    "name": "BLIND"
+   },
+   {
+    "class": "Group",
+    "i": 15,
+    "name": "STROBE"
+   },
+   {
+    "class": "Group",
+    "i": 16,
+    "name": "HAZE"
+   },
+   {
+    "class": "Group",
+    "i": 17,
+    "name": "ODD"
+   },
+   {
+    "class": "Group",
+    "i": 18,
+    "name": "EVEN"
+   }
+  ]
+ }
+}

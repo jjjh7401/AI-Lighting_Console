@@ -11,8 +11,19 @@
 # `reports/effect-arrangement-rules-20261007.md:98-115`), 그룹 번호는
 # 배치 규칙서 §2가 직접 적은 숫자 그대로이거나(BACK·SIDE-ALL·MOVER-U·
 # MOVER-D) `.moai/reports/t525/verdict.md` §②가 실측한 값(BLIND=14).
-# STROBE는 이 plan-phase 증거 어디에도 그룹 번호가 없어 비워 둔다(지어내지
-# 않음).
+# STROBE는 이 plan-phase 증거 어디에도 그룹 번호가 없어 비워 뒀다가(지어내지
+# 않음) 카드 t543 콘솔 실측으로 15 를 채웠다.
+#
+# 카드 t543(감독 2026-10-10 「데이터 채우기 먼저」) — FOH·WASH-ALL 두 트랙은
+# 콘솔 읽기 전용 실측으로 추가했다(콘솔 쓰기 0): 그룹 풀 이름·번호는
+# `.moai/reports/t543/r1_pools.json`(FOH=3, WASH-ALL=10), 소속 장비는 1.6.6
+# props 나눠 읽기로 받은 SELECTIONDATA 전량을 패치 SUBFIXTUREINDEX 로 바꾼
+# `.moai/reports/t543/r4_group_fids.txt`(FOH 111~118 8대, WASH-ALL 401~410·
+# 421~430 20대 — 이름과 전부 일치). 워시 줄은 WASH-U/D 를 함께 잡는
+# WASH-ALL 하나로 둔다(§2 SCENE 「WASH 색·밝기」, 한 그룹 한 시퀀스 — 둘을
+# 따로 두면 겹침 검증이 WASH-ALL 과 함께 쓰는 것을 막는다). 트랙 순서는 시안
+# `reports/ldbeat-runbook-ui-proposal-20261008.html` 의 ROLES 순서(FOH →
+# WASH-ALL → BACK …)를 따른다.
 #
 # 프리셋 **번호**(브라이트니스 디머·디머 효과 프리셋, position_preset_no,
 # color_preset_no, effect_preset_no)는 §4에 숫자가 전혀 없으므로(REQ-LDBEAT-
@@ -22,6 +33,32 @@
 # 아니므로 베끼지 않는다.
 source: love_attack_default
 tracks:
+  - group_name: FOH
+    group_no: 3
+    group_no_confirmed: true
+    cues:
+      # 규칙 7 「얼굴 빛(FOH)은 벌스부터 끝까지 유지」 — 켜는 큐 하나뿐이다.
+      # §4 가 밝기 숫자를 주지 않아 값은 비워 둔다(지어내지 않음).
+      - bar: 7
+        label: "FOH 켬"
+        source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+  - group_name: WASH-ALL
+    group_no: 10
+    group_no_confirmed: true
+    # 감독 결정 2026-10-10(카드 t543) — §4 칸의 「워시」는 층 역할 wash 를
+    # 부른다. 이 곡의 확인된 트랙 중 wash 역할(공용 판정기)은 WASH-ALL
+    # 하나뿐이라 역할 매칭으로 여기 올렸다(그룹 이름 문자열은 넓히지 않음).
+    # 색(라벤더)은 이름만 있고 색 프리셋 번호가 없어 라벨에만 남긴다.
+    cues:
+      - bar: 7
+        label: "라벤더 워시 40%(2마디 번짐)"
+        brightness: {mode: value, value_percent: 40}
+        entry: {fade_bars: 2}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+      - bar: 14
+        label: "워시 25% 덜어냄"
+        brightness: {mode: value, value_percent: 25}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:108"
   - group_name: BACK
     group_no: 4
     group_no_confirmed: true
@@ -91,8 +128,10 @@ tracks:
         brightness: {mode: value, value_percent: 100}
         source_ref: "reports/effect-arrangement-rules-20261007.md:109"
   - group_name: STROBE
-    group_no: null
-    group_no_confirmed: false
+    # 카드 t543 — 콘솔 그룹 풀 15 'STROBE', SELECTIONDATA 611~614 4대 실측
+    # (`.moai/reports/t543/r4_group_fids.txt`).
+    group_no: 15
+    group_no_confirmed: true
     # 0~25마디 구간에는 스트로브 발화가 없다(63·67마디부터) — 빈 트랙은
     # 거짓이 아니라 이 구간의 정확한 모습이다.
     cues: []
@@ -107,19 +146,20 @@ tracks:
 # 나오지만 이 파일의 tracks에 그 그룹 번호가 확인돼 있지 않다(트랙 자체가
 # 없다) → 메모. 나머지 넷(11~13·14~17·18~21·22~25)은 칸 자체가 그룹 이름을
 # 부르지 않는다 → 메모. 추측(지어낸 그룹 배정)은 0건이다.
+#
+# 카드 t543 — FOH·WASH-ALL 트랙이 콘솔 실측으로 확인된 뒤 다시 적용했다.
+# bar 7 「FOH 켬」은 FOH 를 직접 부르고, 번호가 확인됐고, 빈 자리라 FOH
+# 트랙으로 옮겼다(세 조건). bar 7 「라벤더 워시 40%」와 bar 14 「워시 25%
+# 덜어냄」은 규칙 확장(감독 결정 2026-10-10 — 칸이 층 역할을 부르고 그 역할의
+# 확인된 트랙이 정확히 하나면 그 트랙으로)으로 WASH-ALL 트랙에 옮겼다. 그래서
+# bar 7·14 메모가 빠지고 넷이 남는다.
 scene_memos:
   - bar: 0
     text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」"
     source_ref: "reports/effect-arrangement-rules-20261007.md:104"
-  - bar: 7
-    text: "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」"
-    source_ref: "reports/effect-arrangement-rules-20261007.md:106"
   - bar: 11
     text: "배정 미정 — SCENE 원값 「틴트 한 단계」"
     source_ref: "reports/effect-arrangement-rules-20261007.md:107"
-  - bar: 14
-    text: "배정 미정 — SCENE 원값 「워시 25% 덜어냄」"
-    source_ref: "reports/effect-arrangement-rules-20261007.md:108"
   - bar: 18
     text: "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」"
     source_ref: "reports/effect-arrangement-rules-20261007.md:109"

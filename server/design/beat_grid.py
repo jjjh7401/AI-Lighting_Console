@@ -81,6 +81,8 @@ def classify_scene_cell_assignment(
     named_group: str | None,
     confirmed_track_group_names: Sequence[str],
     group_has_existing_cue_at_bar: bool,
+    named_role: str | None = None,
+    confirmed_track_roles: Sequence[str | None] = (),
 ) -> SceneCellAssignment:
     """REQ-LDBEAT-006(iv-2)의 "세 조건" 규칙을 파라미터화한 순수 함수
     (plan-audit iteration 3 D4 — 이전까지는 ``beat_grid_data/*.yaml``을
@@ -93,9 +95,21 @@ def classify_scene_cell_assignment(
     이 함수는 어떤 리그·곡의 그룹 이름도 모른다(카드 t537 추가 지시 2와
     같은 일반화 원칙) — ``named_group``/``confirmed_track_group_names``는
     호출자가 그 곡의 데이터에서 넘긴다.
+
+    **규칙 확장(감독 결정 2026-10-10, 카드 t543)** — 칸이 그룹 이름 대신 층
+    역할(예: 「워시」 → ``"wash"``)을 부르면 ``named_role``로 넘긴다. 그 역할을
+    가진 확인된 트랙(``confirmed_track_roles``, 공용 판정기
+    ``resolve_layer_role``의 결과)이 **정확히 하나**일 때만 조건 1·2가 참이다 —
+    둘 이상이면 어느 줄인지 정할 수 없고, 없으면 갈 곳이 없어 메모로 남는다.
+    그룹 이름 문자열 비교는 넓히지 않는다(다른 리그에서 이름이 달라도 역할은
+    같은 판정기로 붙는다).
     """
     if named_group is None:
-        return "memo"
+        if named_role is None:
+            return "memo"
+        if list(confirmed_track_roles).count(named_role) != 1:
+            return "memo"
+        return "memo" if group_has_existing_cue_at_bar else "track"
     if named_group not in confirmed_track_group_names:
         return "memo"
     if group_has_existing_cue_at_bar:

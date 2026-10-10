@@ -1,0 +1,1636 @@
+{
+ "ping": true,
+ "responder_version": "1.6.6",
+ "presets": {
+  "1": {
+   "path": "ShowData/DataPools/Default/PresetPools/4/1",
+   "field_count": 138,
+   "values": [
+    {
+     "n": "IGNORENETWORK",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "STRUCTURELOCKED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SYSTEMLOCKED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "LOCK",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "1"
+    },
+    {
+     "n": "COUNT",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "1"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "골드 앰버 (=P1)"
+    },
+    {
+     "n": "USEREXPANDED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "FADERENABLED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "OWNED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "HIDDEN",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DEPENDENCYEXPORT",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "MEMORYFOOTPRINT",
+     "ok": true,
+     "t": "number",
+     "v": "2376"
+    },
+    {
+     "e": "property not readable: GUID",
+     "n": "GUID",
+     "ok": false
+    },
+    {
+     "e": "property not readable: SCRIBBLE",
+     "n": "SCRIBBLE",
+     "ok": false
+    },
+    {
+     "e": "property not readable: APPEARANCE",
+     "n": "APPEARANCE",
+     "ok": false
+    },
+    {
+     "n": "NOTE",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "TAGS",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "e": "property not readable: PREVIEWCOPY",
+     "n": "PREVIEWCOPY",
+     "ok": false
+    },
+    {
+     "n": "ACTIVE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "HASANYMATRICKSDATA",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SHUFFLEMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Auto"
+    },
+    {
+     "n": "INITIALNAME",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "e": "property not readable: INITIALMATRICKS",
+     "n": "INITIALMATRICKS",
+     "ok": false
+    },
+    {
+     "n": "X",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "Y",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "Z",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTSTYLE",
+     "ok": true,
+     "t": "string",
+     "v": "Pan"
+    },
+    {
+     "n": "INVERTX",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTY",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTZ",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEX",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEY",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEZ",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "RELATIVEFADE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVEDELAY",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVEPHASE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVESPEED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "RELATIVE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "PHASERTRANSFORM",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DOSHUFFLE",
+     "ok": true,
+     "t": "table",
+     "v": "{\"Property\":\"DOSHUFFLE\",\"Target\":\"Preset 4.1\"}"
+    },
+    {
+     "n": "MEMORYTYPE",
+     "ok": true,
+     "t": "string",
+     "v": "Compressed"
+    },
+    {
+     "n": "MOVEGRIDCURSOR",
+     "ok": true,
+     "t": "string",
+     "v": "Append X"
+    },
+    {
+     "n": "PRESERVEGRIDPOSITIONS",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SELECTIONDATA",
+     "ok": true,
+     "t": "table",
+     "v": "{}"
+    },
+    {
+     "e": "property not readable: INPUTFILTER",
+     "n": "INPUTFILTER",
+     "ok": false
+    },
+    {
+     "n": "CUEPART",
+     "ok": true,
+     "t": "string",
+     "v": "Default"
+    },
+    {
+     "n": "TYPE",
+     "ok": true,
+     "t": "string",
+     "v": "Preset"
+    },
+    {
+     "n": "USER",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "FEATUREGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "Color"
+    },
+    {
+     "n": "TRIGGER",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "VALUESMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Normal"
+    },
+    {
+     "n": "MAGIC",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "PRESETMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Universal"
+    },
+    {
+     "n": "STOREDDATA",
+     "ok": true,
+     "t": "string",
+     "v": "Universal"
+    },
+    {
+     "n": "SPEEDMASTER",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDSCALE",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "n": "PRESETDATA",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "OWNDATAPRESENT",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "DIRECTPROGRAMMERCOOKING",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "OWNNONCOOKEDDATAPRESENT",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "MODE",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "e": "property not readable: OFFFADE",
+     "n": "OFFFADE",
+     "ok": false
+    },
+    {
+     "n": "RECIPETEMPLATE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DELAYTOPHASE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DEPENDENCIES",
+     "ok": true,
+     "t": "table",
+     "v": "{}"
+    },
+    {
+     "n": "REFERENCES",
+     "ok": true,
+     "t": "string",
+     "truncated": true,
+     "v": "3154118741:8090489919094998016,3154118749:-6206073985722043392,3154119360:-7866391247887599616,3154119435:3596306153797348352,3154119437:2370449341213624320,7449087014:8090489919094998016,7449087022:-6206073985722043392,7449087038:-78663912"
+    },
+    {
+     "n": "MAXDEPTH",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "e": "property not readable: AUTOSTART",
+     "n": "AUTOSTART",
+     "ok": false
+    },
+    {
+     "e": "property not readable: AUTOSTOP",
+     "n": "AUTOSTOP",
+     "ok": false
+    },
+    {
+     "e": "property not readable: SWAPPROTECT",
+     "n": "SWAPPROTECT",
+     "ok": false
+    },
+    {
+     "e": "property not readable: KILLPROTECT",
+     "n": "KILLPROTECT",
+     "ok": false
+    },
+    {
+     "e": "property not readable: USEEXECUTORTIME",
+     "n": "USEEXECUTORTIME",
+     "ok": false
+    },
+    {
+     "e": "property not readable: OFFWHENOVERRIDDEN",
+     "n": "OFFWHENOVERRIDDEN",
+     "ok": false
+    },
+    {
+     "e": "property not readable: AUTOPREPOS",
+     "n": "AUTOPREPOS",
+     "ok": false
+    },
+    {
+     "e": "property not readable: PRIORITY",
+     "n": "PRIORITY",
+     "ok": false
+    },
+    {
+     "e": "property not readable: PLAYBACKMASTER",
+     "n": "PLAYBACKMASTER",
+     "ok": false
+    },
+    {
+     "e": "property not readable: OUTPUTFILTER",
+     "n": "OUTPUTFILTER",
+     "ok": false
+    },
+    {
+     "e": "property not readable: EXECUTORDISPLAYMODE",
+     "n": "EXECUTORDISPLAYMODE",
+     "ok": false
+    },
+    {
+     "n": "ACTION",
+     "ok": true,
+     "t": "number",
+     "v": "416"
+    }
+   ],
+   "state": {
+    "children": [],
+    "id": "t543c-17",
+    "kind": "state",
+    "node": {
+     "childCount": 0,
+     "class": "Preset",
+     "enumeration": "ok",
+     "name": "골드 앰버 (=P1)"
+    },
+    "offset": 0,
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/4/1",
+    "truncated": false,
+    "v": 1
+   }
+  },
+  "2": {
+   "path": "ShowData/DataPools/Default/PresetPools/4/2",
+   "field_count": 138,
+   "values": [
+    {
+     "n": "IGNORENETWORK",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "STRUCTURELOCKED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SYSTEMLOCKED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "LOCK",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "2"
+    },
+    {
+     "n": "COUNT",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "n": "NO",
+     "ok": true,
+     "t": "number",
+     "v": "2"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "핫 핑크 (=P4)"
+    },
+    {
+     "n": "USEREXPANDED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "FADERENABLED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "OWNED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "HIDDEN",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DEPENDENCYEXPORT",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "MEMORYFOOTPRINT",
+     "ok": true,
+     "t": "number",
+     "v": "2376"
+    },
+    {
+     "e": "property not readable: GUID",
+     "n": "GUID",
+     "ok": false
+    },
+    {
+     "e": "property not readable: SCRIBBLE",
+     "n": "SCRIBBLE",
+     "ok": false
+    },
+    {
+     "e": "property not readable: APPEARANCE",
+     "n": "APPEARANCE",
+     "ok": false
+    },
+    {
+     "n": "NOTE",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "TAGS",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "e": "property not readable: PREVIEWCOPY",
+     "n": "PREVIEWCOPY",
+     "ok": false
+    },
+    {
+     "n": "ACTIVE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "HASANYMATRICKSDATA",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SHUFFLEMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Auto"
+    },
+    {
+     "n": "INITIALNAME",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "e": "property not readable: INITIALMATRICKS",
+     "n": "INITIALMATRICKS",
+     "ok": false
+    },
+    {
+     "n": "X",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "Y",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "Z",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZBLOCK",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZWINGS",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZWIDTH",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZSHUFFLE",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "YSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "ZSHIFT",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "XINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "XINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "YINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINV",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVB",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVG",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ZINVW",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTSTYLE",
+     "ok": true,
+     "t": "string",
+     "v": "Pan"
+    },
+    {
+     "n": "INVERTX",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTY",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "INVERTZ",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEX",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEY",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "ALIGNRANGEZ",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "RELATIVEFADE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVEDELAY",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVEPHASE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "RELATIVESPEED",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "RELATIVE",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "PHASERTRANSFORM",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOX",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOY",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADEFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "FADETOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DELAYTOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDTOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASEFROMZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "PHASETOZ",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "DOSHUFFLE",
+     "ok": true,
+     "t": "table",
+     "v": "{\"Property\":\"DOSHUFFLE\",\"Target\":\"Preset 4.2\"}"
+    },
+    {
+     "n": "MEMORYTYPE",
+     "ok": true,
+     "t": "string",
+     "v": "Compressed"
+    },
+    {
+     "n": "MOVEGRIDCURSOR",
+     "ok": true,
+     "t": "string",
+     "v": "Append X"
+    },
+    {
+     "n": "PRESERVEGRIDPOSITIONS",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "SELECTIONDATA",
+     "ok": true,
+     "t": "table",
+     "v": "{}"
+    },
+    {
+     "e": "property not readable: INPUTFILTER",
+     "n": "INPUTFILTER",
+     "ok": false
+    },
+    {
+     "n": "CUEPART",
+     "ok": true,
+     "t": "string",
+     "v": "Default"
+    },
+    {
+     "n": "TYPE",
+     "ok": true,
+     "t": "string",
+     "v": "Preset"
+    },
+    {
+     "n": "USER",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "FEATUREGROUP",
+     "ok": true,
+     "t": "string",
+     "v": "Color"
+    },
+    {
+     "n": "TRIGGER",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "VALUESMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Normal"
+    },
+    {
+     "n": "MAGIC",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "PRESETMODE",
+     "ok": true,
+     "t": "string",
+     "v": "Universal"
+    },
+    {
+     "n": "STOREDDATA",
+     "ok": true,
+     "t": "string",
+     "v": "Universal"
+    },
+    {
+     "n": "SPEEDMASTER",
+     "ok": true,
+     "t": "string",
+     "v": "None"
+    },
+    {
+     "n": "SPEEDSCALE",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "n": "PRESETDATA",
+     "ok": true,
+     "t": "string",
+     "v": ""
+    },
+    {
+     "n": "OWNDATAPRESENT",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "DIRECTPROGRAMMERCOOKING",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "OWNNONCOOKEDDATAPRESENT",
+     "ok": true,
+     "t": "boolean",
+     "v": "true"
+    },
+    {
+     "n": "MODE",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "e": "property not readable: OFFFADE",
+     "n": "OFFFADE",
+     "ok": false
+    },
+    {
+     "n": "RECIPETEMPLATE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DELAYTOPHASE",
+     "ok": true,
+     "t": "boolean",
+     "v": "false"
+    },
+    {
+     "n": "DEPENDENCIES",
+     "ok": true,
+     "t": "table",
+     "v": "{}"
+    },
+    {
+     "n": "REFERENCES",
+     "ok": true,
+     "t": "string",
+     "truncated": true,
+     "v": "3154118749:-6206073985722043392,3154118751:-7895569146458363904,3154118757:5642292568863237120,3154119360:-7866391247887599616,3154119398:-7899135836069758976,7449087022:-6206073985722043392,7449087024:-7895569146458363904,7449087030:564229"
+    },
+    {
+     "n": "MAXDEPTH",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    },
+    {
+     "e": "property not readable: AUTOSTART",
+     "n": "AUTOSTART",
+     "ok": false
+    },
+    {
+     "e": "property not readable: AUTOSTOP",
+     "n": "AUTOSTOP",
+     "ok": false
+    },
+    {
+     "e": "property not readable: SWAPPROTECT",
+     "n": "SWAPPROTECT",
+     "ok": false
+    },
+    {
+     "e": "property not readable: KILLPROTECT",
+     "n": "KILLPROTECT",
+     "ok": false
+    },
+    {
+     "e": "property not readable: USEEXECUTORTIME",
+     "n": "USEEXECUTORTIME",
+     "ok": false
+    },
+    {
+     "e": "property not readable: OFFWHENOVERRIDDEN",
+     "n": "OFFWHENOVERRIDDEN",
+     "ok": false
+    },
+    {
+     "e": "property not readable: AUTOPREPOS",
+     "n": "AUTOPREPOS",
+     "ok": false
+    },
+    {
+     "e": "property not readable: PRIORITY",
+     "n": "PRIORITY",
+     "ok": false
+    },
+    {
+     "e": "property not readable: PLAYBACKMASTER",
+     "n": "PLAYBACKMASTER",
+     "ok": false
+    },
+    {
+     "e": "property not readable: OUTPUTFILTER",
+     "n": "OUTPUTFILTER",
+     "ok": false
+    },
+    {
+     "e": "property not readable: EXECUTORDISPLAYMODE",
+     "n": "EXECUTORDISPLAYMODE",
+     "ok": false
+    },
+    {
+     "n": "ACTION",
+     "ok": true,
+     "t": "number",
+     "v": "416"
+    }
+   ],
+   "state": {
+    "children": [],
+    "id": "t543c-33",
+    "kind": "state",
+    "node": {
+     "childCount": 0,
+     "class": "Preset",
+     "enumeration": "ok",
+     "name": "핫 핑크 (=P4)"
+    },
+    "offset": 0,
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/4/2",
+    "truncated": false,
+    "v": 1
+   }
+  }
+ }
+}
