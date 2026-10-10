@@ -1,0 +1,4683 @@
+{
+ "ping": true,
+ "root": "Patch/Stages/1/Fixtures",
+ "childCount": 86,
+ "tree": [
+  {
+   "path": "Patch/Stages/1/Fixtures/1",
+   "i": 1,
+   "class": "Fixture",
+   "name": "KEY 101",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "101"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 101"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "101"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "0"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/2",
+   "i": 2,
+   "class": "Fixture",
+   "name": "KEY 102",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "102"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 102"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "102"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "1"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/3",
+   "i": 3,
+   "class": "Fixture",
+   "name": "KEY 103",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "103"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 103"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "103"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "2"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/4",
+   "i": 4,
+   "class": "Fixture",
+   "name": "KEY 104",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "104"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 104"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "104"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "3"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/5",
+   "i": 5,
+   "class": "Fixture",
+   "name": "KEY 105",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "105"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 105"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "105"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "4"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/6",
+   "i": 6,
+   "class": "Fixture",
+   "name": "KEY 106",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "106"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "KEY 106"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "106"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "5"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/7",
+   "i": 7,
+   "class": "Fixture",
+   "name": "FOH 111",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "111"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 111"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "111"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "6"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/8",
+   "i": 8,
+   "class": "Fixture",
+   "name": "FOH 112",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "112"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 112"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "112"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "7"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/9",
+   "i": 9,
+   "class": "Fixture",
+   "name": "FOH 113",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "113"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 113"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "113"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "8"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/10",
+   "i": 10,
+   "class": "Fixture",
+   "name": "FOH 114",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "114"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 114"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "114"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "9"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/11",
+   "i": 11,
+   "class": "Fixture",
+   "name": "FOH 115",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "115"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 115"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "115"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "10"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/12",
+   "i": 12,
+   "class": "Fixture",
+   "name": "FOH 116",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "116"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 116"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "116"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "11"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/13",
+   "i": 13,
+   "class": "Fixture",
+   "name": "FOH 117",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "117"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 117"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "117"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "12"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/14",
+   "i": 14,
+   "class": "Fixture",
+   "name": "FOH 118",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "118"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "FOH 118"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "118"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "13"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/15",
+   "i": 15,
+   "class": "Fixture",
+   "name": "BLIND 601",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "601"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 601"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "601"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "14"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/16",
+   "i": 16,
+   "class": "Fixture",
+   "name": "BLIND 602",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "602"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 602"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "602"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "15"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/17",
+   "i": 17,
+   "class": "Fixture",
+   "name": "BLIND 603",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "603"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 603"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "603"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "16"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/18",
+   "i": 18,
+   "class": "Fixture",
+   "name": "BLIND 604",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "604"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 604"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "604"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "17"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/19",
+   "i": 19,
+   "class": "Fixture",
+   "name": "BLIND 605",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "605"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 605"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "605"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "18"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/20",
+   "i": 20,
+   "class": "Fixture",
+   "name": "BLIND 606",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "606"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BLIND 606"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "606"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "19"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/21",
+   "i": 21,
+   "class": "Fixture",
+   "name": "STROBE 611",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "611"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "STROBE 611"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "611"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "20"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/21/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "21"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/22",
+   "i": 22,
+   "class": "Fixture",
+   "name": "STROBE 612",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "612"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "STROBE 612"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "612"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "22"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/22/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "23"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/23",
+   "i": 23,
+   "class": "Fixture",
+   "name": "STROBE 613",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "613"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "STROBE 613"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "613"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "24"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/23/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "25"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/24",
+   "i": 24,
+   "class": "Fixture",
+   "name": "STROBE 614",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "614"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "STROBE 614"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "614"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "26"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/24/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "27"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/25",
+   "i": 25,
+   "class": "Fixture",
+   "name": "HAZE 621",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "621"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "HAZE 621"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "621"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "28"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/26",
+   "i": 26,
+   "class": "Fixture",
+   "name": "HAZE 622",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "622"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "HAZE 622"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "622"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "29"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/27",
+   "i": 27,
+   "class": "Fixture",
+   "name": "MOVER-U 501",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "501"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 501"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "501"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "30"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/28",
+   "i": 28,
+   "class": "Fixture",
+   "name": "MOVER-U 502",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "502"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 502"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "502"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "31"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/29",
+   "i": 29,
+   "class": "Fixture",
+   "name": "MOVER-U 503",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "503"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 503"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "503"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "32"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/30",
+   "i": 30,
+   "class": "Fixture",
+   "name": "MOVER-U 504",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "504"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 504"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "504"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "33"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/31",
+   "i": 31,
+   "class": "Fixture",
+   "name": "MOVER-U 505",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "505"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 505"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "505"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "34"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/32",
+   "i": 32,
+   "class": "Fixture",
+   "name": "MOVER-U 506",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "506"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 506"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "506"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "35"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/33",
+   "i": 33,
+   "class": "Fixture",
+   "name": "MOVER-U 507",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "507"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 507"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "507"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "36"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/34",
+   "i": 34,
+   "class": "Fixture",
+   "name": "MOVER-U 508",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "508"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-U 508"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "508"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "37"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/35",
+   "i": 35,
+   "class": "Fixture",
+   "name": "MOVER-D 521",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "521"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 521"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "521"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "38"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/35/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "39"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/35/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "40"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/35/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "41"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/36",
+   "i": 36,
+   "class": "Fixture",
+   "name": "MOVER-D 522",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "522"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 522"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "522"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "42"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/36/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "43"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/36/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "44"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/36/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "45"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/37",
+   "i": 37,
+   "class": "Fixture",
+   "name": "MOVER-D 523",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "523"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 523"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "523"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "46"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/37/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "47"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/37/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "48"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/37/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "49"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/38",
+   "i": 38,
+   "class": "Fixture",
+   "name": "MOVER-D 524",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "524"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 524"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "524"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "50"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/38/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "51"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/38/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "52"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/38/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "53"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/39",
+   "i": 39,
+   "class": "Fixture",
+   "name": "MOVER-D 525",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "525"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 525"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "525"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "54"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/39/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "55"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/39/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "56"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/39/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "57"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/40",
+   "i": 40,
+   "class": "Fixture",
+   "name": "MOVER-D 526",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "526"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 526"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "526"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "58"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/40/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "59"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/40/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "60"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/40/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "61"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/41",
+   "i": 41,
+   "class": "Fixture",
+   "name": "MOVER-D 527",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "527"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 527"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "527"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "62"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/41/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "63"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/41/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "64"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/41/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "65"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/42",
+   "i": 42,
+   "class": "Fixture",
+   "name": "MOVER-D 528",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "528"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "MOVER-D 528"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "528"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "66"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/42/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "67"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/42/2",
+     "i": 2,
+     "class": "SubFixture",
+     "name": "[Instance3#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance3#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "2"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "68"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    },
+    {
+     "path": "Patch/Stages/1/Fixtures/42/3",
+     "i": 3,
+     "class": "SubFixture",
+     "name": "[Instance4#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance4#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "3"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "69"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 3
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/43",
+   "i": 43,
+   "class": "Fixture",
+   "name": "BACK 201",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "201"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 201"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "201"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "70"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/43/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "71"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/44",
+   "i": 44,
+   "class": "Fixture",
+   "name": "BACK 202",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "202"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 202"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "202"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "72"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/44/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "73"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/45",
+   "i": 45,
+   "class": "Fixture",
+   "name": "BACK 203",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "203"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 203"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "203"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "74"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/45/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "75"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/46",
+   "i": 46,
+   "class": "Fixture",
+   "name": "BACK 204",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "204"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 204"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "204"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "76"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/46/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "77"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/47",
+   "i": 47,
+   "class": "Fixture",
+   "name": "BACK 205",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "205"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 205"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "205"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "78"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/47/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "79"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/48",
+   "i": 48,
+   "class": "Fixture",
+   "name": "BACK 206",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "206"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 206"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "206"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "80"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/48/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "81"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/49",
+   "i": 49,
+   "class": "Fixture",
+   "name": "BACK 207",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "207"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 207"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "207"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "82"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/49/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "83"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/50",
+   "i": 50,
+   "class": "Fixture",
+   "name": "BACK 208",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "208"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 208"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "208"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "84"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/50/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "85"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/51",
+   "i": 51,
+   "class": "Fixture",
+   "name": "BACK 209",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "209"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 209"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "209"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "86"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/51/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "87"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/52",
+   "i": 52,
+   "class": "Fixture",
+   "name": "BACK 210",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "210"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 210"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "210"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "88"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/52/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "89"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/53",
+   "i": 53,
+   "class": "Fixture",
+   "name": "BACK 211",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "211"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 211"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "211"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "90"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/53/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "91"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/54",
+   "i": 54,
+   "class": "Fixture",
+   "name": "BACK 212",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "212"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "BACK 212"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "212"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "92"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/54/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "93"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/55",
+   "i": 55,
+   "class": "Fixture",
+   "name": "SIDE-L 301",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "301"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 301"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "301"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "94"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/55/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "95"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/56",
+   "i": 56,
+   "class": "Fixture",
+   "name": "SIDE-L 302",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "302"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 302"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "302"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "96"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/56/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "97"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/57",
+   "i": 57,
+   "class": "Fixture",
+   "name": "SIDE-L 303",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "303"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 303"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "303"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "98"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/57/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "99"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/58",
+   "i": 58,
+   "class": "Fixture",
+   "name": "SIDE-L 304",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "304"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 304"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "304"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "100"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/58/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "101"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/59",
+   "i": 59,
+   "class": "Fixture",
+   "name": "SIDE-L 305",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "305"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 305"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "305"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "102"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/59/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "103"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/60",
+   "i": 60,
+   "class": "Fixture",
+   "name": "SIDE-L 306",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "306"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-L 306"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "306"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "104"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/60/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "105"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/61",
+   "i": 61,
+   "class": "Fixture",
+   "name": "SIDE-R 311",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "311"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 311"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "311"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "106"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/61/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "107"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/62",
+   "i": 62,
+   "class": "Fixture",
+   "name": "SIDE-R 312",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "312"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 312"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "312"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "108"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/62/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "109"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/63",
+   "i": 63,
+   "class": "Fixture",
+   "name": "SIDE-R 313",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "313"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 313"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "313"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "110"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/63/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "111"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/64",
+   "i": 64,
+   "class": "Fixture",
+   "name": "SIDE-R 314",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "314"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 314"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "314"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "112"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/64/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "113"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/65",
+   "i": 65,
+   "class": "Fixture",
+   "name": "SIDE-R 315",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "315"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 315"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "315"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "114"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/65/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "115"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/66",
+   "i": 66,
+   "class": "Fixture",
+   "name": "SIDE-R 316",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "316"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "SIDE-R 316"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "316"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "116"
+    }
+   ],
+   "children": [
+    {
+     "path": "Patch/Stages/1/Fixtures/66/1",
+     "i": 1,
+     "class": "SubFixture",
+     "name": "[Instance2#2]",
+     "reads": [
+      {
+       "e": "property not readable: FID",
+       "n": "FID",
+       "ok": false
+      },
+      {
+       "n": "NAME",
+       "ok": true,
+       "t": "string",
+       "v": "[Instance2#2]"
+      },
+      {
+       "n": "INDEX",
+       "ok": true,
+       "t": "number",
+       "v": "1"
+      },
+      {
+       "n": "SUBFIXTUREINDEX",
+       "ok": true,
+       "t": "number",
+       "v": "117"
+      }
+     ],
+     "children": [],
+     "childCount": 0
+    }
+   ],
+   "childCount": 1
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/67",
+   "i": 67,
+   "class": "Fixture",
+   "name": "WASH-U 401",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "401"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 401"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "401"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "118"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/68",
+   "i": 68,
+   "class": "Fixture",
+   "name": "WASH-U 402",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "402"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 402"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "402"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "119"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/69",
+   "i": 69,
+   "class": "Fixture",
+   "name": "WASH-U 403",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "403"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 403"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "403"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "120"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/70",
+   "i": 70,
+   "class": "Fixture",
+   "name": "WASH-U 404",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "404"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 404"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "404"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "121"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/71",
+   "i": 71,
+   "class": "Fixture",
+   "name": "WASH-U 405",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "405"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 405"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "405"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "122"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/72",
+   "i": 72,
+   "class": "Fixture",
+   "name": "WASH-U 406",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "406"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 406"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "406"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "123"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/73",
+   "i": 73,
+   "class": "Fixture",
+   "name": "WASH-U 407",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "407"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 407"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "407"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "124"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/74",
+   "i": 74,
+   "class": "Fixture",
+   "name": "WASH-U 408",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "408"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 408"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "408"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "125"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/75",
+   "i": 75,
+   "class": "Fixture",
+   "name": "WASH-U 409",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "409"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 409"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "409"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "126"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/76",
+   "i": 76,
+   "class": "Fixture",
+   "name": "WASH-U 410",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "410"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-U 410"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "410"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "127"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/77",
+   "i": 77,
+   "class": "Fixture",
+   "name": "WASH-D 421",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "421"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 421"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "421"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "128"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/78",
+   "i": 78,
+   "class": "Fixture",
+   "name": "WASH-D 422",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "422"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 422"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "422"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "129"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/79",
+   "i": 79,
+   "class": "Fixture",
+   "name": "WASH-D 423",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "423"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 423"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "423"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "130"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/80",
+   "i": 80,
+   "class": "Fixture",
+   "name": "WASH-D 424",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "424"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 424"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "424"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "131"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/81",
+   "i": 81,
+   "class": "Fixture",
+   "name": "WASH-D 425",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "425"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 425"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "425"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "132"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/82",
+   "i": 82,
+   "class": "Fixture",
+   "name": "WASH-D 426",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "426"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 426"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "426"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "133"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/83",
+   "i": 83,
+   "class": "Fixture",
+   "name": "WASH-D 427",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "427"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 427"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "427"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "134"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/84",
+   "i": 84,
+   "class": "Fixture",
+   "name": "WASH-D 428",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "428"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 428"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "428"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "135"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/85",
+   "i": 85,
+   "class": "Fixture",
+   "name": "WASH-D 429",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "429"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 429"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "429"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "136"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  },
+  {
+   "path": "Patch/Stages/1/Fixtures/86",
+   "i": 86,
+   "class": "Fixture",
+   "name": "WASH-D 430",
+   "reads": [
+    {
+     "n": "FID",
+     "ok": true,
+     "t": "number",
+     "v": "430"
+    },
+    {
+     "n": "NAME",
+     "ok": true,
+     "t": "string",
+     "v": "WASH-D 430"
+    },
+    {
+     "n": "INDEX",
+     "ok": true,
+     "t": "number",
+     "v": "430"
+    },
+    {
+     "n": "SUBFIXTUREINDEX",
+     "ok": true,
+     "t": "number",
+     "v": "137"
+    }
+   ],
+   "children": [],
+   "childCount": 0
+  }
+ ]
+}
