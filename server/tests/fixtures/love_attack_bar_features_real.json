@@ -1,0 +1,664 @@
+{
+  "_source_note": "LOVE ATTACK 82마디 특징(음량·저역·보컬 대역 비율·온셋 개수) — server.audio.bar_map.extract_bar_features()가 실제 LOVE ATTACK mp3에서 잰 값을 그대로 고정한 숫자(derived numbers)다. 원곡 오디오 자체는 커밋하지 않는다(REQ-LDBARMAP-014) — 이 파일은 파생 숫자일 뿐이라 허용된다. 디코드·비트 검출 경로는 server/audio/analyze.py의 analyze()와 동일하다(soundfile 읽기 -> mono 다운믹스 -> librosa.beat.beat_track hop=512). 첫 박 오프셋은 AC-LDBARMAP-016이 감독 귀 확정한 1(정수, beat_times 인덱스 mod 4)을 썼다. 카드 t535(M3 정밀도 보강)가 생성.",
+  "first_beat_offset": 1,
+  "bar_boundaries_ms": [
+    1498,
+    3657,
+    5782,
+    7918,
+    10066,
+    12214,
+    14362,
+    16498,
+    18646,
+    20793,
+    22930,
+    25078,
+    27225,
+    29350,
+    31509,
+    33646,
+    35794,
+    37895,
+    40078,
+    42225,
+    44362,
+    46510,
+    48646,
+    50794,
+    52941,
+    55078,
+    57226,
+    59362,
+    61498,
+    63658,
+    65794,
+    67930,
+    70055,
+    72214,
+    74362,
+    76498,
+    78646,
+    80794,
+    82942,
+    85078,
+    87226,
+    89374,
+    91510,
+    93658,
+    95794,
+    97930,
+    100078,
+    102226,
+    104362,
+    106510,
+    108646,
+    110794,
+    112942,
+    115078,
+    117226,
+    119362,
+    121510,
+    123646,
+    125794,
+    127919,
+    130055,
+    132214,
+    134362,
+    136499,
+    138646,
+    140783,
+    142907,
+    145078,
+    147215,
+    149362,
+    151510,
+    153646,
+    155794,
+    157942,
+    160078,
+    162226,
+    164362,
+    166510,
+    168647,
+    170794,
+    172931,
+    175055
+  ],
+  "bar_features": [
+    {
+      "bar": 1,
+      "volume_norm": 0.7956711972510414,
+      "low_band_norm": 0.522838973967482,
+      "vocal_band_ratio": 0.3353424072265625,
+      "onset_count": 3
+    },
+    {
+      "bar": 2,
+      "volume_norm": 0.7030755163255417,
+      "low_band_norm": 0.783851592945322,
+      "vocal_band_ratio": 0.46211832761764526,
+      "onset_count": 2
+    },
+    {
+      "bar": 3,
+      "volume_norm": 0.6299810809842376,
+      "low_band_norm": 1.3604206183919372,
+      "vocal_band_ratio": 0.244978129863739,
+      "onset_count": 7
+    },
+    {
+      "bar": 4,
+      "volume_norm": 0.6138149000602449,
+      "low_band_norm": 2.175643414801932,
+      "vocal_band_ratio": 0.23940739035606384,
+      "onset_count": 9
+    },
+    {
+      "bar": 5,
+      "volume_norm": 0.6408560406731212,
+      "low_band_norm": 1.3187308371178583,
+      "vocal_band_ratio": 0.21078965067863464,
+      "onset_count": 8
+    },
+    {
+      "bar": 6,
+      "volume_norm": 0.6536057393653163,
+      "low_band_norm": 1.310377622307911,
+      "vocal_band_ratio": 0.35122308135032654,
+      "onset_count": 8
+    },
+    {
+      "bar": 7,
+      "volume_norm": 0.9332457121195225,
+      "low_band_norm": 0.9450312963175632,
+      "vocal_band_ratio": 0.2749890387058258,
+      "onset_count": 10
+    },
+    {
+      "bar": 8,
+      "volume_norm": 0.9272739739376702,
+      "low_band_norm": 0.9902774142794591,
+      "vocal_band_ratio": 0.3037312626838684,
+      "onset_count": 6
+    },
+    {
+      "bar": 9,
+      "volume_norm": 0.9593993802720494,
+      "low_band_norm": 1.0248001766390797,
+      "vocal_band_ratio": 0.2766455113887787,
+      "onset_count": 8
+    },
+    {
+      "bar": 10,
+      "volume_norm": 0.9077129105078146,
+      "low_band_norm": 1.051289526782603,
+      "vocal_band_ratio": 0.3497720956802368,
+      "onset_count": 4
+    },
+    {
+      "bar": 11,
+      "volume_norm": 0.9163048293973275,
+      "low_band_norm": 0.9861654024964459,
+      "vocal_band_ratio": 0.3929722011089325,
+      "onset_count": 1
+    },
+    {
+      "bar": 12,
+      "volume_norm": 0.911877387899934,
+      "low_band_norm": 0.9447254820724639,
+      "vocal_band_ratio": 0.3801678419113159,
+      "onset_count": 4
+    },
+    {
+      "bar": 13,
+      "volume_norm": 0.8686635362133638,
+      "low_band_norm": 0.9775925545325526,
+      "vocal_band_ratio": 0.2902652621269226,
+      "onset_count": 8
+    },
+    {
+      "bar": 14,
+      "volume_norm": 0.7391293937442506,
+      "low_band_norm": 1.00678173637775,
+      "vocal_band_ratio": 0.40932226181030273,
+      "onset_count": 8
+    },
+    {
+      "bar": 15,
+      "volume_norm": 0.794647554425449,
+      "low_band_norm": 0.9801364241849385,
+      "vocal_band_ratio": 0.3565695285797119,
+      "onset_count": 11
+    },
+    {
+      "bar": 16,
+      "volume_norm": 0.8805254694256717,
+      "low_band_norm": 1.0323707674542737,
+      "vocal_band_ratio": 0.3866938352584839,
+      "onset_count": 11
+    },
+    {
+      "bar": 17,
+      "volume_norm": 0.9897041306378215,
+      "low_band_norm": 1.000620833466819,
+      "vocal_band_ratio": 0.3295056223869324,
+      "onset_count": 9
+    },
+    {
+      "bar": 18,
+      "volume_norm": 0.9005520990412735,
+      "low_band_norm": 2.6332941110217454,
+      "vocal_band_ratio": 0.36126020550727844,
+      "onset_count": 5
+    },
+    {
+      "bar": 19,
+      "volume_norm": 1.0241352658557896,
+      "low_band_norm": 1.117121268572799,
+      "vocal_band_ratio": 0.41566213965415955,
+      "onset_count": 4
+    },
+    {
+      "bar": 20,
+      "volume_norm": 1.0015098878187256,
+      "low_band_norm": 0.9324061684276779,
+      "vocal_band_ratio": 0.3966802656650543,
+      "onset_count": 4
+    },
+    {
+      "bar": 21,
+      "volume_norm": 1.0195541146808147,
+      "low_band_norm": 0.8481895559531337,
+      "vocal_band_ratio": 0.39898115396499634,
+      "onset_count": 4
+    },
+    {
+      "bar": 22,
+      "volume_norm": 1.0155875510565615,
+      "low_band_norm": 1.0600414095319421,
+      "vocal_band_ratio": 0.4431988596916199,
+      "onset_count": 3
+    },
+    {
+      "bar": 23,
+      "volume_norm": 1.0212095913499293,
+      "low_band_norm": 0.9627014749306884,
+      "vocal_band_ratio": 0.4263049066066742,
+      "onset_count": 4
+    },
+    {
+      "bar": 24,
+      "volume_norm": 1.0242906499307303,
+      "low_band_norm": 1.045788568440026,
+      "vocal_band_ratio": 0.4306986331939697,
+      "onset_count": 3
+    },
+    {
+      "bar": 25,
+      "volume_norm": 1.0868092148114512,
+      "low_band_norm": 0.8719609860129778,
+      "vocal_band_ratio": 0.4628363251686096,
+      "onset_count": 4
+    },
+    {
+      "bar": 26,
+      "volume_norm": 1.0470054407867793,
+      "low_band_norm": 1.0002888915588235,
+      "vocal_band_ratio": 0.3718794584274292,
+      "onset_count": 4
+    },
+    {
+      "bar": 27,
+      "volume_norm": 1.0230594655524556,
+      "low_band_norm": 1.0100415843863015,
+      "vocal_band_ratio": 0.39802226424217224,
+      "onset_count": 3
+    },
+    {
+      "bar": 28,
+      "volume_norm": 1.000032315869034,
+      "low_band_norm": 0.9887932826341443,
+      "vocal_band_ratio": 0.4102726876735687,
+      "onset_count": 3
+    },
+    {
+      "bar": 29,
+      "volume_norm": 1.0356434826259506,
+      "low_band_norm": 0.9796641968253925,
+      "vocal_band_ratio": 0.4119220972061157,
+      "onset_count": 4
+    },
+    {
+      "bar": 30,
+      "volume_norm": 1.0478105747569864,
+      "low_band_norm": 1.0970401900132274,
+      "vocal_band_ratio": 0.4158336818218231,
+      "onset_count": 5
+    },
+    {
+      "bar": 31,
+      "volume_norm": 1.0180308316832147,
+      "low_band_norm": 1.0865443460601716,
+      "vocal_band_ratio": 0.44213828444480896,
+      "onset_count": 5
+    },
+    {
+      "bar": 32,
+      "volume_norm": 1.0931273858069372,
+      "low_band_norm": 0.7634548118251552,
+      "vocal_band_ratio": 0.4252403676509857,
+      "onset_count": 4
+    },
+    {
+      "bar": 33,
+      "volume_norm": 1.0690996999814812,
+      "low_band_norm": 0.5998341415959347,
+      "vocal_band_ratio": 0.4465086758136749,
+      "onset_count": 0
+    },
+    {
+      "bar": 34,
+      "volume_norm": 0.9165980163749364,
+      "low_band_norm": 0.8811212642315872,
+      "vocal_band_ratio": 0.42340153455734253,
+      "onset_count": 3
+    },
+    {
+      "bar": 35,
+      "volume_norm": 0.9152409173152445,
+      "low_band_norm": 1.2315158140493427,
+      "vocal_band_ratio": 0.2728273272514343,
+      "onset_count": 8
+    },
+    {
+      "bar": 36,
+      "volume_norm": 0.9088969606004255,
+      "low_band_norm": 1.2415357325736427,
+      "vocal_band_ratio": 0.29606109857559204,
+      "onset_count": 11
+    },
+    {
+      "bar": 37,
+      "volume_norm": 0.8929584558573601,
+      "low_band_norm": 0.9332356614300265,
+      "vocal_band_ratio": 0.29557323455810547,
+      "onset_count": 10
+    },
+    {
+      "bar": 38,
+      "volume_norm": 0.8156336974477831,
+      "low_band_norm": 1.4231664018192571,
+      "vocal_band_ratio": 0.410712331533432,
+      "onset_count": 5
+    },
+    {
+      "bar": 39,
+      "volume_norm": 0.9258237783848027,
+      "low_band_norm": 0.7957076832251602,
+      "vocal_band_ratio": 0.3007192313671112,
+      "onset_count": 5
+    },
+    {
+      "bar": 40,
+      "volume_norm": 0.8542822210144236,
+      "low_band_norm": 1.448332727506524,
+      "vocal_band_ratio": 0.322794109582901,
+      "onset_count": 3
+    },
+    {
+      "bar": 41,
+      "volume_norm": 0.896270078954533,
+      "low_band_norm": 0.8280993930061552,
+      "vocal_band_ratio": 0.28696051239967346,
+      "onset_count": 4
+    },
+    {
+      "bar": 42,
+      "volume_norm": 0.8145948176062212,
+      "low_band_norm": 0.7823937497485213,
+      "vocal_band_ratio": 0.330228328704834,
+      "onset_count": 4
+    },
+    {
+      "bar": 43,
+      "volume_norm": 0.8523309620517932,
+      "low_band_norm": 0.711342183268512,
+      "vocal_band_ratio": 0.3683875501155853,
+      "onset_count": 10
+    },
+    {
+      "bar": 44,
+      "volume_norm": 0.9132857235188198,
+      "low_band_norm": 1.2345208972464539,
+      "vocal_band_ratio": 0.3725471496582031,
+      "onset_count": 11
+    },
+    {
+      "bar": 45,
+      "volume_norm": 1.0052737656426387,
+      "low_band_norm": 0.9730409548704114,
+      "vocal_band_ratio": 0.3460080623626709,
+      "onset_count": 11
+    },
+    {
+      "bar": 46,
+      "volume_norm": 0.9515576751193594,
+      "low_band_norm": 2.7491932079170676,
+      "vocal_band_ratio": 0.43583613634109497,
+      "onset_count": 4
+    },
+    {
+      "bar": 47,
+      "volume_norm": 1.0223652604073006,
+      "low_band_norm": 1.0932856850514436,
+      "vocal_band_ratio": 0.4209862947463989,
+      "onset_count": 4
+    },
+    {
+      "bar": 48,
+      "volume_norm": 1.033510300390235,
+      "low_band_norm": 1.057458790545661,
+      "vocal_band_ratio": 0.41659462451934814,
+      "onset_count": 3
+    },
+    {
+      "bar": 49,
+      "volume_norm": 1.041721126440777,
+      "low_band_norm": 0.9023248675819897,
+      "vocal_band_ratio": 0.40992018580436707,
+      "onset_count": 4
+    },
+    {
+      "bar": 50,
+      "volume_norm": 1.013677817148441,
+      "low_band_norm": 1.0344067957327658,
+      "vocal_band_ratio": 0.44327107071876526,
+      "onset_count": 3
+    },
+    {
+      "bar": 51,
+      "volume_norm": 1.024150251712155,
+      "low_band_norm": 0.9359055066139766,
+      "vocal_band_ratio": 0.41564875841140747,
+      "onset_count": 3
+    },
+    {
+      "bar": 52,
+      "volume_norm": 1.0486039879456786,
+      "low_band_norm": 0.9633934158369895,
+      "vocal_band_ratio": 0.43409812450408936,
+      "onset_count": 2
+    },
+    {
+      "bar": 53,
+      "volume_norm": 1.0999488806486213,
+      "low_band_norm": 0.8820468266405851,
+      "vocal_band_ratio": 0.45867353677749634,
+      "onset_count": 2
+    },
+    {
+      "bar": 54,
+      "volume_norm": 1.0470253661153546,
+      "low_band_norm": 0.9986054661402171,
+      "vocal_band_ratio": 0.3730641305446625,
+      "onset_count": 3
+    },
+    {
+      "bar": 55,
+      "volume_norm": 1.0341488318231944,
+      "low_band_norm": 0.9997111084411766,
+      "vocal_band_ratio": 0.3933810889720917,
+      "onset_count": 3
+    },
+    {
+      "bar": 56,
+      "volume_norm": 1.0152509134674794,
+      "low_band_norm": 1.1663747268805054,
+      "vocal_band_ratio": 0.4117789566516876,
+      "onset_count": 2
+    },
+    {
+      "bar": 57,
+      "volume_norm": 1.0382314311844452,
+      "low_band_norm": 0.9792821701974451,
+      "vocal_band_ratio": 0.42112115025520325,
+      "onset_count": 3
+    },
+    {
+      "bar": 58,
+      "volume_norm": 1.0463063798892822,
+      "low_band_norm": 1.086432358877358,
+      "vocal_band_ratio": 0.40911737084388733,
+      "onset_count": 4
+    },
+    {
+      "bar": 59,
+      "volume_norm": 1.027934640903719,
+      "low_band_norm": 1.0834628896945946,
+      "vocal_band_ratio": 0.43871474266052246,
+      "onset_count": 6
+    },
+    {
+      "bar": 60,
+      "volume_norm": 1.1074972313839664,
+      "low_band_norm": 0.7273898742121856,
+      "vocal_band_ratio": 0.44444987177848816,
+      "onset_count": 5
+    },
+    {
+      "bar": 61,
+      "volume_norm": 1.105271120094811,
+      "low_band_norm": 0.590227281323822,
+      "vocal_band_ratio": 0.46722444891929626,
+      "onset_count": 0
+    },
+    {
+      "bar": 62,
+      "volume_norm": 0.8613691078375526,
+      "low_band_norm": 0.7916009773675351,
+      "vocal_band_ratio": 0.42375537753105164,
+      "onset_count": 2
+    },
+    {
+      "bar": 63,
+      "volume_norm": 0.917328137343448,
+      "low_band_norm": 1.233583597487355,
+      "vocal_band_ratio": 0.19176338613033295,
+      "onset_count": 7
+    },
+    {
+      "bar": 64,
+      "volume_norm": 0.9291570849277783,
+      "low_band_norm": 1.4128719418525244,
+      "vocal_band_ratio": 0.19292953610420227,
+      "onset_count": 7
+    },
+    {
+      "bar": 65,
+      "volume_norm": 0.9326405011940128,
+      "low_band_norm": 1.2310725281010049,
+      "vocal_band_ratio": 0.17282983660697937,
+      "onset_count": 8
+    },
+    {
+      "bar": 66,
+      "volume_norm": 0.8656795926794008,
+      "low_band_norm": 1.335415158715302,
+      "vocal_band_ratio": 0.2456602305173874,
+      "onset_count": 7
+    },
+    {
+      "bar": 67,
+      "volume_norm": 0.7138718630584073,
+      "low_band_norm": 1.030051032953133,
+      "vocal_band_ratio": 0.5287289023399353,
+      "onset_count": 3
+    },
+    {
+      "bar": 68,
+      "volume_norm": 0.8290107928304984,
+      "low_band_norm": 1.9155660857629682,
+      "vocal_band_ratio": 0.4863741397857666,
+      "onset_count": 5
+    },
+    {
+      "bar": 69,
+      "volume_norm": 0.9466340259645449,
+      "low_band_norm": 0.8768493511516491,
+      "vocal_band_ratio": 0.4243990480899811,
+      "onset_count": 6
+    },
+    {
+      "bar": 70,
+      "volume_norm": 1.053756024900298,
+      "low_band_norm": 0.8075698029656666,
+      "vocal_band_ratio": 0.4425417482852936,
+      "onset_count": 4
+    },
+    {
+      "bar": 71,
+      "volume_norm": 0.999967684130966,
+      "low_band_norm": 0.973118533931011,
+      "vocal_band_ratio": 0.41288673877716064,
+      "onset_count": 3
+    },
+    {
+      "bar": 72,
+      "volume_norm": 1.0156599687423502,
+      "low_band_norm": 1.0766200949784763,
+      "vocal_band_ratio": 0.4035121202468872,
+      "onset_count": 2
+    },
+    {
+      "bar": 73,
+      "volume_norm": 0.9980116531358616,
+      "low_band_norm": 0.9769802025070738,
+      "vocal_band_ratio": 0.40954887866973877,
+      "onset_count": 4
+    },
+    {
+      "bar": 74,
+      "volume_norm": 1.0714615211766056,
+      "low_band_norm": 0.7585199796429329,
+      "vocal_band_ratio": 0.43426960706710815,
+      "onset_count": 3
+    },
+    {
+      "bar": 75,
+      "volume_norm": 1.0580166127008397,
+      "low_band_norm": 0.9932601482756929,
+      "vocal_band_ratio": 0.3732937276363373,
+      "onset_count": 2
+    },
+    {
+      "bar": 76,
+      "volume_norm": 1.0897483682160536,
+      "low_band_norm": 1.1255031032227185,
+      "vocal_band_ratio": 0.3893336355686188,
+      "onset_count": 2
+    },
+    {
+      "bar": 77,
+      "volume_norm": 1.0484083346142472,
+      "low_band_norm": 1.190019538266314,
+      "vocal_band_ratio": 0.401191383600235,
+      "onset_count": 1
+    },
+    {
+      "bar": 78,
+      "volume_norm": 1.0540734069197484,
+      "low_band_norm": 1.0282753969827052,
+      "vocal_band_ratio": 0.4050047695636749,
+      "onset_count": 4
+    },
+    {
+      "bar": 79,
+      "volume_norm": 1.0963713632507956,
+      "low_band_norm": 1.1174176768592556,
+      "vocal_band_ratio": 0.43982505798339844,
+      "onset_count": 2
+    },
+    {
+      "bar": 80,
+      "volume_norm": 1.0597531302021432,
+      "low_band_norm": 1.1241529863898592,
+      "vocal_band_ratio": 0.44309279322624207,
+      "onset_count": 4
+    },
+    {
+      "bar": 81,
+      "volume_norm": 0.9349206955178727,
+      "low_band_norm": 0.8736975510782746,
+      "vocal_band_ratio": 0.4865826666355133,
+      "onset_count": 2
+    },
+    {
+      "bar": 82,
+      "volume_norm": 1.0389026133659105,
+      "low_band_norm": 0.42723033870254123,
+      "vocal_band_ratio": 0.5438047647476196,
+      "onset_count": 2
+    }
+  ]
+}

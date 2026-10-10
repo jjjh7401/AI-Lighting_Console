@@ -389,7 +389,156 @@ PASS로 실행됨, CI에서는 자동 skip): `test_real_love_attack_extraction_r
 - AC-LDBARMAP-007은 재현율만 요구하므로 판정은 PASS 그대로다. 그러나 이 지도를 소비할 SPEC-LDARRANGE-001(브레이크→블랙아웃 같은 배치)에는 거짓 양성이 그대로 연출이 된다 — 정밀도 지표(검출 대비 정답)는 이 SPEC에 AC가 없다. **Gap**: 브레이크 정밀도 ≈ 40%(6/15), 미검증 9건. 후속 카드 또는 LDARRANGE plan에서 정밀도 AC를 둘지 결정 필요.
 - 「보고서 숫자 경로」 7/7은 보고서가 그 숫자로 사건을 정했으므로 순환이다 — 실음원 경로 7/7만 독립 근거로 센다.
 
-## §E.3 Run-phase Audit-Ready Signal
+> **[SUPERSEDED — 카드 t535, 2026-10-10]** 위 두 줄의 "판정은 PASS 그대로다"와
+> "이 SPEC에 AC가 없다"는 더는 맞지 않는다 — acceptance.md AC-LDBARMAP-007이
+> 같은 날 정밀도 조건(≥70%, 범위② 점 사건 분모)으로 개정됐고, `classify_bar_events`
+> 의 브레이크 판정도 저역+온셋 비율 결합으로 교정됐다(아래 "M3 정밀도 보강"
+> 절). 당시 수치(6/15≈40%)는 이 절의 실측(8/18≈44.4%, 집계 범위가 달라 숫자가
+> 다르다 — 당시는 break만, 지금은 break+kick_entry 합산)와 큰 틀에서 일치한다.
+> 교정 뒤 정밀도는 5/6(83.3%)로 PASS다. 이 줄 자체는 역사 기록으로 보존하고
+> 지우지 않는다(당시 리드가 실제로 관측한 사실이었다).
+
+### M3 정밀도 보강(카드 t535, 2026-10-10)
+
+acceptance.md AC-LDBARMAP-007이 같은 날 정밀도 조건(≥70%, 범위② 실제 오디오
+점 사건 분모, "AND"로 재현율 조건과 결합)으로 개정됐다. 이 절은 그 조건을
+만족시키는 구현 교정 + 측정 결과를 기록한다.
+
+**진단(직접 재서 확인, 추측 아님)** — 교정 전 `classify_bar_events`의 브레이크
+분기는 `low_band_norm<=0.45 OR (onset_count<=2)`였다. `onset_count<=2`는 **절대
+상수**였는데, 이 모듈의 `librosa.onset.onset_detect`는 LOVE ATTACK 82마디에서
+마디당 **중앙값 4개**를 낸다(실측) — 지도 보고서 §2.1 "평소 15 안팎"이라는
+**다른 계기**의 눈금에서 따온 상수를 그대로 쓴 것이 척도 불일치였다. 그 결과
+실제 오디오 경로②에서 검출 브레이크 15건 중 **14건이 온셋 분기만으로** 나왔고
+(저역이 1.0 안팎인, 전혀 조용하지 않은 마디까지 포함), 부록 A "순간" 칸 근거
+대비 정밀도는 **8/18 ≈ 44.4%**(FAIL, 문턱 70%)였다.
+
+**교정**: 온셋을 절대 상수가 아니라 **곡 자신의 온셋 중앙값 대비 비율**로
+재고, 저역 완화(dip)와 **AND**로 묶었다 — `low_band_norm<=0.45 OR
+(low_band_norm<=0.7 AND onset_count<=0.25*median_onset)`. 두 상수
+(`_BREAK_DIP_LOW_BAND_RATIO=0.7`, `_BREAK_ONSET_FRACTION_OF_MEDIAN=0.25`)는
+이 SPEC이 처음 도입한다. 중앙값은 `onset_count`를 실제로 잰 마디만으로
+계산한다(`None`을 "0개"로 섞지 않는다 — 새 RED 테스트 2개로 재발 방지,
+`test_classify_bar_events_break_dip_conjunction_both_conditions_required`·
+`test_classify_bar_events_break_median_onset_excludes_none_entries`).
+킥 진입(kick_entry) 문턱은 바꾸지 않았다(bar 4는 여전히 근거 없음 — 아래
+감독 귀 확인 후보 참조).
+
+**AC-LDBARMAP-007 전체 매트릭스(재현율 AND 정밀도, old vs new, 양쪽 경로)**:
+
+| 조건 | 경로 | 규칙 | 수치 | 판정 |
+|---|---|---|---|---|
+| 재현율(≥5/7, 70%) | ① 보고서 수치 경로 | 영향 없음(브레이크 교정은 재현율 로직 불변) | 7/7(100%) | PASS |
+| 재현율(≥5/7, 70%) | ② 실제 오디오 경로 | 구 규칙 | 7/7(100%) | PASS |
+| 재현율(≥5/7, 70%) | ② 실제 오디오 경로 | **신 규칙(카드 t535)** | 7/7(100%) | PASS(불변) |
+| 정밀도(≥70%, 분모=break+kick_entry 점 사건) | ① 보고서 수치 경로 | N/A | — | AC 범위 밖(acceptance.md § 범위 — 순환 증거라 채점 안 함) |
+| 정밀도(≥70%) | ② 실제 오디오 경로 | **구 규칙(참고, 역사 기록)** | 8/18 ≈ 44.4% | **FAIL** |
+| 정밀도(≥70%) | ② 실제 오디오 경로 | **신 규칙(카드 t535)** | **5/6 ≈ 83.3%** | **PASS** |
+
+종류별 참고 수치(신 규칙, PASS/FAIL 문턱 아님, 참고만): break 정밀도 3/3
+(100%), kick_entry 정밀도 2/3(66.7%, bar 4 근거 없음). 근거 없음 검출은
+`.moai/reports/SPEC-LDBARMAP-001-probes/m3-ear-check-candidates.md`에
+감독 귀 확인 후보로 1건(kick_entry bar 4, 0:07.92) 적었다 — 참고 섹션에
+구 규칙의 근거 없음 10건(break 9 + kick_entry 1)도 비교용으로 함께 적었다.
+
+**민감도(±20%, 네 상수 + 지식의 날 하나 정직히 기록)** —
+`test_ac007_real_audio_fixture_sensitivity_recall_and_precision_stay_passing`
+(6개 파라미터화 케이스) +
+`test_ac007_real_audio_fixture_dip_ratio_minus_20_percent_is_a_knife_edge`:
+
+| 상수 | 기준값 | −20% | +20% |
+|---|---|---|---|
+| `_KICK_ENTRY_LOW_BAND_RATIO` | 2.0 | recall 7/7, 정밀도 6/7≈85.7%(PASS) | recall 7/7, 정밀도 5/5=100%(PASS) |
+| `_BREAK_LOW_BAND_RATIO` | 0.45 | recall 6/7(PASS), 정밀도 4/5=80%(PASS) | recall 7/7, 정밀도 5/7≈71.4%(PASS) |
+| `_BREAK_DIP_LOW_BAND_RATIO` | 0.7 | **recall 정확히 5/7(문턱에 닿음, PASS)**, **정밀도 정확히 3/4=75%(PASS)** — 지식의 날: 33·61마디(저역 0.60·0.59)가 0.56 밖으로 빠진다 | recall 7/7, 정밀도 5/6≈83.3%(기준값과 동일 — 추가로 포함되는 마디 없음) |
+| `_BREAK_ONSET_FRACTION_OF_MEDIAN` | 0.25 | recall 7/7, 정밀도 5/6≈83.3%(기준값과 동일, 영향 마디 없음) | recall 7/7, 정밀도 5/6≈83.3%(동일) |
+
+**지식의 날 정직한 고지**: `_BREAK_DIP_LOW_BAND_RATIO`를 −20%(0.56)로 낮추면
+재현율이 정확히 AC-007의 문턱(5/7, 70%)에 닿는다 — 그 밑으로는 떨어지지
+않지만 여유가 없다. 그 외 세 상수(킥 진입 문턱, 브레이크 절대 저역 문턱,
+온셋 비율)는 ±20% 안에서 재현율·정밀도 모두 여유 있게 PASS를 유지한다
+(지식의 날이 아니다).
+
+**픽스처 출처**: `server/tests/fixtures/love_attack_bar_features_real.json`
+(오디오 아님, 82마디 파생 숫자 — `tools/barmap/gen_bar_features_fixture.py`가
+`detect_beat_grid`→`derive_bars(…,1)`→`extract_bar_features`를 실제
+LOVE ATTACK mp3 1회 실행해 고정했다). 이 픽스처 덕에 AC-LDBARMAP-007
+정밀도 조건이 CI에서(원곡 없이) `test_ac007_real_audio_fixture_*` 로
+재현된다 — 기존 로컬 전용 회귀(`test_real_love_attack_extraction_...`)도
+같은 정밀도 단언으로 확장했다(원곡 있을 때만, 상호 검산).
+
+**새로 추가된 산출물**: `server/audio/bar_map.py`(브레이크 판정 교정,
+`_BREAK_MAX_ONSET_COUNT` 제거 → `_BREAK_DIP_LOW_BAND_RATIO`·
+`_BREAK_ONSET_FRACTION_OF_MEDIAN` 신설) + `server/tests/test_audio_bar_map.py`
+(16개 신규 테스트, 62→78개) + `tools/barmap/ground_truth.py`
+(`parse_precision_evidence` 신규 — 부록 A "순간" 칸 정규식 파싱, 하드코딩
+사본 아님) + `tools/barmap/scorer.py`(`PrecisionResult`·`event_precision`
+신규) + `tools/barmap/gen_bar_features_fixture.py`(신규 — 픽스처 생성기) +
+`tools/barmap/gen_ear_check_candidates.py`(신규 — 감독 귀 확인 후보 생성기) +
+`server/tests/fixtures/love_attack_bar_features_real.json`(신규 픽스처) +
+`.moai/reports/SPEC-LDBARMAP-001-probes/{m3-ear-check-candidates.md,
+m3-precision-pytest-output.txt,m3-precision-ruff-output.txt}`(신규,
+`git add -f`로 올림).
+
+명령 + verbatim 출력(`.moai/reports/SPEC-LDBARMAP-001-probes/m3-precision-pytest-output.txt`에 재수록):
+
+```
+.venv/bin/python -m pytest server/tests/test_audio_bar_map.py tools/barmap \
+    server/tests/test_audio_analyze.py server/tests/test_audio_boundary.py \
+    server/tests/test_audio_fallback.py server/tests/test_audio_grade_saturation.py \
+    server/tests/test_audio_segment_floor_bars.py -q
+........................................................................ [ 39%]
+........................................................................ [ 78%]
+........................................                                 [100%]
+184 passed in 23.06s
+```
+
+```
+.venv/bin/python -m ruff check server/audio/bar_map.py server/tests/test_audio_bar_map.py \
+    tools/barmap/ground_truth.py tools/barmap/candidates.py tools/barmap/scorer.py \
+    tools/barmap/gen_bar_features_fixture.py tools/barmap/gen_ear_check_candidates.py
+All checks passed!
+.venv/bin/python -m ruff format --check (같은 파일 목록)
+11 files already formatted
+```
+
+**RED-GREEN 증거(E8, TDD 필수)**: `classify_bar_events`를 일시적으로 교정
+전 버전(HEAD `b5820f56`)으로 되돌려
+`test_classify_bar_events_break_dip_conjunction_both_conditions_required`만
+돌리면 RED(아래), 교정 버전으로 되돌리면 GREEN(위 184 passed에 포함):
+
+```
+$ .venv/bin/python -m pytest server/tests/test_audio_bar_map.py -q \
+    -k "break_dip_conjunction or break_median_onset_excludes_none"
+F.                                                                       [100%]
+...
+E       AssertionError: assert [BarEvent(kin...e='measured')] == [BarEvent(kin...e='measured')]
+E
+E         Left contains one more item: BarEvent(kind='break', start_bar=8, end_bar=8, grade='measured')
+E       Use -v to get more diff
+...
+1 failed, 1 passed, 57 deselected in 0.11s
+```
+
+(두 번째 테스트는 구 규칙에도 동일 결과를 내 우연히 통과했다 — 정직하게
+기록: median 기반 로직 자체를 구 코드가 갖고 있지 않아 이 특정 입력에서는
+구분하지 못했다. 첫 번째 테스트가 교정이 필요했음을 독립적으로 증명한다.)
+
+**Gaps(미검증, 정직하게 기록)**:
+- **지식의 날**: `_BREAK_DIP_LOW_BAND_RATIO` −20%에서 재현율이 문턱에 정확히
+  닿는다(여유 없음) — 위 표 참조. 그 외 상수는 여유 있다.
+- **단일 곡·단일 경로 교정이다.** 두 상수 모두 LOVE ATTACK 1곡의 실측(마디당
+  온셋 중앙값 4)으로 골랐다 — 다른 곡(다른 템포·다른 타악 밀도)에서 온셋
+  중앙값이 크게 다르면 이 비율 상수도 재검증이 필요하다(M1·M2·M3의 기존
+  Gaps와 같은 한계, 일반화 시험 안 함).
+- **kick_entry 문턱(2.0배)은 이번에 손대지 않았다.** bar 4가 여전히 근거
+  없음(정밀도 종류별 2/3) — 감독 귀 확인 후보 목록에 남겨 뒀다. 이 문턱을
+  올리면 recall이 깨질 위험이 있어(민감도 표 참조, +20%에서도 recall 유지는
+  확인했으나 kick_entry 문턱을 더 보수적으로 바꾸는 것은 이 카드 범위 밖) 건드리지 않았다.
+- **감독 귀 확인 후보 목록의 최종 판정은 비어 있다** — "감독 판정" 칸은
+  이 카드가 채우지 않는다(acceptance.md가 명시: 최종 판정은 감독의 몫).
+- **드롭(참고 지표)은 이 카드의 교정 범위 밖이다** — M3 landing 당시 Gap
+  그대로(실제 오디오 경로에서 0건 검출, PASS 판정에 영향 없음).
 
 _<pending run-phase>_
 
