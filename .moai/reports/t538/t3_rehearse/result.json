@@ -1,0 +1,73 @@
+{
+  "item": "T538-T3",
+  "free_slots": [],
+  "occupied_before": [],
+  "planned": {
+    "t3_off311": [
+      "Off Sequence 311"
+    ],
+    "t3_prog": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 112"
+    ],
+    "t3_clear": [
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "Store 0줄. 감독 판정 뒤 t3_clear."
+  ],
+  "bundles": {
+    "t3_off311": true,
+    "t3_prog": true,
+    "t3_clear": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "Off Sequence 311",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+    "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+    "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+    "Attribute 'Tilt' At Phase 0 Thru 360",
+    "Attribute 'Tilt' At Speed 112",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 311"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative 30",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
