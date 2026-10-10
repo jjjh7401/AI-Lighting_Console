@@ -19,7 +19,11 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, os.getcwd())
-from server.audio.analyze import _HOP_LENGTH, _tempo_from_beat_regression, _tempo_from_beats  # noqa: E402
+from server.audio.analyze import (  # noqa: E402
+    _HOP_LENGTH,
+    _tempo_from_beat_regression,
+    _tempo_from_beats,
+)
 from server.audio.bar_map import _check_bpm_half_double  # noqa: E402
 
 SAMPLE_DIR = "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/src/sample music"
