@@ -1,0 +1,46 @@
+{"step": "edit_preset", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.5", "reasons": []}, {"command": "Store Preset 4.302 /Merge", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "edit_preset", "t": 0.065, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.198, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.266, "kind": "exec", "command": "At Preset 4.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.332, "kind": "exec", "command": "Store Preset 4.302 /Merge", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off", "t": 0.399, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "off", "t": 0.466, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/302",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "edit_preset": true,
+    "off": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 4.5",
+        "Store Preset 4.302 /Merge",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

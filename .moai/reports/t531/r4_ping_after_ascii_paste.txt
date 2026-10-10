@@ -1,0 +1,2 @@
+<<< {"id": "f87cc029", "kind": "pong", "plugin": "CopilotResponder", "proto": 1, "v": 1, "version": "1.6.6"}
+<<< {"children": [{"class": "UserPlugin", "i": 1, "name": "CopilotResponder"}, {"class": "UserPlugin", "i": 2, "name": "CopilotPatchSource4LEDSeries3LustrX8"}, {"class": "UserPlugin", "i": 3, "name": "CopilotPatchCuePixBlinderWW2"}, {"class": "UserPlugin", "i": 4, "name": "CopilotPatchAtomic3000LED"

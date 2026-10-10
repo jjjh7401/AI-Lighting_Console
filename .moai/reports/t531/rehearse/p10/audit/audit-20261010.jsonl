@@ -1,0 +1,15 @@
+{"ts": "2026-10-10T10:18:17.243557+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Phase 0 Thru 180", "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'", "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Phase 0 Thru 180", "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'", "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'", "ClearAll"], "kind": "t531_m1_p10"}
+{"ts": "2026-10-10T10:18:17.243980+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244244+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244391+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244487+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244564+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244635+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244705+00:00", "event": "executed", "command": "Attribute 'Dimmer' At Phase 0 Thru 180", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244775+00:00", "event": "executed", "command": "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244839+00:00", "event": "executed", "command": "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.244900+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.245000+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 309"], "held": ["Goto Cue 1 Sequence 309"], "kind": "t531_m1_p10"}
+{"ts": "2026-10-10T10:18:17.245078+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 309", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:18:17.245171+00:00", "event": "approved", "commands": ["Off Sequence 309"], "held": ["Off Sequence 309"], "kind": "t531_m1_p10"}
+{"ts": "2026-10-10T10:18:17.245247+00:00", "event": "executed", "command": "Off Sequence 309", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

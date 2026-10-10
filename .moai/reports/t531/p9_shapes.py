@@ -25,7 +25,9 @@ import sys
 sys.path.insert(0, ".moai/reports/t531")
 from m1_common import main_cli, seq_path  # noqa: E402
 
-GROUP_MOVER_ALL = 13
+# t531 v2: Group 13 은 t516 에서 8/16대만 보였다(:219-220)
+# → 보였던 Group 11 MOVER-U(t516 verdict.md:264)로 교체
+GROUP_MOVER_ALL = 11
 POS_POOL = 2
 BASE_PRESET = 1
 SEQ = dict(circle=306, ballyhoo=307, wave=308)
@@ -36,7 +38,8 @@ def _base(seq_no: int, name: str) -> list[str]:
         "ChangeDestination Root",
         "ClearAll",
         f"Group {GROUP_MOVER_ALL}",
-        f"Attribute 'Position' At Preset {POS_POOL}.{BASE_PRESET}",
+        # v3: Attribute 접두 없이 — 실기 1010 `Attribute 'Color' At Preset` 거절
+        f"At Preset {POS_POOL}.{BASE_PRESET}",
     ]
 
 

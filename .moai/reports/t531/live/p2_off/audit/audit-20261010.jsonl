@@ -1,0 +1,4 @@
+{"ts": "2026-10-10T06:34:33.548939+00:00", "event": "approved", "commands": ["Off Sequence 221", "Off Sequence 226", "Off Sequence 11"], "held": ["Off Sequence 221", "Off Sequence 226", "Off Sequence 11"], "kind": "t531_m1_p2"}
+{"ts": "2026-10-10T06:34:33.615016+00:00", "event": "executed", "command": "Off Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:34:33.681810+00:00", "event": "executed", "command": "Off Sequence 226", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:34:33.748418+00:00", "event": "executed", "command": "Off Sequence 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

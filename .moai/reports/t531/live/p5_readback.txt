@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/302|NAME,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 91a904b8 NAME,CURRENTCUE ShowData/DataPools/Default/Sequences/302"
+<<< {"id": "91a904b8", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/302", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P5 relative-on-preset"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 302.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/302/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 7920a927 MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/302/3"
+<<< {"id": "7920a927", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/302/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3780"}], "truncated": false, "v": 1}

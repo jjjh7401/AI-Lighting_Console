@@ -1,0 +1,8 @@
+
+>>> state:ShowData/DataPools/Default/Timecodes/30
+    wire: Plugin "CopilotResponder" "state f2db8cf6 ShowData/DataPools/Default/Timecodes/30"
+<<< {"children": [{"class": "TrackGroup", "i": 1, "name": "TrackGroup 1"}], "id": "f2db8cf6", "kind": "state", "node": {"childCount": 1, "class": "Timecode", "enumeration": "ok", "name": "LDBEAT M1 - P1 six tracks"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/30", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/30/1
+    wire: Plugin "CopilotResponder" "state d2787562 ShowData/DataPools/Default/Timecodes/30/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<RHYTHM PROBE v3 - L0 STATIC 100>"}, {"class": "Track", "i": 3, "name": "<RHYTHM PROBE v3 - L1 PULSE SPEED 112>"}, {"class": "Track", "i": 4, "name": "<RHYTHM PROBE v3 - L2 PULSE SPEEDMASTER>"}, {"class": "Track", "i": 5, "name": "<RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2>"}, {"class": "Track", "i": 6, "name": "<RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112>"}, {"class": "Track", "i": 7, "name": "<RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER>"}], "id": "d2787562", "kind": "state", "node": {"childCount": 7, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/30/1", "truncated": false, "v": 1}

@@ -1,0 +1,4 @@
+{"step": "goto_all", "t": 0.2, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 3 Sequence 221", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 3 Sequence 226", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 1 Sequence 11", "reasons": ["reference-invoking command"]}]}
+{"step": "goto_all", "t": 0.266, "kind": "exec", "command": "Goto Cue 3 Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_all", "t": 0.333, "kind": "exec", "command": "Goto Cue 3 Sequence 226", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_all", "t": 0.4, "kind": "exec", "command": "Goto Cue 1 Sequence 11", "fired": true, "ok": true, "detail": "OK"}

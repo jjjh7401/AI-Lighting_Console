@@ -1,0 +1,19 @@
+{
+  "item": "P4",
+  "bundles": {
+    "release": true
+  },
+  "verdict": "release only",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 301"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

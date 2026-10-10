@@ -5,15 +5,19 @@
 페이저가 남는다"만 보고 "복수 선택이면 마지막 것만 남는다"(t520 가설,
 `verdict.md:46`)를 가르지 못했다. 이번판은 같은 시퀀스 303 에 큐를 둘 저장한다:
 
-- **Cue 1**(단일 선택, 기준선) — Group 4(BACK) 하나만 선택해 디머 페이저.
-- **Cue 2**(t520 모양의 축소판) — Group 4(BACK) 선택+디머 페이저 값을 넣은 뒤
-  **선택을 Group 11(MOVER-U)로 바꿔** Pan 페이저 값을 넣고 저장 — t520
+- **Cue 1**(단일 선택, 기준선) — Group 11(MOVER-U) 하나만 선택해 디머 페이저.
+- **Cue 2**(t520 모양의 축소판) — Group 11 선택+디머 페이저 값을 넣은 뒤
+  **선택을 Group 10(WASH-ALL)으로 바꿔** 디머 페이저 값을 넣고 저장 — t520
   `verdict.md:167`이 적은 "`Step 2` 뒤 선택을 바꿔도 단계 2에 머무는지는 안 잰
   것"을 가장 작게 줄인 형태(선택 다섯 개 → 둘, 그룹 하나씩).
 
-판정: Cue 1 은 디머 페이저가 남고 Cue 2 는 BACK 디머 페이저를 잃고 MOVER-U Pan
-페이저만 남으면 → t520 가설(마지막 선택만 남는다) 확인. 둘 다 남거나 둘 다
-없으면 그 결과를 그대로 적는다(가설 확인만을 기대하지 않는다).
+t531 v2(2026-10-10): 두 선택 모두 감독 눈에 보였던 그룹으로 바꿨다 — 원판의 Group 4
+BACK 은 t516 에서 안 보였다(t516 verdict.md:134-138, :219-220). Group 11 은 t516
+verdict.md:264, Group 10 은 t520 verdict.md:508 에서 켜진 것이 관찰됐다.
+
+판정: Cue 1 에서 MOVER-U 가 깜박이고, Cue 2 에서 MOVER-U 깜박임이 사라지고 바닥
+워시만 깜박이면 → t520 가설(마지막 선택만 남는다) 확인. 둘 다 깜박이거나 둘 다
+안 깜박이면 그 결과를 그대로 적는다(가설 확인만을 기대하지 않는다).
 """
 
 from __future__ import annotations
@@ -24,8 +28,11 @@ sys.path.insert(0, ".moai/reports/t531")
 from m1_common import main_cli, seq_path  # noqa: E402
 
 SEQ_NO = 303
-GROUP_BACK = 4
-GROUP_MOVER_U = 11
+# t531 v2: 두 선택 모두 감독 눈에 보였던 그룹 — 첫 선택 Group 11 MOVER-U(t516 verdict.md:264),
+# 두 번째 선택 Group 10 WASH-ALL(Rush Par, t520 verdict.md:508 「바닥워시는 켜졌어」).
+# Group 4 BACK·Group 12 MOVER-D(Spiider)는 안 보였다(t516 :134-138 · t520 :505-511).
+GROUP_FIRST = 11
+GROUP_SECOND = 10
 
 
 def build_plan() -> list[tuple[str, list[str]]]:
@@ -35,7 +42,7 @@ def build_plan() -> list[tuple[str, list[str]]]:
             [
                 "ChangeDestination Root",
                 "ClearAll",
-                f"Group {GROUP_BACK}",
+                f"Group {GROUP_FIRST}",
                 "Attribute 'Dimmer' At 0",
                 "Step 2",
                 "Attribute 'Dimmer' At 100",
@@ -48,14 +55,14 @@ def build_plan() -> list[tuple[str, list[str]]]:
             [
                 "ChangeDestination Root",
                 "ClearAll",
-                f"Group {GROUP_BACK}",
+                f"Group {GROUP_FIRST}",
                 "Attribute 'Dimmer' At 0",
                 "Step 2",
                 "Attribute 'Dimmer' At 100",
-                f"Group {GROUP_MOVER_U}",
-                "Attribute 'Pan' At Relative 10",
+                f"Group {GROUP_SECOND}",
+                "Attribute 'Dimmer' At 0",
                 "Step 2",
-                "Attribute 'Pan' At Relative -10",
+                "Attribute 'Dimmer' At 100",
                 f"Store Sequence {SEQ_NO} Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
                 f"Set Sequence {SEQ_NO} Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
                 "ClearAll",

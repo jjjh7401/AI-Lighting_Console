@@ -1,0 +1,4 @@
+{"step": "off_all", "t": 0.198, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 221", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 226", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 11", "reasons": ["reference-invoking command"]}]}
+{"step": "off_all", "t": 0.264, "kind": "exec", "command": "Off Sequence 221", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_all", "t": 0.331, "kind": "exec", "command": "Off Sequence 226", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_all", "t": 0.398, "kind": "exec", "command": "Off Sequence 11", "fired": true, "ok": true, "detail": "OK"}

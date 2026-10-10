@@ -1,0 +1,56 @@
+{"step": "pre_free:ShowData/DataPools/Default/Timecodes/31", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/31", "ok": false, "error": "path segment not found: '31' (in ShowData/DataPools/Default/Timecodes/31)"}
+{"step": "tc_setup", "t": 0.066, "kind": "screen", "cleared": false, "commands": [{"command": "Store Timecode 31", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Timecode 31.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign S
+{"step": "goto_mid", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Time 5 Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "play", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "Go Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "release", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Off Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}, {"command": "Off Sequence 228", "reasons": ["reference-invoking command"]}]}
+{
+  "item": "P6",
+  "free_slots": [
+    "ShowData/DataPools/Default/Timecodes/31"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "tc_setup": false,
+    "goto_mid": false,
+    "play": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 31",
+        "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+        "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 31.1",
+        "Assign Sequence 228 At Timecode 31.1.1",
+        "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+        "cd Timecode 31.1.1.1.1",
+        "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Time 5 Timecode 31"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Go Timecode 31"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Timecode 31",
+        "Off Sequence 228"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

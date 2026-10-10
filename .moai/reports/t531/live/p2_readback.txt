@@ -1,0 +1,12 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/221|CURRENTCUE,PLAYBACKSTATUS
+    wire: Plugin "CopilotResponder" "props 43274bc7 CURRENTCUE,PLAYBACKSTATUS ShowData/DataPools/Default/Sequences/221"
+<<< {"id": "43274bc7", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.3"}, {"e": "property not readable: PLAYBACKSTATUS", "n": "PLAYBACKSTATUS", "ok": false}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/226|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 527d9a62 CURRENTCUE ShowData/DataPools/Default/Sequences/226"
+<<< {"id": "527d9a62", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/226", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 226.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/11|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props eb94fd4d CURRENTCUE ShowData/DataPools/Default/Sequences/11"
+<<< {"id": "eb94fd4d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/11", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 11.1"}], "truncated": false, "v": 1}

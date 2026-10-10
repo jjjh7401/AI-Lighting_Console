@@ -1,0 +1,40 @@
+{
+  "item": "P10",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/309"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": true,
+    "play": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0 Thru 180",
+        "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+        "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 309"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

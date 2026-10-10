@@ -54,11 +54,11 @@
     "play": true,
     "release": true
   },
-  "verdict": "rehearsal ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)",
+  "verdict": "ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)",
   "fake_sent": [
     "ChangeDestination Root",
     "ClearAll",
-    "Group 4",
+    "Group 11",
     "Attribute 'Dimmer' At 0",
     "Step 2",
     "Attribute 'Dimmer' At 100",
@@ -69,7 +69,7 @@
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
-    "Group 4",
+    "Group 11",
     "At Preset 21.301",
     "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
     "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",
@@ -82,7 +82,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "Attribute 'Dimmer' At 0",
         "Step 2",
         "Attribute 'Dimmer' At 100",
@@ -98,7 +98,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "At Preset 21.301",
         "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
         "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",

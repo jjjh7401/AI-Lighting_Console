@@ -1,0 +1,37 @@
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/302",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "edit_preset": true,
+    "off": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 4.5",
+        "Store Preset 4.302 /Merge",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

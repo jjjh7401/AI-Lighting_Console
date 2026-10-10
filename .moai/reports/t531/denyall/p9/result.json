@@ -1,0 +1,90 @@
+{
+  "item": "P9",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/306",
+    "ShowData/DataPools/Default/Sequences/307",
+    "ShowData/DataPools/Default/Sequences/308"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_circle": false,
+    "store_ballyhoo": false,
+    "store_wave": false,
+    "play_each": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 2.1",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Tilt' At Relative 8",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 60",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'",
+        "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 2.1",
+        "Attribute 'Pan' At Relative 20",
+        "Attribute 'Tilt' At Relative 10",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 120",
+        "Attribute 'Tilt' At Speed 120",
+        "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'",
+        "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 2.1",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'",
+        "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 306",
+        "Off Sequence 306",
+        "Goto Cue 1 Sequence 307",
+        "Off Sequence 307",
+        "Goto Cue 1 Sequence 308"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 306",
+        "Off Sequence 307",
+        "Off Sequence 308"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

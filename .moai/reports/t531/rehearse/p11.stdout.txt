@@ -1,0 +1,75 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/310", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/310", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/310)"}
+{"step": "store_cue", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Group 10", "reasons": []}, {"command": "Attribute 'Dimmer' At 0", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Group 10", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"
+{"step": "store_cue", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Dimmer' At 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 310", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 310': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play", "t": 0.002, "kind": "exec", "command": "Goto Cue 1 Sequence 310", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 310", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 310': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "release", "t": 0.003, "kind": "exec", "command": "Off Sequence 310", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P11",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/310"
+  ],
+  "occupied_before": [],
+  "notes": [
+    "⑦ 큐2 와의 차이는 Step 2 위치 하나(t520 approval_m2a_batch1_v2.txt:178-209 꼴).",
+    "감독 관찰: MOVER-U 와 바닥 워시가 둘 다 깜빡이나."
+  ],
+  "bundles": {
+    "store_cue": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Group 11",
+        "Attribute 'Dimmer' At 100",
+        "Group 10",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+        "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 310"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 310"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

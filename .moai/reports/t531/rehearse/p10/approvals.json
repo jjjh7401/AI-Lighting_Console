@@ -1,0 +1,29 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Phase 0 Thru 180",
+      "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+      "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 309"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 309"
+    ],
+    "approved": true
+  }
+]

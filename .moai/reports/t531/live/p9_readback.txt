@@ -1,0 +1,24 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/306|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props a24d8311 CURRENTCUE ShowData/DataPools/Default/Sequences/306"
+<<< {"id": "a24d8311", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/306", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 306.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/307|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 20828153 CURRENTCUE ShowData/DataPools/Default/Sequences/307"
+<<< {"id": "20828153", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/307", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 307.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 874138d5 CURRENTCUE ShowData/DataPools/Default/Sequences/308"
+<<< {"id": "874138d5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 308.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/306/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 2c85430d MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/306/3"
+<<< {"id": "2c85430d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/306/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3748"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/307/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 5668f318 MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/307/3"
+<<< {"id": "5668f318", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/307/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3780"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props b58515d0 MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/308/3"
+<<< {"id": "b58515d0", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3760"}], "truncated": false, "v": 1}

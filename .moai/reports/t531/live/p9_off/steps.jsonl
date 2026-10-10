@@ -1,0 +1,4 @@
+{"step": "release", "t": 0.199, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 306", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 307", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 308", "reasons": ["reference-invoking command"]}]}
+{"step": "release", "t": 0.266, "kind": "exec", "command": "Off Sequence 306", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.333, "kind": "exec", "command": "Off Sequence 307", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.399, "kind": "exec", "command": "Off Sequence 308", "fired": true, "ok": true, "detail": "OK"}

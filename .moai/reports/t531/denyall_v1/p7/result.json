@@ -1,0 +1,75 @@
+{
+  "item": "P7",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/303"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue1_single": false,
+    "store_cue2_two_selections": false,
+    "play_cue1": false,
+    "off_cue1": false,
+    "play_cue2": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Group 11",
+        "Attribute 'Pan' At Relative 10",
+        "Step 2",
+        "Attribute 'Pan' At Relative -10",
+        "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
+        "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 303"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 303"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

@@ -1,0 +1,52 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/310", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/310", "ok": false, "error": "path segment not found: '310' (in ShowData/DataPools/Default/Sequences/310)"}
+{"step": "store_cue", "t": 0.066, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 10", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["b
+{"step": "play", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 310", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 310': state query failed for 'Sequence 310': path segment not found: '310' (in DataPool/Sequences/310)"]}]}
+{"step": "release", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 310", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 310': state query failed for 'Sequence 310': path segment not found: '310' (in DataPool/Sequences/310)"]}]}
+{
+  "item": "P11",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/310"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": false,
+    "play": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Group 11",
+        "Attribute 'Dimmer' At 100",
+        "Group 10",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+        "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 310"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 310"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

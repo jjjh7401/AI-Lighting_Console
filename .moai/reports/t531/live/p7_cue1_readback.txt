@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/303|NAME,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 459832de NAME,CURRENTCUE ShowData/DataPools/Default/Sequences/303"
+<<< {"id": "459832de", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/303", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P7 single-vs-double"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 303.1"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/303
+    wire: Plugin "CopilotResponder" "state a486d6c0 ShowData/DataPools/Default/Sequences/303"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "LDBEAT M1 - P7 cue1 single-selection step2"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "LDBEAT M1 - P7 cue2 two-selections step2"}], "id": "a486d6c0", "kind": "state", "node": {"childCount": 4, "class": "Sequence", "enumeration": "ok", "name": "LDBEAT M1 - P7 single-vs-double"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/303", "truncated": false, "v": 1}
