@@ -1,7 +1,7 @@
 ---
 id: SPEC-LDARRANGE-001
 title: "배치 자동 생성 — 역할×마디 초안"
-version: "0.1.1"
+version: "0.1.2"
 status: draft
 created: 2026-10-10
 updated: 2026-10-10
@@ -12,8 +12,8 @@ module: "server/design/song_cue_render.py(RG5 그룹-주소 함수 재사용만)
 lifecycle: spec-anchored
 tags: "auto-arrangement, role-bar-draft, ai-suggestion-card, director-approval, rg5-group-address, love-attack"
 tier: M
-related_specs: [SPEC-LDBEAT-001, SPEC-LDRHYTHM-001, SPEC-LDDESIGN-001]
-depends_on: [SPEC-LDBEAT-001]
+related_specs: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001, SPEC-LDRHYTHM-001, SPEC-LDDESIGN-001]
+depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 ---
 
 # SPEC-LDARRANGE-001 — 배치 자동 생성: 역할×마디 초안
@@ -24,6 +24,7 @@ depends_on: [SPEC-LDBEAT-001]
 |---|---|
 | 2026-10-10 | 최초 작성(카드 t528). 감독 요청 2026-10-10(리드 경유, `reports/ldbeat-feasibility-roadmap-20261010.md`): 「되는 것과 안 되는 것, 그리고 앞으로 해야 할 것을 스펙을 만들어서 진행할 수 있도록 정리」, 그리고 그 보고서를 받아 「보고서대로 스펙을 만들어줘」. 입력: 위 로드맵 보고서(주 체크아웃 전용 경로, 추적 안 됨 — SPEC 진행안 순서 ①LDBEAT→②LDBARMAP→③LDARRANGE의 세 번째), `reports/effect-arrangement-rules-20261007.md`(규칙 9개·역할 6종·LOVE ATTACK 전체 배치 §3·0~25마디 격자 §4·감독 결정 §5), `.moai/reports/t525/verdict.md`(무대 패치 좌표 86/86 확인, 그룹 소속 18개 중 4개만·그룹당 앞 2칸만 확인), `.moai/specs/SPEC-LDBEAT-001/`(이 SPEC의 산출물을 소비할 격자 화면, 역할 6종 어휘의 출처, status: draft), `.moai/specs/SPEC-LDRHYTHM-001/`(REQ-LDRHYTHM-012(a) — 비트 시각 미저장·다운비트 생산자 0건, 이 plan-phase 재확인). **SPEC-LDBARMAP-001(마디 지도 SPEC)은 이 작성 시점에 존재하지 않는다**(`.moai/specs/` 확인, 카드 t527이 병행 작성 중) — 이 SPEC은 그 출력을 입력으로 가정하지만 스키마를 확정하지 않는다(§5 항목 1). Tier M(§0 근거). **plan만 — 코드 diff 0줄, 콘솔 접촉 0건.** |
 | 2026-10-10 | plan-audit iteration 1 반영(`.moai/reports/plan-audit/SPEC-LDARRANGE-001-review-1.md`, 검증 PASS 0.80, Tier M 상한 충족). D1 — REQ-LDARRANGE-004·011의 요구사항 문장 안에 있던 파일:line·함수명 인용(`section_palette.py:236-267`, `session.py:7685-7902`, `song_cue_render.py:815`·`:890`)을 근거(rationale) 열로 이동. D6 — REQ-LDARRANGE-011의 GEARS 키워드를 `Where`→`While`로 통일(원문이 capability-gate 키워드와 "동안"(durative) 수식을 섞어 썼던 것을 고침). D3 — REQ-LDARRANGE-001·004·013에 전용 직접 AC를 부여(acceptance.md: AC-LDARRANGE-015 신규, AC-LDARRANGE-016 신규, AC-LDARRANGE-011 확장) — AC 총수 14→16, Tier M 상한(16개) 정확히 충족. D2 — REQ-LDARRANGE-002,003,004,006,008,009,011,012,013(9개 — plan-audit iter2 D9 재계수)의 `shall`/`shall not` 클로즈 묶음은 **분리하지 않는다**: 분리하면 REQ 총수가 14+9=23이 되어 Tier M 상한(16개)을 넘는다 — 쪼개기보다 상한 준수를 우선했다. 향후 리비전에서 SPEC을 둘로 나눌 기회가 생기면 재검토 후보로 남긴다. D4(인간 판단 AC의 자연어 서술)·D5(`depends_on`이 `SPEC-LDBARMAP-001`을 못 올림 — 그 SPEC이 아직 존재하지 않아서)·D7(`SPEC-LDBARMAP-001` 미존재 참조)은 plan-auditor가 이미 "의도된 공개"로 확인한 항목이라 변경하지 않는다. version 0.1.0→0.1.1. |
+| 2026-10-10 | **인터페이스 맞춤(카드 t529, plan 문서만 — 코드 0·콘솔 0).** ① frontmatter `depends_on`에 `SPEC-LDBARMAP-001` 추가(iteration 1 D5 — 당시 그 SPEC이 없어 본문으로만 적었던 것; `related_specs`에도 추가). ② §5 항목 1에 "권고 입력 모양"을 넣어 `SPEC-LDBARMAP-001` §5 열린 결정 0의 "권고 출력 모양"과 같은 문면으로 맞췄다 — 필드 이름, 정수 밀리초/정수 마디 단위, 마디 번호 1-base 위상 1 기준 + 0 = 못갖춘마디(배치 규칙서 §4 "0~2"행), 사건 어휘 4개, "실제 임팩트" = `kick_entry`∪`drop`. 같은 자리에 소비자 쪽 공백 둘(사건 크기 없음, "마지막 코러스" 이름 없음)을 열린 채로 적었다. §2 항목 1 갱신. **REQ·AC 문면은 바꾸지 않았다** — plan-audit 재실행 없음(사유: `progress.md`). 만료 고지: §0·§1·§3 REQ-LDARRANGE-001·§4·`plan.md` §A/§B의 "`SPEC-LDBARMAP-001` 존재하지 않음"은 최초 작성 시점의 사실이다 — 그 SPEC은 같은 날 PR #571로 머지됐다(status: draft, 출력 데이터는 아직 없으므로 REQ-LDARRANGE-001의 구속은 그대로 유효). ③ LDBEAT 저장 키(§5 항목 2)는 t526 머지 뒤 후속 커밋. version 0.1.1→0.1.2. |
 
 ## §0. Tier 선택 근거
 
@@ -49,7 +50,7 @@ depends_on: [SPEC-LDBEAT-001]
 
 이 SPEC의 생성기는 세 입력을 받는다. 셋 중 **둘은 열린 결정**이다(§5):
 
-1. **마디 지도** — `SPEC-LDBARMAP-001` 출력(존재하지 않음). 스키마·저장 위치 미정(§5 항목 1).
+1. **마디 지도** — `SPEC-LDBARMAP-001` 출력(그 SPEC은 PR #571로 머지됐지만 status: draft — 출력 **데이터**는 아직 없다). 값의 모양은 두 SPEC이 같은 권고 문면을 가진다(§5 항목 1, 카드 t529). 저장 위치는 미정.
 2. **확정 배치 규칙** — `reports/effect-arrangement-rules-20261007.md`(저장소에 이미 추적됨, 이 입력은 확정). 규칙 9개(§1)·역할 6종(§2)·LOVE ATTACK 전체 배치(§3)·0~25마디 격자(§4)·감독 결정(§5).
 3. **무대 패치** — t525가 확인한 좌표(86/86)·그룹(18개 중 4개, 그룹당 앞 2칸). RG5 그룹-주소 패턴(`server/design/song_cue_render.py:815` `_role_group_numbers`, `:890` `_effect_group_numbers` — "그룹-주소 패턴, fid 불요·RG5" 주석, 이 plan-phase 재확인)을 그대로 재사용하면 **멤버십 전수를 몰라도** 그룹 번호만으로 역할-그룹 매핑을 유지할 수 있다 — 이것이 이 SPEC이 "그룹 소속 부분 확인"이라는 조건에서도 진행할 수 있는 근거다(REQ-LDARRANGE-011).
 
@@ -130,7 +131,14 @@ depends_on: [SPEC-LDBEAT-001]
 
 이 결정들은 감독 착수 승인(Implementation Kickoff Approval) 라운드 또는 그 전에 명시적으로 확인받아야 한다 — 권고는 있으나 확정이 아니다.
 
-1. **[열린 결정 — SPEC-LDBARMAP-001 확정 대기] 마디 지도 출력 인터페이스** (스키마, 저장 위치). `SPEC-LDBARMAP-001`이 이 작성 시점 존재하지 않아 이 plan-phase가 확정할 수 없다. 권고: 그 SPEC이 run-phase에 진입하고 출력 스키마가 고정된 뒤, 이 SPEC의 run-phase 착수 전에 이 항목을 재확인한다 — 두 SPEC을 동시에 진행하면 LDARRANGE의 생성 로직이 아직 안정되지 않은 스키마에 묶이는 사고가 난다.
+1. **[열린 결정 — SPEC-LDBARMAP-001 확정 대기] 마디 지도 출력 인터페이스** (스키마, 저장 위치). 최초 작성 시점에는 `SPEC-LDBARMAP-001`이 없었다 — 지금은 PR #571(`deab5dd5`)로 머지됐고(status: draft), 저장 위치는 그 SPEC §5 열린 결정 0(REQ-LDBARMAP-010)이 M2+로 미뤘다. 권고: 그 SPEC이 run-phase에 진입하고 출력 스키마가 고정된 뒤, 이 SPEC의 run-phase 착수 전에 이 항목을 재확인한다 — 두 SPEC을 동시에 진행하면 LDARRANGE의 생성 로직이 아직 안정되지 않은 스키마에 묶이는 사고가 난다.
+   - **권고 입력 모양(카드 t529 — 생산자 `SPEC-LDBARMAP-001` §5 열린 결정 0의 "권고 출력 모양"과 같은 문면, 확정 아님).** 한쪽만 고치면 생산자와 소비자가 갈라진다 — 두 문단을 같이 고친다.
+     - `bpm`(실수, BPM) · `time_signature`(`[4, 4]`) · `bars[]` = `{bar, start_ms, beats_ms}` · `events[]` = `{kind, start_bar, end_bar, start_beat, grade}`.
+     - **마디 번호(`bar`·`start_bar`·`end_bar`)**: 정수, **1-base, 위상 1 기준** — 지도 보고서(`reports/loveattack-music-map-20261006.md`) §2·부록 A와 이 SPEC의 입력인 배치 규칙서 §3~§4가 이미 같은 번호 공간이다(둘 다 후렴 1 진입 = 18마디, 실측 대조 t529). **0 = 못갖춘마디(앞박) 예약 번호** — 배치 규칙서 §4 "0~2"행의 0이 이것이다. 마디 지도에 못갖춘마디가 없으면 `bar: 0`은 생략된다 — 그때 0행을 어떻게 다룰지는 run-phase 생성기 설계의 몫이다. 사건 구간은 **양끝 포함**.
+     - **단위**: 절대 시각(`start_ms`·`beats_ms`)만 정수 밀리초, 그 밖의 길이·창은 정수 마디(필요하면 `start_beat`, 마디 안 1-base 1~4). 초 단위 길이 필드는 없다 — REQ-LDARRANGE-005·006의 "4마디"·"8마디"는 `bar` 번호 차로 센다.
+     - **사건 어휘(`kind`) 4개 고정**: `kick_entry`(킥 진입 — 지도 보고서의 "후렴 진입 큰 히트") · `build`(빌드업) · `drop`(드롭) · `break`(브레이크 — "킥 멈춤"). `grade`는 `measured` | `estimated`(지도 보고서 [잰 값]/[추정]).
+     - **이 SPEC이 읽는 방식(권고)**: REQ-LDARRANGE-008의 "실제 임팩트" = `kind ∈ {kick_entry, drop}` 사건의 (`start_bar`, `start_beat`). REQ-LDARRANGE-005의 "드롭" 구간 = `kind == drop` 사건의 `start_bar`~`end_bar`.
+     - **이 모양으로 메워지지 않는 소비자 쪽 공백 둘(열린 채로 둔다)**: (가) **크기가 없다** — 위 임팩트 집합은 STROBE를 제안해도 되는 마디의 **상한**일 뿐, 그 안에서 배치 규칙서 §3의 STROBE 자리(63·67마디)와 BLIND만 쓰는 자리(18·46마디)를 가를 신호가 마디 지도에 없다. (나) **"마지막 코러스" 이름이 없다** — 구간 이름은 마디 지도의 몫이 아니라 기존 분석 캐시의 `sections`(지도 보고서 §6 "추정" 등급)에서 온다. 두 공백은 Implementation Kickoff Approval 라운드에서 이 항목과 함께 제시한다.
 2. **[열린 결정 — SPEC-LDBEAT-001 M2 확정 대기] LDBEAT 격자 입력 인터페이스(저장 키)**. `SPEC-LDBEAT-001` REQ-LDBEAT-006은 격자 자체의 저장을 "기존 `timeline` 사전에 `beat_grid` 키로 임베드"를 권고(아직 결정 아님, M2 미착수)로 두었다. 권고: 그 결정이 확정되면, 이 SPEC의 초안도 같은 `timeline` 사전 안의 새 키(예: `arrangement_draft`)로 임베드해 같은 되돌리기/영속 메커니즘(`TimelineDraftHistory`/`SongTimelineStore`/`SongTimelineLibrary`)을 코드 추가 없이 재사용한다 — 독립 저장소 신설은 M2가 LDBEAT 쪽에서 임베드를 기각할 경우에만 고려한다.
 3. **[열린 결정] "느린 곡" 판정 기준** (REQ-LDARRANGE-007의 STROBE 게이팅). 배치 규칙서는 "발라드처럼 느린 곡"이라고만 적고 수치 경계를 주지 않는다. 옵션: (a) BPM 임계값(예: `server/audio/analyze.py`가 산출하는 BPM < N) — 단순하지만 BPM은 느낌과 항상 일치하지 않는다(예: 빠른 BPM의 발라드풍 편곡), (b) 감독이 곡별로 직접 지정하는 플래그(곡 메타데이터에 "느린 곡" 불리언) — REQ-LDARRANGE-004의 곡별 기본값 모델과 자연스럽게 맞물린다, (c) 마디 지도(SPEC-LDBARMAP-001)가 산출하는 섹션 특성(예: 드롭/빌드 밀도)으로 추론 — 마디 지도가 아직 없어 이 SPEC의 run-phase 시점에 쓸 수 없을 가능성. 권고: (b)를 1차 기본값으로 채택하고 (a)를 보조 제안으로 노출한다 — 수치 하나로 전곡을 재단하는 위험(REQ-LDARRANGE-004가 경계하는 것과 같은 종류)을 피한다.
 4. **[열린 결정] 무대 패치(좌표·방향)가 그룹-번호 주소를 넘어 역할 배치 자체에 영향을 주는가**. 옵션: (a) 아니다 — 역할 배치는 순수하게 규칙+마디 지도+그룹 번호로 결정되고, 좌표는 LDBEAT 격자나 무대 그림(t525)의 시각화 참고 정보로만 쓰인다, (b) 그렇다 — 예를 들어 무대 앞뒤 추정 방향(현재 이름 추정뿐, t525 "콘솔에서 무대 앞뒤를 따로 읽지는 않았다")이 FOH/BACK 역할의 그룹 선택에 영향을 줄 수 있다. 권고: (a) — 이 SPEC의 범위(§3.6 REQ-LDARRANGE-013)는 이미 (a)로 명시했다. 좌표 기반 배치 정교화가 필요해지면 별도 SPEC으로 분리한다.
