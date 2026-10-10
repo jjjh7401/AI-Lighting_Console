@@ -67,7 +67,7 @@ REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 �
 - M1은 순수 측정/채점 — `server/audio/analyze.py`의 기존 함수(`analyze()`, `_tempo_from_beats`)를 **읽기만** 하고 호출해 `beat_times`를 꺼낸다(현재 `analyze()`는 `beat_times`를 반환하지 않으므로, M1 스크립트는 `analyze.py`를 import해 내부 함수를 직접 호출하거나, `librosa.beat.beat_track`을 독립적으로 재호출한다 — 어느 쪽이든 `server/` 파일은 수정하지 않는다).
 - 채점 스크립트는 지도 보고서의 부록 A(82마디 표, 다운비트 시각·마디별 이벤트 라벨)를 정답 테이블로 파싱한다.
 - 음성 대조군은 정답 테이블을 프로그램적으로 변형(전체를 N ms 또는 1박 밀기)해 만든다 — 손으로 날조하지 않는다(재현 가능성).
-- M2의 신규 모듈은 `AnalysisResult`를 확장하지 않는다 — REQ-LDBARMAP-010이 저장 형태를 정하지 않으므로, M2 자체는 별도 함수(`detect_bar_map(audio_bytes) -> BarMapResult | BarMapFailure` 가칭)로 분리해 기존 `analyze()` 계약을 건드리지 않는다. 기존 `AnalysisResult`/`AnalysisFailure`의 "예외를 밖으로 내보내지 않는다"(`analyze.py:297` 원칙)를 신규 모듈도 따른다.
+- M2의 신규 모듈은 `AnalysisResult`를 확장하지 않는다 — M2 시점(REQ-LDBARMAP-010이 아직 저장 형태를 정하지 않았던 당시)에는 이 분리가 저장 미확정에 대한 방어였다. **갱신(카드 t539, M4, 2026-10-10, plan-audit iteration 9 D5 교정)**: REQ-LDBARMAP-010은 이제 확정됐지만(옵션 A, `timeline["bar_map"]`), 이 분리 자체는 바뀌지 않는다 — M2는 여전히 메모리/테스트 픽스처 범위에 남고, 확정된 저장 배선은 M4(`bar_map_store.py` + `session.py` 메서드)의 몫이다. M2 자체는 별도 함수(`detect_bar_map(audio_bytes) -> BarMapResult | BarMapFailure` 가칭)로 분리해 기존 `analyze()` 계약을 건드리지 않는다. 기존 `AnalysisResult`/`AnalysisFailure`의 "예외를 밖으로 내보내지 않는다"(`analyze.py:297` 원칙)를 신규 모듈도 따른다.
 
 ## §E. 위험
 
@@ -76,7 +76,7 @@ REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 �
 | BPM 배수 오류(절반/두 배)가 다운비트·마디 경계 지표까지 오염 | REQ-LDBARMAP-006 — 격자 정합도 비교를 BPM 채택 전 필수 단계로 둔다 |
 | 채점기 자체가 공허(무엇을 넣어도 통과) | REQ-LDBARMAP-005 — 음성 대조군을 M1 통과 조건에 포함 |
 | 지도 보고서의 "추정" 라벨(구간 이름·드롭 위치)을 정답으로 과신 | REQ-LDBARMAP-009 — 신뢰도 갈래를 이어받아 "추정" 항목은 미달 판정의 유일한 근거로 쓰지 않음 |
-| 저장 인터페이스를 이 plan-phase가 섣불리 확정 | REQ-LDBARMAP-010 — 열린 결정으로 명시 보존, M2+에서 확정 |
+| 저장 인터페이스를 이 plan-phase가 섣불리 확정 | REQ-LDBARMAP-010 — 열린 결정으로 명시 보존, M2+에서 확정. **갱신(카드 t539, M4, 2026-10-10, plan-audit iteration 9 D5 교정)**: M4에서 옵션 A로 확정 완료 — 이 위험 행은 plan-phase 최초 작성 시점의 완화 기록으로 보존한다(역사) |
 | 다른 박자(3/4 등)·다른 곡으로 일반화할 때 LOVE ATTACK 전용 상수(60ms 허용오차 등)가 깨짐 | REQ-LDBARMAP-004 각주 — 이 SPEC은 LOVE ATTACK 한 곡만 보정하고, 일반화는 범위 밖(§5 열린 결정 3) |
 
 ## §F. 제약 (PRESERVE 목록)

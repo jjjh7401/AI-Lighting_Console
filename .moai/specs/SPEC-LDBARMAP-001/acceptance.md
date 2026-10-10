@@ -112,17 +112,18 @@
 **When** `grep -rln "downbeat" server`를 실행하면
 **Then** 출력이 0건이다 — 이 SPEC이 메우려는 공백(다운비트 생산자 부재)이 plan-phase 시점에도 그대로 존재함을 재확인한다. (이 plan-phase 실측: 2026-10-10, 0건.) **REQ 인용 교정**: 이 AC는 특정 REQ의 shall 절을 직접 검증하지 않는다 — spec.md §1 배경이 적은, 이 SPEC 전체의 동기가 되는 베이스라인 사실(다운비트 생산자 부재)을 재확인하는 premise-check다. REQ-LDBARMAP-001(오프라인 분석 범위 — 이 공백을 메우는 작업의 범위를 선언하는 요구사항)을 가장 가까운 간접 인용으로 둔다. (이전 버전은 REQ-LDBARMAP-008을 인용했으나, REQ-008은 네 가지 이벤트-검출-대상 범주를 정의할 뿐 이 베이스라인 사실과 무관했다 — plan-audit iteration 2 D-NEW-2.)
 
-### AC-LDBARMAP-010 (REQ-LDBARMAP-010, REQ-LDBARMAP-011) — 저장 인터페이스 왕복(쓰기→읽기)·되돌리기·버전·거부 (카드 t539, M4 확정 — 2026-10-10 개정)
+### AC-LDBARMAP-010 (REQ-LDBARMAP-010, REQ-LDBARMAP-011) — 저장 인터페이스 왕복(쓰기→읽기)·되돌리기·버전·거부·인용 추적성 (카드 t539, M4 확정 — 2026-10-10 개정, plan-audit iteration 9 D1/D3/D4 교정)
 
 **Given** M4가 구현한 저장 배선(`server/audio/bar_map_store.py`의 build/validate/attach/read + `server/web/session.py`의 `store_timeline_bar_map`/`timeline_bar_map`)과, 임의의 유효한 마디 지도 페이로드(스키마: §5 열린 결정 0의 확정 모양 — `bpm`·`time_signature`·`bars[]`·`events[]`·`schema_version`(=1)·`first_beat_offset`)가 주어진 상태에서
-**When** 그 마디 지도을 `timeline["bar_map"]`에 쓰고 곧바로 읽으면
-**Then** 아래 다섯 조건이 모두(AND) PASS다:
+**When** 그 마디 지도를 `timeline["bar_map"]`에 쓰고 곧바로 읽으면
+**Then** 아래 여섯 조건이 모두(AND) PASS다:
 
 1. **왕복 동등성**: 읽은 값이 쓴 값과 필드 단위로 동일하다(부동소수 `bpm`은 상대오차 1e-9 이내, 그 외 필드는 완전 일치).
-2. **영속화**: `SongTimelineStore`가 프로세스를 재시작(또는 그 모듈의 재로드 경로를 재호출)한 뒤에도 같은 `timeline["bar_map"]` 값을 읽어내고, `SongTimelineLibrary`에 저장(`save`)한 뒤 조회(`get`)하면 같은 값이 돌아온다.
+2. **영속화(구체화, plan-audit iteration 9 D4 교정)**: 같은 파일 경로로 `SongTimelineStore(path)`를 새로 생성해 `latest`를 읽으면, 쓰기 전 생성한 `SongTimelineStore` 인스턴스가 쓴 값과 같은 `timeline["bar_map"]`이 나온다(프로세스 재시작을 흉내 — 새 인스턴스가 디스크의 원자적 JSON을 다시 읽는다는 뜻이다). 그리고 `SongTimelineLibrary.save(name, timeline)` → `get(entry_id)`를 호출하면 저장한 타임라인과 같은 `timeline["bar_map"]` 값이 돌아온다.
 3. **되돌리기 1회**: 마디 지도 쓰기 전 `TimelineDraftHistory`에 1회 `record()`된 깊은 사본이 있고, 되돌리기(undo) 1회를 실행하면 타임라인이 쓰기 이전 상태로 정확히 복원된다 — 쓰기 이전에 `bar_map` 키가 없었던 경우는 되돌린 뒤 그 키가 다시 부재여야 한다(키가 빈 값으로 남지 않는다).
 4. **잘못된 페이로드 거부**: 스키마 밖 페이로드(예: `bars[]`의 `bar` 번호가 음수, 또는 `events[].start_beat`가 0이거나 그 마디 박자표 분자를 초과)를 쓰려고 하면 쓰기가 거부되고, 거부 전후로 `timeline["bar_map"]` 값과 `TimelineDraftHistory`의 되돌리기 깊이(기록 개수)가 둘 다 변하지 않는다(거부가 되돌리기 기록을 남기지 않는다).
-5. **LOVE ATTACK 전용 가정 없음(일반화 검증)**: LOVE ATTACK 모양(82마디·4/4·못갖춘마디 없음)이 아닌 픽스처 — 예: 3/4박자, 못갖춘마디 없음, 마지막 마디가 2박만 채워진 부분 마디(분자 3 중 2박) — 로 위 1~3을 반복해도 전부 PASS다.
+5. **LOVE ATTACK 전용 가정 없음(일반화 검증, plan-audit iteration 9 D1 교정 — 기대 오프셋 범위 명시)**: LOVE ATTACK 모양(82마디·4/4·못갖춘마디 없음)이 아닌 픽스처 — 예: 3/4박자, 못갖춘마디 없음, 마지막 마디가 2박만 채워진 부분 마디(분자 3 중 2박) — 로 위 1~3을 반복해도 전부 PASS다. 이 3/4 픽스처의 `first_beat_offset`은 박자표 분자(3)로 나눈 나머지이므로 기대 범위는 **0~2**(박)다 — LOVE ATTACK(4/4)의 0~3 범위를 그대로 적용하지 않는다(spec.md §5 열린 결정 0 일반화 규칙 참조).
+6. **인용 추적성(REQ-LDBARMAP-011, plan-audit iteration 9 D3 신설)**: `spec.md` §5 열린 결정 0을 읽으면, `SPEC-LDBEAT-001` REQ-LDBEAT-006의 저장소 실체(`SongTimelineStore`/`TimelineDraftHistory`/`SongTimelineLibrary`, 파일:줄 번호 포함)가 옵션 A의 출처로 인용되어 있고, `SPEC-LDARRANGE-001`이 장래 소비자로 명시되어 있다 — grep 검증 가능: `grep -c 'SongTimelineStore\|TimelineDraftHistory\|SongTimelineLibrary' spec.md` ≥ 1, `grep -c 'SPEC-LDARRANGE-001' spec.md` ≥ 1, 둘 다 §5 열린 결정 0 범위 안.
 
 ### AC-LDBARMAP-011 (REQ-LDBARMAP-011) — LDARRANGE-001 부재 확인
 
