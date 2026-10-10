@@ -124,8 +124,7 @@ def main() -> None:
     truth = parse_downbeats()
     truth_events = parse_events()
     print(
-        f"[정답지] 다운비트 {len(truth)}개, 사건 {len(truth_events)}개 "
-        "(REQ-LDBARMAP-004/008/009)"
+        f"[정답지] 다운비트 {len(truth)}개, 사건 {len(truth_events)}개 (REQ-LDBARMAP-004/008/009)"
     )
 
     # --- 음성 대조군(REQ-LDBARMAP-005) — 후보와 무관하게 채점기 자체를 먼저 검증 ---
@@ -135,14 +134,12 @@ def main() -> None:
     shifted_1beat = shift_downbeats(truth, BEAT_INTERVAL_SEC)
     neg1 = strict_index_hit_rate(shifted_1beat, truth)
     print(
-        f"음성 대조군 1(1박={BEAT_INTERVAL_SEC:.3f}s 밀림): {neg1}  "
-        "(기대: <10%, AC-LDBARMAP-002)"
+        f"음성 대조군 1(1박={BEAT_INTERVAL_SEC:.3f}s 밀림): {neg1}  (기대: <10%, AC-LDBARMAP-002)"
     )
     shifted_1bar = shift_downbeats(truth, BAR_INTERVAL_SEC)
     neg2 = strict_index_hit_rate(shifted_1bar, truth)
     print(
-        f"음성 대조군 2(1마디={BAR_INTERVAL_SEC:.3f}s 밀림): {neg2}  "
-        "(기대: <10%, AC-LDBARMAP-003)"
+        f"음성 대조군 2(1마디={BAR_INTERVAL_SEC:.3f}s 밀림): {neg2}  (기대: <10%, AC-LDBARMAP-003)"
     )
 
     control_results = {

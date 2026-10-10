@@ -287,9 +287,7 @@ def alternate_phase_downbeats(candidate: CandidateResult, phase: int) -> np.ndar
     return candidate.beat_times[phase::4]
 
 
-def detect_events_from_bars(
-    y, sr, downbeats: np.ndarray, hop_length: int
-) -> list[tuple[str, int]]:
+def detect_events_from_bars(y, sr, downbeats: np.ndarray, hop_length: int) -> list[tuple[str, int]]:
     """마디별 변화 이벤트(킥 진입·빌드업·킥 멈춤) — 지도 보고서 §1 규칙을 간단화한 버전.
 
     M1 범위(plan.md §C M1) — "간단한 마디별 규칙"만 쓴다. M3가 본 분류기를 맡는다
