@@ -358,7 +358,7 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
     except Exception as error:  # 분석기 내부 실패도 예외로 새어 나가지 않는다
         return AnalysisFailure(f"오디오를 분석하지 못했습니다: {error}")
 
-    bpm, confidence = _tempo_from_beats(numpy, beat_times)
+    bpm, confidence = _tempo_from_beat_regression(numpy, beat_times)
     if bpm is None:
         return AnalysisFailure("박을 찾지 못해 BPM 을 재지 못했습니다.")
 
@@ -384,6 +384,11 @@ def _tempo_from_beats(numpy, beat_times) -> tuple[float | None, float]:
     ``beat_track`` 이 돌려주는 템포 추정치 대신 **박 간격의 중앙값**을 쓴다. 추정치는
     한 곡에 하나뿐이라 흔들림을 감출 수 있지만, 간격 분포는 흔들림을 그대로
     보여 준다 — 그리고 그 흔들림이 곧 ``bpm_confidence`` 다.
+
+    🔴 중앙값은 hop 격자에 묶여 참 112 BPM 을 112.347 로 낸다(카드 t546). ``analyze()`` 는
+    그래서 :func:`_tempo_from_beat_regression` 을 쓴다. 이 함수를 그대로 두는 이유는
+    ``bar_map.detect_beat_grid`` 다 — 그 뒤의 절반/두 배 검사(REQ-LDBARMAP-006)는 이
+    값에 맞춰져 있어, 정확한 BPM 을 주면 LOVE ATTACK 을 224 로 뒤집는다(카드 t547).
     """
     if len(beat_times) < 4:
         return None, 0.0
@@ -397,6 +402,53 @@ def _tempo_from_beats(numpy, beat_times) -> tuple[float | None, float]:
     spread = float(numpy.std(intervals)) / median
     confidence = max(0.0, min(1.0, 1.0 - spread))
     return 60.0 / median, confidence
+
+
+def _tempo_from_beat_regression(numpy, beat_times) -> tuple[float | None, float]:
+    """:func:`_tempo_from_beats` 와 같은 계약 — BPM 만 박 시각의 직선 기울기로 낸다.
+
+    기울기는 박 전체를 쓰므로 hop 격자 칸에 묶이지 않는다(카드 t546). 기울기를 믿을
+    수 없으면(:func:`_regression_beat_seconds` 가 ``None``) 중앙값 BPM 을 그대로 낸다.
+    확신은 중앙값 함수의 것 그대로다.
+    """
+    bpm, confidence = _tempo_from_beats(numpy, beat_times)
+    if bpm is None:
+        return None, confidence
+    regressed = _regression_beat_seconds(numpy, beat_times, 60.0 / bpm)
+    return (bpm if regressed is None else 60.0 / regressed), confidence
+
+
+#: 박 회귀를 믿는 잔차 상한 — 잔차 표준편차 / 박 길이 (카드 t546).
+#:
+#: 근거는 합성 박 목록이다(``.moai/reports/t546/cut_basis.py``·``cut_basis.txt``):
+#: hop 512 양자화 + 사람 연주 흔들림 σ ≤ 15ms, 60~200 BPM 에서 잔차는 박의 **최대 5.0%**,
+#: 반 박 자리에 박이 하나 끼어 번호가 밀린 경우는 위치(곡의 5~95%)와 템포에 상관없이
+#: **최소 20.1%** 였다. 0.10 은 그 둘의 기하 중간이다.
+#: 실제 곡 10개(t536 판정)는 이 값을 고르는 데 쓰지 않았고, 대조로만 썼다.
+#: 한계: 템포가 곡 중간에 바뀌는 곡은 재지 않았다 — 그런 곡은 잔차가 커져 중앙값으로
+#: 돌아가는 쪽으로만 틀린다.
+_REGRESSION_MAX_RESIDUAL_BEATS = 0.10
+
+
+def _regression_beat_seconds(numpy, beat_times, median: float) -> float | None:
+    """박 시각의 직선 기울기(초/박) — 믿을 수 없으면 ``None``.
+
+    중앙값 간격은 hop 격자의 정수배로만 나온다(hop 512 · 44.1kHz 에서 11.6ms 칸,
+    참 112 BPM 이 112.347 이 되는 이유). 기울기는 박 전체를 쓰므로 그 칸에 묶이지 않는다.
+    박 번호는 간격을 중앙값의 배수로 반올림해 매긴다 — 빠진 박(간격 2배)은 번호가
+    바로잡히지만, 반 박 자리에 낀 박은 그 뒤 번호를 모두 밀어 기울기를 틀리게 한다.
+    그 경우를 잔차로 가려 중앙값으로 돌아간다.
+    """
+    times = numpy.asarray(beat_times, dtype=float)
+    steps = numpy.maximum(1.0, numpy.round(numpy.diff(times) / median))
+    index = numpy.concatenate([[0.0], numpy.cumsum(steps)])
+    slope, intercept = numpy.polyfit(index, times, 1)
+    if slope <= 0:
+        return None
+    residual = float(numpy.std(times - (slope * index + intercept))) / slope
+    if residual > _REGRESSION_MAX_RESIDUAL_BEATS:
+        return None
+    return float(slope)
 
 
 def _min_segment_ms(*, bpm: float | None, duration_ms: int) -> float:

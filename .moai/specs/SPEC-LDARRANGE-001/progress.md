@@ -38,6 +38,14 @@
 - **감사**: 부분 plan-audit(LDBARMAP 쪽과 한 묶음) 1차 FAIL 0.80 → 2차 FAIL → 3차 **PASS 1.00** — `.moai/reports/t541/plan-audit.md`.
 - **미검증·남은 것**: 이 SPEC 자신의 REQ-LDARRANGE-001·AC-LDARRANGE-015·plan.md:6·:46 의 「LDBARMAP 존재하지 않음」 문면은 t529 HISTORY 일괄 만료 고지에 맡기고 고치지 않았다(카드 범위 밖) — 다음 개정 때 인라인 고지 후보.
 
+## 낡은 문면 인라인 고지 (카드 t545, 2026-10-10)
+
+- **주장**: 「SPEC-LDBARMAP-001 존재하지 않음/미작성」을 현재형으로 단언하던 본문 6곳(spec.md §0·REQ-LDARRANGE-001 괄호와 근거 칸, plan.md §A·§D·M1, acceptance.md AC-LDARRANGE-015)에 제자리 고지를 붙였다. 뜻은 바꾸지 않았다. spec.md v0.2.1→0.2.2.
+- **뜻 불변 근거(이 트리 diff, 바뀐 줄 6→6)**: 지운 줄/더한 줄의 규범 표현 개수 — `**While**` 1→1, `== true` 1→1, `== 0` 2→2, `카운트` 2→2, `| AC-LDARRANGE-015 |` 1→1, `shall not` 1→2(늘어난 1은 근거 칸의 「`shall not`은 그대로 유효」 인용 — 새 의무 아님). 그래서 plan-audit 미실행(리드 지시: 뜻이 바뀔 때만).
+- **잔여 문면 검사**: LDBARMAP 를 담은 줄에서 부재 표현 앞 140자·뒤 60자 안에 고지 표지가 없는 경우(HISTORY 제외) — 고치기 전 10건(8줄 — spec.md:34·70×2·150, plan.md:6·46·54, acceptance.md:23×2·52) → 지금 3건(이 트리 재실행, 「작성 시점에는」·「현황」도 고지 표지로 셈). 남은 3건은 일부러 둠: spec.md:150(§5 항목 3(c), run-phase 시점에 **데이터**가 없을 가능성 — 참), acceptance.md:23 Given 칸·:52(스텁 상태 시나리오 — 시험 조건이지 사실 단언 아님).
+- **현황 사실**: 선행 조건(존재 PR #571, 스키마 확정 PR #585 `364ab000`) 충족 · 실제 지도 데이터 진입 경로(오디오→`timeline["bar_map"]`)는 아직 없음 → REQ-LDARRANGE-001 `shall not` 유효.
+- **미검증**: 독립 감사 없음(뜻 불변 판단은 레인이 규범 표현 개수로 잰 것).
+
 ## §E.2 Run-phase Evidence
 
 _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_

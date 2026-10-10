@@ -3,7 +3,7 @@
 ## §A 맥락
 
 - **입력**: `reports/ldbeat-feasibility-roadmap-20261010.md`(주 체크아웃 전용 경로 — 이 워크트리로 복사하지 않고 절대경로로 참조만 함, SPEC 진행안 순서 ①LDBEAT→②LDBARMAP→③LDARRANGE) · `reports/effect-arrangement-rules-20261007.md`(규칙 9개·역할 6종 §2·LOVE ATTACK 전체 배치 §3·0~25마디 격자 §4·감독 결정 §5) · `.moai/reports/t525/verdict.md`(무대 패치 좌표 86/86, 그룹 18개 중 4개·그룹당 앞 2칸만 확인) · `.moai/specs/SPEC-LDBEAT-001/spec.md`·`plan.md`(역할 어휘 출처 REQ-LDBEAT-004, 저장소 결정 미확정 REQ-LDBEAT-006, 송신 경로 REQ-LDBEAT-011~013 — status: draft, M1~M6 전부 미착수) · `.moai/specs/SPEC-LDRHYTHM-001/spec.md` REQ-LDRHYTHM-012(a)(비트/다운비트 미저장, 이 plan-phase가 `server/audio/analyze.py:352-390`로 재확인) · `.moai/specs/SPEC-LDDESIGN-001/spec.md` REQ-LDDESIGN-092/094/095(M7, AI 제안→「적용」 원칙의 출처, 단일 큐 단위) · `server/design/song_cue_render.py:815`(`_role_group_numbers`)·`:890`(`_effect_group_numbers`)(RG5 그룹-주소 패턴, 이 plan-phase가 재확인) · `server/design/section_palette.py:236-267`·`server/web/session.py:7685-7902`(`palette_mode` — 곡별 선택 메커니즘의 기존 선례).
-- **전제 SPEC**: `SPEC-LDBEAT-001`(status: draft — M1~M6 전부 미착수, 이 SPEC의 산출물을 소비할 격자 화면·저장소 결정의 출처), `SPEC-LDBARMAP-001`(이 작성 시점 **존재하지 않음** — 카드 t527이 병행 작성 중, 이 SPEC의 핵심 입력인 마디 지도의 출처). **이 SPEC의 run-phase는 두 전제 SPEC 모두가 run-phase에 진입하고 핵심 인터페이스가 안정된 뒤에만 착수한다**(§B 위험 1) — plan-phase 자체는 세 SPEC이 서로 독립적으로 진행 가능하다.
+- **전제 SPEC**: `SPEC-LDBEAT-001`(status: draft — M1~M6 전부 미착수, 이 SPEC의 산출물을 소비할 격자 화면·저장소 결정의 출처), `SPEC-LDBARMAP-001`(작성 시점에는 **존재하지 않았다** — 카드 t527이 병행 작성 중이었다; 지금은 PR #571로 생겼고 M4 PR #585로 저장 모양이 확정됐다, 카드 t545 현황 고지. 이 SPEC의 핵심 입력인 마디 지도의 출처). **이 SPEC의 run-phase는 두 전제 SPEC 모두가 run-phase에 진입하고 핵심 인터페이스가 안정된 뒤에만 착수한다**(§B 위험 1) — plan-phase 자체는 세 SPEC이 서로 독립적으로 진행 가능하다.
 - **범위**: 역할×마디 초안을 생성하는 새 로직 모듈 1개(규칙 적용 + 그룹-번호 매핑) + AI 제안 카드 UI(LDDESIGN 패턴을 초안 전체 단위로 일반화) + `SPEC-LDBEAT-001` 격자와의 연결점(초안을 격자에 "편집 가능한 초안"으로 노출). 마디 분석(LDBARMAP), 격자 화면·저장·에미터·콘솔 송신(LDBEAT), 응답기 나눠 읽기 확장, 색 미세 조정, 다른 곡 규칙서 작성은 범위 밖(spec.md §4).
 - **진입 조건**: 이 plan-phase 종료 후 Implementation Kickoff Approval(감독 착수 승인) — run-phase는 그 승인 뒤에만 시작한다. 그 승인 라운드에서 **spec.md §5의 열린 결정 4건 중 적어도 항목 1(마디 지도 인터페이스)·항목 3("느린 곡" 기준)을 감독에게 명시적으로 제시하고 확인받는다** — 항목 2(LDBEAT 저장 키)는 LDBEAT M2가 먼저 확정해야 하는 종속 결정이라 이 SPEC의 착수 승인만으로는 확정할 수 없다.
 
@@ -43,7 +43,7 @@ grep -n "max_prop_value" console/lua/copilot_responder.lua
 - 생성기의 어떤 경로도 `fid`(장비 개별 식별자) 수준의 그룹 멤버십을 추론하거나 가정하지 않는다(REQ-LDARRANGE-011) — 그룹 번호 주소만 쓴다.
 - AI 제안 카드의 승인·거절을 역할×마디 칸 단위로 쪼개지 않는다 — 초안 전체에 1개의 단위를 유지한다(REQ-LDARRANGE-009, AC-LDARRANGE-007).
 - 이 SPEC의 어떤 코드도 콘솔에 직접 쓰지 않는다 — `ConsoleLink`/`exec`/`deploy` 류의 호출을 생성 로직에 넣지 않는다(REQ-LDARRANGE-003, AC-LDARRANGE-006이 검사).
-- 마디 지도 스키마가 아직 확정되지 않은 상태에서, 그 스키마의 구체 필드명(아직 존재하지 않는 `SPEC-LDBARMAP-001`의 필드)에 의존하는 코드를 작성하지 않는다(REQ-LDARRANGE-001) — 인터페이스가 확정되기 전까지는 그 경계를 추상화(예: 타입 스텁·프로토콜)로만 표현한다.
+- 마디 지도 스키마가 아직 확정되지 않은 상태에서, 그 스키마의 구체 필드명(작성 시점에는 존재하지 않던 `SPEC-LDBARMAP-001`의 필드)에 의존하는 코드를 작성하지 않는다(REQ-LDARRANGE-001) — 인터페이스가 확정되기 전까지는 그 경계를 추상화(예: 타입 스텁·프로토콜)로만 표현한다. **현황(카드 t545)**: 스키마는 확정됐다(M4, PR #585, 정본 `validate_bar_map`) — 필드명은 이제 실재한다. 이 줄이 막는 「미확정 스키마에 기대기」는 해소됐지만, REQ-LDARRANGE-001이 막는 「실제 지도 데이터 없이 데이터 의존 생성 로직 구현」은 데이터가 들어오기 전까지 그대로다.
 
 ## §E 마일스톤 (결정 번복 비용 순)
 
@@ -51,7 +51,7 @@ grep -n "max_prop_value" console/lua/copilot_responder.lua
 
 가장 되돌리기 비싼 축 — 이후 모든 마일스톤이 이 결정 위에 선다.
 
-- `SPEC-LDBARMAP-001`의 진행 상태를 재확인한다(§C 사전 점검). 존재하지 않거나 출력 스키마가 미확정이면, 이 마일스톤은 **잠정 인터페이스(스텁 타입)**만 정의하고 실제 연결은 M4로 미룬다 — "스키마가 없으니 아무것도 안 한다"가 아니라 "스키마가 바뀌어도 흔들리지 않는 경계를 먼저 긋는다"가 목표다.
+- `SPEC-LDBARMAP-001`의 진행 상태를 재확인한다(§C 사전 점검; 카드 t545 현황: 존재·스키마 확정 둘 다 이미 충족 — PR #571·#585. 남은 확인은 실제 지도 데이터가 타임라인에 들어오는 진입 경로가 생겼는지다). 존재하지 않거나 출력 스키마가 미확정이면, 이 마일스톤은 **잠정 인터페이스(스텁 타입)**만 정의하고 실제 연결은 M4로 미룬다 — "스키마가 없으니 아무것도 안 한다"가 아니라 "스키마가 바뀌어도 흔들리지 않는 경계를 먼저 긋는다"가 목표다.
 - "느린 곡" 판정 기준(spec.md §5 항목 3)을 감독과 확정한다 — 권고 기본값은 곡 메타데이터의 명시적 플래그(옵션 b)이며, BPM 임계값(옵션 a)을 보조 제안으로 노출할지도 이 마일스톤에서 결정한다.
 - 결정과 근거를 `progress.md`에 기록한다.
 
