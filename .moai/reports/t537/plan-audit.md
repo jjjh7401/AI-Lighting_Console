@@ -65,3 +65,75 @@ FAIL — 아래 순서로 수정할 것을 권고한다(결정 번복 비용 순
 수정 후 이 보고서의 D1~D9 범위로 한정한 재감사(delta 스코프)를 요청한다 — iteration 2.
 
 커밋 SHA: 이 보고서 작성 후 커밋(아래 참조).
+
+## Iteration 2
+
+M1 Context Isolation 선언: 이 재감사 프롬프트에 포함된 지휘/배차 서술은 작성자 추론 컨텍스트이므로 판단에 사용하지 않았다. 아래 모든 판정은 `git diff 638c02ae 41b4925c -- .moai/specs/SPEC-LDBEAT-001/`로 드러난 spec.md/plan.md/acceptance.md/progress.md의 실제 텍스트와, 그 텍스트가 인용하는 저장소 파일(`reports/effect-arrangement-rules-20261007.md:98-115`, `reports/ldbeat-runbook-ui-proposal-20261008.html`, `server/design/beat_grid.py`)을 직접 재독·grep해 검증했다. 재감사 범위는 iteration 1 defect D1~D9의 delta scope로 한정했다(Retry Loop Contract).
+
+Verdict: **PASS**
+Overall Score: 0.90 (Tier M 임계 0.85 이상 — `spec-workflow.md` § SPEC Complexity Tier)
+
+### D1~D9 결함별 판정
+
+- **D1 (GEARS-MIX 재발) — RESOLVED.** `spec.md:100` REQ-LDBEAT-006의 (i)·(ii)가 (i-1)~(i-7)·(ii-1)~(ii-5)로 재구조화됐다. 전수 재독(`grep -n "^| REQ-LDBEAT-006" spec.md`로 추출한 전체 셀 텍스트) 결과 (i-1)~(i-7)·(ii-1)~(ii-5)·(iii) 13개 서브 레터 **전부**가 굵은 GEARS 트리거(`**The**…**shall**`/`**shall not**`/`**When**…**shall**`/`**While**…**shall**`)를 갖는다 — 트리거 없는 평서문은 더 이상 없다. 다만 (i-3)·(i-4)는 다른 서브절(예: (i-1)(i-2)(i-6)(ii-2)(ii-3))과 달리 `**The**` 없이 바로 `` `effect_preset_no` **shall**... ``/`` `entry` 필드 **shall**... ``로 시작한다 — 트리거(`**shall**`/`**shall not**`) 자체는 굵게 있어 M3 rubric의 GEARS 트리거 요건은 충족하지만, 같은 REQ 안에서 트리거 앞 주어 표기 스타일이 섞여 있다(cosmetic). 이 비일관성은 트리거 부재가 아니므로 MP-2 FAIL 조건("informal language ... 없이")에 해당하지 않는다 — **optional** 등급으로만 아래 새 발견 N1에 기록한다.
+- **D2 (BRIGHTNESS-FADE-VALUE-GAP) — RESOLVED.** `spec.md:100` REQ-LDBEAT-006(i-4)~(i-7)에 `entry.fade_bars`(마디 수, 초 아님)와 `source_ref` 필드를 신설하고, §4의 밝기 퍼센트/페이드 힌트 전사 규칙을 명시했다. `reports/effect-arrangement-rules-20261007.md:104,106,108,109,110` 전수 재독(직접 `awk`/`sed`로 재확인) 결과 `acceptance.md:36-40` "§A 보충 — 전사값 기대표"가 적은 네 자리(BACK(그룹4)@7마디=60%`:106`·@18마디=100%`:109`·@22마디=100%`:110`, BLIND(그룹14)@18마디=100%`:109`)가 §4 원문과 정확히 일치한다. `server/design/beat_grid.py:194-263` `_love_attack_tracks()`를 직접 재독해 BACK 트랙(`group_no=4`)의 cue(bar=7/18/22)와 BLIND 트랙(`group_no=14`)의 cue(bar=18)가 그 값을 실제로 갖고 있음을 확인했고, 나머지 26개 큐(SIDE-ALL 7·MOVER-U 7·MOVER-D 7·BLIND 나머지 1·STROBE 0) 어디에도 숫자 퍼센트가 없음을 전수 확인했다 — 전사 대상이 "이 넷뿐"이라는 SPEC의 주장은 실측과 바이트 단위로 일치한다. `entry.fade_bars`에 대응하는 숫자 페이드 힌트("2마디 번짐"·"끊어 바꿈"·"1마디 번짐")는 전부 SCENE 열(`:104,106,109,110`)에만 있고 SCENE은 `_love_attack_tracks()`의 트랙이 아니므로(`server/design/beat_grid.py:179` 주석 "SCENE은 트랙에서 뺐다" 직접 확인) 30개 큐 전부의 `fade_bars`가 `null`이라는 주장도 실측과 일치한다.
+- **D3·D4 (TRACE-OVERCLAIM / TRACE-GAP) — RESOLVED.** `acceptance.md:34` AC-LDBEAT-016에 (f)(값·페이드 전수 대조)·(g)(레거시 읽기 + `label`-파싱 부재 grep, REQ-006(ii-1)(ii-2))·(h)(겹침 독립성, REQ-006(iii)) 세 하위 시나리오가 신설됐고, `acceptance.md:27` AC-LDBEAT-009에 (d)(M1 실패-경로, REQ-003(b))가 신설됐다. `acceptance.md:53` §A.1의 "REQ-LDBEAT-006 → AC-016(e)(f)(g)(h)" 매핑 주장이 이제 AC-016 본문의 실제 Given/When/Then/검증수단과 일치한다(각 레터가 각자의 REQ 서브 레터를 인용 — (f)→(i-5)~(i-7), (g)→(ii-1)(ii-2), (h)→(iii)).
+- **D5 (TESTMETHOD-MECHANISM-MISMATCH) — RESOLVED.** `acceptance.md:27` AC-LDBEAT-009(c)의 검증 수단에 "서버 파싱 경로인 경우 즉시 재조회로 충분하고, 빌드 타임 생성 경로를 택한 경우 재빌드 후 재조회" 조건부 문구가 추가돼, REQ-LDBEAT-003(b)가 허용한 두 구현 경로 모두에서 AC가 성립한다.
+- **D6 (LEGACY-PARSE-BAN-UNDERTESTED) — RESOLVED.** `acceptance.md:34` AC-LDBEAT-016(g)의 검증 수단에 "`grep -rn` 레거시-읽기 경로 소스에서 라벨 파싱 함수 부재 확인(AC-LDBEAT-005 패턴과 동일)"이 추가됐다 — 출력이 우연히 `null`을 반환하는 파싱 함수를 걸러내는 코드-부재 확인 방식이다.
+- **D7 (CITATION-OFFBYONE) — RESOLVED.** `spec.md:31`(HISTORY 2026-10-10 행)의 "전체 656행 재검증"이 "전체 655행 재검증"으로 정정됐다. 재실측: `wc -l reports/ldbeat-runbook-ui-proposal-20261008.html` → **655** — 정정된 문면과 일치.
+- **D8 (CITATION-LABEL-MISMATCH) — RESOLVED.** 같은 HISTORY 행의 "AC-LDBEAT-016(f)" 오기가 "AC-LDBEAT-016(e)"로 정정돼, `acceptance.md`·`progress.md`의 기존 인용("(e)")과 일치한다.
+- **D9 (SCHEMA-POOL-COVERAGE-AMBIGUITY) — RESOLVED.** `spec.md:100` REQ-LDBEAT-006(i-3)에 `effect_kind`(`"position"|"color"|"dimmer"|"mixed"|null`) 필드가 신설돼 `effect_preset_no`가 위치 효과 풀에만 고정됐던 결함을 교정했고, `spec.md:209`(§5 열린 결정 7항)에 색·혼합 효과의 구체 실례를 M2/M3 재확인 대상으로 명시했다. `plan.md:146-154`(M7 (1))도 `effect_kind`·`fade_bars`·`source_ref`로 갱신돼 spec.md와 일치한다.
+
+### 새로 발견한 결함 (이번 수정이 들여온 것)
+
+- **N1 (optional, cosmetic)** — `spec.md:100` REQ-LDBEAT-006(i-3)·(i-4)가 다른 서브 레터((i-1)(i-2)(i-5)(i-6)(i-7)(ii-1)~(ii-5)(iii))와 달리 `**The**` 굵은 주어 마커 없이 바로 `` `effect_preset_no` **shall**... ``/`` `entry` 필드 **shall**... ``로 시작한다. GEARS 트리거(`**shall**`/`**shall not**`) 자체는 굵게 존재하므로 MP-2 FAIL 조건(트리거 부재)에는 해당하지 않으나, 같은 REQ 내부에서 주어-마커 볼드 스타일이 비일관적이다 — Severity: minor — Class: optional — Required fix(선택): (i-3)·(i-4) 앞에도 `**The**`를 붙여 스타일을 통일한다.
+- **N2 (optional, bundling)** — `spec.md:100` (i-4)와 (i-7)이 각각 한 서브 레터 안에 서로 다른 두 개의 독립 GEARS 단언(예: (i-4) "entry shall 마디 수로 담는다" + "초 단위 저장은 shall not", (i-7) "그 자리는 shall null이다" + "추측해 채우는 것은 shall not이다")을 묶어 담고 있다. 둘 다 트리거가 명시적이라 MP-2 FAIL은 아니지만, 이후 테스트 작성 시 한 레터에 두 개의 독립 검증 포인트가 생겨 AC 쪽에서 1:1 대응이 흐려질 위험이 있다 — Severity: minor — Class: optional — Required fix(선택): 필요시 (i-4)를 (i-4a)/(i-4b), (i-7)을 (i-7a)/(i-7b)로 더 쪼갠다. 현재 AC-016(f)/(g)가 이미 실질적으로 양쪽을 커버하고 있어 지금 당장 blocking은 아니다.
+
+둘 다 M6 Finding-consumption discipline상 **optional**로 분류한다 — MP-2 자체는 트리거가 모두 존재하므로 PASS이고, 이 두 발견은 스타일 통일성 문제일 뿐 SPEC의 정합성·완전성·테스트 가능성을 해치지 않는다. 오케스트레이터 재량으로 남긴다(강제 수정 유발 금지).
+
+### SCENE 제외의 정직한 고지 여부 (질의 3)
+
+**명시적으로 기술돼 있다 — 숨겨진 손실이 아니다.** 아래 세 자리에서 일관되게 서술:
+
+1. `acceptance.md:40` §A 보충: "30개 큐 전부의 `entry.fade_bars`는 `null`이다 — §4의 마디 단위 페이드 힌트는 모두 SCENE 열에 있고, SCENE은 `_love_attack_tracks()`에 트랙으로 없다(`server/design/beat_grid.py` docstring "SCENE은 트랙에서 뺐다") — 대응하는 큐가 없으므로 전사 대상이 아니다. SCENE 자신의 밝기 퍼센트(0~2행 30%:104, 7~10행 40%:106, 18~21행 70%:109)와 14~17행 "워시 25% 덜어냄"(...)도 같은 이유 + REQ-LDBEAT-006(i-6)(상대 서술 미전사 규칙)로 전사되지 않는다."
+2. `spec.md:100` REQ-LDBEAT-006(i-4)~(i-7) 근거 칸: "`_love_attack_tracks()`의 실제 30개 큐 중 이 퍼센트가 대응하는 자리는 acceptance.md § 보충(...)에 전수 enumeration했다 — SCENE 열의 퍼센트·페이드 힌트는 SCENE이 트랙에 없어(...) 대응 큐가 없으므로 전사 대상이 아니다."
+3. `plan.md:146,154` M7(1): "SCENE 열의 30%·40%·70%·'2마디 번짐'·'끊어 바꿈'·'1마디 번짐'(:104,106,109,110)은 SCENE이 트랙에 없어 ... 대응 큐가 없으므로 전사하지 않는다" — 그리고 `plan.md:26`(§B 위험 14)는 이를 M7이 빠뜨리지 않도록 명시적으로 경고하는 위험 항목으로 올렸다: "§4의 밝기 퍼센트·마디 페이드 힌트를 'SCENE 열이니까 전사 대상 없음'으로 뭉뚱그려 생략하지 마라... M7 (1)이 이 넷을 빠뜨리고 '전부 null'로 단순화하면 REQ-LDBEAT-006(i-5)를 위반한다."
+
+세 문서가 SCENE 자신의 수치(30%/40%/70%, 재독으로 값까지 정확 재확인)를 구체적으로 적시하면서 "트랙이 아니므로 전사하지 않는다"는 이유를 매번 함께 적었다 — 수치를 감추거나 뭉뚱그려 생략한 흔적이 없다. 질의 3은 **결함 아님**으로 판정한다.
+
+### 재발 방지 확인 (Stagnation Check)
+
+D1(GEARS-MIX)은 iteration 1(D1/D10)·iteration 2(D10)에 이어 이 카드 t537 round에서도 3회째 같은 패턴으로 재발했었으나, 이번 수정으로 **13개 서브 레터 전수**가 트리거를 갖도록 재구조화됐고 cosmetic 잔여(N1/N2)만 남았다 — stagnation(동일 결함 무진전)이 아니라 진전으로 판정한다.
+
+## Must-Pass Results (Iteration 2)
+
+- [**PASS**] MP-1 REQ number consistency: `grep -oE '^\| REQ-LDBEAT-[0-9]+' spec.md | sort -u | wc -l` → 15, 001~015 연속·중복 없음 (불변).
+- [**PASS**] MP-2 EARS/GEARS Format Compliance: REQ-LDBEAT-006의 (i-1)~(i-7)·(ii-1)~(ii-5)·(iii) 13개 서브 레터 전수가 굵은 트리거(`**The**…**shall**`/`**shall not**`/`**When**…**shall**`/`**While**…**shall**`)를 갖는다(`spec.md:100` 직접 재독, 트리거 없는 평서문 0건). N1(일부 서브 레터가 `**The**` 없이 바로 `**shall**`로 시작)은 트리거 자체는 존재하므로 FAIL 조건에 해당하지 않는 cosmetic 비일관성이다.
+- [**PASS**] MP-3 YAML Frontmatter Validity: `spec.md:1-15` 12개 필드 전부 존재·올바른 타입 유지(`version: "0.3.0"`, `updated: 2026-10-10`) — 이번 수정은 REQ/AC 본문만 바꿨고 frontmatter 변경 없음.
+- [**N/A**] MP-4 Section 22 Language Neutrality: 단일 프로젝트 SPEC, 멀티언어 툴링 미해당 (불변).
+- [**PASS**] MP-5 D7 Cross-SPEC Reconciliation: `grep -oE 'SPEC-([A-Z][A-Z0-9]+-)+[0-9]+' spec.md | sort -u` → SPEC-LDARRANGE-001·SPEC-LDBARMAP-001·SPEC-LDBEAT-001·SPEC-LDDESIGN-001·SPEC-LDRENDER-001·SPEC-LDRHYTHM-001 — retired/superseded/archived 0건, BLOCKING 없음 (불변).
+- [**PASS**] MP-6 D8 Cross-Platform Discipline: `grep -n "syscall" spec.md plan.md acceptance.md` 0건 — D8-4 자동 PASS (불변).
+- [**N/A**] MP-7 [NEEDS CLARIFICATION] Marker Gate: `grep -rn '\[NEEDS CLARIFICATION' plan.md research.md` — Tier M이라 `research.md` 자체가 없음(N/A 사유), `plan.md` 매치 0건.
+
+## Category Scores (0.0-1.0, rubric-anchored) — Iteration 2
+
+| Dimension | Score | Rubric Band | Evidence |
+|-----------|-------|-------------|----------|
+| Clarity | 0.90 | 0.75~1.0 경계 — 거의 모든 요구가 단일 해석 | D2 수정으로 `brightness.value_percent`/`entry.fade_bars`의 출처·단위·전사 규칙이 명시됐다(`spec.md:100` (i-4)~(i-7)). N1/N2의 스타일 비일관성만 남아 1.0에는 못 미친다. |
+| Completeness | 0.90 | 0.75~1.0 경계 | §A 보충 전사값 기대표(`acceptance.md:36-40`)와 §5 열린 결정 7항(`spec.md:209`)이 신설돼 D2/D9가 비워 둔 내용을 채웠다. 모든 섹션·frontmatter 존재. |
+| Testability | 0.90 | 0.75~1.0 경계 | AC-LDBEAT-016(f)(g)(h)·AC-LDBEAT-009(d)가 전부 기계 검증(grep/assert) 수단을 명시한다(`acceptance.md:34,27`). N2가 지적한 번들링(한 서브 레터에 두 단언)만 남아 1.0에는 못 미친다. |
+| Traceability | 0.90 | 0.75~1.0 경계 | `acceptance.md:53` §A.1의 "REQ-006 → AC-016(e)(f)(g)(h)" 매핑이 AC-016 본문과 일치하고, AC-009(d)가 REQ-003(b) 실패-경로를 커버한다. REQ-006(ii-3)(ii-4)(ii-5)(M3 이후 대상)는 AC-016(g)의 Given/Then에 포괄적으로만 걸려 레터 단위 1:1은 아니나, M3 미착수 단계에서 이는 선택적(optional) 간극이다. |
+
+## Overall Score 산정
+
+(0.90+0.90+0.90+0.90)/4 = 0.90. Tier M plan-auditor PASS threshold(`spec-workflow.md` § SPEC Complexity Tier) 이상 — Must-Pass 7개 전부 PASS/N/A, 블로킹 결함 0건.
+
+## Regression Check (Iteration 2)
+
+Iteration 1 defect D1~D9 전부 위 "D1~D9 결함별 판정"에서 RESOLVED로 확인했다 — UNRESOLVED 0건. 새로 발견한 N1·N2는 둘 다 optional(cosmetic/번들링)이며 blocking 등급의 신규 결함이 아니다.
+
+## Recommendation (Iteration 2)
+
+PASS — Must-Pass 7개(MP-1~MP-7) 전부 PASS 또는 N/A, D1~D9 전부 해소, aggregate 0.90은 Tier M 임계 이상이다. N1·N2(optional)는 오케스트레이터 재량으로 다음 plan 개정 시 반영하거나 보류해도 되며, 강제 수정 대상이 아니다. run-phase 착수 전 Implementation Kickoff Approval(감독 승인)은 별도로 필요하다(본 PASS가 그 승인을 대체하지 않음).
+
+커밋 SHA (iteration 2 재감사 대상): 41b4925c (fix) — 직전 638c02ae (iteration 1 FAIL 보고서 커밋) 대비 diff 전수 재독으로 판정.
