@@ -1,0 +1,8 @@
+ultrathink. 레인 세션 재개 — 리드 배차 대기 (다음 카드 t547 예정).
+applied lessons: project-lane-t540-t546-1010.md, lesson-a-subagent-may-land-in-its-own-worktree.md
+
+전제 검증:
+1) git fetch origin main → git merge-base --is-ancestor 322d1f89 origin/main 성공
+2) git worktree list | grep -E "t540|t542|t536|t546" → 리드가 지웠으면 0줄, 남아 있어도 진행 가능
+
+실행: 리드 배차가 오면 카드 본문을 읽고 moai todo next <id> 로 집기 — t547 은 bar_map 반/두배 검사(REQ-LDBARMAP-006) 재보정, SPEC 일. 입력은 .moai/reports/t546/d_compare.txt

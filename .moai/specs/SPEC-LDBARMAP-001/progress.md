@@ -34,6 +34,15 @@ plan_complete_at: 2026-10-10
 - 마디 번호 공간 실측(t529): 지도 보고서 §2 "마디 번호는 위상 1 기준이다. 1마디 = 1.50초. 0.96초의 첫 박은 못갖춘마디" · 같은 보고서 18마디 = "후렴 1 진입 — 큰 히트" · 배치 규칙서 §3 18~21행 = "코러스 1 앞", §4 첫 행 = "0~2" — 두 문서가 같은 번호 공간을 쓰고 0은 못갖춘마디다.
 - ③ 저장 키 맞춤(t529 후속, 2026-10-10): §5 열린 결정에 세 SPEC 공통 권고 키 `timeline["beat_grid"]`/`["bar_map"]`/`["arrangement_draft"]` 추가. 권고뿐 — REQ·AC·plan.md·acceptance.md 변경 0, plan-audit 재실행 없음.
 
+## REQ-LDBARMAP-006 재설계 — plan-only (카드 t547, 2026-10-10)
+
+- **바뀐 곳**: `spec.md`(REQ-LDBARMAP-006 재작성 + 근거 칸 + HISTORY 1행, version 0.1.6→0.1.7) · `acceptance.md`(AC-LDBARMAP-004를 하위 기준 4개 AC-LDBARMAP-004a~d로 재작성 + §A 상수표에 α=0.01·대칭점 0.5 행 추가 + 56.175/224.69 행에 각주) · `plan.md`(§E 위험표 REQ-006 행 갱신 + §C 신규 범위 단락 "M-추가") · `research.md`(§11 재설계 근거 5개 하위 절 추가). REQ/AC 총량 변경 없음(16/16 그대로 — REQ-006·AC-004 본문만 확장, AC 서브-ID 표기는 acceptance.md 본문 전용 관례이며 spec-lint 대상이 아니다).
+- **근거(이 plan-phase가 실행, 이 트리)**: `.moai/reports/t547/probe_songs.py`·`probe_sign.py`·`probe_synth.py` 세 스크립트 + 출력 `probe_songs.txt`·`probe_sign.txt`·`probe_synth.txt` — 고정 격자 비교의 결함 2가지(BPM 오차 취약성, 밀도 편향 — 10곡 중 3곡 거짓 두 배)와 새 부호검정 설계의 세 갈래(adopt_double/keep/ambiguous) 재현을 전부 확인했다.
+- **코드·콘솔**: `server/` 아래 프로덕션 코드 변경 0줄, 콘솔 접촉 0건 — `_check_bpm_half_double` 재작성은 run-phase 몫이다(plan.md §C "M-추가").
+- **plan-audit**: 이 교정의 부분 재심사 필요 여부는 다음 턴에서 판단한다(이 메모 작성 시점 기준 미실행) — REQ ID·AC ID 신설이 없어 재심사 범위는 좁을 것으로 예상된다.
+- **다음 단계**: run-phase 착수는 감독 승인 대기다 — 이 카드(t547)는 plan-phase 전용 위임이었다.
+- **plan-audit iter 1 FAIL 0.667 → 교정(같은 날 후속)**: `.moai/reports/t547/plan-audit.md` D1/D2(AC-004b/d Given이 "킥/스네어"라 적었지만 인용 수치는 균일 세기 박 케이스였다) + AC 판정을 결과·부등식 기준(outcome + p_mid/w_mid 부등식, 한 번 렌더의 소수값은 "참고 실측"으로만)으로 교정 — acceptance.md AC-LDBARMAP-004a~d 전부 수정, REQ 문면은 건드리지 않았다.
+
 ## §E.2 Run-phase Evidence
 
 ### M1 — 계기 보정(카드 t530, 2026-10-10)

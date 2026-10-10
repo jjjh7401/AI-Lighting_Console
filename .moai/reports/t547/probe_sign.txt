@@ -1,0 +1,11 @@
+song                      n  w_mid     p_mid |  w_odd     p_two
+LOVE ATTACK.mp3         326   0.16  2.34e-38 |   0.58  5.98e-02
+Club Diver.mp3          331   0.33  7.00e-10 |   0.67  1.08e-05
+Cut and Run.mp3         364   0.34  2.07e-10 |   0.53  5.05e-01
+Ice cream.mp3           122   0.36  9.37e-04 |   0.59  2.00e-01
+Let's Dance.mp3         156   0.17  6.52e-18 |   0.76  6.42e-06
+LoveMe.mp3              156   0.09  7.02e-28 |   0.71  3.78e-04
+Morning.mp3             285   0.07  6.31e-57 |   0.46  3.56e-01
+Rain.mp3                251   0.17  3.21e-27 |   0.70  5.83e-06
+Too Cool.mp3            475   0.08  3.10e-85 |   0.40  2.15e-03
+scott-buckley-neon.mp3  498   0.41  7.96e-05 |   0.31  7.21e-10

@@ -1,0 +1,110 @@
+.FFF.FF.F..                                                              [100%]
+=================================== FAILURES ===================================
+_____ TestHopGridQuantization.test_bpm_is_not_stuck_on_the_hop_grid[112.0] _____
+
+self = <server.tests.test_audio_tempo_t546.TestHopGridQuantization object at 0x107a2bed0>
+true_bpm = 112.0
+
+    @pytest.mark.parametrize("true_bpm", [76.0, 112.0, 120.0, 128.5, 139.7, 160.0])
+    def test_bpm_is_not_stuck_on_the_hop_grid(self, true_bpm):
+        # 고치기 전: 112 → 112.347, 128.5 → 129.199 (hop 격자 한 칸).
+        bpm, _confidence = _tempo_from_beats(np, _quantized_beats(true_bpm))
+>       assert bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 112.34714673913075 == 112.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 112.34714673913075
+E         Expected: 112.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:37: AssertionError
+_____ TestHopGridQuantization.test_bpm_is_not_stuck_on_the_hop_grid[120.0] _____
+
+self = <server.tests.test_audio_tempo_t546.TestHopGridQuantization object at 0x107bdd6d0>
+true_bpm = 120.0
+
+    @pytest.mark.parametrize("true_bpm", [76.0, 112.0, 120.0, 128.5, 139.7, 160.0])
+    def test_bpm_is_not_stuck_on_the_hop_grid(self, true_bpm):
+        # 고치기 전: 112 → 112.347, 128.5 → 129.199 (hop 격자 한 칸).
+        bpm, _confidence = _tempo_from_beats(np, _quantized_beats(true_bpm))
+>       assert bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 120.18531976744175 == 120.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 120.18531976744175
+E         Expected: 120.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:37: AssertionError
+_____ TestHopGridQuantization.test_bpm_is_not_stuck_on_the_hop_grid[128.5] _____
+
+self = <server.tests.test_audio_tempo_t546.TestHopGridQuantization object at 0x107bdf7d0>
+true_bpm = 128.5
+
+    @pytest.mark.parametrize("true_bpm", [76.0, 112.0, 120.0, 128.5, 139.7, 160.0])
+    def test_bpm_is_not_stuck_on_the_hop_grid(self, true_bpm):
+        # 고치기 전: 112 → 112.347, 128.5 → 129.199 (hop 격자 한 칸).
+        bpm, _confidence = _tempo_from_beats(np, _quantized_beats(true_bpm))
+>       assert bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 129.19921874999932 == 128.5 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 129.19921874999932
+E         Expected: 128.5 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:37: AssertionError
+_____ TestHopGridQuantization.test_bpm_is_not_stuck_on_the_hop_grid[160.0] _____
+
+self = <server.tests.test_audio_tempo_t546.TestHopGridQuantization object at 0x107bdf3d0>
+true_bpm = 160.0
+
+    @pytest.mark.parametrize("true_bpm", [76.0, 112.0, 120.0, 128.5, 139.7, 160.0])
+    def test_bpm_is_not_stuck_on_the_hop_grid(self, true_bpm):
+        # 고치기 전: 112 → 112.347, 128.5 → 129.199 (hop 격자 한 칸).
+        bpm, _confidence = _tempo_from_beats(np, _quantized_beats(true_bpm))
+>       assert bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 161.49902343749977 == 160.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 161.49902343749977
+E         Expected: 160.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:37: AssertionError
+_ TestHopGridQuantization.test_human_timing_jitter_still_lands_near_the_true_tempo _
+
+self = <server.tests.test_audio_tempo_t546.TestHopGridQuantization object at 0x107bdea50>
+
+    def test_human_timing_jitter_still_lands_near_the_true_tempo(self):
+        # 사람 연주 흔들림 σ 10ms — 깨끗한 쪽 잔차 상한(박의 5%) 근처를 재현한다.
+        bpm, _confidence = _tempo_from_beats(np, _quantized_beats(112.0, jitter_s=0.010))
+>       assert bpm == pytest.approx(112.0, abs=0.1)
+E       assert 112.34714673913075 == 112.0 ± 0.1
+E         
+E         comparison failed
+E         Obtained: 112.34714673913075
+E         Expected: 112.0 ± 0.1
+
+server/tests/test_audio_tempo_t546.py:42: AssertionError
+_ TestNumberingSlipFallsBack.test_a_dropped_beat_is_renumbered_and_keeps_the_regression _
+
+self = <server.tests.test_audio_tempo_t546.TestNumberingSlipFallsBack object at 0x107bf2110>
+
+    def test_a_dropped_beat_is_renumbered_and_keeps_the_regression(self):
+        # 빠진 박은 간격이 두 배라 번호 매김이 바로잡는다 — 폴백이 필요 없다.
+        beats = list(_quantized_beats(112.0))
+        del beats[len(beats) // 2]
+        bpm, _confidence = _tempo_from_beats(np, np.asarray(beats))
+>       assert bpm == pytest.approx(112.0, abs=0.05)
+E       assert 112.34714673913075 == 112.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 112.34714673913075
+E         Expected: 112.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:62: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_audio_tempo_t546.py::TestHopGridQuantization::test_bpm_is_not_stuck_on_the_hop_grid[112.0]
+FAILED server/tests/test_audio_tempo_t546.py::TestHopGridQuantization::test_bpm_is_not_stuck_on_the_hop_grid[120.0]
+FAILED server/tests/test_audio_tempo_t546.py::TestHopGridQuantization::test_bpm_is_not_stuck_on_the_hop_grid[128.5]
+FAILED server/tests/test_audio_tempo_t546.py::TestHopGridQuantization::test_bpm_is_not_stuck_on_the_hop_grid[160.0]
+FAILED server/tests/test_audio_tempo_t546.py::TestHopGridQuantization::test_human_timing_jitter_still_lands_near_the_true_tempo
+FAILED server/tests/test_audio_tempo_t546.py::TestNumberingSlipFallsBack::test_a_dropped_beat_is_renumbered_and_keeps_the_regression
+6 failed, 5 passed in 0.11s

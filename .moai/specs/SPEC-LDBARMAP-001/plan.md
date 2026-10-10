@@ -62,6 +62,14 @@ REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 �
 
 - 산출물: `SPEC-LDRHYTHM-001/spec.md` HISTORY에 한 줄 추가(이 SPEC이 직접 쓰지 않음 — 재위임 기록만 이 plan에 남긴다).
 
+### M-추가 — BPM 두 배 판정 재설계 (우선순위 High, 범위 — 카드 t547, 2026-10-10, 착수는 감독 승인 뒤)
+
+REQ-LDBARMAP-006을 고정 전역 격자 비교에서 추정 비트 격자 기준 단측 부호검정으로 바꾼다(spec.md REQ-LDBARMAP-006 근거 칸 참조). `.moai/reports/t547/probe_songs.py`·`probe_sign.py`·`probe_synth.py`(+ 동반 `.txt` 출력)가 이 재설계의 plan-phase 실측이다 — 이 마일스톤 자체는 코드 0줄·콘솔 0건(plan-phase 산출물은 spec.md·plan.md·acceptance.md·research.md·progress.md 뿐이다).
+
+- **범위(run-phase, 착수 승인 뒤)**: `server/audio/bar_map.py::_check_bpm_half_double` 재작성 + `BpmCandidateCheck` 레코드 필드를 outcome/w_mid/p_mid/홀짝 w_odd·p_two/n/근거로 교체. 이 함수 안의 기존 고정 격자 비교(`_grid_lock_ratio` 사용처)를 대체한다. 테스트는 합성 클릭 트랙(알려진 정답 템포, CI 안전)을 1차 기준으로 쓰고, 실제 곡 10개는 **로컬 대조군으로만** 쓴다(순환 금지 — acceptance.md AC-LDBARMAP-004c 근거 칸).
+- **범위 밖**: `bar_map.detect_beat_grid`를 중앙값 BPM→회귀 BPM으로 바꾸는 것(t546에서 이미 분리된 범위, 이 재설계는 그 분리를 전제하지 않는다), `tools/barmap/scorer.py::check_bpm_multiple`(M1 보정 도구, 별도 범위), 프로덕션 소비자 배선(`_check_bpm_half_double`의 프로덕션 소비자는 현재 0건, `git grep` 확인).
+- **통과 조건**: `acceptance.md` AC-LDBARMAP-004(a~d) 전부 PASS.
+
 ## §D. 기술적 접근
 
 - M1은 순수 측정/채점 — `server/audio/analyze.py`의 기존 함수(`analyze()`, `_tempo_from_beats`)를 **읽기만** 하고 호출해 `beat_times`를 꺼낸다(현재 `analyze()`는 `beat_times`를 반환하지 않으므로, M1 스크립트는 `analyze.py`를 import해 내부 함수를 직접 호출하거나, `librosa.beat.beat_track`을 독립적으로 재호출한다 — 어느 쪽이든 `server/` 파일은 수정하지 않는다).
@@ -73,7 +81,7 @@ REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 �
 
 | 위험 | 완화 |
 |---|---|
-| BPM 배수 오류(절반/두 배)가 다운비트·마디 경계 지표까지 오염 | REQ-LDBARMAP-006 — 격자 정합도 비교를 BPM 채택 전 필수 단계로 둔다 |
+| BPM 배수 오류(절반/두 배)가 다운비트·마디 경계 지표까지 오염 | REQ-LDBARMAP-006(카드 t547 재설계, 2026-10-10) — 고정 전역 격자 비교(옛 설계, BPM 오차에 취약하고 BPM이 정확해질수록 거짓 두 배를 더 잘 일으킴 — 10곡 중 3곡 재현, `.moai/reports/t547/probe_songs.txt`) 대신, 추정 비트 격자 자체를 기준틀로 쓰는 단측 부호검정(박 대 중간점, α=0.01)을 BPM 채택 전 필수 단계로 둔다 — 실제 10곡 전부 keep으로 재현되고(`.moai/reports/t547/probe_sign.txt`), 합성 대조군이 adopt_double·keep·ambiguous 세 갈래를 모두 재현한다(`.moai/reports/t547/probe_synth.txt`). 절반은 자동 채택하지 않는다(홀짝 부호검정은 정상곡 악센트와 구별 불가 — 진단용) |
 | 채점기 자체가 공허(무엇을 넣어도 통과) | REQ-LDBARMAP-005 — 음성 대조군을 M1 통과 조건에 포함 |
 | 지도 보고서의 "추정" 라벨(구간 이름·드롭 위치)을 정답으로 과신 | REQ-LDBARMAP-009 — 신뢰도 갈래를 이어받아 "추정" 항목은 미달 판정의 유일한 근거로 쓰지 않음 |
 | 저장 인터페이스를 이 plan-phase가 섣불리 확정 | REQ-LDBARMAP-010 — 열린 결정으로 명시 보존, M2+에서 확정. **갱신(카드 t539, M4, 2026-10-10, plan-audit iteration 9 D5 교정)**: M4에서 옵션 A로 확정 완료 — 이 위험 행은 plan-phase 최초 작성 시점의 완화 기록으로 보존한다(역사) |

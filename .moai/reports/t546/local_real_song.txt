@@ -1,0 +1,5 @@
+.                                                                        [100%]
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED server/tests/test_audio_bar_map.py::test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016
+1 passed in 1.86s
