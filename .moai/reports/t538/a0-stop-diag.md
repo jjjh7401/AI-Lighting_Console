@@ -54,3 +54,31 @@
 
 `PositionMSpeed` 는 MegaPointe 에서 DMX 채널 3 이고, 기본 「Track 80%」 다. 이 채널이 있는지와 기본값은 패치의 FixtureType → DMXMode → DMXChannels 에서 읽힌다(`r10`·`r12`·`r13` 경로).
 앱이 위치 페이저를 낼 때는 장비에 MSpeed 류 채널이 있으면 빠른 값을 함께 내야 할 수 있다. 그 필요 여부는 T1 결과에 달렸다.
+
+## 추가 2026-10-10 — T1·T3 결과와 1단계 원인
+
+- T1(PositionMSpeed 0): 감독 「여전히 멈춰 있음」 → 후보 ① 기각. `ClearAll` 로 정리했다(`live/T1_clear/`).
+- T3(311 끄고 프로그래머에만 A0 몸통): 감독 「위치는 바뀌었는데 무빙은 안 됨」. Fixture Sheet 의 501 Tilt 숫자도 멈춰 있었다.
+  - 시각화와 시퀀스 경로는 원인이 아니다. 콘솔이 페이저 값을 계산하지 않는다. `ClearAll` 로 정리했다(`live/T3_clear/`).
+- **원인(근거 셋이 같은 쪽을 가리킨다): A0 은 1단계라 페이저가 아니다.**
+  - 앱 룰북: 「Steps CREATE the phaser (two or more) … `Phase` / `Speed` / every other layer only MODIFIES one that exists」(`server/rulebook/assets/v2.4.2/33_effect_editors.md:21-22`).
+  - 앱 코드: `MIN_STEPS = 2`(`server/fx/schema.py:67`). 1단계면 「every line ok:true, no `Step` line, no phaser」(`server/fx/instantiate.py:405-416`, REQ-FXLIB-009).
+  - MA 공식 문서: 「Phasers change the output for attributes using a set of information in two or more steps」(Phasers 2.0). 위치 프리셋 둘레 원 절차도 「Two steps /points are the basis for the circle」(Create a Circle Phaser Around a Position Preset 2.2).
+- **t516 A2(236) 「움직임」은 감독 원문이 아니다.**
+  - 원문은 「235 … 확인 못했어 … 242~244 켜진 거 없어」와 「나머지는 모두 확인했어」뿐이다.
+  - 「236·237 Tilt 움직임」은 리드 정리로 붙은 해석이다(`t516/verdict.md:385`). 236 은 단독 재생이었다(`replay_v4.py:48-49`).
+  - 그래서 A0 의 「알려진 성공」 전제가 처음부터 서지 않았다. 2단계 움직임은 감독 원문이 있다: t516 v5 E2 247 「좌우로 흔들렸어」(`t516/verdict.md` 4-14).
+- 영향:
+  - 카드의 A1~A5 는 모두 A0 꼴(1단계)이라 그대로면 전부 「정지」로 나온다. 2단계로 다시 설계해야 한다.
+  - A6(쇼 효과 프리셋)·B1~B3(위치 큐, 페이저 없음)은 이 원인과 무관하다.
+  - `server/spatial/position_fx.py` 의 circle·wave·ballyhoo 도 1단계 상대값이다. ⑤⑨ 정지의 원인이 같다(앱 결함 후보 — 고치기는 별도 카드).
+
+## T4·T5 문면 (실행 X — 리드가 감독 승인을 받는다)
+
+- 파일: `t4_t5_two_steps.py`, 승인 목록 `approval_t45.txt`(24줄, sha256 `b9d5bbb0b1ec36c2e9374f3b403fe685273fa8f61e14720a758bf38b53500514`).
+- 검증: 리허설 OK. 실기 전부-거절은 거절 4 / 실행 0 이고, 문면이 리허설과 같다.
+- T4 양성 대조: t516 v4 A3(237) 몸통 그대로(`approval_rhythm_probe_v4.txt:28-36`), Store 없음.
+  - 줄: Dimmer 70 · Tilt 45 · Tilt Relative -30 · `Step 2` · Tilt Relative 30 · Phase 0 Thru 360 · Speed 112.
+- T5: T4 에 `Step 1/2 At Accel -100`·`At Decel -100` 을 더한다(앱 실측 사인 곡선, `instantiate.py:470-485`). 줄 순서는 단계 → 곡선 → 위상 → 속도(`instantiate.py:646`).
+  - 「1단계 + Form」은 명령줄 근거가 없어 만들지 않았다. 공식 문서의 Form 은 페이저 편집기 버튼으로만 나오고, 룰북은 1단계에 곡선 줄을 넣으면 「accepted and do nothing」이라고 적는다(`33_effect_editors.md:23-24`).
+- 감독 볼 것: Fixture Sheet 501 Tilt 숫자가 계속 바뀌나 + 무대에서 틸트 물결. T5 는 그 움직임이 T4 보다 부드러운가.
