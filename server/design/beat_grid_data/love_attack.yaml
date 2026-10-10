@@ -38,9 +38,11 @@ tracks:
     group_no_confirmed: true
     cues:
       # 규칙 7 「얼굴 빛(FOH)은 벌스부터 끝까지 유지」 — 켜는 큐 하나뿐이다.
-      # §4 가 밝기 숫자를 주지 않아 값은 비워 둔다(지어내지 않음).
+      # §4 가 밝기 숫자를 주지 않아 % 값은 없다(지어내지 않음).
+      # 디머 프리셋 1.1 — [이름] 「풀」 · 규칙 7 「얼굴은 밝게」 · 감독 승인 2026-10-10(t543 proposal-table.md #1)
       - bar: 7
         label: "FOH 켬"
+        brightness: {mode: dimmer_preset, preset_no: "1.1"}
         source_ref: "reports/effect-arrangement-rules-20261007.md:106"
   - group_name: WASH-ALL
     group_no: 10
@@ -65,23 +67,36 @@ tracks:
     cues:
       - bar: 0
         label: "앞박 1회"
+      # 효과 21.1(All 1 풀) — [이름] 「DIM-PULSE」 · 감독 승인 2026-10-10(t543 proposal-table.md #5)
       - bar: 3
         label: "마디 4박마다"
+        effect_preset_no: "21.1"
+        effect_kind: mixed
+      # 효과 21.1 — [이름] 「DIM-PULSE」, 박 패턴(1·2·4)은 프리셋 안을 못 읽어 미확인
+      # · 감독 승인 2026-10-10(t543 proposal-table.md #6)
       - bar: 7
         label: "킥 1·2·4박 60%"
         brightness: {mode: value, value_percent: 60}
+        effect_preset_no: "21.1"
+        effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:106"
       - bar: 11
         label: "—"
       - bar: 14
         label: "—"
+      # 효과 21.1 — [이름] 같은 펄스 · 감독 승인 2026-10-10(t543 proposal-table.md #9)
       - bar: 18
         label: "킥 1·2·4박 100%"
         brightness: {mode: value, value_percent: 100}
+        effect_preset_no: "21.1"
+        effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+      # 효과 21.1 — [이름] 같은 펄스 · 감독 승인 2026-10-10(t543 proposal-table.md #10)
       - bar: 22
         label: "킥 1·2·4박 100%"
         brightness: {mode: value, value_percent: 100}
+        effect_preset_no: "21.1"
+        effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:110"
   - group_name: SIDE-ALL
     group_no: 7
@@ -90,8 +105,10 @@ tracks:
       - {bar: 0, label: "—"}
       - {bar: 3, label: "—"}
       - {bar: 7, label: "—"}
-      - {bar: 11, label: "SIDE-L/R 2·4박 번갈이"}
-      - {bar: 14, label: "가속(마디마다 두 배)"}
+      # 효과 21.3 — [이름] 「DIM-CHASE」 · 감독 승인 2026-10-10(t543 proposal-table.md #14)
+      - {bar: 11, label: "SIDE-L/R 2·4박 번갈이", effect_preset_no: "21.3", effect_kind: mixed}
+      # 효과 21.3 — [이름] 같은 체이스, 가속은 속도로 따로 · 감독 승인 2026-10-10(t543 proposal-table.md #15)
+      - {bar: 14, label: "가속(마디마다 두 배)", effect_preset_no: "21.3", effect_kind: mixed}
       - {bar: 18, label: "—"}
       - {bar: 22, label: "—"}
   - group_name: MOVER-U
@@ -102,8 +119,17 @@ tracks:
       - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
       - {bar: 7, label: "정지"}
       - {bar: 11, label: "기울인 자리에서 느린 팬 흔들기"}
-      - {bar: 14, label: "가속 스윕 4박→2박→1박→반 박"}
-      - {bar: 18, label: "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"}
+      # 효과 21.5 — [실측] Group 11 「위아래로 쓸기」(SPEC-LDBEAT-001/progress.md:130,
+      # t538 A6b 319) · 감독 승인 2026-10-10(t543 proposal-table.md #22)
+      - bar: 14
+        label: "가속 스윕 4박→2박→1박→반 박"
+        effect_preset_no: "21.5"
+        effect_kind: mixed
+      # 위치 2.1 — [실측] Group 11 「조금 무대 앞, 틸트업」(progress.md:131, t538 B1 320)
+      # · 감독 승인 2026-10-10(t543 proposal-table.md #23). 19마디 팬 웨이브는 카드 t548(앱 2단계 무빙)
+      - bar: 18
+        label: "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"
+        position_preset_no: "2.1"
       - {bar: 22, label: "22마디 1박에 멈춰 섬"}
   - group_name: MOVER-D
     group_no: 12
@@ -113,8 +139,12 @@ tracks:
       - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
       - {bar: 7, label: "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"}
       - {bar: 11, label: "11마디 1박 새 자리, 정지"}
-      - {bar: 14, label: "U 와 같은 스윕"}
-      - {bar: 18, label: "위로 연 자리, 정지"}
+      # 효과 21.5 — [실측·다른 그룹] Group 11 에서만 잼, Group 12 미측정
+      # · 감독 승인 2026-10-10(t543 proposal-table.md #29)
+      - {bar: 14, label: "U 와 같은 스윕", effect_preset_no: "21.5", effect_kind: mixed}
+      # 위치 2.1 — [실측·다른 그룹] Group 11 에서만 잼, Group 12 미측정
+      # · 감독 승인 2026-10-10(t543 proposal-table.md #30)
+      - {bar: 18, label: "위로 연 자리, 정지", position_preset_no: "2.1"}
       - {bar: 22, label: "22마디부터 틸트 웨이브(한 바퀴 2박)"}
   - group_name: BLIND
     group_no: 14
@@ -122,7 +152,10 @@ tracks:
     cues:
       # ACCENT 열의 0~25마디 구간 실제 발화는 이 둘뿐 — 63·67마디
       # (스트로브 포함)는 범위 밖(§4 범위, §3 전체 배치).
-      - {bar: 17, label: "17마디 3·4박 전부 비움(예고)"}
+      # 디머 프리셋 1.6 — [이름] 「아웃」 · 감독 승인 2026-10-10(t543 proposal-table.md #32)
+      - bar: 17
+        label: "17마디 3·4박 전부 비움(예고)"
+        brightness: {mode: dimmer_preset, preset_no: "1.6"}
       - bar: 18
         label: "18마디 1박 BLIND 100% 2박"
         brightness: {mode: value, value_percent: 100}

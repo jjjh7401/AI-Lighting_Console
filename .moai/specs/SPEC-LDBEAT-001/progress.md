@@ -466,6 +466,15 @@ $ git diff edc537db -- ui/src/App.tsx
 - **색 프리셋 값**: 4.1·4.2 필드 135개 읽기 — 색 값 칸 없음(`PRESETDATA ""`, `SELECTIONDATA {}`). `colorPresetHex` 막힘 유지(빗금).
 - **안 잰 것**: 화면(`ui/`)에서 새 트랙이 어떻게 보이는지 브라우저로 안 봄. 전체 시험은 CI 에 맡김.
 
+### 프리셋 번호 12칸 반영 — 감독 승인 2026-10-10 (카드 t543 후속)
+
+- **출처**: `.moai/reports/t543/proposal-table.md`(AI 초안) 12칸을 감독이 「모두 승인」(2026-10-10, 리드 경유). 나머지 120칸은 미정(`null`) 그대로. 움직임 칸(팬 흔들기·틸트 웨이브)은 감독 결정 「앱 2단계 무빙으로」에 따라 카드 t548 몫 — 여기서 손대지 않음.
+- **반영**: 디머 프리셋 2(FOH 7 → 1.1, BLIND 17 → 1.6, `brightness.mode = dimmer_preset`), 효과 8(21.1×4 BACK, 21.3×2 SIDE-ALL, 21.5×2 MOVER-U/D, `effect_kind = mixed` — 21번은 All 풀), 위치 2(MOVER-U/D 18 → 2.1). 로더 출력과 제안표 데이터를 기계 대조: 12/12 일치.
+- **근거 표기 위치**: 칸마다 yaml 주석에 `[실측]`/`[실측·다른 그룹]`/`[이름]` + 「감독 승인 2026-10-10」 + 제안표 행 번호. `source_ref` 는 쓰지 않았다 — REQ-LDBEAT-006(i-5)가 `source_ref` 를 「§4 파일 경로+행 번호, 칸당 1개」로 묶고 있고, FOH 7·BACK 18 등은 이미 §4 % 출처를 거기 싣고 있어 덮어쓰면 그 출처가 사라진다.
+- **REQ-LDBEAT-015(f) 예외, 감독 승인 2026-10-10**: (f)는 프리셋 번호를 「배치 규칙서 또는 t525류 실측 출처에 숫자로 적힌 값만」으로 묶는다. 이번 12칸 중 실측 근거는 4칸(그중 2칸은 Group 11 에서 잰 것을 Group 12 에 적용)이고, 8칸은 프리셋 **이름**만 맞춘 후보다. 감독이 제안표의 「이름은 증거가 아니다」 경고를 본 뒤 승인했다. spec.md (f) 문면 개정은 manager-spec 몫으로 남긴다.
+- **검증**: `pytest server/tests -k "beat_grid or runbook or ldbeat or timeline"` → 207 passed, 2 skipped. 「승인된 12칸 외엔 번호 없음」·「밝기 단일모드」 시험 추가. `ruff check`·`format --check` 통과.
+- **안 잰 것**: 이 번호들이 실제 콘솔에서 의도대로 보이는지(특히 [이름] 8칸과 Group 12 의 21.5·2.1)는 재지 않았다 — 데이터만 바꿨고 콘솔 쓰기 0.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_

@@ -95,17 +95,51 @@ class TestStructuredCueFields:
         assert by_bar[14]["entry"]["fade_bars"] is None
         assert by_bar[14]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:108"
 
-    def test_no_cue_anywhere_invents_a_preset_number(self) -> None:
-        # REQ-LDBEAT-015(f) — §4에 프리셋 번호가 0개이므로 30개 큐 전부
-        # 네 프리셋 번호 필드가 None이다.
+    def test_only_the_supervisor_approved_preset_numbers_are_filled(self) -> None:
+        # REQ-LDBEAT-015(f) — §4에는 프리셋 번호가 0개다. 채워진 번호는 카드
+        # t543 제안표(.moai/reports/t543/proposal-table.md)에서 감독이 승인한
+        # 12칸(2026-10-10)뿐이고, 나머지 칸은 전부 미정(None)이다.
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        approved = {
+            ("FOH", 7, "dim"): "1.1",
+            ("BACK", 3, "fx"): "21.1",
+            ("BACK", 7, "fx"): "21.1",
+            ("BACK", 18, "fx"): "21.1",
+            ("BACK", 22, "fx"): "21.1",
+            ("SIDE-ALL", 11, "fx"): "21.3",
+            ("SIDE-ALL", 14, "fx"): "21.3",
+            ("MOVER-U", 14, "fx"): "21.5",
+            ("MOVER-U", 18, "pos"): "2.1",
+            ("MOVER-D", 14, "fx"): "21.5",
+            ("MOVER-D", 18, "pos"): "2.1",
+            ("BLIND", 17, "dim"): "1.6",
+        }
 
+        filled = {}
         for track in grid["tracks"]:
             for cue in track["cues"]:
-                assert cue["brightness"]["preset_no"] is None
-                assert cue["position_preset_no"] is None
-                assert cue["color_preset_no"] is None
-                assert cue["effect_preset_no"] is None
+                fields = {
+                    "dim": cue["brightness"]["preset_no"],
+                    "pos": cue["position_preset_no"],
+                    "color": cue["color_preset_no"],
+                    "fx": cue["effect_preset_no"],
+                }
+                for col, value in fields.items():
+                    if value is not None:
+                        filled[(track["group_name"], cue["bar"], col)] = value
+        assert filled == approved
+
+    def test_brightness_stays_single_mode_with_approved_presets(self) -> None:
+        # REQ-LDBEAT-015(c) — 디머 프리셋을 받은 칸은 % 값을 함께 갖지 않는다.
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        for track in grid["tracks"]:
+            for cue in track["cues"]:
+                b = cue["brightness"]
+                if b["mode"] == "dimmer_preset":
+                    assert b["preset_no"] is not None
+                    assert b["value_percent"] is None
+                if b["mode"] == "value":
+                    assert b["preset_no"] is None
 
     def test_entry_fade_bars_is_none_except_the_wash_cell_that_states_one(self) -> None:
         # §4의 마디 단위 페이드 힌트는 전부 SCENE 열에만 있다 — 그중 트랙으로
