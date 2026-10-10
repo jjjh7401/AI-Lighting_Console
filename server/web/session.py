@@ -1541,7 +1541,7 @@ def _song_timeline_payload(
     # 카드 t532(SPEC-LDBEAT-001 M2) — 박자 격자를 기존 timeline 사전의 새 키
     # `beat_grid` 로 심는다(REQ-LDBEAT-006, M2 임베드 설계). ADDITIVE: 다른
     # 칸은 이 래핑으로 바뀌지 않고, 있으면 보존·없으면 곡별 기본값이다.
-    return attach_beat_grid_default(apply_cue_sheet_view(
+    payload = apply_cue_sheet_view(
         {
             "song_title": plan.song_title,
             "sequence_name": plan.sequence_name,
@@ -1686,7 +1686,8 @@ def _song_timeline_payload(
             "concept_bullet": concept_bullet(interview_records),
         },
         _song_cue_sheet_view_fields(plan),
-    ))
+    )
+    return attach_beat_grid_default(payload)
 
 
 def _song_trig_time_token(start_ms: int) -> str:
