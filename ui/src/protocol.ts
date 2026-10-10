@@ -399,6 +399,38 @@ export interface SongTimelineSection {
   position_preset_no?: string;
 }
 
+/** t532 (SPEC-LDBEAT-001 M2) — 박자 격자 칸 하나. 효과 모양·속도 같은 내용은
+ * 트랙 정체성이 아니라 이 칸의 `label`에만 산다(REQ-LDBEAT-004). */
+export interface BeatGridCue {
+  bar: number;
+  label: string;
+}
+
+/** 콘솔 그룹 트랙 하나 — 줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나
+ * (REQ-LDBEAT-004, 카드 t526 교정). `layer_role`은 그 줄 옆의 이름표일
+ * 뿐이고(`server.design.rig.RIG_LAYER_ROLES`), 트랙 식별자는 아니다.
+ * `group_no`가 `null`이면 이 콘솔 그룹의 번호가 아직 확인되지 않았다는
+ * 뜻이다(`group_no_confirmed`가 그 구분을 명시한다, 지어내지 않음). */
+export interface BeatGridTrack {
+  group_no: number | null;
+  group_no_confirmed: boolean;
+  group_name: string;
+  layer_role: string | null;
+  cues: BeatGridCue[];
+}
+
+/** t532 — 박자 격자 전체. `timeline["beat_grid"]`에 임베드된다(REQ-LDBEAT-006
+ * M2 저장소 결정) — 다른 칸과 독립적으로 곡별 되돌리기/저장/버전관리가
+ * `TimelineDraftHistory`/`SongTimelineStore`/`SongTimelineLibrary`를 통해
+ * 코드 추가 없이 그대로 적용된다(전체-사전 스냅샷 방식이므로). */
+export interface BeatGridView {
+  song_title: string;
+  bar_range: { start: number; end: number };
+  tracks: BeatGridTrack[];
+  source: "love_attack_default" | "empty" | "custom";
+  note: string | null;
+}
+
 export interface SongTimelineView {
   song_title: string;
   sequence_name: string | null;
@@ -453,6 +485,12 @@ export interface SongTimelineView {
   /** t485 — 컨셉 패널 탭 1 인과 불릿 원문(서버 `concept_bullet`, 인터뷰 Q1).
    * `available: false` 면 `reason` 만 온다. 예전 페이로드에는 없으므로 선택 필드다. */
   concept_bullet?: SongTimelineConceptBullet;
+
+  /** t532 (SPEC-LDBEAT-001 M2) — 콘솔 그룹 트랙 × 마디 격자. 서버
+   * `attach_beat_grid_default`(`server/design/beat_grid.py`)가 항상 채워
+   * 보낸다(있으면 보존, 없으면 곡별 기본값) — 예전 페이로드에는 없으므로
+   * 선택 필드다. */
+  beat_grid?: BeatGridView;
 }
 
 /** t485 — REQ-013·032·080. `text` 는 감독 답 원문 그대로다(요약·윤문 없음). */

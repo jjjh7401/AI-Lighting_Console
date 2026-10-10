@@ -39,6 +39,7 @@ from server.audio.analyze import AnalysisResult, analyze
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
+from server.design.beat_grid import attach_beat_grid_default
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
     paged_pool_children,
@@ -1537,7 +1538,10 @@ def _song_timeline_payload(
     seconds_per_bar = _song_seconds_per_bar(plan.music_profile)
     manual_go = plan.timing.mode == MANUAL_GO
     start_ms_by_index = [decision.section.start_ms for decision in plan.sections]
-    return apply_cue_sheet_view(
+    # 카드 t532(SPEC-LDBEAT-001 M2) — 박자 격자를 기존 timeline 사전의 새 키
+    # `beat_grid` 로 심는다(REQ-LDBEAT-006, M2 임베드 설계). ADDITIVE: 다른
+    # 칸은 이 래핑으로 바뀌지 않고, 있으면 보존·없으면 곡별 기본값이다.
+    payload = apply_cue_sheet_view(
         {
             "song_title": plan.song_title,
             "sequence_name": plan.sequence_name,
@@ -1683,6 +1687,7 @@ def _song_timeline_payload(
         },
         _song_cue_sheet_view_fields(plan),
     )
+    return attach_beat_grid_default(payload)
 
 
 def _song_trig_time_token(start_ms: int) -> str:
