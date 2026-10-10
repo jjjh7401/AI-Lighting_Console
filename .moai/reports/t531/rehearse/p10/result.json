@@ -1,0 +1,86 @@
+{
+  "item": "P10",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/309"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_cue": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Attribute 'Dimmer' At Phase 0 Thru 180",
+      "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+      "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+      "ClearAll"
+    ],
+    "play": [
+      "Goto Cue 1 Sequence 309"
+    ],
+    "release": [
+      "Off Sequence 309"
+    ]
+  },
+  "notes": [
+    "⑦ 큐1 과의 차이는 'Attribute 'Dimmer' At Phase 0 Thru 180' 한 줄.",
+    "문법 근거: t227 verdict.md:98 (0 Thru 360, executed_ok). 끝값 180 은 미측정.",
+    "감독 관찰: MOVER-U 가 다 같이 / 물결 / 한 대씩 번갈아 중 무엇인가."
+  ],
+  "bundles": {
+    "store_cue": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11",
+    "Attribute 'Dimmer' At 0",
+    "Step 2",
+    "Attribute 'Dimmer' At 100",
+    "Attribute 'Dimmer' At Phase 0 Thru 180",
+    "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+    "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+    "ClearAll",
+    "Goto Cue 1 Sequence 309",
+    "Off Sequence 309"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0 Thru 180",
+        "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+        "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 309"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 309"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

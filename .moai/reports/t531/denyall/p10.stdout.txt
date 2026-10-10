@@ -1,0 +1,48 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/309", "t": 0.067, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/309", "ok": false, "error": "path segment not found: '309' (in ShowData/DataPools/Default/Sequences/309)"}
+{"step": "store_cue", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100", "reasons": ["b
+{"step": "play", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 309", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 309': state query failed for 'Sequence 309': path segment not found: '309' (in DataPool/Sequences/309)"]}]}
+{"step": "release", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 309", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 309': state query failed for 'Sequence 309': path segment not found: '309' (in DataPool/Sequences/309)"]}]}
+{
+  "item": "P10",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/309"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": false,
+    "play": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Phase 0 Thru 180",
+        "Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'",
+        "Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 309"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 309"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

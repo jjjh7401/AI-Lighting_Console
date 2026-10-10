@@ -1,0 +1,97 @@
+{
+  "item": "P11",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/310"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_cue": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "Attribute 'Dimmer' At 0",
+      "Group 10",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Group 11",
+      "Attribute 'Dimmer' At 100",
+      "Group 10",
+      "Attribute 'Dimmer' At 100",
+      "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+      "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+      "ClearAll"
+    ],
+    "play": [
+      "Goto Cue 1 Sequence 310"
+    ],
+    "release": [
+      "Off Sequence 310"
+    ]
+  },
+  "notes": [
+    "⑦ 큐2 와의 차이는 Step 2 위치 하나(t520 approval_m2a_batch1_v2.txt:178-209 꼴).",
+    "감독 관찰: MOVER-U 와 바닥 워시가 둘 다 깜빡이나."
+  ],
+  "bundles": {
+    "store_cue": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11",
+    "Attribute 'Dimmer' At 0",
+    "Group 10",
+    "Attribute 'Dimmer' At 0",
+    "Step 2",
+    "Group 11",
+    "Attribute 'Dimmer' At 100",
+    "Group 10",
+    "Attribute 'Dimmer' At 100",
+    "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+    "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+    "ClearAll",
+    "Goto Cue 1 Sequence 310",
+    "Off Sequence 310"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Group 11",
+        "Attribute 'Dimmer' At 100",
+        "Group 10",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+        "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 310"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 310"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

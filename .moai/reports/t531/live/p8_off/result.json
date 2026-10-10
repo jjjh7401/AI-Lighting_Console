@@ -1,0 +1,25 @@
+{
+  "item": "P8",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/304",
+    "ShowData/DataPools/Default/Sequences/305"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "release": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 304",
+        "Off Sequence 305"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

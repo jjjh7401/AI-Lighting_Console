@@ -3,9 +3,9 @@
 전부-거절(2026-10-10 15:26)에서 나온 승인 문면 그대로다. `--approve .moai/reports/t531/denyall/p<n>` 은
 이 문면과 **글자까지 같은** 묶음만 승인한다(t506 RecordingApproval).
 
-합계: 묶음 36 · 줄 181
+합계: 묶음 42 · 줄 209
 
-첫 낱말별 줄 수: 34 Attribute, 27 ClearAll, 23 Off, 19 Store, 14 Set, 14 Group, 13 Goto, 13 ChangeDestination, 8 At, 7 Assign, 4 Step, 2 Go, 2 cd, 1 Label
+첫 낱말별 줄 수: 41 Attribute, 31 ClearAll, 25 Off, 21 Store, 19 Group, 16 Set, 15 Goto, 15 ChangeDestination, 8 At, 7 Assign, 6 Step, 2 Go, 2 cd, 1 Label
 
 ## P1 ① 타임코드 트랙 6개 — 묶음 4 · 줄 18
 1. `Store Timecode 30` / `Set Timecode 30 Property 'Name' 'LDBEAT M1 - P1 six tracks'` / `Set Timecode 30 Property 'Duration' 10 'AutoStop' 0` / `Store Timecode 30.1`
@@ -60,3 +60,13 @@
 3. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 2.1` / `Attribute 'Tilt' At Relative 12` / `Attribute 'Tilt' At Phase 0 Thru 360` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'` / `Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'` / `ClearAll`
 4. `Goto Cue 1 Sequence 306` / `Off Sequence 306` / `Goto Cue 1 Sequence 307` / `Off Sequence 307` / `Goto Cue 1 Sequence 308`
 5. `Off Sequence 306` / `Off Sequence 307` / `Off Sequence 308`
+
+## P10 ⑩ 디머 위상 펼침 (번갈아) — 묶음 3 · 줄 12
+1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Dimmer' At 0` / `Step 2` / `Attribute 'Dimmer' At 100` / `Attribute 'Dimmer' At Phase 0 Thru 180` / `Store Sequence 309 Cue 1 'LDBEAT M1 - P10 dimmer phase spread'` / `Set Sequence 309 Property 'Name' 'LDBEAT M1 - P10 dimmer phase spread'` / `ClearAll`
+2. `Goto Cue 1 Sequence 309`
+3. `Off Sequence 309`
+
+## P11 ⑪ t520 줄 순서 재현 — 묶음 3 · 줄 16
+1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Dimmer' At 0` / `Group 10` / `Attribute 'Dimmer' At 0` / `Step 2` / `Group 11` / `Attribute 'Dimmer' At 100` / `Group 10` / `Attribute 'Dimmer' At 100` / `Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'` / `Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'` / `ClearAll`
+2. `Goto Cue 1 Sequence 310`
+3. `Off Sequence 310`
