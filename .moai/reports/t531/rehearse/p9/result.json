@@ -10,7 +10,7 @@
     "store_circle": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Position' At Preset 2.1",
       "Attribute 'Pan' At Relative 12",
       "Attribute 'Tilt' At Relative 8",
@@ -25,7 +25,7 @@
     "store_ballyhoo": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Position' At Preset 2.1",
       "Attribute 'Pan' At Relative 20",
       "Attribute 'Tilt' At Relative 10",
@@ -40,7 +40,7 @@
     "store_wave": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Position' At Preset 2.1",
       "Attribute 'Tilt' At Relative 12",
       "Attribute 'Tilt' At Phase 0 Thru 360",
@@ -78,7 +78,7 @@
   "fake_sent": [
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Position' At Preset 2.1",
     "Attribute 'Pan' At Relative 12",
     "Attribute 'Tilt' At Relative 8",
@@ -91,7 +91,7 @@
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Position' At Preset 2.1",
     "Attribute 'Pan' At Relative 20",
     "Attribute 'Tilt' At Relative 10",
@@ -104,7 +104,7 @@
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Position' At Preset 2.1",
     "Attribute 'Tilt' At Relative 12",
     "Attribute 'Tilt' At Phase 0 Thru 360",
@@ -126,7 +126,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Position' At Preset 2.1",
         "Attribute 'Pan' At Relative 12",
         "Attribute 'Tilt' At Relative 8",
@@ -144,7 +144,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Position' At Preset 2.1",
         "Attribute 'Pan' At Relative 20",
         "Attribute 'Tilt' At Relative 10",
@@ -162,7 +162,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Position' At Preset 2.1",
         "Attribute 'Tilt' At Relative 12",
         "Attribute 'Tilt' At Phase 0 Thru 360",

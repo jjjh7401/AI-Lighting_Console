@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Timecodes/31|NAME,CURSOR,DURATION
+    wire: Plugin "CopilotResponder" "props 2ef2241c NAME,CURSOR,DURATION ShowData/DataPools/Default/Timecodes/31"
+<<< {"id": "2ef2241c", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Timecodes/31", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P6 mid-start"}, {"n": "CURSOR", "ok": true, "t": "string", "v": "0.00"}, {"n": "DURATION", "ok": true, "t": "string", "v": "10.00"}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/31/1
+    wire: Plugin "CopilotResponder" "state 80e5bcbf ShowData/DataPools/Default/Timecodes/31/1"
+<<< {"children": [{"class": "MarkerTrack", "i": 1, "name": "Marker"}, {"class": "Track", "i": 2, "name": "<RHYTHM PROBE v3 - L0 STATIC 100>"}], "id": "80e5bcbf", "kind": "state", "node": {"childCount": 2, "class": "TrackGroup", "enumeration": "ok", "name": "TrackGroup 1"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Timecodes/31/1", "truncated": false, "v": 1}

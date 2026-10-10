@@ -8,7 +8,7 @@
     "store_cue": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Position' At Preset 2.1",
       "Attribute 'Pan' At Relative 12",
       "Attribute 'Tilt' At Relative 8",
@@ -40,7 +40,7 @@
   "fake_sent": [
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Position' At Preset 2.1",
     "Attribute 'Pan' At Relative 12",
     "Attribute 'Tilt' At Relative 8",
@@ -59,7 +59,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Position' At Preset 2.1",
         "Attribute 'Pan' At Relative 12",
         "Attribute 'Tilt' At Relative 8",

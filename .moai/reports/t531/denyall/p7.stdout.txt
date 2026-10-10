@@ -1,10 +1,10 @@
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/303", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/303", "ok": false, "error": "path segment not found: '303' (in ShowData/DataPools/Default/Sequences/303)"}
-{"step": "store_cue1_single", "t": 0.066, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 4", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100", "reason
-{"step": "store_cue2_two_selections", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 4", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100",
-{"step": "play_cue1", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
-{"step": "off_cue1", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
-{"step": "play_cue2", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
-{"step": "release", "t": 0.332, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/303", "t": 0.064, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/303", "ok": false, "error": "path segment not found: '303' (in ShowData/DataPools/Default/Sequences/303)"}
+{"step": "store_cue1_single", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100", "reaso
+{"step": "store_cue2_two_selections", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 0", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Step 2", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Dimmer' At 100"
+{"step": "play_cue1", "t": 0.131, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
+{"step": "off_cue1", "t": 0.198, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
+{"step": "play_cue2", "t": 0.265, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 2 Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
+{"step": "release", "t": 0.331, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 303': state query failed for 'Sequence 303': path segment not found: '303' (in DataPool/Sequences/303)"]}]}
 {
   "item": "P7",
   "free_slots": [
@@ -26,7 +26,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "Attribute 'Dimmer' At 0",
         "Step 2",
         "Attribute 'Dimmer' At 100",
@@ -39,14 +39,14 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "Attribute 'Dimmer' At 0",
         "Step 2",
         "Attribute 'Dimmer' At 100",
-        "Group 11",
-        "Attribute 'Pan' At Relative 10",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
         "Step 2",
-        "Attribute 'Pan' At Relative -10",
+        "Attribute 'Dimmer' At 100",
         "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
         "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
         "ClearAll"

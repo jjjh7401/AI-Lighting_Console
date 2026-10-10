@@ -1,0 +1,44 @@
+
+>>> state:ShowData/Masters/2
+    wire: Plugin "CopilotResponder" "state ccf07d6b ShowData/Masters/2"
+<<< {"children": [{"class": "MasterGrand", "i": 1, "name": "Master"}, {"class": "MasterGrand", "i": 2, "name": "World"}, {"class": "MasterGrand", "i": 3, "name": "Highlight"}, {"class": "MasterGrand", "i": 4, "name": "Lowlight"}, {"class": "MasterGrand", "i": 5, "name": "Solo"}, {"class": "MasterGrand", "i": 6, "name": "Rate"}, {"class": "MasterGrand", "i": 7, "name": "Reserved"}, {"class": "MasterGrand", "i": 8, "name": "ProgramTime"}, {"class": "MasterGrand", "i": 9, "name": "ProgramXFade"}, {"class": "MasterGrand", "i": 10, "name": "ExecutorTime"}, {"class": "MasterGrand", "i": 11, "name": "ExecutorXFade"}, {"class": "MasterGrand", "i": 12, "name": "Blind"}, {"class": "MasterGrand", "i": 13, "name": "SoundOut"}, {"class": "MasterGrand", "i": 14, "name": "SoundIn"}, {"class": "MasterGrand", "i": 15, "name": "SoundFade"}], "id": "ccf07d6b", "kind": "state", "node": {"childCount": 15, "class": "MasterPoolGrand", "enumeration": "ok", "name": "Grand"}, "offset": 0, "ok": true, "path": "ShowData/Masters/2", "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/221|PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 51ed40f5 PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE ShowData/DataPools/Default/Sequences/221"
+<<< {"id": "51ed40f5", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "reads": [{"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}, {"n": "PLAYBACKMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOSTART", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: OUTPUTFILTER", "n": "OUTPUTFILTER", "ok": false}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 221.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/226|PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props dba35fc8 PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE ShowData/DataPools/Default/Sequences/226"
+<<< {"id": "dba35fc8", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/226", "reads": [{"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}, {"n": "PLAYBACKMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOSTART", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: OUTPUTFILTER", "n": "OUTPUTFILTER", "ok": false}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 226.3"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/11|PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props c9a2bc3b PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE ShowData/DataPools/Default/Sequences/11"
+<<< {"id": "c9a2bc3b", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/11", "reads": [{"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}, {"n": "PLAYBACKMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOSTART", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: OUTPUTFILTER", "n": "OUTPUTFILTER", "ok": false}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 11.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/228|PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE
+    wire: Plugin "CopilotResponder" "props d34aa24f PRIORITY,PLAYBACKMASTER,SPEEDMASTER,AUTOSTART,OUTPUTFILTER,CURRENTCUE ShowData/DataPools/Default/Sequences/228"
+<<< {"id": "d34aa24f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/228", "reads": [{"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}, {"n": "PLAYBACKMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOSTART", "ok": true, "t": "boolean", "v": "true"}, {"e": "property not readable: OUTPUTFILTER", "n": "OUTPUTFILTER", "ok": false}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 228.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/11/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 64e0c919 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/11/3"
+<<< {"id": "64e0c919", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/11/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "chase-horizontal"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4564"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/221/5|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 464a00cc NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/221/5"
+<<< {"id": "464a00cc", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/221/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Measure 05"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3736"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/1|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 12663353 NAME,NORMEDVALUE ShowData/Masters/2/1"
+<<< {"id": "12663353", "kind": "props", "ok": true, "path": "ShowData/Masters/2/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Master"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/2|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 0230a6d8 NAME,NORMEDVALUE ShowData/Masters/2/2"
+<<< {"id": "0230a6d8", "kind": "props", "ok": true, "path": "ShowData/Masters/2/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "World"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/12|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 9ef068b3 NAME,NORMEDVALUE ShowData/Masters/2/12"
+<<< {"id": "9ef068b3", "kind": "props", "ok": true, "path": "ShowData/Masters/2/12", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Blind"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/Masters/2/5|NAME,NORMEDVALUE
+    wire: Plugin "CopilotResponder" "props 93312262 NAME,NORMEDVALUE ShowData/Masters/2/5"
+<<< {"id": "93312262", "kind": "props", "ok": true, "path": "ShowData/Masters/2/5", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Solo"}, {"n": "NORMEDVALUE", "ok": true, "t": "number", "v": "100"}], "truncated": false, "v": 1}

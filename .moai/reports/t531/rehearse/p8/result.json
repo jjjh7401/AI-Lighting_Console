@@ -9,7 +9,7 @@
     "store_dimmer_seq": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Dimmer' At 100",
       "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'",
       "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'",
@@ -18,7 +18,7 @@
     "store_pantilt_seq": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
+      "Group 11",
       "Attribute 'Pan' At Relative 10",
       "Attribute 'Tilt' At Relative 10",
       "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'",
@@ -48,14 +48,14 @@
   "fake_sent": [
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Dimmer' At 100",
     "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'",
     "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'",
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
-    "Group 13",
+    "Group 11",
     "Attribute 'Pan' At Relative 10",
     "Attribute 'Tilt' At Relative 10",
     "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'",
@@ -71,7 +71,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Dimmer' At 100",
         "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'",
         "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'",
@@ -83,7 +83,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Pan' At Relative 10",
         "Attribute 'Tilt' At Relative 10",
         "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'",

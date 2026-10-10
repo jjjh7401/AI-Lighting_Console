@@ -215,6 +215,8 @@ def main_cli(
     parser.add_argument("out")
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
+    # 실기에서 감독이 켜진 상태를 볼 수 있게, 승인된 묶음 중 일부만 보낸다(문면은 그대로).
+    parser.add_argument("--only", default=None, help="보낼 묶음 이름, 쉼표 구분")
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -281,6 +283,14 @@ def main_cli(
     from server.tools.probe_preflight import preflight
 
     plan = build_plan()
+    first_label = plan[0][0]
+    if args.only:
+        wanted = args.only.split(",")
+        unknown = [w for w in wanted if w not in {lbl for lbl, _ in plan}]
+        if unknown:
+            print(f"알 수 없는 묶음: {unknown}")
+            return 1
+        plan = [(lbl, cmds) for lbl, cmds in plan if lbl in wanted]
     pinned = None
     if args.approve:
         pinned = [
@@ -307,7 +317,9 @@ def main_cli(
             print(json.dumps(dict(preflight=health), ensure_ascii=False, indent=2))
             return 1
         probe = Probe(stack.gate, out)
-        free = check_free(probe, "pre_free", free_slots)
+        # 빈 번호 확인은 첫 묶음을 보낼 때만 — 그 뒤엔 차 있는 게 정상이다.
+        includes_first = any(lbl == first_label for lbl, _ in plan)
+        free = check_free(probe, "pre_free", free_slots) if includes_first else []
         result = dict(item=item, free_slots=free_slots, occupied_before=free)
         if free:
             result["verdict"] = f"stopped: slots not free {free}"

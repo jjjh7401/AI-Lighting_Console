@@ -28,7 +28,9 @@ from m1_common import main_cli, preset_path, seq_path  # noqa: E402
 POOL_COLOR = 4
 PRESET_NO = 301
 SEQ_NO = 300
-GROUP_BACK = 4
+# t531 v2: 감독 눈에 보였던 그룹(Group 11 MOVER-U, t516 verdict.md:264)으로 교체
+# Group 4 BACK 은 t516 에서 안 보였다(:134-138, :219-220)
+GROUP_BACK = 11
 
 
 def build_plan() -> list[tuple[str, list[str]]]:

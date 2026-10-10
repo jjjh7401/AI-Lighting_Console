@@ -1,0 +1,63 @@
+{
+  "item": "P4",
+  "preset": "21.301",
+  "sequence": 301,
+  "occupied_before": [],
+  "master_normedvalue_observed": "69",
+  "master_normedvalue_expected": "69",
+  "preset_introspect_fields": {
+    "error": "path segment not found: '301' (in ShowData/DataPools/Default/PresetPools/21/301)"
+  },
+  "preset_props_candidates": null,
+  "bundles": {
+    "store_preset": false,
+    "store_cue": false,
+    "play": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal",
+        "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "At Preset 21.301",
+        "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
+        "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 301"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 301"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

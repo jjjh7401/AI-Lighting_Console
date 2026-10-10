@@ -23,7 +23,9 @@ from m1_common import main_cli, seq_path  # noqa: E402
 
 SEQ_DIMMER = 304
 SEQ_PANTILT = 305
-GROUP_MOVER_ALL = 13
+# t531 v2: Group 13 은 t516 에서 8/16대만 보였다(:219-220)
+# → 보였던 Group 11 MOVER-U(t516 verdict.md:264)로 교체
+GROUP_MOVER_ALL = 11
 
 
 def build_plan() -> list[tuple[str, list[str]]]:

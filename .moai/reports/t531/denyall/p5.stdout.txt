@@ -1,7 +1,7 @@
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found: '302' (in ShowData/DataPools/Default/Sequences/302)"}
-{"step": "store_cue", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 13", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribu
-{"step": "play", "t": 0.132, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': state query failed for 'Sequence 302': path segment not found: '302' (in DataPool/Sequences/302)"]}]}
-{"step": "release", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': state query failed for 'Sequence 302': path segment not found: '302' (in DataPool/Sequences/302)"]}]}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.064, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found: '302' (in ShowData/DataPools/Default/Sequences/302)"}
+{"step": "store_cue", "t": 0.066, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribu
+{"step": "play", "t": 0.131, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': state query failed for 'Sequence 302': path segment not found: '302' (in DataPool/Sequences/302)"]}]}
+{"step": "release", "t": 0.197, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': state query failed for 'Sequence 302': path segment not found: '302' (in DataPool/Sequences/302)"]}]}
 {
   "item": "P5",
   "free_slots": [
@@ -20,7 +20,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
+        "Group 11",
         "Attribute 'Position' At Preset 2.1",
         "Attribute 'Pan' At Relative 12",
         "Attribute 'Tilt' At Relative 8",

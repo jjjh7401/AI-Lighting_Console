@@ -16,3 +16,21 @@
 {"ts": "2026-10-10T05:48:49.225907+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
 {"ts": "2026-10-10T05:48:49.226030+00:00", "event": "approved", "commands": ["Off Sequence 302"], "held": ["Off Sequence 302"], "kind": "t531_m1_p5"}
 {"ts": "2026-10-10T05:48:49.226127+00:00", "event": "executed", "command": "Off Sequence 302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.919723+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Position' At Preset 2.1", "Attribute 'Pan' At Relative 12", "Attribute 'Tilt' At Relative 8", "Attribute 'Pan' At Phase 0", "Attribute 'Tilt' At Phase 90", "Attribute 'Pan' At Speed 60", "Attribute 'Tilt' At Speed 60", "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Position' At Preset 2.1", "Attribute 'Pan' At Relative 12", "Attribute 'Tilt' At Relative 8", "Attribute 'Pan' At Phase 0", "Attribute 'Tilt' At Phase 90", "Attribute 'Pan' At Speed 60", "Attribute 'Tilt' At Speed 60", "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "ClearAll"], "kind": "t531_m1_p5"}
+{"ts": "2026-10-10T06:36:27.920138+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920241+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920325+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920400+00:00", "event": "executed", "command": "Attribute 'Position' At Preset 2.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920473+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 12", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920542+00:00", "event": "executed", "command": "Attribute 'Tilt' At Relative 8", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920612+00:00", "event": "executed", "command": "Attribute 'Pan' At Phase 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920691+00:00", "event": "executed", "command": "Attribute 'Tilt' At Phase 90", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920761+00:00", "event": "executed", "command": "Attribute 'Pan' At Speed 60", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920825+00:00", "event": "executed", "command": "Attribute 'Tilt' At Speed 60", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920890+00:00", "event": "executed", "command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.920955+00:00", "event": "executed", "command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.921020+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.921135+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 302"], "held": ["Goto Cue 1 Sequence 302"], "kind": "t531_m1_p5"}
+{"ts": "2026-10-10T06:36:27.921224+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:27.921309+00:00", "event": "approved", "commands": ["Off Sequence 302"], "held": ["Off Sequence 302"], "kind": "t531_m1_p5"}
+{"ts": "2026-10-10T06:36:27.921380+00:00", "event": "executed", "command": "Off Sequence 302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

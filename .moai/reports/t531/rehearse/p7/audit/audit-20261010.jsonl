@@ -29,3 +29,34 @@
 {"ts": "2026-10-10T05:59:44.322062+00:00", "event": "executed", "command": "Goto Cue 2 Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
 {"ts": "2026-10-10T05:59:44.322139+00:00", "event": "approved", "commands": ["Off Sequence 303"], "held": ["Off Sequence 303"], "kind": "t531_m1_p7"}
 {"ts": "2026-10-10T05:59:44.322214+00:00", "event": "executed", "command": "Off Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007039+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'", "ClearAll"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.007400+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007500+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007584+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007661+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007733+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007801+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007867+00:00", "event": "executed", "command": "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.007937+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008126+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Group 10", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'", "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Group 10", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'", "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'", "ClearAll"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.008252+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008328+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008401+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008465+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008532+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008594+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008654+00:00", "event": "executed", "command": "Group 10", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008717+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008775+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008833+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008893+00:00", "event": "executed", "command": "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.008952+00:00", "event": "executed", "command": "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.009011+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.009099+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 303"], "held": ["Goto Cue 1 Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.009177+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.009257+00:00", "event": "approved", "commands": ["Off Sequence 303"], "held": ["Off Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.009332+00:00", "event": "executed", "command": "Off Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.009414+00:00", "event": "approved", "commands": ["Goto Cue 2 Sequence 303"], "held": ["Goto Cue 2 Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.009500+00:00", "event": "executed", "command": "Goto Cue 2 Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.009577+00:00", "event": "approved", "commands": ["Off Sequence 303"], "held": ["Off Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T06:36:28.009653+00:00", "event": "executed", "command": "Off Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

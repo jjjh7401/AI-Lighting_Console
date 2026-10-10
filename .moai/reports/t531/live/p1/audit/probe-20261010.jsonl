@@ -1,0 +1,8 @@
+{"ts": "2026-10-10T06:30:32.724434+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:32.791008+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Timecodes/30", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:30:33.591541+00:00", "event": "executed", "command": "DataPool/Sequences/228", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:33.658233+00:00", "event": "executed", "command": "DataPool/Sequences/229", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:33.724973+00:00", "event": "executed", "command": "DataPool/Sequences/230", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:33.790689+00:00", "event": "executed", "command": "DataPool/Sequences/231", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:33.858005+00:00", "event": "executed", "command": "DataPool/Sequences/232", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:30:33.924842+00:00", "event": "executed", "command": "DataPool/Sequences/233", "kind": "state_query", "ok": true, "detail": ""}

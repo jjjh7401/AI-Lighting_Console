@@ -3,7 +3,7 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 4",
+      "Group 11",
       "Attribute 'Dimmer' At 0",
       "Step 2",
       "Attribute 'Dimmer' At 100",
@@ -19,7 +19,7 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 4",
+      "Group 11",
       "At Preset 21.301",
       "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
       "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",

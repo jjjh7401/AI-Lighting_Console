@@ -19,7 +19,7 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "Attribute 'Dimmer' At 0",
         "Step 2",
         "Attribute 'Dimmer' At 100",
@@ -32,14 +32,14 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 4",
+        "Group 11",
         "Attribute 'Dimmer' At 0",
         "Step 2",
         "Attribute 'Dimmer' At 100",
-        "Group 11",
-        "Attribute 'Pan' At Relative 10",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
         "Step 2",
-        "Attribute 'Pan' At Relative -10",
+        "Attribute 'Dimmer' At 100",
         "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
         "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
         "ClearAll"
