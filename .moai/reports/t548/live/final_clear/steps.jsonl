@@ -1,0 +1,2 @@
+{"step": "v0b_clear", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "v0b_clear", "t": 0.067, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

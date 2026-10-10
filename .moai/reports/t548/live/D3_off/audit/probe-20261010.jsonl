@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T15:48:26.515732+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T15:48:26.582491+00:00", "event": "executed", "command": "DataPool/Sequences/333", "kind": "state_query", "ok": true, "detail": ""}

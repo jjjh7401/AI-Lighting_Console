@@ -70,3 +70,36 @@ uv run python $R/probe_moverd.py $R/live/D1_off --approve $R/denyall --only off_
 - `Dimmer2` 가 이 쇼의 Spiider 속성 이름으로 받아들여지는지 — t516 채널 표의 이름일 뿐, 명령으로 보낸 적 없다. 거절되면 v0b·D1~D4 저장 묶음이 그 줄에서 실패한다.
 - Group 12 의 그룹 안 순서 — 위상 펼침의 물결 방향이 Fixture 목록 순서와 같은지는 t538 이 Group 11 에서만 쟀다.
 - 앱 회신 포트 9005 를 onPC 자신도 열고 있다(`lsof`). 지금은 핑이 돌아오지만 회신이 끊기면 첫 용의자.
+
+## 실기 결과 (리드 「실행」 2026-10-11, 승인 목록 sha256 c25b136f…ea336 보내기 전 재확인 일치)
+
+| 묶음 | 보낸 줄 | 콘솔 응답 | 쓰기 감사 | 감독 육안 |
+|---|---|---|---|---|
+| v0a | `ChangeDestination Root` · `ClearAll` · `Group 12 ; Attribute 'Dimmer' At 70` · `Group 12 ; At Preset 2.1` | 4줄 모두 `OK` | approved 1 → executed 4 · SaveShow skipped | **안 켜짐** — 2.1 자리는 빔이 꺼져 판정 불가 |
+| v0a_clear | `ClearAll` | `OK` | approved 1 → executed 1 | — |
+| v0b | v0a 4줄 + `Group 12 ; Attribute 'Dimmer2' At 70`(Dimmer 뒤) | 5줄 모두 `OK` — `Dimmer2` 거절 없음 | approved 1 → executed 5 · SaveShow skipped | **켜짐** — 리드 onPC 3D 캡처 00:44:08·00:44:13(전송 00:43:54 뒤), 「8 Fixtures Selected」, 8대 모두 빔이 아래로 · v0a(안 켜짐)와 차이는 `Dimmer2` 한 줄 → **Spiider MOVER-D 는 Dimmer2 가 있어야 켜진다(실측)** |
+| D1 (seq 331) | store_D1 17줄(v0b 머리 + Tilt ±30 2단계 + 곡선 4 + `Phase 0 Thru 360` + `Speed 14` + Store/ClearAll/Name) · play_D1 `Goto Cue 1 Sequence 331` — 전송 00:45:20 | 18줄 모두 `OK` · 331 전송 전 비어 있음 | approved 2 → executed 18 | **움직임** — 리드 3D 캡처 4장 00:45:35~39, 프레임 사이 변화 1.3~1.4% 픽셀, 차이는 빔 가장자리·바닥 스폿에만 |
+| off_D1 | `Off Sequence 331` — 00:46:32 | `OK` | approved 1 → executed 1 | — |
+| v0b 재전송(정지 켜짐 대조) | v0b 5줄 — 00:46:37 | 5줄 `OK` | approved 1 → executed 5 | **켜짐·정지** — 밝기 D1 과 같음, 프레임 사이 변화 0.00% (리드 캡처) |
+| D2 (seq 332) | store_D2 17줄(**Pan** ±30 2단계 + 곡선 + `Phase 0 Thru 360` + `Speed 56`) · play_D2 — 전송 00:47:12 | 18줄 `OK` · 332 전송 전 비어 있음 | approved 2 → executed 18 | **판정 불가**(정지 아님) — 변화 0.02~0.03%(대조 0.00%, D1 1.3%). 2.1 에서 빔이 거의 수직 아래라 Pan 은 빔 축 회전뿐 → 기울인 기준으로 재시험 필요 |
+| off_D2 | `Off Sequence 332` — 00:47:58 | `OK` | approved 1 → executed 1 | — |
+| D3 (seq 333) | store_D3 17줄(Tilt ±30 2단계 + 곡선 + `Phase 0 Thru 360` + `Speed 56`) · play_D3 — 전송 00:48:03 | 18줄 `OK` · 333 전송 전 비어 있음 | approved 2 → executed 18 | **움직임·D1 보다 빠름** — 0.27초 간격 프레임 변화 1.0~1.3%(D1 은 1초 간격에 비슷한 변화) → 2박 vs 2마디와 맞음 |
+| off_D3 | `Off Sequence 333` — 00:48:27 | `OK` | approved 1 → executed 1 | — |
+| D4 (seq 334) | store_D4 21줄(Pan+Tilt ±30 2단계 + 곡선 + 위상 0/90 + `Speed 56`) · play_D4 — 전송 00:48:32 | 22줄 `OK` · 334 전송 전 비어 있음 | approved 2 → executed 22 | **움직임** — 프레임 변화 1.1~2.1%, 넷 중 최대 |
+| off_D4 | `Off Sequence 334` — 00:49:22 | `OK` | approved 1 → executed 1 | — |
+| 마무리 | `ClearAll`(승인 목록의 v0b_clear 묶음) — 00:49:23 | `OK` | approved 1 → executed 1 | — |
+
+### 요약 (MOVER-D, Spiider, Group 12, 기준 2.1)
+
+- 켜짐: `Dimmer` 만으로는 안 켜지고 `Dimmer2` 를 더하면 켜진다(v0a vs v0b, 한 줄 차이).
+- 2단계 상대 페이저는 Spiider 에서도 돈다: Tilt 물결 2마디(D1)·2박(D3)·원(D4) 모두 움직임. 정지 대조 0.00%.
+- Pan 물결(D2)은 판정 불가 — 2.1 에서 빔이 거의 수직 아래라 Pan 이 빔 축 회전으로만 나타남. D2' 로 재시험.
+- 콘솔에 남은 것: 시퀀스 331~334(모두 Off), 쇼 저장 0. 판정은 리드 onPC 3D 캡처(Display 3) 프레임 차이와 감독 육안(v0a).
+
+## D2' — Pan 물결 재시험, 기울인 기준 (설계·전부-거절, 실행 전)
+
+- 스크립트 `probe_moverd_d2p.py`. 기준 줄은 2.1 대신 `Attribute 'Tilt' At 45` — t538 A0′ 의 실측 기준 줄(MegaPointe 에서 2단계 물결이 그 자리 중심으로 돈다고 감독 확인). 45 는 각도 값, 장비·그룹·프리셋 번호 아님. 선택·디머·BPM 은 데이터에서(Group 12 · Dimmer+Dimmer2 · Speed 56).
+- **기울었는지 아는 법**: 첫 묶음 `t0_tilted_lit`(프로그래머만, Store 0)이 같은 기준으로 켜기만 한다 → 리드 3D 캡처로 바닥 스폿이 v0b(2.1, 장비 바로 아래)에서 옆으로 옮겨졌는지 본다. 옮겨지지 않았으면 D2' 를 보내지 않는다.
+- 묶음 6: t0_tilted_lit → t0_clear → store_D2p(seq 335) → play_D2p → off_D2p → final_clear.
+- 리허설 6/6 통과 · 실기 전부-거절: preflight `responder_ok`, 335 비어 있음, 쓰기 감사 rejected 6 / executed 0, 읽기 감사 executed 4, 문면 리허설과 동일, 금지 줄 0, Store 는 `Sequence 335 Cue 1` 한 줄.
+- 승인 목록 `approval_t548_d2p.txt` — 26줄, sha256 `51fa4d5ad9cb1d88b86adc57a489c9a37491e36d6c374137999417f16ec4e0f6`.

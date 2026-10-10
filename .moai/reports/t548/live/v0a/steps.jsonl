@@ -1,0 +1,9 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/331", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/331", "ok": false, "error": "path segment not found: '331' (in ShowData/DataPools/Default/Sequences/331)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/332", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/332", "ok": false, "error": "path segment not found: '332' (in ShowData/DataPools/Default/Sequences/332)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/333", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/333", "ok": false, "error": "path segment not found: '333' (in ShowData/DataPools/Default/Sequences/333)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/334", "t": 0.266, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/334", "ok": false, "error": "path segment not found: '334' (in ShowData/DataPools/Default/Sequences/334)"}
+{"step": "v0a_dimmer_only", "t": 0.266, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 12 ; At Preset 2.1", "reasons": []}]}
+{"step": "v0a_dimmer_only", "t": 0.333, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "v0a_dimmer_only", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "v0a_dimmer_only", "t": 0.466, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "v0a_dimmer_only", "t": 0.533, "kind": "exec", "command": "Group 12 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}

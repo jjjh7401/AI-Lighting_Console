@@ -1,0 +1,70 @@
+{"step": "store_D3", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": []}, {"command": "Group 12 ; At Preset 2.1", "reasons": []}, {"command": "Group 12 ; Attribute 'Tilt' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 30", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"comman
+{"step": "store_D3", "t": 0.066, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.199, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.266, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer2' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.332, "kind": "exec", "command": "Group 12 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.398, "kind": "exec", "command": "Group 12 ; Attribute 'Tilt' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.466, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.532, "kind": "exec", "command": "Attribute 'Tilt' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.599, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.666, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.733, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.799, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.866, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 0.933, "kind": "exec", "command": "Attribute 'Tilt' At Speed 56", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 1.0, "kind": "exec", "command": "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 1.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_D3", "t": 1.133, "kind": "exec", "command": "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_D3", "t": 1.199, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 333", "reasons": ["reference-invoking command"]}]}
+{"step": "play_D3", "t": 1.266, "kind": "exec", "command": "Goto Cue 1 Sequence 333", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T548",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/331",
+    "ShowData/DataPools/Default/Sequences/332",
+    "ShowData/DataPools/Default/Sequences/333",
+    "ShowData/DataPools/Default/Sequences/334"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_D3": true,
+    "play_D3": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 56",
+        "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+        "ClearAll",
+        "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 333"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
