@@ -86,7 +86,20 @@ Preserve 목록 확인: `SPEC-LDRHYTHM-001`·`SPEC-LDBEAT-001` 쪽 파일 미수
   LOVE_ATTACK_t530_phase3_40s.wav 첫 박(강클릭) 앞 4개=[2.58, 4.73, 6.86, 8.99]
   ```
 - 대조: 박 326개·112.35 BPM은 지도 보고서 §6 「박 시각 326개」와 같고, phase1 첫 박 넷(1.50·3.66·5.78·7.92초)은 부록 A 1~4마디 다운비트와 일치한다(같은 박 경로라는 확인 — 정답 여부는 감독 귀 확인이 정한다).
-- 미확인: 감독 청취 결과(대기 중).
+- **확인됨(2026-10-10)**: 감독 청취 결과 — phase1 채택(아래 "위상 정답 확정" 참조). "미확인: 감독 청취 결과(대기 중)"이던 이전 기록을 이 줄로 교정한다.
+
+### 위상 정답 확정(카드 t530, 2026-10-10)
+
+위상 정답 = **phase1**, 감독 귀 확정 2026-10-10, 근거 t530 클릭 wav
+(`/Users/studiox/Music/AI-Lighting_Console-listen/t530/LOVE_ATTACK_t530_phase0_40s.wav`,
+`..._phase1_40s.wav`, `..._phase2_40s.wav`, `..._phase3_40s.wav`). 후렴 1 진입(0:37.9)에서
+강한 클릭이 "하나"에 떨어지는 것을 들어 확정했다 — 지도 보고서 부록 A의 1마디
+다운비트(1.50초)와 일치한다. 지도 보고서 §6이 **[미확정(귀로)]**로 매겼던 "다운비트
+위상"은 이제 **감독 귀 확정** 등급으로 올라갔다(spec.md REQ-LDBARMAP-009 근거 칸 갱신,
+2026-10-10) — 그 외 "추정" 항목(구간 이름·드롭 63~66마디 등)은 등급 불변. M2 회귀
+기준 오프셋 값은 **1**(REQ-LDBARMAP-016 정본 단위, acceptance.md AC-LDBARMAP-016·
+plan.md M2 참조)로 고정했다. 자동 위상 선택기 재설계는 여전히 **보류**(follow-up) —
+이 확정은 정답지 쪽 불확실성만 없앤다.
 
 ### SPEC 개정(카드 t530, 2026-10-10) — M2 범위 축소 반영
 
@@ -102,6 +115,13 @@ version 0.1.2→0.1.3. 코드 변경 0줄 — 이 개정은 plan-phase 문서 3�
 acceptance.md)만 다룬다. 커밋: `2f79fdb045acd9c2d7c922fc4191a0905b0081cf`(백필 —
 직전 커밋이 자기 자신의 SHA를 몰라 `pending-backfill-SPEC-LDBARMAP-001-t530-amendment`로
 썼던 것을 실제 SHA로 교정, 워크트리 `.claude/worktrees/t530`, 브랜치 `WT-barmap-run`).
+
+**같은 개정에 접어 넣은 추가분(위 "위상 정답 확정" 참조, 별도 버전 올리지 않음)**:
+감독이 위상 클릭 wav를 듣고 phase1을 다운비트 정답으로 확정한 결과를 REQ-LDBARMAP-009
+근거 칸(spec.md)·AC-LDBARMAP-005/006 보류 주석(acceptance.md)·M2 회귀 기준 오프셋
+(plan.md, acceptance.md AC-016)에 반영했다 — REQ·AC 개수·version 변경 없음(여전히
+16/16, 0.1.3). 커밋: `pending-backfill-SPEC-LDBARMAP-001-t530-phase-confirm`(다음
+커밋에서 실제 SHA로 백필).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
