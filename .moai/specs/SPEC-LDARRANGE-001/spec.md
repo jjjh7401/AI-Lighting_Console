@@ -1,7 +1,7 @@
 ---
 id: SPEC-LDARRANGE-001
 title: "배치 자동 생성 — 역할×마디 초안"
-version: "0.2.0"
+version: "0.2.1"
 status: draft
 created: 2026-10-10
 updated: 2026-10-10
@@ -27,6 +27,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 | 2026-10-10 | **인터페이스 맞춤(카드 t529, plan 문서만 — 코드 0·콘솔 0).** ① frontmatter `depends_on`에 `SPEC-LDBARMAP-001` 추가(iteration 1 D5 — 당시 그 SPEC이 없어 본문으로만 적었던 것; `related_specs`에도 추가). ② §5 항목 1에 "권고 입력 모양"을 넣어 `SPEC-LDBARMAP-001` §5 열린 결정 0의 "권고 출력 모양"과 같은 문면으로 맞췄다 — 필드 이름, 정수 밀리초/정수 마디 단위, 마디 번호 1-base 위상 1 기준 + 0 = 못갖춘마디(배치 규칙서 §4 "0~2"행), 사건 어휘 4개, "실제 임팩트" = `kick_entry`∪`drop`. 같은 자리에 소비자 쪽 공백 둘(사건 크기 없음, "마지막 코러스" 이름 없음)을 열린 채로 적었다. §2 항목 1 갱신. **REQ·AC 문면은 바꾸지 않았다** — plan-audit 재실행 없음(사유: `progress.md`). 만료 고지: §0·§1·§3 REQ-LDARRANGE-001·§4·`plan.md` §A/§B의 "`SPEC-LDBARMAP-001` 존재하지 않음"은 최초 작성 시점의 사실이다 — 그 SPEC은 같은 날 PR #571로 머지됐다(status: draft, 출력 데이터는 아직 없으므로 REQ-LDARRANGE-001의 구속은 그대로 유효). ③ LDBEAT 저장 키(§5 항목 2)는 t526 머지 뒤 후속 커밋. version 0.1.1→0.1.2. |
 | 2026-10-10 | **저장 키 맞춤(카드 t529 ③, plan 문서만).** `SPEC-LDBEAT-001` v0.2.0(PR #572) 머지 뒤, §5 항목 2에 세 SPEC 공통 권고 키 이름(`beat_grid`/`bar_map`/`arrangement_draft`)과 같은 마디 번호 공간을 적었다. REQ·AC 문면 변경 0. 알려진 미해결(이 카드 범위 밖, 리드 보고): LDBEAT v0.2.0이 REQ-LDBEAT-004를 "콘솔 그룹 트랙 + 층 역할 이름표 key/back/side/wash/mover/effect/audience"로 재교정해, 이 SPEC의 REQ-LDARRANGE-002·AC-LDARRANGE-014가 인용하는 역할 6종(SCENE/BACK PULSE/…) 어휘가 LDBEAT 쪽에서 철회됐다. version 0.1.2→0.1.3. |
 | 2026-10-10 | **역할 어휘 맞춤(카드 t533).** 직전 행이 적어 둔 미해결을 해소한다 — `SPEC-LDBEAT-001` v0.2.0(PR #572, 카드 t526)이 REQ-LDBEAT-004를 "콘솔 그룹 트랙(줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나) + `rig.py`의 7개 층 역할 이름표 key/back/side/wash/mover/effect/audience"로 재교정했으므로, 이 SPEC도 같은 어휘를 쓰도록 맞춘다. §2 끝에 단위 정정 문단을 추가해 이 문서 전체가 쓰는 "역할×마디"의 뜻을 "콘솔 그룹 트랙(역할 이름표가 붙음) × 마디"로 명시했다. REQ-LDARRANGE-002(생성기가 쓸 트랙 모양·역할 어휘를 LDBEAT와 맞추고, 배치 규칙서 §2의 역할 6종을 트랙 식별자로 금지, 겹치는 그룹 트랙 동시 사용 금지를 흡수)·REQ-LDARRANGE-007(STROBE 게이팅을 "ACCENT 트랙"이 아니라 트랙 비종속 서술로 재작성)을 고쳤다. `acceptance.md` AC-LDARRANGE-003·004(ACCENT 트랙 참조 제거)·014(라벨 집합을 7종 부분집합 + 트랙 식별자가 6종이 아닌지로 재정의, AC 개수 16 불변)를 같은 방향으로 고쳤다. `plan.md` §B 위험 6(역할 어휘 분류축 안내를 반전 — 이제 LDBEAT·LDARRANGE와 `rig.py`는 같은 어휘다)·§C 사전 점검 grep(LDBEAT의 7종 어휘를 확인하도록 교체)·§E M3(그룹 매핑 입력을 7종 트랙으로 교정)·§F 안티패턴·§G 교차 참조(`rig.py` 인용 정정)를 갱신했다. REQ·AC가 구속하는 **뜻**(생성기가 새 역할 발명 금지·STROBE 게이팅·그룹 번호 주소만 사용)은 바뀌지 않았으나 **인용 어휘**가 바뀌었으므로 **plan-audit 재실행이 필요하다**(`progress.md`에 기록). version 0.1.3→0.2.0. |
+| 2026-10-10 | **마디 지도 입력 모양 맞춤(카드 t541, plan 문서만 — 코드 0·콘솔 0).** 생산자 `SPEC-LDBARMAP-001`이 M4(카드 t539, PR #585 `364ab000`)에서 저장 위치(`timeline["bar_map"]`)와 값 모양을 확정했으므로, §5 항목 1의 미러 문단을 같은 문면으로 맞췄다 — `schema_version`(=1)·`first_beat_offset`(단위 박, 0~(분자−1)) 추가, `time_signature`를 `[4, 4]` 고정에서 `[분자, 분모]` 일반형으로, `start_beat`를 1~분자로, 일반화 규칙(곡 길이·박자표·못갖춘마디 가정 금지) 승계. 항목 1 머리를 「생산자 쪽 확정, 소비 방식만 열림」으로 갱신, §2 입력 1의 「저장 위치는 미정」을 갱신(지도 **데이터** 진입 경로는 아직 없음 — 후속 UI 카드), §1 「마디 지도는 아직 없다」에 만료 고지. **REQ·AC 문면 변경 0** — REQ-LDARRANGE-001의 구속(지도 데이터 없이 생성하지 않음)은 그대로 유효. version 0.2.0→0.2.1. |
 
 ## §0. Tier 선택 근거
 
@@ -44,7 +45,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 
 - **자동 배치 생성기는 지금 존재하지 않는다.** `grep -rln "arrangement\|auto_arrange\|generate_arrangement\|배치.*생성\|배치.*자동" server --include="*.py"`는 `arrangement`라는 낱말을 포함하는 파일을 전혀 찾지 못했다(이 plan-phase 재확인) — 있는 것은 효과 검색/합성(`find_fx`/`compose_fx`, `server/orchestrator/tools.py:7764,8117`)과 위치 커맨드 생성(`server/spatial/pointing.py`)뿐이다. 둘 다 "트랙 하나(콘솔 그룹 하나)·마디 하나"의 커맨드를 만드는 하위 도구이고, "콘솔 그룹 트랙 × 마디 N개"를 규칙에 맞춰 짜는 상위 로직은 없다.
 - **LOVE ATTACK의 지금 배치는 손작업이다.** `reports/effect-arrangement-rules-20261007.md` §3~§4의 표(마디별 SCENE/주인공/보조/무빙 U·D/강조)는 리드가 전문가 조사·K팝 조사·감독 확인을 거쳐 손으로 짠 것이다(같은 문서 머리말) — 교정 뒤에는 `SPEC-LDBEAT-001`과 마찬가지로 "콘솔 그룹별 배치"로 읽는다(값 자체는 바뀌지 않는다, LDBEAT §1). 이것이 이 SPEC의 수용 판정 기준선이다(§5·acceptance.md AC-LDARRANGE-001).
-- **마디 지도(SPEC-LDBARMAP-001)는 아직 없다.** `.moai/specs/`에 그 디렉터리가 없다(이 plan-phase 확인) — 카드 t527이 병행 작성 중이며, 완성되면 비트·다운비트·마디 경계·마디별 변화(킥·드롭·빌드)를 산출한다(로드맵 보고서 SPEC 진행안 2행). `SPEC-LDRHYTHM-001` REQ-LDRHYTHM-012(a)도 "지금은 BPM 숫자 하나만 렌더러에 닿는다(`analyze.py` 비트 시각 미저장·다운비트 생산자 0건)"고 이미 적어 뒀다 — 이 plan-phase가 `server/audio/analyze.py`를 재확인해도 같다(`beat_times`는 `_tempo_from_beats`에서 BPM 계산에만 쓰이고 저장되지 않는다, `:352-390`). **이 SPEC은 그 출력에 의존하지만, 출력 스키마를 이 plan-phase에서 확정하지 않는다**(§5 항목 1 — 열린 결정).
+- **[최초 작성 시점의 사실 — 만료, 카드 t541 고지: 그 SPEC은 PR #571로 생겼고 M4(PR #585)에서 저장 모양이 확정됐다, 현재 상태는 아래 §2 입력 1·§5 항목 1] 마디 지도(SPEC-LDBARMAP-001)는 아직 없다.** `.moai/specs/`에 그 디렉터리가 없다(이 plan-phase 확인) — 카드 t527이 병행 작성 중이며, 완성되면 비트·다운비트·마디 경계·마디별 변화(킥·드롭·빌드)를 산출한다(로드맵 보고서 SPEC 진행안 2행). `SPEC-LDRHYTHM-001` REQ-LDRHYTHM-012(a)도 "지금은 BPM 숫자 하나만 렌더러에 닿는다(`analyze.py` 비트 시각 미저장·다운비트 생산자 0건)"고 이미 적어 뒀다 — 이 plan-phase가 `server/audio/analyze.py`를 재확인해도 같다(`beat_times`는 `_tempo_from_beats`에서 BPM 계산에만 쓰이고 저장되지 않는다, `:352-390`). **이 SPEC은 그 출력에 의존하지만, 출력 스키마를 이 plan-phase에서 확정하지 않는다**(§5 항목 1 — 열린 결정).
 - **그룹 소속은 여전히 부분적으로만 확인됐다.** `.moai/reports/t525/verdict.md`: 무대 패치 좌표는 86/86 전부 확인됐지만, 그룹 소속은 18개 그룹 중 4개만 읽었고(`probe_groups.py`), 그 4개도 `SELECTIONDATA` 값이 응답기 한도(`console/lua/copilot_responder.lua:43` `max_prop_value=240`)에 잘려 그룹당 앞 2칸만 왔다. 전부 읽으려면 응답기의 "나눠 읽기" 확장이 필요하고, 그것은 이 SPEC의 범위 밖이다(§4 Out of Scope).
 - **AI 제안 → 「적용」 흐름의 선례는 있지만, 단일 큐 단위다.** `SPEC-LDDESIGN-001` REQ-LDDESIGN-092/094/095(M7 "PLAN CUE 수정요청 생성기")가 "생성기는 문장만 산출, 서버가 단일 진실 지점, 로컬 변형 금지, 거절 시 상태 유지" 원칙을 확정했다 — 그러나 그 대상은 큐 카드 하나다. 이 SPEC은 같은 원칙을 **역할×마디 전체 초안**(여러 칸에 걸친 배치) 단위로 일반화해야 한다(REQ-LDARRANGE-009) — "선례가 있으니 그대로 포팅하면 된다"고 가정하면 N칸 배치 승인이 N개의 개별 승인으로 쪼개지는 사고가 난다(LDBEAT의 같은 함정, REQ-LDBEAT-012 참조).
 
@@ -52,7 +53,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 
 이 SPEC의 생성기는 세 입력을 받는다. 셋 중 **둘은 열린 결정**이다(§5):
 
-1. **마디 지도** — `SPEC-LDBARMAP-001` 출력(그 SPEC은 PR #571로 머지됐지만 status: draft — 출력 **데이터**는 아직 없다). 값의 모양은 두 SPEC이 같은 권고 문면을 가진다(§5 항목 1, 카드 t529). 저장 위치는 미정.
+1. **마디 지도** — `SPEC-LDBARMAP-001` 출력. 값의 모양은 두 SPEC이 같은 문면을 가진다(§5 항목 1, 카드 t529). **갱신(카드 t541, 2026-10-10)**: 저장 위치는 `timeline["bar_map"]`로 확정됐고(그 SPEC M4, PR #585) 서버 저장 배선이 있다 — 다만 오디오에서 지도를 만들어 그 키에 싣는 진입 경로(WS/HTTP)는 아직 없어서, 실제 곡의 지도 **데이터**가 타임라인에 들어 있는 상태는 아직 아니다(후속 UI 카드).
 2. **확정 배치 규칙** — `reports/effect-arrangement-rules-20261007.md`(저장소에 이미 추적됨, 이 입력은 확정). 규칙 9개(§1)·역할 6종(§2)·LOVE ATTACK 전체 배치(§3)·0~25마디 격자(§4)·감독 결정(§5).
 3. **무대 패치** — t525가 확인한 좌표(86/86)·그룹(18개 중 4개, 그룹당 앞 2칸). RG5 그룹-주소 패턴(`server/design/song_cue_render.py:815` `_role_group_numbers`, `:890` `_effect_group_numbers` — "그룹-주소 패턴, fid 불요·RG5" 주석, 이 plan-phase 재확인)을 그대로 재사용하면 **멤버십 전수를 몰라도** 그룹 번호만으로 역할-그룹 매핑을 유지할 수 있다 — 이것이 이 SPEC이 "그룹 소속 부분 확인"이라는 조건에서도 진행할 수 있는 근거다(REQ-LDARRANGE-011).
 
@@ -135,11 +136,12 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 
 이 결정들은 감독 착수 승인(Implementation Kickoff Approval) 라운드 또는 그 전에 명시적으로 확인받아야 한다 — 권고는 있으나 확정이 아니다.
 
-1. **[열린 결정 — SPEC-LDBARMAP-001 확정 대기] 마디 지도 출력 인터페이스** (스키마, 저장 위치). 최초 작성 시점에는 `SPEC-LDBARMAP-001`이 없었다 — 지금은 PR #571(`deab5dd5`)로 머지됐고(status: draft), 저장 위치는 그 SPEC §5 열린 결정 0(REQ-LDBARMAP-010)이 M2+로 미뤘다. 권고: 그 SPEC이 run-phase에 진입하고 출력 스키마가 고정된 뒤, 이 SPEC의 run-phase 착수 전에 이 항목을 재확인한다 — 두 SPEC을 동시에 진행하면 LDARRANGE의 생성 로직이 아직 안정되지 않은 스키마에 묶이는 사고가 난다.
-   - **권고 입력 모양(카드 t529 — 생산자 `SPEC-LDBARMAP-001` §5 열린 결정 0의 "권고 출력 모양"과 같은 문면, 확정 아님).** 한쪽만 고치면 생산자와 소비자가 갈라진다 — 두 문단을 같이 고친다.
-     - `bpm`(실수, BPM) · `time_signature`(`[4, 4]`) · `bars[]` = `{bar, start_ms, beats_ms}` · `events[]` = `{kind, start_bar, end_bar, start_beat, grade}`.
+1. **[생산자 쪽 확정 — SPEC-LDBARMAP-001 M4(PR #585, `364ab000`); 이 SPEC의 소비 방식만 열려 있음] 마디 지도 출력 인터페이스** (스키마, 저장 위치). 최초 작성 시점에는 `SPEC-LDBARMAP-001`이 없었다 — 그 뒤 PR #571(`deab5dd5`)로 머지됐고, 저장 위치는 그 SPEC §5 열린 결정 0(REQ-LDBARMAP-010)이 M2+로 미뤘었다. 권고였던 것: 그 SPEC이 run-phase에 진입하고 출력 스키마가 고정된 뒤, 이 SPEC의 run-phase 착수 전에 이 항목을 재확인한다 — 두 SPEC을 동시에 진행하면 LDARRANGE의 생성 로직이 아직 안정되지 않은 스키마에 묶이는 사고가 난다. **갱신(카드 t541, 2026-10-10)**: 그 조건이 충족됐다 — `SPEC-LDBARMAP-001` M4(카드 t539)가 저장 위치를 `timeline["bar_map"]`(옵션 A)로, 값의 모양을 아래 모양으로 확정했고 서버 쪽 저장·불러오기·되돌리기가 `server/audio/bar_map_store.py`(`validate_bar_map`)로 구현됐다. 남은 열린 것은 이 SPEC 쪽 — 아래 "이 SPEC이 읽는 방식"과 소비자 공백 둘(가)(나) — 뿐이며, 이 SPEC의 run-phase 착수 전 Implementation Kickoff Approval에서 확인한다.
+   - **입력 모양(카드 t529 신설, 카드 t541 갱신 — 생산자 `SPEC-LDBARMAP-001` §5 열린 결정 0의 확정 모양과 같은 문면; 생산자 쪽에서는 확정, 그 정본은 `validate_bar_map`).** 한쪽만 고치면 생산자와 소비자가 갈라진다 — 두 문단을 같이 고친다.
+     - `schema_version`(정수, 고정값 `1`) · `bpm`(실수, BPM) · `time_signature`(`[분자, 분모]` — 분자 1~16, 분모 ∈ {1,2,4,8,16}; LOVE ATTACK은 `[4, 4]`) · `first_beat_offset`(정수, 사람이 지정한 첫 박 오프셋, 단위 박, 범위 0~(분자−1) — 자동 비트 격자의 0-base 인덱스를 분자로 나눈 나머지, REQ-LDBARMAP-016) · `bars[]` = `{bar, start_ms, beats_ms}` · `events[]` = `{kind, start_bar, end_bar, start_beat, grade}`.
+     - **일반화(생산자 확정 규칙 — 이 SPEC도 같은 가정으로 읽는다)**: 곡 길이·박자표·못갖춘마디 유무는 곡마다 다르다. `bar: 0`(못갖춘마디)은 1~분자 박, 마지막 마디는 1~분자 박(못다 채운 마디)일 수 있다. 이 SPEC의 생성기는 82마디·4/4를 가정하지 않는다.
      - **마디 번호(`bar`·`start_bar`·`end_bar`)**: 정수, **1-base, 위상 1 기준** — 지도 보고서(`reports/loveattack-music-map-20261006.md`) §2·부록 A와 이 SPEC의 입력인 배치 규칙서 §3~§4가 이미 같은 번호 공간이다(둘 다 후렴 1 진입 = 18마디, 실측 대조 t529). **0 = 못갖춘마디(앞박) 예약 번호** — 배치 규칙서 §4 "0~2"행의 0이 이것이다. 마디 지도에 못갖춘마디가 없으면 `bar: 0`은 생략된다 — 그때 0행을 어떻게 다룰지는 run-phase 생성기 설계의 몫이다. 사건 구간은 **양끝 포함**.
-     - **단위**: 절대 시각(`start_ms`·`beats_ms`)만 정수 밀리초, 그 밖의 길이·창은 정수 마디(필요하면 `start_beat`, 마디 안 1-base 1~4). 초 단위 길이 필드는 없다 — REQ-LDARRANGE-005·006의 "4마디"·"8마디"는 `bar` 번호 차로 센다.
+     - **단위**: 절대 시각(`start_ms`·`beats_ms`)만 정수 밀리초, 그 밖의 길이·창은 정수 마디(필요하면 `start_beat`, 마디 안 1-base 1~분자 — 4/4에서는 1~4). 초 단위 길이 필드는 없다 — REQ-LDARRANGE-005·006의 "4마디"·"8마디"는 `bar` 번호 차로 센다.
      - **사건 어휘(`kind`) 4개 고정**: `kick_entry`(킥 진입 — 지도 보고서의 "후렴 진입 큰 히트") · `build`(빌드업) · `drop`(드롭) · `break`(브레이크 — "킥 멈춤"). `grade`는 `measured` | `estimated`(지도 보고서 [잰 값]/[추정]).
      - **이 SPEC이 읽는 방식(권고)**: REQ-LDARRANGE-008의 "실제 임팩트" = `kind ∈ {kick_entry, drop}` 사건의 (`start_bar`, `start_beat`). REQ-LDARRANGE-005의 "드롭" 구간 = `kind == drop` 사건의 `start_bar`~`end_bar`.
      - **이 모양으로 메워지지 않는 소비자 쪽 공백 둘(열린 채로 둔다)**: (가) **크기가 없다** — 위 임팩트 집합은 STROBE를 제안해도 되는 마디의 **상한**일 뿐, 그 안에서 배치 규칙서 §3의 STROBE 자리(63·67마디)와 BLIND만 쓰는 자리(18·46마디)를 가를 신호가 마디 지도에 없다. (나) **"마지막 코러스" 이름이 없다** — 구간 이름은 마디 지도의 몫이 아니라 기존 분석 캐시의 `sections`(지도 보고서 §6 "추정" 등급)에서 온다. 두 공백은 Implementation Kickoff Approval 라운드에서 이 항목과 함께 제시한다.

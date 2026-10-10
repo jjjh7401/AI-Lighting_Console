@@ -639,6 +639,14 @@ fast-forward 병합해 시작했다. 위 pytest/ruff 출력은 M4 커밋 전 작
 - 돌연변이 대조(검사가 헛돌지 않는지): ① `bar_map_store.py:318` `start_beat` 상한을 `numerator`→`99`, ② `session.py:9021` `_draft_history.record(timeline)`→`pass` 로 바꾸고 새 테스트 2파일 실행 → `7 failed, 70 passed`(①은 `test_validator_rejects_start_beat_above_numerator` 등 2건, ②는 되돌리기·일반화 픽스처 5건이 잡음). `git checkout --` 로 원상복구, `git status` 깨끗함 확인.
 - `session.py` 범위: hunk 2개(`@@ -36,6 +36,7 @@` import 1줄, `@@ -8986,6 +8987,65 @@` 메서드 2개) — 기존 줄 변경 0. import 위치는 리드 승인안(42행 아래)과 달리 38행 아래(ruff I001 정렬 때문), 리드에 보고.
 
+### 후속 문서 정리(카드 t541, 2026-10-10 — plan 문서만, 코드 0·콘솔 0)
+
+- **주장**: (1) `SPEC-LDARRANGE-001` §5 미러 문단이 이 SPEC §5 확정 모양과 같다(그 SPEC v0.2.1). (2) AC-LDBARMAP-011을 부재 단언에서 「존재 + §5 소비자 명시 + 미러 필드 8개 일치」로 교정. (3) §5 `time_signature` `[4, 4]` 고정 표기를 `[분자, 분모]`로 교정. (4) LDARRANGE 부재를 현재형으로 단언하던 본문 4곳(spec.md §1 배경·REQ-011 괄호·§4 Out of Scope, plan.md §A)에 만료 고지. spec.md v0.1.5→0.1.6. REQ/AC 16/16 불변.
+- **증거(AC-LDBARMAP-011 실행, 이 트리)**: 검사 1 `ls -d .moai/specs/SPEC-LDARRANGE-001` → exit 0. 검사 2 §5 범위 `grep -c 'SPEC-LDARRANGE-001'` → `5`. 검사 3 → LDBARMAP `2 1 1 2 1 2 1 3`, LDARRANGE `1 1 1 1 1 2 1 3`(8개 모두 ≥1). 대조: 교정 전 LDARRANGE §5 의 `schema_version`/`first_beat_offset` → `0`.
+- **잔여 문면 전수 검사**: LDARRANGE 를 담은 줄에서 「존재하지 않/없음/미작성/아직 없」 앞 120자·뒤 40자 안에 만료 표지가 없는 경우(HISTORY 행 제외) — 이 트리 `0`건, 교정 전 spec.md(origin/main `ef854b0a`) `3`건(39·85·116행 = 고친 세 곳). 감사관 독립 재검사도 0건.
+- **감사**: 부분 plan-audit 1차 FAIL(0.80, D1 117행·D2 검사 3 명령 부재) → 2차 FAIL(D3 40행 — 1차 때 감사관·레인 둘 다 놓침: 레인 grep 은 출력을 200자로 잘라 가렸다) → 3차 **PASS 1.00** — `.moai/reports/t541/plan-audit.md`.
+- **미검증**: LDARRANGE 자신의 REQ-001·AC-015·plan.md:6·:46 부재 문면(그 SPEC t529 HISTORY 일괄 고지에 맡김, 범위 밖).
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_

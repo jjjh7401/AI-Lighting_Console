@@ -6,7 +6,7 @@ LOVE ATTACK 한 곡을 대상으로, 오프라인 분석으로 비트·다운비
 
 - 작업 위치: 메인 체크아웃(워크트리 `.claude/worktrees/t527`, 브랜치 `WT-barmap-plan`, 베이스 `origin/main` `88ecfb9d`).
 - 선행 SPEC: `SPEC-LDBEAT-001`(런북 모드 박자 배치, draft) — 이 SPEC의 산출물(마디 지도)은 그 SPEC의 박자 격자가 소비할 수 있는 입력 후보다. 두 SPEC은 서로 독립적으로 진행 가능하다(LDBEAT M1~M2는 LOVE ATTACK 손 배치를 입력으로 쓰고, 이 SPEC의 산출물을 기다리지 않는다).
-- 후속 SPEC: `SPEC-LDARRANGE-001`(역할×마디 자동 배치, 아직 존재하지 않음) — 이 SPEC의 마디 지도를 소비할 장래 SPEC.
+- 후속 SPEC: `SPEC-LDARRANGE-001`(역할×마디 자동 배치 — 최초 작성 시점에는 없었고 같은 날 PR #570으로 생겼다, 카드 t541 만료 고지) — 이 SPEC의 마디 지도를 소비할 장래 SPEC.
 
 ## §B. 결정 — 저장 인터페이스 (확정, M4, 카드 t539)
 

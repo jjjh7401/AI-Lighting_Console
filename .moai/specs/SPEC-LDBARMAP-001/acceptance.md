@@ -125,11 +125,17 @@
 5. **LOVE ATTACK 전용 가정 없음(일반화 검증, plan-audit iteration 9 D1 교정 — 기대 오프셋 범위 명시)**: LOVE ATTACK 모양(82마디·4/4·못갖춘마디 없음)이 아닌 픽스처 — 예: 3/4박자, 못갖춘마디 없음, 마지막 마디가 2박만 채워진 부분 마디(분자 3 중 2박) — 로 위 1~3을 반복해도 전부 PASS다. 이 3/4 픽스처의 `first_beat_offset`은 박자표 분자(3)로 나눈 나머지이므로 기대 범위는 **0~2**(박)다 — LOVE ATTACK(4/4)의 0~3 범위를 그대로 적용하지 않는다(spec.md §5 열린 결정 0 일반화 규칙 참조).
 6. **인용 추적성(REQ-LDBARMAP-011, plan-audit iteration 9 D3 신설)**: `spec.md` §5 열린 결정 0을 읽으면, `SPEC-LDBEAT-001` REQ-LDBEAT-006의 저장소 실체(`SongTimelineStore`/`TimelineDraftHistory`/`SongTimelineLibrary`, 파일:줄 번호 포함)가 옵션 A의 출처로 인용되어 있고, `SPEC-LDARRANGE-001`이 장래 소비자로 명시되어 있다 — 이 조건만 서버 동작이 아닌 **문서 검사**다(검사 대상: `spec.md` §5). 범위를 §5로 잘라 낸 뒤 센다: `sed -n '/^## 5\./,/^1\. \*\*마디 지도와/p' spec.md | grep -c 'SPEC-LDBEAT-001'` ≥ 1(단위: 줄), 같은 범위에서 `grep -c 'SongTimelineStore'`·`grep -c 'TimelineDraftHistory'`·`grep -c 'SongTimelineLibrary'` 각각 ≥ 1, `grep -c 'SPEC-LDARRANGE-001'` ≥ 1 — HISTORY 등 §5 바깥의 등장은 세지 않는다(plan-audit iteration 2 NEW-D1 교정).
 
-### AC-LDBARMAP-011 (REQ-LDBARMAP-011) — LDARRANGE-001 부재 확인
+### AC-LDBARMAP-011 (REQ-LDBARMAP-011) — LDARRANGE-001 소비자 연결 확인 (카드 t541 교정, 2026-10-10)
 
-**Given** 이 plan-phase 시점의 `.moai/specs/` 디렉터리가 주어진 상태에서
-**When** `ls .moai/specs/ | grep -i ARRANGE`를 실행하면
-**Then** 출력이 0건이다(`SPEC-LDARRANGE-001`은 아직 존재하지 않는다). (이 plan-phase 실측: 2026-10-10, 0건, exit 1.)
+> **교정 이력**: 최초 문면은 「`ls .moai/specs/ | grep -i ARRANGE` 출력 0건 — `SPEC-LDARRANGE-001`은 아직 존재하지 않는다」였다(2026-10-10 plan-phase 실측, 0건, exit 1). 그 SPEC은 같은 날 PR #570으로 생겼으므로 이 단언은 만료됐다(M4 부분 감사 D7). 지금은 REQ-LDBARMAP-011이 요구하는 「장래 소비자로 명시」가 실제 소비자 SPEC과 이어져 있는지를 잰다.
+
+**Given** 현재 `.moai/specs/` 트리와 두 SPEC(`SPEC-LDBARMAP-001`·`SPEC-LDARRANGE-001`)의 `spec.md`가 주어진 상태에서
+**When** 아래 세 검사를 실행하면
+**Then** 셋 다(AND) PASS다:
+
+1. **존재**: `ls -d .moai/specs/SPEC-LDARRANGE-001` → exit 0(디렉터리 1개).
+2. **소비자 명시**: 이 SPEC `spec.md` §5를 잘라 낸 범위(`sed -n '/^## 5\./,$p' .moai/specs/SPEC-LDBARMAP-001/spec.md`)에서 `grep -c 'SPEC-LDARRANGE-001'` ≥ 1(단위: 줄).
+3. **미러 필드 일치**: 두 SPEC의 §5 범위 각각에서 확정 모양의 필드 이름 8개(`schema_version`·`bpm`·`time_signature`·`first_beat_offset`·`bars[]`·`beats_ms`·`events[]`·`start_beat`)가 모두 1줄 이상 나온다 — 한쪽에만 있는 필드가 0개(단위: 개). 생산자·소비자 문단이 갈라지면 이 검사가 FAIL한다. 실행 명령(저장소 루트, 각 파일에 대해): `for f in schema_version bpm time_signature first_beat_offset 'bars\[\]' beats_ms 'events\[\]' start_beat; do sed -n '/^## 5\./,$p' <spec.md> | grep -c "$f"; done` — 출력 8줄이 모두 1 이상.
 
 ### AC-LDBARMAP-012 (REQ-LDBARMAP-014) — 오디오 파일 비커밋
 
