@@ -17,6 +17,8 @@
 - iteration 1: FAIL(0.60, 통과선 0.80). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-1.md`. D1(critical, AC-006 분모 13≠8)·D3(critical, 1마디 밀림 음성 대조군·매칭 방법론 누락)·D2(major, REQ-010/012 이중 모달)·D4(major, AC→REQ 인용 희박 + REQ-001 무검증)·D5(minor, 224.70/224.69 불일치) — 모두 spec.md·acceptance.md에 교정 반영(REQ 14→15, AC 13→15). D6(minor, 선택)은 비용 대비 효과가 낮아 보류.
 - iteration 2: FAIL(0.68, 통과선 0.80). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-2.md`. D1~D6(iteration 1) 전부 RESOLVED 재확인. iteration 1의 AC-003 신설이 그 뒤 AC 번호를 전부 1씩 밀렸는데 `plan.md`가 반영 못 함 — **D-NEW-1(critical)**: M1(`plan.md:31` AC-001~005→001~006)·M2(`plan.md:38` AC-004/005→005/006)·M3(`plan.md:45-46` AC-006→007, M3 자신이 가리키려던 이벤트 재현율은 007)을 재매핑. **D-NEW-2(minor)**: `acceptance.md` AC-009가 무관한 REQ-008을 인용 — REQ-001(간접)로 재지정. 교정 뒤 spec.md/plan.md/research.md/progress.md 전수 grep 재확인(research.md·progress.md 0건, plan.md 4건 전부 교정). REQ/AC 총량 변경 없음(15/15).
 - iteration 3: **PASS(0.86, 통과선 0.80)**. `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-3.md`(주 체크아웃, gitignore — 1~3행 `Verdict: PASS` / `Overall Score: 0.86`). must-pass 7개 PASS, D-NEW-1/D-NEW-2 RESOLVED 재확인. Implementation Kickoff Approval 가능 판정 — 감독 착수 승인 2026-10-10(M1~M3, 카드 t530).
+- iteration 4(부분, v0.1.3 개정분만 — 카드 t530): FAIL(0.68). `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-4.md`(t530 워크트리, gitignore). D1(must-pass MP-2: REQ-016 굵은 shall 없음)·D2(spec.md §0 REQ/AC 15개 표기 잔존)·D3(progress.md 같은 잔존). 교정 커밋 `e3e63a17`.
+- iteration 5(부분, D1~D3 델타): **PASS(0.95)**. `.moai/reports/plan-audit/SPEC-LDBARMAP-001-review-5.md`. D1~D3 RESOLVED, 개정 범위 안 새 결함 0.
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
