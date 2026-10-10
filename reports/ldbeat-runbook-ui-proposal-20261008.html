@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>런북 박자 배치 UI</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--max-width:min(1640px,97vw);--border:1.5px solid var(--g300);--ui:#17171b;--ui2:#202026;--ui3:#2b2b33;--uit:#e8e6dc;--uim:#9a98a6}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ivory:#1b1b19;--paper:#24241f;--slate:#ecebe4;--oat:#3a3731;--g100:#2c2b26;--g300:#46443d;--g500:#9c9a90;--g700:#cfcdc3}}
+:root[data-theme="dark"]{--ivory:#1b1b19;--paper:#24241f;--slate:#ecebe4;--oat:#3a3731;--g100:#2c2b26;--g300:#46443d;--g500:#9c9a90;--g700:#cfcdc3}
+*{box-sizing:border-box}
+body{background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.6;margin:0;padding:24px 16px}
+main{max-width:var(--max-width);margin:auto}
+h1{font-size:1.5rem;margin:.2em 0}h2{margin-top:2em;border-bottom:2px solid var(--oat);padding-bottom:.3em}
+.lead{background:var(--g100);border-left:4px solid var(--clay);padding:.7em 1em;border-radius:8px}
+.note{font-size:.85rem;color:var(--g700)}
+.tag{display:inline-block;font-size:.7rem;padding:0 6px;border-radius:999px;border:1px solid var(--g300);vertical-align:middle;white-space:nowrap}
+.tag.m{background:#e6f0dc;color:#3d5a24;border-color:#b9cfa3}.tag.u{background:#fbe7dc;color:#9a3f1d;border-color:#efb99d}.tag.p{background:#ece8f6;color:#4b3f7a;border-color:#c8bfe6}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:.86rem;margin:.8em 0}th,td{border:1px solid var(--g300);padding:6px 8px;vertical-align:top;text-align:left}th{background:var(--oat)}
+.tw{overflow-x:auto}
+code{font-family:var(--mono);font-size:.82em;background:var(--g100);padding:0 3px;border-radius:4px}
+/* ---------- app ---------- */
+.app{background:var(--ui);color:var(--uit);border-radius:14px;overflow:hidden;border:2px solid #000;font-size:13px;line-height:1.35;position:relative;margin:1em 0}
+.top{display:flex;align-items:center;gap:6px;padding:8px 10px;background:#0f0f12;border-bottom:1px solid #000;flex-wrap:wrap;white-space:nowrap}
+.top b{font-size:14px}.pill{background:#ffffff14;border-radius:999px;padding:2px 9px;color:var(--uim)}
+.top .sp{flex:1}
+.tbtn{background:var(--ui3);color:var(--uit);border:1px solid #3a3a44;border-radius:7px;padding:4px 10px;font:inherit;cursor:pointer;white-space:nowrap}
+.tbtn:hover{border-color:#6a6a78}.tbtn.pri{background:var(--clay);border-color:var(--clay);color:#fff}
+.play{display:inline-flex;align-items:center;gap:6px;background:#ffffff0d;border:1px solid #3a3a44;border-radius:10px;padding:3px 8px}.plab{color:#ffd84d;font-size:11px;font-weight:700;margin-right:2px}.clk{font-family:var(--mono);min-width:58px;text-align:center;color:#fff}
+.badge{background:#7fc45a;color:#111;border-radius:999px;padding:0 6px;font-size:11px;margin-left:4px}
+/* overview */
+.ov{padding:6px 12px 4px;background:var(--ui2);border-bottom:1px solid #000}
+.ov svg{width:100%;height:64px;display:block;cursor:pointer}
+.ovlab{display:flex;justify-content:space-between;color:var(--uim);font-size:11px}
+/* lanes */
+.lanes{display:grid;grid-template-columns:128px max-content;border-bottom:1px solid #000;height:440px;overflow:auto;position:relative}
+.lhead{background:var(--ui2);border-right:1px solid #000;position:sticky;left:0;z-index:8}
+.lhead>div:nth-child(1){position:sticky;top:0;z-index:9;background:var(--ui2)}.lhead>div:nth-child(2){position:sticky;top:38px;z-index:9;background:#14141a}
+.lhead div{height:40px;padding:5px 8px;border-bottom:1px solid #000;overflow:hidden}
+.lhead div:first-child{height:38px;color:var(--uim);font-size:11px}
+.lhead b{display:block;font-size:12px}.lhead small{color:var(--uim);font-size:10.5px}
+.scroller{overflow-x:auto;position:relative}
+.track{position:relative}
+.ruler{height:38px;position:sticky;top:0;z-index:6;border-bottom:1px solid #000;background:var(--ui2)}
+.rb{position:absolute;top:0;height:38px;border-left:1px solid #33333d;font-size:10.5px;padding:2px 3px;color:var(--uim);cursor:pointer;overflow:hidden;white-space:nowrap}
+.rb b{color:var(--uit);font-size:11.5px}.rb.sec{border-left:2px solid var(--clay)}
+.rb .sl{display:block;color:#f0b49c;font-size:10px}
+.lane{height:40px;position:relative;border-bottom:1px solid #000;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(var(--bw) - 1px),#26262e calc(var(--bw) - 1px),#26262e var(--bw))}
+.clip{position:absolute;top:3px;bottom:3px;border-radius:6px;padding:3px 6px;overflow:hidden;cursor:pointer;color:#fff;text-shadow:0 0 3px #000a;border:1px solid #0006;display:flex;flex-direction:column;justify-content:space-between}
+.clip .t{font-size:11px;font-weight:700;white-space:nowrap}
+.clip .s{font-size:10px;opacity:.92;white-space:nowrap}
+.clip .ib{position:absolute;left:0;bottom:0;height:3px;background:#fff}
+.clip.off{background:repeating-linear-gradient(135deg,#25252c 0 6px,#2c2c34 6px 12px)!important;color:var(--uim);text-shadow:none}
+.clip.sel{outline:2px solid #fff;outline-offset:-1px;z-index:2}
+.clip.edited{box-shadow:inset 0 0 0 2px #7fc45a}
+.clip.hl{box-shadow:inset 0 0 0 3px #ffd84d}
+.clip.ghost{border:2px dashed #7fc45a;background:#7fc45a22!important;color:#cfe9bf;z-index:3}
+.clip.empty{background:transparent!important;border:1px dashed #3a3a44;color:#5d5b68;text-shadow:none}
+.ph{position:absolute;top:0;bottom:0;background:#ffffff14;border-left:2px solid #ffd84d;border-right:1px solid #ffd84d55;pointer-events:none;z-index:4}
+.wave{position:absolute;right:4px;top:3px;opacity:.85}
+.fw{position:absolute;left:0;top:0;bottom:0;pointer-events:none}
+.jt{position:absolute;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:3px;background:#101014;border:1.5px solid #9a98a6;color:#fff;font-size:8px;line-height:10px;text-align:center;cursor:pointer;z-index:5}
+.jt.f{border-color:#7fb3ff}.jt.mib{border-color:#b98aff;background:#3a2a55}.jt.w{border-color:#ffb38a;background:#4a2a1a}.jt.on{outline:2px solid #ffd84d}
+.frow{height:22px;border-bottom:1px solid #000;background:#14141a;position:relative}
+.lhead .fh{height:22px!important;padding:2px 8px!important;background:#14141a;cursor:pointer;color:#f0b49c;font-size:11px;border-top:2px solid #55556a}
+.lhead .kid{padding-left:20px!important}
+.clip.sum{opacity:.9;border-style:dashed}
+.clip.follow{background:transparent!important;border:1px dashed #55556a;color:#77758a;text-shadow:none}
+.clip.split{background:repeating-linear-gradient(90deg,#3a2a55 0 8px,#2a2a38 8px 16px)!important;color:#d9c6ff;text-shadow:none}
+.cell{cursor:pointer;border-radius:4px}.cell:hover{outline:1px solid #ffd84d}
+.bt td:last-child{white-space:nowrap}.bt td{padding:3px 4px}
+.bt .gh td{color:#f0b49c;font-size:10.5px;padding-top:6px;cursor:pointer}
+.bt select{font:inherit;font-size:11px;background:#2b2b33;color:#e8e6dc;border:1px solid #ffd84d;border-radius:5px;max-width:150px}
+.mid{display:grid;grid-template-columns:minmax(0,1fr) 310px;border-bottom:1px solid #000}
+.mid .lanes{border-bottom:none;min-width:0}
+.sidepane{background:#141419;border-left:2px solid #000;padding:10px 12px;overflow:auto;font-size:12.5px}
+.sidepane h5{margin:0 0 4px;font-size:13px;color:#fff;display:flex;justify-content:space-between}
+.sidepane .ed{grid-template-columns:1fr;gap:4px}
+.sidepane .ed label{margin-top:8px;color:#f0b49c;font-size:12px;font-weight:700;border-top:1px solid #2c2c34;padding-top:8px}
+.sidepane .ed select,.sidepane .ed input{font-size:12.5px;padding:5px 6px}
+.sidepane .dimrow select:first-child{width:110px}
+.sidepane #eMB{display:block;flex:1;min-width:0}.sidepane #eMB select,.sidepane #eMB input{width:100%;box-sizing:border-box}
+.tg{background:#2b2b33;border:1px solid #4a4a56;color:#e8e6dc;border-radius:6px;padding:3px 10px;cursor:pointer;font:inherit;font-size:12px}.tg:hover{border-color:#8a889a}.tg.on{background:#ffd84d;color:#111;border-color:#ffd84d;font-weight:700}.tg:disabled{opacity:.4;cursor:not-allowed}
+.trbox{margin-top:8px;border:1px solid #ffd84d55;border-radius:8px;padding:8px;background:#ffd84d0d}
+.sidepane .empty{color:var(--uim);text-align:center;margin-top:40px;line-height:1.7}
+@media (max-width:980px){.mid{grid-template-columns:1fr}}
+.trow{height:22px;position:sticky;top:38px;z-index:6;border-bottom:1px solid #000;background:#1a1a20}
+.tm{position:absolute;top:2px;height:18px;transform:translateX(-50%);background:#2e2e38;border:1px solid #55556a;border-radius:9px;padding:0 6px;font-size:10px;color:#e8e6dc;white-space:nowrap;cursor:pointer;z-index:5}
+.tm:hover,.tm.on{border-color:#ffd84d}
+/* inspector */
+.insp{display:grid;grid-template-columns:minmax(420px,1.2fr) minmax(420px,1fr);gap:0;height:390px;border-bottom:1px solid #000}
+.insp.side3{grid-template-columns:290px minmax(300px,1.15fr) minmax(280px,1fr)}
+#edPane{display:none}.insp.side3 #edPane{display:block}
+.bt tr.sub td{background:#ffffff06;color:#b8b6c4;font-size:11px;white-space:normal;padding:4px 8px 6px 18px}
+.bt .rn{cursor:pointer}
+.tpane{padding-top:0}
+.tpane h5{position:sticky;top:0;z-index:4;background:var(--ui);margin:0;padding:8px 0 6px}
+.bt tr.hd td{position:sticky;top:30px;z-index:3;background:var(--ui);border-bottom:1px solid #3a3a44}
+.vtabs{display:flex;gap:4px;margin:-2px 0 6px}.vt{font-size:11px;padding:1px 7px;border:1px solid #3a3a44;border-radius:6px;cursor:pointer;color:var(--uim)}.vt.on{border-color:#ffd84d;color:#fff}
+.brow{display:grid;grid-template-columns:62px 1fr;gap:4px;align-items:center;margin:2px 0}
+.brow .bl{font-size:10px;color:var(--uim);white-space:nowrap;overflow:hidden}
+.tiles{display:flex;flex-wrap:wrap;gap:2px}
+.tl{width:9px;height:9px;border-radius:2px;border:1px solid #0008}
+.bfold{font-size:10px;color:#f0b49c;margin-top:4px}
+@media (max-width:980px){.insp{grid-template-columns:1fr;height:auto}}
+.pane{padding:8px 10px;border-right:1px solid #000;overflow:auto}
+.pane h5{margin:0 0 6px;font-size:12px;color:var(--uim);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.stage svg{width:100%;height:330px;display:block;border-radius:8px}
+.bt{width:100%;border-collapse:collapse;font-size:12px;background:transparent;margin:0}
+.bt td{border:none;border-bottom:1px solid #2c2c34;padding:4px 4px;vertical-align:middle;color:var(--uit)}
+.bt tr{cursor:pointer}.bt tr:hover td{background:#ffffff08}.bt tr.on td{background:#ffffff12}
+.bt .rn{font-weight:700;white-space:nowrap}.bt .chg{color:#f0b49c;font-size:10.5px}
+.chip{display:inline-flex;align-items:center;gap:3px;border:1px solid #3a3a44;border-radius:6px;padding:0 5px;font-size:11px;background:#ffffff0a;color:var(--uit);white-space:nowrap;cursor:pointer;margin:1px 0}
+.chip b{font-family:var(--mono);font-size:10.5px;color:#fff}.chip:hover{border-color:#ffd84d}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;border:1px solid #0006}
+.u{color:#ffb38a;font-size:10px}
+.ed{display:grid;grid-template-columns:62px 1fr;gap:5px 8px;align-items:center}
+.ed label{color:var(--uim);font-size:11.5px}
+.ed select,.ed input{font:inherit;font-size:12px;background:var(--ui3);color:var(--uit);border:1px solid #3a3a44;border-radius:6px;padding:3px 5px;width:100%}
+.dimrow{display:flex;gap:4px}.dimrow select:first-child{width:92px;flex:none}
+.cmdbox{font-family:var(--mono);font-size:10.5px;background:#0d0d10;border-radius:6px;padding:6px;white-space:pre;overflow-x:auto;color:#cfcdc0;margin-top:6px;max-height:110px}
+details summary{cursor:pointer;color:var(--uim);font-size:11.5px;margin-top:6px}
+.fx{color:var(--uim);font-size:11px;margin-top:4px}
+/* command bar */
+.cmd{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#0f0f12;flex-wrap:wrap}
+.cmd input{flex:1;min-width:260px;font:inherit;font-size:13px;background:var(--ui3);color:var(--uit);border:1px solid #3a3a44;border-radius:8px;padding:6px 10px}
+.log{padding:6px 12px;background:#0b0b0e;color:#b9e3a1;font-family:var(--mono);font-size:11px;min-height:2.2em;white-space:pre-wrap;border-top:1px solid #000}
+/* drawer */
+.drawer{position:absolute;top:0;right:0;bottom:0;width:300px;background:#101014;border-left:1px solid #000;transform:translateX(100%);transition:transform .18s;z-index:10;overflow:auto;padding:10px}
+.drawer.open{transform:none}
+.drawer h4{margin:0 0 6px;font-size:13px}
+.drawer h6{margin:10px 0 4px;font-size:11.5px;color:var(--uim)}
+.pr{display:flex;justify-content:space-between;gap:6px;padding:3px 4px;border-radius:5px;cursor:pointer;font-size:12px}
+.pr:hover,.pr.on{background:#ffffff12}.pr .c{color:var(--uim);font-size:10.5px;white-space:nowrap}
+.pinfo{margin-top:8px;border-top:1px solid #2c2c34;padding-top:8px;font-size:12px;color:var(--uit)}
+.zoom{display:inline-flex;border:1px solid #3a3a44;border-radius:7px;overflow:hidden}
+.zoom button{background:var(--ui3);color:var(--uim);border:none;padding:4px 8px;font:inherit;cursor:pointer}
+.zoom button.on{background:#4a4a56;color:#fff}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes sway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes nod{0%,100%{transform:rotate(-10deg) scaleY(.85)}50%{transform:rotate(10deg) scaleY(1.05)}}
+.anim-pulse{animation:pulse var(--per,1.07s) ease-in-out infinite}
+.anim-sway{animation:sway var(--per,1.07s) ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0%}
+.anim-nod{animation:nod var(--per,1.07s) ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0%}
+@media (prefers-reduced-motion: reduce){.anim-pulse,.anim-sway,.anim-nod{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>런북 모드 박자 배치 — UI 제안</h1>
+<p class="note">SPEC-LDBEAT-001 · LOVE ATTACK · 2026-10-08 · 시안(앱 코드 0줄, 콘솔 명령 0건) · 데이터는 0~25마디만 채움, 26마디부터는 빈 칸</p>
+
+<p class="lead"><b>핵심</b> — 화면을 <b>한 화면 높이</b>로 고정하고 위에서 아래로 세 층으로 나눴어요. <b>① 곡 전체 지도</b>(82마디 한 줄) → <b>② 장비 그룹 줄 타임라인</b>(좌우 스크롤, 줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나, 큐 하나 = 막대 하나) → <b>③ 상세 창</b>(무대 그림 · 「이 마디 한눈에」 표 — <b>칸을 눌러 그 자리에서 고침</b> · 타임라인 <b>막대(큐)를 누르면 타임라인 바로 오른쪽 세로 칸에 큐 편집</b>(밝기 · 위치 · 색 · 움직임 · 들어올 때)이 열림 — 고치는 곳은 여기 한 군데, 가운데 표는 마디 전체 훑어보기). 맨 아래 <b>명령창</b> 하나로 문장 수정과 AI 요청을 받아요. 프리셋 목록은 오른쪽 <b>서랍</b>으로 숨겼어요.</p>
+
+<div class="app" id="app">
+  <div class="top">
+    <b>런북 모드</b><span class="pill">LOVE ATTACK</span><span class="pill">v1 초안</span><span class="pill" title="스피드 마스터 15 는 콘솔에서 직접 설정">BPM 112.35</span>
+    <span class="sp"></span>
+    <span class="play">
+     <span class="plab">플레이</span>
+     <button class="tbtn" id="bTop" title="처음으로">⏮</button>
+     <button class="tbtn" id="bBack10" title="10초 뒤로">⏪ 10초</button>
+     <button class="tbtn pri" id="bPlay" title="재생 / 일시정지 (스페이스)" style="min-width:84px">▶ 재생</button>
+     <button class="tbtn" id="bFwd10" title="10초 앞으로">10초 ⏩</button>
+     <span id="clock" class="clk">0:00.0</span>
+     <label class="tbtn" style="cursor:pointer" title="음원 파일을 불러오면 음악에 맞춰 재생">♪ <span id="audLbl">음원</span><input type="file" id="aud" accept="audio/*" hidden></label>
+     <button class="tbtn" id="bCon" title="재생할 때 콘솔 타임코드도 같이">콘솔 같이 끔</button>
+    </span>
+    <span class="sp"></span>
+    <button class="tbtn" id="bPrev" title="이전 마디 (←)">◀</button>
+    <span id="barLbl" style="min-width:92px;text-align:center"></span>
+    <button class="tbtn" id="bNext" title="다음 마디 (→)">▶</button>
+    <button class="tbtn pri" id="bPrev2" title="이 마디를 콘솔에서 보기">▶ 콘솔</button>
+    <button class="tbtn" id="bOff">■ 끄기</button>
+    <button class="tbtn" id="bApply" title="고친 것 콘솔에 반영">⇪ 반영<span class="badge" id="pend">0</span></button>
+    <button class="tbtn" id="bLib" title="프리셋 목록">▤</button>
+  </div>
+  <div class="ov">
+    <div class="ovlab"><span>곡 전체 — 구간 · 에너지선(개념, 앱에서는 음원 분석 음량) · 강조(★) · 흰 테두리 = 아래에 보이는 범위</span><span><span class="zoom" id="zoom"><button data-z="16">곡 전체</button><button data-z="32" class="on">16마디</button><button data-z="64">8마디</button></span></span></div>
+    <svg id="ov" viewBox="0 0 830 64"></svg>
+  </div>
+  <div class="mid">
+  <div class="lanes" id="scroller">
+    <div class="lhead" id="lhead"></div>
+    <div class="track" id="track"></div>
+  </div>
+  <div class="sidepane" id="sidePane"></div>
+  </div>
+  <div class="insp" id="insp">
+    <div class="pane stage"><h5>무대 <span id="stT"></span></h5><svg id="stage" viewBox="0 0 360 300"></svg>
+ <div class="fx">2D 개념도 · 위 = 무대 뒤 · 노란 테두리 = 고른 줄 · 장비를 누르면 그 줄 편집 · 앱에서는 패치 좌표(Posx·Posy)로 실제 위치에 그림</div></div>
+    <div class="pane tpane"><h5><span id="bsT">이 마디 한눈에</span><span style="font-weight:400">훑어보기 · 누르면 오른쪽에서 고치기</span></h5><table class="bt" id="bt"></table></div>
+  </div>
+  <div class="cmd">
+    <span style="color:var(--uim)">명령</span>
+    <input id="cmdIn" value="22~25마디 MOVER-D 효과를 Sweep 2박으로">
+    <button class="tbtn" id="bRule">바로 적용(문장)</button>
+    <button class="tbtn" id="bAi">AI 제안</button>
+  </div>
+  <div class="log" id="log">← → 마디 이동 · 막대 = 큐 편집 · 이음매 ◆ = 전환 편집(◢ 페이드 · M = MIB · ! = 경고) · 「장면 전환」 알약 = 그 순간 전체 · 칩 = 같은 프리셋 강조</div>
+  <div class="drawer" id="drawer"></div>
+</div>
+
+<h2>줄이 많아질 때 — 접는 폴더와 「갈라질 때만」 자식 줄</h2>
+<p class="lead">시안에 지금 적용돼 있어요. 줄은 <b>층 역할 폴더</b>(앞빛·워시·역광·옆빛·무빙·효과)로 묶여 있고, 폴더 이름(▾/▸)을 누르면 접히고 펴져요. <b>접힌 폴더</b>는 한 줄 요약(「n/m줄 켜짐」, 바뀌는 곳 경계)으로 보이고, 지금 화면에서는 <b>효과</b> 폴더가 접힌 예시예요. <b>옆빛</b>은 11~13마디만 <b>SIDE-L · SIDE-R</b> 두 줄로 갈라진 예시예요 — 그 구간만 따로(오른쪽만 핑크), 나머지는 「SIDE-ALL 따름」.</p>
+<div class="tw"><table>
+<tr><th>단계</th><th>보이는 것</th><th>대형 무대에서</th></tr>
+<tr><td>1 폴더 = 층 역할</td><td>▾ 무빙 · mover (2줄) — 접으면 요약 한 줄</td><td>장비가 수백 대여도 접어 두면 6~7줄. 접힌 요약에도 바뀌는 경계가 보여 곡 흐름은 그대로</td></tr>
+<tr><td>2 줄 = 콘솔 그룹</td><td>MOVER-U(G11), MOVER-D(G12)</td><td>콘솔의 부모·자식 그룹(MOVER-ALL/U/D, SIDE-ALL/L/R, WASH-ALL/U/D — 이 리그에 실제로 있음)을 그대로 씀. 앱 역할 매칭도 이미 접두어로 묶음(<code>rig.py</code>)</td></tr>
+<tr><td>3 자식 줄 = 위치별 갈라짐</td><td>└ SIDE-L / └ SIDE-R — 갈라진 구간만, 나머지는 점선 「따름」</td><td>미리 만들지 않음. 감독이 「이 구간 왼쪽·오른쪽 따로」를 누를 때만 생기고 「다시 합치기」로 없어짐. 좌우 번갈이·홀짝 엇갈림 정도는 줄을 안 나누고 효과 위상으로</td></tr>
+</table></div>
+<p class="note">「이 마디 한눈에」 표도 같은 폴더로 묶여요(접힌 폴더는 한 줄 「n줄 접힘 · 이 마디 n줄 바뀜」). 표의 밝기·위치·색·움직임 칸을 누르면 그 자리에 목록이 펼쳐져 바로 고쳐지고, 상세(장비·큐 번호·큐 길이·콘솔 명령)는 줄 이름 ▸ 를 누르면 그 줄 아래 한 줄로만 펼쳐지고, 오른쪽 칸은 평소에 없어요 — 이음매(전환)나 AI 제안을 열 때만 나타나요. 프리셋이 몇 곳에서 쓰이는지는 칩에 마우스를 올리면 보여요. ⚠ 줄 하나 = 시퀀스 하나 = 타임코드 트랙 하나라서 줄이 많아지면 트랙도 늘어나요(실기에서는 트랙 2개까지만 확인) — 폴더를 콘솔에서 시퀀스 하나로 합치는 방법은 M1 에서 확인할 항목이에요.</p>
+
+<h2>큐 운영 — 큐와 큐 사이는 「이음매」로</h2>
+<p class="lead">큐 길이·전환 타이밍·MIB 는 큐 하나가 아니라 <b>두 큐 사이</b>의 일이라, 표의 칸이 아니라 <b>막대와 막대가 만나는 자리(이음매)</b>에 그려요. 실제 값은 MA3 처럼 <b>들어오는 큐</b>에 저장돼요(페이드·딜레이는 다음 큐의 속성) — 그래서 화면은 「사이」로 보여 주고, 저장은 「다음 큐」에 해요.</p>
+<div class="tw"><table>
+<tr><th>운영 항목</th><th>타임라인에서</th><th>고치는 곳</th><th>상태</th></tr>
+<tr><td>큐 길이</td><td>막대 길이 그 자체(마디·초는 마우스를 올리면)</td><td>이음매를 좌우로 끌기 = 다음 큐 트리거를 옮김 — 박 단위로 붙음</td><td><span class="tag m">잰 것</span> 타임코드 이벤트 시각(t520)</td></tr>
+<tr><td>트리거 시각</td><td>이음매 ◆ 위치(마디 중간 박이면 그만큼 오른쪽)</td><td>이음매 → 「마디 · 박」 선택</td><td><span class="tag m">잰 것</span> 소수 시각 이벤트(t520)</td></tr>
+<tr><td>페이드</td><td>다음 막대 왼쪽 끝의 <b>색 번짐</b>(길이 = 페이드 시간), 이음매 ◢</td><td>이음매 → 페이드. 화면은 <b>초를 먼저</b>(예: 2.14초 (1마디)), 박으로도 넣을 수 있음 — 콘솔에는 초로 저장(<code>CueFade 2.14</code>)</td><td><span class="tag m">잰 것</span> CueFade(CUETIME 5초 페이드 실측)</td></tr>
+<tr><td>딜레이 · 위치만 따로</td><td>이음매 상세에만</td><td>이음매 → 딜레이 / 「위치는 1박 늦게」</td><td><span class="tag u">미확인</span> 속성별 타이밍은 앱이 아직 안 만듦(<code>emit.py</code> 축별 timing 거부)</td></tr>
+<tr><td>MIB</td><td>이음매 <b>M</b>(보라) = 앞 큐가 꺼져 있어 어둠 속 미리 이동</td><td>자동 — 앞이 꺼져 있고 위치가 바뀌면 앱이 사이에 위치 전용 큐(Cue n.5)를 넣음. 켜진 채 위치가 바뀌면 「MIB 불가」로 알림</td><td><span class="tag m">잰 것</span> <code>server/spatial/mib.py</code>(CUETIME M2: 리빌 때 흔들림 4,731px → 0px)</td></tr>
+<tr><td>트래킹</td><td>이음매 상세</td><td>Track / Cue Only / Block / Release</td><td>4모드 어휘는 있음(REQ-LDDESIGN-053) · 콘솔 송신은 아직 없음</td></tr>
+<tr><td>경고</td><td>이음매 <b>!</b>(주황)</td><td>예: 켜진 채 위치가 끊어 바뀜 · 구간 경계가 아닌데 색이 끊어 바뀜</td><td><span class="tag p">제안</span> 규칙서 §2.3 규칙 2 를 검사로</td></tr>
+<tr><td><b>장면 전환</b></td><td>자 아래 「장면 전환」 줄의 <b>알약</b>(그 마디에 3줄 이상 동시에 바뀜)</td><td>알약 → 그 순간 바뀌는 줄 전부의 페이드·MIB·경고를 한 표로, 「모두 끊기 / 모두 1박 페이드」</td><td><span class="tag p">제안</span></td></tr>
+</table></div>
+<p class="note">시안에서 해 볼 것: 이음매 ◆ 를 누르면 오른쪽에 「전환」 편집이, 「장면 전환」 줄의 알약(예: 18마디 6줄)을 누르면 그 순간 전체가 나와요. 가운데 「이 마디 한눈에」 표의 「이 마디 전환」 칸(끊기 / 페이드 n박)을 눌러도 돼요.</p>
+
+<h2>타임라인 줄은 누가 어떻게 정하나</h2>
+<div class="tw"><table>
+<tr><th>층</th><th>무엇</th><th>누가 정하나</th><th>예</th></tr>
+<tr><td><b>① 장비 그룹</b> = 타임라인 줄</td><td>콘솔 그룹 풀에 있는 그룹. 줄 하나 = 그룹 하나 = 시퀀스 하나</td><td>쇼파일(콘솔) — 앱은 읽기만. 어떤 그룹을 줄로 쓸지는 감독이 고름(기본은 역할이 붙은 그룹)</td><td>G4 BACK, G11 MOVER-U</td></tr>
+<tr><td><b>② 층 역할</b> = 줄 옆 이름표</td><td>앱의 정해진 어휘 7개: key(앞빛) · back(역광) · side(옆빛) · wash(워시) · mover(무빙) · effect(효과) · audience(객석)</td><td>앱이 그룹 이름으로 <b>제안</b>(정확 일치·접두어만, 추측 안 함) → <b>감독 확인</b>. 감독이 직접 선언하면 그게 우선. 이미 있는 기능(<code>server/design/rig.py</code> <code>RIG_LAYER_ROLES</code>, 곡 큐 만들 때 감독 확인 1회)</td><td>FOH→key, BLIND→effect(감독 결정 2026-09-15)</td></tr>
+<tr><td><b>③ 효과</b> = 막대 내용</td><td>펄스·체이스·스윕·웨이브 — 그 큐에서 그 그룹이 하는 일</td><td>배치 규칙서 기본값 → 감독이 막대에서 수정</td><td>BACK 이 벌스엔 정지, 코러스엔 펄스</td></tr>
+</table></div>
+<p class="note"><b>정정</b>: 직전 시안의 「SCENE · BACK PULSE · SIDE CHASE · ACCENT」는 장비와 하는 일을 섞은 제 임시 이름이었어요 — SCENE 은 워시와 앞빛 두 그룹을 묶었고, 「PULSE·CHASE」는 효과 이름이라 BACK 이 펄스를 안 하는 마디에도 붙어 있었어요. 이제 줄 이름은 <b>콘솔 그룹 이름</b>, 옆 이름표는 <b>앱의 층 역할</b>, 펄스 같은 건 <b>막대 안</b>에만 있어요. 같은 장비를 두 줄이 잡으면 안 되니(마지막 값이 이겨서 섞임) 앱이 겹치는 그룹(예: MOVER-ALL 과 MOVER-U)을 동시에 줄로 쓰지 못하게 막아요.</p>
+
+<h2>왜 이렇게 바꿨나 — 이전 두 시안과 비교</h2>
+<div class="tw"><table>
+<tr><th></th><th>좌우 스크롤 격자(첫 시안)</th><th>표 + 목록(직전 시안)</th><th>이번 제안</th></tr>
+<tr><td>곡 전체 흐름</td><td>26마디만, 전체는 안 보임</td><td>격자는 있으나 아래가 길어 함께 안 보임</td><td><b>곡 전체 지도</b>가 늘 맨 위 — 구간·에너지·강조, 지금 보는 범위</td></tr>
+<tr><td>마디마다 무엇이 켜졌나</td><td>칸마다 번호가 반복돼 읽기 힘듦</td><td>6줄 큰 표 — 정확하지만 김</td><td><b>큐 하나 = 막대 하나</b>(바뀌는 곳만 경계) + 아래 <b>6줄 짧은 요약</b></td></tr>
+<tr><td>고치기</td><td>없음</td><td>표 아래로 내려가야 편집 창</td><td>오른쪽 칸에 늘 있음 — 막대·요약 줄을 누르면 바로</td></tr>
+<tr><td>문장·AI</td><td>없음</td><td>편집 창 안의 탭</td><td>맨 아래 <b>명령창 하나</b>, AI 제안은 타임라인에 <b>점선 막대</b>로 미리 보임</td></tr>
+<tr><td>프리셋 목록</td><td>없음</td><td>페이지 맨 아래 긴 목록</td><td>오른쪽 <b>서랍</b>(필요할 때만)</td></tr>
+<tr><td>화면 길이</td><td>짧음</td><td>매우 김(스크롤 2~3화면)</td><td><b>한 화면 고정</b></td></tr>
+</table></div>
+
+<h2>조작 방법</h2>
+<ul class="note">
+<li><b>마디 이동</b>: ← → 키 또는 ◀ ▶ · 자 눈금(마디 번호) 클릭 · 곡 전체 지도 클릭(그 위치로 점프)</li>
+<li><b>확대</b>: 곡 전체 / 16마디 / 8마디 — 8마디에서 막대 글씨가 가장 자세함</li>
+<li><b>큐 고치기</b>: 막대 또는 요약 줄 클릭 → 오른쪽에서 밝기(값·디머 프리셋·디머 효과) · 위치 · 색 · 효과 선택 → 즉시 초안 반영(초록 테두리)</li>
+<li><b>문장</b>: 명령창에 「22~25마디 MOVER-D 효과를 Sweep 2박으로」 → 바로 적용 · <b>AI</b>: 「코러스 1 아래 무빙 더 화려하게」 → 점선 막대로 제안 → 수락/거절</li>
+<li><b>콘솔</b>: ▶ 이 마디 콘솔에서 보기(<code>Goto Cue</code> × 6, 쓰기 없음) · ⇪ 콘솔에 반영(고친 큐·새 프리셋을 승인 1번)</li>
+</ul>
+<p class="note">이름은 콘솔에 들어가는 영문 이름(예: <code>4.24 LA Pink</code>)을 먼저 보여 줘요. 미확인 효과는 <span class="tag u">미확인</span>. 실기 확인 항목은 직전 시안 §6 과 같아요(프리셋 갱신 전파, 한 큐 프리셋 여럿, 상대값 움직임 프리셋, 효과 프리셋의 SM15 묶음, Goto 2번 이후·6줄 동시).</p>
+
+<script>
+const BPM=112.35,BEAT=60/BPM,LEAD=3.0,NB=83;
+const BAR_T=[0.00,1.50,3.66,5.78,7.92,10.07,12.21,14.36,16.50,18.65,20.79,22.93,25.08,27.23,29.35,31.51,33.65,35.79,37.90,40.08,42.23,44.36,46.51,48.65,50.79,52.94];
+const barT=b=>b<BAR_T.length?BAR_T[b]:52.94+(b-25)*4*BEAT;
+const SECTIONS=[[0,2,"인트로","#5b6b8a",.2],[3,6,"드럼",".",.35],[7,13,"벌스1","#6d5ba8",.45],[14,17,"프리1","#8a6bc4",.6],[18,32,"코러스1","#c4508a",.85],[33,33,"킥멈춤","#444",.15],[34,41,"벌스2","#6d5ba8",.5],[42,45,"프리2","#8a6bc4",.65],[46,60,"코러스2","#c4508a",.9],[61,61,"킥멈춤","#444",.15],[62,62,"브릿지","#5b6b8a",.3],[63,66,"드롭","#d9774f",1],[67,67,"덜어냄","#444",.2],[68,81,"마지막 코러스","#e0607a",1],[82,82,"끝","#333",.1]];
+const ACC=[18,46,63,67];
+const secOf=b=>SECTIONS.find(s=>b>=s[0]&&b<=s[1]);
+const P={
+ "4.21":{t:"색",nm:"LA Cold",n:"차가운 흰",rgb:[55,80,100]},"4.22":{t:"색",nm:"LA Lavender",n:"라벤더",rgb:[60,30,100]},"4.23":{t:"색",nm:"LA Lavender Tint",n:"라벤더 틴트",rgb:[48,38,100]},"4.24":{t:"색",nm:"LA Pink",n:"핑크",rgb:[100,20,60]},"4.25":{t:"색",nm:"LA Peach",n:"피치",rgb:[100,50,10]},
+ "2.41":{t:"위치",nm:"LA Floor",n:"Pan 0 Tilt 15",tilt:15},"2.42":{t:"위치",nm:"LA Mid",n:"Pan 0 Tilt 45",tilt:45},"2.43":{t:"위치",nm:"LA Up Point",n:"Pan 0 Tilt 60",tilt:60},"2.44":{t:"위치",nm:"LA Open Up",n:"Pan 0 Tilt 75",tilt:75},"2.45":{t:"위치",nm:"LA D Snap",n:"Pan -20 Tilt 30",tilt:30},"2.46":{t:"위치",nm:"LA Back Aim",n:"Pan 180 Tilt 80",tilt:80},
+ "1.31":{t:"밝기",nm:"LA Dim 30",n:"30%",dim:30},"1.32":{t:"밝기",nm:"LA Dim 60",n:"60%",dim:60},"1.33":{t:"밝기",nm:"LA Dim 100",n:"100%",dim:100},
+ "1.21":{t:"효과",pool:"d",nm:"LA Pulse 4",n:"펄스 30↔60 · 4박",k:"p",per:4,hi:60},"1.22":{t:"효과",pool:"d",nm:"LA Pulse 1 60",n:"펄스 30↔60 · 1박",k:"p",per:1,hi:60},"1.23":{t:"효과",pool:"d",nm:"LA Pulse 1 100",n:"펄스 30↔100 · 1박",k:"p",per:1,hi:100},
+ "1.24":{t:"효과",pool:"d",nm:"LA Chase 4",n:"체이스 · 2·4박",k:"p",per:2,hi:100},"1.25":{t:"효과",pool:"d",nm:"LA Chase 2",n:"체이스 · 1박",k:"p",per:1,hi:100},"1.26":{t:"효과",pool:"d",nm:"LA Chase 1",n:"체이스 · 반 박",k:"p",per:.5,hi:100,u:1},
+ "2.61":{t:"효과",pool:"m",nm:"LA Tilt Wave 8",n:"틸트 웨이브 · 8박",k:"n",per:8,u:1},"2.62":{t:"효과",pool:"m",nm:"LA Pan Sway 8",n:"팬 흔들기 · 8박",k:"s",per:8,u:1},"2.63":{t:"효과",pool:"m",nm:"LA Sweep 4",n:"스윕 · 4박",k:"s",per:4},"2.64":{t:"효과",pool:"m",nm:"LA Sweep 2",n:"스윕 · 2박",k:"s",per:2},"2.65":{t:"효과",pool:"m",nm:"LA Sweep 1",n:"스윕 · 1박",k:"s",per:1},"2.66":{t:"효과",pool:"m",nm:"LA Sweep Half",n:"스윕 · 반 박",k:"s",per:.5,u:1},"2.67":{t:"효과",pool:"m",nm:"LA Pan Wave 2",n:"팬 웨이브 · 2박",k:"s",per:2,u:1},"2.68":{t:"효과",pool:"m",nm:"LA Tilt Wave 2",n:"틸트 웨이브 · 2박",k:"n",per:2}
+};
+const ROLES=[
+ {id:"foh",name:"FOH",role:"key",rl:"앞빛",sub:"G3 · 111~118 · 8대",fix:"Group 3 'FOH' · 111~118 · 8대 · 디머만",seq:280,g:"Group 3",nocol:1},
+ {id:"wash",name:"WASH-ALL",role:"wash",rl:"워시",sub:"G10 · 20대 Rush Par 2",fix:"Group 10 'WASH-ALL' · 401~410·421~430 · 20대 · Rush Par 2",seq:281,g:"Group 10"},
+ {id:"back",name:"BACK",role:"back",rl:"역광",sub:"G4 · 12대 Aura XB",fix:"Group 4 'BACK' · 201~212 · 12대 · Aura XB",seq:282,g:"Group 4"},
+ {id:"side",name:"SIDE-ALL",role:"side",rl:"옆빛",sub:"G7 · 12대 Aura XB",fix:"Group 7 'SIDE-ALL' · 301~306(L)·311~316(R) · 12대 · Aura XB — 좌우 번갈이는 효과 안에서(위상 0/180)",seq:283,g:"Group 7"},
+ {id:"movu",name:"MOVER-U",role:"mover",rl:"무빙",sub:"G11 · 8대 MegaPointe",fix:"Group 11 'MOVER-U' · 501~508 · 8대 · MegaPointe",seq:284,g:"Group 11"},
+ {id:"movd",name:"MOVER-D",role:"mover",rl:"무빙",sub:"G12 · 8대 Spiider",fix:"Group 12 'MOVER-D' · 521~528 · 8대 · Spiider(Dimmer2 같이)",seq:285,g:"Group 12"},
+ {id:"blind",name:"BLIND",role:"effect",rl:"효과",sub:"G14 · 6대 블라인더",fix:"Group 14 'BLIND' · 601~606 · 6대",seq:286,g:"Group 14",nocol:1},
+ {id:"strobe",name:"STROBE",role:"effect",rl:"효과",sub:"그룹 번호는 콘솔에서 읽음",fix:"Group 'STROBE'(번호는 콘솔 그룹 풀에서 읽음) · 이 곡은 63·67마디에만",seq:287,g:"Group STROBE",nocol:1}
+];
+const SEG={
+ foh:[[0,6,{dim:0,label:"FOH Off"}],[7,25,{dim:60,label:"Face 60"}]],
+ wash:[[0,6,{dim:0,col:"4.22",label:"Intro"}],[7,10,{dim:40,col:"4.22",label:"Verse One"}],[11,13,{dim:40,col:"4.23",label:"Verse Tint"}],[14,17,{dim:25,col:"4.23",label:"Pre One"}],[18,21,{dim:70,col:"4.24",label:"Chorus One"}],[22,25,{dim:70,col:"4.25",label:"Peach Bleed"}]],
+ back:[[0,0,{dim:"1.33",pos:"2.46",col:"4.21",label:"Start Hit"}],[1,2,{dim:"1.31",pos:"2.46",col:"4.21",label:"Intro Hold"}],[3,6,{pos:"2.46",col:"4.21",fx:"1.21",label:"Kick Four"}],[7,10,{pos:"2.46",col:"4.22",fx:"1.22",label:"Verse Pulse"}],[11,17,{dim:"1.31",pos:"2.46",col:"4.22",label:"Back Hold"}],[18,25,{pos:"2.46",col:"4.22",fx:"1.23",label:"Chorus Pulse"}]],
+ side:[[0,10,{dim:0,col:"4.22",label:"Side Off"}],[11,13,{col:"4.22",fx:"1.24",label:"Side Chase"}],[14,14,{col:"4.22",fx:"1.24",label:"Chase 4"}],[15,15,{col:"4.22",fx:"1.25",label:"Chase 2"}],[16,16,{col:"4.22",fx:"1.26",label:"Chase 1"}],[17,17,{dim:0,col:"4.22",label:"Pre Gap"}],[18,25,{dim:0,col:"4.22",label:"Side Off"}]],
+ movu:[[0,4,{dim:"1.32",pos:"2.41",col:"4.21",label:"Floor"}],[5,10,{dim:"1.32",pos:"2.42",col:"4.21",label:"Mid"}],[11,13,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.62",label:"Pan Sway"}],[14,14,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.63",label:"Sweep 4"}],[15,15,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.64",label:"Sweep 2"}],[16,16,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.65",label:"Sweep 1"}],[17,17,{dim:"1.32",pos:"2.43",col:"4.21",fx:"2.66",label:"Pre Gap"}],[18,18,{dim:"1.32",pos:"2.44",col:"4.24",label:"Open Up"}],[19,21,{dim:"1.32",pos:"2.44",col:"4.24",fx:"2.67",label:"Pan Wave"}],[22,25,{dim:"1.32",pos:"2.44",col:"4.25",label:"U Hold"}]],
+ movd:[[0,4,{dim:"1.32",pos:"2.41",col:"4.21",label:"Floor"}],[5,6,{dim:"1.32",pos:"2.42",col:"4.21",label:"Mid"}],[7,10,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.61",label:"Tilt Wave"}],[11,13,{dim:"1.32",pos:"2.45",col:"4.21",label:"D Snap"}],[14,14,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.63",label:"Sweep 4"}],[15,15,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.64",label:"Sweep 2"}],[16,16,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.65",label:"Sweep 1"}],[17,17,{dim:"1.32",pos:"2.43",col:"4.21",fx:"2.66",label:"Pre Gap"}],[18,21,{dim:"1.32",pos:"2.44",col:"4.24",label:"D Hold Up"}],[22,25,{dim:"1.32",pos:"2.44",col:"4.25",fx:"2.68",label:"D Wave"}]],
+ blind:[[0,17,{dim:0,label:"Blind Off"}],[18,18,{dim:"1.33",label:"Chorus Hit"}],[19,25,{dim:0,label:"Blind Off"}]],
+ strobe:[[0,25,{dim:0,label:"Strobe Off"}]]
+};
+const EDITED=new Set();let GHOST=[];let selJ=null;
+const FOLD=[{k:"key",n:"앞빛",ids:["foh"]},{k:"wash",n:"워시",ids:["wash"]},{k:"back",n:"역광",ids:["back"]},{k:"side",n:"옆빛",ids:["side"]},{k:"mover",n:"무빙",ids:["movu","movd"]},{k:"effect",n:"효과",ids:["blind","strobe"]}];
+const OPEN=new Set(["key","wash","back","side","mover"]); // effect 는 접힌 예시
+let SPLIT=null;const EXP=new Set(); // 표에서 펼친 줄(상세 한 줄)
+let AIP=false;let CLIP=false; // 막대를 눌러 오른쪽 큐 편집을 열었는지 // AI 제안 창을 띄웠는지 // {a,b} — SIDE-ALL 이 SIDE-L / SIDE-R 로 갈라진 구간
+const KIDS=[{id:"sideL",name:"SIDE-L",role:"side",rl:"옆빛",sub:"G5 · 301~306 · 6대",fix:"Group 5 'SIDE-L' · 301~306 · 6대 · Aura XB",seq:288,g:"Group 5",parent:"side"},
+ {id:"sideR",name:"SIDE-R",role:"side",rl:"옆빛",sub:"G6 · 311~316 · 6대",fix:"Group 6 'SIDE-R' · 311~316 · 6대 · Aura XB",seq:289,g:"Group 6",parent:"side"}];
+const RID=id=>ROLES.find(x=>x.id===id)||KIDS.find(x=>x.id===id);
+// ---- transitions: stored on the INCOMING cue (MA3 keeps fade/delay on the destination cue) ----
+const TRK=["Track","Cue Only","Block","Release"];
+const TR={"wash:7":{fade:8,why:"벌스 진입 — 2마디 번짐(규칙 2: 장면은 크로스페이드)"},"wash:11":{fade:2},"wash:14":{fade:1,why:"빌드업 앞 덜어냄"},"wash:18":{fade:0,why:"코러스 히트 — 끊어 바꿈(규칙 2)"},"wash:22":{fade:4,why:"핑크→피치 1마디 번짐"},
+ "foh:7":{fade:8,why:"얼굴빛이 워시와 같이 번지며 켜짐"},
+ "back:3":{fade:0},"back:7":{fade:0},"back:11":{fade:1},"back:18":{fade:0,why:"히트 — 끊기"},
+ "side:11":{fade:0},"side:17":{fade:0,why:"17마디 3박부터 비움 — 트리거는 3박(36.86초)",trigBeat:3},
+ "movu:5":{fade:2,why:"켜진 채 위치 이동 — 어둠이 없어 MIB 불가, 2박 동안 보이게 이동"},"movu:17":{fade:.5,trigBeat:1},"movu:18":{fade:0,why:"히트에 위로 활짝 — 끊기"},"movu:22":{fade:1},
+ "movd:5":{fade:2},"movd:11":{fade:0,why:"켜진 채 위치가 끊어 바뀜 — 의도한 스냅인지 확인"},"movd:18":{fade:0},
+ "blind:18":{fade:0,why:"블라인더 적중"},"blind:19":{fade:.5,why:"2박 켠 뒤 반 박 안에 끔"}};
+const trOf=(rid,seg)=>{const k=`${rid}:${seg[0]}`;return TR[k]||(TR[k]={fade:0});};
+const beatsToS=b=>(b*BEAT).toFixed(2).replace(/\.?0+$/,"");
+const fadeLbl=b=>b?`${beatsToS(b)}초 (${b%4===0?(b/4)+"마디":b+"박"})`:"끊기 (0초)";
+function trigTime(rid,seg){const t=trOf(rid,seg);return barT(seg[0])+((t.trigBeat||1)-1)*BEAT;}
+function mibOf(rid,seg){const i=SEG[rid].indexOf(seg);if(i<1)return {k:"none",t:"곡 첫 큐"};const a=SEG[rid][i-1][2],c=seg[2];
+ if(!c.pos||a.pos===c.pos)return {k:"none",t:"위치 안 바뀜 — MIB 필요 없음"};
+ if(bright(a)===0)return {k:"auto",t:`앞 큐가 꺼져 있음 → 어둠 속에서 미리 이동(앱이 사이에 Cue ${i}.5 위치 전용 큐 삽입, CUETIME 실측)`};
+ return {k:"lit",t:"앞 큐가 켜져 있어 MIB 불가 — 켜진 채 이동(페이드로 보이게)"};}
+function warnOf(rid,seg){const i=SEG[rid].indexOf(seg);if(i<1)return "";const a=SEG[rid][i-1][2],c=seg[2],t=trOf(rid,seg);const w=[];
+ if(c.pos&&a.pos!==c.pos&&bright(a)>0&&t.fade===0&&!ACC.includes(seg[0]))w.push("켜진 채 위치가 끊어 바뀜");
+ if(c.col&&a.col!==c.col&&t.fade===0&&!SECTIONS.some(x=>x[0]===seg[0]))w.push("구간 경계가 아닌데 색이 끊어 바뀜");
+ return w.join(" · ");}
+let cur=18,selRole="movd",bw=32,hlP=null;
+const segOf=(r,b)=>SEG[r].find(s=>b>=s[0]&&b<=s[1]);
+const cueNo=(r,b)=>SEG[r].findIndex(s=>b>=s[0]&&b<=s[1])+1;
+const rgb=id=>{const p=P[id];if(!p||!p.rgb)return "#777";const [r,g,b]=p.rgb;return `rgb(${r*2.55|0},${g*2.55|0},${b*2.55|0})`};
+const isDF=id=>!!(id&&P[id]&&P[id].pool==="d");
+const bright=s=>isDF(s.fx)?P[s.fx].hi:(typeof s.dim==="string"?P[s.dim].dim:(s.dim||0));
+const tc=t=>(LEAD+t).toFixed(2).replace(/\.?0+$/,"");
+const chip=id=>id?`<span class="chip" data-p="${id}" title="${P[id].n} · 이 곡에서 큐 ${(usage()[id]||[]).length}곳 사용">${P[id].rgb?`<span class="sw" style="background:${rgb(id)}"></span>`:""}<b>${id}</b>${P[id].nm.replace(/^LA /,"")}${P[id].u?' <span class="u">⚠</span>':""}</span>`:'<span style="color:#555">—</span>';
+const dimTxt=s=>isDF(s.fx)?chip(s.fx):(typeof s.dim==="string"?chip(s.dim):`${s.dim||0}%`);
+const log=m=>document.getElementById("log").textContent=m;
+// ---------- overview ----------
+function drawOv(){const ov=document.getElementById("ov");const W=Math.max(300,Math.round(ov.clientWidth||830)),ub=W/NB;ov.setAttribute("viewBox",`0 0 ${W} 64`);let o="";
+ for(const s of SECTIONS){const x=s[0]*ub,w=(s[1]-s[0]+1)*ub;o+=`<rect x="${x}" y="22" width="${w-.5}" height="26" fill="${s[3]==="."?"#5b6b8a":s[3]}" opacity=".85"/>`;if(w>34)o+=`<text x="${x+3}" y="39" font-size="10" fill="#fff">${s[2]}</text>`;}
+ let pts=[];for(const s of SECTIONS)for(let b=s[0];b<=s[1];b++)pts.push(`${(b+.5)*ub},${20-s[4]*16}`);o+=`<polyline points="${pts.join(" ")}" fill="none" stroke="#ffd84d" stroke-width="1.5"/>`;
+ for(const a of ACC)o+=`<text x="${(a+.5)*ub}" y="62" font-size="11" fill="#ffd84d" text-anchor="middle">★</text>`;
+ o+=`<rect x="0" y="22" width="${26*ub}" height="26" fill="none" stroke="#7fc45a" stroke-dasharray="3 2"/><text x="${26*ub+3}" y="58" font-size="9" fill="#7fc45a">← 채운 범위(0~25)</text>`;
+ const sc=document.getElementById("scroller");const vis=Math.max(1,(sc.clientWidth-128)/bw);const st=sc.scrollLeft/bw;
+ o+=`<rect x="${st*ub}" y="20" width="${vis*ub}" height="30" fill="#ffffff10" stroke="#fff" stroke-width="1.5"/>`;
+ o+=`<line x1="${(cur+.5)*ub}" x2="${(cur+.5)*ub}" y1="16" y2="52" stroke="#ffd84d" stroke-width="2"/>`;
+ document.getElementById("ov").innerHTML=o;}
+document.getElementById("ov").onclick=e=>{const r=e.currentTarget.getBoundingClientRect();const b=Math.min(NB-1,Math.max(0,Math.floor((e.clientX-r.left)/r.width*NB)));setBar(b,true);};
+// ---------- lanes ----------
+function waveIcon(fx){if(!fx)return "";const p=P[fx];const k=p.k;let d="";
+ if(k==="p")d="M1 9 H4 V2 H7 V9 H10 V2 H13 V9 H16";else if(k==="s")d="M1 6 Q5 0 9 6 T17 6";else d="M1 2 Q5 12 9 2 T17 2";
+ return `<svg class="wave" width="18" height="11" viewBox="0 0 18 11"><path d="${d}" fill="none" stroke="#fff" stroke-width="1.5"/></svg>`;}
+function clipsHTML(rid,opt){opt=opt||{};let h="";const r=RID(rid);
+ for(const seg of SEG[rid]){const s=seg[2],L=seg[0]*bw,W=(seg[1]-seg[0]+1)*bw-2,br=bright(s);
+  if(rid==="side"&&SPLIT&&seg[0]>=SPLIT.a&&seg[1]<=SPLIT.b){h+=`<div class="clip split" data-r="side" data-b="${seg[0]}" style="left:${L+1}px;width:${W}px"><span class="t">${W>40?"↓ L·R 로 갈라짐":""}</span><span class="s">${W>70?"아래 두 줄 보기":""}</span></div>`;continue;}
+  const name=s.fx?P[s.fx].nm.replace(/^LA /,""):(br?s.label:"꺼짐");
+  const sub=[s.pos?P[s.pos].nm.replace(/^LA /,""):"",typeof s.dim==="string"?P[s.dim].n:(isDF(s.fx)?"":(br?br+"%":""))].filter(Boolean).join(" · ");
+  const used=hlP&&[s.dim,s.pos,s.col,s.fx].includes(hlP);
+  const cls=["clip",br?"":"off",selRole===rid&&cur>=seg[0]&&cur<=seg[1]?"sel":"",EDITED.has(seg)?"edited":"",used?"hl":""].join(" ");
+  const i=SEG[rid].indexOf(seg);let fw="";if(i>0){const f=trOf(rid,seg).fade;if(f){const pv=SEG[rid][i-1][2];const pc=bright(pv)?(pv.col?rgb(pv.col):"#d8d8d8"):"#25252c";fw=`<span class="fw" style="width:${Math.min(W,f*bw/4)}px;background:linear-gradient(90deg,${pc},transparent)"></span>`;}}
+  h+=`<div class="${cls}" data-r="${rid}" data-b="${seg[0]}" style="left:${L+1}px;width:${W}px;background:${s.col&&br?rgb(s.col):(br?"#d8d8d8":"")};${!s.col&&br?"color:#111;text-shadow:none":""}" title="${r.name} ${seg[0]}~${seg[1]}마디 · Cue ${i+1} '${s.label}'"><span class="t">${W>40?name:""}</span><span class="s">${W>70?sub:""}</span>${W>40?waveIcon(s.fx):""}<span class="ib" style="width:${br}%;opacity:.55"></span>${fw}</div>`;}
+ if(!opt.nojoint)for(const seg of SEG[rid].slice(1)){const t=trOf(rid,seg),m=mibOf(rid,seg),w=warnOf(rid,seg);
+  const cls=["jt",t.fade?"f":"",m.k==="auto"?"mib":"",w?"w":"",selJ&&selJ.r===rid&&selJ.b===seg[0]?"on":""].join(" ");
+  h+=`<div class="${cls}" data-jr="${rid}" data-jb="${seg[0]}" style="left:${seg[0]*bw+((t.trigBeat||1)-1)*bw/4}px" title="전환 ${seg[0]}마디 · 페이드 ${fadeLbl(t.fade)}${w?" · ⚠ "+w:""}">${m.k==="auto"?"M":(w?"!":(t.fade?"◢":""))}</div>`;}
+ for(const g of GHOST.filter(g=>g.r===rid))h+=`<div class="clip ghost" style="left:${g.a*bw+1}px;width:${(g.b-g.a+1)*bw-2}px"><span class="t">AI: ${g.t}</span><span class="s">수락/거절 →</span></div>`;
+ h+=`<div class="clip empty" style="left:${26*bw+1}px;width:${(NB-26)*bw-2}px"><span class="t">26마디~ 아직 배치 안 함</span></div>`;return h;}
+function kidHTML(k){let h="";const a=SPLIT.a,b=SPLIT.b;
+ h+=`<div class="clip follow" style="left:1px;width:${a*bw-2}px"><span class="t">${a*bw>90?"SIDE-ALL 따름":""}</span></div>`;
+ h+=clipsHTML(k.id,{nojoint:1}).replace(/<div class="clip empty"[^]*$/,"");
+ h+=`<div class="clip follow" style="left:${(b+1)*bw+1}px;width:${(26-b-1)*bw-2}px"><span class="t">SIDE-ALL 따름</span></div>`;return h;}
+function summaryHTML(f){const ids=f.ids;let starts=new Set([0]);ids.forEach(id=>SEG[id].forEach(sg=>starts.add(sg[0])));starts=[...starts].sort((a,b)=>a-b);let h="";
+ starts.forEach((a,ix)=>{const b=(ix+1<starts.length?starts[ix+1]:26)-1,W=(b-a+1)*bw-2;
+  const reps=ids.map(id=>segOf(id,a)[2]);const lit=ids.filter((id,k)=>bright(reps[k])>0);const rep=reps[ids.indexOf(lit[0]||ids[0])];
+  const ch=ids.filter(id=>segOf(id,a)[0]===a).map(id=>RID(id).name);
+  h+=`<div class="clip sum ${lit.length?"":"off"}" data-fold="${f.k}" style="left:${a*bw+1}px;width:${W}px;background:${lit.length&&rep.col?rgb(rep.col):(lit.length?"#d8d8d8":"")}" title="${f.n} ${a}~${b}마디 — 켜진 줄 ${lit.length}/${ids.length}"><span class="t">${W>40?(lit.length?`${lit.length}/${ids.length}줄 켜짐`:"꺼짐"):""}</span><span class="s">${W>70&&ch.length?ch.join("·")+" 바뀜":""}</span></div>`;});
+ return h+`<div class="clip empty" style="left:${26*bw+1}px;width:${(NB-26)*bw-2}px"><span class="t">26마디~</span></div>`;}
+function drawLanes(){const lh=document.getElementById("lhead");
+ const tr=document.getElementById("track");tr.style.width=(NB*bw)+"px";tr.style.setProperty("--bw",bw+"px");
+ let L=`<div>마디 →<br>줄 ↓ <span style="cursor:pointer;color:#ffd84d" id="fAll">[모두 접기/펴기]</span></div><div style="height:22px;padding:3px 8px;color:#f0b49c;font-size:10.5px;border-bottom:1px solid #000">장면 전환 ▼</div>`;
+ let h=`<div class="ruler">`;for(let b=0;b<NB;b++){const s=secOf(b);const first=s[0]===b;
+  if(bw>=24||b%2===0||first)h+=`<div class="rb${first?" sec":""}" data-b="${b}" style="left:${b*bw}px;width:${bw}px"><b>${b===0?"앞":b}</b>${first&&bw>=24?`<span class="sl">${s[2]}${ACC.includes(b)?" ★":""}</span>`:(ACC.includes(b)?`<span class="sl">★</span>`:"")}</div>`;}
+ h+=`</div><div class="trow">`;
+ for(let b=1;b<=25;b++){const ch=ROLES.filter(r=>segOf(r.id,b)[0]===b);if(ch.length>=3)h+=`<div class="tm${selJ&&selJ.scene===b?" on":""}" data-sb="${b}" style="left:${b*bw}px">${b}마디 ${ch.length}줄</div>`;}
+ h+=`</div>`;
+ for(const f of FOLD){const open=OPEN.has(f.k);const nKids=f.k==="side"&&SPLIT?2:0;
+  L+=`<div class="fh" data-f="${f.k}">${open?"▾":"▸"} ${f.n} · ${f.k} <span style="color:#9a98a6">(${f.ids.length+nKids}줄)</span></div>`;h+=`<div class="frow"></div>`;
+  if(!open){L+=`<div class="kid"><b style="color:#9a98a6">접힘 — 요약</b><small>${f.ids.map(id=>RID(id).name).join(" · ")}</small></div>`;h+=`<div class="lane">${summaryHTML(f)}</div>`;continue;}
+  for(const id of f.ids){const r=RID(id);L+=`<div class="kid"><b>${r.name}</b><small>${r.sub}</small></div>`;h+=`<div class="lane" data-r="${id}">${clipsHTML(id)}</div>`;
+   if(id==="side"&&SPLIT)for(const k of KIDS){L+=`<div class="kid" style="padding-left:34px!important"><b>└ ${k.name}</b><small>${k.sub} · ${SPLIT.a}~${SPLIT.b}마디만 따로</small></div>`;h+=`<div class="lane" data-r="${k.id}">${kidHTML(k)}</div>`;}}}
+ h+=`<div class="ph" id="ph" style="left:${cur*bw}px;width:${bw}px"></div>`;
+ lh.innerHTML=L;tr.innerHTML=h;
+ lh.querySelectorAll(".fh").forEach(e=>e.onclick=()=>{const k=e.dataset.f;OPEN.has(k)?OPEN.delete(k):OPEN.add(k);refresh();});
+ lh.querySelector("#fAll").onclick=()=>{if(OPEN.size)OPEN.clear();else FOLD.forEach(f=>OPEN.add(f.k));refresh();};
+ tr.querySelectorAll(".rb").forEach(e=>e.onclick=()=>setBar(+e.dataset.b));
+ tr.querySelectorAll(".jt").forEach(e=>e.onclick=ev=>{ev.stopPropagation();selJ={r:e.dataset.jr,b:+e.dataset.jb};selRole=selJ.r;setBar(selJ.b);});
+ tr.querySelectorAll(".tm").forEach(e=>e.onclick=ev=>{ev.stopPropagation();selJ={scene:+e.dataset.sb};setBar(selJ.scene);});
+ tr.querySelectorAll(".clip[data-fold]").forEach(e=>e.onclick=()=>{OPEN.add(e.dataset.fold);refresh();});
+ tr.querySelectorAll(".clip[data-r]").forEach(e=>e.onclick=ev=>{const r=e.dataset.r;const x=ev.offsetX+e.offsetLeft;const b=Math.min(25,Math.max(0,Math.floor(x/bw)));selRole=r;selJ=null;AIP=false;CLIP=true;setBar(b);});
+ drawOv();}
+document.getElementById("scroller").addEventListener("scroll",drawOv);
+// ---------- stage ----------
+function drawStage(b){const S=id=>(b<26?segOf(id,b)[2]:{dim:0});const per=v=>`${(v*BEAT).toFixed(2)}s`;
+ const st=document.getElementById("stage");const H=300,W=Math.max(420,Math.round(H*((st.clientWidth||620)/(st.clientHeight||300)))),L0=60,R0=W-60,SW=R0-L0; // 칸 비율에 맞춰 가로를 채움
+ const lamp=(x,y,r,s,cls,sty)=>{const h=bright(s);return `<circle cx="${x}" cy="${y}" r="${r}" fill="${h?(s.col?rgb(s.col):"#fff"):"#333"}" opacity="${h?Math.max(.35,h/100):1}" class="${cls||""}" style="${sty||""}"/>`};
+ const row=(n,a,bb)=>Array.from({length:n},(_,i)=>a+(bb-a)*(n===1?.5:i/(n-1)));
+ let o=`<rect width="${W}" height="${H}" fill="#101014"/><rect x="${L0}" y="70" width="${SW}" height="170" fill="#1b1b22" stroke="#333"/>`;
+ const sc=S("wash"),sh=bright(sc);if(sh)o+=`<rect x="${L0}" y="70" width="${SW}" height="170" fill="${rgb(sc.col)}" opacity="${sh/160}"/>`;
+ row(10,L0+22,R0-22).forEach(x=>{o+=lamp(x,226,5,sc);o+=lamp(x,86,5,sc);});
+ const fo=S("foh");row(8,L0+60,R0-60).forEach(x=>o+=lamp(x,264,5,fo));
+ const bk=S("back"),bp=isDF(bk.fx)?P[bk.fx]:null;row(12,L0+10,R0-10).forEach(x=>o+=lamp(x,30,6,bk,bp?"anim-pulse":"",bp?`--per:${per(bp.per)}`:""));
+ const spl=SPLIT&&b>=SPLIT.a&&b<=SPLIT.b,sdL=spl?S("sideL"):S("side"),sdR=spl?S("sideR"):S("side"),spL=isDF(sdL.fx)?P[sdL.fx]:null,spR=isDF(sdR.fx)?P[sdR.fx]:null;
+ row(6,92,212).forEach(y=>{o+=lamp(28,y,6,sdL,spL?"anim-pulse":"",spL?`--per:${per(spL.per*2)}`:"");o+=lamp(W-28,y,6,sdR,spR?"anim-pulse":"",spR?`--per:${per(spR.per*2)};animation-delay:${per(spR.per)}`:"");});
+ const mv=(id,y)=>{const s=S(id),fp=s.fx&&!isDF(s.fx)?P[s.fx]:null,h=bright(s);let cls=fp?(fp.k==="n"?"anim-nod":"anim-sway"):"";
+  const len=40+((P[s.pos]||{}).tilt||45)*1.3;let g="";row(8,L0+30,R0-30).forEach(x=>{
+  g+=`<g class="${cls}" style="--per:${fp?per(fp.per):"1s"}"><polygon points="${x},${y} ${x-9},${y+len} ${x+9},${y+len}" fill="${rgb(s.col)}" opacity="${h/260}"/></g><rect x="${x-5}" y="${y-5}" width="10" height="10" fill="${h?rgb(s.col):"#333"}"/>`;});return g;};
+ o+=mv("movu",54)+mv("movd",120);
+ const ac=S("blind"),ah=bright(ac);row(6,W/2-110,W/2+110).forEach(x=>o+=`<rect x="${x-9}" y="41" width="18" height="8" fill="${ah?"#fff":"#444"}"/>`);if(ah)o+=`<rect width="${W}" height="${H}" fill="#fff" opacity=".18"/>`;
+ const ZB={foh:[L0+40,254,SW-80,20,"FOH"],wash:[L0+4,76,SW-8,160,"WASH-ALL"],back:[L0,21,SW,18,"BACK"],side:[[16,82,24,142],[W-40,82,24,142],"SIDE"],sideL:[16,82,24,142,"SIDE-L"],sideR:[W-40,82,24,142,"SIDE-R"],movu:[L0+16,46,SW-32,18,"MOVER-U"],movd:[L0+16,112,SW-32,18,"MOVER-D"],blind:[W/2-124,37,248,16,"BLIND"]};
+ const lab=(x,y,t,a)=>`<text x="${x}" y="${y}" font-size="10" fill="#8a889a" text-anchor="${a||"start"}">${t}</text>`;
+ o+=lab(L0+44,284,"FOH")+lab(L0+6,250,"WASH")+lab(L0,16,"BACK")+lab(14,76,"SIDE-L")+lab(W-14,76,"SIDE-R","end")+lab(L0-14,58,"U","end")+lab(L0-14,124,"D","end")+lab(W/2+130,50,"BLIND");
+ const hz=ZB[selRole];if(hz){const boxes=Array.isArray(hz[0])?[hz[0],hz[1]]:[hz];boxes.forEach(z=>o+=`<rect x="${z[0]}" y="${z[1]}" width="${z[2]}" height="${z[3]}" fill="none" stroke="#ffd84d" stroke-width="2" rx="4" stroke-dasharray="5 3"/>`);}
+ for(const [id,z] of Object.entries(ZB)){if(id==="side"&&spl)continue;if((id==="sideL"||id==="sideR")&&!spl)continue;const boxes=Array.isArray(z[0])?[z[0],z[1]]:[z];boxes.forEach(q=>o+=`<rect class="hit" data-hit="${id}" x="${q[0]}" y="${q[1]}" width="${q[2]}" height="${q[3]}" fill="transparent" style="cursor:pointer"><title>${z[z.length-1]} — 눌러서 편집</title></rect>`);}
+ st.setAttribute("viewBox",`0 0 ${W} ${H}`);st.innerHTML=o;
+ st.querySelectorAll(".hit").forEach(h=>h.onclick=()=>{selRole=h.dataset.hit;selJ=null;AIP=false;CLIP=true;refresh();});}
+// ---------- bar summary ----------
+function changedTxt(r,b){if(b===0||b>25)return "";const pa=segOf(r,b-1),pc=segOf(r,b);if(!pc)return "";if(!pa)return "● 여기서 갈라짐";const a=pa[2],c=pc[2];if(a===c)return "";const o=[];
+ if(String(a.dim)!==String(c.dim)||isDF(a.fx)!==isDF(c.fx))o.push("밝기");for(const [k,l] of [["pos","위치"],["col","색"],["fx","효과"]])if(a[k]!==c[k]&&!(k==="fx"&&(isDF(a.fx)||isDF(c.fx))&&!(!isDF(a.fx)&&!isDF(c.fx))))o.push(l);return "● "+(o.join("·")||"큐")+" 바뀜";}
+function cellHTML(rid,s,field){
+ if(field==="dim")return `<span class="cell" data-c="dim" data-r="${rid}">${dimTxt(s)}</span>`;
+ if(field==="pos")return (rid==="foh"||rid==="wash"||rid==="side"||rid.startsWith("side")||rid==="blind"||rid==="strobe")?'<span style="color:#555">—</span>':`<span class="cell" data-c="pos" data-r="${rid}">${s.pos?chip(s.pos):'<span style="color:#777">＋</span>'}</span>`;
+ if(field==="col")return RID(rid).nocol?'<span style="color:#555">—</span>':`<span class="cell" data-c="col" data-r="${rid}">${s.col?chip(s.col):'<span style="color:#777">＋</span>'}</span>`;
+ if(field==="fx")return (rid==="movu"||rid==="movd")?`<span class="cell" data-c="fx" data-r="${rid}">${s.fx&&!isDF(s.fx)?chip(s.fx):'<span style="color:#777">＋ 없음</span>'}</span>`:'<span style="color:#555">—</span>';}
+function rowHTML(r,b){const seg=segOf(r.id,b),s=seg[2];
+ return `<tr data-r="${r.id}" class="${selRole===r.id?"on":""}"><td><span class="rn">${r.name}</span><br><span class="chg">${changedTxt(r.id,b)}</span></td><td>${cellHTML(r.id,s,"dim")}</td><td>${cellHTML(r.id,s,"pos")}</td><td>${cellHTML(r.id,s,"col")}</td><td>${cellHTML(r.id,s,"fx")}</td><td>${seg[0]===b&&SEG[r.id].indexOf(seg)>0?(()=>{const t=trOf(r.id,seg),w=warnOf(r.id,seg);return `<span class="chip" data-j="${r.id}">${t.fade?"페이드 "+fadeLbl(t.fade):"끊기"}${mibOf(r.id,seg).k==="auto"?" · MIB":""}</span>${w?' <span class="u">⚠</span>':""}`;})():'<span style="color:#555">유지</span>'}</td></tr>`;}
+function detailRow(r,b){const seg=segOf(r.id,b),k=SEG[r.id].indexOf(seg)+1,next=SEG[r.id][k],len=(next?next[0]:26)-seg[0];
+ return `<tr class="sub"><td colspan="6">${r.fix}<br>Seq ${r.seq} · Cue ${k} '${seg[2].label}' · ${seg[0]}~${seg[1]}마디(${len}마디 ≈ ${(len*4*BEAT).toFixed(1)}초) · 타임코드 ${tc(trigTime(r.id,seg))}초
+ ${r.id==="side"?(SPLIT?` · <a href="#" data-unsplit="1" style="color:#ffd84d">L·R 다시 합치기</a>`:` · <a href="#" data-split="1" style="color:#ffd84d">이 구간 왼쪽·오른쪽 따로</a>`):""}
+ <details><summary>콘솔 명령</summary><div class="cmdbox">${cueLines(r.id,b).join("\n")}</div></details></td></tr>`;}
+function drawBar(b){const s0=secOf(b);document.getElementById("barLbl").textContent=`${b===0?"앞박":b+"마디"} · ${s0[2]}`;
+ document.getElementById("stT").textContent=`${b===0?"앞박":b+"마디"} · ${barT(b).toFixed(1)}초`;
+ document.getElementById("bsT").textContent=`${b===0?"앞박":b+"마디"} 한눈에 — ${s0[2]}${ACC.includes(b)?" ★":""}`;
+ if(b>25){document.getElementById("bt").innerHTML=`<tr><td style="color:var(--uim)">이 마디는 아직 배치하지 않았어요(시안 데이터 0~25마디).</td></tr>`;return;}
+ let h=`<tr class="hd" style="cursor:default"><td style="color:var(--uim)">줄</td><td style="color:var(--uim)">밝기</td><td style="color:var(--uim)">위치</td><td style="color:var(--uim)">색</td><td style="color:var(--uim)">움직임</td><td style="color:var(--uim)">전환</td></tr>`;
+ for(const f of FOLD){const open=OPEN.has(f.k);const ch=f.ids.filter(id=>segOf(id,b)[0]===b).length;
+  h+=`<tr class="gh" data-f="${f.k}"><td colspan="6">${open?"▾":"▸"} ${f.n} · ${f.k} ${!open?`— ${f.ids.length}줄 접힘${ch?` · 이 마디 ${ch}줄 바뀜`:""}`:""}</td></tr>`;
+  if(!open)continue;for(const id of f.ids){h+=rowHTML(RID(id),b);if(id==="side"&&SPLIT&&b>=SPLIT.a&&b<=SPLIT.b)KIDS.forEach(k=>h+=rowHTML(k,b).replace(`<span class="rn">${k.name}`,`<span class="rn">└ ${k.name}`));}}
+ document.getElementById("bt").innerHTML=h;
+ document.querySelectorAll("#bt tr.gh").forEach(t=>t.onclick=()=>{const k=t.dataset.f;OPEN.has(k)?OPEN.delete(k):OPEN.add(k);refresh();});
+ document.querySelectorAll("#bt tr[data-r]").forEach(t=>t.onclick=()=>{selRole=t.dataset.r;selJ=null;AIP=false;CLIP=true;refresh();});
+ document.querySelectorAll("#bt .cell").forEach(c=>c.onclick=e=>{e.stopPropagation();selRole=c.dataset.r;selJ=null;AIP=false;CLIP=true;FOCUS=c.dataset.c;refresh();});
+ document.querySelectorAll("#bt .rn[data-x]").forEach(n=>n.onclick=e=>{e.stopPropagation();const id=n.dataset.x;EXP.has(id)?EXP.delete(id):EXP.add(id);selRole=id;refresh();});
+ document.querySelectorAll("#bt [data-split]").forEach(a=>a.onclick=e=>{e.preventDefault();e.stopPropagation();const seg=segOf("side",cur),s=seg[2];SPLIT={a:seg[0],b:seg[1]};SEG.sideL=[[seg[0],seg[1],{...JSON.parse(JSON.stringify(s)),label:"Side L"}]];SEG.sideR=[[seg[0],seg[1],{...JSON.parse(JSON.stringify(s)),col:"4.24",label:"Side R"}]];OPEN.add("side");log(`[갈라짐] SIDE-ALL ${seg[0]}~${seg[1]}마디 → SIDE-L·SIDE-R`);refresh();});
+ document.querySelectorAll("#bt [data-unsplit]").forEach(a=>a.onclick=e=>{e.preventDefault();e.stopPropagation();SPLIT=null;delete SEG.sideL;delete SEG.sideR;log("[합침] SIDE-L·R → SIDE-ALL");refresh();});}
+function inlineEdit(c){const rid=c.dataset.r,field=c.dataset.c,seg=segOf(rid,cur),s=seg[2];let o="";
+ if(field==="dim"){o=[0,25,40,60,70,100].map(v=>`<option value="v${v}" ${s.dim===v&&!isDF(s.fx)?"selected":""}>값 ${v}%</option>`).join("")+`<optgroup label="디머 프리셋">`+Object.keys(P).filter(k=>P[k].t==="밝기").map(k=>`<option value="${k}" ${s.dim===k?"selected":""}>${k} ${P[k].nm}</option>`).join("")+`</optgroup><optgroup label="디머 효과">`+Object.keys(P).filter(k=>P[k].pool==="d").map(k=>`<option value="${k}" ${s.fx===k?"selected":""}>${k} ${P[k].nm}${P[k].u?" ⚠":""}</option>`).join("")+`</optgroup>`;}
+ else if(field==="pos")o=opts("위치",s.pos,true);else if(field==="col")o=opts("색",s.col,true);else o=opts("효과",isDF(s.fx)?"":s.fx,true,k=>P[k].pool==="m");
+ c.innerHTML=`<select>${o}</select>`;const sel=c.querySelector("select");sel.focus();sel.onclick=e=>e.stopPropagation();
+ sel.onchange=()=>{const v=sel.value;if(v==="__new"){log("＋ 새 프리셋: 이름(영문 LA …)·값을 정하거나 명령창에 「○○ 같은 프리셋 만들어」로 AI 요청");return;}
+  if(field==="dim"){if(v[0]==="v"){s.dim=+v.slice(1);if(isDF(s.fx))delete s.fx;}else if(P[v].pool==="d"){delete s.dim;s.fx=v;}else{s.dim=v;if(isDF(s.fx))delete s.fx;}}
+  else if(field==="fx"){if(v)s.fx=v;else delete s.fx;}else{if(v)s[field]=v;else delete s[field];}
+  EDITED.add(seg);selRole=rid;log(`[초안 적용] ${RID(rid).name} ${seg[0]}~${seg[1]}마디 ${{dim:"밝기",pos:"위치",col:"색",fx:"움직임"}[field]} → ${v.replace(/^v/,"")}${v[0]==="v"?"%":""} — 이 큐가 걸친 마디 전체 · 콘솔은 「⇪ 콘솔에 반영」`);refresh();};
+ sel.onblur=()=>setTimeout(()=>{if(document.activeElement!==sel)drawBar(cur);},150);}
+// ---------- editor ----------
+function opts(type,curv,none,filter){const ids=Object.keys(P).filter(k=>P[k].t===type&&(!filter||filter(k)));return (none?`<option value="">— 없음 —</option>`:"")+ids.map(i=>`<option value="${i}" ${i===curv?"selected":""}>${i} ${P[i].nm}${P[i].u?" ⚠":""}</option>`).join("")+`<option value="__new">＋ 새 프리셋…</option>`;}
+function drawTr(p){
+ if(selJ.scene!==undefined){const b=selJ.scene;const ch=ROLES.filter(r=>segOf(r.id,b)[0]===b);
+  p.innerHTML=`<h5><span>장면 전환 · ${b}마디 (타임코드 ${tc(barT(b))}초)</span><span style="cursor:pointer" id="jx">✕</span></h5><div class="fx" style="margin-bottom:6px">이 순간 ${ch.length}줄이 함께 바뀜 — 한눈에 보고 줄별로 고치기</div>
+  <table class="bt">${ch.map(r=>{const seg=segOf(r.id,b),t=trOf(r.id,seg),m=mibOf(r.id,seg),w=warnOf(r.id,seg);return `<tr data-jr="${r.id}"><td class="rn">${r.name}</td><td>${t.fade?"페이드 "+fadeLbl(t.fade):"끊기 (0초)"}</td><td>${m.k==="auto"?"MIB 자동":m.k==="lit"?"켜진 채 이동":"—"}</td><td>${w?'<span class="u">⚠ '+w+'</span>':""}</td></tr>`;}).join("")}</table>
+  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="tbtn" id="allCut">모두 끊기</button><button class="tbtn" id="allFade">모두 1박 페이드</button></div>
+  <div class="fx">규칙: 히트(★)는 끊기, 장면 전환은 크로스페이드 — 규칙서 §2.3 규칙 2</div>`;
+  p.querySelector("#jx").onclick=()=>{selJ=null;refresh();};
+  p.querySelectorAll("tr[data-jr]").forEach(t=>t.onclick=()=>{selJ={r:t.dataset.jr,b};selRole=t.dataset.jr;refresh();});
+  p.querySelector("#allCut").onclick=()=>{ch.forEach(r=>{trOf(r.id,segOf(r.id,b)).fade=0;EDITED.add(segOf(r.id,b));});log(`[초안] ${b}마디 ${ch.length}줄 모두 끊기`);refresh();};
+  p.querySelector("#allFade").onclick=()=>{ch.forEach(r=>{trOf(r.id,segOf(r.id,b)).fade=1;EDITED.add(segOf(r.id,b));});log(`[초안] ${b}마디 ${ch.length}줄 모두 1박 페이드`);refresh();};return;}
+ const r=RID(selJ.r),seg=segOf(selJ.r,selJ.b),i=SEG[selJ.r].indexOf(seg),prev=SEG[selJ.r][i-1],t=trOf(selJ.r,seg),m=mibOf(selJ.r,seg),w=warnOf(selJ.r,seg);
+ const next=SEG[selJ.r][i+1];const lenBars=(next?next[0]:26)-seg[0];
+ p.innerHTML=`<h5><span>전환 · ${r.name} · Cue ${i} → Cue ${i+1}</span><span style="cursor:pointer" id="jx">✕</span></h5>
+ <div class="fx" style="margin:0 0 6px">'${prev[2].label}' → '${seg[2].label}' · 값은 <b>들어오는 큐(Cue ${i+1})</b>에 저장돼요(MA3 방식)</div>
+ <div class="ed">
+  <label>트리거</label><div class="dimrow"><select id="jT" style="width:110px"><option>타임코드 이벤트</option><option disabled>Follow(앞 큐 끝나면)</option><option disabled>Go(손으로)</option></select><span style="flex:1">${seg[0]}마디 <select id="jB" style="width:64px">${[1,2,3,4].map(x=>`<option ${x===(t.trigBeat||1)?"selected":""}>${x}</option>`).join("")}</select>박 = ${tc(trigTime(selJ.r,seg))}초</span></div>
+  <label>큐 길이</label><div>${lenBars}마디 ≈ ${(lenBars*4*BEAT).toFixed(1)}초 <span class="fx">(다음 트리거까지 — 막대 끝을 끌어 조절)</span></div>
+  <label>페이드</label><div class="dimrow"><b style="align-self:center;min-width:64px">${beatsToS(t.fade)}초</b><span style="align-self:center;color:var(--uim)">=</span><input id="jF" type="number" step="0.5" min="0" value="${t.fade}" style="width:58px"><span style="flex:1;align-self:center;color:var(--uim)">박 (1박 ${beatsToS(1)}초 · 4박 = 1마디) ${t.fade?"":"— 끊기"}</span></div>
+  <label>딜레이</label><div class="dimrow"><b style="align-self:center;min-width:64px">${beatsToS(t.delay||0)}초</b><span style="align-self:center;color:var(--uim)">=</span><input id="jD" type="number" step="0.5" min="0" value="${t.delay||0}" style="width:58px"><span style="flex:1;align-self:center;color:var(--uim)">박</span></div>
+  <label>위치만 따로</label><div><select id="jA"><option value="">같이(기본)</option><option value="late">위치는 1박 늦게 ⚠미확인</option></select></div>
+  <label>MIB</label><div style="font-size:11.5px">${m.k==="auto"?'<span style="color:#c9a8ff">● 자동</span> ':m.k==="lit"?'<span class="u">● 불가</span> ':"— "}${m.t}</div>
+  <label>트래킹</label><select id="jK">${TRK.map(x=>`<option ${x===(t.trk||"Track")?"selected":""}>${x}</option>`).join("")}</select>
+ </div>
+ ${w?`<div class="u" style="margin-top:6px">⚠ ${w}</div>`:""}${t.why?`<div class="fx">이유: ${t.why}</div>`:""}
+ <details><summary>콘솔 명령(이 전환)</summary><div class="cmdbox">Store Sequence ${r.seq} Cue ${i+1} '${seg[2].label}' CueFade ${beatsToS(t.fade)}${t.delay?`\n(딜레이 ${beatsToS(t.delay)}초 — 줄 꼴 실기 미확인)`:""}\ncd Timecode 25.1.${ROLES.indexOf(r)+1}.1.1\nStore Property 'Time' ${tc(trigTime(selJ.r,seg))} 'AbsTime' ${tc(trigTime(selJ.r,seg))} 'Token' 'Go+'${m.k==="auto"?`\n(MIB) Store Sequence ${r.seq} Cue ${i}.5 — 위치 프리셋만, 밝기 0 유지`:""}</div></details>`;
+ p.querySelector("#jx").onclick=()=>{selJ=null;refresh();};
+ const up=()=>{t.fade=+p.querySelector("#jF").value;t.delay=+p.querySelector("#jD").value;t.trigBeat=+p.querySelector("#jB").value;t.trk=p.querySelector("#jK").value;EDITED.add(seg);log(`[초안] ${r.name} ${seg[0]}마디 전환 — 트리거 ${t.trigBeat}박 · 페이드 ${fadeLbl(t.fade)} · 딜레이 ${beatsToS(t.delay)}초 · ${t.trk}`);refresh();};
+ ["#jF","#jD","#jB","#jK"].forEach(q=>p.querySelector(q).onchange=up);}
+let FOCUS=null;let TRSHOW=false,CMDSHOW=false;
+function drawClipEd(p){const rid=selRole,r=RID(rid),seg=segOf(rid,cur),s=seg[2],k=SEG[rid].indexOf(seg)+1,next=SEG[rid][k],len=(next?next[0]:26)-seg[0];
+ const t=k>1?trOf(rid,seg):null,m=k>1?mibOf(rid,seg):null,w=k>1?warnOf(rid,seg):"";
+ const dm=isDF(s.fx)?"fx":(typeof s.dim==="string"?"preset":"value");const mover=rid==="movu"||rid==="movd";const posOK=mover||rid==="back";
+ const trView=TRSHOW&&t;
+ const head=`<h5><span>${r.name} · Cue ${k} '${s.label}'</span><span style="display:flex;gap:6px;align-items:center"><button class="tg ${trView?"on":""}" id="tgTr" ${t?"":"disabled title=\"곡 첫 큐 — 들어오는 전환 없음\""}>전환</button><span style="cursor:pointer" id="cx">✕</span></span></h5>
+ <div class="fx" style="margin:0 0 6px">${r.fix}<br>Seq ${r.seq} · ${seg[0]}~${seg[1]}마디 · ${len}마디 ≈ ${(len*4*BEAT).toFixed(1)}초 · 타임코드 ${tc(trigTime(rid,seg))}초</div>`;
+ const mainView=`<div class="ed">
+  <label>밝기</label><div class="dimrow"><select id="eM"><option value="value" ${dm==="value"?"selected":""}>값</option><option value="preset" ${dm==="preset"?"selected":""}>디머 프리셋</option><option value="fx" ${dm==="fx"?"selected":""}>디머 효과</option></select><span id="eMB" style="flex:1"></span></div>
+  ${posOK?`<label>위치</label><select id="eP">${opts("위치",s.pos,true)}</select>`:""}
+  ${!r.nocol?`<label>색</label><select id="eC">${opts("색",s.col,true)}</select>`:""}
+  ${mover?`<label>움직임</label><select id="eF">${opts("효과",isDF(s.fx)?"":s.fx,true,x=>P[x].pool==="m")}</select>`:""}
+ </div>
+ ${rid==="side"?(SPLIT?`<button class="tbtn" id="unS" style="margin-top:8px">L·R 다시 합치기</button>`:`<button class="tbtn" id="doS" style="margin-top:8px">이 구간 왼쪽·오른쪽 따로</button>`):""}`;
+ const trViewHTML=t?`<div style="color:#ffd84d;font-weight:700;margin:2px 0 2px">전환 — Cue ${k-1} '${SEG[rid][k-2][2].label}' → Cue ${k}</div>
+ <div class="ed">
+  <label>페이드</label><div class="dimrow"><b style="align-self:center;min-width:56px">${beatsToS(t.fade)}초</b><input id="tF" type="number" step="0.5" min="0" value="${t.fade}" style="width:60px"><span style="align-self:center;color:var(--uim)">박 ${t.fade?"번짐":"— 끊기"}</span></div>
+  <label>트리거</label><div>${seg[0]}마디 <select id="tB" style="width:60px">${[1,2,3,4].map(x=>`<option ${x===(t.trigBeat||1)?"selected":""}>${x}</option>`).join("")}</select> 박 = ${tc(trigTime(rid,seg))}초</div>
+  <label>딜레이</label><div class="dimrow"><b style="align-self:center;min-width:56px">${beatsToS(t.delay||0)}초</b><input id="tD" type="number" step="0.5" min="0" value="${t.delay||0}" style="width:60px"><span style="align-self:center;color:var(--uim)">박</span></div>
+  <label>위치만 따로</label><select id="tA"><option>같이(기본)</option><option>1박 늦게 ⚠미확인</option></select>
+  <label>MIB</label><div style="font-size:12px">${m.t}</div>
+  <label>트래킹</label><select id="tK">${TRK.map(x=>`<option ${x===(t.trk||"Track")?"selected":""}>${x}</option>`).join("")}</select>
+ </div>${w?`<div class="u" style="margin-top:6px">⚠ ${w}</div>`:""}${t.why?`<div class="fx">이유: ${t.why}</div>`:""}`:"";
+ const cmd=`<div style="margin-top:12px;border-top:1px solid #2c2c34;padding-top:8px"><button class="tg ${CMDSHOW?"on":""}" id="tgCmd">콘솔 명령</button></div>
+ ${CMDSHOW?`<div class="cmdbox">${trView?`CueFade ${beatsToS(t.fade)}${t.delay?` · 딜레이 ${beatsToS(t.delay)}초(줄 꼴 미확인)`:""}\ncd Timecode 25.1.${(ROLES.indexOf(r)+1)||"?"}.1.1\nStore Property 'Time' ${tc(trigTime(rid,seg))} 'AbsTime' ${tc(trigTime(rid,seg))} 'Token' 'Go+'${m.k==="auto"?`\n(MIB) Cue ${k-1}.5 위치 전용 큐`:""}`:cueLines(rid,cur).join("\n")}</div>`:""}`;
+ p.innerHTML=head+(trView?trViewHTML:mainView)+cmd;
+ p.querySelector("#cx").onclick=()=>{CLIP=false;refresh();};
+ const tt=p.querySelector("#tgTr");if(tt)tt.onclick=()=>{TRSHOW=!TRSHOW;refresh();};
+ p.querySelector("#tgCmd").onclick=()=>{CMDSHOW=!CMDSHOW;refresh();};
+ if(trView){const upd=()=>{t.fade=+p.querySelector("#tF").value;t.trigBeat=+p.querySelector("#tB").value;t.delay=+p.querySelector("#tD").value;t.trk=p.querySelector("#tK").value;EDITED.add(seg);log(`[초안] ${r.name} ${seg[0]}마디 전환 — 페이드 ${fadeLbl(t.fade)} · 트리거 ${t.trigBeat}박 · 딜레이 ${beatsToS(t.delay)}초 · ${t.trk}`);refresh();};
+  ["#tF","#tB","#tD","#tK"].forEach(q=>p.querySelector(q).onchange=upd);return;}
+ const box=()=>{const mm=p.querySelector("#eM").value,el=p.querySelector("#eMB");
+  if(mm==="value")el.innerHTML=`<input id="eV" type="number" min="0" max="100" value="${typeof s.dim==="number"?s.dim:bright(s)}">`;
+  else if(mm==="preset")el.innerHTML=`<select id="eV">${opts("밝기",typeof s.dim==="string"?s.dim:"",false)}</select>`;
+  else el.innerHTML=`<select id="eV">${Object.keys(P).filter(x=>P[x].pool==="d").map(x=>`<option value="${x}" ${x===s.fx?"selected":""}>${x} ${P[x].nm}${P[x].u?" ⚠":""}</option>`).join("")}</select>`;
+  p.querySelector("#eV").onchange=apply;};
+ const apply=()=>{const mm=p.querySelector("#eM").value,v=p.querySelector("#eV").value;
+  if(v==="__new"){log("＋ 새 프리셋: 이름(영문 LA …)·값을 정하거나 명령창에 「○○ 같은 프리셋 만들어」로 AI 요청");return;}
+  if(mm==="value"){s.dim=+v;if(isDF(s.fx))delete s.fx;}else if(mm==="preset"){s.dim=v;if(isDF(s.fx))delete s.fx;}else{delete s.dim;s.fx=v;}
+  for(const [id,key] of [["#eP","pos"],["#eC","col"],["#eF","fx"]]){const el=p.querySelector(id);if(!el)continue;if(el.value==="__new"){log("＋ 새 프리셋…");return;}if(key==="fx"&&mm==="fx")continue;if(el.value)s[key]=el.value;else delete s[key];}
+  EDITED.add(seg);log(`[초안 적용] ${r.name} ${seg[0]}~${seg[1]}마디 — 콘솔은 「⇪ 콘솔에 반영」에서`);refresh();};
+ p.querySelector("#eM").onchange=()=>{box();apply();};box();
+ ["#eP","#eC","#eF"].forEach(q=>{const el=p.querySelector(q);if(el)el.onchange=apply;});
+ const ds=p.querySelector("#doS");if(ds)ds.onclick=()=>{SPLIT={a:seg[0],b:seg[1]};SEG.sideL=[[seg[0],seg[1],{...JSON.parse(JSON.stringify(s)),label:"Side L"}]];SEG.sideR=[[seg[0],seg[1],{...JSON.parse(JSON.stringify(s)),col:"4.24",label:"Side R"}]];OPEN.add("side");log(`[갈라짐] SIDE-ALL ${seg[0]}~${seg[1]}마디 → SIDE-L·SIDE-R`);refresh();};
+ const us=p.querySelector("#unS");if(us)us.onclick=()=>{SPLIT=null;delete SEG.sideL;delete SEG.sideR;log("[합침] SIDE-L·R → SIDE-ALL");refresh();};
+ if(FOCUS){const f={dim:"#eM",pos:"#eP",col:"#eC",fx:"#eF"}[FOCUS];const el=f&&p.querySelector(f);if(el){el.focus();el.style.outline="2px solid #ffd84d";}FOCUS=null;}}
+function drawEd(){const p=document.getElementById("sidePane");
+ const lanes=document.querySelector(".mid .lanes");if(lanes)p.style.maxHeight=lanes.offsetHeight+"px";
+ if(AIP)return;
+ if(selJ&&cur<=25){drawTr(p);return;}
+ if(CLIP&&cur<=25){if(!segOf(selRole,cur)){const kd=KIDS.find(x=>x.id===selRole);if(kd)selRole=kd.parent;else{CLIP=false;}}if(CLIP){drawClipEd(p);return;}}
+ p.innerHTML=`<div class="empty">타임라인의 <b>막대(큐)</b>나<br>무대 그림의 장비를 누르면<br>여기서 고쳐요<br><br>밝기 · 위치 · 색 · 움직임 · 들어올 때<br><br>이음매 ◆ 를 누르면 전환,<br>「장면 전환」 알약을 누르면 그 순간 전체</div>`;}
+function cueLines(rid,b){const s=segOf(rid,b)[2],r=RID(rid),k=cueNo(rid,b),g=r.g,L=[];
+ L.push(rid==="movd"?`${g} ; Attribute 'Dimmer2' At 100`:g);
+ if(typeof s.dim==="number"&&!isDF(s.fx))L.push(rid==="movd"?`At ${s.dim}`:`Attribute 'Dimmer' At ${s.dim}`);
+ if(typeof s.dim==="string")L.push(`At Preset ${s.dim}`);for(const kk of ["pos","col","fx"])if(s[kk])L.push(`At Preset ${s[kk]}`);
+  L.push(`Store Sequence ${r.seq} Cue ${k} '${s.label}' CueFade 0`,"ClearAll");return L;}
+// ---------- drawer ----------
+function usage(){const U={};for(const r of ROLES)for(const s of SEG[r.id])for(const k of ["dim","pos","col","fx"]){const id=s[2][k];if(typeof id!=="string")continue;(U[id]=U[id]||[]).push({r,s});}return U;}
+function drawDrawer(){const U=usage();let h=`<h4>프리셋 <span style="float:right;cursor:pointer" id="dx">✕</span></h4><div class="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>`;
+ for(const [t,f] of [["디머 풀 1 — 밝기·밝기 효과",k=>P[k].t==="밝기"||P[k].pool==="d"],["위치 풀 2 — 위치·움직임(상대값)",k=>P[k].t==="위치"||P[k].pool==="m"],["색 풀 4",k=>P[k].t==="색"]]){
+  h+=`<h6>${t}</h6>`;for(const id of Object.keys(P).filter(f)){const u=U[id]||[];h+=`<div class="pr${hlP===id?" on":""}" data-p="${id}"><span>${P[id].rgb?`<span class="sw" style="background:${rgb(id)}"></span> `:""}<b style="font-family:var(--mono);font-size:11px">${id}</b> ${P[id].nm}${P[id].u?' <span class="u">⚠</span>':""}</span><span class="c">큐 ${u.length}</span></div>`;}}
+ if(hlP){const u=U[hlP]||[];h+=`<div class="pinfo"><b>${hlP} ${P[hlP].nm}</b><br><span style="color:var(--uim)">${P[hlP].n}</span><br>쓰는 곳: 큐 ${u.length}개 — ${u.map(x=>`${x.r.name} ${x.s[0]}~${x.s[1]}`).join(", ")||"없음"}<br><span style="color:var(--uim)">이 프리셋을 고치면 위 큐가 한꺼번에 바뀜 <span class="u">(실기 미확인)</span></span><br><button class="tbtn" style="margin-top:6px" id="pe">✎ 프리셋 고치기</button></div>`;}
+ const d=document.getElementById("drawer");d.innerHTML=h;
+ d.querySelector("#dx").onclick=()=>d.classList.remove("open");
+ d.querySelectorAll(".pr").forEach(e=>e.onclick=()=>{hlP=hlP===e.dataset.p?null:e.dataset.p;refresh();});
+ const pe=d.querySelector("#pe");if(pe)pe.onclick=()=>log(`[프리셋 고치기] ${hlP} ${P[hlP].nm} — 값 선택 또는 명령창에 「${P[hlP].nm} 조금 더 ○○하게」 · 반영 때 이 프리셋만 다시 저장(승인 1번)`);}
+document.getElementById("bLib").onclick=()=>{document.getElementById("drawer").classList.toggle("open");};
+// ---------- refresh ----------
+function bindChips(){document.querySelectorAll(".chip[data-j]").forEach(c=>c.onclick=e=>{e.stopPropagation();selJ={r:c.dataset.j,b:cur};selRole=c.dataset.j;refresh();});document.querySelectorAll(".chip[data-p]").forEach(c=>c.onclick=e=>{e.stopPropagation();hlP=hlP===c.dataset.p?null:c.dataset.p;document.getElementById("drawer").classList.add("open");refresh();});}
+const COUNT={foh:8,wash:20,back:12,side:12,movu:8,movd:8,blind:6,strobe:4,sideL:6,sideR:6};
+let VIEW="board";
+function tileHTML(s,n,extra){const h=bright(s),c=h?(s.col?rgb(s.col):"#f2f2f2"):"#2a2a30";const pul=isDF(s.fx)?`anim-pulse" style="--per:${(P[s.fx].per*BEAT).toFixed(2)}s;`:'" style="';
+ let o="";for(let i=0;i<n;i++)o+=`<span class="tl ${pul}background:${c};opacity:${h?Math.max(.35,h/100):1};${extra?extra(i):""}"></span>`;return o;}
+function drawBoard(b){const el=document.getElementById("vBoard");if(b>25){el.innerHTML='<div class="fx">0~25마디만 채운 시안</div>';return;}
+ let o="";for(const f of FOLD){o+=`<div class="bfold">${OPEN.has(f.k)?"▾":"▸"} ${f.n}</div>`;
+  if(!OPEN.has(f.k)){const n=f.ids.reduce((a,id)=>a+COUNT[id],0);const lit=f.ids.filter(id=>bright(segOf(id,b)[2])>0);o+=`<div class="brow"><span class="bl">${n}대 요약</span><span class="tiles">${f.ids.map(id=>tileHTML(segOf(id,b)[2],COUNT[id])).join("")}</span></div>`;continue;}
+  for(const id of f.ids){const r=RID(id),s=segOf(id,b)[2];
+   if(id==="side"&&SPLIT&&b>=SPLIT.a&&b<=SPLIT.b){o+=`<div class="brow"><span class="bl">SIDE-L·R</span><span class="tiles">${tileHTML(segOf("sideL",b)[2],6)}<span style="width:6px"></span>${tileHTML(segOf("sideR",b)[2],6)}</span></div>`;continue;}
+   const mv=s.fx&&!isDF(s.fx)?` ${P[s.fx].k==="n"?"↕":"↔"}`:"";
+   o+=`<div class="brow"><span class="bl" title="${r.fix}">${r.name}${mv}</span><span class="tiles">${tileHTML(s,COUNT[id])}</span></div>`;}}
+ el.innerHTML=o+`<div class="fx">칸 하나 = 장비 한 대 · 색 = 색 프리셋 · 진하기 = 밝기 · 깜박임 = 디머 효과 · ↔↕ = 움직임 효과<br>폴더를 접으면 여기서도 한 줄 — 장비가 수백 대여도 같은 크기</div>`;}
+function drawCap(b){document.getElementById("vCap").innerHTML=`<div style="height:150px;border:1px dashed #55556a;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--uim);font-size:11.5px;padding:8px">「▶ 이 마디 콘솔에서 보기」 뒤에<br>onPC 3D 창을 찍어 여기에 표시<br>(${b}마디 · 실제 결과)</div>
+ <div class="fx">근거: onPC 3D 창 스크린샷(<code>screencapture -l</code>)은 조준 검증·CUETIME 픽셀 비교에서 이미 썼음 <span class="tag m">잰 것</span> · 실물 콘솔(onPC 아님)에서는 같은 방법이 안 됨 — 별도 비주얼라이저/캡처 필요 <span class="tag u">미확인</span><br>장면 전환마다 찍어 두면 곡 전체 지도 아래에 썸네일 줄(필름 띠)로 이어 볼 수 있음</div>`;}
+function setView(v){VIEW=v;document.querySelectorAll(".vt").forEach(t=>t.classList.toggle("on",t.dataset.v===v));
+ document.getElementById("vBoard").style.display=v==="board"?"block":"none";document.getElementById("vPlan").style.display=v==="plan"?"block":"none";document.getElementById("vCap").style.display=v==="cap"?"block":"none";}
+document.querySelectorAll(".vt").forEach(t=>t.onclick=()=>setView(t.dataset.v));
+let FOLLOW=false;
+const ZONE={foh:"앞에서 얼굴",wash:"바닥 워시",back:"무대 뒤 역광",side:"양옆",sideL:"왼쪽 옆",sideR:"오른쪽 옆",movu:"위 무빙",movd:"아래 무빙",blind:"블라인더",strobe:"스트로브"};
+function lookTxt(id,s){const n=COUNT[id];const h=bright(s);if(!h)return null;
+ const col=s.col?P[s.col].n:(id==="foh"||id==="blind"?"흰빛":"");
+ const dim=isDF(s.fx)?`${P[s.fx].n.replace("펄스","깜박")}`:`${h}%`;
+ const pos=s.pos==="2.46"?" · 객석 쪽으로 기울여 비춤":s.pos?` · ${P[s.pos].n.replace(/Pan (-?\d+) Tilt (\d+)/,(m,a,b)=>`${+b<=20?"바닥 쪽":+b<=50?"무대 중간 높이":+b<=70?"위쪽":"위로 활짝"}${+a!==0?(+a>90?"(객석 쪽)":"(옆으로 틀어)"):""}`)}`:"";
+ const mv=s.fx&&!isDF(s.fx)?` · ${P[s.fx].n.replace("팬 흔들기","좌우로 흔들기").replace("틸트 웨이브","위아래 파도").replace("팬 웨이브","좌우 파도").replace("스윕","좌우 왕복")}`:"";
+ return `<b>${ZONE[id]}</b> ${n}대 — ${col} ${dim}${pos}${mv}`;}
+function drawDesc(b){const el=document.getElementById("desc");if(b>25){el.innerHTML='<span class="fx">0~25마디만 채운 시안</span>';return;}
+ const ids=[];FOLD.forEach(f=>f.ids.forEach(id=>{if(id==="side"&&SPLIT&&b>=SPLIT.a&&b<=SPLIT.b){ids.push("sideL","sideR");}else ids.push(id);}));
+ const lit=[],off=[];ids.forEach(id=>{const t=lookTxt(id,segOf(id,b)[2]);t?lit.push(t):off.push(RID(id).name);});
+ const ch=[];if(b>0)ROLES.forEach(r=>{const seg=segOf(r.id,b);if(seg[0]===b&&SEG[r.id].indexOf(seg)>0){const t=trOf(r.id,seg);ch.push(`${ZONE[r.id]} ${changedTxt(r.id,b).replace("● ","")} (${t.fade?fadeLbl(t.fade)+" 번짐":"끊어서"})`);}});
+ el.innerHTML=`<div style="color:#ffd84d;margin-bottom:3px">${ch.length?"이 마디에서 바뀌는 것":"앞 마디와 같음"}</div>${ch.map(x=>`<div>· ${x}</div>`).join("")}
+ <div style="color:var(--uim);margin:6px 0 3px">지금 켜진 것</div>${lit.map(x=>`<div>${x}</div>`).join("")||"<div>모두 꺼짐</div>"}
+ ${off.length?`<div style="color:var(--uim);margin-top:5px">꺼짐: ${off.join(" · ")}</div>`:""}
+ <div class="fx" style="margin-top:6px">실제 모습은 「콘솔 따라 보기」를 켜고 콘솔(onPC 3D 또는 무대)에서 봐요</div>`;}
+function refresh(){drawLanes();drawStage(cur);drawBar(cur);drawEd();drawDrawer();bindChips();document.getElementById("pend").textContent=EDITED.size+GHOST.length*0;}
+let PLAY=false,T0=0,TS=0,AUDIO=null,CONS=false,RAF=0,HOLD=null; // HOLD = 일시정지·10초 이동으로 멈춰 둔 시각
+const tEnd=()=>barT(26);
+function barAt(t){let b=0;for(let i=0;i<NB;i++){if(barT(i)<=t)b=i;else break;}return b;}
+function nowT(){return AUDIO&&!AUDIO.paused?AUDIO.currentTime:TS+(performance.now()-T0)/1000;}
+function fmtT(t){const m=Math.floor(t/60);return m+":"+(t%60).toFixed(1).padStart(4,"0");}
+function placePH(t){const b=barAt(t),f=Math.max(0,Math.min(1,(t-barT(b))/((barT(b+1)-barT(b))||1)));const ph=document.getElementById("ph");if(ph)ph.style.left=((b+f)*bw)+"px";document.getElementById("clock").textContent=fmtT(t);}
+function keepVisible(){const sc=document.getElementById("scroller");const x=cur*bw,vw=sc.clientWidth-128;if(x<sc.scrollLeft||x>sc.scrollLeft+vw-bw*2)sc.scrollLeft=Math.max(0,x-vw/3);drawOv();}
+function tick(){if(!PLAY)return;const t=nowT();if(t>=tEnd()){stopPlay();log("재생 끝 — 26마디(시안 데이터 끝)");return;}const b=barAt(t);if(b!==cur){cur=b;try{refresh();keepVisible();}catch(e){log(`[화면 오류 — 재생은 계속] ${b}마디: ${e.message}`);}}placePH(t);RAF=requestAnimationFrame(tick);}
+const DEFAULT_AUD="file:///Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE%20ATTACK.mp3";
+const shortName=n=>n.length>12?n.slice(0,10)+"…":n;
+function setAudio(src,name){if(AUDIO)AUDIO.pause();const a=new Audio();a.preload="auto";
+ a.onerror=()=>{if(AUDIO===a){AUDIO=null;document.getElementById("audLbl").textContent="음원";log(`[음원 오류] ${name} 을 읽지 못했어요 — 「♪ 음원」을 눌러 파일을 직접 골라 주세요`);}};
+ a.oncanplay=()=>{document.getElementById("audLbl").textContent="✓ 음원";document.getElementById("audLbl").parentElement.title=name+" 연결됨 — 눌러서 다른 파일";};
+ a.src=src;AUDIO=a;document.getElementById("audLbl").textContent="불러오는 중…";}
+function audioGo(){const a=AUDIO;if(!a)return;const go=()=>{try{a.currentTime=TS;}catch(e){}a.play().catch(e=>log(`[음원 재생 실패] ${e.name}: ${e.message} — 「♪ 음원」으로 파일을 다시 골라 주세요`));};
+ if(a.readyState>=1)go();else a.addEventListener("loadedmetadata",go,{once:true});}
+function startPlay(){PLAY=true;TS=HOLD!=null?HOLD:barT(cur);HOLD=null;T0=performance.now();if(AUDIO)audioGo();
+ document.getElementById("bPlay").textContent="❚❚ 일시정지";
+ log(`[재생] ${cur}마디(${fmtT(TS)})부터 ${AUDIO?"음원에 맞춰":"BPM 시계로(음원 없음)"} — 마디가 넘어가면 무대 그림·표·편집 칸이 같이 바뀜`+(CONS?(cur===0?`\n[콘솔 — 승인 1회] Top Timecode 25 → Go Timecode 25 · 음원은 타임코드 3초 뒤 시작(t520 실측 3.002초)`:`\n[콘솔] 중간 마디부터 타임코드 재생은 실기 미확인 — 콘솔은 처음(⏮)부터만 같이 재생`):""));tick();}
+function stopPlay(){if(PLAY)HOLD=Math.min(nowT(),tEnd()-0.05);PLAY=false;cancelAnimationFrame(RAF);if(AUDIO)AUDIO.pause();document.getElementById("bPlay").textContent="▶ 재생";if(CONS)log("[콘솔] Off Timecode 25 (멈춤 — 되감기는 Top Timecode)");}
+document.getElementById("bPlay").onclick=()=>PLAY?stopPlay():startPlay();
+function seek(d){const t0=PLAY?nowT():(HOLD!=null?HOLD:barT(cur));const t=Math.max(0,Math.min(tEnd()-0.05,t0+d));cur=barAt(t);
+ if(PLAY){TS=t;T0=performance.now();if(AUDIO){try{AUDIO.currentTime=t;}catch(e){}}}else HOLD=t;
+ try{refresh();}catch(e){log(`[화면 오류] ${e.message}`);}keepVisible();placePH(t);log(`[${d>0?"10초 앞으로":"10초 뒤로"}] ${fmtT(t)} · ${cur}마디${PLAY?"":" — ▶ 누르면 여기서부터"}`);}
+document.getElementById("bBack10").onclick=()=>seek(-10);document.getElementById("bFwd10").onclick=()=>seek(10);
+document.getElementById("bTop").onclick=()=>{const was=PLAY;if(was)stopPlay();HOLD=null;setBar(0,true);document.getElementById("clock").textContent="0:00.0";if(was)startPlay();};
+document.getElementById("aud").onchange=e=>{const f=e.target.files[0];if(!f)return;setAudio(URL.createObjectURL(f),f.name);log(`[음원 연결] ${f.name} — 음원 0초 = 앞박, 1마디 = 1.50초(음악 지도 기준). ▶ 재생`);};
+document.getElementById("bCon").onclick=()=>{CONS=!CONS;const b=document.getElementById("bCon");b.textContent="콘솔 같이 "+(CONS?"켬":"끔");b.classList.toggle("pri",CONS);};
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&e.target.tagName!=="INPUT"&&e.target.tagName!=="SELECT"&&e.target.tagName!=="TEXTAREA"){e.preventDefault();PLAY?stopPlay():startPlay();}});
+function setBar(b,center){const prevBar=cur;cur=Math.max(0,Math.min(NB-1,b));if(!PLAY)HOLD=null;if(PLAY){TS=barT(cur);T0=performance.now();if(AUDIO){try{AUDIO.currentTime=TS;}catch(e){}}}refresh();
+ if(FOLLOW&&cur!==prevBar&&cur<=25){const ch=ROLES.filter(r=>cueNo(r.id,cur)!==cueNo(r.id,Math.min(prevBar,25)));log(`[따라 보기 → 콘솔] ${cur}마디: `+(ch.length?ch.map(r=>`Goto Cue ${cueNo(r.id,cur)} Sequence ${r.seq}`).join(" · "):"바뀐 줄 없음 — 보내지 않음"));}const sc=document.getElementById("scroller");const x=cur*bw,vw=sc.clientWidth-128;
+ if(center||x<sc.scrollLeft||x>sc.scrollLeft+vw-bw)sc.scrollLeft=Math.max(0,x-vw/2);drawOv();}
+document.getElementById("bPrev").onclick=()=>setBar(cur-1);document.getElementById("bNext").onclick=()=>setBar(cur+1);
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT")return;if(e.key==="ArrowRight"){setBar(cur+1);e.preventDefault();}if(e.key==="ArrowLeft"){setBar(cur-1);e.preventDefault();}});
+document.querySelectorAll("#zoom button").forEach(z=>z.onclick=()=>{document.querySelectorAll("#zoom button").forEach(x=>x.classList.remove("on"));z.classList.add("on");const sc=document.getElementById("scroller");bw=z.dataset.z==="16"?Math.max(10,(sc.clientWidth-128)/NB):+z.dataset.z;refresh();setBar(cur,true);});
+document.getElementById("bPrev2").onclick=()=>log(`[승인 카드 — 재생만] ${cur}마디 켜기: `+ROLES.map(r=>`Goto Cue ${cueNo(r.id,Math.min(cur,25))} Sequence ${r.seq}`).join(" · "));
+document.getElementById("bOff").onclick=()=>log("[콘솔] "+ROLES.map(r=>`Off Sequence ${r.seq}`).join(" · "));
+document.getElementById("bApply").onclick=()=>log(EDITED.size?`[승인 카드] 다시 저장할 큐 ${EDITED.size}개 · 새 프리셋 ${Object.keys(P).filter(k=>P[k].ai).length}개 → 승인 1회 → 승인한 줄 = 보낸 줄 대조`:"고친 큐가 없어요.");
+document.getElementById("bRule").onclick=()=>{const t=document.getElementById("cmdIn").value;const m=t.match(/(\d+)\s*~\s*(\d+)마디\s*(\S+)\s*(밝기|위치|색|효과)를?\s*(.+?)으?로$/);
+ if(!m){log("[거절] 정해진 꼴이 아니에요 — 「(마디) (역할) (밝기|위치|색|효과)를 (프리셋 이름)으로」. 느낌으로 말하려면 「AI 제안」");return;}
+ const role=ROLES.find(r=>r.name.replace(/\s/g,"").toLowerCase()===m[3].toLowerCase());const key={밝기:"dim",위치:"pos",색:"col",효과:"fx"}[m[4]];
+ const id=Object.keys(P).find(k=>P[k].nm.toLowerCase().replace(/^la /,"").replace(/\s/g,"")===m[5].toLowerCase().replace(/\s/g,"").replace(/박$/,""))||Object.keys(P).find(k=>P[k].nm.toLowerCase().includes(m[5].toLowerCase().replace(/박$/,"").trim()));
+ if(!role){log(`[거절] 역할 「${m[3]}」을 모르겠어요 — SCENE·BACKPULSE·SIDECHASE·MOVER-U·MOVER-D·ACCENT`);return;}
+ if(!id){log(`[거절] 프리셋 「${m[5]}」을 찾지 못했어요 — 프리셋 서랍에서 이름 확인`);return;}
+ const a=+m[1],b=+m[2];const segs=SEG[role.id].filter(s=>s[0]>=a&&s[1]<=b);if(!segs.length){log(`[거절] ${a}~${b}마디에 딱 맞는 큐가 없어요 — 큐 경계: `+SEG[role.id].map(s=>s[0]+"~"+s[1]).join(", "));return;}
+ segs.forEach(s=>{s[2][key]=id;EDITED.add(s);});selRole=role.id;log(`[문장 → 초안 적용] ${role.name} ${a}~${b}마디 ${m[4]} → ${id} ${P[id].nm}`);setBar(a);};
+document.getElementById("bAi").onclick=()=>{AIP=true;selJ=null;GHOST=[{r:"movd",a:18,b:21,t:"Pan Wave 2 Rev(새)"}];refresh();setBar(18);
+ const p=document.getElementById("sidePane");p.innerHTML=`<h5><span>AI 제안</span><span>「${document.getElementById("cmdIn").value}」</span></h5>
+ <div style="font-size:12px">바꿀 큐 1 · 새 프리셋 1<ul style="margin:4px 0 6px 16px;padding:0"><li>MOVER-D 18~21마디: 효과 없음 → <b>2.69 LA Pan Wave 2 Rev</b>(새, 위 무빙과 반대 방향)</li></ul>
+ 검사: 층 예산 지킴 · 새 프리셋 <span class="u">⚠ 위상 반대 미확인</span><br>타임라인의 <b>점선 막대</b>가 제안이에요.</div>
+ <div style="display:flex;gap:6px;margin-top:8px"><button class="tbtn pri" id="aOk">수락</button><button class="tbtn" id="aNo">거절</button></div>`;
+ document.getElementById("aOk").onclick=()=>{P["2.69"]={t:"효과",pool:"m",nm:"LA Pan Wave 2 Rev",n:"팬 웨이브 2박 반대(AI 새 프리셋)",k:"s",per:2,u:1,ai:1};const s=SEG.movd.find(x=>x[0]===18);s[2].fx="2.69";EDITED.add(s);AIP=false;GHOST=[];log("[AI 제안 수락 → 초안 적용] 새 프리셋 2.69 는 「⇪ 콘솔에 반영」 승인 카드에 함께");refresh();};
+ document.getElementById("aNo").onclick=()=>{AIP=false;GHOST=[];log("AI 제안 거절");refresh();};};
+// 처음 화면: 효과 폴더는 접어 두고, 옆빛 11~13마디를 L·R 로 갈라 둔 예시
+SPLIT={a:11,b:13};{const s=SEG.side.find(x=>x[0]===11)[2];SEG.sideL=[[11,13,{...JSON.parse(JSON.stringify(s)),label:"Side L"}]];SEG.sideR=[[11,13,{...JSON.parse(JSON.stringify(s)),col:"4.24",label:"Side R"}]];}
+selRole="back";CLIP=true;refresh();setBar(12,true);
+window.addEventListener("resize",()=>{drawStage(cur);drawOv();});
+setAudio(DEFAULT_AUD,"LOVE ATTACK.mp3"); // 이 Mac 의 음원(저장소에 넣지 않음) — 없으면 「♪ 음원」으로 직접 선택
+</script>
+</main>
+</body>
+</html>
