@@ -399,11 +399,50 @@ export interface SongTimelineSection {
   position_preset_no?: string;
 }
 
-/** t532 (SPEC-LDBEAT-001 M2) — 박자 격자 칸 하나. 효과 모양·속도 같은 내용은
- * 트랙 정체성이 아니라 이 칸의 `label`에만 산다(REQ-LDBEAT-004). */
+/** t537 — REQ-LDBEAT-006(i-2)/(015)(c). 값(퍼센트) / 디머 프리셋 / 디머
+ * 효과 프리셋 중 정확히 하나만 쓴다. `mode`가 `null`이면 셋 다 미정이다. */
+export interface BeatGridBrightness {
+  mode: "value" | "dimmer_preset" | "dimmer_effect" | null;
+  value_percent: number | null;
+  preset_no: string | null;
+}
+
+/** t537 — REQ-LDBEAT-006(i-4). "들어올 때"는 **마디 수**(`fade_bars`, 초
+ * 아님 — 초 환산은 화면 표시 시점에 그 곡 BPM으로 계산한다)와 MIB 모드다. */
+export interface BeatGridEntry {
+  fade_bars: number | null;
+  mib_mode: string | null;
+}
+
+/** t532/t537 (SPEC-LDBEAT-001 M2/M7) — 박자 격자 칸 하나. 카드 t537(감독
+ * 결정 "전체 화면 + 속성별 값")이 단일 `label` 서술 문자열을 속성별
+ * 구조화 필드 다섯 종(`brightness`·`position_preset_no`·`color_preset_no`·
+ * `effect_preset_no`·`entry`)으로 바꿨다(REQ-LDBEAT-006(i-1)~(i-7)).
+ * `label`은 레거시 호환 + 화면 표시용으로 남는다(삭제하지 않는다,
+ * REQ-006(ii-3)) — 그 자유 텍스트를 파싱해 구조화 필드를 역산하는 것은
+ * `shall not`이다(REQ-006(ii-2)). */
 export interface BeatGridCue {
   bar: number;
   label: string;
+  brightness: BeatGridBrightness;
+  position_preset_no: string | null;
+  color_preset_no: string | null;
+  effect_preset_no: string | null;
+  effect_kind: "position" | "color" | "dimmer" | "mixed" | null;
+  entry: BeatGridEntry;
+  /** 이 칸의 값이 비롯된 §4 파일 경로+행 번호(칸당 1개) — REQ-006(i-5).
+   * 출처가 없는 값(미정이거나 상대 서술)은 `null`이다. */
+  source_ref: string | null;
+}
+
+/** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
+ * 이라 단일 콘솔 그룹 트랙으로 지어낼 수 없다. 그 값은 트랙 큐에 끼워
+ * 넣지 않고 이 메모로만 남긴다 — 겹침 검증(REQ-LDBEAT-004(h))과는
+ * 완전히 독립이다. */
+export interface BeatGridSceneMemo {
+  bar: number;
+  text: string;
+  source_ref: string;
 }
 
 /** 콘솔 그룹 트랙 하나 — 줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나
@@ -427,6 +466,14 @@ export interface BeatGridView {
   song_title: string;
   bar_range: { start: number; end: number };
   tracks: BeatGridTrack[];
+  /** t537 ② — SCENE 열처럼 단일 콘솔 그룹 트랙으로 옮길 수 없는 §4 값. */
+  scene_memos: BeatGridSceneMemo[];
+  /** t537 — M1 9항목 판정(REQ-LDBEAT-003(b)). 서버가 progress.md를 그
+   * 자리에서 읽어 채운 **살아있는** 값이다 — 손으로 옮긴 TS 상수가 더는
+   * 출처가 아니다. 판정 칸 텍스트 그대로(예: `"통과(구조)"`·`"미확인"`·
+   * `"움직임 없음"`) — 지어낸 매핑 없음. 표가 없거나 파싱 실패하면 서버가
+   * 9항목 전부 `"미확인"`으로 보낸다. */
+  probe_results: Record<number, string>;
   source: "love_attack_default" | "empty" | "custom";
   note: string | null;
 }

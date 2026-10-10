@@ -40,7 +40,7 @@ from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_ba
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
-from server.design.beat_grid import attach_beat_grid_default
+from server.design.beat_grid import attach_beat_grid_default, attach_beat_grid_runtime_extras
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
     paged_pool_children,
@@ -1688,7 +1688,13 @@ def _song_timeline_payload(
         },
         _song_cue_sheet_view_fields(plan),
     )
-    return attach_beat_grid_default(payload)
+    payload = attach_beat_grid_default(payload)
+    # 카드 t537 — M1 9항목 판정을 progress.md에서 그 자리에서 다시 읽어
+    # 최신화한다(REQ-LDBEAT-003(b), 손으로 옮긴 TS 상수를 영구 소스로
+    # 쓰지 않는다). `attach_beat_grid_default`의 "있으면 바이트 그대로
+    # 보존" 계약은 이 단계가 아니라 그 함수 자체가 지킨다 — 여기서는
+    # 매 서빙마다 `probe_results`만 새로 읽어 덮어쓴다.
+    return attach_beat_grid_runtime_extras(payload)
 
 
 def _song_trig_time_token(start_ms: int) -> str:

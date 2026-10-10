@@ -12,7 +12,13 @@
 // 버튼은 M3 배선 전까지 비활성이다.
 import { useMemo, useRef, useState } from "react";
 
-import type { BeatGridCue, BeatGridTrack, BeatGridView } from "../protocol";
+import type {
+  BeatGridBrightness,
+  BeatGridCue,
+  BeatGridSceneMemo,
+  BeatGridTrack,
+  BeatGridView,
+} from "../protocol";
 
 /** REQ-LDBEAT-005(a) — 초기 표시 범위를 4마디 단위 행 7개로 나눈다. 배치
  * 규칙서 §4의 표 그대로(첫 행은 못갖춘마디 포함 3마디, 넷째 행도 3마디 —
@@ -161,17 +167,23 @@ export function isUnconfirmedShapeCue(label: string): boolean {
   return UNCONFIRMED_SHAPE_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
 }
 
-/** 카드 t534 — M1(progress.md "### M1 — 콘솔 확인 프로브" 표, 커밋
- * `46283183`)이 실제로 기록한 중간 상태를 더한 것. 그 표는 9항목 모두
- * "가짜 콘솔 리허설"(exit 0, 막힌 줄 0)은 통과했지만 "실기 실행"·"판정"은
- * 전부 "미실행"이다 — `"미실행"` 하나로만 보여주면 리허설 통과 사실이
- * 사라지고, `"pass"`로 보여주면 실기 미실행인데 통과라고 지어내는 것이
- * 된다. `"리허설PASS·실기미실행"`은 그 표의 두 칸을 그대로 합친
- * 이름이다(지어낸 상태가 아니다). */
-export type ProbeStatus = "pass" | "fail" | "미실행" | "리허설PASS·실기미실행";
+/** t537 — REQ-LDBEAT-003(b). M1 9항목 판정은 progress.md의 표 칸 텍스트를
+ * **그대로** 옮긴 자유 문자열이다(예: `"통과(구조)"`·`"미확인"`·`"움직임
+ * 없음"`·`"부분(결과 기록)"`) — 고정된 네 상태로 매핑하지 않는다. 손으로
+ * 옮긴 TS 상수(`beatGridM1Probes.ts`, 카드 t534가 만든 것)는 카드 t537이
+ * 폐기했다 — progress.md 자신이 "그 표가 갱신되면 바로 낡는다"고 적어
+ * 두었던 그 위험이 실제로 일어났기 때문이다(lane-3의 실기 M1이 머지되며
+ * 이 상수가 가리키던 "리허설PASS·실기미실행" 아홉 줄은 더 이상 사실이
+ * 아니게 됐다). 이제 이 값은 `BeatGridView.probe_results`(서버가
+ * progress.md를 그 자리에서 읽어 채운 값)에서만 온다. */
+export type ProbeStatus = string;
+
+/** 표가 없거나·파싱 실패하거나·그 항목 행이 없을 때의 정직한 기본값
+ * (REQ-LDBEAT-003(b) 실패-경로, AC-LDBEAT-009(d)) — 지어낸 PASS는 0건. */
+export const UNCONFIRMED_PROBE_STATUS = "미확인";
 
 /** REQ-LDBEAT-001~003의 9항목 — progress.md가 쓰는 같은 순서·같은 9개.
- * `probeResults`에 없는 항목은 "미실행"이 기본이다(한 자리에서 뒤집기 쉽게). */
+ * `probeResults`에 없는 항목은 `UNCONFIRMED_PROBE_STATUS`가 기본이다. */
 export const DEFAULT_PROBE_LABELS: readonly { id: number; label: string }[] = [
   { id: 1, label: "타임코드 트랙 ≥3" },
   { id: 2, label: "Goto 2번 이후·여러 시퀀스 동시" },
@@ -196,24 +208,26 @@ export function buildProbeStatusTable(
   return DEFAULT_PROBE_LABELS.map(({ id, label }) => ({
     id,
     label,
-    status: probeResults?.[id] ?? "미실행",
+    status: probeResults?.[id] ?? UNCONFIRMED_PROBE_STATUS,
   }));
 }
 
-/** REQ-LDBEAT-001 게이트 — 9항목 중 하나라도 PASS가 아니면 그 항목에 의존하는
- * 콘솔 **쓰기**는 잠긴다(미리보기는 이 게이트의 대상이 아니다, 결정⑤). */
+/** REQ-LDBEAT-001 게이트 — 9항목 중 하나라도 "통과"로 시작하지 않으면 그
+ * 항목에 의존하는 콘솔 **쓰기**는 잠긴다(미리보기는 이 게이트의 대상이
+ * 아니다, 결정⑤). progress.md의 판정 갈래 중 "통과"만 쓰기를 열 근거이고
+ * "부분"·"미확인"·"움직임 없음"은 전부 아직 아니다. */
 export function isWriteLocked(probes: readonly { status: ProbeStatus }[]): boolean {
-  return probes.some((probe) => probe.status !== "pass");
+  return probes.some((probe) => !probe.status.startsWith("통과"));
 }
 
-/** 카드 t534 — 프로브 상태 → CSS 클래스 접미사. 네 상태가 전부 다른 자리를
- * 가진다(`"리허설PASS·실기미실행"`을 `"pending"`과 같이 보여주면 리허설
- * 통과 사실이 "미실행"과 똑같이 보여서 사라진다). */
-export function probeStatusClass(status: ProbeStatus): "pass" | "fail" | "rehearsal" | "pending" {
-  if (status === "pass") return "pass";
-  if (status === "fail") return "fail";
-  if (status === "리허설PASS·실기미실행") return "rehearsal";
-  return "pending";
+/** t537 — 프로브 상태(progress.md 판정 칸의 자유 문자열) → CSS 클래스
+ * 접미사. "통과"로 시작하면 pass, 정확히 "미확인"이면 pending(판정 근거
+ * 없음), 그 밖(부분/움직임 없음/문법 불명 등 — 아직 쓰기를 열 수 없는
+ * 모든 상태)은 fail로 눈에 띄게 보인다. */
+export function probeStatusClass(status: ProbeStatus): "pass" | "fail" | "pending" {
+  if (status.startsWith("통과")) return "pass";
+  if (status === UNCONFIRMED_PROBE_STATUS) return "pending";
+  return "fail";
 }
 
 /** 곡의 첫 칸인지 — "들어오는 전환" 토글이 비활성화되는 기준(REQ-LDBEAT-004(d)).
@@ -346,13 +360,19 @@ export interface BeatGridProps {
   fixtures?: BeatGridFixturePoint[];
   probeResults?: Readonly<Record<number, ProbeStatus>>;
   secondsPerBar?: number | null;
+  /** t537 (3) — 색 프리셋 번호 → 실제 콘솔 색(hex). 이 카드는 콘솔 접촉
+   * 0이라 아직 이 데이터의 살아있는 출처가 없다(M3+ 이후 프리셋 풀 읽기가
+   * 채운다) — 넘기지 않으면(또는 번호가 이 표에 없으면) 그 칸은 항상
+   * 중립(미정)으로 보인다. 임의 색으로 지어내 칠하지 않는다. */
+  colorPresetHex?: Readonly<Record<string, string>>;
+  /** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠(REQ-LDBEAT-004(a)). 이미
+   * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
+   * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
+  sections?: readonly BeatGridSectionLite[];
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
- * 없음(기존 `cue_sheet_edit.py`의 `r.nocol` 관례와 같은 판단). M2의 큐
- * 내용은 아직 역할·모양·속도가 한 문장으로 묶인 `label` 하나뿐이라(M3가
- * 구조화한다), 여기서는 그 문장을 "내용" 한 줄로 그대로 보여준다 —
- * 밝기/위치/색/움직임을 문장에서 쪼개 지어내지 않는다. */
+ * 없음(기존 `cue_sheet_edit.py`의 `r.nocol` 관례와 같은 판단). */
 function roleFieldHints(role: string | null): string[] {
   const hints: string[] = ["밝기"];
   if (role === "mover" || role === "back" || role === "side" || role === "wash") hints.push("위치");
@@ -361,7 +381,154 @@ function roleFieldHints(role: string | null): string[] {
   return hints;
 }
 
-export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = null }: BeatGridProps) {
+/** t537 — 구조화 필드가 미정(`null`)일 때 공통으로 쓰는 표시 문구. "0"이나
+ * 빈 문자열이 아니라 명시적으로 "미정"이라고 말한다(REQ-LDBEAT-015(f)와
+ * 같은 원칙을 화면 표시에도 적용 — 출처 없는 값을 지어내지 않는다). */
+export const UNSET_FIELD_LABEL = "미정";
+
+/** 밝기 칸 표시 — `mode`가 없으면 미정, `"value"`면 퍼센트, 프리셋
+ * 모드면 그 프리셋 번호(없으면 역시 미정 — 둘 다 비면 지어내지 않는다). */
+export function formatBrightnessField(brightness: BeatGridBrightness): string {
+  if (brightness.mode === "value") {
+    return brightness.value_percent === null ? UNSET_FIELD_LABEL : `${brightness.value_percent}%`;
+  }
+  if (brightness.mode === "dimmer_preset" || brightness.mode === "dimmer_effect") {
+    return brightness.preset_no ?? UNSET_FIELD_LABEL;
+  }
+  return UNSET_FIELD_LABEL;
+}
+
+/** 위치/색/효과 프리셋 번호 칸 — 값이 없으면 미정(추측해 채우지 않음,
+ * REQ-LDBEAT-015(f)). */
+export function formatPresetField(presetNo: string | null): string {
+  return presetNo ?? UNSET_FIELD_LABEL;
+}
+
+/** "들어올 때"의 마디 수 칸 — `null`이면 미정(REQ-LDBEAT-006(i-4)). */
+export function formatFadeBarsField(fadeBars: number | null): string {
+  return fadeBars === null ? UNSET_FIELD_LABEL : `${fadeBars}마디`;
+}
+
+/** 마디 수 → 초 환산(REQ-LDBEAT-006(i-4) — "저장은 마디, 초 환산은 화면
+ * 표시 시점에 그 곡 BPM으로"). 둘 중 하나라도 없으면 `null`(지어내지
+ * 않음) — 저장하지 않는 **파생값**이라는 것을 호출부가 "derived" 표기와
+ * 함께 보여준다. */
+export function deriveFadeSeconds(fadeBars: number | null, secondsPerBar: number | null): number | null {
+  if (fadeBars === null || !secondsPerBar || !Number.isFinite(secondsPerBar)) return null;
+  return fadeBars * secondsPerBar;
+}
+
+/** `source_ref` 표시 — 있으면 그 문자열을 그대로(링크 텍스트), 없으면
+ * `null`(호출부가 행 자체를 생략하거나 "출처 없음"으로 보여준다). */
+export function formatSourceRefLabel(sourceRef: string | null): string | null {
+  return sourceRef;
+}
+
+export interface BeatGridCueColorFill {
+  /** CSS 배경색 문자열 — 있을 때만 inline style로 쓴다. */
+  background?: string;
+  /** `color_preset_no`가 없거나, 있어도 그 색을 아는 자리(`colorPresetHex`)가
+   * 없을 때 참 — 둘 다 "지어내지 않는다"는 같은 규칙의 다른 경로다
+   * (REQ-LDBEAT-015(f)와 같은 원칙을 렌더링에도 적용, plan.md M7 (3)). */
+  isColorUnset: boolean;
+}
+
+/** 막대 채우기 색 — `color_preset_no`가 있고 그 번호의 실제 색(`colorPresetHex`,
+ * 콘솔에서 읽은 프리셋 색 — 이 카드 범위에서는 콘솔 접촉 0이라 아직 아무
+ * 데이터도 없다)을 알 때만 그 색을 쓴다. 번호가 없거나, 번호는 있지만
+ * 색을 모르면(아직 `colorPresetHex`가 없다) **중립**이다 — 임의 색을
+ * 지어내 칠하지 않는다(plan.md M7 (3), REQ-LDBEAT-015(f)와 같은 원칙). */
+export function cueColorFill(
+  cue: BeatGridCue,
+  colorPresetHex?: Readonly<Record<string, string>>,
+): BeatGridCueColorFill {
+  if (!cue.color_preset_no) return { isColorUnset: true };
+  const hex = colorPresetHex?.[cue.color_preset_no];
+  if (!hex) return { isColorUnset: true };
+  return { background: hex, isColorUnset: false };
+}
+
+/** t537 ② — `bar`가 속한 4마디 행에 걸린 SCENE 메모(있으면). 메모는 그
+ * 행의 시작 마디에 매달려 있다(`default_beat_grid`의 YAML 데이터, 행
+ * 안의 어느 마디를 봐도 같은 메모가 보인다) — 없으면 `null`. */
+export function sceneMemoForBar(
+  memos: readonly BeatGridSceneMemo[],
+  bar: number,
+): BeatGridSceneMemo | null {
+  const rowIndex = barRowIndex(bar);
+  if (rowIndex === -1) return null;
+  const [rowStart] = BEAT_GRID_BAR_ROWS[rowIndex];
+  return memos.find((memo) => memo.bar === rowStart) ?? null;
+}
+
+/** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠를 derive하는 데 필요한
+ * 최소 필드. `ui/src/protocol.ts`의 `SongTimelineSection`은 상위집합이라
+ * 그대로 넘겨도 된다(구조적 타이핑). */
+export interface BeatGridSectionLite {
+  label: string;
+  start_ms: number;
+  palette_primary_hex?: string | null;
+}
+
+export interface BeatGridSectionBlock {
+  label: string;
+  startBar: number;
+  /** 배타적 — 다음 구간이 시작하는 마디(또는 표시 범위 끝+1). */
+  endBar: number;
+  hex: string | null;
+}
+
+/** 구간 레이블(`sections[].label`, 이미 서버가 보내는 값)을 `start_ms`
+ * → 그 곡 BPM(`secondsPerBar`, `barToSeconds`의 역수 관계 — REQ-LDBEAT-
+ * 005(b)와 같은 환산)으로 마디 위치로 옮긴다. 추측·보간 없음: 둘 중
+ * 하나라도 없으면(구간 데이터 없음, BPM 미확정) 빈 배열 — 호출부가 숫자
+ * 띠로 조용히 떨어진다(지어내지 않음). 표시 범위(`rangeStart`~`rangeEnd`)
+ * 밖으로 완전히 벗어난 구간은 뺀다. */
+export function deriveSectionBlocks(
+  sections: readonly BeatGridSectionLite[] | undefined,
+  secondsPerBar: number | null | undefined,
+  rangeStart: number,
+  rangeEnd: number,
+): BeatGridSectionBlock[] {
+  if (!sections || sections.length === 0) return [];
+  if (!secondsPerBar || !Number.isFinite(secondsPerBar) || secondsPerBar <= 0) return [];
+  const withBars = sections
+    .map((section) => ({
+      label: section.label,
+      startBar: Math.max(0, Math.round(section.start_ms / 1000 / secondsPerBar)),
+      hex: section.palette_primary_hex ?? null,
+    }))
+    .sort((a, b) => a.startBar - b.startBar);
+  const blocks: BeatGridSectionBlock[] = [];
+  for (let i = 0; i < withBars.length; i++) {
+    const current = withBars[i];
+    const next = withBars[i + 1];
+    const blockEnd = next ? next.startBar : rangeEnd + 1;
+    const clippedStart = Math.max(current.startBar, rangeStart);
+    const clippedEnd = Math.min(blockEnd, rangeEnd + 1);
+    if (clippedStart > rangeEnd || clippedEnd <= clippedStart) continue;
+    blocks.push({ label: current.label, startBar: clippedStart, endBar: clippedEnd, hex: current.hex });
+  }
+  return blocks;
+}
+
+/** 곡 전체 지도 위 SCENE 메모 배지의 가로 위치(%) — 표시 범위 안에서
+ * `bar`의 상대 위치다. flexbox 기반 구간 띠는 정확한 픽셀 경계를 미리
+ * 알 수 없어서(브라우저가 레이아웃한다), 오버레이는 퍼센트로 둔다. */
+export function barPercentInRange(bar: number, rangeStart: number, rangeEnd: number): number {
+  const span = rangeEnd - rangeStart + 1;
+  if (span <= 0) return 0;
+  return ((bar - rangeStart) / span) * 100;
+}
+
+export function BeatGrid({
+  grid,
+  fixtures = [],
+  probeResults,
+  secondsPerBar = null,
+  colorPresetHex,
+  sections,
+}: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
@@ -372,7 +539,14 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
-  const probes = useMemo(() => buildProbeStatusTable(probeResults), [probeResults]);
+  // t537 — M1 상태의 살아있는 소스는 `grid.probe_results`(서버가 progress.md를
+  // 그 자리에서 읽어 채운 값)다. `probeResults` prop은 명시적으로 다른 값을
+  // 넘기고 싶을 때만 쓰는 override다(시험·예외 상황) — 둘 다 없으면
+  // `buildProbeStatusTable`이 9항목 전부 "미확인"으로 떨어진다.
+  const probes = useMemo(
+    () => buildProbeStatusTable(probeResults ?? grid?.probe_results),
+    [probeResults, grid],
+  );
   const writeLocked = isWriteLocked(probes);
   const stageBounds = useMemo(() => computeStageBounds(fixtures), [fixtures]);
 
@@ -414,6 +588,14 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
   const selectedCue = selectedTrack && selected ? cueForBar(selectedTrack, selected.bar) : null;
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
   const viewBar = selected?.bar ?? grid.bar_range.start;
+  const viewBarSceneMemo = sceneMemoForBar(grid.scene_memos, viewBar);
+  // t537 레이아웃 교정 — 곡 전체 지도 구간 띠(데이터 없으면 빈 배열, 호출부가
+  // 숫자 띠로 떨어진다) + SCENE 메모 오버레이의 퍼센트 위치 헬퍼.
+  const sectionBlocks = useMemo(
+    () => deriveSectionBlocks(sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end),
+    [sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end],
+  );
+  const barPercent = (bar: number) => barPercentInRange(bar, grid.bar_range.start, grid.bar_range.end);
   // 카드 t534 — 재생 위치를 마디로 환산(음원 동기가 없으면 null, 지어내지
   // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
@@ -446,17 +628,54 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
         </span>
       </header>
 
-      {/* ① 곡 전체 지도 — 0~25마디 표시 범위를 한 줄로. */}
+      {/* ① 곡 전체 지도 — 시안처럼 구간(인트로/벌스/코러스…) 블록 띠(REQ-
+          LDBEAT-004(a)). 구간 레이블은 `timeline.sections`(서버가 이미
+          보내는 값)에서, 블록 경계는 `start_ms`를 그 곡 BPM(`secondsPerBar`)
+          으로 마디 환산해 derive한다(지어내지 않음 — REQ-LDBEAT-005(b)와
+          같은 환산) — 그 데이터가 없으면(secondsPerBar 미확정 등) 기존
+          7칸 숫자 띠로 조용히 떨어진다(추측 대신 "아는 만큼만"). SCENE
+          메모가 걸린 마디는 그 위에 퍼센트 위치로 겹쳐 그린 「미정」
+          배지로 보여준다(t537 ②, 리드 지시). 시안처럼 "전체 곡 중 지금
+          보는 범위를 강조"는 전체 곡 길이(마디 수) 데이터가 아직 없어
+          못 했다 — 지도 자체가 그 표시 범위(0~25마디)다(§Gaps). */}
       <div className="beat-grid-overview" role="img" aria-label="곡 전체 지도">
-        {BEAT_GRID_BAR_ROWS.map(([start, end]) => (
-          <span
-            key={start}
-            className={`beat-grid-ov-cell${barRowIndex(viewBar) === barRowIndex(start) ? " is-current" : ""}`}
-            title={`${start}~${end}마디`}
-          >
-            {start}
-          </span>
-        ))}
+        <div className="beat-grid-overview-track">
+          {sectionBlocks.length > 0
+            ? sectionBlocks.map((block) => (
+                <span
+                  key={`${block.label}-${block.startBar}`}
+                  className={`beat-grid-overview-section${
+                    viewBar >= block.startBar && viewBar < block.endBar ? " is-current" : ""
+                  }`}
+                  style={{ flexGrow: block.endBar - block.startBar, background: block.hex ?? undefined }}
+                  title={`${block.label} · ${block.startBar}~${block.endBar - 1}마디`}
+                >
+                  {block.label}
+                </span>
+              ))
+            : BEAT_GRID_BAR_ROWS.map(([start, end]) => (
+                <span
+                  key={start}
+                  className={`beat-grid-overview-section${barRowIndex(viewBar) === barRowIndex(start) ? " is-current" : ""}`}
+                  style={{ flexGrow: end - start + 1 }}
+                  title={`${start}~${end}마디`}
+                >
+                  {start}
+                </span>
+              ))}
+        </div>
+        <div className="beat-grid-overview-memos">
+          {grid.scene_memos.map((memo) => (
+            <span
+              key={memo.bar}
+              className="beat-grid-overview-memo-marker"
+              style={{ left: `${barPercent(memo.bar)}%` }}
+              title={memo.text}
+            >
+              ⚠ 미정
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="beat-grid-toolbar">
@@ -492,8 +711,11 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
       {/* ② 그룹-트랙 타임라인 — 마디 시간축 위 칸 막대(카드 t534, REQ-LDBEAT-004).
           곡 전체 지도·자(마디 눈금)는 `.beat-grid-lanes` 스크롤 안에서
           `position:sticky`로 위에 고정되고, 폴더는 좌우 스크롤 + 한 화면
-          고정 높이(REQ-LDBEAT-004(b)). */}
-      <div className="beat-grid-body">
+          고정 높이(REQ-LDBEAT-004(b)). t537 레이아웃 교정 — 타임라인과
+          큐 편집 칸을 한 줄(`.beat-grid-mid`)에 나란히(시안 `.mid` =
+          `.lanes`+`.sidepane`), 무대·한눈에는 그 아래 별도 띠(아래
+          `.beat-grid-insp`)로 뺐다. */}
+      <div className="beat-grid-mid">
         <div className="beat-grid-lanes" role="table" aria-label="콘솔 그룹 트랙 타임라인">
           {/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`). */}
           <div className="beat-grid-ruler-row">
@@ -559,16 +781,26 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
                             const hasNext = segIndex < segments.length - 1;
+                            // t537 (3) — 막대 채우기 색은 color_preset_no가 실제 색을
+                            // 아는 자리일 때만 쓴다. 지금 LOVE ATTACK 기본값은 §4에
+                            // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
+                            // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
+                            const colorFill = cueColorFill(segment.cue, colorPresetHex);
                             return (
                               <span key={segment.cue.bar} className="beat-grid-cue-slot">
                                 <button
                                   type="button"
-                                  className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}`}
+                                  className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}${
+                                    active && colorFill.isColorUnset ? " is-color-unset" : ""
+                                  }`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
+                                    ...(colorFill.background ? { backgroundColor: colorFill.background } : {}),
                                   }}
-                                  title={`${segment.startBar}~${segment.endBar - 1}마디`}
+                                  title={`${segment.startBar}~${segment.endBar - 1}마디${
+                                    colorFill.isColorUnset && active ? " · 색 미정" : ""
+                                  }`}
                                   onClick={() => {
                                     setSelected({ trackIndex, bar: segment.cue.bar });
                                     setTransitionView(false);
@@ -618,56 +850,8 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
           )}
         </div>
 
-        {/* ③ 상세 창 — 2D 무대 + 이 마디 한눈에. */}
-        <div className="beat-grid-detail">
-          <div className="beat-grid-stage-pane">
-            <h5>무대 (2D)</h5>
-            {stageBounds ? (
-              <svg viewBox={`0 0 ${STAGE_VIEW_W} ${STAGE_VIEW_H}`} className="beat-grid-stage">
-                {fixtures.map((fixture) => {
-                  const { cx, cy } = projectFixture(fixture, stageBounds);
-                  return (
-                    <circle
-                      key={fixture.fid}
-                      cx={cx}
-                      cy={cy}
-                      r={3}
-                      fill={fixtureDisplayColor(fixture, grid.tracks)}
-                      opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
-                    >
-                      <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
-                    </circle>
-                  );
-                })}
-              </svg>
-            ) : (
-              <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
-            )}
-            <p className="beat-grid-stage-note">
-              위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
-              (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
-            </p>
-          </div>
-
-          <div className="beat-grid-glance-pane">
-            <h5>이 마디 한눈에 — {viewBar}마디</h5>
-            <table className="beat-grid-glance-table">
-              <tbody>
-                {grid.tracks.map((track) => {
-                  const cue = cueForBar(track, viewBar);
-                  return (
-                    <tr key={track.group_name}>
-                      <td>{track.group_name}</td>
-                      <td>{cue ? cue.label : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 큐 편집 칸 — 시안처럼 "오른쪽 칸에 늘 있음"(선택 전엔 빈 안내).
+        {/* 큐 편집 칸 — 시안처럼 "타임라인 바로 오른쪽에 늘 있음"(선택 전엔
+            빈 안내, t537 레이아웃 교정 — `.beat-grid-mid`의 두 번째 칸).
             M2/M3 경계: 값 표시는 읽기 전용이고, 밝기/위치/색/들어올 때
             네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)) — 편집 반영은 M3. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
@@ -698,14 +882,52 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                 </div>
               ) : (
                 <div className="beat-grid-cue-view">
-                  {roleFieldHints(selectedTrack.layer_role).map((field) => (
-                    <div className="beat-grid-cue-field" key={field}>
-                      <span className="beat-grid-cue-field-label">{field}</span>
-                      <span className="beat-grid-cue-field-value">{selectedCue?.label ?? "—"}</span>
-                    </div>
-                  ))}
+                  {/* t537 — 속성별 값을 각각 독립된 자리에(REQ-LDBEAT-004(c),
+                      감독 결정 「전체 화면 + 속성별 값」). 같은 문장을 네 번
+                      반복하던 M2후속 임시 동작을 걷어냈다 — `label`은 아래
+                      "설명(원문)" 한 줄로만 남아 구조화 필드와 혼동되지 않는다. */}
+                  {(() => {
+                    const hints = roleFieldHints(selectedTrack.layer_role);
+                    const rows: { field: string; value: string; sourceRef?: string | null }[] = [];
+                    if (selectedCue) {
+                      rows.push({ field: "밝기", value: formatBrightnessField(selectedCue.brightness) });
+                      if (hints.includes("위치")) {
+                        rows.push({ field: "위치 프리셋", value: formatPresetField(selectedCue.position_preset_no) });
+                      }
+                      if (hints.includes("색")) {
+                        rows.push({ field: "색 프리셋", value: formatPresetField(selectedCue.color_preset_no) });
+                      }
+                      if (hints.includes("움직임")) {
+                        const effectValue = formatPresetField(selectedCue.effect_preset_no);
+                        rows.push({
+                          field: "효과 프리셋",
+                          value: selectedCue.effect_kind ? `${effectValue} (${selectedCue.effect_kind})` : effectValue,
+                        });
+                      }
+                    }
+                    return rows.map((row) => (
+                      <div className="beat-grid-cue-field" key={row.field}>
+                        <span className="beat-grid-cue-field-label">{row.field}</span>
+                        <span
+                          className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}`}
+                        >
+                          {row.value}
+                        </span>
+                      </div>
+                    ));
+                  })()}
                   <div className="beat-grid-cue-field beat-grid-cue-field-entry">
                     <span className="beat-grid-cue-field-label">들어올 때</span>
+                    <span className="beat-grid-cue-field-value">
+                      {selectedCue ? formatFadeBarsField(selectedCue.entry.fade_bars) : UNSET_FIELD_LABEL}
+                      {selectedCue &&
+                        (() => {
+                          const derivedSeconds = deriveFadeSeconds(selectedCue.entry.fade_bars, secondsPerBar);
+                          return derivedSeconds !== null ? (
+                            <span className="beat-grid-cue-field-derived"> (≈{derivedSeconds.toFixed(1)}초, derived)</span>
+                          ) : null;
+                        })()}
+                    </span>
                     <button
                       type="button"
                       className="beat-grid-cue-field-entry-btn"
@@ -714,6 +936,18 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
                     >
                       {firstCue ? "곡 첫 큐 — 전환 없음" : "전환 보기 열기 ›"}
                     </button>
+                  </div>
+                  {selectedCue?.source_ref && (
+                    <div className="beat-grid-cue-field beat-grid-cue-field-source">
+                      <span className="beat-grid-cue-field-label">출처</span>
+                      <span className="beat-grid-cue-field-value">
+                        {formatSourceRefLabel(selectedCue.source_ref)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="beat-grid-cue-field beat-grid-cue-field-label-row">
+                    <span className="beat-grid-cue-field-label">설명(원문)</span>
+                    <span className="beat-grid-cue-field-value">{selectedCue?.label ?? "—"}</span>
                   </div>
                 </div>
               )}
@@ -724,6 +958,65 @@ export function BeatGrid({ grid, fixtures = [], probeResults, secondsPerBar = nu
             </p>
           )}
         </aside>
+      </div>
+
+      {/* ③ 하단 띠 — 2D 무대(왼쪽) + 이 마디 한눈에(오른쪽), 시안 `.insp`와
+          같은 자리(타임라인 아래, 고정 높이, t537 레이아웃 교정). */}
+      <div className="beat-grid-insp">
+        <div className="beat-grid-stage-pane">
+          <h5>무대 (2D)</h5>
+          {stageBounds ? (
+            <svg viewBox={`0 0 ${STAGE_VIEW_W} ${STAGE_VIEW_H}`} className="beat-grid-stage">
+              {fixtures.map((fixture) => {
+                const { cx, cy } = projectFixture(fixture, stageBounds);
+                return (
+                  <circle
+                    key={fixture.fid}
+                    cx={cx}
+                    cy={cy}
+                    r={3}
+                    fill={fixtureDisplayColor(fixture, grid.tracks)}
+                    opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
+                  >
+                    <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
+                  </circle>
+                );
+              })}
+            </svg>
+          ) : (
+            <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
+          )}
+          <p className="beat-grid-stage-note">
+            위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
+            (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
+          </p>
+        </div>
+
+        <div className="beat-grid-glance-pane">
+          <h5>이 마디 한눈에 — {viewBar}마디</h5>
+          {/* t537 ② — 이 행에 걸린 SCENE 메모(§4 역할·효과 혼성 값, 트랙에
+              못 옮긴 자리)를 표 위에 그대로 보여준다 — 추측해 채우지 않고
+              「미정」으로 남긴 이유를 그 자리에서 읽을 수 있게 한다. */}
+          {viewBarSceneMemo && (
+            <p className="beat-grid-scene-memo-note">
+              ⚠ {viewBarSceneMemo.text}
+              <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.source_ref})</span>
+            </p>
+          )}
+          <table className="beat-grid-glance-table">
+            <tbody>
+              {grid.tracks.map((track) => {
+                const cue = cueForBar(track, viewBar);
+                return (
+                  <tr key={track.group_name}>
+                    <td>{track.group_name}</td>
+                    <td>{cue ? cue.label : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 하단 명령 입력 — M3 배선 전까지 제출 두 경로 모두 비활성. */}
