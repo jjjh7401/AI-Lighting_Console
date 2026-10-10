@@ -1,0 +1,2 @@
+{"ts": "2026-10-10T12:23:06.113062+00:00", "event": "approved", "commands": ["ClearAll"], "held": ["ClearAll"], "kind": "t531_m1_t538-t4t5"}
+{"ts": "2026-10-10T12:23:06.178502+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

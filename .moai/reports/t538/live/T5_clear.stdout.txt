@@ -1,0 +1,23 @@
+{"step": "t5_clear", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "t5_clear", "t": 0.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T538-T4T5",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "t5_clear": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}
