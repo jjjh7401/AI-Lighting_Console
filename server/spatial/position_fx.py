@@ -14,9 +14,9 @@ building command bundle, in two validated shapes:
   presets at a new venue re-aims the sequence for free.
 
 * **Base effects** (``circle``, ``ballyhoo``, ``wave``) — one cue: recall the
-  base preset, then build a RELATIVE phaser on top of it. ``At Relative``
-  rides on the fixtures' current aim and KEEPS that center-follow semantics
-  under preset recall (31_choreography_patterns.md V2 + operator
+  base preset, then build a two-step RELATIVE phaser (±value, card t540) on
+  top of it. ``At Relative`` rides on the fixtures' current aim and KEEPS
+  that center-follow semantics under preset recall (31_choreography_patterns.md V2 + operator
   confirmations), so the same cue orbits/waves around wherever the base
   preset points today.
 
@@ -142,19 +142,44 @@ def _cue_store(sequence_no: int, cue_no: int, name: str, *, merge: bool) -> str:
     return command
 
 
-def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
-    """The relative-phaser body for one base effect, rulebook shape exactly.
+#: Per-step curve value that turns the linear step fade into a sine-like one
+#: (server/fx/instantiate.py `_curve_lines`, measured V1 2026-08-15). On a
+#: Pan+Tilt pair it is what makes the orbit read round instead of a diamond
+#: (t538 A5 「마름모」 vs A5b 「동그란 원」).
+_STEP_CURVE = -100
 
-    Each axis that moves gets three validated lines — ``At Relative`` (the
-    swing, one step riding the base aim), ``At Phase ...`` (the shape), and
-    ``At Speed <bpm>`` (the rate) — mirroring the live-validated build at
-    31_choreography_patterns.md:66-73. Only the moving axes are touched.
+
+def _two_step_swing(swings: Sequence[tuple[str, int]]) -> list[str]:
+    """Two relative steps per moving axis: ``-value`` / ``Step 2`` / ``+value``.
+
+    grandMA3 builds a phaser only from TWO OR MORE steps (MA Phasers manual;
+    33_effect_editors.md:21-22; server/fx/schema.py MIN_STEPS=2). A single
+    ``At Relative`` line is a one-off offset, not a phaser: on the live rig it
+    moved the beams once and froze (t538 T3, card t540). ``Step 1`` is never
+    written — the first step is the current one — and the curve lines follow
+    the whole step run, the ordering instantiate.py measured.
+    """
+    lines = [f"Attribute '{axis}' At Relative -{value}" for axis, value in swings]
+    lines.append("Step 2")
+    lines += [f"Attribute '{axis}' At Relative {value}" for axis, value in swings]
+    for step in (1, 2):
+        lines.append(f"Step {step} At Accel {_STEP_CURVE}")
+        lines.append(f"Step {step} At Decel {_STEP_CURVE}")
+    return lines
+
+
+def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
+    """The relative-phaser body for one base effect, live-validated shape.
+
+    Each moving axis swings ±value across two steps (:func:`_two_step_swing`),
+    then ``At Phase ...`` (the shape) and ``At Speed <bpm>`` (the rate) — the
+    line order sent live in t538 A3/A5b (base preset recall, two relative
+    steps, curves, phase, speed). Only the moving axes are touched.
     """
     speed = _format_speed(speed_bpm)
     if effect == "circle":
         return (
-            f"Attribute 'Pan' At Relative {_CIRCLE_RELATIVE_PAN}",
-            f"Attribute 'Tilt' At Relative {_CIRCLE_RELATIVE_TILT}",
+            *_two_step_swing((("Pan", _CIRCLE_RELATIVE_PAN), ("Tilt", _CIRCLE_RELATIVE_TILT))),
             f"Attribute 'Pan' At Phase {_CIRCLE_PAN_PHASE}",
             f"Attribute 'Tilt' At Phase {_CIRCLE_TILT_PHASE}",
             f"Attribute 'Pan' At Speed {speed}",
@@ -162,15 +187,14 @@ def _relative_phaser_lines(effect: str, speed_bpm: float) -> tuple[str, ...]:
         )
     if effect == "wave":
         return (
-            f"Attribute 'Tilt' At Relative {_WAVE_RELATIVE_TILT}",
+            *_two_step_swing((("Tilt", _WAVE_RELATIVE_TILT),)),
             f"Attribute 'Tilt' At {_PHASE_SPREAD}",
             f"Attribute 'Tilt' At Speed {speed}",
         )
     # ballyhoo — both axes swing, phase fanned per axis, fast by definition.
     bally_speed = _format_speed(speed_bpm * _BALLYHOO_SPEED_FACTOR)
     return (
-        f"Attribute 'Pan' At Relative {_BALLY_RELATIVE_PAN}",
-        f"Attribute 'Tilt' At Relative {_BALLY_RELATIVE_TILT}",
+        *_two_step_swing((("Pan", _BALLY_RELATIVE_PAN), ("Tilt", _BALLY_RELATIVE_TILT))),
         f"Attribute 'Pan' At {_PHASE_SPREAD}",
         f"Attribute 'Tilt' At {_PHASE_SPREAD}",
         f"Attribute 'Pan' At Speed {bally_speed}",
