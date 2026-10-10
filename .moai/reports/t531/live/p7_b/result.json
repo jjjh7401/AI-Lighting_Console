@@ -1,0 +1,31 @@
+{
+  "item": "P7",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/303"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_cue1": true,
+    "play_cue2": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 303"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

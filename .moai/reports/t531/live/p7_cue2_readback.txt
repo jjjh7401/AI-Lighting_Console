@@ -1,0 +1,4 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/303|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props d5a8bc7f CURRENTCUE ShowData/DataPools/Default/Sequences/303"
+<<< {"id": "d5a8bc7f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/303", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 303.2"}], "truncated": false, "v": 1}
