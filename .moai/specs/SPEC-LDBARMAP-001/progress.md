@@ -99,9 +99,9 @@ AC-LDBARMAP-016(신설, 오프셋 기반 평가 — M2 실제 통과 기준) 추
 갱신(M1 통과 조건 미충족을 그대로 기록 + M2는 그 조건이 아니라 이 감독 결정으로
 진행함을 명시). REQ 15→16개·AC 15→16개(Tier M 상한 16개에 정확히 닿음, 초과 없음).
 version 0.1.2→0.1.3. 코드 변경 0줄 — 이 개정은 plan-phase 문서 3개(spec.md·plan.md·
-acceptance.md)만 다룬다. 커밋: `pending-backfill-SPEC-LDBARMAP-001-t530-amendment`
-(이 줄 자신이 그 커밋 안에 있어 자기 참조가 불가능 — 다음 커밋에서 실제 SHA로
-백필한다, 워크트리 `.claude/worktrees/t530`, 브랜치 `WT-barmap-run`).
+acceptance.md)만 다룬다. 커밋: `2f79fdb045acd9c2d7c922fc4191a0905b0081cf`(백필 —
+직전 커밋이 자기 자신의 SHA를 몰라 `pending-backfill-SPEC-LDBARMAP-001-t530-amendment`로
+썼던 것을 실제 SHA로 교정, 워크트리 `.claude/worktrees/t530`, 브랜치 `WT-barmap-run`).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
