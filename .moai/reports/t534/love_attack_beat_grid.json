@@ -1,0 +1,178 @@
+{
+ "song_title": "LOVE ATTACK",
+ "bar_range": {
+  "start": 0,
+  "end": 25
+ },
+ "tracks": [
+  {
+   "group_no": 4,
+   "group_no_confirmed": true,
+   "group_name": "BACK",
+   "layer_role": "back",
+   "cues": [
+    {
+     "bar": 0,
+     "label": "앞박 1회"
+    },
+    {
+     "bar": 3,
+     "label": "마디 4박마다"
+    },
+    {
+     "bar": 7,
+     "label": "킥 1·2·4박 60%"
+    },
+    {
+     "bar": 11,
+     "label": "—"
+    },
+    {
+     "bar": 14,
+     "label": "—"
+    },
+    {
+     "bar": 18,
+     "label": "킥 1·2·4박 100%"
+    },
+    {
+     "bar": 22,
+     "label": "킥 1·2·4박 100%"
+    }
+   ]
+  },
+  {
+   "group_no": 7,
+   "group_no_confirmed": true,
+   "group_name": "SIDE-ALL",
+   "layer_role": "side",
+   "cues": [
+    {
+     "bar": 0,
+     "label": "—"
+    },
+    {
+     "bar": 3,
+     "label": "—"
+    },
+    {
+     "bar": 7,
+     "label": "—"
+    },
+    {
+     "bar": 11,
+     "label": "SIDE-L/R 2·4박 번갈이"
+    },
+    {
+     "bar": 14,
+     "label": "가속(마디마다 두 배)"
+    },
+    {
+     "bar": 18,
+     "label": "—"
+    },
+    {
+     "bar": 22,
+     "label": "—"
+    }
+   ]
+  },
+  {
+   "group_no": 11,
+   "group_no_confirmed": true,
+   "group_name": "MOVER-U",
+   "layer_role": "mover",
+   "cues": [
+    {
+     "bar": 0,
+     "label": "바닥 쪽 좁은 빔, 정지"
+    },
+    {
+     "bar": 3,
+     "label": "5마디 1박 위치 한 칸 올림"
+    },
+    {
+     "bar": 7,
+     "label": "정지"
+    },
+    {
+     "bar": 11,
+     "label": "기울인 자리에서 느린 팬 흔들기"
+    },
+    {
+     "bar": 14,
+     "label": "가속 스윕 4박→2박→1박→반 박"
+    },
+    {
+     "bar": 18,
+     "label": "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"
+    },
+    {
+     "bar": 22,
+     "label": "22마디 1박에 멈춰 섬"
+    }
+   ]
+  },
+  {
+   "group_no": 12,
+   "group_no_confirmed": true,
+   "group_name": "MOVER-D",
+   "layer_role": "mover",
+   "cues": [
+    {
+     "bar": 0,
+     "label": "바닥 쪽, 정지"
+    },
+    {
+     "bar": 3,
+     "label": "5마디 1박 위치 한 칸 올림"
+    },
+    {
+     "bar": 7,
+     "label": "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"
+    },
+    {
+     "bar": 11,
+     "label": "11마디 1박 새 자리, 정지"
+    },
+    {
+     "bar": 14,
+     "label": "U 와 같은 스윕"
+    },
+    {
+     "bar": 18,
+     "label": "위로 연 자리, 정지"
+    },
+    {
+     "bar": 22,
+     "label": "22마디부터 틸트 웨이브(한 바퀴 2박)"
+    }
+   ]
+  },
+  {
+   "group_no": 14,
+   "group_no_confirmed": true,
+   "group_name": "BLIND",
+   "layer_role": "effect",
+   "cues": [
+    {
+     "bar": 17,
+     "label": "17마디 3·4박 전부 비움(예고)"
+    },
+    {
+     "bar": 18,
+     "label": "18마디 1박 BLIND 100% 2박"
+    }
+   ]
+  },
+  {
+   "group_no": null,
+   "group_no_confirmed": false,
+   "group_name": "STROBE",
+   "layer_role": "effect",
+   "cues": []
+  }
+ ],
+ "source": "love_attack_default",
+ "note": null
+}

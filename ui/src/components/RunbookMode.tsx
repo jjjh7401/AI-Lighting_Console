@@ -26,6 +26,7 @@ import {
   type SongTimelineView,
 } from "../protocol";
 import { BeatGrid, type BeatGridFixturePoint, type ProbeStatus } from "./BeatGrid";
+import { M1_PROBE_RESULTS_T531 } from "./beatGridM1Probes";
 import { ConceptPanel } from "./ConceptPanel";
 import { CueSheetTimeline } from "./CueSheetTimeline";
 import { RunbookGateBar } from "./RunbookGateBar";
@@ -68,7 +69,10 @@ export interface RunbookModeProps {
    * 0인 M2는 살아있는 읽기 경로가 없으므로 props로만 받는다(지어내지
    * 않음) — 넘기지 않으면 격자는 "무대 좌표 미제공"으로 떨어진다. */
   beatGridFixtures?: BeatGridFixturePoint[];
-  /** M1 프로브 9항목 상태 — 넘기지 않으면 전부 "미실행"(REQ-LDBEAT-003). */
+  /** M1 프로브 9항목 상태. 안 넘기면(App.tsx가 아직 안 넘긴다, 카드
+   * t534까지도 그대로) `M1_PROBE_RESULTS_T531`(progress.md M1 표 그대로,
+   * 카드 t531 실측)로 떨어진다 — "미실행" 전부가 아니라 실제 리허설
+   * 통과 상태가 보인다. 명시적으로 다른 값을 넘기면 그 값이 우선한다. */
   beatGridProbeResults?: Readonly<Record<number, ProbeStatus>>;
 }
 
@@ -210,7 +214,7 @@ export function RunbookMode({
   generatorResponding = false,
   generatorLastAssistantText = null,
   beatGridFixtures,
-  beatGridProbeResults,
+  beatGridProbeResults = M1_PROBE_RESULTS_T531,
 }: RunbookModeProps) {
   const staleSuffix = cueMonitor.stale ? " (오래됨 — 콘솔 연결을 확인하세요)" : "";
 
