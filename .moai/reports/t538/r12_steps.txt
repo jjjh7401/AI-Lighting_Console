@@ -1,0 +1,3 @@
+props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3|NAME,DEFAULT,HIGHLIGHT,LOWLIGHT,COARSE,FINE
+props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/2|NAME,DEFAULT,COARSE,FINE
+introspect:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1

@@ -1,0 +1,6 @@
+state:ShowData/DataPools/Default/Sequences/311
+props:ShowData/DataPools/Default/Sequences/311/3|NAME,MEMORYFOOTPRINT
+props:ShowData/DataPools/Default/Sequences/311|CURRENTCUE,PRIORITY,SEQUMIBMODE,SPEEDMASTER,RATEMASTER,SPEEDSCALE,PLAYBACKMASTER
+prop:Selection|COUNTTOTALSELECTED
+state:ShowData/DataPools/Default/Pages
+state:ShowData/DataPools/Default/Pages/1

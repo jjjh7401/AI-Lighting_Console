@@ -1,0 +1,5 @@
+introspect:Patch/Stages/1/Fixtures/27
+introspect:Patch/Stages/1/Fixtures/27@27
+introspect:Patch/Stages/1/Fixtures/27@54
+state:Patch/Stages/1/Fixtures/27
+state:Patch/FixtureTypes

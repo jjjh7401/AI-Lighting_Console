@@ -1,0 +1,16 @@
+
+>>> state:Patch/FixtureTypes/11/DMXModes
+    wire: Plugin "CopilotResponder" "state d6a4e766 Patch/FixtureTypes/11/DMXModes"
+<<< {"children": [{"class": "DMXMode", "i": 1, "name": "Mode 1"}, {"class": "DMXMode", "i": 2, "name": "Mode 2"}], "id": "d6a4e766", "kind": "state", "node": {"childCount": 2, "class": "DMXModes", "enumeration": "ok", "name": "DMXModes"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/DMXModes/1
+    wire: Plugin "CopilotResponder" "state 41a818a4 Patch/FixtureTypes/11/DMXModes/1"
+<<< {"children": [{"class": "DMXChannels", "i": 1, "name": "DMXChannels"}, {"class": "Relations", "i": 2, "name": "Relations"}, {"class": "FTMacros", "i": 3, "name": "FTMacros"}, {"class": "SoftwareVersions", "i": 4, "name": "SoftwareVersions"}, {"class": "FTPresets", "i": 5, "name": "FTPresets"}, {"class": "SubfixtureOverview", "i": 6, "name": "SubfixtureOverview"}], "id": "41a818a4", "kind": "state", "node": {"childCount": 6, "class": "DMXMode", "enumeration": "ok", "name": "Mode 1"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/AttributeDefinitions
+    wire: Plugin "CopilotResponder" "state 38a61a57 Patch/FixtureTypes/11/AttributeDefinitions"
+<<< {"children": [{"class": "DeactivationGroups", "i": 1, "name": "DeactivationGroups"}, {"class": "ActivationGroups", "i": 2, "name": "ActivationGroups"}, {"class": "FeatureGroups", "i": 3, "name": "FeatureGroups"}, {"class": "Attributes", "i": 4, "name": "Attributes"}], "id": "38a61a57", "kind": "state", "node": {"childCount": 4, "class": "AttributeDefinitions", "enumeration": "ok", "name": "AttributeDefinitions"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/AttributeDefinitions", "truncated": false, "v": 1}
+
+>>> state:Patch/FixtureTypes/11/AttributeDefinitions/1
+    wire: Plugin "CopilotResponder" "state faaaa7e5 Patch/FixtureTypes/11/AttributeDefinitions/1"
+<<< {"children": [], "id": "faaaa7e5", "kind": "state", "node": {"childCount": 0, "class": "DeactivationGroups", "enumeration": "ok", "name": "DeactivationGroups"}, "offset": 0, "ok": true, "path": "Patch/FixtureTypes/11/AttributeDefinitions/1", "truncated": false, "v": 1}

@@ -1,0 +1,16 @@
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props be4edcf4 NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1"
+<<< {"id": "be4edcf4", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/1", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Track 80%"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "0"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "0"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.8"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "0.8"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/2|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props f6069191 NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/2"
+<<< {"id": "f6069191", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/2", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Track 100%"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "65793"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "65793"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "1.0"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "1.0"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/3|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props da874b2c NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/3"
+<<< {"id": "da874b2c", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "Track 100  1%"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "131586"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "16711422"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.996"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "0.018"}], "truncated": false, "v": 1}
+
+>>> props:Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/4|NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO
+    wire: Plugin "CopilotResponder" "props 1d7e4746 NAME,DMXFROM,DMXTO,PHYSICALFROM,PHYSICALTO Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/4"
+<<< {"id": "1d7e4746", "kind": "props", "ok": true, "path": "Patch/FixtureTypes/11/DMXModes/1/DMXChannels/3/1/1/4", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "min Track"}, {"n": "DMXFROM", "ok": true, "t": "number", "v": "16777215"}, {"n": "DMXTO", "ok": true, "t": "number", "v": "16777216"}, {"n": "PHYSICALFROM", "ok": true, "t": "number", "v": "0.014"}, {"n": "PHYSICALTO", "ok": true, "t": "number", "v": "0.014"}], "truncated": false, "v": 1}
