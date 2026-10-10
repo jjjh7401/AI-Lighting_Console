@@ -8,16 +8,16 @@ LOVE ATTACK 한 곡을 대상으로, 오프라인 분석으로 비트·다운비
 - 선행 SPEC: `SPEC-LDBEAT-001`(런북 모드 박자 배치, draft) — 이 SPEC의 산출물(마디 지도)은 그 SPEC의 박자 격자가 소비할 수 있는 입력 후보다. 두 SPEC은 서로 독립적으로 진행 가능하다(LDBEAT M1~M2는 LOVE ATTACK 손 배치를 입력으로 쓰고, 이 SPEC의 산출물을 기다리지 않는다).
 - 후속 SPEC: `SPEC-LDARRANGE-001`(역할×마디 자동 배치, 아직 존재하지 않음) — 이 SPEC의 마디 지도를 소비할 장래 SPEC.
 
-## §B. 열린 결정 — 저장 인터페이스 (먼저 제시)
+## §B. 결정 — 저장 인터페이스 (확정, M4, 카드 t539)
 
-`spec.md` §5 열린 결정 0을 그대로 가져온다 — 이것이 이 plan의 가장 바뀔 가능성이 높은 결정이므로 마일스톤 목록보다 먼저 적는다.
+`spec.md` §5 열린 결정 0을 그대로 가져온다 — **M4(카드 t539, 2026-10-10, 리드 경유 감독 승인)에서 옵션 A로 확정됐다.** 아래 표는 결정 당시 비교한 옵션 두 가지를 역사로 보존한다.
 
-| 옵션 | 내용 | 장점 | 단점 |
-|---|---|---|---|
-| A — 임베드 | `timeline` 사전의 새 키(예: `beat_grid` 또는 `bar_map`)로 기존 `SongTimelineStore`/`TimelineDraftHistory`/`SongTimelineLibrary`에 얹는다 | 되돌리기·버전 관리를 코드 추가 없이 재사용(`SPEC-LDBEAT-001` REQ-LDBEAT-006 선례) | 82마디 × 여러 필드가 박자 격자보다 무거워 `TimelineDraftHistory`의 "전체 사전 깊은 사본" 비용이 커질 수 있음 |
-| B — 독립 저장소 | 마디 지도 전용 신규 저장 모듈 | 생명주기(곡당 1개, 재분석 시 덮어쓰기)가 편집 이력과 분리되어 더 정직 | 신규 코드, LDBEAT·LDARRANGE와 별도 배선 필요 |
+| 옵션 | 내용 | 장점 | 단점 | 판정 |
+|---|---|---|---|---|
+| A — 임베드 | `timeline` 사전의 새 키 `timeline["bar_map"]`로 기존 `SongTimelineStore`/`TimelineDraftHistory`/`SongTimelineLibrary`에 얹는다 | 되돌리기·버전 관리를 코드 추가 없이 재사용(`SPEC-LDBEAT-001` REQ-LDBEAT-006 선례) | 82마디 × 여러 필드가 박자 격자보다 무거워 `TimelineDraftHistory`의 "전체 사전 깊은 사본" 비용이 커질 수 있음 | **확정** |
+| B — 독립 저장소 | 마디 지도 전용 신규 저장 모듈 | 생명주기(곡당 1개, 재분석 시 덮어쓰기)가 편집 이력과 분리되어 더 정직 | 신규 코드, LDBEAT·LDARRANGE와 별도 배선 필요 | 기각 |
 
-**결정 시점**: M2+ 착수 시 감독과 함께. 이 plan-phase는 선택하지 않는다(REQ-LDBARMAP-010).
+**결정 확정(카드 t539, M4, 2026-10-10)**: 저장 키는 `timeline["bar_map"]`, 값 모양은 `spec.md` §5 열린 결정 0의 확정 모양(`bpm`·`time_signature`·`bars[]`·`events[]` + 신규 `schema_version`(=1)·`first_beat_offset`). 되돌리기는 `TimelineDraftHistory`의 마디 지도 쓰기 1회당 전체 타임라인 깊은 사본 1회 `record()`, 영속화는 `SongTimelineStore`의 원자적 JSON, 버전은 `SongTimelineLibrary`(전체 타임라인 사전 단위) — 영속화 전용 신규 저장소 모듈은 만들지 않는다(REQ-LDBARMAP-010). **일반화 규칙(감독 원칙 2026-10-10)**: 저장 형태는 LOVE ATTACK 고유값을 가정하지 않는다 — 임의의 곡 길이·박자표(분자 1~16, 분모 ∈ {1,2,4,8,16})·못갖춘마디 유무·마지막 부분 마디를 받아들인다(상세: `spec.md` §5 열린 결정 0).
 
 ## §C. 마일스톤 (우선순위 기반, 시간 추정 없음)
 
@@ -48,12 +48,13 @@ REQ-LDBARMAP-008의 네 종류(킥 진입·빌드업·드롭·브레이크)를 �
 - 산출물: 이벤트 분류 함수 + 테스트(지도 보고서 §2.1/§2.3의 라벨 대비 재현율 AC-LDBARMAP-007 — plan-audit iteration 2 D-NEW-1 교정: AC-003 삽입으로 밀린 번호를 반영, AC-006은 마디 경계 적중률이지 이벤트 재현율이 아니다).
 - 통과 조건: AC-LDBARMAP-007 PASS — 재현율 조건(7개 사건 중 5개 이상 적중, 70% 이상)과 정밀도 조건(카드 t535 신설, 2026-10-10 — 실제 오디오 경로(②)에서 `measured` 등급 `break`·`kick_entry` 점 사건 전체 대비 부록 A "순간" 칸 근거 ±1마디 내 적중 비율 70% 이상, 미달 사건은 `.moai/reports/SPEC-LDBARMAP-001-probes/m3-ear-check-candidates.md`에 감독 귀 확인 후보로 출력) 둘 다 PASS.
 
-### M4 — 저장 인터페이스 배선 (우선순위 Medium, §B 결정 선행 필요)
+### M4 — 저장 인터페이스 배선 (우선순위 Medium, 결정 확정됨 — 착수, 카드 t539)
 
-§B의 열린 결정이 M2+ 착수 시 확정되면, 그 결정대로 마디 지도를 저장 경로에 배선한다.
+§B의 결정(옵션 A, `timeline["bar_map"]`)이 확정됐다(카드 t539, 2026-10-10, 리드 경유 감독 승인) — 이 마일스톤은 그 결정대로 마디 지도를 저장 경로에 배선한다. 범위는 서버 쪽 저장·로드·되돌리기만 — UI 표시는 범위 밖(레인-2 t537 머지 뒤 별도 카드), 이 마일스톤에는 WS/HTTP 진입 경로가 없다(후속), 콘솔 접촉 0건.
 
-- 선행 조건: §B 결정 확정(감독).
-- 산출물: 저장 배선 코드 + 왕복(쓰기→읽기) 테스트.
+- 선행 조건: §B 결정 확정(완료, 2026-10-10).
+- 산출물: `server/audio/bar_map_store.py`(순수 함수 — build/validate/attach/read, 기존 `analyze()`/`AnalysisResult` 계약을 건드리지 않음) + `server/web/session.py`에 메서드 2개 신설(`store_timeline_bar_map`, `timeline_bar_map`) + 왕복(쓰기→읽기) 테스트(LOVE ATTACK 모양 1개 + LOVE ATTACK 전용 상수를 가정하지 않는 비-4/4 모양 1개 이상).
+- 통과 조건: `acceptance.md` AC-LDBARMAP-010.
 
 ### M5 — LDRHYTHM 교차참조 (우선순위 Low, sync-phase)
 
