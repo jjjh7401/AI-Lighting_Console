@@ -1,0 +1,13 @@
+{"ts": "2026-10-10T12:24:34.508565+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T12:24:34.575145+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/312", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.641759+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/313", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.708020+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/314", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.774267+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/315", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.841601+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/316", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.907894+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/317", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:34.974918+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/318", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:35.041607+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/319", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:35.108216+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/320", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:35.174871+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/321", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:35.241993+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/322", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T12:24:35.308687+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/323", "kind": "state_query", "ok": false, "detail": ""}
