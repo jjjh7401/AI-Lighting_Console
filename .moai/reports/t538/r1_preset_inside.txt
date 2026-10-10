@@ -1,0 +1,16 @@
+
+>>> state:ShowData/DataPools/Default/PresetPools/21/2
+    wire: Plugin "CopilotResponder" "state 35fe4e9f ShowData/DataPools/Default/PresetPools/21/2"
+<<< {"children": [], "id": "35fe4e9f", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "PT-CIRCLE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/2", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/21/2
+    wire: Plugin "CopilotResponder" "introspect 7166d5a6 ShowData/DataPools/Default/PresetPools/21/2"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "7166d5a6", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/2", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21/5
+    wire: Plugin "CopilotResponder" "state e92d6fce ShowData/DataPools/Default/PresetPools/21/5"
+<<< {"children": [], "id": "e92d6fce", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "TILT-SWEEP"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/21/5", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/2/1
+    wire: Plugin "CopilotResponder" "state c25d8416 ShowData/DataPools/Default/PresetPools/2/1"
+<<< {"children": [], "id": "c25d8416", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "POS01 보컬 센터 페이스 · 합성좌표"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/2/1", "truncated": false, "v": 1}

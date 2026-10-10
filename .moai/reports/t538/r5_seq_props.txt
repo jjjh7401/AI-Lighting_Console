@@ -1,0 +1,16 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/310|WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY
+    wire: Plugin "CopilotResponder" "props 81b5c0d3 WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY ShowData/DataPools/Default/Sequences/310"
+<<< {"id": "81b5c0d3", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/310", "reads": [{"n": "WRAPAROUND", "ok": true, "t": "boolean", "v": "true"}, {"n": "SEQUMIB", "ok": true, "t": "string", "v": "Enabled"}, {"n": "SEQUMIBMODE", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOPREPOS", "ok": true, "t": "boolean", "v": "false"}, {"n": "RESTARTMODE", "ok": true, "t": "string", "v": "First Cue"}, {"n": "SPEEDFROMRATE", "ok": true, "t": "boolean", "v": "false"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "RATEMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "TRACKING", "ok": true, "t": "number", "v": "1"}, {"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308|WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY
+    wire: Plugin "CopilotResponder" "props 7ea16add WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY ShowData/DataPools/Default/Sequences/308"
+<<< {"id": "7ea16add", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308", "reads": [{"n": "WRAPAROUND", "ok": true, "t": "boolean", "v": "true"}, {"n": "SEQUMIB", "ok": true, "t": "string", "v": "Enabled"}, {"n": "SEQUMIBMODE", "ok": true, "t": "string", "v": "None"}, {"n": "AUTOPREPOS", "ok": true, "t": "boolean", "v": "false"}, {"n": "RESTARTMODE", "ok": true, "t": "string", "v": "First Cue"}, {"n": "SPEEDFROMRATE", "ok": true, "t": "boolean", "v": "false"}, {"n": "SPEEDMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "RATEMASTER", "ok": true, "t": "string", "v": "None"}, {"n": "TRACKING", "ok": true, "t": "number", "v": "1"}, {"n": "PRIORITY", "ok": true, "t": "string", "v": "LTP"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/236|WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props f87a0359 WRAPAROUND,SEQUMIB,SEQUMIBMODE,AUTOPREPOS,RESTARTMODE,SPEEDFROMRATE,SPEEDMASTER,RATEMASTER,TRACKING,PRIORITY,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/236"
+<<< {"error": "path segment not found: '236' (in ShowData/DataPools/Default/Sequences/236)", "id": "f87a0359", "kind": "props", "ok": false, "path": "ShowData/DataPools/Default/Sequences/236", "reads": [], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/308|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 307e5d7d MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/308"
+<<< {"id": "307e5d7d", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/308", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "29354"}], "truncated": false, "v": 1}
