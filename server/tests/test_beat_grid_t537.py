@@ -204,6 +204,11 @@ class TestLegacyCueReadPath:
             "effect_kind": None,
             "entry": {"fade_bars": None, "mib_mode": None},
             "source_ref": "reports/effect-arrangement-rules-20261007.md:106",
+            # 카드 t548 — REQ-LDBEAT-006(vi)(vii) 신설 필드. 선언하지 않은
+            # 레거시 입력에서도 normalize_beat_grid_cue는 이 둘을 `None`으로
+            # 채운다(아래 "입력에 없음" assert와 같은 레거시-읽기 보장).
+            "app_movement": None,
+            "evidence": None,
         }
 
         cue = normalize_beat_grid_cue(structured)

@@ -40,10 +40,14 @@ tracks:
       # 규칙 7 「얼굴 빛(FOH)은 벌스부터 끝까지 유지」 — 켜는 큐 하나뿐이다.
       # §4 가 밝기 숫자를 주지 않아 % 값은 없다(지어내지 않음).
       # 디머 프리셋 1.1 — [이름] 「풀」 · 규칙 7 「얼굴은 밝게」 · 감독 승인 2026-10-10(t543 proposal-table.md #1)
+      # 카드 t548 — 위 주석의 근거 등급·승인을 evidence 구조화 필드로 옮긴다(REQ-LDBEAT-006(vii), REQ-LDBEAT-015(g)).
       - bar: 7
         label: "FOH 켬"
         brightness: {mode: dimmer_preset, preset_no: "1.1"}
         source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#1"}
   - group_name: WASH-ALL
     group_no: 10
     group_no_confirmed: true
@@ -72,6 +76,9 @@ tracks:
         label: "마디 4박마다"
         effect_preset_no: "21.1"
         effect_kind: mixed
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#5"}
       # 효과 21.1 — [이름] 「DIM-PULSE」, 박 패턴(1·2·4)은 프리셋 안을 못 읽어 미확인
       # · 감독 승인 2026-10-10(t543 proposal-table.md #6)
       - bar: 7
@@ -80,6 +87,9 @@ tracks:
         effect_preset_no: "21.1"
         effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#6"}
       - bar: 11
         label: "—"
       - bar: 14
@@ -91,6 +101,9 @@ tracks:
         effect_preset_no: "21.1"
         effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#9"}
       # 효과 21.1 — [이름] 같은 펄스 · 감독 승인 2026-10-10(t543 proposal-table.md #10)
       - bar: 22
         label: "킥 1·2·4박 100%"
@@ -98,6 +111,9 @@ tracks:
         effect_preset_no: "21.1"
         effect_kind: mixed
         source_ref: "reports/effect-arrangement-rules-20261007.md:110"
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#10"}
   - group_name: SIDE-ALL
     group_no: 7
     group_no_confirmed: true
@@ -106,9 +122,21 @@ tracks:
       - {bar: 3, label: "—"}
       - {bar: 7, label: "—"}
       # 효과 21.3 — [이름] 「DIM-CHASE」 · 감독 승인 2026-10-10(t543 proposal-table.md #14)
-      - {bar: 11, label: "SIDE-L/R 2·4박 번갈이", effect_preset_no: "21.3", effect_kind: mixed}
+      - bar: 11
+        label: "SIDE-L/R 2·4박 번갈이"
+        effect_preset_no: "21.3"
+        effect_kind: mixed
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#14"}
       # 효과 21.3 — [이름] 같은 체이스, 가속은 속도로 따로 · 감독 승인 2026-10-10(t543 proposal-table.md #15)
-      - {bar: 14, label: "가속(마디마다 두 배)", effect_preset_no: "21.3", effect_kind: mixed}
+      - bar: 14
+        label: "가속(마디마다 두 배)"
+        effect_preset_no: "21.3"
+        effect_kind: mixed
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#15"}
       - {bar: 18, label: "—"}
       - {bar: 22, label: "—"}
   - group_name: MOVER-U
@@ -118,18 +146,45 @@ tracks:
       - {bar: 0, label: "바닥 쪽 좁은 빔, 정지"}
       - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
       - {bar: 7, label: "정지"}
-      - {bar: 11, label: "기울인 자리에서 느린 팬 흔들기"}
+      # 카드 t548(REQ-LDBEAT-006(vi), 감독 결정 2026-10-11 ①②) — 「느린 팬
+      # 흔들기」를 app_movement(wave + axes=Pan)로 구조화한다. 주기는 이
+      # 레이블이 말하지 않아 미정(지어내지 않음, REQ-LDBEAT-015(f)와 같은
+      # 원칙). 기준 위치(position_preset_no)도 없어 기본 수직 중심으로
+      # 돈다 — Pan 단독 + 기준 없음은 감독 결정④에 따라 눈에 안 보일 수
+      # 있다는 경고 대상이다(pan_only_vertical_base_warning).
+      - bar: 11
+        label: "기울인 자리에서 느린 팬 흔들기"
+        app_movement:
+          shape: wave
+          axes: [Pan]
+          period_unit: null
+          period_value: null
+          phase_spread: null
       # 효과 21.5 — [실측] Group 11 「위아래로 쓸기」(SPEC-LDBEAT-001/progress.md:130,
       # t538 A6b 319) · 감독 승인 2026-10-10(t543 proposal-table.md #22)
       - bar: 14
         label: "가속 스윕 4박→2박→1박→반 박"
         effect_preset_no: "21.5"
         effect_kind: mixed
+        evidence:
+          grade: measured
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#22"}
       # 위치 2.1 — [실측] Group 11 「조금 무대 앞, 틸트업」(progress.md:131, t538 B1 320)
-      # · 감독 승인 2026-10-10(t543 proposal-table.md #23). 19마디 팬 웨이브는 카드 t548(앱 2단계 무빙)
+      # · 감독 승인 2026-10-10(t543 proposal-table.md #23). 19마디 팬 웨이브는 카드 t548(앱 2단계
+      # 무빙) — period_unit=beat/period_value=2(「한 바퀴 2박」), 기준 위치는 이 칸 자신의
+      # position_preset_no "2.1"(REQ-LDBEAT-006(vi-8), 감독 결정 2026-10-11 ②).
       - bar: 18
         label: "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"
         position_preset_no: "2.1"
+        evidence:
+          grade: measured
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#23"}
+        app_movement:
+          shape: wave
+          axes: [Pan]
+          period_unit: beat
+          period_value: 2
+          phase_spread: null
       - {bar: 22, label: "22마디 1박에 멈춰 섬"}
   - group_name: MOVER-D
     group_no: 12
@@ -137,15 +192,54 @@ tracks:
     cues:
       - {bar: 0, label: "바닥 쪽, 정지"}
       - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
-      - {bar: 7, label: "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"}
+      # 카드 t548 — 「틸트 웨이브, 한 바퀴 2마디, 위상 펼침」. MOVER-D(Spiider,
+      # Group 12)는 실기 라이브 프로브(`.moai/reports/t548/probe-moverd.md`,
+      # `reports/t548-moverd-probe-20261011.md`, 2026-10-11)가 PASS로 확인한
+      # 뒤에만 채운다 — 프로브 결론: "2단계 틸트 웨이브·원은 MOVER-D 에서
+      # 움직인다"(위상 펼침은 "위상 펼침" 레이블 그대로 true).
+      - bar: 7
+        label: "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"
+        app_movement:
+          shape: wave
+          axes: [Tilt]
+          period_unit: bar
+          period_value: 2
+          phase_spread: true
       - {bar: 11, label: "11마디 1박 새 자리, 정지"}
       # 효과 21.5 — [실측·다른 그룹] Group 11 에서만 잼, Group 12 미측정
       # · 감독 승인 2026-10-10(t543 proposal-table.md #29)
-      - {bar: 14, label: "U 와 같은 스윕", effect_preset_no: "21.5", effect_kind: mixed}
+      - bar: 14
+        label: "U 와 같은 스윕"
+        effect_preset_no: "21.5"
+        effect_kind: mixed
+        evidence:
+          grade: measured_other_group
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#29"}
       # 위치 2.1 — [실측·다른 그룹] Group 11 에서만 잼, Group 12 미측정
       # · 감독 승인 2026-10-10(t543 proposal-table.md #30)
-      - {bar: 18, label: "위로 연 자리, 정지", position_preset_no: "2.1"}
-      - {bar: 22, label: "22마디부터 틸트 웨이브(한 바퀴 2박)"}
+      # 카드 t548 — 「22마디부터 틸트 웨이브(한 바퀴 2박)」는 bar 22에
+      # 걸리므로 app_movement는 bar 22에 둔다(이 칸은 그 이전의 "정지"
+      # 상태 기술이라 app_movement 없음).
+      - bar: 18
+        label: "위로 연 자리, 정지"
+        position_preset_no: "2.1"
+        evidence:
+          grade: measured_other_group
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#30"}
+      # 카드 t548 — 「22마디부터 틸트 웨이브(한 바퀴 2박)」. MOVER-D 실기
+      # 프로브 PASS(위 bar 7과 같은 근거) 이후에만 채운다. 기준 위치는 이
+      # 칸 자신의 position_preset_no — 이 칸은 레이블이 정적 번호를 말하지
+      # 않아 미정(REQ-LDBEAT-015(f)와 같은 원칙, 지어내지 않음)이고, 그래서
+      # 틸트 웨이브는 기본 수직 중심으로 돈다(REQ-LDBEAT-006(vi-8)) — 축이
+      # Tilt라 감독 결정④의 Pan 단독 경고 대상은 아니다.
+      - bar: 22
+        label: "22마디부터 틸트 웨이브(한 바퀴 2박)"
+        app_movement:
+          shape: wave
+          axes: [Tilt]
+          period_unit: beat
+          period_value: 2
+          phase_spread: null
   - group_name: BLIND
     group_no: 14
     group_no_confirmed: true
@@ -156,6 +250,9 @@ tracks:
       - bar: 17
         label: "17마디 3·4박 전부 비움(예고)"
         brightness: {mode: dimmer_preset, preset_no: "1.6"}
+        evidence:
+          grade: name_only
+          approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#32"}
       - bar: 18
         label: "18마디 1박 BLIND 100% 2박"
         brightness: {mode: value, value_percent: 100}
