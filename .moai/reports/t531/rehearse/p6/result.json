@@ -1,0 +1,98 @@
+{
+  "item": "P6",
+  "free_slots": [
+    "ShowData/DataPools/Default/Timecodes/31"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "tc_setup": [
+      "Store Timecode 31",
+      "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+      "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+      "Store Timecode 31.1",
+      "Assign Sequence 228 At Timecode 31.1.1",
+      "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+      "cd Timecode 31.1.1.1.1",
+      "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+      "cd root"
+    ],
+    "goto_mid": [
+      "Goto Time 5 Timecode 31"
+    ],
+    "play": [
+      "Go Timecode 31"
+    ],
+    "release": [
+      "Off Timecode 31",
+      "Off Sequence 228"
+    ]
+  },
+  "notes": [
+    "`Goto Time <n> Timecode <n>` 은 문서화·실측 전례 0건(그렙 근거: 독스트링).",
+    "거절 시 기록 문구는 반드시 '미확인 — 문법 불명' — '중간 시작 기능 없음' 금지.",
+    "읽기 판정: play 직후 0.1초 내 CURSOR 값."
+  ],
+  "bundles": {
+    "tc_setup": true,
+    "goto_mid": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "Store Timecode 31",
+    "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+    "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+    "Store Timecode 31.1",
+    "Assign Sequence 228 At Timecode 31.1.1",
+    "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+    "cd Timecode 31.1.1.1.1",
+    "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+    "cd root",
+    "Goto Time 5 Timecode 31",
+    "Go Timecode 31",
+    "Off Timecode 31",
+    "Off Sequence 228"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 31",
+        "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+        "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 31.1",
+        "Assign Sequence 228 At Timecode 31.1.1",
+        "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+        "cd Timecode 31.1.1.1.1",
+        "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Time 5 Timecode 31"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 31"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 31",
+        "Off Sequence 228"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

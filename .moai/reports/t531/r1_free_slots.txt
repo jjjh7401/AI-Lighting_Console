@@ -1,0 +1,52 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/300
+    wire: Plugin "CopilotResponder" "state a65563f3 ShowData/DataPools/Default/Sequences/300"
+<<< {"error": "path segment not found: '300' (in ShowData/DataPools/Default/Sequences/300)", "id": "a65563f3", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/300", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/301
+    wire: Plugin "CopilotResponder" "state 0ccee60a ShowData/DataPools/Default/Sequences/301"
+<<< {"error": "path segment not found: '301' (in ShowData/DataPools/Default/Sequences/301)", "id": "0ccee60a", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/301", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/302
+    wire: Plugin "CopilotResponder" "state 8bd31274 ShowData/DataPools/Default/Sequences/302"
+<<< {"error": "path segment not found: '302' (in ShowData/DataPools/Default/Sequences/302)", "id": "8bd31274", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/302", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/303
+    wire: Plugin "CopilotResponder" "state 531f92d6 ShowData/DataPools/Default/Sequences/303"
+<<< {"error": "path segment not found: '303' (in ShowData/DataPools/Default/Sequences/303)", "id": "531f92d6", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/303", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/304
+    wire: Plugin "CopilotResponder" "state bae2cfe8 ShowData/DataPools/Default/Sequences/304"
+<<< {"error": "path segment not found: '304' (in ShowData/DataPools/Default/Sequences/304)", "id": "bae2cfe8", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/304", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/305
+    wire: Plugin "CopilotResponder" "state a5aa06f6 ShowData/DataPools/Default/Sequences/305"
+<<< {"error": "path segment not found: '305' (in ShowData/DataPools/Default/Sequences/305)", "id": "a5aa06f6", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/305", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/306
+    wire: Plugin "CopilotResponder" "state 986264c2 ShowData/DataPools/Default/Sequences/306"
+<<< {"error": "path segment not found: '306' (in ShowData/DataPools/Default/Sequences/306)", "id": "986264c2", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/306", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/307
+    wire: Plugin "CopilotResponder" "state e3d0fb0c ShowData/DataPools/Default/Sequences/307"
+<<< {"error": "path segment not found: '307' (in ShowData/DataPools/Default/Sequences/307)", "id": "e3d0fb0c", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/307", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/308
+    wire: Plugin "CopilotResponder" "state 29327171 ShowData/DataPools/Default/Sequences/308"
+<<< {"error": "path segment not found: '308' (in ShowData/DataPools/Default/Sequences/308)", "id": "29327171", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Sequences/308", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/30
+    wire: Plugin "CopilotResponder" "state 4367bd73 ShowData/DataPools/Default/Timecodes/30"
+<<< {"error": "path segment not found: '30' (in ShowData/DataPools/Default/Timecodes/30)", "id": "4367bd73", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/30", "v": 1}
+
+>>> state:ShowData/DataPools/Default/Timecodes/31
+    wire: Plugin "CopilotResponder" "state fce6a9e8 ShowData/DataPools/Default/Timecodes/31"
+<<< {"error": "path segment not found: '31' (in ShowData/DataPools/Default/Timecodes/31)", "id": "fce6a9e8", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/Timecodes/31", "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/4/301
+    wire: Plugin "CopilotResponder" "state 937b881b ShowData/DataPools/Default/PresetPools/4/301"
+<<< {"error": "path segment not found: '301' (in ShowData/DataPools/Default/PresetPools/4/301)", "id": "937b881b", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/PresetPools/4/301", "v": 1}
+
+>>> state:ShowData/DataPools/Default/PresetPools/21/301
+    wire: Plugin "CopilotResponder" "state 2ce088c5 ShowData/DataPools/Default/PresetPools/21/301"
+<<< {"error": "path segment not found: '301' (in ShowData/DataPools/Default/PresetPools/21/301)", "id": "2ce088c5", "kind": "state", "offset": 0, "ok": false, "path": "ShowData/DataPools/Default/PresetPools/21/301", "v": 1}

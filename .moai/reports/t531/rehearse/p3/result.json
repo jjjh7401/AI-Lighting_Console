@@ -1,0 +1,123 @@
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/301",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_preset": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Color' At Preset 4.9",
+      "Store Preset 4.301",
+      "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+      "ClearAll"
+    ],
+    "store_cue": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Color' At Preset 4.301",
+      "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+      "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+      "ClearAll"
+    ],
+    "edit_preset": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 4",
+      "Attribute 'Color' At Preset 4.5",
+      "Store Preset 4.301 /Merge",
+      "ClearAll"
+    ],
+    "off": [
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "edit_preset 묶음의 '/Merge' 문법은 미측정 — live 전 단독으로 먼저 확인.",
+    "읽기 판정: edit_preset 전/후 Sequence 300/1 의 PRESETDATA·MEMORYFOOTPRINT 대조.",
+    "감독 관찰: 큐 활성 중 프리셋 수정 시 무대가 즉시 바뀌는지."
+  ],
+  "bundles": {
+    "store_preset": true,
+    "store_cue": true,
+    "edit_preset": true,
+    "off": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Color' At Preset 4.9",
+    "Store Preset 4.301",
+    "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Color' At Preset 4.301",
+    "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+    "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Color' At Preset 4.5",
+    "Store Preset 4.301 /Merge",
+    "ClearAll",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Color' At Preset 4.9",
+        "Store Preset 4.301",
+        "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Color' At Preset 4.301",
+        "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+        "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Color' At Preset 4.5",
+        "Store Preset 4.301 /Merge",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "item": "P4",
+  "preset": "21.301",
+  "sequence": 301,
+  "occupied_before": [],
+  "master_normedvalue_observed": "69",
+  "master_normedvalue_expected": "69",
+  "preset_introspect_fields": {
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/21/301",
+    "fields": [],
+    "fake": true
+  },
+  "preset_props_candidates": {
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/21/301",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "v": "fake"
+      },
+      {
+        "n": "SPEED",
+        "ok": true,
+        "v": "fake"
+      },
+      {
+        "n": "MEASURE",
+        "ok": true,
+        "v": "fake"
+      },
+      {
+        "n": "SPEEDMASTER",
+        "ok": true,
+        "v": "fake"
+      },
+      {
+        "n": "NORMEDVALUE",
+        "ok": true,
+        "v": "fake"
+      },
+      {
+        "n": "PRESETDATA",
+        "ok": true,
+        "v": "fake"
+      }
+    ],
+    "fake": true
+  },
+  "bundles": {
+    "store_preset": true,
+    "store_cue": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "Attribute 'Dimmer' At 0",
+    "Step 2",
+    "Attribute 'Dimmer' At 100",
+    "Attribute 'Dimmer' At Measure 1",
+    "Attribute 'Dimmer' At SpeedMaster 15",
+    "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal",
+    "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 4",
+    "At Preset 21.301",
+    "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
+    "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",
+    "ClearAll",
+    "Goto Cue 1 Sequence 301",
+    "Off Sequence 301"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal",
+        "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 4",
+        "At Preset 21.301",
+        "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
+        "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 301"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 301"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,20 @@
+
+>>> state:ShowData/DataPools/Default/Sequences/228
+    wire: Plugin "CopilotResponder" "state dd973c07 ShowData/DataPools/Default/Sequences/228"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "L0 Static 100"}], "id": "dd973c07", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "RHYTHM PROBE v3 - L0 STATIC 100"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/228", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/221
+    wire: Plugin "CopilotResponder" "state 2fa431a8 ShowData/DataPools/Default/Sequences/221"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Measure 1"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Measure 2"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Measure 05"}], "id": "2fa431a8", "kind": "state", "node": {"childCount": 5, "class": "Sequence", "enumeration": "ok", "name": "RHYTHM PROBE - SPEEDMASTER MEASURE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/221", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/226
+    wire: Plugin "CopilotResponder" "state 10985725 ShowData/DataPools/Default/Sequences/226"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "Measure 1"}, {"class": "Cue", "cueNo": 2, "i": 4, "name": "Measure 2"}, {"class": "Cue", "cueNo": 3, "i": 5, "name": "Measure Half"}], "id": "10985725", "kind": "state", "node": {"childCount": 5, "class": "Sequence", "enumeration": "ok", "name": "RHYTHM PROBE v2 - SPEEDMASTER MEASURE"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/226", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/11
+    wire: Plugin "CopilotResponder" "state 3051ad09 ShowData/DataPools/Default/Sequences/11"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "chase-horizontal"}], "id": "3051ad09", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "chase-horizontal"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/11", "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/12
+    wire: Plugin "CopilotResponder" "state 303d9dd8 ShowData/DataPools/Default/Sequences/12"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "chase-bounce-run"}], "id": "303d9dd8", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "chase-bounce-run"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/12", "truncated": false, "v": 1}

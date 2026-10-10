@@ -1,0 +1,27 @@
+{"ts": "2026-10-10T05:59:42.148009+00:00", "event": "executed", "command": "ShowData/Masters/3/15 NORMEDVALUE", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T05:59:42.148306+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 1", "Attribute 'Dimmer' At SpeedMaster 15", "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal", "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 4", "Attribute 'Dimmer' At 0", "Step 2", "Attribute 'Dimmer' At 100", "Attribute 'Dimmer' At Measure 1", "Attribute 'Dimmer' At SpeedMaster 15", "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal", "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'", "ClearAll"], "kind": "t531_m1_p4"}
+{"ts": "2026-10-10T05:59:42.148440+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148525+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148594+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148659+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148723+00:00", "event": "executed", "command": "Step 2", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148786+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148843+00:00", "event": "executed", "command": "Attribute 'Dimmer' At Measure 1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148904+00:00", "event": "executed", "command": "Attribute 'Dimmer' At SpeedMaster 15", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.148964+00:00", "event": "executed", "command": "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149021+00:00", "event": "executed", "command": "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149077+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149202+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21/301", "kind": "introspect_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T05:59:42.149266+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21/301 NAME,SPEED,MEASURE,SPEEDMASTER,NORMEDVALUE,PRESETDATA", "kind": "props_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T05:59:42.149411+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 4", "At Preset 21.301", "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'", "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 4", "At Preset 21.301", "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'", "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'", "ClearAll"], "kind": "t531_m1_p4"}
+{"ts": "2026-10-10T05:59:42.149496+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149559+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149617+00:00", "event": "executed", "command": "Group 4", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149695+00:00", "event": "executed", "command": "At Preset 21.301", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149751+00:00", "event": "executed", "command": "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149807+00:00", "event": "executed", "command": "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149863+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.149943+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 301"], "held": ["Goto Cue 1 Sequence 301"], "kind": "t531_m1_p4"}
+{"ts": "2026-10-10T05:59:42.150015+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 301", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T05:59:42.150090+00:00", "event": "approved", "commands": ["Off Sequence 301"], "held": ["Off Sequence 301"], "kind": "t531_m1_p4"}
+{"ts": "2026-10-10T05:59:42.150154+00:00", "event": "executed", "command": "Off Sequence 301", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

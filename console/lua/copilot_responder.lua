@@ -108,7 +108,17 @@ local M = {
     -- a reply without it (any responder < 1.6.5) is judged exactly as before.
     -- NOT live-verified: offline-only bump; deployment is confirmed BY
     -- VERSION -- `ping` must answer 1.6.5.
-    VERSION = "1.6.5",
+    -- 1.6.6: `props` 가 `offset=<n>` 트레일링 토큰을 받는다(카드 t531,
+    -- SPEC-LDBEAT-001 M1) -- state/introspect 와 같은 M.parse_paged_args
+    -- 규약. offset 토큰은 프로퍼티 이름 정확히 하나일 때만 허용되고(그 외는
+    -- ok:false), 표 값은 CONFIG.max_prop_value 아이템 상한을 쓰지 않는 대신
+    -- 엔트리(배열 원소/해시 키-값) 단위로 통째로 담거나 통째로 미루며, 창은
+    -- 응답 전체 인코딩 크기가 CONFIG.max_payload 를 넘지 않는 한에서 늘어난다
+    -- (`.moai/reports/t525/verdict.md` §② 실측 — 그룹 소속이 앞 2대로
+    -- 잘려 도착했다). offset 토큰이 없는 요청은 바이트 단위로 그대로다.
+    -- NOT live-verified: offline-only bump; deployment is confirmed BY
+    -- VERSION -- `ping` must answer 1.6.6.
+    VERSION = "1.6.6",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -274,19 +284,15 @@ function M.json_encode(value)
     return encode_value(value, 0, {})
 end
 
--- 구조적 절단 (REQ-READBACK-005): 후행 엔트리를 **통째로** 버리고 컨테이너를
--- 다시 닫는다. 바이트 절단(`safe_truncate`)을 테이블 값에 걸면 `{"k00":"VV`
--- 같은 조각이 남아 절단 고지가 있어도 소비자가 파싱할 수 없다. 넓은 테이블에
--- 대해 절단은 예외가 아니라 **기본 경로**다.
--- 반환: (JSON 텍스트, 엔트리를 하나라도 버렸는가)
-function M.json_encode_bounded(value, max_len)
-    local full = M.json_encode(value)
-    if #full <= max_len or type(value) ~= "table" then
-        return full, false
-    end
+-- 테이블 값의 엔트리를 개별 JSON 텍스트 배열로 뽑는다(REQ-READBACK-005 /
+-- 카드 t531 offset 나눠 읽기가 공유). 배열/객체 판정과 키 정렬은 depth-1
+-- 콘텍스트에서 한 번만 적용된다 — `json_encode_bounded`(바이트 예산 절단)와
+-- `M.build_props_offset_result`(entry 단위 offset 페이징)가 같은 순서의
+-- 같은 엔트리 목록을 보장받는다(둘이 따로 구현하면 그 날 어긋난다).
+local function table_entry_parts(value)
     local seen = { [value] = true }
-    local entries = {}
     local open, close = "{", "}"
+    local entries = {}
     if getmetatable(value) == ARRAY_MT or is_dense_array(value) then
         open, close = "[", "]"
         for i = 1, rawlen(value) do
@@ -300,6 +306,20 @@ function M.json_encode_bounded(value, max_len)
                 .. encode_value(rawget(value, originals[text]), 1, seen)
         end
     end
+    return open, close, entries
+end
+
+-- 구조적 절단 (REQ-READBACK-005): 후행 엔트리를 **통째로** 버리고 컨테이너를
+-- 다시 닫는다. 바이트 절단(`safe_truncate`)을 테이블 값에 걸면 `{"k00":"VV`
+-- 같은 조각이 남아 절단 고지가 있어도 소비자가 파싱할 수 없다. 넓은 테이블에
+-- 대해 절단은 예외가 아니라 **기본 경로**다.
+-- 반환: (JSON 텍스트, 엔트리를 하나라도 버렸는가)
+function M.json_encode_bounded(value, max_len)
+    local full = M.json_encode(value)
+    if #full <= max_len or type(value) ~= "table" then
+        return full, false
+    end
+    local open, close, entries = table_entry_parts(value)
     local kept, used = {}, #open + #close
     for _, entry in ipairs(entries) do
         local extra = #entry + (#kept > 0 and 1 or 0)
@@ -1028,6 +1048,110 @@ function M.build_props_result(id, path, names)
     return payload
 end
 
+-- 표 값 전용 offset 나눠 읽기 (카드 t531, `.moai/reports/t525/verdict.md`
+-- §② 실측 — 그룹 소속이 앞 2대로 잘려 도착한다). 일반 `props` 경로
+-- (`M.build_props_result`)의 `CONFIG.max_prop_value` 아이템당 상한을 쓰지
+-- 않는다 — 여기서는 **엔트리 전체**를 통째로 유지하거나 버리고, 예산은
+-- 응답 전체(퍼센트 인코딩 뒤)의 `CONFIG.max_payload` 하나뿐이다. 호출자는
+-- offset 토큰이 붙은 요청에 정확히 하나의 프로퍼티 이름만 보낸다
+-- (dispatch 쪽에서 미리 걸러진다).
+function M.build_props_offset_result(id, path, name, offset)
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "props",
+            id = id,
+            ok = false,
+            path = path,
+            reads = M.array({}),
+            truncated = false,
+            error = message,
+        }
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local value, perr, value_type, raw_table = M.safe_property(handle, name)
+    if value == nil then
+        return fail(perr)
+    end
+    local item
+    if raw_table == nil then
+        -- 비-테이블 값: offset 토큰은 영향이 없다 — 기존 max_prop_value
+        -- 규칙이 그대로 적용된다(설계 결정 4, 프로토콜 문서 참조).
+        item = { n = name, ok = true, t = value_type or "?", v = value }
+        if #value > CONFIG.max_prop_value then
+            item.v = safe_truncate(value, CONFIG.max_prop_value)
+            item.truncated = true
+        end
+    else
+        local open, close, entries = table_entry_parts(raw_table)
+        local total = #entries
+        local start = offset + 1
+        local kept = {}
+        if start <= total then
+            -- 엔트리를 하나씩 더해 **실제로 인코딩한** 전체 응답 크기를
+            -- 재며 늘린다 — 퍼센트 인코딩이 바이트 수를 비선형으로 바꾸므로
+            -- 추측이 아니라 매 단계 실측이다. 첫 엔트리부터 안 들어가면
+            -- 즉시 멈춘다(무한루프 방지, 빈 컨테이너 + truncated=true).
+            for i = start, total do
+                local candidate = {}
+                for _, e in ipairs(kept) do
+                    candidate[#candidate + 1] = e
+                end
+                candidate[#candidate + 1] = entries[i]
+                local candidate_item = {
+                    n = name,
+                    ok = true,
+                    t = value_type,
+                    v = open .. table.concat(candidate, ",") .. close,
+                    offset = offset,
+                    total = total,
+                    truncated = i < total,
+                }
+                local trial_payload = {
+                    v = M.PROTO,
+                    kind = "props",
+                    id = id,
+                    ok = true,
+                    path = path,
+                    reads = M.array({ candidate_item }),
+                    truncated = false,
+                }
+                if #M.encode_payload(trial_payload) > CONFIG.max_payload then
+                    break
+                end
+                kept = candidate
+                item = candidate_item
+            end
+        end
+        if not item then
+            -- 창에 들어갈 엔트리가 하나도 없다: offset>=total(뒤에 남은 게
+            -- 없음) 이거나 첫 엔트리조차 예산을 넘는다(뒤에 남음). 둘 다
+            -- 빈 컨테이너를 내고, truncated 로만 구분한다.
+            item = {
+                n = name,
+                ok = true,
+                t = value_type,
+                v = open .. close,
+                offset = offset,
+                total = total,
+                truncated = start <= total,
+            }
+        end
+    end
+    return {
+        v = M.PROTO,
+        kind = "props",
+        id = id,
+        ok = true,
+        path = path,
+        reads = M.array({ item }),
+        truncated = false,
+    }
+end
+
 -- @MX:ANCHOR: [AUTO] property_accessors is accepted as a complete set or
 --   rejected as a complete set; partial introspection results are not emitted.
 -- @MX:REASON: REQ-INTROSPECT-004 closes the plausible-partial-answer failure
@@ -1409,7 +1533,29 @@ function M.handle_request(request)
                 error = perr,
             }
         else
-            payload = M.build_props_result(parsed.id, path, names)
+            -- offset 나눠 읽기 (카드 t531): 트레일링 토큰은 path 의
+            -- 끝에서만 떼어낸다 — M.parse_paged_args 가 state/introspect
+            -- 와 같은 규약으로 한 번 더 파싱한다. 토큰이 없으면
+            -- stripped_path 가 path 와 같은 문자열이므로(동일 참조가 아니라
+            -- 값 비교) 아래 분기는 기존 경로로 그대로 빠진다.
+            local stripped_path, offset = M.parse_paged_args(path)
+            local had_offset_token = stripped_path ~= path
+            if had_offset_token and #names > 1 then
+                payload = {
+                    v = M.PROTO,
+                    kind = "props",
+                    id = parsed.id,
+                    ok = false,
+                    path = stripped_path,
+                    reads = M.array({}),
+                    truncated = false,
+                    error = "offset paging takes exactly one property name",
+                }
+            elseif had_offset_token then
+                payload = M.build_props_offset_result(parsed.id, stripped_path, names[1], offset)
+            else
+                payload = M.build_props_result(parsed.id, path, names)
+            end
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "introspect" then

@@ -1,0 +1,18 @@
+[
+  {
+    "commands": [
+      "Goto Cue 3 Sequence 221",
+      "Goto Cue 3 Sequence 226",
+      "Goto Cue 1 Sequence 11"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Off Sequence 221",
+      "Off Sequence 226",
+      "Off Sequence 11"
+    ],
+    "approved": true
+  }
+]
