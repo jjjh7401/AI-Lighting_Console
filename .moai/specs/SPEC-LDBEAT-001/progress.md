@@ -484,6 +484,19 @@ $ git diff edc537db -- ui/src/App.tsx
 - **감사**: 1회차 FAIL 0.63 — D1 `grade` 한 필드에 증거 강도와 승인 경로가 섞여 AC(o)/(p)가 같은 8칸에 다른 값을 요구, D2 (vi-5)(vi-6)(vi-7)에 실패하는 AC 없음. 2회차 PASS 1.00(`grade`/`approval` 분리, AC (r)(s)(t) 추가). 보고서 `.moai/reports/t548/plan-audit.md`.
 - **열린 결정(run 전에 감독이 정할 것)**: ① 팬만 흔드는 모양이 `position_fx` 에 없다(`wave` 는 Tilt 만) — 새 모양 vs `wave` 에 축 매개변수. ② 무빙 기준 위치 — `position_fx` 의 라벨 해석 뱅크 프리셋 vs 큐 자신의 `position_preset_no`. ③ MOVER-D(Group 12, Spiider)는 2단계 무빙을 한 번도 안 쟀다 — run 전 프로브 필요.
 
+### M8 — 앱 2단계 무빙 칸 + 칸별 근거 등급 (카드 t548, 브랜치 `worktree-agent-a8a08906909a82bea`)
+
+REQ-LDBEAT-006(vi)(vii)·(iv-2) 재교정, REQ-LDBEAT-015(g) 구현. 콘솔 접촉 0건, 콘솔 쓰기 0건. TDD(RED-GREEN), cycle_type=tdd. 전체 verdict는 `.moai/reports/t548/run-verdict.md`.
+
+- **`BeatGridCue` 신설 필드** — `app_movement: {shape, axes, period_unit, period_value, phase_spread} | None`, `evidence: {grade, approval} | None`. `normalize_beat_grid_cue`가 레거시 칸에서 둘 다 `None`으로 채운다(`label` 파싱 0건, REQ-006(ii-2)와 같은 금지).
+- **`position_fx.py` 일반화** — `wave`를 `axes` 파라미터(Pan/Tilt/둘 다)로 일반화한 `relative_wave_lines()` 신설. `position_fx_commands`의 기존 wave 경로(axes={Tilt}, phase_spread=True)는 일반화 이전 하드코딩 출력과 바이트 동일 — 기존 `test_wave_full_bundle` 그대로 PASS.
+- **새 에미터 `server/design/app_movement.py`** — `app_movement_commands()`가 선택+기준 위치 리콜(그 칸 **자신의** `position_preset_no`, `position_fx`의 레이블 해석 뱅크 프리셋은 호출하지 않음, REQ-006(vi-8)) → 상대 두 단계 → 커브 → 위상(phase_spread가 참일 때만) → 속도 순서로 명령을 낸다. Speed는 BPM ÷ (주기 × 마디당 박, period_unit="bar"일 때만) 로 호출 시점에 계산 — 저장 시점 계산·초 단위 상수 0건(vi-4). BPM/beats_per_bar/period 중 하나라도 없으면 거절(reason 문자열). `dimmer_attribute_names()`/`brightness_value_commands()` — MA3 Dimmer 패밀리(정확 일치, `DimmerCurve` 제외) 전수에 한 줄씩.
+- **검증 함수 3개(`beat_grid.py`)** — `check_app_movement_axis_conflict`(같은 축 배타성, REQ-006(vi-7)), `check_evidence_approval`(프리셋 번호 있는 칸은 완전한 `evidence.approval` 필요, REQ-015(f)/(g)), `pan_only_vertical_base_warning`(감독 결정④ — Pan 단독+기준 위치 없음 경고, `position_preset_no == None`에만 한정 — non-null 프리셋의 "수직인가" 판정은 범위 밖, §5 항목 8 미해소분).
+- **데이터(`love_attack.yaml`)** — MOVER-U bar 11(`wave`+`axes=[Pan]`, 주기 미정 — 레이블이 말하지 않아 지어내지 않음)·bar 18(`axes=[Pan]`, `period_unit=beat`, `period_value=2`), MOVER-D bar 7(`axes=[Tilt]`, `period_unit=bar`, `period_value=2`, `phase_spread=true`)·bar 22(`axes=[Tilt]`, `period_unit=beat`, `period_value=2`) — MOVER-D 두 칸은 실기 라이브 프로브(`.moai/reports/t548/probe-moverd.md`, `reports/t548-moverd-probe-20261011.md`, 2026-10-11) PASS 확인 후 채움(Dimmer2까지 내야 빛남·2단계 틸트 웨이브/원 움직임·팬 단독은 기울인 자리에서만 보임, 세 사실 전부 구현에 반영). 12칸의 `evidence`를 yaml 주석에서 구조화 필드로 소급(측정 2·다른 그룹 실측 2·이름만 8, `.moai/reports/t543/proposal-table.md` 전수 재독, 전부 승인 `by=supervisor, date=2026-10-10`) — `source_ref` 바이트 동일 보존.
+- **UI(`protocol.ts`/`BeatGrid.tsx`)** — `BeatGridAppMovement`/`BeatGridEvidence`/`BeatGridEvidenceApproval` 타입. `formatAppMovementField`/`formatEvidenceField`(shape+축+음악단위주기, grade+승인날짜) + `appMovementAxisConflictWarning`(⚠ 같은 축 충돌) + `panOnlyVerticalBaseWarning` 4개 순수 함수, `sceneMemoMarkers`와 같은 DOM-없는 단위시험 패턴.
+- **검증**: `pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py server/tests/test_beat_grid_t548.py server/tests/test_position_fx.py server/tests/test_position_fx_dedupe_t542.py server/tests/test_app_movement_t548.py` → 181 passed. `ruff check`/`format --check` 통과(7개 파일). `vitest run src/components/BeatGrid.test.tsx` → 101 passed. `tsc --noEmit` 클린.
+- **안 잰 것**: MOVER-U bar 11의 주기(레이블이 말하지 않음, 미정으로 둠)·MOVER-D 실기 쓰기(프로브는 리허설+전부-거절까지만, 실제 Store는 범위 밖)·이 4칸이 실제 콘솔에서 시각적으로 의도대로 보이는지(라이브 프로브는 화소 변화율만 잼)·non-null `position_preset_no`의 "수직인가" 판정(§5 항목 8 미해소분, 범위를 넓히지 않음).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
