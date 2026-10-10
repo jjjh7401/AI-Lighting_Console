@@ -6,9 +6,9 @@
 
 ## 작성된 파일
 
-- `.moai/specs/SPEC-LDBARMAP-001/spec.md` — REQ 15개(R1~R5), Out of Scope 5개 H3 섹션, 열린 결정 4개
+- `.moai/specs/SPEC-LDBARMAP-001/spec.md` — REQ 16개(R1~R6, R6은 카드 t530이 신설한 REQ-LDBARMAP-016), Out of Scope 5개 H3 섹션, 열린 결정 4개
 - `.moai/specs/SPEC-LDBARMAP-001/plan.md` — M1~M5 마일스톤(저장 인터페이스 열린 결정을 마일스톤보다 먼저 제시)
-- `.moai/specs/SPEC-LDBARMAP-001/acceptance.md` — AC 15개(Given-When-Then + 수치·단위 + REQ-ID 인용), Definition of Done
+- `.moai/specs/SPEC-LDBARMAP-001/acceptance.md` — AC 16개(Given-When-Then + 수치·단위 + REQ-ID 인용), Definition of Done
 - `.moai/specs/SPEC-LDBARMAP-001/research.md` — 이 plan-phase가 실행한 10개 실측(명령+출력)
 - `.moai/specs/SPEC-LDBARMAP-001/progress.md` — 이 파일
 
