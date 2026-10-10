@@ -1,0 +1,19 @@
+{"step": "store_B1", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Store Sequence 320 Cue 1 'T538 POS01'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.4", "reasons": []}, {"command": "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.5", "reasons": []}, {"command": "Store Sequence 320 Cue 3 'T538 POS05' CueFade 1.07", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; At Preset 2.3", "reasons": []}, {"command": "Store Sequence 320 Cue 4 'T538 POS03' CueFade 0.54", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 320 Property 'Name' 'T538 - B1 position cues'", "reasons": []}]}
+{"step": "store_B1", "t": 0.065, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.132, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.2, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.266, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.333, "kind": "exec", "command": "Store Sequence 320 Cue 1 'T538 POS01'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.399, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.466, "kind": "exec", "command": "Group 11 ; At Preset 2.4", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.534, "kind": "exec", "command": "Store Sequence 320 Cue 2 'T538 POS04' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.6, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.667, "kind": "exec", "command": "Group 11 ; At Preset 2.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.733, "kind": "exec", "command": "Store Sequence 320 Cue 3 'T538 POS05' CueFade 1.07", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.8, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.865, "kind": "exec", "command": "Group 11 ; At Preset 2.3", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.933, "kind": "exec", "command": "Store Sequence 320 Cue 4 'T538 POS03' CueFade 0.54", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 0.999, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_B1", "t": 1.066, "kind": "exec", "command": "Set Sequence 320 Property 'Name' 'T538 - B1 position cues'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_B1_c1", "t": 1.133, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 320", "reasons": ["reference-invoking command"]}]}
+{"step": "play_B1_c1", "t": 1.199, "kind": "exec", "command": "Goto Cue 1 Sequence 320", "fired": true, "ok": true, "detail": "OK"}
