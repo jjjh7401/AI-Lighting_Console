@@ -540,7 +540,97 @@ E       Use -v to get more diff
 - **드롭(참고 지표)은 이 카드의 교정 범위 밖이다** — M3 landing 당시 Gap
   그대로(실제 오디오 경로에서 0건 검출, PASS 판정에 영향 없음).
 
-_<pending run-phase>_
+### M4 — 저장 인터페이스 배선(카드 t539, 2026-10-10)
+
+**Claim**: §B/§5 열린 결정 0이 확정한 옵션 A(`timeline["bar_map"]` 임베드)를
+구현했다 — 신규 순수 모듈 `server/audio/bar_map_store.py`(`build_bar_map_payload`
+/`validate_bar_map`/`attach_bar_map`/`read_bar_map`)와 `server/web/session.py`
+신규 메서드 2개(`store_timeline_bar_map`/`timeline_bar_map`). 기존
+`SongTimelineStore`/`TimelineDraftHistory`/`SongTimelineLibrary`를 코드 추가 없이
+재사용했고, `server/` 아래 다른 파일은 손대지 않았다. AC-LDBARMAP-010의 여섯
+조건을 TDD(RED→GREEN)로 재현 — `server/tests/test_audio_bar_map_store.py`(순수
+모듈, 조건 1·5·6 + validate_bar_map 음성 대조군 다수)와
+`server/tests/test_session_bar_map_store.py`(세션 배선, 조건 1~5) 두 파일,
+77개 테스트 전부 통과.
+
+**Evidence** (verbatim, 커밋 전 작업 트리에서 실행):
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && \
+  uv run pytest -q server/tests/test_audio_bar_map_store.py server/tests/test_session_bar_map_store.py \
+    server/tests/test_audio_bar_map.py server/tests/test_web_cue_sheet_draft.py \
+    server/tests/test_web_session.py server/tests/test_draft_apply_routing.py
+........................................................................ [ 10%]
+........................................................................ [ 21%]
+........................................................................ [ 32%]
+........................................................................ [ 43%]
+........................................................................ [ 54%]
+........................................................................ [ 65%]
+........................................................................ [ 76%]
+........................................................................ [ 87%]
+........................................................................ [ 98%]
+........                                                                 [100%]
+656 passed in 19.24s
+```
+
+```
+$ unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && \
+  uv run ruff check server/audio/bar_map_store.py server/web/session.py \
+    server/tests/test_audio_bar_map_store.py server/tests/test_session_bar_map_store.py
+All checks passed!
+
+$ uv run ruff format --check server/audio/bar_map_store.py server/web/session.py \
+    server/tests/test_audio_bar_map_store.py server/tests/test_session_bar_map_store.py
+4 files already formatted
+```
+
+파이썬 타입체커는 이 저장소 툴체인에 없다(`Makefile:49-50` — "파이썬 쪽
+타입체커는 이 저장소 툴체인에 없다(pyproject dev = httpx/pytest/pytest-cov/
+ruff) — 없는 것을 있는 척 부르지 않는다") — 그래서 돌리지 않았다. `git diff
+<base>..HEAD -- server/web/session.py` 는 삽입 2곳뿐이다(import 1행 + 메서드
+2개) — 기존 줄은 한 글자도 안 바꿨다.
+
+**Baseline-attribution**: HEAD `a8f72df7`(이 M4 작업의 시작점, 카드 t539
+plan-phase 2차 부분 감사 PASS 0.86 커밋) — 이 worktree(`worktree-agent-a74bc4c420ef8d8f6`)
+는 이 HEAD에서 `WT-barmap-store`(plan-phase 문서만 보유, 동일 HEAD)를
+fast-forward 병합해 시작했다. 위 pytest/ruff 출력은 M4 커밋 전 작업 트리에서
+관측했다.
+
+**Gaps**:
+- **WS/HTTP 라우트 없음** — `store_timeline_bar_map`/`timeline_bar_map`은 세션
+  메서드로만 존재한다. 클라이언트가 호출할 진입 경로(WebSocket 메시지 타입,
+  REST 엔드포인트)는 이 마일스톤 범위 밖이다(plan.md M4 — "서버 쪽 저장·로드·
+  되돌리기만") — UI 배선은 레인-2 t537 머지 뒤 별도 카드로 리드가 맡는다.
+- **`SPEC-LDARRANGE-001` §5 항목 1 미러가 두 신규 필드를 아직 안 반영** —
+  `schema_version`·`first_beat_offset`은 이 SPEC의 §5 열린 결정 0에만 추가됐다
+  (spec.md:144, 카드 t539). 두 SPEC이 같은 문면을 가져야 한다는 카드 t529
+  원칙이 아직 어긋나 있다 — 후속 작업(이 SPEC의 sync-phase 또는 LDARRANGE
+  쪽 plan-phase).
+- **곡을 다시 설계하면 `bar_map`이 사라진다** — `beat_grid`(`SPEC-LDBEAT-001`)와
+  같은 한계다: 새 곡 설계는 `timeline` 사전을 통째로 새로 만들고, 저장된
+  `bar_map`/`beat_grid` 키는 그 새 사전에 들어 있지 않다. 재분석 뒤 다시
+  저장해야 한다 — 이 M4가 고치는 범위가 아니다.
+- **session.py import 위치가 배차 지시와 1행 다르다** — 배차는 "line 42
+  바로 아래"를 지정했으나, `server.audio.bar_map_store`를 line 43 자리에
+  두면 `ruff check`의 import-sort(I001)가 깨졌다(실측 — `ruff check --fix`가
+  스스로 line 39, 즉 `server.audio.analyze` 바로 아래로 옮겼다). 두 승인된
+  삽입 지점(import 1행 + 메서드 2개) 수는 그대로이고 기존 줄은 안 바뀌었으나,
+  import의 정확한 줄 번호는 38 바로 아래로 1행 이동했다 — lint 통과를 위한
+  최소 조정이며 리드 확인이 필요하면 되돌릴 수 있다.
+
+**Residual-risk**:
+- `TimelineDraftHistory`의 "전체 사전 깊은 사본" 비용(§5 열린 결정 0이 결정
+  당시부터 명시한 알려진 비용)은 이 M4에서 측정하지 않았다 — 82마디 마디
+  지도 하나를 20단계(`DRAFT_HISTORY_LIMIT`)까지 쌓을 때의 실제 메모리 비용은
+  미측정이다.
+- `attach_bar_map`이 `validate_bar_map`을 다시 호출하는 이중 검증(세션의
+  `store_timeline_bar_map`이 먼저 검증하고, `attach_bar_map` 내부가 또
+  검증)은 의도적 방어 중복이지만, 세션 경로에서는 사실상 항상 통과하는
+  두 번째 호출이라 테스트가 그 경로(이미 유효한 payload가 `attach_bar_map`
+  내부 검증에서 우연히 막히는 경우)를 직접 때리지 않는다 — `validate_bar_map`
+  자체의 광범위한 음성 대조군(`test_audio_bar_map_store.py`)이 간접 증거다.
+- 이 곡에만 맞는 것 점검: bar_map_store.py 상수 0 — t535 문턱은 bar_map.py
+  에 「한 곡 보정」 꼬리표로 남아 있음, 두 번째 곡 대조 전 완료 아님.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
