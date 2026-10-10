@@ -3,8 +3,8 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
-      "Attribute 'Position' At Preset 2.1",
+      "Group 11",
+      "At Preset 2.1",
       "Attribute 'Pan' At Relative 12",
       "Attribute 'Tilt' At Relative 8",
       "Attribute 'Pan' At Phase 0",

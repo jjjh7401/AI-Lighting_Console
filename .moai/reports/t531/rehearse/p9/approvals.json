@@ -3,8 +3,8 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
-      "Attribute 'Position' At Preset 2.1",
+      "Group 11",
+      "At Preset 2.1",
       "Attribute 'Pan' At Relative 12",
       "Attribute 'Tilt' At Relative 8",
       "Attribute 'Pan' At Phase 0",
@@ -21,8 +21,8 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
-      "Attribute 'Position' At Preset 2.1",
+      "Group 11",
+      "At Preset 2.1",
       "Attribute 'Pan' At Relative 20",
       "Attribute 'Tilt' At Relative 10",
       "Attribute 'Pan' At Phase 0",
@@ -39,8 +39,8 @@
     "commands": [
       "ChangeDestination Root",
       "ClearAll",
-      "Group 13",
-      "Attribute 'Position' At Preset 2.1",
+      "Group 11",
+      "At Preset 2.1",
       "Attribute 'Tilt' At Relative 12",
       "Attribute 'Tilt' At Phase 0 Thru 360",
       "Attribute 'Tilt' At Speed 60",

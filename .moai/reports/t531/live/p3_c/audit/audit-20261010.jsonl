@@ -1,0 +1,9 @@
+{"ts": "2026-10-10T10:21:19.938816+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.5", "Store Preset 4.302 /Merge", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.5", "Store Preset 4.302 /Merge", "ClearAll"], "kind": "t531_m1_p3"}
+{"ts": "2026-10-10T10:21:20.003377+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.070719+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.136771+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.204114+00:00", "event": "executed", "command": "At Preset 4.5", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.270809+00:00", "event": "executed", "command": "Store Preset 4.302 /Merge", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.336974+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:20.337274+00:00", "event": "approved", "commands": ["ClearAll"], "held": ["ClearAll"], "kind": "t531_m1_p3"}
+{"ts": "2026-10-10T10:21:20.404170+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

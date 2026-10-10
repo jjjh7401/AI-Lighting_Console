@@ -1,0 +1,12 @@
+{"ts": "2026-10-10T06:26:28.334228+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:26:28.401306+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:26:28.467876+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:26:28.601170+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:26:28.800697+00:00", "event": "executed", "command": "DataPool/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:26:28.867803+00:00", "event": "executed", "command": "DataPool/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:36:38.476871+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:36:38.543368+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:36:38.609256+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:36:38.743329+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/21", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-10T06:36:38.943023+00:00", "event": "executed", "command": "DataPool/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T06:36:39.009857+00:00", "event": "executed", "command": "DataPool/Sequences/301", "kind": "state_query", "ok": false, "detail": ""}

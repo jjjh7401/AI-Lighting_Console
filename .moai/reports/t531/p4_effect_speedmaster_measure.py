@@ -66,7 +66,9 @@ from server.safety.ruleset import load_ruleset  # noqa: E402
 PRESET_POOL = 21
 PRESET_NO = 301
 SEQ_NO = 301
-GROUP_BACK = 4
+# t531 v2: 감독 눈에 보였던 그룹(Group 11 MOVER-U, t516 verdict.md:264)으로 교체
+# Group 4 BACK 은 t516 에서 안 보였다(:134-138, :219-220)
+GROUP_BACK = 11
 PRESET_NAME = "LDBEAT M1 - P4 SM15 MEASURE"
 
 # 🔴 미확인 — 어느 속성 이름이 실제로 존재하는지는 live 에서 introspect 가 답한다.
@@ -110,7 +112,9 @@ PLAY = [f"Goto Cue 1 Sequence {SEQ_NO}"]
 RELEASE = [f"Off Sequence {SEQ_NO}"]
 
 
-def run(gate: SafetyGate, out: Path) -> dict:
+def run(gate: SafetyGate, out: Path, *, deny_all: bool = False, hold: bool = False) -> dict:
+    # deny_all: 묶음이 거절돼도 멈추지 않고 다음 묶음의 승인 요청까지 띄운다 —
+    # 전부-거절 1회로 보낼 명령 전체의 승인 문면을 모으기 위해서다(쓰기는 0).
     probe = Probe(gate, out)
     result: dict = dict(item="P4", preset=f"{PRESET_POOL}.{PRESET_NO}", sequence=SEQ_NO)
 
@@ -137,7 +141,7 @@ def run(gate: SafetyGate, out: Path) -> dict:
 
     bundles: dict[str, bool] = {}
     bundles["store_preset"] = probe.fire("store_preset", build_store_preset())
-    if not bundles["store_preset"]:
+    if not bundles["store_preset"] and not deny_all:
         result["bundles"] = bundles
         result["verdict"] = "stopped: store_preset not executed"
         return finish(probe, result)
@@ -154,17 +158,23 @@ def run(gate: SafetyGate, out: Path) -> dict:
     )
 
     bundles["store_cue"] = probe.fire("store_cue", build_store_cue())
-    if not bundles["store_cue"]:
+    if not bundles["store_cue"] and not deny_all:
         result["bundles"] = bundles
         result["verdict"] = "stopped: store_cue not executed (recall 문법 거절 가능 — 🔴 미측정)"
         return finish(probe, result)
 
     bundles["play"] = probe.fire("play", PLAY)
+    if hold:
+        # 감독이 켜진 상태를 볼 수 있게 끄기 전에 멈춘다 — 끄기는 --release-only 로 따로.
+        result["bundles"] = bundles
+        result["verdict"] = "held — played, release not sent (감독 관찰 대기)"
+        return finish(probe, result)
     bundles["release"] = probe.fire("release", RELEASE)
     result["bundles"] = bundles
-    result["verdict"] = (
-        "rehearsal ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)"
-    )
+    if deny_all:
+        result["verdict"] = "deny-all: nothing written"
+    else:
+        result["verdict"] = "ok — preset stored+recalled; 재생 속도 비교는 감독 관찰(마스터 미변경)"
     return finish(probe, result)
 
 
@@ -190,6 +200,8 @@ def main() -> int:
     parser.add_argument("out")
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
+    parser.add_argument("--hold", action="store_true", help="재생 후 끄기 전에 멈춘다")
+    parser.add_argument("--release-only", action="store_true", help="승인된 끄기 묶음만 보낸다")
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -201,8 +213,7 @@ def main() -> int:
     skipped: list[str] = []
 
     if not args.rehearse:
-        print("이 카드는 --rehearse 만 돈다(실기 송신은 리드의 「실행」 신호 이후).")
-        return 1
+        return main_live(args, out, skipped)
 
     from server.safety.backup import BackupManager
 
@@ -228,6 +239,58 @@ def main() -> int:
             {k: v for k, v in result.items() if k != "fake_sent"}, ensure_ascii=False, indent=2
         )[:6000]
     )
+    return 0
+
+
+def main_live(args, out: Path, skipped: list[str]) -> int:
+    """실기 경로 — m1_common.main_cli 의 deny-all/--approve 와 같은 틀."""
+    from m1_common import LISTEN_PORT, LinkTimeouts
+
+    from server.safety.bootstrap import build_console_stack
+    from server.tools.probe_preflight import preflight
+
+    pinned = None
+    if args.approve:
+        pinned = [
+            r["commands"]
+            for r in json.loads((Path(args.approve) / "approvals.json").read_text("utf-8"))
+        ]
+    approval = RecordingApproval(pinned)
+    stack = build_console_stack(
+        send_host="127.0.0.1",
+        send_port=8000,
+        receive_host="127.0.0.1",
+        receive_port=LISTEN_PORT,
+        approval_port=approval,
+        audit_dir=out / "audit",
+        timeouts=LinkTimeouts(state_query_seconds=6.0),
+        attempt_session_backup=False,
+    )
+    stack.backup._backup_action = lambda: skipped.append("SaveShow skipped (supervisor)")
+    try:
+        health = preflight(
+            stack.gate, receive_host="127.0.0.1", receive_port=LISTEN_PORT, console_port=8000
+        )
+        if health.get("verdict") != "responder_ok":
+            print(json.dumps(dict(preflight=health), ensure_ascii=False, indent=2))
+            return 1
+        if args.release_only:
+            probe = Probe(stack.gate, out)
+            result = dict(item="P4", bundles=dict(release=probe.fire("release", RELEASE)))
+            result["verdict"] = "release only"
+            finish(probe, result)
+        else:
+            result = run(stack.gate, out, deny_all=(pinned is None), hold=args.hold)
+        result["preflight"] = health.get("verdict")
+    finally:
+        stack.stop()
+    result["approval_requests"] = approval.requests
+    result["skipped_saveshow"] = skipped
+    (out / "approvals.json").write_text(
+        json.dumps(approval.requests, ensure_ascii=False, indent=2), "utf-8"
+    )
+    (out / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
+    print(json.dumps(result, ensure_ascii=False, indent=2)[:6000])
     return 0
 
 

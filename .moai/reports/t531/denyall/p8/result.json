@@ -1,0 +1,58 @@
+{
+  "item": "P8",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/304",
+    "ShowData/DataPools/Default/Sequences/305"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_dimmer_seq": false,
+    "store_pantilt_seq": false,
+    "play_both": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'",
+        "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Pan' At Relative 10",
+        "Attribute 'Tilt' At Relative 10",
+        "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'",
+        "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 304",
+        "Goto Cue 1 Sequence 305"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 304",
+        "Off Sequence 305"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

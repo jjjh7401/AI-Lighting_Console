@@ -1,0 +1,21 @@
+{"step": "release", "t": 0.064, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 301", "reasons": ["reference-invoking command"]}]}
+{"step": "release", "t": 0.13, "kind": "exec", "command": "Off Sequence 301", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P4",
+  "bundles": {
+    "release": true
+  },
+  "verdict": "release only",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 301"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

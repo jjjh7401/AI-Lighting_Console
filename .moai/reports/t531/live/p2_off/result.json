@@ -1,0 +1,23 @@
+{
+  "item": "P2",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "off_all": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 221",
+        "Off Sequence 226",
+        "Off Sequence 11"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

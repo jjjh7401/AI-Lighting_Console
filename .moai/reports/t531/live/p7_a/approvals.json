@@ -1,0 +1,39 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Store Sequence 303 Cue 1 'LDBEAT M1 - P7 cue1 single-selection step2'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Group 10",
+      "Attribute 'Dimmer' At 0",
+      "Step 2",
+      "Attribute 'Dimmer' At 100",
+      "Store Sequence 303 Cue 2 'LDBEAT M1 - P7 cue2 two-selections step2'",
+      "Set Sequence 303 Property 'Name' 'LDBEAT M1 - P7 single-vs-double'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 303"
+    ],
+    "approved": true
+  }
+]

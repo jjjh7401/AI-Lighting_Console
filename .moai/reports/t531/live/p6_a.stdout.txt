@@ -1,0 +1,52 @@
+{"step": "pre_free:ShowData/DataPools/Default/Timecodes/31", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Timecodes/31", "ok": false, "error": "path segment not found: '31' (in ShowData/DataPools/Default/Timecodes/31)"}
+{"step": "tc_setup", "t": 0.067, "kind": "screen", "cleared": true, "commands": [{"command": "Store Timecode 31", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "reasons": []}, {"command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "reasons": []}, {"command": "Store Timecode 31.1", "reasons": ["blacklisted command (matches closed-set entry 'Store Timecode')"]}, {"command": "Assign Sequence 228 At Timecode 31.1.1", "reasons": ["blacklisted command (matches closed-set entry 'As
+{"step": "tc_setup", "t": 0.133, "kind": "exec", "command": "Store Timecode 31", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.2, "kind": "exec", "command": "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.266, "kind": "exec", "command": "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.333, "kind": "exec", "command": "Store Timecode 31.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.399, "kind": "exec", "command": "Assign Sequence 228 At Timecode 31.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.466, "kind": "exec", "command": "Store Type 'CmdSubTrack' Timecode 31.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.533, "kind": "exec", "command": "cd Timecode 31.1.1.1.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.6, "kind": "exec", "command": "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "tc_setup", "t": 0.666, "kind": "exec", "command": "cd root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "goto_mid", "t": 0.667, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Time 5 Timecode 31", "reasons": ["reference-invoking command", "unverifiable reference: no recognizable target object"]}]}
+{"step": "goto_mid", "t": 0.733, "kind": "exec", "command": "Goto Time 5 Timecode 31", "fired": true, "ok": false, "detail": "User Canceled Command"}
+{
+  "item": "P6",
+  "free_slots": [
+    "ShowData/DataPools/Default/Timecodes/31"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "tc_setup": true,
+    "goto_mid": false
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 31",
+        "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+        "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 31.1",
+        "Assign Sequence 228 At Timecode 31.1.1",
+        "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+        "cd Timecode 31.1.1.1.1",
+        "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Time 5 Timecode 31"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

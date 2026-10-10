@@ -1,0 +1,40 @@
+{"step": "pre_free:ShowData/DataPools/Default/PresetPools/4/301", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/PresetPools/4/301", "ok": false, "error": "path segment not found: '301' (in ShowData/DataPools/Default/PresetPools/4/301)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/300", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/300", "ok": false, "error": "path segment not found: '300' (in ShowData/DataPools/Default/Sequences/300)"}
+{"step": "store_preset", "t": 0.132, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Color' At Preset 4.9", "reasons": []}, {"command": "Store Preset 4.301", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_preset", "t": 0.199, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.266, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.332, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.399, "kind": "exec", "command": "Attribute 'Color' At Preset 4.9", "fired": true, "ok": false, "detail": "Illegal object"}
+{"step": "store_preset", "t": 0.466, "kind": "exec", "command": "Store Preset 4.301", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.532, "kind": "exec", "command": "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/301",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_preset": false
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Color' At Preset 4.9",
+        "Store Preset 4.301",
+        "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

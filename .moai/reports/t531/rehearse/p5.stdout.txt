@@ -1,9 +1,9 @@
 {"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/302)"}
-{"step": "store_cue", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 13", "reasons": []}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attr
+{"step": "store_cue", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attribute 'Tilt' At Speed
 {"step": "store_cue", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 13", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Position' At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Relative 8", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
@@ -38,8 +38,8 @@
       "commands": [
         "ChangeDestination Root",
         "ClearAll",
-        "Group 13",
-        "Attribute 'Position' At Preset 2.1",
+        "Group 11",
+        "At Preset 2.1",
         "Attribute 'Pan' At Relative 12",
         "Attribute 'Tilt' At Relative 8",
         "Attribute 'Pan' At Phase 0",

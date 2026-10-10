@@ -14,6 +14,7 @@ import numpy as np
 
 from .ground_truth import (
     DOWNBEAT_TOLERANCE_SEC,
+    EVENT_TOLERANCE_BARS,
     TARGET_BPM,
     TruthEvent,
 )
@@ -88,6 +89,55 @@ def event_recall(
     total = len(truth_events)
     rate_pct = (matched / total * 100.0) if total else 0.0
     return EventRecallResult(matched=matched, total=total, rate_pct=rate_pct, matches=matches)
+
+
+@dataclass(frozen=True)
+class PrecisionResult:
+    """AC-LDBARMAP-007 정밀도 조건의 채점 결과(카드 t535, 2026-10-10).
+
+    ``rate_pct`` 는 분모(``total``)가 0이면 **0.0** 이다(공허한 100%/정의되지
+    않은 값으로 읽지 않는다 — "검사 자신이 공허할 수 있다" 함정, 분모 0 규칙).
+    ``unsupported`` 는 증거를 못 찾은 검출들을 그대로 보존한다(감독 귀 확인
+    후보 목록을 만들 때 쓴다).
+    """
+
+    supported: int
+    total: int
+    rate_pct: float
+    unsupported: list[tuple[str, int]]  # (event_type, bar) — 증거 없는 검출
+
+    def __str__(self) -> str:  # pragma: no cover - 표시용
+        return f"{self.supported}/{self.total} ({self.rate_pct:.1f}%)"
+
+
+def event_precision(
+    detected_events: list[tuple[str, int]],  # (event_type, bar) — 점 사건(break/kick_entry)만
+    evidence: dict[str, frozenset[int]] | dict[str, set[int]],
+    tolerance_bars: int = EVENT_TOLERANCE_BARS,
+) -> PrecisionResult:
+    """AC-LDBARMAP-007 정밀도 조건 — 검출별 독립 판정(acceptance.md § 매칭 방식).
+
+    검출된 사건 **각각을 독립적으로** 채점한다 — 자신과 같은 종류의 증거
+    표시 중 ±1마디(``tolerance_bars``) 이내에 하나라도 있으면 근거 있음이다.
+    증거 표시 하나가 여러 검출을 동시에 지지할 수 있다(증거 쪽에 1:1 소진을
+    요구하지 않는다 — acceptance.md § 매칭 방식 그대로).
+
+    분모(``total`` = 전체 검출 사건 수)가 0이면 ``rate_pct`` 는 0.0 — 빈
+    분류기는 정밀도를 주장할 수 없다(분모 0 규칙, acceptance.md § 문턱).
+    """
+    unsupported: list[tuple[str, int]] = []
+    supported = 0
+    for event_type, bar in detected_events:
+        evidence_bars = evidence.get(event_type, frozenset())
+        if any(abs(bar - e) <= tolerance_bars for e in evidence_bars):
+            supported += 1
+        else:
+            unsupported.append((event_type, bar))
+    total = len(detected_events)
+    rate_pct = (supported / total * 100.0) if total else 0.0
+    return PrecisionResult(
+        supported=supported, total=total, rate_pct=rate_pct, unsupported=unsupported
+    )
 
 
 def grid_lock_ratio(

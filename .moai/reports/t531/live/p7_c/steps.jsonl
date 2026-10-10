@@ -1,0 +1,2 @@
+{"step": "release", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command"]}]}
+{"step": "release", "t": 0.133, "kind": "exec", "command": "Off Sequence 303", "fired": true, "ok": true, "detail": "OK"}

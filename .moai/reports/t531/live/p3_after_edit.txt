@@ -1,0 +1,12 @@
+
+>>> props:ShowData/DataPools/Default/PresetPools/4/302|NAME,MEMORYFOOTPRINT,PRESETDATA
+    wire: Plugin "CopilotResponder" "props b5be2d13 NAME,MEMORYFOOTPRINT,PRESETDATA ShowData/DataPools/Default/PresetPools/4/302"
+<<< {"id": "b5be2d13", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/302", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P3 propagation#2"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1852"}, {"n": "PRESETDATA", "ok": true, "t": "string", "v": ""}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/300/3|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props e2ea0290 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/300/3"
+<<< {"id": "e2ea0290", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/300/3", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P3 ref cue"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "4296"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/PresetPools/4/301|NAME,MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props 625bdd33 NAME,MEMORYFOOTPRINT ShowData/DataPools/Default/PresetPools/4/301"
+<<< {"id": "625bdd33", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/301", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P3 propagation"}, {"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "1568"}], "truncated": false, "v": 1}

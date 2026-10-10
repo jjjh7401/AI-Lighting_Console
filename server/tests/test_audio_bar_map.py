@@ -18,6 +18,12 @@ REQ-LDBARMAP-016(M2) · REQ-LDBARMAP-008(M3) · AC-LDBARMAP-015/016/007. 다섯 
    AC-LDBARMAP-007(≥5/7) 재현 + 문턱 ±20% 민감도.
 7. 로컬 전용 회귀(M3) — 실제 LOVE ATTACK mp3가 있을 때만, ``extract_bar_features``
    가 음량을 재현하고 전체 파이프라인이 AC-007 을 통과하는지 확인.
+8. AC-LDBARMAP-007 **정밀도 조건**(카드 t535, 2026-10-10) — 브레이크 분류의
+   저역+온셋 비율 결합(순수 함수, CI-safe), 정답지 "순간" 칸 증거 파서
+   (``ground_truth.parse_precision_evidence``), 정밀도 채점기
+   (``scorer.event_precision``), 그리고 LOVE ATTACK **실제 오디오 마디별
+   특징 고정 픽스처**(``fixtures/love_attack_bar_features_real.json`` — 오디오가
+   아니라 파생 숫자, CI에서 원곡 없이도 돈다)로 재현율·정밀도 둘 다 확인.
 
 콘솔 접촉 0건 — 이 파일은 오디오 분석기만 다룬다(REQ-LDBARMAP-001/015).
 """
@@ -46,8 +52,14 @@ from server.audio.bar_map import (
     detect_beat_grid,
     extract_bar_features,
 )
-from tools.barmap.ground_truth import DOWNBEAT_TOLERANCE_SEC, parse_bar_features, parse_downbeats
-from tools.barmap.scorer import event_recall, strict_index_hit_rate
+from tools.barmap.gen_ear_check_candidates import build_candidate_rows, load_fixture
+from tools.barmap.ground_truth import (
+    DOWNBEAT_TOLERANCE_SEC,
+    parse_bar_features,
+    parse_downbeats,
+    parse_precision_evidence,
+)
+from tools.barmap.scorer import event_precision, event_recall, strict_index_hit_rate
 
 pytestmark = pytest.mark.skipif(
     not analysis_available(),
@@ -56,7 +68,11 @@ pytestmark = pytest.mark.skipif(
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 LOVE_ATTACK_BEAT_GRID_PATH = FIXTURES_DIR / "love_attack_beat_grid.json"
+LOVE_ATTACK_BAR_FEATURES_REAL_PATH = FIXTURES_DIR / "love_attack_bar_features_real.json"
 LOVE_ATTACK_MP3_PATH = Path("/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3")
+
+#: AC-LDBARMAP-007 정밀도 조건(카드 t535) — 70% 이상.
+AC007_PRECISION_THRESHOLD_PCT = 70.0
 
 # AC-LDBARMAP-016 — 감독이 귀로 확인해 확정한 첫 박 오프셋(progress.md §E.2, plan.md M2).
 CONFIRMED_FIRST_BEAT_OFFSET = 1
@@ -484,9 +500,10 @@ def test_classify_bar_events_drop_without_vocal_band_ratio_is_skipped() -> None:
 
 
 def test_classify_bar_events_break_onset_count_none_is_not_read_as_zero() -> None:
-    """``onset_count`` 가 ``None`` 이면 온셋 기반 브레이크 분기를 건너뛴다 — "0개"로
-    잘못 읽어 모든 마디를 브레이크로 분류하는 결함을 재발 방지(``_BREAK_MAX_ONSET_COUNT``
-    주석 참조). 저역도 평탄하면(1.0) 어떤 브레이크도 나오지 않아야 한다.
+    """``onset_count`` 가 ``None`` 이면 온셋 중앙값 계산과 온셋 기반 브레이크 분기
+    양쪽에서 제외된다 — "0개"로 잘못 읽어 모든 마디를 브레이크로 분류하는 결함을
+    재발 방지(``_BREAK_DIP_LOW_BAND_RATIO`` 주석 참조). 저역도 평탄하면(1.0)
+    어떤 브레이크도 나오지 않아야 한다.
     """
     features = [
         BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, onset_count=None)
@@ -494,6 +511,48 @@ def test_classify_bar_events_break_onset_count_none_is_not_read_as_zero() -> Non
     ]
     events = classify_bar_events(features)
     assert [e for e in events if e.kind == "break"] == []
+
+
+def test_classify_bar_events_break_dip_conjunction_both_conditions_required() -> None:
+    """브레이크(카드 t535 교정) — 저역 완화(dip, 0.45<저역≤0.7)와 온셋 중앙값 대비
+    낮은 온셋이 **함께** 있어야 브레이크다. 저역만 dip거나 온셋만 낮으면(절대
+    문턱 없이) 브레이크가 아니다 — 과거 "절대 온셋 개수" 방식의 결함(검출기
+    자신의 온셋 척도가 지도 보고서 계기의 척도와 달라, 저역이 전혀 낮지 않은
+    마디까지 브레이크로 잘못 분류됐다, progress.md §E.2 M3 "리드 재측정 메모")을
+    재발 방지한다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, onset_count=4) for i in range(1, 11)
+    ]
+    # bar 5 — 저역 dip(0.6, 0.45<0.6<=0.7) AND 온셋(1) <= 중앙값(4)*0.25=1.0 → 브레이크.
+    features[4] = BarFeatures(bar=5, volume_norm=1.0, low_band_norm=0.6, onset_count=1)
+    # bar 7 — 저역은 dip(0.6)이지만 온셋이 중앙값과 같다(4, 낮지 않음) → 브레이크 아님.
+    features[6] = BarFeatures(bar=7, volume_norm=1.0, low_band_norm=0.6, onset_count=4)
+    # bar 8 — 온셋은 0으로 아주 낮지만 저역이 dip 범위 밖(1.0, 평탄) → 브레이크 아님
+    # (과거 절대 문턱 방식이면 onset=0<=2라 브레이크로 잘못 분류됐을 자리).
+    features[7] = BarFeatures(bar=8, volume_norm=1.0, low_band_norm=1.0, onset_count=0)
+
+    events = classify_bar_events(features)
+    break_events = [e for e in events if e.kind == "break"]
+    assert break_events == [BarEvent("break", 5, 5, grade="measured")]
+
+
+def test_classify_bar_events_break_median_onset_excludes_none_entries() -> None:
+    """온셋 중앙값은 ``onset_count`` 를 실제로 잰 마디만으로 계산한다 — ``None``
+    이 섞인 마디를 "0개"로 읽어 중앙값을 왜곡하지 않는다."""
+    # 중앙값 계산 표본 3개(8, 8, 8) → median=8, 문턱=0.25*8=2.0.
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, onset_count=8) for i in range(1, 4)
+    ]
+    features += [
+        # bar 4 — dip(0.6) AND onset(2) <= 2.0 → 브레이크.
+        BarFeatures(bar=4, volume_norm=1.0, low_band_norm=0.6, onset_count=2),
+        # bar 5 — dip(0.6) 이지만 onset_count 를 못 쟀다(None) → 이 분기 제외,
+        # None 을 0으로 잘못 읽었다면 브레이크가 됐을 자리.
+        BarFeatures(bar=5, volume_norm=1.0, low_band_norm=0.6, onset_count=None),
+    ]
+    events = classify_bar_events(features)
+    break_events = [e for e in events if e.kind == "break"]
+    assert break_events == [BarEvent("break", 4, 4, grade="measured")]
 
 
 # ---------------------------------------------------------------------------
@@ -597,6 +656,10 @@ def test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007() -> N
     ``librosa.decompose.hpss``)을 쓰므로 절대 수치까지 재현하지는 않는다 — 이
     시험은 음량만 수치로 재현을 확인하고, 저역·보컬 대역은 **분류 결과(재현율)**
     로만 재현을 확인한다.
+
+    카드 t535 확장 — AC-LDBARMAP-007 **정밀도 조건**(≥70%, 분모는 범위② 점
+    사건만)도 같은 실제 오디오 경로에서 재확인한다(progress.md §E.2 M3 "정밀도
+    보강" 참조).
     """
     audio_bytes = LOVE_ATTACK_MP3_PATH.read_bytes()
     grid = detect_beat_grid(audio_bytes)
@@ -619,6 +682,209 @@ def test_real_love_attack_extraction_reproduces_volume_and_achieves_ac007() -> N
     matched, total, matches = _event_recall_for(list(features))
     assert total == 7
     assert matched >= AC007_RECALL_THRESHOLD, f"{matched}/{total} — matches: {matches}"
+
+    events = classify_bar_events(list(features))
+    detected = [(e.kind, e.start_bar) for e in events if e.kind in ("break", "kick_entry")]
+    evidence = parse_precision_evidence()
+    precision = event_precision(detected, evidence)
+    assert precision.total > 0, "분모 0 — 빈 분류기는 정밀도를 주장할 수 없다"
+    assert precision.rate_pct >= AC007_PRECISION_THRESHOLD_PCT, str(precision)
+
+
+# ---------------------------------------------------------------------------
+# 8. AC-LDBARMAP-007 정밀도 조건(카드 t535) — 증거 파서 + 정밀도 채점기 +
+#    LOVE ATTACK 실제 오디오 마디별 특징 고정 픽스처(CI-safe, 오디오 아님).
+# ---------------------------------------------------------------------------
+
+#: acceptance.md AC-LDBARMAP-007 § "근거 있음 판정" 표의 스냅샷(카드 t535,
+#: 2026-10-10) — 아래 테스트는 ``parse_precision_evidence`` 가 부록 A "순간"
+#: 칸에서 직접 파싱한 결과가 이 스냅샷과 같은지 검산한다(검산 대상이지, 생산
+#: 코드가 이 리터럴을 쓰지는 않는다 — 생산 코드는 항상 보고서를 다시 읽는다).
+EXPECTED_BREAK_EVIDENCE_BARS = frozenset({3, 14, 33, 34, 61, 62, 67, 82})
+EXPECTED_KICK_ENTRY_EVIDENCE_BARS = frozenset({7, 8, 18, 46, 69, 70})
+
+
+def test_ground_truth_parses_precision_evidence_matches_ac_table() -> None:
+    """부록 A "순간" 칸 파서가 acceptance.md AC-007 § 근거 있음 판정 표와 같은
+    마디 집합을 낸다 — 17마디(빌드업의 꼬리, kick_entry 아님)가 제외됐는지도
+    확인한다."""
+    evidence = parse_precision_evidence()
+    assert evidence["break"] == EXPECTED_BREAK_EVIDENCE_BARS
+    assert evidence["kick_entry"] == EXPECTED_KICK_ENTRY_EVIDENCE_BARS
+    assert 17 not in evidence["kick_entry"], "17마디는 빌드업의 꼬리다 — kick_entry 증거가 아니다"
+
+
+def test_event_precision_counts_each_detection_independently_against_evidence() -> None:
+    """``event_precision`` — 검출별 독립 판정(증거 쪽 1:1 소진 요구 없음).
+
+    한 증거 표시(바 10)가 ±1마디 안의 검출 둘(9·11)을 동시에 지지할 수 있다."""
+    evidence = {"break": frozenset({10}), "kick_entry": frozenset({20})}
+    detected = [("break", 9), ("break", 11), ("break", 50), ("kick_entry", 20)]
+    result = event_precision(detected, evidence)
+    assert result.total == 4
+    assert result.supported == 3
+    assert result.rate_pct == pytest.approx(75.0)
+    assert result.unsupported == [("break", 50)]
+
+
+def test_event_precision_denominator_zero_is_fail_not_vacuous_pass() -> None:
+    """분모 0 규칙(acceptance.md § 문턱) — 검출이 하나도 없으면 ``rate_pct`` 는
+    0.0(공허한 100%로 읽지 않는다). 70% 문턱과 비교하면 FAIL이다."""
+    result = event_precision([], {"break": frozenset({10})})
+    assert result.total == 0
+    assert result.supported == 0
+    assert result.rate_pct == 0.0
+    assert result.rate_pct < AC007_PRECISION_THRESHOLD_PCT
+
+
+@pytest.fixture(scope="module")
+def love_attack_bar_features_real_fixture() -> dict:
+    with LOVE_ATTACK_BAR_FEATURES_REAL_PATH.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _bar_features_from_real_fixture(fixture: dict) -> list[BarFeatures]:
+    return [
+        BarFeatures(
+            bar=row["bar"],
+            volume_norm=row["volume_norm"],
+            low_band_norm=row["low_band_norm"],
+            vocal_band_ratio=row["vocal_band_ratio"],
+            onset_count=row["onset_count"],
+        )
+        for row in fixture["bar_features"]
+    ]
+
+
+def _recall_and_precision_for(features: list[BarFeatures]) -> tuple[int, int, object]:
+    matched, total, _matches = _event_recall_for(features)
+    events = classify_bar_events(features)
+    detected = [(e.kind, e.start_bar) for e in events if e.kind in ("break", "kick_entry")]
+    precision = event_precision(detected, parse_precision_evidence())
+    return matched, total, precision
+
+
+def test_ac007_real_audio_fixture_has_82_bars(
+    love_attack_bar_features_real_fixture: dict,
+) -> None:
+    """픽스처 자체의 검산 — 82마디, 첫 박 오프셋이 AC-LDBARMAP-016 확정값(1)과 같다."""
+    assert len(love_attack_bar_features_real_fixture["bar_features"]) == 82
+    assert love_attack_bar_features_real_fixture["first_beat_offset"] == CONFIRMED_FIRST_BEAT_OFFSET
+
+
+def test_ac007_real_audio_fixture_recall_and_precision_both_pass(
+    love_attack_bar_features_real_fixture: dict,
+) -> None:
+    """CI-safe(원곡 불필요) — LOVE ATTACK 실제 오디오 경로②에서 재현율(≥5/7)과
+    **정밀도(≥70%)** 가 새 브레이크 규칙(카드 t535)으로 함께 PASS 하는지 확인한다."""
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    matched, total, precision = _recall_and_precision_for(features)
+    assert total == 7
+    assert matched >= AC007_RECALL_THRESHOLD, f"recall {matched}/{total}"
+    assert precision.total > 0
+    assert precision.rate_pct >= AC007_PRECISION_THRESHOLD_PCT, str(precision)
+
+
+def test_ac007_real_audio_fixture_old_absolute_onset_rule_would_have_failed_precision(
+    love_attack_bar_features_real_fixture: dict,
+) -> None:
+    """정직한 회귀 기록(카드 t535) — 카드 t535 **이전**의 구 규칙(저역≤0.45배 OR
+    온셋 절대 개수≤2개)을 이 픽스처에 그대로 돌리면 정밀도가 8/18(44.4%)로
+    70% 문턱에 크게 못 미친다(progress.md §E.2 M3 "리드 재측정 메모"의 실측과
+    일치). 구 상수는 ``bar_map.py``에서 이미 제거됐으므로 여기서는 역사적
+    수치로만 재현한다 — 생산 코드가 이 값을 쓰지 않는다."""
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    by_bar = {f.bar: f for f in features}
+    old_break_bars = sorted(
+        bar
+        for bar, f in by_bar.items()
+        if f.low_band_norm <= 0.45 or (f.onset_count is not None and f.onset_count <= 2)
+    )
+    old_kick_bars = sorted(bar for bar, f in by_bar.items() if f.low_band_norm >= 2.0)
+    old_detected = [("break", b) for b in old_break_bars] + [
+        ("kick_entry", b) for b in old_kick_bars
+    ]
+    precision = event_precision(old_detected, parse_precision_evidence())
+    assert precision.total == 18
+    assert precision.supported == 8
+    assert precision.rate_pct == pytest.approx(44.4, abs=0.1)
+    assert precision.rate_pct < AC007_PRECISION_THRESHOLD_PCT, (
+        "이 테스트는 구 규칙이 FAIL 했음을 문서화한다 — PASS 하면 역사 재현이 깨졌다는 뜻"
+    )
+
+
+@pytest.mark.parametrize(
+    ("constant_name", "factor"),
+    [
+        ("_KICK_ENTRY_LOW_BAND_RATIO", 0.8),
+        ("_KICK_ENTRY_LOW_BAND_RATIO", 1.2),
+        ("_BREAK_LOW_BAND_RATIO", 0.8),
+        ("_BREAK_LOW_BAND_RATIO", 1.2),
+        ("_BREAK_ONSET_FRACTION_OF_MEDIAN", 0.8),
+        ("_BREAK_ONSET_FRACTION_OF_MEDIAN", 1.2),
+    ],
+)
+def test_ac007_real_audio_fixture_sensitivity_recall_and_precision_stay_passing(
+    love_attack_bar_features_real_fixture: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    constant_name: str,
+    factor: float,
+) -> None:
+    """문턱 ±20% 민감도(카드 t535) — 실제 오디오 경로에서 재현율·정밀도 둘 다
+    여전히 PASS 선 위인지 확인한다. ``_BREAK_DIP_LOW_BAND_RATIO`` 는 지식의 날
+    (−20%에서 recall 이 정확히 문턱에 닿는다)이라 별도 테스트로 정직하게
+    기록한다(아래 ``test_...dip_ratio_minus_20_percent_is_a_knife_edge``)."""
+    base_value = getattr(bar_map_module, constant_name)
+    monkeypatch.setattr(bar_map_module, constant_name, base_value * factor)
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    matched, total, precision = _recall_and_precision_for(features)
+    assert matched >= AC007_RECALL_THRESHOLD, (
+        f"{constant_name}*{factor}={base_value * factor}: recall {matched}/{total}"
+    )
+    assert precision.total > 0
+    assert precision.rate_pct >= AC007_PRECISION_THRESHOLD_PCT, (
+        f"{constant_name}*{factor}={base_value * factor}: precision {precision}"
+    )
+
+
+def test_ac007_real_audio_fixture_dip_ratio_minus_20_percent_is_a_knife_edge(
+    love_attack_bar_features_real_fixture: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """지식의 날, 정직하게 기록(카드 t535 지시) — ``_BREAK_DIP_LOW_BAND_RATIO``
+    기준값(0.7)을 −20%(0.56)로 낮추면 33·61마디(저역 0.6·0.59 — 기준값 안쪽이지만
+    0.56 밖)가 브레이크에서 빠져 재현율이 **정확히** 5/7(문턱에 닿는다, 그 밑은
+    아니다)로, 정밀도가 **정확히** 3/4(75%)로 떨어진다. 둘 다 여전히 PASS지만
+    문턱에 바로 붙어 있다는 사실을 숨기지 않는다."""
+    base = bar_map_module._BREAK_DIP_LOW_BAND_RATIO
+    monkeypatch.setattr(bar_map_module, "_BREAK_DIP_LOW_BAND_RATIO", base * 0.8)
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    matched, total, precision = _recall_and_precision_for(features)
+    assert (matched, total) == (5, 7), f"지식의 날 수치가 바뀌었다: {matched}/{total}"
+    assert precision.total == 4
+    assert precision.supported == 3
+    assert precision.rate_pct == pytest.approx(75.0)
+    assert matched >= AC007_RECALL_THRESHOLD
+    assert precision.rate_pct >= AC007_PRECISION_THRESHOLD_PCT
+
+
+def test_gen_ear_check_candidates_build_candidate_rows_matches_real_fixture() -> None:
+    """``gen_ear_check_candidates.build_candidate_rows`` — 새 규칙 기준, 실제
+    오디오 고정 픽스처에서 근거 없음 검출이 정확히 kick_entry 4마디 하나인지
+    확인한다(진행기록 §E.2 M3 "정밀도 보강"의 실측과 일치)."""
+    features, bar_boundaries_ms = load_fixture()
+    by_bar = {f.bar: f for f in features}
+    events = classify_bar_events(features)
+    detected = [(e.kind, e.start_bar) for e in events if e.kind in ("break", "kick_entry")]
+    evidence = parse_precision_evidence()
+    result = event_precision(detected, evidence)
+
+    rows = build_candidate_rows(features, bar_boundaries_ms, result.unsupported)
+    assert len(rows) == 1
+    assert rows[0]["bar"] == 4
+    assert rows[0]["kind"] == "kick_entry"
+    assert rows[0]["downbeat_mmss"] == "0:07.92"
+    assert by_bar[4].low_band_norm == pytest.approx(rows[0]["low_band_norm"])
 
 
 def test_extract_bar_features_garbage_bytes_returns_failure_not_raise() -> None:

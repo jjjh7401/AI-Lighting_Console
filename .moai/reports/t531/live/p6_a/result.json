@@ -1,0 +1,39 @@
+{
+  "item": "P6",
+  "free_slots": [
+    "ShowData/DataPools/Default/Timecodes/31"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "tc_setup": true,
+    "goto_mid": false
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 31",
+        "Set Timecode 31 Property 'Name' 'LDBEAT M1 - P6 mid-start'",
+        "Set Timecode 31 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 31.1",
+        "Assign Sequence 228 At Timecode 31.1.1",
+        "Store Type 'CmdSubTrack' Timecode 31.1.1.1",
+        "cd Timecode 31.1.1.1.1",
+        "Store Property 'Time' 5 'AbsTime' 5 'Token' 'Go+'",
+        "cd root"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Time 5 Timecode 31"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

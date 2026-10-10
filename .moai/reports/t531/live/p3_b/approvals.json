@@ -1,0 +1,26 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "At Preset 4.9",
+      "Store Preset 4.302",
+      "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "At Preset 4.302",
+      "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+      "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+      "ClearAll"
+    ],
+    "approved": true
+  }
+]

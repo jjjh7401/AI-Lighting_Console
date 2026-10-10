@@ -1,0 +1,35 @@
+{"step": "off_cue1", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 303", "reasons": ["reference-invoking command"]}]}
+{"step": "off_cue1", "t": 0.133, "kind": "exec", "command": "Off Sequence 303", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_cue2", "t": 0.2, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 2 Sequence 303", "reasons": ["reference-invoking command"]}]}
+{"step": "play_cue2", "t": 0.266, "kind": "exec", "command": "Goto Cue 2 Sequence 303", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P7",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/303"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_cue1": true,
+    "play_cue2": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 303"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 2 Sequence 303"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

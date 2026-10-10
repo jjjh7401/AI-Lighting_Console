@@ -1,0 +1,48 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/306", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/306", "ok": false, "error": "path segment not found: '306' (in ShowData/DataPools/Default/Sequences/306)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/307", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/307", "ok": false, "error": "path segment not found: '307' (in ShowData/DataPools/Default/Sequences/307)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/308", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/308", "ok": false, "error": "path segment not found: '308' (in ShowData/DataPools/Default/Sequences/308)"}
+{"step": "store_circle", "t": 0.2, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 60", "reasons": []}, {"command": "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_circle", "t": 0.266, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.332, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.399, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.466, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.533, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.599, "kind": "exec", "command": "Attribute 'Tilt' At Relative 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.666, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.733, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.8, "kind": "exec", "command": "Attribute 'Pan' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.866, "kind": "exec", "command": "Attribute 'Tilt' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 0.933, "kind": "exec", "command": "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 1.0, "kind": "exec", "command": "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_circle", "t": 1.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.066, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 20", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 10", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 120", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 120", "reasons": []}, {"command": "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_ballyhoo", "t": 1.133, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.266, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.332, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.399, "kind": "exec", "command": "Attribute 'Pan' At Relative 20", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.465, "kind": "exec", "command": "Attribute 'Tilt' At Relative 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.532, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.599, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.666, "kind": "exec", "command": "Attribute 'Pan' At Speed 120", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.733, "kind": "exec", "command": "Attribute 'Tilt' At Speed 120", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.799, "kind": "exec", "command": "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.867, "kind": "exec", "command": "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_ballyhoo", "t": 1.933, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 1.934, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 60", "reasons": []}, {"command": "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_wave", "t": 2.0, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.066, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.133, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.2, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.266, "kind": "exec", "command": "Attribute 'Tilt' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.333, "kind": "exec", "command": "Attribute 'Tilt' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.4, "kind": "exec", "command": "Attribute 'Tilt' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.467, "kind": "exec", "command": "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.533, "kind": "exec", "command": "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_wave", "t": 2.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_each", "t": 2.933, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 306", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 306", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 1 Sequence 307", "reasons": ["reference-invoking command"]}, {"command": "Off Sequence 307", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 1 Sequence 308", "reasons": ["reference-invoking command"]}]}
+{"step": "play_each", "t": 2.999, "kind": "exec", "command": "Goto Cue 1 Sequence 306", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_each", "t": 3.066, "kind": "exec", "command": "Off Sequence 306", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_each", "t": 3.133, "kind": "exec", "command": "Goto Cue 1 Sequence 307", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_each", "t": 3.199, "kind": "exec", "command": "Off Sequence 307", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_each", "t": 3.266, "kind": "exec", "command": "Goto Cue 1 Sequence 308", "fired": true, "ok": true, "detail": "OK"}

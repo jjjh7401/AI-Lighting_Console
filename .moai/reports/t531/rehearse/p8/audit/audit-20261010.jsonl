@@ -21,3 +21,26 @@
 {"ts": "2026-10-10T05:48:52.607635+00:00", "event": "approved", "commands": ["Off Sequence 304", "Off Sequence 305"], "held": ["Off Sequence 304", "Off Sequence 305"], "kind": "t531_m1_p8"}
 {"ts": "2026-10-10T05:48:52.607709+00:00", "event": "executed", "command": "Off Sequence 304", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
 {"ts": "2026-10-10T05:48:52.607770+00:00", "event": "executed", "command": "Off Sequence 305", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.097834+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 100", "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Dimmer' At 100", "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'", "ClearAll"], "kind": "t531_m1_p8"}
+{"ts": "2026-10-10T06:36:28.099263+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.099387+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.099553+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.099664+00:00", "event": "executed", "command": "Attribute 'Dimmer' At 100", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.099947+00:00", "event": "executed", "command": "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.100083+00:00", "event": "executed", "command": "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.100170+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.100355+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Pan' At Relative 10", "Attribute 'Tilt' At Relative 10", "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'", "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Pan' At Relative 10", "Attribute 'Tilt' At Relative 10", "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'", "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'", "ClearAll"], "kind": "t531_m1_p8"}
+{"ts": "2026-10-10T06:36:28.100809+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101071+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101282+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101415+00:00", "event": "executed", "command": "Attribute 'Pan' At Relative 10", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101502+00:00", "event": "executed", "command": "Attribute 'Tilt' At Relative 10", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101578+00:00", "event": "executed", "command": "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101645+00:00", "event": "executed", "command": "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101748+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.101878+00:00", "event": "approved", "commands": ["Goto Cue 1 Sequence 304", "Goto Cue 1 Sequence 305"], "held": ["Goto Cue 1 Sequence 304", "Goto Cue 1 Sequence 305"], "kind": "t531_m1_p8"}
+{"ts": "2026-10-10T06:36:28.101975+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 304", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.102044+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 305", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.102144+00:00", "event": "approved", "commands": ["Off Sequence 304", "Off Sequence 305"], "held": ["Off Sequence 304", "Off Sequence 305"], "kind": "t531_m1_p8"}
+{"ts": "2026-10-10T06:36:28.102227+00:00", "event": "executed", "command": "Off Sequence 304", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:36:28.102297+00:00", "event": "executed", "command": "Off Sequence 305", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

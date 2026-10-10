@@ -1,0 +1,4 @@
+{"ts": "2026-10-10T10:13:57.355556+00:00", "event": "approved", "commands": ["Off Sequence 303"], "held": ["Off Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T10:13:57.421769+00:00", "event": "executed", "command": "Off Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:13:57.488829+00:00", "event": "approved", "commands": ["Goto Cue 2 Sequence 303"], "held": ["Goto Cue 2 Sequence 303"], "kind": "t531_m1_p7"}
+{"ts": "2026-10-10T10:13:57.555094+00:00", "event": "executed", "command": "Goto Cue 2 Sequence 303", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

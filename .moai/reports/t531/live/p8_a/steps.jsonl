@@ -1,0 +1,22 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/304", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/304", "ok": false, "error": "path segment not found: '304' (in ShowData/DataPools/Default/Sequences/304)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/305", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/305", "ok": false, "error": "path segment not found: '305' (in ShowData/DataPools/Default/Sequences/305)"}
+{"step": "store_dimmer_seq", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Dimmer' At 100", "reasons": []}, {"command": "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_dimmer_seq", "t": 0.199, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.266, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.332, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.398, "kind": "exec", "command": "Attribute 'Dimmer' At 100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.466, "kind": "exec", "command": "Store Sequence 304 Cue 1 'LDBEAT M1 - P8 dimmer-only'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.533, "kind": "exec", "command": "Set Sequence 304 Property 'Name' 'LDBEAT M1 - P8 dimmer'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_dimmer_seq", "t": 0.599, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.6, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Pan' At Relative 10", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 10", "reasons": []}, {"command": "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_pantilt_seq", "t": 0.666, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.732, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.799, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.866, "kind": "exec", "command": "Attribute 'Pan' At Relative 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.932, "kind": "exec", "command": "Attribute 'Tilt' At Relative 10", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 0.999, "kind": "exec", "command": "Store Sequence 305 Cue 1 'LDBEAT M1 - P8 pantilt-only'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 1.066, "kind": "exec", "command": "Set Sequence 305 Property 'Name' 'LDBEAT M1 - P8 pantilt'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_pantilt_seq", "t": 1.133, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_both", "t": 1.266, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 304", "reasons": ["reference-invoking command"]}, {"command": "Goto Cue 1 Sequence 305", "reasons": ["reference-invoking command"]}]}
+{"step": "play_both", "t": 1.333, "kind": "exec", "command": "Goto Cue 1 Sequence 304", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_both", "t": 1.399, "kind": "exec", "command": "Goto Cue 1 Sequence 305", "fired": true, "ok": true, "detail": "OK"}

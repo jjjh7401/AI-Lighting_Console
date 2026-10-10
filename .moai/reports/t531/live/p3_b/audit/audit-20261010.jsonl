@@ -1,0 +1,16 @@
+{"ts": "2026-10-10T10:21:04.138434+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.9", "Store Preset 4.302", "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.9", "Store Preset 4.302", "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "ClearAll"], "kind": "t531_m1_p3"}
+{"ts": "2026-10-10T10:21:04.204682+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.271305+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.338083+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.404730+00:00", "event": "executed", "command": "At Preset 4.9", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.471334+00:00", "event": "executed", "command": "Store Preset 4.302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.537824+00:00", "event": "executed", "command": "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.604335+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.604686+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.302", "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "At Preset 4.302", "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "ClearAll"], "kind": "t531_m1_p3"}
+{"ts": "2026-10-10T10:21:04.671142+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.738009+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.804527+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.871301+00:00", "event": "executed", "command": "At Preset 4.302", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:04.938166+00:00", "event": "executed", "command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:05.004819+00:00", "event": "executed", "command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T10:21:05.071298+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

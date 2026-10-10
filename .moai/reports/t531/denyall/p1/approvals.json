@@ -1,0 +1,40 @@
+[
+  {
+    "commands": [
+      "Store Timecode 30",
+      "Set Timecode 30 Property 'Name' 'LDBEAT M1 - P1 six tracks'",
+      "Set Timecode 30 Property 'Duration' 10 'AutoStop' 0",
+      "Store Timecode 30.1"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Assign Sequence 228 At Timecode 30.1.1",
+      "Assign Sequence 229 At Timecode 30.1.2",
+      "Assign Sequence 230 At Timecode 30.1.3",
+      "Assign Sequence 231 At Timecode 30.1.4",
+      "Assign Sequence 232 At Timecode 30.1.5",
+      "Assign Sequence 233 At Timecode 30.1.6"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Go Timecode 30"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "Off Timecode 30",
+      "Off Sequence 228",
+      "Off Sequence 229",
+      "Off Sequence 230",
+      "Off Sequence 231",
+      "Off Sequence 232",
+      "Off Sequence 233"
+    ],
+    "approved": false
+  }
+]

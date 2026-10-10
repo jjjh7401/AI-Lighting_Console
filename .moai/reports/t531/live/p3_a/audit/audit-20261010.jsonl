@@ -1,0 +1,8 @@
+{"ts": "2026-10-10T09:49:23.914252+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Color' At Preset 4.9", "Store Preset 4.301", "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "ClearAll"], "held": ["ChangeDestination Root", "ClearAll", "Group 11", "Attribute 'Color' At Preset 4.9", "Store Preset 4.301", "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "ClearAll"], "kind": "t531_m1_p3"}
+{"ts": "2026-10-10T09:49:23.980736+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T09:49:24.047412+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T09:49:24.114018+00:00", "event": "executed", "command": "Group 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T09:49:24.180722+00:00", "event": "executed", "command": "Attribute 'Color' At Preset 4.9", "kind": "command", "ok": false, "detail": "Illegal object", "outcome": "failed"}
+{"ts": "2026-10-10T09:49:24.247592+00:00", "event": "executed", "command": "Store Preset 4.301", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T09:49:24.314017+00:00", "event": "executed", "command": "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T09:49:24.380501+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

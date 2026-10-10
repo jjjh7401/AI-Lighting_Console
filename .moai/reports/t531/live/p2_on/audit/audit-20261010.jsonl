@@ -1,0 +1,4 @@
+{"ts": "2026-10-10T06:31:32.522617+00:00", "event": "approved", "commands": ["Goto Cue 3 Sequence 221", "Goto Cue 3 Sequence 226", "Goto Cue 1 Sequence 11"], "held": ["Goto Cue 3 Sequence 221", "Goto Cue 3 Sequence 226", "Goto Cue 1 Sequence 11"], "kind": "t531_m1_p2"}
+{"ts": "2026-10-10T06:31:32.588989+00:00", "event": "executed", "command": "Goto Cue 3 Sequence 221", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:31:32.655000+00:00", "event": "executed", "command": "Goto Cue 3 Sequence 226", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T06:31:32.722313+00:00", "event": "executed", "command": "Goto Cue 1 Sequence 11", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

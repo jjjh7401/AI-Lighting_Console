@@ -1,0 +1,48 @@
+{
+  "item": "P11",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/310"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": false,
+    "play": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Group 10",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Group 11",
+        "Attribute 'Dimmer' At 100",
+        "Group 10",
+        "Attribute 'Dimmer' At 100",
+        "Store Sequence 310 Cue 1 'LDBEAT M1 - P11 t520 step order'",
+        "Set Sequence 310 Property 'Name' 'LDBEAT M1 - P11 t520 step order'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 310"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 310"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

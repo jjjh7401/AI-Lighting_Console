@@ -1,0 +1,23 @@
+{
+  "item": "P5",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/302"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "release": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 302"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

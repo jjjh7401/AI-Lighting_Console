@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/309/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props a89ecfd4 MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/309/3"
+<<< {"id": "a89ecfd4", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/309/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3608"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/303/3|MEMORYFOOTPRINT
+    wire: Plugin "CopilotResponder" "props bbc5a80f MEMORYFOOTPRINT ShowData/DataPools/Default/Sequences/303/3"
+<<< {"id": "bbc5a80f", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/303/3", "reads": [{"n": "MEMORYFOOTPRINT", "ok": true, "t": "number", "v": "3568"}], "truncated": false, "v": 1}

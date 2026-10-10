@@ -1,0 +1,221 @@
+{
+  "item": "P4",
+  "preset": "21.301",
+  "sequence": 301,
+  "occupied_before": [],
+  "master_normedvalue_observed": "69",
+  "master_normedvalue_expected": "69",
+  "preset_introspect_fields": {
+    "class": "Preset",
+    "fields": [
+      {
+        "n": "IGNORENETWORK",
+        "t": "UInt64"
+      },
+      {
+        "n": "STRUCTURELOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "SYSTEMLOCKED",
+        "t": "UInt64"
+      },
+      {
+        "n": "LOCK",
+        "t": "UInt64"
+      },
+      {
+        "n": "INDEX",
+        "t": "UInt32"
+      },
+      {
+        "n": "COUNT",
+        "t": "UInt32"
+      },
+      {
+        "n": "NO",
+        "t": "UInt32"
+      },
+      {
+        "n": "NAME",
+        "t": "String"
+      },
+      {
+        "n": "USEREXPANDED",
+        "t": "UInt64"
+      },
+      {
+        "n": "FADERENABLED",
+        "t": "Bool"
+      },
+      {
+        "n": "OWNED",
+        "t": "Bool"
+      },
+      {
+        "n": "HIDDEN",
+        "t": "UInt64"
+      },
+      {
+        "n": "DEPENDENCYEXPORT",
+        "t": "String"
+      },
+      {
+        "n": "MEMORYFOOTPRINT",
+        "t": "Int64"
+      },
+      {
+        "n": "GUID",
+        "t": "Custom"
+      },
+      {
+        "n": "SCRIBBLE",
+        "t": "Handle"
+      },
+      {
+        "n": "APPEARANCE",
+        "t": "Handle"
+      },
+      {
+        "n": "NOTE",
+        "t": "String"
+      },
+      {
+        "n": "TAGS",
+        "t": "Custom"
+      },
+      {
+        "n": "PREVIEWCOPY",
+        "t": "Handle"
+      },
+      {
+        "n": "ACTIVE",
+        "t": "UInt8"
+      },
+      {
+        "n": "HASANYMATRICKSDATA",
+        "t": "Bool"
+      },
+      {
+        "n": "SHUFFLEMODE",
+        "t": "UInt8"
+      },
+      {
+        "n": "INITIALNAME",
+        "t": "String"
+      },
+      {
+        "n": "INITIALMATRICKS",
+        "t": "Handle"
+      },
+      {
+        "n": "X",
+        "t": "Int32"
+      },
+      {
+        "n": "Y",
+        "t": "Int32"
+      }
+    ],
+    "id": "gate-17",
+    "kind": "introspect",
+    "offset": 0,
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/21/301",
+    "source": "property_accessors",
+    "total": 138,
+    "truncated": true,
+    "v": 1
+  },
+  "preset_props_candidates": {
+    "id": "gate-18",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/21/301",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "LDBEAT M1 - P4 SM15 MEASURE"
+      },
+      {
+        "e": "property not readable: SPEED",
+        "n": "SPEED",
+        "ok": false
+      },
+      {
+        "e": "property not readable: MEASURE",
+        "n": "MEASURE",
+        "ok": false
+      },
+      {
+        "n": "SPEEDMASTER",
+        "ok": true,
+        "t": "string",
+        "v": "None"
+      },
+      {
+        "e": "property not readable: NORMEDVALUE",
+        "n": "NORMEDVALUE",
+        "ok": false
+      },
+      {
+        "n": "PRESETDATA",
+        "ok": true,
+        "t": "string",
+        "v": ""
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  },
+  "bundles": {
+    "store_preset": true,
+    "store_cue": true,
+    "play": true
+  },
+  "verdict": "held — played, release not sent (감독 관찰 대기)",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Dimmer' At 0",
+        "Step 2",
+        "Attribute 'Dimmer' At 100",
+        "Attribute 'Dimmer' At Measure 1",
+        "Attribute 'Dimmer' At SpeedMaster 15",
+        "Store Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE' /Universal",
+        "Label Preset 21.301 'LDBEAT M1 - P4 SM15 MEASURE'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 21.301",
+        "Store Sequence 301 Cue 1 'LDBEAT M1 - P4 recall'",
+        "Set Sequence 301 Property 'Name' 'LDBEAT M1 - P4 recall SM15 measure'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 301"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

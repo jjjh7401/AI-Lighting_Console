@@ -1,0 +1,98 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/306", "t": 0.064, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/306", "ok": false, "error": "path segment not found: '306' (in ShowData/DataPools/Default/Sequences/306)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/307", "t": 0.131, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/307", "ok": false, "error": "path segment not found: '307' (in ShowData/DataPools/Default/Sequences/307)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/308", "t": 0.197, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/308", "ok": false, "error": "path segment not found: '308' (in ShowData/DataPools/Default/Sequences/308)"}
+{"step": "store_circle", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attr
+{"step": "store_ballyhoo", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 20", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attr
+{"step": "store_wave", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribu
+{"step": "play_each", "t": 0.531, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Goto Cue 1 Sequence 307", "reasons": ["reference-invoking command",
+{"step": "release", "t": 0.731, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 307", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 307': state query failed for 'Sequence 307': path segment not found: '307' (in DataPool/Sequences/307)"]}, {"command": "Off Sequence 308", "reasons": ["reference-invoking command", "unverifiable r
+{
+  "item": "P9",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/306",
+    "ShowData/DataPools/Default/Sequences/307",
+    "ShowData/DataPools/Default/Sequences/308"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_circle": false,
+    "store_ballyhoo": false,
+    "store_wave": false,
+    "play_each": false,
+    "release": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Tilt' At Relative 8",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 60",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'",
+        "Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Pan' At Relative 20",
+        "Attribute 'Tilt' At Relative 10",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 120",
+        "Attribute 'Tilt' At Speed 120",
+        "Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'",
+        "Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Position' At Preset 2.1",
+        "Attribute 'Tilt' At Relative 12",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'",
+        "Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 306",
+        "Off Sequence 306",
+        "Goto Cue 1 Sequence 307",
+        "Off Sequence 307",
+        "Goto Cue 1 Sequence 308"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 306",
+        "Off Sequence 307",
+        "Off Sequence 308"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

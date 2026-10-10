@@ -1,0 +1,19 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11",
+      "At Preset 4.5",
+      "Store Preset 4.302 /Merge",
+      "ClearAll"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ClearAll"
+    ],
+    "approved": true
+  }
+]

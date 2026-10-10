@@ -1,0 +1,60 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.065, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found: '302' (in ShowData/DataPools/Default/Sequences/302)"}
+{"step": "store_cue", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attribute 'Tilt' At Speed
+{"step": "store_cue", "t": 0.132, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.265, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.332, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.398, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.465, "kind": "exec", "command": "Attribute 'Tilt' At Relative 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.532, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.598, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.665, "kind": "exec", "command": "Attribute 'Pan' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.732, "kind": "exec", "command": "Attribute 'Tilt' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.799, "kind": "exec", "command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.865, "kind": "exec", "command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.935, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play", "t": 1.0, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 302", "reasons": ["reference-invoking command"]}]}
+{"step": "play", "t": 1.066, "kind": "exec", "command": "Goto Cue 1 Sequence 302", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "P5",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/302"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_cue": true,
+    "play": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "At Preset 2.1",
+        "Attribute 'Pan' At Relative 12",
+        "Attribute 'Tilt' At Relative 8",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 60",
+        "Attribute 'Tilt' At Speed 60",
+        "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'",
+        "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 302"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/304|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 6a0bc575 CURRENTCUE ShowData/DataPools/Default/Sequences/304"
+<<< {"id": "6a0bc575", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/304", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 304.1"}], "truncated": false, "v": 1}
+
+>>> props:ShowData/DataPools/Default/Sequences/305|CURRENTCUE
+    wire: Plugin "CopilotResponder" "props 2fb9b0f9 CURRENTCUE ShowData/DataPools/Default/Sequences/305"
+<<< {"id": "2fb9b0f9", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/305", "reads": [{"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 305.1"}], "truncated": false, "v": 1}
