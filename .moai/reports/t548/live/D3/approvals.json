@@ -1,0 +1,30 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1",
+      "Group 12 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 56",
+      "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+      "ClearAll",
+      "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 333"
+    ],
+    "approved": true
+  }
+]

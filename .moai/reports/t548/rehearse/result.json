@@ -1,0 +1,442 @@
+{
+  "item": "T548",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/331",
+    "ShowData/DataPools/Default/Sequences/332",
+    "ShowData/DataPools/Default/Sequences/333",
+    "ShowData/DataPools/Default/Sequences/334"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "v0a_dimmer_only": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; At Preset 2.1"
+    ],
+    "v0a_clear": [
+      "ClearAll"
+    ],
+    "v0b_dimmer_and_dimmer2": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1"
+    ],
+    "v0b_clear": [
+      "ClearAll"
+    ],
+    "store_D1": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1",
+      "Group 12 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 14",
+      "Store Sequence 331 Cue 1 'T548 - D1 tilt wave 2 bars'",
+      "ClearAll",
+      "Set Sequence 331 Property 'Name' 'T548 - D1 tilt wave 2 bars'"
+    ],
+    "play_D1": [
+      "Goto Cue 1 Sequence 331"
+    ],
+    "off_D1": [
+      "Off Sequence 331"
+    ],
+    "store_D2": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1",
+      "Group 12 ; Attribute 'Pan' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Phase 0 Thru 360",
+      "Attribute 'Pan' At Speed 56",
+      "Store Sequence 332 Cue 1 'T548 - D2 pan wave 2 beats'",
+      "ClearAll",
+      "Set Sequence 332 Property 'Name' 'T548 - D2 pan wave 2 beats'"
+    ],
+    "play_D2": [
+      "Goto Cue 1 Sequence 332"
+    ],
+    "off_D2": [
+      "Off Sequence 332"
+    ],
+    "store_D3": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1",
+      "Group 12 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Tilt' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Tilt' At Phase 0 Thru 360",
+      "Attribute 'Tilt' At Speed 56",
+      "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+      "ClearAll",
+      "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'"
+    ],
+    "play_D3": [
+      "Goto Cue 1 Sequence 333"
+    ],
+    "off_D3": [
+      "Off Sequence 333"
+    ],
+    "store_D4": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 12 ; Attribute 'Dimmer' At 70",
+      "Group 12 ; Attribute 'Dimmer2' At 70",
+      "Group 12 ; At Preset 2.1",
+      "Group 12 ; Attribute 'Pan' At Relative -30",
+      "Group 12 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Attribute 'Tilt' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Tilt' At Phase 90",
+      "Attribute 'Pan' At Speed 56",
+      "Attribute 'Tilt' At Speed 56",
+      "Store Sequence 334 Cue 1 'T548 - D4 pan tilt circle 2 beats'",
+      "ClearAll",
+      "Set Sequence 334 Property 'Name' 'T548 - D4 pan tilt circle 2 beats'"
+    ],
+    "play_D4": [
+      "Goto Cue 1 Sequence 334"
+    ],
+    "off_D4": [
+      "Off Sequence 334"
+    ]
+  },
+  "notes": [
+    "선택 Group 12 · 기준 위치 At Preset 2.1 · BPM 112.002(박 시각 회귀) — 전부 데이터에서 읽음",
+    "v0 는 프로그래머만(Store 0), Dimmer2 줄은 t516 채널 표의 이름 — 미측정"
+  ],
+  "bundles": {
+    "v0a_dimmer_only": true,
+    "v0a_clear": true,
+    "v0b_dimmer_and_dimmer2": true,
+    "v0b_clear": true,
+    "store_D1": true,
+    "play_D1": true,
+    "off_D1": true,
+    "store_D2": true,
+    "play_D2": true,
+    "off_D2": true,
+    "store_D3": true,
+    "play_D3": true,
+    "off_D3": true,
+    "store_D4": true,
+    "play_D4": true,
+    "off_D4": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; At Preset 2.1",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; Attribute 'Dimmer2' At 70",
+    "Group 12 ; At Preset 2.1",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; Attribute 'Dimmer2' At 70",
+    "Group 12 ; At Preset 2.1",
+    "Group 12 ; Attribute 'Tilt' At Relative -30",
+    "Step 2",
+    "Attribute 'Tilt' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Tilt' At Phase 0 Thru 360",
+    "Attribute 'Tilt' At Speed 14",
+    "Store Sequence 331 Cue 1 'T548 - D1 tilt wave 2 bars'",
+    "ClearAll",
+    "Set Sequence 331 Property 'Name' 'T548 - D1 tilt wave 2 bars'",
+    "Goto Cue 1 Sequence 331",
+    "Off Sequence 331",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; Attribute 'Dimmer2' At 70",
+    "Group 12 ; At Preset 2.1",
+    "Group 12 ; Attribute 'Pan' At Relative -30",
+    "Step 2",
+    "Attribute 'Pan' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Pan' At Phase 0 Thru 360",
+    "Attribute 'Pan' At Speed 56",
+    "Store Sequence 332 Cue 1 'T548 - D2 pan wave 2 beats'",
+    "ClearAll",
+    "Set Sequence 332 Property 'Name' 'T548 - D2 pan wave 2 beats'",
+    "Goto Cue 1 Sequence 332",
+    "Off Sequence 332",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; Attribute 'Dimmer2' At 70",
+    "Group 12 ; At Preset 2.1",
+    "Group 12 ; Attribute 'Tilt' At Relative -30",
+    "Step 2",
+    "Attribute 'Tilt' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Tilt' At Phase 0 Thru 360",
+    "Attribute 'Tilt' At Speed 56",
+    "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+    "ClearAll",
+    "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'",
+    "Goto Cue 1 Sequence 333",
+    "Off Sequence 333",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 12 ; Attribute 'Dimmer' At 70",
+    "Group 12 ; Attribute 'Dimmer2' At 70",
+    "Group 12 ; At Preset 2.1",
+    "Group 12 ; Attribute 'Pan' At Relative -30",
+    "Group 12 ; Attribute 'Tilt' At Relative -30",
+    "Step 2",
+    "Attribute 'Pan' At Relative 30",
+    "Attribute 'Tilt' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Pan' At Phase 0",
+    "Attribute 'Tilt' At Phase 90",
+    "Attribute 'Pan' At Speed 56",
+    "Attribute 'Tilt' At Speed 56",
+    "Store Sequence 334 Cue 1 'T548 - D4 pan tilt circle 2 beats'",
+    "ClearAll",
+    "Set Sequence 334 Property 'Name' 'T548 - D4 pan tilt circle 2 beats'",
+    "Goto Cue 1 Sequence 334",
+    "Off Sequence 334"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; At Preset 2.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 14",
+        "Store Sequence 331 Cue 1 'T548 - D1 tilt wave 2 bars'",
+        "ClearAll",
+        "Set Sequence 331 Property 'Name' 'T548 - D1 tilt wave 2 bars'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 331"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 331"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 332 Cue 1 'T548 - D2 pan wave 2 beats'",
+        "ClearAll",
+        "Set Sequence 332 Property 'Name' 'T548 - D2 pan wave 2 beats'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 332"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 332"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 56",
+        "Store Sequence 333 Cue 1 'T548 - D3 tilt wave 2 beats'",
+        "ClearAll",
+        "Set Sequence 333 Property 'Name' 'T548 - D3 tilt wave 2 beats'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 333"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 333"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Pan' At Relative -30",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0",
+        "Attribute 'Tilt' At Phase 90",
+        "Attribute 'Pan' At Speed 56",
+        "Attribute 'Tilt' At Speed 56",
+        "Store Sequence 334 Cue 1 'T548 - D4 pan tilt circle 2 beats'",
+        "ClearAll",
+        "Set Sequence 334 Property 'Name' 'T548 - D4 pan tilt circle 2 beats'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 334"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 334"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

@@ -1,0 +1,6 @@
+{"ts": "2026-10-10T15:46:36.521318+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 12 ; Attribute 'Dimmer' At 70", "Group 12 ; Attribute 'Dimmer2' At 70", "Group 12 ; At Preset 2.1"], "held": ["ChangeDestination Root", "ClearAll", "Group 12 ; Attribute 'Dimmer' At 70", "Group 12 ; Attribute 'Dimmer2' At 70", "Group 12 ; At Preset 2.1"], "kind": "t531_m1_t548"}
+{"ts": "2026-10-10T15:46:36.586995+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T15:46:36.653351+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T15:46:36.720185+00:00", "event": "executed", "command": "Group 12 ; Attribute 'Dimmer' At 70", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T15:46:36.786681+00:00", "event": "executed", "command": "Group 12 ; Attribute 'Dimmer2' At 70", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T15:46:36.853091+00:00", "event": "executed", "command": "Group 12 ; At Preset 2.1", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

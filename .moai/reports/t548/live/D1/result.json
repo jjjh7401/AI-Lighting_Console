@@ -1,0 +1,50 @@
+{
+  "item": "T548",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/331",
+    "ShowData/DataPools/Default/Sequences/332",
+    "ShowData/DataPools/Default/Sequences/333",
+    "ShowData/DataPools/Default/Sequences/334"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_D1": true,
+    "play_D1": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 12 ; Attribute 'Dimmer' At 70",
+        "Group 12 ; Attribute 'Dimmer2' At 70",
+        "Group 12 ; At Preset 2.1",
+        "Group 12 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 14",
+        "Store Sequence 331 Cue 1 'T548 - D1 tilt wave 2 bars'",
+        "ClearAll",
+        "Set Sequence 331 Property 'Name' 'T548 - D1 tilt wave 2 bars'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 331"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

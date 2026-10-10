@@ -1,0 +1,25 @@
+{"step": "final_clear", "t": 0.0, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "final_clear", "t": 0.067, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T548D2p",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/335"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "final_clear": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

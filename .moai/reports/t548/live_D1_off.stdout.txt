@@ -1,0 +1,28 @@
+{"step": "off_D1", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 331", "reasons": ["reference-invoking command"]}]}
+{"step": "off_D1", "t": 0.132, "kind": "exec", "command": "Off Sequence 331", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T548",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/331",
+    "ShowData/DataPools/Default/Sequences/332",
+    "ShowData/DataPools/Default/Sequences/333",
+    "ShowData/DataPools/Default/Sequences/334"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_D1": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 331"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

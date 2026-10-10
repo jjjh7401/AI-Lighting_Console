@@ -1,0 +1,23 @@
+{
+  "item": "T548D2p",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/335"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_D2p": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 335"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

@@ -1,0 +1,7 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/335", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/335", "ok": false, "error": "path segment not found: '335' (in ShowData/DataPools/Default/Sequences/335)"}
+{"step": "t0_tilted_lit", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 12 ; Attribute 'Dimmer2' At 70", "reasons": []}, {"command": "Group 12 ; Attribute 'Tilt' At 45", "reasons": []}]}
+{"step": "t0_tilted_lit", "t": 0.132, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.265, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.332, "kind": "exec", "command": "Group 12 ; Attribute 'Dimmer2' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.399, "kind": "exec", "command": "Group 12 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
