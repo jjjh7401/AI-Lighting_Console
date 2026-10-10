@@ -1,0 +1,13 @@
+{"ts": "2026-10-10T11:43:13.674251+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-10T11:43:13.740854+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/311", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:13.807099+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/312", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:13.874364+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/313", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:13.940819+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/314", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.007571+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/315", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.074196+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/316", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.140812+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/317", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.207721+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/318", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.274236+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/319", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.340367+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/320", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:14.407490+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/321", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-10T11:43:15.140463+00:00", "event": "executed", "command": "DataPool/Sequences/311", "kind": "state_query", "ok": true, "detail": ""}
