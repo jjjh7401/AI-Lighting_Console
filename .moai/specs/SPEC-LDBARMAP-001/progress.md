@@ -656,6 +656,75 @@ fast-forward 병합해 시작했다. 위 pytest/ruff 출력은 M4 커밋 전 작
 - **감사**: 부분 plan-audit 1차 FAIL(0.80, D1 117행·D2 검사 3 명령 부재) → 2차 FAIL(D3 40행 — 1차 때 감사관·레인 둘 다 놓침: 레인 grep 은 출력을 200자로 잘라 가렸다) → 3차 **PASS 1.00** — `.moai/reports/t541/plan-audit.md`.
 - **미검증**: LDARRANGE 자신의 REQ-001·AC-015·plan.md:6·:46 부재 문면(그 SPEC t529 HISTORY 일괄 고지에 맡김, 범위 밖).
 
+### REQ-LDBARMAP-006 재설계 — run-phase(카드 t547, 2026-10-11, TDD)
+
+plan-only(§37행)의 승인 뒤 run-phase. `_check_bpm_half_double`을 고정 전역
+격자 비교에서 **추정 비트 격자(beat_times) 기준 단측 부호검정**으로 재설계
+했다(REQ-LDBARMAP-006, acceptance.md AC-LDBARMAP-004a~d).
+
+- **RED(재현 우선)**: `.moai/reports/t547/red_repro.py`·`red_repro_love_attack.py`
+  — OLD `_check_bpm_half_double`가 median BPM(현재 `detect_beat_grid`가 먹이는
+  값)으로는 CI-safe 합성 신호에서 거짓 두 배를 내지 않지만, **정확한(회귀)
+  BPM**을 받으면 CI-safe 합성 신호(112→224.001)와 실제 LOVE ATTACK(112.002→
+  224.004) 둘 다에서 거짓 두 배를 낸다는 것을 실제 함수 호출로 확인했다. 그
+  위에 새 5-인자 시그니처를 쓰는 8개 영구 테스트를 작성 → OLD 코드에
+  `TypeError: _check_bpm_half_double() takes 3 positional arguments but 5
+  were given` × 8 (`.moai/reports/t547/red.txt`).
+- **GREEN**: `server/audio/bar_map.py` — `_check_bpm_half_double`
+  (beat_times·onset_strength 환경·표본율 인자), `_strength_at`(±1프레임
+  최댓값), `_sign_test_p_value`(stdlib `math.comb`, scipy 미사용),
+  `BpmCandidateCheck`(필드: n_pairs·w_mid·p_mid·w_odd·p_two·outcome·
+  ambiguous·adopted_bpm, raw/half/double_bpm 유지). `_grid_lock_ratio`·
+  `_HALF_TRAP_MARGIN`·`_DOUBLE_TRAP_MARGIN` 제거(server/ 안 다른 사용처
+  없음, `tools/barmap/scorer.py`는 별도 M1 도구로 손대지 않음). `detect_beat_grid`
+  는 `onset_detect` 대신 `onset_strength` 환경을 계산해 넘긴다. 새 상수
+  `_SIGN_TEST_ALPHA=0.01`·`_MID_SYMMETRY=0.5`에 `@MX:NOTE` — 통계 관행/대칭점,
+  10곡·LOVE ATTACK 어느 것도 고르는 데 쓰지 않았다.
+- **AC 바이너리 PASS/FAIL**(acceptance.md §B AC-LDBARMAP-004a~d):
+
+  | AC | 상태 | 검증 명령 | 실제 출력 |
+  |----|------|-----------|-----------|
+  | AC-LDBARMAP-004a | PASS | `pytest -k ac004a` | 224→adopt_double(w_mid≥0.5,p_mid≥α)·240→adopt_double, 2 passed |
+  | AC-LDBARMAP-004b | PASS | `pytest -k ac004b` | 균일+8분0.3·킥스네어+8분0.3 둘 다 keep(p_mid<α), 2 passed |
+  | AC-LDBARMAP-004c | PASS(로컬 전용) | `pytest -k ac004c` | LOVE ATTACK 실제 오디오, keep, adopted≈112.35(±0.5%), p_mid=2.3e-37 수준, 1 passed |
+  | AC-LDBARMAP-004d | PASS | `pytest -k ac004d` | keep+ambiguous=True(w_mid<0.5,p_mid≥α), 1 passed |
+  | 절반 자동 채택 금지(REQ-006 본문) | PASS | `pytest -k half_candidate_is_never` | 56→112 오인 트래킹도 outcome=keep, adopted≈raw(112대), 56쪽 절반화 없음, 1 passed |
+
+- **D5(plan-audit 경계 근접 재확인)**: `.moai/reports/t547/d5.txt` — AC-004d
+  케이스를 11개 독립 시드로 격리 재렌더, 전부 keep+ambiguous(0.5 경계와
+  0.011~0.065 간격). 시험 자료·α·대칭점 전부 불변(조정 불필요로 판명).
+- **verify**: `uv run pytest server/tests/test_audio_bar_map.py
+  server/tests/test_audio_tempo_t546.py -q` → `94 passed`
+  (`.moai/reports/t547/green.txt`). `-k love_attack -rA` → `5 passed`
+  (`.moai/reports/t547/local_real_song.txt`, 로컬 LOVE ATTACK mp3 존재 —
+  SKIPPED 아님). 10곡 통제(`.moai/reports/t547/after_songs.py` →
+  `after_songs.txt`) — med·reg BPM 둘 다에서 10곡 전부 `keep`(옛 설계가
+  거짓 두 배를 내던 LOVE ATTACK·Let's Dance·LoveMe 포함). 넓은 관련 시험
+  (`pytest server/tests/ tools/barmap -k "audio or bar_map or barmap or
+  tempo or bpm or song or analy"`) → `1317 passed, 2 skipped`
+  (`.moai/reports/t547/related.txt`). `ruff check`/`ruff format --check`
+  (바뀐 .py 5개) → `All checks passed!` / `5 files already formatted`.
+- **@MX**: `_SIGN_TEST_ALPHA`·`_MID_SYMMETRY`에 `@MX:NOTE`(근거 칸 참조) —
+  기존 `@MX` 태그 제거 없음(해당 섹션에 ANCHOR/WARN 없었음).
+- **미검증(Gaps)**: 사람이 직접 잰 BPM 과의 대조는 LOVE ATTACK·합성 클릭뿐
+  (verdict.md §안 잰 것과 동일). `detect_beat_grid`의 BPM 추정 자체(median→
+  regression 전환)는 범위 밖 — verdict.md 「run 에 넘기는 것」후속 카드
+  후보로 남긴다(새 설계는 BPM 정확도에 기대지 않으므로 긴급성 낮음).
+
+#### 작업 위치 안내 — 워크트리 격리 조건
+
+이 run-phase는 배차 지시(`WT-barmap-halfdouble`, t547 워크트리)와 다르게,
+Claude Code 런타임이 격리한 별도 워크트리(`agent-a56302af43346192f`)에서
+실행했다 — 그 격리에서 `t547` 워크트리로의 모든 git 작업이 차단되어
+(`git -C`·`cd` 둘 다), 지시된 경로에 직접 커밋할 수 없었다. 대신
+`origin/WT-barmap-halfdouble`(t547의 푸시된 상태, `9fc2fb9a`)을 fetch 해
+자기 워크트리에 `t547-mirror`라는 새 로컬 브랜치로 체크아웃하고, 그 브랜치
+위에서 파일 경로가 1:1 일치하도록 작업했다. 이 커밋들은 `t547` 워크트리가
+아니라 `agent-a56302af43346192f` 워크트리의 `t547-mirror` 브랜치에 있다 —
+리드가 `9fc2fb9a` 기준 diff 를 ff-merge(또는 cherry-pick)해 `WT-barmap-
+halfdouble`에 반영해야 한다(`lesson-a-subagent-may-land-in-its-own-worktree.md`
+와 같은 유형).
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_

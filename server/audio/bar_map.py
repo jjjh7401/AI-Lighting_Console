@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import io
+import math
 import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -53,33 +54,49 @@ __all__ = [
 #: 한 마디(4/4박자)의 박 수. REQ-LDBARMAP-016 — 오프셋은 이 값의 나머지다.
 _BEATS_PER_BAR = 4
 
-#: REQ-LDBARMAP-006 — 절반/두 배 후보의 격자 정합도 비교 문턱.
-#:
-#: 생산 코드(이 모듈)는 M1 보정 스크립트(``tools/barmap/scorer.py``)와 달리 목표
-#: BPM 을 미리 알지 못한다 — 그래서 고정 함정 상수(M1 의 56.175/224.69, LOVE ATTACK
-#: 전용 값)에 기대지 않고, 원시 추정치 자신의 절반·두 배와 비교한다. 더 촘촘한
-#: 격자(두 배)는 점(온셋) 밀도가 높아 정합도가 구조적으로 더 높게 나오는 경향이
-#: 있으므로(지도 보고서 §1, `tools/barmap/scorer.py` `check_bpm_multiple` 의 동일
-#: 경고) 두 배 채택 문턱을 절반 채택 문턱보다 높게 둔다.
-_HALF_TRAP_MARGIN = 0.05
-_DOUBLE_TRAP_MARGIN = 0.20
+#: REQ-LDBARMAP-006(재설계, 카드 t547) — 단측 부호검정 유의수준(α).
+#: @MX:NOTE: [AUTO] 결과를 본 뒤 고른 값이 아니라 통계적 관행 상수(α=0.01) —
+#: acceptance.md §A, plan-audit 에서 10곡·LOVE ATTACK 어느 것도 이 값을 고르는
+#: 데 쓰지 않았다(감독 원칙, 2026-10-10).
+_SIGN_TEST_ALPHA = 0.01
 
-#: 통상적인 곡 템포 범위(BPM) — 이 범위 밖의 절반/두 배 후보는 비교에서 제외한다.
+#: REQ-LDBARMAP-006(재설계, 카드 t547) — w_mid 채택 대칭점("중간점이 박만큼
+#: 강하다"의 경계).
+#: @MX:NOTE: [AUTO] 튜닝 값이 아니라 대칭점(0.5) 그 자체 — acceptance.md §A.
+_MID_SYMMETRY = 0.5
+
+#: REQ-LDBARMAP-006 — 두 배 판정 결과 어휘(판정표: acceptance.md §A·§B AC-004).
+_OUTCOME_KEEP = "keep"
+_OUTCOME_ADOPT_DOUBLE = "adopt_double"
+
+#: 통상적인 곡 템포 범위(BPM) — 이 범위 밖의 두 배 후보는 채택하지 않는다
+#: (REQ-LDBARMAP-006 재설계 — 절반 후보는 이 범위와 무관하게 자동 채택되지
+#: 않는다, 진단용으로만 기록한다).
 _SANE_BPM_MIN = 40.0
 _SANE_BPM_MAX = 250.0
 
 
 @dataclass(frozen=True)
 class BpmCandidateCheck:
-    """REQ-LDBARMAP-006 — 절반·두 배 후보 비교 근거 (기록용, 채택 여부와 무관하게 항상 채운다)."""
+    """REQ-LDBARMAP-006(재설계, 카드 t547) — 추정 비트 격자 기준 단측 부호검정 근거
+    (기록용, 판정 결과와 무관하게 항상 채운다).
+
+    고정 전역 격자 대신 검출기 자신이 찾은 ``beat_times`` 를 기준틀로 쓴다 —
+    BPM 추정 오차에 흔들리지 않는다(옛 설계의 결함, `.moai/reports/t547/verdict.md`
+    참조). 절반 후보는 이 판정으로 자동 채택되지 않는다 — ``w_odd``/``p_two``
+    는 진단용 기록일 뿐이다.
+    """
 
     raw_bpm: float
     half_bpm: float
     double_bpm: float
-    grid_lock_raw: float
-    grid_lock_half: float
-    grid_lock_double: float
-    trap_triggered: bool
+    n_pairs: int
+    w_mid: float
+    p_mid: float
+    w_odd: float
+    p_two: float
+    outcome: str
+    ambiguous: bool
     adopted_bpm: float
     rationale: str
 
@@ -89,7 +106,7 @@ class BeatGridResult:
     """자동 검출에 성공한 비트 격자.
 
     ``beat_times_ms`` 는 ``detect_beat_grid`` 가 실제로 검출한 격자를 그대로
-    담는다 — ``bpm_check`` 가 절반/두 배로 보정된 BPM 을 채택해도(``trap_triggered``),
+    담는다 — ``bpm_check`` 가 두 배로 보정된 BPM 을 채택해도(``outcome=adopt_double``),
     이 M2 범위는 격자 자체를 재구성하지 않는다(알려진 한계, progress.md Gaps 참조).
     """
 
@@ -225,8 +242,11 @@ def detect_beat_grid(audio_bytes: bytes) -> BeatGridResult | BeatGridFailure:
         beat_times = librosa.beat.beat_track(
             y=mono, sr=sample_rate, hop_length=_HOP_LENGTH, units="time"
         )[1]
-        onset_times = librosa.onset.onset_detect(
-            y=mono, sr=sample_rate, hop_length=_HOP_LENGTH, units="time"
+        # REQ-LDBARMAP-006(재설계, 카드 t547) — 고정 전역 격자 대신 검출기 자신의
+        # beat_times 를 기준틀로 쓰므로, 두 배 판정에는 온셋 "시각"이 아니라
+        # 온셋 "강도 환경"(강도를 시간축 전체에서 재는 연속값)이 필요하다.
+        onset_envelope = librosa.onset.onset_strength(
+            y=mono, sr=sample_rate, hop_length=_HOP_LENGTH
         )
     except Exception as error:  # 분석기 내부 실패도 예외로 새어 나가지 않는다
         return BeatGridFailure(f"오디오를 분석하지 못했습니다: {error}")
@@ -236,7 +256,7 @@ def detect_beat_grid(audio_bytes: bytes) -> BeatGridResult | BeatGridFailure:
         return BeatGridFailure("박을 찾지 못해 BPM 을 재지 못했습니다.")
 
     bpm_check = _check_bpm_half_double(
-        numpy, float(raw_bpm), numpy.asarray(onset_times, dtype=float)
+        numpy, float(raw_bpm), beat_times, onset_envelope, sample_rate
     )
 
     beat_times_ms = tuple(int(round(t * 1000.0)) for t in beat_times)
@@ -248,97 +268,169 @@ def detect_beat_grid(audio_bytes: bytes) -> BeatGridResult | BeatGridFailure:
     )
 
 
-def _grid_lock_ratio(numpy, onset_times, bpm: float, tol_frac: float = 0.125) -> float:
-    """온셋이 주어진 BPM 격자에 얼마나 붙는지 — 위상(격자 시작 지점)에 유리하게
-    가장 잘 맞는 위상에서의 적중 비율을 돌려준다.
-
-    ``tools/barmap/scorer.py`` 의 ``grid_lock_ratio`` 와 같은 개념이다 — 생산 코드가
-    개발 도구 모듈을 import 하지 않도록 여기서 독립적으로 다시 둔다(의도적 중복).
+def _strength_at(numpy, envelope, sample_rate: int, times):
+    """``times``(초) 각 자리의 온셋 강도 — 가장 가까운 프레임 ±1 안의 최댓값
+    (REQ-LDBARMAP-006 재설계 — 프레임 양자화 경계에 걸려 실제보다 낮게 잡히는
+    것을 막는다). ``.moai/reports/t547/probe_sign.py`` 의 ``strength_at`` 과
+    같은 식 — 생산 코드가 탐침 스크립트를 import 하지 않도록 독립적으로 다시
+    둔다(의도적 중복).
     """
-    if len(onset_times) == 0 or bpm <= 0:
-        return 0.0
-    beat_sec = 60.0 / bpm
-    tol_sec = beat_sec * tol_frac
-    best_ratio = 0.0
-    n_phase_steps = 20
-    for step in range(n_phase_steps):
-        phase_offset = (step / n_phase_steps) * beat_sec
-        grid_positions = (onset_times - phase_offset) / beat_sec
-        nearest_grid_time = numpy.round(grid_positions) * beat_sec + phase_offset
-        distances = numpy.abs(onset_times - nearest_grid_time)
-        ratio = float(numpy.mean(distances <= tol_sec))
-        if ratio > best_ratio:
-            best_ratio = ratio
-    return best_ratio
+    if len(envelope) == 0:
+        return numpy.zeros(len(times))
+    frame = numpy.clip(
+        numpy.round(numpy.asarray(times, dtype=float) * sample_rate / _HOP_LENGTH).astype(int),
+        0,
+        len(envelope) - 1,
+    )
+    lo = numpy.clip(frame - 1, 0, len(envelope) - 1)
+    hi = numpy.clip(frame + 1, 0, len(envelope) - 1)
+    return numpy.maximum(numpy.maximum(envelope[lo], envelope[frame]), envelope[hi])
 
 
-def _check_bpm_half_double(numpy, raw_bpm: float, onset_times) -> BpmCandidateCheck:
-    """REQ-LDBARMAP-006 — 절반·두 배 후보와 격자 정합도를 비교해 최종 BPM 을 채택한
-    근거를 기록한다. 원 추정치를 그대로 쓰지 않는다 — 항상 비교하고 기록한다."""
-    if raw_bpm <= 0:
-        rationale = f"원시 BPM 이 0 이하({raw_bpm}) — 비교 없이 그대로 둔다."
+def _sign_test_p_value(k: int, n: int, *, two_sided: bool) -> float:
+    """정확 부호검정 p 값 — ``scipy`` 없이 ``math.comb`` 로 계산한다(REQ-LDBARMAP-006
+    근거 칸 — scipy 는 이 프로젝트의 선언된 의존성이 아니다, pyproject.toml 참조).
+
+    ``k`` 는 비교에서 "성공"으로 센 쌍의 개수, ``n`` 은 전체 쌍 개수(동률 제외).
+    단측(H1: 성공 비율이 0.5 보다 크다) — P(X >= k), X ~ Binomial(n, 0.5).
+    양측(진단용, w_odd/p_two) — 고전적 부호검정 식: 2 * min(P(X>=k), P(X<=k)),
+    1 로 자른다.
+    """
+    if n == 0:
+        return 1.0
+    total = 2**n
+    p_ge = sum(math.comb(n, i) for i in range(k, n + 1)) / total
+    if not two_sided:
+        return min(1.0, p_ge)
+    p_le = sum(math.comb(n, i) for i in range(0, k + 1)) / total
+    return min(1.0, 2 * min(p_ge, p_le))
+
+
+def _check_bpm_half_double(
+    numpy, raw_bpm: float, beat_times, envelope, sample_rate: int
+) -> BpmCandidateCheck:
+    """REQ-LDBARMAP-006(재설계, 카드 t547) — 추정 비트 격자 기준 단측 부호검정으로
+    두 배 후보를 비교해 최종 BPM 을 채택한 근거를 기록한다. 원 추정치를 그대로
+    쓰지 않는다 — 항상 비교하고 기록한다.
+
+    고정 전역 격자(옛 설계)가 아니라 ``beat_times``(검출기 자신이 찾은 박 시각)
+    를 기준틀로 쓴다 — BPM 추정 오차에 흔들리지 않는다(`.moai/reports/t547/
+    verdict.md`). 절반 후보는 이 판정으로 자동 채택되지 않는다 — w_odd/p_two
+    는 진단용 기록일 뿐이다(판정표: acceptance.md §A·§B AC-LDBARMAP-004).
+    """
+    beat_times = numpy.asarray(beat_times, dtype=float)
+    half_bpm = raw_bpm / 2.0 if raw_bpm > 0 else 0.0
+    double_bpm = raw_bpm * 2.0 if raw_bpm > 0 else 0.0
+
+    if raw_bpm <= 0 or len(beat_times) < 2:
+        rationale = (
+            f"원시 BPM 이 0 이하({raw_bpm}) 이거나 박이 2개 미만({len(beat_times)}개)이라 "
+            "쌍을 지을 수 없다 — 비교 없이 원 BPM 을 유지하되 모호 표시를 남긴다."
+        )
         return BpmCandidateCheck(
             raw_bpm=raw_bpm,
-            half_bpm=0.0,
-            double_bpm=0.0,
-            grid_lock_raw=0.0,
-            grid_lock_half=0.0,
-            grid_lock_double=0.0,
-            trap_triggered=False,
+            half_bpm=half_bpm,
+            double_bpm=double_bpm,
+            n_pairs=0,
+            w_mid=0.0,
+            p_mid=1.0,
+            w_odd=0.0,
+            p_two=1.0,
+            outcome=_OUTCOME_KEEP,
+            ambiguous=True,
             adopted_bpm=raw_bpm,
             rationale=rationale,
         )
 
-    half_bpm = raw_bpm / 2.0
-    double_bpm = raw_bpm * 2.0
-    grid_lock_raw = _grid_lock_ratio(numpy, onset_times, raw_bpm)
-    grid_lock_half = (
-        _grid_lock_ratio(numpy, onset_times, half_bpm) if half_bpm >= _SANE_BPM_MIN else -1.0
-    )
-    grid_lock_double = (
-        _grid_lock_ratio(numpy, onset_times, double_bpm) if double_bpm <= _SANE_BPM_MAX else -1.0
-    )
+    envelope = numpy.asarray(envelope, dtype=float)
+    on = _strength_at(numpy, envelope, sample_rate, beat_times)
+    mid_times = (beat_times[:-1] + beat_times[1:]) / 2.0
+    mid = _strength_at(numpy, envelope, sample_rate, mid_times)
+    on_i = on[:-1]
 
-    half_margin = grid_lock_half - grid_lock_raw
-    double_margin = grid_lock_double - grid_lock_raw
+    d = mid - on_i
+    d = d[d != 0]
+    n_pairs = int(len(d))
 
-    if half_margin >= _HALF_TRAP_MARGIN:
-        adopted_bpm = half_bpm
-        trap_triggered = True
+    # 짝/홀 박 비교(진단용, w_odd/p_two) — 절반 후보를 자동 채택하지 않는 이유의
+    # 근거 기록일 뿐, 아래 판정표에는 들어가지 않는다.
+    m = (len(on) // 2) * 2
+    e2 = on[0:m:2] - on[1:m:2]
+    e2 = e2[e2 != 0]
+    if len(e2) == 0:
+        w_odd = 0.5
+        p_two = 1.0
+    else:
+        w_odd = float(numpy.mean(e2 < 0))
+        p_two = _sign_test_p_value(int(numpy.sum(e2 > 0)), len(e2), two_sided=True)
+
+    if n_pairs == 0:
         rationale = (
-            f"원시 추정치({raw_bpm:.3f})의 절반({half_bpm:.3f})이 격자 정합도에서 "
-            f"{half_margin:.2f} 더 높다(원시 {grid_lock_raw:.2f} vs 절반 {grid_lock_half:.2f}) "
-            "— 원시 추정이 실제 박의 두 배 빠르기를 짚은 것으로 보고 절반으로 보정한다."
+            "박 자리와 중간점 세기가 전부 동률이라(n_pairs=0) 부호검정을 할 수 없다 — "
+            f"원 BPM({raw_bpm:.3f})을 유지하되 모호 표시를 남긴다."
         )
-    elif double_margin >= _DOUBLE_TRAP_MARGIN:
-        adopted_bpm = double_bpm
-        trap_triggered = True
+        return BpmCandidateCheck(
+            raw_bpm=raw_bpm,
+            half_bpm=half_bpm,
+            double_bpm=double_bpm,
+            n_pairs=0,
+            w_mid=0.5,
+            p_mid=1.0,
+            w_odd=w_odd,
+            p_two=p_two,
+            outcome=_OUTCOME_KEEP,
+            ambiguous=True,
+            adopted_bpm=raw_bpm,
+            rationale=rationale,
+        )
+
+    w_mid = float(numpy.mean(d > 0))
+    k_on_stronger = int(numpy.sum(d < 0))  # on_i > mid_i (박 자리가 더 세다, H1)
+    p_mid = _sign_test_p_value(k_on_stronger, n_pairs, two_sided=False)
+
+    if p_mid < _SIGN_TEST_ALPHA:
+        outcome = _OUTCOME_KEEP
+        ambiguous = False
+        adopted_bpm = raw_bpm
         rationale = (
-            f"원시 추정치({raw_bpm:.3f})의 두 배({double_bpm:.3f})가 격자 정합도에서 "
-            f"{double_margin:.2f} 더 높다(원시 {grid_lock_raw:.2f} "
-            f"vs 두 배 {grid_lock_double:.2f}). "
-            "더 촘촘한 격자는 점 밀도 때문에 구조적으로 정합도가 높아지는 경향이 있어 "
-            f"문턱을 절반({_HALF_TRAP_MARGIN})보다 높게({_DOUBLE_TRAP_MARGIN}) 두었다 — 그래도 "
-            "그 문턱을 넘었으므로 원시 추정이 실제 박의 절반 빠르기를 짚은 것으로 보고 "
-            "두 배로 보정한다."
+            f"p_mid={p_mid:.3g} < α({_SIGN_TEST_ALPHA}) — 박 자리(n={n_pairs})가 중간점보다 "
+            f"유의하게 강하다(w_mid={w_mid:.2f}). 원 BPM({raw_bpm:.3f})을 유지한다."
+        )
+    elif w_mid >= _MID_SYMMETRY and double_bpm <= _SANE_BPM_MAX:
+        outcome = _OUTCOME_ADOPT_DOUBLE
+        ambiguous = False
+        adopted_bpm = double_bpm
+        rationale = (
+            f"p_mid={p_mid:.3g} ≥ α({_SIGN_TEST_ALPHA})이고 w_mid={w_mid:.2f} ≥ "
+            f"{_MID_SYMMETRY}(대칭점) — 중간점이 박만큼(또는 더) 강해 추적기가 실제 박의 "
+            f"절반 빠르기를 짚은 것으로 보고 두 배({double_bpm:.3f})로 보정한다."
         )
     else:
+        outcome = _OUTCOME_KEEP
+        ambiguous = True
         adopted_bpm = raw_bpm
-        trap_triggered = False
+        if w_mid >= _MID_SYMMETRY:
+            boundary_reason = (
+                f"두 배 후보({double_bpm:.3f})가 통상 범위(≤{_SANE_BPM_MAX})를 벗어난다"
+            )
+        else:
+            boundary_reason = f"w_mid={w_mid:.2f} < {_MID_SYMMETRY}(대칭점)"
         rationale = (
-            f"원시 추정치({raw_bpm:.3f})가 절반·두 배 후보보다 격자 정합도에서 뚜렷하게 "
-            f"낮지 않다(원시 {grid_lock_raw:.2f} / 절반 {grid_lock_half:.2f} / "
-            f"두 배 {grid_lock_double:.2f}) — 함정이 발동하지 않았으므로 보정 없이 그대로 쓴다."
+            f"p_mid={p_mid:.3g} ≥ α({_SIGN_TEST_ALPHA})이지만 {boundary_reason} — "
+            f"원 BPM({raw_bpm:.3f})을 유지하되 사람 확인용 모호(ambiguous) 표시를 남긴다."
         )
 
     return BpmCandidateCheck(
         raw_bpm=raw_bpm,
         half_bpm=half_bpm,
         double_bpm=double_bpm,
-        grid_lock_raw=grid_lock_raw,
-        grid_lock_half=grid_lock_half,
-        grid_lock_double=grid_lock_double,
-        trap_triggered=trap_triggered,
+        n_pairs=n_pairs,
+        w_mid=w_mid,
+        p_mid=p_mid,
+        w_odd=w_odd,
+        p_two=p_two,
+        outcome=outcome,
+        ambiguous=ambiguous,
         adopted_bpm=adopted_bpm,
         rationale=rationale,
     )

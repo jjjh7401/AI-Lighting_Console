@@ -1,0 +1,8 @@
+median_bpm (detect_beat_grid 현재 추정)=112.34714673913075
+regression_bpm (t546 회귀 BPM, analyze() 가 쓰는 값)=112.00191993244025
+
+[median bpm 로 호출] adopted_bpm=112.347 trap_triggered=False
+[regression bpm 으로 호출] adopted_bpm=224.004 trap_triggered=True
+원시 추정치(112.002)의 두 배(224.004)가 격자 정합도에서 0.21 더 높다(원시 0.61 vs 두 배 0.82). 더 촘촘한 격자는 점 밀도 때문에 구조적으로 정합도가 높아지는 경향이 있어 문턱을 절반(0.05)보다 높게(0.2) 두었다 — 그래도 그 문턱을 넘었으므로 원시 추정이 실제 박의 절반 빠르기를 짚은 것으로 보고 두 배로 보정한다.
+
+OLD CODE RESULT: DEFECT REPRODUCED (false double, 112→224)
