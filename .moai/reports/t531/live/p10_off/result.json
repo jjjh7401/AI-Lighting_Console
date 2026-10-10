@@ -1,0 +1,23 @@
+{
+  "item": "P10",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/309"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "release": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 309"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}
