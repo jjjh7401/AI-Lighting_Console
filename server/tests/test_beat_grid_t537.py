@@ -57,6 +57,8 @@ class TestStructuredCueFields:
     def test_every_other_cue_has_no_value_percent_and_no_source_ref(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
         known = {("BACK", 7), ("BACK", 18), ("BACK", 22), ("BLIND", 18)}
+        # 카드 t543 — FOH bar 7 「FOH 켬」은 §4 출처 행은 있지만 밝기 숫자가 없다.
+        foh_on = ("FOH", 7)
 
         checked = 0
         for track in grid["tracks"]:
@@ -65,8 +67,11 @@ class TestStructuredCueFields:
                 if (track["group_name"], cue["bar"]) in known:
                     continue
                 assert cue["brightness"]["value_percent"] is None
+                if (track["group_name"], cue["bar"]) == foh_on:
+                    assert cue["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
+                    continue
                 assert cue["source_ref"] is None
-        assert checked == 30  # 7+7+7+7+2+0
+        assert checked == 31  # FOH 1 + WASH-ALL 0 + 7+7+7+7+2+0
 
     def test_no_cue_anywhere_invents_a_preset_number(self) -> None:
         # REQ-LDBEAT-015(f) — §4에 프리셋 번호가 0개이므로 30개 큐 전부
@@ -228,7 +233,16 @@ class TestSceneCellAssignmentRule:
         # 그대로 옮긴 **이 테스트 전용** 데이터이고, `beat_grid.py`의
         # 함수 로직에는 올라가지 않는다(리그 전용 상수를 app 로직에 더하지
         # 않는다).
-        love_attack_confirmed_tracks = ["BACK", "SIDE-ALL", "MOVER-U", "MOVER-D", "BLIND"]
+        # 카드 t543 — FOH(3)·WASH-ALL(10) 이 콘솔 실측으로 확인된 트랙이 됐다.
+        love_attack_confirmed_tracks = [
+            "FOH",
+            "WASH-ALL",
+            "BACK",
+            "SIDE-ALL",
+            "MOVER-U",
+            "MOVER-D",
+            "BLIND",
+        ]
         section_4_scene_inputs: dict[int, dict[str, object]] = {
             # bar 0 — BACK을 직접 부르고 그룹 번호도 확인돼 있지만, 그
             # 마디에 이미 펄스 큐("앞박 1회")가 있어 조건 3이 거짓.
@@ -237,8 +251,10 @@ class TestSceneCellAssignmentRule:
                 "confirmed_track_group_names": love_attack_confirmed_tracks,
                 "group_has_existing_cue_at_bar": True,
             },
-            # bar 7 — WASH/FOH 이름이 나오지만 이 곡 트랙에 그 그룹이 없다
-            # (조건 2가 거짓).
+            # bar 7 — 「워시」 부분: 칸이 부르는 이름은 "WASH" 이고 확인된
+            # 트랙은 "WASH-ALL" 이다 — 바이트 일치가 아니라 조건 2가 거짓
+            # (카드 t543, 워시 = WASH-ALL 로 읽을지는 리드 결정). 같은 칸의
+            # 「FOH 켬」 부분은 아래에서 따로 "track" 으로 잰다.
             7: {
                 "named_group": "WASH",
                 "confirmed_track_group_names": love_attack_confirmed_tracks,
@@ -273,6 +289,22 @@ class TestSceneCellAssignmentRule:
             for bar, inputs in section_4_scene_inputs.items()
         }
         assert all(verdict == "memo" for verdict in derived_verdicts.values())
+
+        # 카드 t543 — bar 7 칸의 「FOH 켬」은 FOH 를 바이트로 부르고, FOH(3)가
+        # 확인된 트랙이며, 그 자리에 기존 큐가 없다 → "track". YAML 의 FOH
+        # 트랙이 바로 그 큐 하나를 싣는다.
+        assert (
+            classify_scene_cell_assignment(
+                named_group="FOH",
+                confirmed_track_group_names=love_attack_confirmed_tracks,
+                group_has_existing_cue_at_bar=False,
+            )
+            == "track"
+        )
+        foh = next(
+            t for t in default_beat_grid(LOVE_ATTACK_TITLE)["tracks"] if t["group_name"] == "FOH"
+        )
+        assert [(c["bar"], c["label"]) for c in foh["cues"]] == [(7, "FOH 켬")]
 
         # 이 순수 함수가 도출한 "전부 memo"가, YAML이 실제로 싣고 있는
         # scene_memos의 bar 집합과 바이트 단위로 일치하는지 확인한다.

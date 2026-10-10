@@ -46,6 +46,12 @@ from server.web.session import SongTimelineStore, _song_timeline_payload
 from server.web.timeline_draft import TimelineDraftHistory
 
 
+def _named(timeline: dict, group_name: str) -> dict:
+    """트랙을 위치가 아니라 콘솔 그룹 이름으로 찾는다(카드 t543 — FOH·WASH-ALL 이
+    앞에 붙어 BACK 이 첫 줄이 아니게 됐다)."""
+    return next(t for t in timeline["beat_grid"]["tracks"] if t["group_name"] == group_name)
+
+
 class TestDefaultBeatGrid:
     def test_love_attack_gets_the_hand_arranged_first_default(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
@@ -56,7 +62,18 @@ class TestDefaultBeatGrid:
         names = [track["group_name"] for track in grid["tracks"]]
         # 배치 규칙서 §2가 "줄 하나 = 그룹 하나"로 깨끗이 떨어지는 넷 + ACCENT를
         # 그 모양대로 쪼갠 둘 — SCENE은 단일 그룹이 아니라서 뺐다(코드 주석).
-        assert names == ["BACK", "SIDE-ALL", "MOVER-U", "MOVER-D", "BLIND", "STROBE"]
+        # 카드 t543 — SCENE 이 다루던 FOH·WASH-ALL 은 콘솔 그룹 실측 뒤 시안
+        # ROLES 순서대로 앞에 붙었다.
+        assert names == [
+            "FOH",
+            "WASH-ALL",
+            "BACK",
+            "SIDE-ALL",
+            "MOVER-U",
+            "MOVER-D",
+            "BLIND",
+            "STROBE",
+        ]
 
     def test_group_numbers_match_the_rules_doc_and_t525_where_evidenced(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
@@ -71,6 +88,12 @@ class TestDefaultBeatGrid:
         # t525 §② 실측(probe_groups.py) — 그룹 14.
         assert by_name["BLIND"]["group_no"] == 14
         assert by_name["BLIND"]["group_no_confirmed"] is True
+        # t543 실측(.moai/reports/t543/r1_pools.json · r4_group_fids.txt) — 그룹 풀
+        # 번호와 SELECTIONDATA 소속(FOH 111~118, WASH-ALL 401~410·421~430).
+        assert by_name["FOH"]["group_no"] == 3
+        assert by_name["FOH"]["group_no_confirmed"] is True
+        assert by_name["WASH-ALL"]["group_no"] == 10
+        assert by_name["WASH-ALL"]["group_no_confirmed"] is True
         # STROBE는 이 plan-phase 증거 어디에도 번호가 없다 — 지어내지 않는다.
         assert by_name["STROBE"]["group_no"] is None
         assert by_name["STROBE"]["group_no_confirmed"] is False
@@ -79,6 +102,8 @@ class TestDefaultBeatGrid:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
         by_name = {t["group_name"]: t["layer_role"] for t in grid["tracks"]}
 
+        assert by_name["FOH"] == "key"  # rig.py t395 — FOH 는 key 별칭
+        assert by_name["WASH-ALL"] == "wash"  # 접두 토큰 "wash"
         assert by_name["BACK"] == "back"
         assert by_name["SIDE-ALL"] == "side"
         assert by_name["MOVER-U"] == "mover"
@@ -190,10 +215,10 @@ class TestAttachBeatGridDefault:
         other_song = attach_beat_grid_default({"song_title": "Sugar"})
 
         # 한 곡의 격자를 고쳐도 — 독립 사전이므로 — 다른 곡에 영향이 없다.
-        love_attack["beat_grid"]["tracks"][0]["cues"].append({"bar": 99, "label": "편집"})
+        _named(love_attack, "BACK")["cues"].append({"bar": 99, "label": "편집"})
 
         assert other_song["beat_grid"]["tracks"] == []
-        assert len(love_attack["beat_grid"]["tracks"][0]["cues"]) == 8
+        assert len(_named(love_attack, "BACK")["cues"]) == 8
 
 
 class TestStorageRoundTrip:
@@ -210,22 +235,25 @@ class TestStorageRoundTrip:
 
         reborn = SongTimelineStore(path)  # 서버 재시작 흉내
         assert reborn.latest["beat_grid"]["source"] == "love_attack_default"
-        assert reborn.latest["beat_grid"]["tracks"][0]["group_name"] == "BACK"
+        assert [t["group_name"] for t in reborn.latest["beat_grid"]["tracks"]] == [
+            t["group_name"] for t in timeline["beat_grid"]["tracks"]
+        ]
+        assert _named(reborn.latest, "BACK")["cues"][0]["label"] == "앞박 1회"
 
     def test_timeline_draft_history_undo_restores_the_grid_with_no_new_code(self) -> None:
         history = TimelineDraftHistory()
         before = attach_beat_grid_default({"song_title": LOVE_ATTACK_TITLE})
         after = copy.deepcopy(before)
-        after["beat_grid"]["tracks"][0]["cues"][0]["label"] = "편집됨"
+        _named(after, "BACK")["cues"][0]["label"] = "편집됨"
 
         history.record(before)  # 편집 직전 상태를 쌓는다(session.py:8505와 같은 호출)
         restored = history.undo(after)
 
         assert restored is not None
-        assert restored["beat_grid"]["tracks"][0]["cues"][0]["label"] == "앞박 1회"
+        assert _named(restored, "BACK")["cues"][0]["label"] == "앞박 1회"
         # 직전 상태는 깊은 사본이다 — after를 계속 고쳐도 되돌린 사본은 안 바뀐다.
-        after["beat_grid"]["tracks"][0]["cues"][0]["label"] = "또 편집"
-        assert restored["beat_grid"]["tracks"][0]["cues"][0]["label"] == "앞박 1회"
+        _named(after, "BACK")["cues"][0]["label"] = "또 편집"
+        assert _named(restored, "BACK")["cues"][0]["label"] == "앞박 1회"
 
 
 # -- `_song_timeline_payload` 실제 배선 — session.py 변경이 실제로 호출되는지 ----
@@ -274,7 +302,7 @@ class TestSongTimelinePayloadWiring:
         )
 
         assert payload["beat_grid"]["source"] == "love_attack_default"
-        assert len(payload["beat_grid"]["tracks"]) == 6
+        assert len(payload["beat_grid"]["tracks"]) == 8
 
     def test_another_song_payload_carries_the_empty_no_default_marker(self) -> None:
         plan = _plan("Sugar")

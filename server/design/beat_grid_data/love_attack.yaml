@@ -14,6 +14,17 @@
 # STROBE는 이 plan-phase 증거 어디에도 그룹 번호가 없어 비워 둔다(지어내지
 # 않음).
 #
+# 카드 t543(감독 2026-10-10 「데이터 채우기 먼저」) — FOH·WASH-ALL 두 트랙은
+# 콘솔 읽기 전용 실측으로 추가했다(콘솔 쓰기 0): 그룹 풀 이름·번호는
+# `.moai/reports/t543/r1_pools.json`(FOH=3, WASH-ALL=10), 소속 장비는 1.6.6
+# props 나눠 읽기로 받은 SELECTIONDATA 전량을 패치 SUBFIXTUREINDEX 로 바꾼
+# `.moai/reports/t543/r4_group_fids.txt`(FOH 111~118 8대, WASH-ALL 401~410·
+# 421~430 20대 — 이름과 전부 일치). 워시 줄은 WASH-U/D 를 함께 잡는
+# WASH-ALL 하나로 둔다(§2 SCENE 「WASH 색·밝기」, 한 그룹 한 시퀀스 — 둘을
+# 따로 두면 겹침 검증이 WASH-ALL 과 함께 쓰는 것을 막는다). 트랙 순서는 시안
+# `reports/ldbeat-runbook-ui-proposal-20261008.html` 의 ROLES 순서(FOH →
+# WASH-ALL → BACK …)를 따른다.
+#
 # 프리셋 **번호**(브라이트니스 디머·디머 효과 프리셋, position_preset_no,
 # color_preset_no, effect_preset_no)는 §4에 숫자가 전혀 없으므로(REQ-LDBEAT-
 # 015(f)) 모든 큐에서 비워 둔다(이 파일에 아예 적지 않으면 로더가 `None`
@@ -22,6 +33,23 @@
 # 아니므로 베끼지 않는다.
 source: love_attack_default
 tracks:
+  - group_name: FOH
+    group_no: 3
+    group_no_confirmed: true
+    cues:
+      # 규칙 7 「얼굴 빛(FOH)은 벌스부터 끝까지 유지」 — 켜는 큐 하나뿐이다.
+      # §4 가 밝기 숫자를 주지 않아 값은 비워 둔다(지어내지 않음).
+      - bar: 7
+        label: "FOH 켬"
+        source_ref: "reports/effect-arrangement-rules-20261007.md:106"
+  - group_name: WASH-ALL
+    group_no: 10
+    group_no_confirmed: true
+    # 큐는 비워 둔다. §4 칸은 「워시」라고만 부르고 「WASH-ALL」을 직접
+    # 부르지 않는다 — 세 조건의 조건 1(그룹 직접 지칭, 바이트 일치)을
+    # 레인이 「워시 = WASH-ALL」로 넓혀 읽지 않는다. 워시 값(bar 7 40%·
+    # 2마디 번짐, bar 14 25%)은 아래 scene_memos 에 원문 그대로 남는다.
+    cues: []
   - group_name: BACK
     group_no: 4
     group_no_confirmed: true
@@ -107,6 +135,14 @@ tracks:
 # 나오지만 이 파일의 tracks에 그 그룹 번호가 확인돼 있지 않다(트랙 자체가
 # 없다) → 메모. 나머지 넷(11~13·14~17·18~21·22~25)은 칸 자체가 그룹 이름을
 # 부르지 않는다 → 메모. 추측(지어낸 그룹 배정)은 0건이다.
+#
+# 카드 t543 — FOH·WASH-ALL 트랙이 콘솔 실측으로 확인된 뒤 세 조건을 다시
+# 적용했다. bar 7 칸의 「FOH 켬」은 FOH 를 직접 부르고, 번호가 확인됐고,
+# 그 자리에 기존 큐가 없어 위 FOH 트랙 큐로 옮겼다. 같은 칸의 「라벤더
+# 워시 40%」와 bar 14 「워시 25% 덜어냄」은 「WASH-ALL」을 바이트로 부르지
+# 않아 메모로 남는다(워시 = WASH-ALL 로 읽을지는 리드 결정, t543 판정서).
+# 메모 여섯 개의 원문은 바꾸지 않는다 — bar 7 메모의 「FOH 켬」은 이제
+# FOH 트랙에도 있다.
 scene_memos:
   - bar: 0
     text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」"
