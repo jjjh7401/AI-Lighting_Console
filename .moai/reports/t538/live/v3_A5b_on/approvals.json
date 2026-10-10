@@ -1,0 +1,33 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Pan' At Relative -30",
+      "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Attribute 'Tilt' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Phase 0",
+      "Attribute 'Tilt' At Phase 90",
+      "Attribute 'Pan' At Speed 112",
+      "Attribute 'Tilt' At Speed 112",
+      "Store Sequence 323 Cue 1 'T538 - A5b pan tilt circle curve'",
+      "ClearAll",
+      "Set Sequence 323 Property 'Name' 'T538 - A5b pan tilt circle curve'"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "Goto Cue 1 Sequence 323"
+    ],
+    "approved": true
+  }
+]
