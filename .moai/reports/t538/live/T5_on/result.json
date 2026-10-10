@@ -1,0 +1,33 @@
+{
+  "item": "T538-T4T5",
+  "free_slots": [],
+  "occupied_before": [],
+  "bundles": {
+    "t5_prog": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Dimmer' At 70",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At 45",
+        "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'Tilt' At Relative -30",
+        "Step 2",
+        "Attribute 'Tilt' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Tilt' At Phase 0 Thru 360",
+        "Attribute 'Tilt' At Speed 112"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}
