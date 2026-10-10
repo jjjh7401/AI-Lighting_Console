@@ -162,6 +162,7 @@ $ cd ui && npx tsc --noEmit
 ## §E Gaps (미검증)
 
 - non-null 수직 판정은 범위 밖
+- 에미터·디머 선택 함수 생산 호출자 0 — M4 에서 배선
 - **non-null 수직 판정은 범위 밖(상세)** — `pan_only_vertical_base_warning`은
   `position_preset_no is None`인 경우만 경고한다. non-null 프리셋 번호가
   실제로 "수직"인지(그 프리셋이 가리키는 실제 Tilt 값)는 이 SPEC의 증거
