@@ -4255,6 +4255,33 @@ body {
   color: #fff;
 }
 
+/* t537 ② — SCENE 메모가 걸린 행 표식(역할·효과 혼성이라 트랙에 못 옮긴
+   §4 값이 있다는 뜻, 리드 추가 지시 2026-10-10). */
+.beat-grid-ov-cell.has-scene-memo {
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+
+.beat-grid-scene-memo-badge {
+  display: block;
+  font-size: 8.5px;
+  color: var(--warn);
+}
+
+.beat-grid-scene-memo-note {
+  margin: 0 0 4px;
+  padding: 3px 6px;
+  border: 1px dashed var(--warn);
+  border-radius: 4px;
+  font-size: 10.5px;
+  color: var(--warn);
+  background: #2a2318;
+}
+
+.beat-grid-scene-memo-source {
+  color: var(--muted);
+  font-size: 10px;
+}
+
 .beat-grid-toolbar {
   display: flex;
   align-items: center;
@@ -4431,6 +4458,20 @@ body {
   color: var(--muted);
 }
 
+/* plan.md M7 (3) — color_preset_no가 미정인 켜진 칸의 중립(해칭) 표시.
+   임의 색을 지어내 칠하지 않는다는 원칙을 렌더링에도 적용한다
+   (REQ-LDBEAT-015(f)와 같은 원칙). inline backgroundColor가 없을 때만
+   보인다(실제 색이 있으면 그 색이 이긴다, cueColorFill). */
+.beat-grid-cue.is-color-unset {
+  background: repeating-linear-gradient(
+    45deg,
+    #2b3a52 0,
+    #2b3a52 4px,
+    #23262d 4px,
+    #23262d 8px
+  );
+}
+
 .beat-grid-cue.is-selected {
   border-color: var(--accent);
   background: #2d3a52;
@@ -4586,6 +4627,21 @@ body {
   color: var(--muted);
 }
 
+/* t537 — 「미정」 값은 보통 값보다 흐리게(지어낸 값이 아니라는 신호를
+   눈으로도 구분). */
+.beat-grid-cue-field-value.is-unset {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* "들어올 때" 필드의 파생 초 — 저장값이 아니라 그 곡 BPM으로 그 자리에서
+   계산한 값이라는 것을 라벨("derived")과 함께 옅은 색으로도 구분한다
+   (REQ-LDBEAT-006(i-4)). */
+.beat-grid-cue-field-derived {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
 /* "들어올 때" 필드 — 값이 아니라 전환 보기를 여는 버튼이다(카드 t534:
    페이드·트리거 박 등은 이미 "전환" 토글이 보여준다, 지어낸 값을 새로
    만들지 않고 같은 데이터로 연결). */
@@ -4634,8 +4690,41 @@ body {
   color: var(--ok);
 }
 
-/* 카드 t534 — "리허설PASS·실기미실행"은 "미실행"과 같은 회색이 아니라
-   따로 눈에 띄어야 한다(리허설 통과 사실이 묻히면 안 됨). */
-.beat-grid-probe-rehearsal {
+/* t537 — 정확히 "미확인"(판정 근거 없음)은 경고색으로 — "부분"·"움직임
+   없음" 같은 fail류(빨강)와 구분한다. */
+.beat-grid-probe-pending {
   color: var(--warn);
+}
+
+/* 카드 t537 — 박자 격자 전체화면 토글. 기존 .paperwork-toggle과 같은
+   모양 — 런북 모드 안쪽 전환이라 runbookMode가 참일 때만 헤더에 나타난다
+   (REQ-LDBEAT-004(a)(g)). */
+.beat-grid-fullscreen-toggle {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid #2b2f36;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.beat-grid-fullscreen-toggle-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 전체화면 뷰의 루트 프레임 — 기존 .runbook-with-chat(채팅 2단 레이아웃)과
+   달리 BeatGrid 하나만 꽉 채운다(plan.md M7 (2)) — 기존 5블록·채팅 칸은
+   이 분기에서 전부 숨는다. */
+.beat-grid-fullscreen-frame {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.beat-grid-fullscreen-frame .beat-grid {
+  flex: 1;
 }

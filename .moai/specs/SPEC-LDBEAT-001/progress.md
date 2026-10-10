@@ -263,6 +263,90 @@ $ git diff --stat origin/main -- ui/src/components/CueSheetTimeline.tsx 'CueShee
 - plan.md M7 (1)의 데이터 모양 블록을 `fade_bars`/`effect_kind`/`source_ref`로 갱신.
 - **REQ 15개·AC 16개 총량 불변.** plan-audit 재감사(D1~D9 delta 스코프) 요청.
 
+### t537 ② 구현 — 전체 화면 + 속성별 값 (카드 t537, 브랜치 `WT-ldbeat-fullview-impl`)
+
+기준: `e0612b8d`(승인된 plan 개정, PR #584 머지분 — plan-audit PASS `.moai/reports/t537/plan-audit.md`)를 `156a1d08`(origin/main, lane-3 M1 실기 결과 포함)와 ff-merge. cycle_type=tdd — Python 쪽은 모듈 삭제→RED 확인→재작성(GREEN)으로 엄격히 지켰고, TS 쪽은 `protocol.ts` 타입 변경이 `BeatGrid.tsx`·`BeatGrid.test.tsx`를 동시에 컴파일 불가로 만들어(TypedDict 필드 추가가 기존 전수 테스트 픽스처를 깨뜨림) 완전한 RED→GREEN 분리가 Python만큼 깨끗하지 않았다 — 정직하게 §Gaps에 남긴다. 콘솔 접촉 0건.
+
+**(1) 칸 데이터 구조화(REQ-LDBEAT-006(i-1)~(i-7)·(ii-1)~(ii-5)·(iii))** — `server/design/beat_grid.py`의 `BeatGridCue`를 `{bar,label}`에서 `{bar,label,brightness:{mode,value_percent,preset_no},position_preset_no,color_preset_no,effect_preset_no,effect_kind,entry:{fade_bars,mib_mode},source_ref}`로 확장했다. 새 읽기 경로 `normalize_beat_grid_cue`(레거시·부분 선언 둘 다 받아 다섯 구조화 필드를 전부 채운 완전한 모양으로 — `label` 파싱 0건, `inspect.getsource` grep으로 확인)를 신설했다. LOVE ATTACK 30개 큐 중 §4(`reports/effect-arrangement-rules-20261007.md:98-115`)가 숫자로 준 **네 자리만** 전사됐다(BACK@7마디=60%·@18마디=100%·@22마디=100%, BLIND@18마디=100%, 전부 `brightness.value_percent`+`source_ref`) — 나머지 26개 큐의 `value_percent`와 30개 전부의 `entry.fade_bars`·네 프리셋 번호 필드는 `None`이다(§A 보충 전사값 기대표와 1:1 대조하는 단위시험으로 확인, 아래 §검증). `ui/src/protocol.ts`의 `BeatGridCue`도 같은 모양으로 확장했다.
+
+**(2) 전체화면 전환(REQ-LDBEAT-004(a)(g))** — `RunbookMode.tsx`에서 `<BeatGrid>`를 완전히 빼냈다(기존 5블록 사이 블록 배선 제거, `beatGridFixtures`/`beatGridProbeResults` prop도 같이 제거). `App.tsx`의 `runbookMode` 참 분기에 `beatGridFullscreen` 상태(세션-휘발성, `paperworkMode`와 같은 패턴)와 헤더 토글 버튼(「박자 배치」, `runbookMode`가 참일 때만 보임)을 신설해, `runbookMode && beatGridFullscreen` 분기가 `<BeatGrid>`를 전체화면 루트로 렌더한다. 기존 `runbookMode` 단독 분기(5블록+채팅)와 메인 화면(`runbookMode` 거짓) 분기는 그대로다 — `git diff --stat e0612b8d -- ui/src/App.tsx`가 33줄(+import 1·+state 1·+토글 버튼 1·+분기 1)뿐임을 아래 §검증에서 확인.
+
+**(3) 막대 채우기 색 규칙(plan.md M7 (3))** — 새 순수함수 `cueColorFill(cue, colorPresetHex?)`: `color_preset_no`가 없거나, 있어도 `colorPresetHex`에 그 색이 없으면(이 카드는 콘솔 접촉 0이라 아직 이 표 자체가 없다) **중립**(해칭 CSS, `.is-color-unset`) — 임의 색을 지어내지 않는다. LOVE ATTACK 30개 큐는 전부 `color_preset_no=null`이라(§4에 번호가 없음, REQ-LDBEAT-015(f)) 지금 화면은 전부 해칭으로 보인다 — 이것이 **정확한 모습**이다(아래 캡처로 확인).
+
+**(4) M1 상태 실시간 읽기(REQ-LDBEAT-003(b))** — 신설 모듈 `server/design/beat_grid_probes.py`의 `parse_m1_probe_table`(progress.md의 `① 통과(구조)` 같은 판정 칸 텍스트를 `**`만 벗겨 그대로 돌려줌, 1~9항목만 — ⑩⑪ 확장 항목 제외)과 `read_m1_probe_results`/`read_m1_probe_results_from_path`(표 부재·파싱 실패 시 9항목 전부 `"미확인"`, 지어낸 PASS 0건)를 신설했다. `server/design/beat_grid.py`에 `attach_beat_grid_runtime_extras(payload, progress_md_path=None)`를 신설해 `server/web/session.py`의 `_song_timeline_payload`가 `attach_beat_grid_default` 뒤에 이 함수를 추가로 거치게 배선했다(`attach_beat_grid_default` 자체의 "있으면 바이트 그대로 보존" 계약은 건드리지 않음 — 별도 단계). `ui/src/components/beatGridM1Probes.ts`(카드 t534가 만든 손-복사 상수)와 그 테스트는 삭제했다 — `BeatGrid.tsx`의 `ProbeStatus`를 고정 네 상태(`"pass"|"fail"|"미실행"|"리허설PASS·실기미실행"`)에서 `string`(progress.md 판정 칸 자유 문자열)으로 바꾸고, `isWriteLocked`는 "통과"로 시작하는지, `probeStatusClass`는 "통과" 접두/정확히 "미확인"/그 밖(fail)으로 분류한다. `RunbookMode.tsx`는 이제 이 prop들을 아예 안 받고(제거), `App.tsx`의 전체화면 `<BeatGrid>`는 `grid.probe_results`를 직접 읽는다(prop으로 override 안 함) — **실제로 돌아가는지** `server/web/session.py`의 진짜 배선을 통해 이 저장소의 진짜 progress.md를 읽어 확인했다(아래 §검증 `TestLiveProbeReadThroughTheRealSessionWiring`): 지금 이 표는 `{1: "통과(구조)", 2: "미확인", 3: "부분", 4: "미확인", 5: "움직임 없음", 6: "미확인 — 문법 불명", 7: "부분(결과 기록)", 8: "통과", 9: "wave 움직임 없음 · circle·발리후 미확인"}`.
+
+**(5) SCENE 메모 — 리드 추가 지시(2026-10-10), §REQ-006 밖의 새 데이터 요소(감사 필요)** — §4 SCENE 열 값(BACK/WASH/FOH가 섞인 역할·효과 혼성 칸, 카드 t526이 이미 "SCENE은 단일 콘솔 그룹이 아니라서 트랙에서 뺐다"고 결정한 바로 그 열)은 리드 규칙(두 조건 모두: (a) §4 칸이 그룹을 직접 부르고 (b) 그 그룹 번호가 이미 `beat_grid_data/love_attack.yaml`의 확인된 트랙에 있을 때만 그 트랙에 얹는다, 충돌이면 메모)을 전수 적용한 결과 **여섯 값 전부가 메모로 떨어졌다** — BACK(bar 0)은 그룹 번호가 확인돼 있지만 그 마디에 이미 펄스 큐(「앞박 1회」)가 있어 충돌, WASH·FOH는 이 데이터 파일에 트랙 자체가 없어(그룹 번호 미확인) 메모, 나머지 셋(11~13·18~21·22~25)은 칸 자체가 그룹 이름을 안 부름. `BeatGridView.scene_memos: list[{bar,text,source_ref}]`로 겹침 검증 로직과 완전히 분리된 새 리스트에 담았고(트랙 `cues`에 끼워 넣지 않음 — `TestOverlapIndependentOfCellStructuring`로 확인), UI는 곡 전체 지도의 해당 행에 「미정」 배지(`.has-scene-memo`, 주황 테두리)와 "이 마디 한눈에" 패널 위에 경고 배너(원문 그대로 + `source_ref`)로 보여준다. **이 데이터 요소(`scene_memos`)는 spec.md REQ-LDBEAT-006이 정의한 범위 밖이다** — REQ-006은 트랙 `BeatGridCue`의 구조화만 다루고 "트랙에 못 옮기는 §4 값을 메모로 보존한다"는 요구는 spec.md 어디에도 없다. spec.md는 고치지 않았다(리드 지시대로) — 이 추가가 REQ-006 확장으로 정식 편입돼야 하는지(또는 신설 REQ가 필요한지)는 **다음 plan-audit/감사 라운드의 판단 대상**으로 남긴다.
+
+**(6) 리그·곡 일반화(카드 t537 추가 지시 2, 감독 원칙 2026-10-10)** — `server/design/beat_grid.py`의 로더(`default_beat_grid`·`_build_track_from_data`·`normalize_beat_grid_cue`·`find_overlapping_group_tracks`)에서 LOVE ATTACK 전용 그룹 번호·이름·큐 내용을 전부 들어냈다 — 전부 신설 데이터 파일 `server/design/beat_grid_data/love_attack.yaml`(YAML, `server/measurement/corpus.yaml` 선례와 같은 모양) 하나로 옮기고, Python 쪽에 남은 유일한 곡-특정 결정은 `_SONG_DEFAULT_FILES`(곡 제목 정규화 키 → YAML 경로) 딕셔너리 한 줄이다. 새 단위시험 `TestLoaderIsRigAndSongAgnostic`이 (a) 전혀 다른 가짜 그룹 번호(999)·이름("WEIRD-GROUP-99")을 담은 가짜 YAML을 레지스트리에 끼워 넣어 로더가 그 데이터를 그대로 돌려주는지(LOVE ATTACK 이름이 전혀 안 섞이는지), (b) `find_overlapping_group_tracks` 소스에 리그 전용 리터럴(BACK/MOVER-U 등)이 0건인지를 `inspect.getsource` grep으로 확인한다. UI 쪽(`BeatGrid.tsx`)은 이미 M2/M2후속부터 그룹 번호·장비 종류를 하드코딩하지 않았다(재확인 — `grep -n "201\|301\|501\|601\|Aura XB\|MegaPointe" ui/src/components/BeatGrid.tsx` → 0건, 전부 `track.group_name`/`fixture.confirmedGroupName` 같은 데이터 필드로만 읽는다). **이 변경에서 이 리그·이 곡에만 맞는 것**: `server/design/beat_grid_data/love_attack.yaml`(그룹 번호 4/7/11/12/14, 트랙 이름 6개, 큐 30개, SCENE 메모 6개) + `.moai/reports/t537/`의 캡처 고정값(`love_attack_beat_grid.json`은 이 YAML을 그대로 덤프한 것, `stage_fixtures.json`은 t525가 실측한 이 리그의 8대 확인 그룹) — 그 밖의 로더·렌더 로직은 어떤 그룹 번호·이름·장비 종류도 하드코딩하지 않는다.
+
+**만든/고친 파일**:
+
+- `server/design/beat_grid.py` — `BeatGridCue`/`BeatGridBrightness`/`BeatGridEntry`/`SceneMemo`/`BeatGridView` 구조화, `_love_attack_tracks()` 제거(YAML 로더로 대체), `normalize_beat_grid_cue`/`_build_track_from_data`/`_build_scene_memo_from_data`/`_load_song_default_document`/`attach_beat_grid_runtime_extras` 신설.
+- `server/design/beat_grid_data/love_attack.yaml`(신설) — LOVE ATTACK 전용 데이터(트랙 6개·큐 30개·SCENE 메모 6개).
+- `server/design/beat_grid_probes.py`(신설) — `parse_m1_probe_table`/`read_m1_probe_results`/`read_m1_probe_results_from_path`/`default_progress_md_path`.
+- `server/web/session.py` — `attach_beat_grid_runtime_extras` 배선(1곳, `_song_timeline_payload` 끝).
+- `server/tests/test_beat_grid_t537.py`(신설, 21개)·`server/tests/test_beat_grid_probes_t537.py`(신설, 11개).
+- `ui/src/protocol.ts` — `BeatGridBrightness`/`BeatGridEntry`/`BeatGridSceneMemo` 신설, `BeatGridCue`/`BeatGridView` 확장.
+- `ui/src/components/BeatGrid.tsx` — 구조화 필드 표시 헬퍼 7종(`formatBrightnessField` 등) + `cueColorFill` + `sceneMemoForBar` 신설, `ProbeStatus`를 `string`으로, 큐 편집 칸·곡 전체 지도·이 마디 한눈에 렌더 갱신.
+- `ui/src/components/BeatGrid.test.tsx` — 신규 테스트 46개 추가(69개로 증가), 레거시 픽스처 헬퍼 갱신.
+- `ui/src/components/RunbookMode.tsx` — `<BeatGrid>` 배선 제거, 관련 prop 2개 제거.
+- `ui/src/components/beatGridM1Probes.ts`·`beatGridM1Probes.test.ts`(삭제).
+- `ui/src/App.tsx` — `BeatGrid` import, `beatGridFullscreen` 상태, 헤더 토글, 전체화면 렌더 분기(33줄, `runbookMode` 범위 안).
+- `ui/src/styles.css` — `.beat-grid-fullscreen-*`·`.beat-grid-scene-memo-*`·`.is-color-unset`·`.is-unset`·`.beat-grid-cue-field-derived` 신설, `.beat-grid-probe-rehearsal`→`.beat-grid-probe-pending`(의미 교정, `probeStatusClass`가 더 이상 "rehearsal"을 안 돌려줌).
+
+**검증**:
+
+```
+$ uv run --quiet pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py -q
+...................................................
+51 passed in 0.42s
+
+$ uv run ruff check server/design/beat_grid.py server/design/beat_grid_probes.py server/web/session.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py
+All checks passed!
+
+$ uv run ruff format --check server/design/beat_grid.py server/design/beat_grid_probes.py server/web/session.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py
+5 files already formatted
+
+$ cd ui && npx tsc --noEmit
+(종료 코드 0, 출력 없음)
+
+$ npx vitest run src/components/BeatGrid.test.tsx src/components/RunbookMode.test.tsx src/App.test.tsx
+ ✓ src/components/BeatGrid.test.tsx (69 tests)
+ ✓ src/components/RunbookMode.test.tsx (16 tests)
+ ✓ src/App.test.tsx (30 tests)
+ Test Files  3 passed (3) · Tests  115 passed (115)
+
+$ git diff --stat e0612b8d -- ui/src/components/CueSheetTimeline.tsx 'CueSheetTimeline*' 'emit*' 'songcue*' 'cue_sheet_edit*' 'console/lua/**'
+(출력 없음 — 금지 파일 0 diff)
+```
+
+**RED 확인(Python, cycle_type=tdd 그대로 지킴)** — `server/design/beat_grid_probes.py`를 임시로 치우고 `test_beat_grid_probes_t537.py` 실행 → `ModuleNotFoundError: No module named 'server.design.beat_grid_probes'`(수집 단계 에러, 1 error). 되돌린 뒤 11 passed. `test_beat_grid_t537.py`도 구현 전에는 `ImportError: cannot import name 'attach_beat_grid_runtime_extras'`로 수집 실패했다(beat_grid.py 재작성 전 상태) — 재작성 후 20→(리그 일반화 추가 시험 포함)21 passed.
+
+**RED 확인(TS, 불완전 — 정직하게 남김)**: `protocol.ts`의 `BeatGridCue` 필드 확장이 `BeatGrid.test.tsx`의 기존 `cue()` 헬퍼·`LOVE_ATTACK_GRID` 픽스처를 동시에 타입 에러로 만들어(`tsc`가 `BeatGrid.tsx` 구현이 없어도 "속성 누락" 에러를 내므로), 새 함수(`formatBrightnessField` 등) 전용의 깨끗한 RED 캡처가 Python만큼 분리되지 않았다 — 구현과 테스트 추가를 거의 동시에 진행했다(§Gaps 참조, TDD 엄격도 미달).
+
+**SCENE 메모 규칙(한 줄, PR 본문용)**: §4 SCENE 열 값은 "그 칸이 그룹을 직접 부르고 그 그룹 번호가 이미 확인돼 있을 때만, 충돌 없으면" 그 트랙에 얹고, 그 밖엔(이번엔 여섯 전부) 트랙에 끼워 넣지 않고 `scene_memos`(겹침 검증과 독립)로만 남겨 화면에 「미정」 배지+원문 배너로 보여준다 — 이것은 REQ-LDBEAT-006이 정의한 범위 밖의 새 데이터 요소이므로 spec.md를 고치지 않고 이 섹션에만 기록했고, REQ-006 편입 여부는 다음 감사 라운드 판단 대상이다.
+
+**리그 일반화(한 줄, PR 본문용)**: 이 변경에서 이 리그·이 곡에만 맞는 것은 `server/design/beat_grid_data/love_attack.yaml`과 `.moai/reports/t537/`의 캡처 고정값(`love_attack_beat_grid.json`·`stage_fixtures.json`)뿐이고, 로더·렌더 로직에는 그룹 번호·이름·장비 종류가 전혀 하드코딩돼 있지 않다(`TestLoaderIsRigAndSongAgnostic`으로 확인).
+
+**캡처**: `.moai/reports/t537/`. `proposal_full.png`(시안 원본, 1640×1900)·`implemented_full.png`(같은 뷰포트, 전체화면 루트 `<BeatGrid>` — 곡 전체 지도에 「미정」 배지 6개(SCENE 메모) 전부 보임, M1 패널이 실제 progress.md 값(「1. … 통과(구조)」 등)을 보여줌, 모든 막대가 해칭(색 미정) 렌더 확인)·`implemented_selected.png`(1640×1200, BACK 18마디 선택 — 밝기 100%·위치 프리셋 미정·색 프리셋 미정·들어올 때 미정+전환 버튼·출처(§4 109행)·설명(원문) 여섯 줄이 각각 독립된 자리에 렌더됨을 확인)·`side_by_side.png`(둘을 나란히). 데이터는 전부 실측: `love_attack_beat_grid.json`은 `uv run python3 -c "from server.design.beat_grid import default_beat_grid, attach_beat_grid_runtime_extras, LOVE_ATTACK_TITLE; ..."` 실행 출력 그대로(probe_results 포함, 실제 progress.md 읽은 값), `stage_fixtures.json`은 t534가 쓴 것(t525 §② 실측)을 그대로 재사용. 재현: `ui/`에 `npm ci` → 임시 엔트리(`t537-capture.html`, `src/components/_t537_capture_entry.tsx`, `src/components/_t537_*.json`)를 이 절 설명대로 다시 만들고 `npx vite --port 5799`로 띄운 뒤 `.moai/reports/t532/run_chrome.sh` 재사용(`?select=BACK,18` 쿼리로 선택 캡처) — 캡처 뒤 임시 파일은 삭제했다(M2/M2후속 선례와 동일한 의도적 선택).
+
+**차이 목록(시안 대비, 정직하게 남김)**:
+
+- **값 구조화는 됐지만 편집은 아직 읽기 전용** — 구조화 필드를 각각 독립된 자리에 보여주지만(이번 카드의 핵심), 그 값을 바꾸는 편집 UI(드롭다운 선택 등)는 M3 범위다. 지금은 읽기 전용 표시만.
+- **전체화면 전환 트리거 UI 모양** — 시안엔 전역 모드 전환 버튼이 없다(plan-audit D7, 큐 편집 칸 내부의 "전환" 토글과는 다른 것 — REQ-LDBEAT-004(d)). 이번 카드가 신설한 「박자 배치」 헤더 토글은 §5 열린 결정 6이 "M2(phase ②)가 director와 확정"하도록 열어 둔 자리를 처음 채운 것이고, 정확한 자리·모양(탭? 버튼? 다른 위치?)은 여전히 재확인 대상이다.
+- **전체화면 프레임의 실제 높이 채움** — `.beat-grid-fullscreen-frame{flex:1}`로 배선했지만 `.beat-grid` 자체 레이아웃(내부 3단 `.beat-grid-body`)은 M2/M2후속 그대로라, 시안처럼 "한 화면 높이 꽉 채움 + 내부 스크롤"이 정확히 같은 느낌인지는 캡처 두 장(1640×1900 전체페이지)으로 간접 확인했을 뿐 실제 브라우저 창(뷰포트 고정)에서 보진 않았다.
+- **예제 모드 불일치** — `App.tsx`의 전체화면 분기는 `state.songTimeline.timeline`만 읽고(예: 실제 타임라인 없음) `timelineExample`(`SONG_TIMELINE_EXAMPLE`) 폴백을 안 쓴다 — 기존 5블록 분기(`RunbookMode`)는 그 폴백을 쓰므로, 예제 모드에서 런북 본문은 예제가 보이는데 박자 격자 전체화면은 "데이터 없음"으로 떨어지는 불일치가 있다(기능 결함은 아니지만 UX 공백).
+- **색 프리셋 실제 색 표(`colorPresetHex`)가 아직 없음** — `cueColorFill`은 받을 준비가 됐지만, 이 카드는 콘솔 접촉 0이라 실제 프리셋→hex 매핑의 살아있는 출처가 없다. 지금은 전부 중립(해칭)으로만 보인다 — M3+ 콘솔 프리셋 풀 읽기가 이 표를 채워야 실제 색이 보인다.
+- M2 후속(t534)이 이미 남긴 차이(곡 전체 지도 에너지 곡선·자(ruler) 박 단위·2D 무대 입체감·프리셋 서랍·장면 전환 알약)는 이번 카드 범위 밖 그대로.
+
+**안 잰 것(Gaps, 정직하게 남김)**:
+
+- **TS 쪽 RED 분리 미흡** — 위 "RED 확인(TS)" 절 참조. 함수별 개별 RED 캡처를 하지 않았다.
+- **MOVER-U/MOVER-D 선택 캡처 없음** — "효과 프리셋" 행이 `roleFieldHints`의 mover 조건에서만 보이는지는 BACK 선택 캡처로는 확인 못 했다(코드 리딩+단위시험으로만 확인, `formatPresetField`/역할 조건 분기 — 단위시험은 있으나 헤드리스 캡처로 눈으로는 안 봤다).
+- **`attach_beat_grid_runtime_extras`의 레거시 칸 정규화가 실제 저장된 커스텀 격자 경로를 탄 적이 없음** — M3 편집 경로가 아직 없어 "레거시 칸이 실제로 저장돼 있다가 이 함수를 거쳐 보인다"는 시나리오는 단위시험(가짜 payload)으로만 확인했지, 실제 세션 저장소 왕복으로는 안 쟀다.
+- **scene_memos 리드 추가 지시의 SPEC 편입 여부** — (5)에 적은 대로 REQ-006 밖의 새 데이터 요소라는 것만 표시했고, spec.md/acceptance.md는 건드리지 않았다 — 다음 라운드의 판단이 필요하다.
+- **콘솔 접촉 0, 실기 확인 0** — M1 읽기 배선이 "진짜 progress.md를 읽는지"는 쟀지만(§검증 `TestLiveProbeReadThroughTheRealSessionWiring`), 그 값 자체가 콘솔 실측과 일치하는지는 M1(카드 t531, lane-3)의 몫이고 이 카드는 그 결과를 "읽는 경로"만 새로 만들었다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
