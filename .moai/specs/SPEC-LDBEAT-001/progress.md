@@ -37,13 +37,13 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 | ② Goto 2번 이후·여러 시퀀스 동시 | `p2_goto_multi.py` (쓰기 0) | exit 0 | 거절 | `live/p2_on/` | **기계 PASS · 눈 미확인** — `4fdce816` 기록 |
 | ③ 프리셋 수정 전파 | `p3_preset_propagation.py` (v2: 4.301 / v3: 4.302, 시퀀스 300) | v3 exit 0 | v3 4/4 거절 | v2 `live/p3_a/` 묶음 1만 · v3 `live/p3_b/`·`p3_c/` 21줄 OK | v2 **거절(Illegal object)** → v3 **기계: 프리셋 수정은 먹음, 큐는 거의 그대로(참조 가설)** · 무대 전파는 미측정(재생 줄 없음) |
 | ④ 효과 프리셋의 SM15·Measure | `p4_effect_speedmaster_measure.py` (21.301, 시퀀스 301) | exit 0 | 거절 | `live/p4_a/` 19줄 OK · `live/p4_off/` 끄기 OK | **미확인** — 감독 눈: 「다 같이 깜빡임」(번갈아 아님). 디머 페이저는 재생, Step 2 는 안 살아남음, SM15·Measure 는 눈으로 판정 불가 |
-| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | v3 exit 0 | v3 거절 | `live/p5_a/` 14줄 OK | **기계: 302.1 재생 · 눈 판정 대기**(켜 둔 채) |
+| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | v3 exit 0 | v3 거절 | `live/p5_a/` 14줄 OK · `live/p5_off/` | **움직임 없음** — 감독 눈 「멈춰 있음」(문법은 받음) |
 | ⑥ 타임코드 중간 재생 | `p6_mid_start.py` (TC 31) | exit 0 | 거절 | `live/p6_a/` | **미확인 — 문법 불명**(`Goto Time 5 Timecode 31` → User Canceled Command) — `4fdce816` 기록 |
 | ⑦ 큐 하나 그룹 하나 + Step 2 | `p7_single_selection_step2.py` (시퀀스 303, 대조 큐 포함) | exit 0 | 거절 | `live/p7_a/`·`p7_b/` | 큐1: **다 같이 깜빡임(번갈아 아님), ④보다 느림** · 큐2: **두 그룹 다 깜빡임** — 선택 둘 각각 Step 2 가 함께 남음 |
 | ⑧ 같은 그룹 두 시퀀스 분담 | `p8_shared_group_two_sequences.py` (시퀀스 304·305) | exit 0 | 거절 | `live/p8_a/` 17줄 OK · `live/p8_off/` | **통과** — 감독 눈 「켜지고 틸트가 조금 기울어짐」(304.1·305.1 동시 재생) |
 | ⑩ 디머 위상 펼침(번갈아) | `p10_dimmer_phase_spread.py` (시퀀스 309) | exit 0 | 3/3 거절 | 재승인 대기 | **미실행** |
 | ⑪ t520 줄 순서 재현 | `p11_t520_step_order.py` (시퀀스 310) | exit 0 | 3/3 거절 | 재승인 대기 | **미실행** |
-| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | v3 exit 0 | v3 거절 | 보류(리드) | **미실행** — ③과 같은 줄 형태라 v3 재승인 대기 |
+| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | v3 exit 0 | v3 거절 | `live/p9_a/` 41줄 OK | **wave 눈 판정 대기** · circle·발리후는 문면상 볼 틈 없음(판정 불가) |
 
 **실기 2026-10-10 (응답기 1.6.6, 쇼 저장 0)**
 
@@ -65,7 +65,11 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 - **v3 재승인 묶음**: `.moai/reports/t531/approval-v3-package.md`(`make_v3_package.py` 생성) — ③⑤⑨ 「이전 → 새」 수정 10줄 + ⑩⑪ 전문 28줄. ⑩ = ⑦ 큐1 + `Attribute 'Dimmer' At Phase 0 Thru 180` 한 줄(문법 근거 `t227/verdict.md:98` 의 `0 Thru 360` executed_ok, 끝값 180·눈 결과 미측정). ⑪ = ⑦ 큐2 를 t520 줄 순서(Step 2 한 번 뒤 재선택)로 바꾼 한 가지 차이. 리허설 5/5, 실기 전부-거절 5/5(실행 줄 0), 309·310 비어 있음 확인(실행 직전 다시 확인).
 - **v3 감독 승인(리드 전달, 2026-10-10)** — 문면 그대로 ③⑤⑨⑩⑪, 순서대로 하나씩.
 - ③ v3: 4묶음 21줄 OK(`live/p3_b/`·`live/p3_c/`). `At Preset 4.9`·`4.302`·`4.5` 모두 콘솔이 받음 — Attribute 접두가 거절 원인이었다는 데 맞는다. 되읽기(`p3_before_edit.txt` → `p3_after_edit.txt`): 프리셋 4.302 MEMORYFOOTPRINT **2068 → 1852**(내용 바뀜), 큐 300.1 **4292 → 4296**(거의 그대로). 큐가 값을 복사하지 않고 프리셋을 가리킨다는 해석과 맞지만 **가설** — 무대에서 색이 바뀌는지(전파 자체)는 재생 줄이 승인 문면에 없어 미측정. 4.302 이름이 콘솔에서 `LDBEAT M1 - P3 propagation#2` 로 붙었다(잰 것) — 같은 이름의 빈 4.301 때문으로 보인다(추정). 빈 4.301 MEMORYFOOTPRINT 1568.
-- ⑤ v3: 14줄 OK(`live/p5_a/`), CURRENTCUE 302.1, 큐 크기 3780(`p5_readback.txt`). 감독 판정 대기.
+- ⑤ v3: 14줄 OK(`live/p5_a/`), CURRENTCUE 302.1, 큐 크기 3780(`p5_readback.txt`). 감독 판정(리드 전달): **「멈춰 있음」** — 프리셋 자리에 서 있고 움직임 없음. 프리셋 호출·상대값 줄은 콘솔이 받았지만 움직임은 안 생겼다. 끄기 `Off Sequence 302` OK(`live/p5_off/`).
+  - 근거 대조(잰 것): t516 A2(시퀀스 236, `t516/approval_rhythm_probe_v4.txt:21-25`) — `Fixture 501…508 ; Attribute 'Tilt' At Relative 30` → `Attribute 'Tilt' At Phase 0 Thru 360` → `Attribute 'Tilt' At Speed 112`, **상대값 한 단계**인데 감독이 「Tilt 움직임」 확인(`t516/verdict.md:385`). 두 단계(`Step 2` ±값)인 237·247 도 움직였다(`:385`, `:428`). → 리드 가설 「한 단계면 정적 오프셋」은 A2 실측과 맞지 않는다.
+  - ⑤ 와 A2 의 차이(원인은 **가설**): 위상(⑤ `Phase 0`/`Phase 90` 단일값 vs A2 `Phase 0 Thru 360`) · 크기(12·8 vs 30) · 속도(60 vs 112) · 선택(`Group 11` vs `Fixture 501…508`) · 기준(프리셋 2.1 호출 vs 같은 큐 Tilt 45 — A2 는 기준이 빠졌다, `t516/verdict.md:390`).
+- 🔴 **CURRENTCUE 는 켜짐/꺼짐을 못 가린다(잰 것).** ⑨ 에서 306·307 을 `Off` 한 뒤에도 CURRENTCUE 가 `Sequence 306.1`·`307.1`(`live/p9_readback.txt`). 위 ②④⑦⑧⑤ 의 「CURRENTCUE = …(재생 중)」은 **마지막으로 간 큐**의 증거일 뿐, 켜져 있다는 증거가 아니다 — 켜짐은 감독 눈으로만 확인됐다.
+- ⑨ v3: 41줄 OK(`live/p9_a/`), 306~308 큐 크기 3748·3780·3760. 🔴 승인 문면의 재생 묶음이 `Goto 306 / Off 306 / Goto 307 / Off 307 / Goto 308` 을 한 번에 보내므로 circle·발리후는 눈으로 볼 틈이 없다 — 이번 문면으로 판정 가능한 것은 wave(308)뿐. wave 는 A2 와 거의 같은 꼴(Tilt 상대값 12 + `Phase 0 Thru 360` + Speed 60, 기준 프리셋 2.1). 감독 판정 대기.
   - 「번갈아」의 근거 조사(t516·t519·t520 문서): **Step 2 하나로 장비가 번갈아 켜진 실측은 없다.** t516 이 확인한 것은 「페이저 실행(Dimmer 0↔100 2단계) 됨」(`t516/verdict.md:14`)으로, 번갈아인지 다 같이인지는 적혀 있지 않다. t520 의 SIDE 번갈이는 Step 2 가 아니라 **두 목록에 엇갈린 단계 값(0/100 · 100/0)** 을 준 설계였고(`t520/verdict.md:160`), §8 「2박마다 번갈아 켜짐」(`:220`)은 감독이 볼 것 — 기대이고, 실기에선 깜빡임 자체가 안 나왔다(`:693`). 위상 펼침(`Phase 0 Thru 360`)은 상대값 Tilt 한 단계에서 확인됐다(`t520/verdict.md:169`, t516 v4 A2) — 디머 2단계에는 안 쟀다.
   - 리드 가설(미측정): Step 2 는 값 두 개를 시간축에 놓을 뿐이고, 장비별 번갈아는 선택 전체에 위상을 펼쳐야(예: `Phase 0 Thru 180`) 나온다. 위 근거와 모순은 없다.
   - 속도 차이(④ SM15 + Measure 1 vs ⑦ 속도 지정 없음): ④가 박자 마스터를 따랐다는 간접 근거일 수 있다 — **가설**. t516 은 「Measure 1 빠름」을 감독 눈으로 확인했다(`t516/verdict.md:18`).
