@@ -1,0 +1,4 @@
+{"ts": "2026-10-10T12:05:29.787615+00:00", "event": "approved", "commands": ["Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"], "held": ["Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0"], "kind": "t531_m1_t538-t1"}
+{"ts": "2026-10-10T12:05:29.788868+00:00", "event": "executed", "command": "Fixture 501 + 502 + 503 + 504 + 505 + 506 + 507 + 508 ; Attribute 'PositionMSpeed' At 0", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-10T12:05:29.789025+00:00", "event": "approved", "commands": ["ClearAll"], "held": ["ClearAll"], "kind": "t531_m1_t538-t1"}
+{"ts": "2026-10-10T12:05:29.789124+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
