@@ -26,7 +26,8 @@ sys.path.insert(0, ".moai/reports/t531")
 from m1_common import main_cli, preset_path, seq_path  # noqa: E402
 
 POOL_COLOR = 4
-PRESET_NO = 301
+# v3: 301 은 실기 2026-10-10 첫 시도가 남긴 빈 프리셋(이름만) — 지우지 않고 302 로 옮긴다
+PRESET_NO = 302
 SEQ_NO = 300
 # t531 v2: 감독 눈에 보였던 그룹(Group 11 MOVER-U, t516 verdict.md:264)으로 교체
 # Group 4 BACK 은 t516 에서 안 보였다(:134-138, :219-220)
@@ -41,7 +42,7 @@ def build_plan() -> list[tuple[str, list[str]]]:
                 "ChangeDestination Root",
                 "ClearAll",
                 f"Group {GROUP_BACK}",
-                f"Attribute 'Color' At Preset {POOL_COLOR}.9",  # 기존 'Breathe Warm' 를 베이스로
+                f"At Preset {POOL_COLOR}.9",  # 기존 'Breathe Warm' 를 베이스로
                 f"Store Preset {POOL_COLOR}.{PRESET_NO}",
                 f"Set Preset {POOL_COLOR}.{PRESET_NO} Property 'Name' 'LDBEAT M1 - P3 propagation'",
                 "ClearAll",
@@ -53,7 +54,7 @@ def build_plan() -> list[tuple[str, list[str]]]:
                 "ChangeDestination Root",
                 "ClearAll",
                 f"Group {GROUP_BACK}",
-                f"Attribute 'Color' At Preset {POOL_COLOR}.{PRESET_NO}",
+                f"At Preset {POOL_COLOR}.{PRESET_NO}",
                 f"Store Sequence {SEQ_NO} Cue 1 'LDBEAT M1 - P3 ref cue'",
                 f"Set Sequence {SEQ_NO} Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
                 "ClearAll",
@@ -66,7 +67,7 @@ def build_plan() -> list[tuple[str, list[str]]]:
                 "ChangeDestination Root",
                 "ClearAll",
                 f"Group {GROUP_BACK}",
-                f"Attribute 'Color' At Preset {POOL_COLOR}.5",  # 'Deep Purple' 로 내용 교체
+                f"At Preset {POOL_COLOR}.5",  # 'Deep Purple' 로 내용 교체
                 f"Store Preset {POOL_COLOR}.{PRESET_NO} /Merge",
                 "ClearAll",
             ],

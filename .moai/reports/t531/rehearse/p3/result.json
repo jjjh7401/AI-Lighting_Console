@@ -1,7 +1,7 @@
 {
   "item": "P3",
   "free_slots": [
-    "ShowData/DataPools/Default/PresetPools/4/301",
+    "ShowData/DataPools/Default/PresetPools/4/302",
     "ShowData/DataPools/Default/Sequences/300"
   ],
   "occupied_before": [],
@@ -10,16 +10,16 @@
       "ChangeDestination Root",
       "ClearAll",
       "Group 11",
-      "Attribute 'Color' At Preset 4.9",
-      "Store Preset 4.301",
-      "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+      "At Preset 4.9",
+      "Store Preset 4.302",
+      "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
       "ClearAll"
     ],
     "store_cue": [
       "ChangeDestination Root",
       "ClearAll",
       "Group 11",
-      "Attribute 'Color' At Preset 4.301",
+      "At Preset 4.302",
       "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
       "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
       "ClearAll"
@@ -28,8 +28,8 @@
       "ChangeDestination Root",
       "ClearAll",
       "Group 11",
-      "Attribute 'Color' At Preset 4.5",
-      "Store Preset 4.301 /Merge",
+      "At Preset 4.5",
+      "Store Preset 4.302 /Merge",
       "ClearAll"
     ],
     "off": [
@@ -52,22 +52,22 @@
     "ChangeDestination Root",
     "ClearAll",
     "Group 11",
-    "Attribute 'Color' At Preset 4.9",
-    "Store Preset 4.301",
-    "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+    "At Preset 4.9",
+    "Store Preset 4.302",
+    "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
     "Group 11",
-    "Attribute 'Color' At Preset 4.301",
+    "At Preset 4.302",
     "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
     "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
     "ClearAll",
     "ChangeDestination Root",
     "ClearAll",
     "Group 11",
-    "Attribute 'Color' At Preset 4.5",
-    "Store Preset 4.301 /Merge",
+    "At Preset 4.5",
+    "Store Preset 4.302 /Merge",
     "ClearAll",
     "ClearAll"
   ],
@@ -77,9 +77,9 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.9",
-        "Store Preset 4.301",
-        "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "At Preset 4.9",
+        "Store Preset 4.302",
+        "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
         "ClearAll"
       ],
       "approved": true
@@ -89,7 +89,7 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.301",
+        "At Preset 4.302",
         "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
         "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
         "ClearAll"
@@ -101,8 +101,8 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.5",
-        "Store Preset 4.301 /Merge",
+        "At Preset 4.5",
+        "Store Preset 4.302 /Merge",
         "ClearAll"
       ],
       "approved": true

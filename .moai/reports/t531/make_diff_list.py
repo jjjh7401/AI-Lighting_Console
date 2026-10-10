@@ -7,21 +7,34 @@ v2 = .moai/reports/t531/denyall/p<n>/approvals.json (그룹 교체 뒤 전부-�
 """
 
 import json
+import sys
 from pathlib import Path
 
 BASE = Path(".moai/reports/t531")
-PROBES = [3, 4, 5, 7, 8, 9]
+# 기본은 v1→v2(그룹 교체). 인자 `v3` 이면 v2→v3(프리셋 호출 형태 교체)
+MODE = sys.argv[1] if len(sys.argv) > 1 else "v2"
+PROBES = [3, 5, 9] if MODE == "v3" else [3, 4, 5, 7, 8, 9]
+OLD = "denyall_v2" if MODE == "v3" else "denyall_v1"
+TITLE = {
+    "v2": "# t531 M1 v2 — 그룹 교체 승인 대조 (이전 줄 → 새 줄)",
+    "v3": "# t531 M1 v3 — 프리셋 호출 형태 교체 승인 대조 (이전 줄 → 새 줄)",
+}[MODE]
+SOURCE = {
+    "v2": "v1 = 감독 1차 승인 문면(`denyall_v1/`), v2 = 그룹 교체 뒤 실기 전부-거절 문면(`denyall/`).",
+    "v3": "v2 = 2차 승인 문면(`denyall_v2/`), v3 = `Attribute '<X>' At Preset` → `At Preset`"
+    " 뒤 실기 전부-거절 문면(`denyall/`).",
+}[MODE]
 
 out = [
-    "# t531 M1 v2 — 그룹 교체 승인 대조 (이전 줄 → 새 줄)",
+    TITLE,
     "",
-    "v1 = 감독 1차 승인 문면(`denyall_v1/`), v2 = 그룹 교체 뒤 실기 전부-거절 문면(`denyall/`).",
+    SOURCE,
     "바뀐 줄만 적는다. 묶음 수나 묶음 안 줄 수가 다르면 🔴 로 적는다 — 이번 대조에서 0건.",
     "",
 ]
 total_changed = 0
 for n in PROBES:
-    v1 = json.loads((BASE / f"denyall_v1/p{n}/approvals.json").read_text("utf-8"))
+    v1 = json.loads((BASE / f"{OLD}/p{n}/approvals.json").read_text("utf-8"))
     v2 = json.loads((BASE / f"denyall/p{n}/approvals.json").read_text("utf-8"))
     lines2 = sum(len(r["commands"]) for r in v2)
     out.append(f"## P{n} — 묶음 {len(v1)} → {len(v2)} · 줄 {lines2}")
@@ -42,5 +55,5 @@ for n in PROBES:
     out.append("")
     print(f"P{n} 바뀐 줄 {changed}")
 out.insert(4, f"바뀐 줄 합계: {total_changed}\n")
-(BASE / "approval-diff-v2.md").write_text("\n".join(out), "utf-8")
+(BASE / f"approval-diff-{MODE}.md").write_text("\n".join(out), "utf-8")
 print("합계", total_changed)

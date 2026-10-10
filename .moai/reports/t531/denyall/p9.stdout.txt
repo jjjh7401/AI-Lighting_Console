@@ -1,11 +1,11 @@
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/306", "t": 0.064, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/306", "ok": false, "error": "path segment not found: '306' (in ShowData/DataPools/Default/Sequences/306)"}
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/307", "t": 0.131, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/307", "ok": false, "error": "path segment not found: '307' (in ShowData/DataPools/Default/Sequences/307)"}
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/308", "t": 0.197, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/308", "ok": false, "error": "path segment not found: '308' (in ShowData/DataPools/Default/Sequences/308)"}
-{"step": "store_circle", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attr
-{"step": "store_ballyhoo", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 20", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attr
-{"step": "store_wave", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribu
-{"step": "play_each", "t": 0.531, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Goto Cue 1 Sequence 307", "reasons": ["reference-invoking command",
-{"step": "release", "t": 0.731, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 307", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 307': state query failed for 'Sequence 307': path segment not found: '307' (in DataPool/Sequences/307)"]}, {"command": "Off Sequence 308", "reasons": ["reference-invoking command", "unverifiable r
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/306", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/306", "ok": false, "error": "path segment not found: '306' (in ShowData/DataPools/Default/Sequences/306)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/307", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/307", "ok": false, "error": "path segment not found: '307' (in ShowData/DataPools/Default/Sequences/307)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/308", "t": 0.199, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/308", "ok": false, "error": "path segment not found: '308' (in ShowData/DataPools/Default/Sequences/308)"}
+{"step": "store_circle", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Relativ
+{"step": "store_ballyhoo", "t": 0.201, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative 20", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Rel
+{"step": "store_wave", "t": 0.202, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Relative 12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Tilt' At Phase 
+{"step": "play_each", "t": 0.533, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Goto Cue 1 Sequence 307", "reasons": ["reference-invoking command",
+{"step": "release", "t": 0.734, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 306", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 306': state query failed for 'Sequence 306': path segment not found: '306' (in DataPool/Sequences/306)"]}, {"command": "Off Sequence 307", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 307': state query failed for 'Sequence 307': path segment not found: '307' (in DataPool/Sequences/307)"]}, {"command": "Off Sequence 308", "reasons": ["reference-invoking command", "unverifiable r
 {
   "item": "P9",
   "free_slots": [
@@ -29,7 +29,7 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Position' At Preset 2.1",
+        "At Preset 2.1",
         "Attribute 'Pan' At Relative 12",
         "Attribute 'Tilt' At Relative 8",
         "Attribute 'Pan' At Phase 0",
@@ -47,7 +47,7 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Position' At Preset 2.1",
+        "At Preset 2.1",
         "Attribute 'Pan' At Relative 20",
         "Attribute 'Tilt' At Relative 10",
         "Attribute 'Pan' At Phase 0",
@@ -65,7 +65,7 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Position' At Preset 2.1",
+        "At Preset 2.1",
         "Attribute 'Tilt' At Relative 12",
         "Attribute 'Tilt' At Phase 0 Thru 360",
         "Attribute 'Tilt' At Speed 60",

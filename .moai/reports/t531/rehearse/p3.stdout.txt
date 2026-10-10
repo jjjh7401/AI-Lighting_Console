@@ -1,34 +1,34 @@
-{"step": "pre_free:ShowData/DataPools/Default/PresetPools/4/301", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/PresetPools/4/301", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/PresetPools/4/301)"}
+{"step": "pre_free:ShowData/DataPools/Default/PresetPools/4/302", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/PresetPools/4/302", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/PresetPools/4/302)"}
 {"step": "pre_free:ShowData/DataPools/Default/Sequences/300", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/300", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/300)"}
-{"step": "store_preset", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Color' At Preset 4.9", "reasons": []}, {"command": "Store Preset 4.301", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_preset", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.9", "reasons": []}, {"command": "Store Preset 4.302", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
 {"step": "store_preset", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_preset", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_preset", "t": 0.001, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_preset", "t": 0.001, "kind": "exec", "command": "Attribute 'Color' At Preset 4.9", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_preset", "t": 0.001, "kind": "exec", "command": "Store Preset 4.301", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_preset", "t": 0.001, "kind": "exec", "command": "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.001, "kind": "exec", "command": "At Preset 4.9", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.001, "kind": "exec", "command": "Store Preset 4.302", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_preset", "t": 0.002, "kind": "exec", "command": "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_preset", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Color' At Preset 4.301", "reasons": []}, {"command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_cue", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.302", "reasons": []}, {"command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Color' At Preset 4.301", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "At Preset 4.302", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'", "fired": true, "ok": true, "detail": "OK"}
 {"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
-{"step": "edit_preset", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Color' At Preset 4.5", "reasons": []}, {"command": "Store Preset 4.301 /Merge", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "ClearAll", "reasons": []}]}
-{"step": "edit_preset", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
-{"step": "edit_preset", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 4.5", "reasons": []}, {"command": "Store Preset 4.302 /Merge", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
 {"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
-{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "Attribute 'Color' At Preset 4.5", "fired": true, "ok": true, "detail": "OK"}
-{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "Store Preset 4.301 /Merge", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "At Preset 4.5", "fired": true, "ok": true, "detail": "OK"}
+{"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "Store Preset 4.302 /Merge", "fired": true, "ok": true, "detail": "OK"}
 {"step": "edit_preset", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
 {"step": "off", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
 {"step": "off", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
 {
   "item": "P3",
   "free_slots": [
-    "ShowData/DataPools/Default/PresetPools/4/301",
+    "ShowData/DataPools/Default/PresetPools/4/302",
     "ShowData/DataPools/Default/Sequences/300"
   ],
   "occupied_before": [],
@@ -50,9 +50,9 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.9",
-        "Store Preset 4.301",
-        "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "At Preset 4.9",
+        "Store Preset 4.302",
+        "Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'",
         "ClearAll"
       ],
       "approved": true
@@ -62,7 +62,7 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.301",
+        "At Preset 4.302",
         "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
         "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
         "ClearAll"
@@ -74,8 +74,8 @@
         "ChangeDestination Root",
         "ClearAll",
         "Group 11",
-        "Attribute 'Color' At Preset 4.5",
-        "Store Preset 4.301 /Merge",
+        "At Preset 4.5",
+        "Store Preset 4.302 /Merge",
         "ClearAll"
       ],
       "approved": true

@@ -5,7 +5,7 @@
 
 합계: 묶음 36 · 줄 181
 
-첫 낱말별 줄 수: 41 Attribute, 27 ClearAll, 23 Off, 19 Store, 14 Set, 14 Group, 13 Goto, 13 ChangeDestination, 7 Assign, 4 Step, 2 Go, 2 cd, 1 Label, 1 At
+첫 낱말별 줄 수: 34 Attribute, 27 ClearAll, 23 Off, 19 Store, 14 Set, 14 Group, 13 Goto, 13 ChangeDestination, 8 At, 7 Assign, 4 Step, 2 Go, 2 cd, 1 Label
 
 ## P1 ① 타임코드 트랙 6개 — 묶음 4 · 줄 18
 1. `Store Timecode 30` / `Set Timecode 30 Property 'Name' 'LDBEAT M1 - P1 six tracks'` / `Set Timecode 30 Property 'Duration' 10 'AutoStop' 0` / `Store Timecode 30.1`
@@ -18,9 +18,9 @@
 2. `Off Sequence 221` / `Off Sequence 226` / `Off Sequence 11`
 
 ## P3 ③ 프리셋 수정 전파 — 묶음 4 · 줄 21
-1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Color' At Preset 4.9` / `Store Preset 4.301` / `Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'` / `ClearAll`
-2. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Color' At Preset 4.301` / `Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'` / `Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'` / `ClearAll`
-3. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Color' At Preset 4.5` / `Store Preset 4.301 /Merge` / `ClearAll`
+1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 4.9` / `Store Preset 4.302` / `Set Preset 4.302 Property 'Name' 'LDBEAT M1 - P3 propagation'` / `ClearAll`
+2. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 4.302` / `Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'` / `Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'` / `ClearAll`
+3. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 4.5` / `Store Preset 4.302 /Merge` / `ClearAll`
 4. `ClearAll`
 
 ## P4 ④ 효과 프리셋 SM15·Measure — 묶음 4 · 줄 20
@@ -30,7 +30,7 @@
 4. `Off Sequence 301`
 
 ## P5 ⑤ 위치 프리셋 위 상대값 — 묶음 3 · 줄 15
-1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Position' At Preset 2.1` / `Attribute 'Pan' At Relative 12` / `Attribute 'Tilt' At Relative 8` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 60` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'` / `Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'` / `ClearAll`
+1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 2.1` / `Attribute 'Pan' At Relative 12` / `Attribute 'Tilt' At Relative 8` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 60` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'` / `Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'` / `ClearAll`
 2. `Goto Cue 1 Sequence 302`
 3. `Off Sequence 302`
 
@@ -55,8 +55,8 @@
 4. `Off Sequence 304` / `Off Sequence 305`
 
 ## P9 ⑨ circle·발리후·wave — 묶음 5 · 줄 44
-1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Position' At Preset 2.1` / `Attribute 'Pan' At Relative 12` / `Attribute 'Tilt' At Relative 8` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 60` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'` / `Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'` / `ClearAll`
-2. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Position' At Preset 2.1` / `Attribute 'Pan' At Relative 20` / `Attribute 'Tilt' At Relative 10` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 120` / `Attribute 'Tilt' At Speed 120` / `Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'` / `Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'` / `ClearAll`
-3. `ChangeDestination Root` / `ClearAll` / `Group 11` / `Attribute 'Position' At Preset 2.1` / `Attribute 'Tilt' At Relative 12` / `Attribute 'Tilt' At Phase 0 Thru 360` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'` / `Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'` / `ClearAll`
+1. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 2.1` / `Attribute 'Pan' At Relative 12` / `Attribute 'Tilt' At Relative 8` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 60` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 306 Cue 1 'LDBEAT M1 - P9 circle'` / `Set Sequence 306 Property 'Name' 'LDBEAT M1 - P9 circle'` / `ClearAll`
+2. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 2.1` / `Attribute 'Pan' At Relative 20` / `Attribute 'Tilt' At Relative 10` / `Attribute 'Pan' At Phase 0` / `Attribute 'Tilt' At Phase 90` / `Attribute 'Pan' At Speed 120` / `Attribute 'Tilt' At Speed 120` / `Store Sequence 307 Cue 1 'LDBEAT M1 - P9 ballyhoo'` / `Set Sequence 307 Property 'Name' 'LDBEAT M1 - P9 ballyhoo'` / `ClearAll`
+3. `ChangeDestination Root` / `ClearAll` / `Group 11` / `At Preset 2.1` / `Attribute 'Tilt' At Relative 12` / `Attribute 'Tilt' At Phase 0 Thru 360` / `Attribute 'Tilt' At Speed 60` / `Store Sequence 308 Cue 1 'LDBEAT M1 - P9 wave'` / `Set Sequence 308 Property 'Name' 'LDBEAT M1 - P9 wave'` / `ClearAll`
 4. `Goto Cue 1 Sequence 306` / `Off Sequence 306` / `Goto Cue 1 Sequence 307` / `Off Sequence 307` / `Goto Cue 1 Sequence 308`
 5. `Off Sequence 306` / `Off Sequence 307` / `Off Sequence 308`

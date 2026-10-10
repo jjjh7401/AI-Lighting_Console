@@ -1,0 +1,66 @@
+{"step": "pre_free:ShowData/DataPools/Default/PresetPools/4/301", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/PresetPools/4/301", "ok": false, "error": "path segment not found: '301' (in ShowData/DataPools/Default/PresetPools/4/301)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/300", "t": 0.133, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/300", "ok": false, "error": "path segment not found: '300' (in ShowData/DataPools/Default/Sequences/300)"}
+{"step": "store_preset", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Color' At Preset 4.9", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Preset 4.301", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command": "Set
+{"step": "store_cue", "t": 0.134, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Color' At Preset 4.301", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'", "reasons": ["blacklisted command (matches closed-set entry 'Store
+{"step": "edit_preset", "t": 0.134, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Color' At Preset 4.5", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Store Preset 4.301 /Merge", "reasons": ["blacklisted command (matches closed-set entry 'Store Preset')"]}, {"command"
+{"step": "off", "t": 0.134, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{
+  "item": "P3",
+  "free_slots": [
+    "ShowData/DataPools/Default/PresetPools/4/301",
+    "ShowData/DataPools/Default/Sequences/300"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_preset": false,
+    "store_cue": false,
+    "edit_preset": false,
+    "off": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Color' At Preset 4.9",
+        "Store Preset 4.301",
+        "Set Preset 4.301 Property 'Name' 'LDBEAT M1 - P3 propagation'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Color' At Preset 4.301",
+        "Store Sequence 300 Cue 1 'LDBEAT M1 - P3 ref cue'",
+        "Set Sequence 300 Property 'Name' 'LDBEAT M1 - P3 preset propagation'",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11",
+        "Attribute 'Color' At Preset 4.5",
+        "Store Preset 4.301 /Merge",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

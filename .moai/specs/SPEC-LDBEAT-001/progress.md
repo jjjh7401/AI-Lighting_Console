@@ -33,21 +33,28 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 
 | 항목 | 프로브 | 가짜 콘솔 리허설 | 실기 전부-거절 | 실기 실행 | 판정 |
 |---|---|---|---|---|---|
-| ① 타임코드 트랙 ≥3(목표 6) | `p1_tc_tracks.py` (TC 30) | exit 0, 막힌 줄 0 | 미실행 | 미실행 | **미실행** |
-| ② Goto 2번 이후·여러 시퀀스 동시 | `p2_goto_multi.py` (쓰기 0) | exit 0 | 미실행 | 미실행 | **미실행** |
-| ③ 프리셋 수정 전파 | `p3_preset_propagation.py` (4.301, 시퀀스 300) | exit 0 | 미실행 | 미실행 | **미실행** |
-| ④ 효과 프리셋의 SM15·Measure | `p4_effect_speedmaster_measure.py` (21.301, 시퀀스 301) | exit 0 | 미실행 | 미실행 | **미실행** |
-| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | exit 0 | 미실행 | 미실행 | **미실행** |
-| ⑥ 타임코드 중간 재생 | `p6_mid_start.py` (TC 31) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ① 타임코드 트랙 ≥3(목표 6) | `p1_tc_tracks.py` (TC 30) | exit 0, 막힌 줄 0 | 9/9 거절 | `live/p1/` | **통과(구조)** — `4fdce816` 기록 |
+| ② Goto 2번 이후·여러 시퀀스 동시 | `p2_goto_multi.py` (쓰기 0) | exit 0 | 거절 | `live/p2_on/` | **기계 PASS · 눈 미확인** — `4fdce816` 기록 |
+| ③ 프리셋 수정 전파 | `p3_preset_propagation.py` (v2: 4.301 / v3: 4.302, 시퀀스 300) | v3 exit 0 | v3 4/4 거절 | `live/p3_a/` 묶음 1만 | **미확인 — `Attribute 'Color' At Preset 4.9` 거절(Illegal object)**. v3 재승인 대기 |
+| ④ 효과 프리셋의 SM15·Measure | `p4_effect_speedmaster_measure.py` (21.301, 시퀀스 301) | exit 0 | 거절 | `live/p4_a/` 묶음 1~3, 19줄 OK | **기계: 저장·재생 OK · 눈 판정 대기**(켜 둔 채) |
+| ⑤ 위치 프리셋 위 상대값 | `p5_relative_on_position_preset.py` (시퀀스 302) | v3 exit 0 | v3 거절 | 보류(리드) | **미실행** — ③과 같은 줄 형태라 v3 재승인 대기 |
+| ⑥ 타임코드 중간 재생 | `p6_mid_start.py` (TC 31) | exit 0 | 거절 | `live/p6_a/` | **미확인 — 문법 불명**(`Goto Time 5 Timecode 31` → User Canceled Command) — `4fdce816` 기록 |
 | ⑦ 큐 하나 그룹 하나 + Step 2 | `p7_single_selection_step2.py` (시퀀스 303, 대조 큐 포함) | exit 0 | 미실행 | 미실행 | **미실행** |
 | ⑧ 같은 그룹 두 시퀀스 분담 | `p8_shared_group_two_sequences.py` (시퀀스 304·305) | exit 0 | 미실행 | 미실행 | **미실행** |
-| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | exit 0 | 미실행 | 미실행 | **미실행** |
+| ⑨ circle·발리후 | `p9_shapes.py` (시퀀스 306~308) | v3 exit 0 | v3 거절 | 보류(리드) | **미실행** — ③과 같은 줄 형태라 v3 재승인 대기 |
+
+**실기 2026-10-10 (응답기 1.6.6, 쇼 저장 0)**
+
+- ③ 묶음 1: 7줄 중 `Attribute 'Color' At Preset 4.9` 만 `Illegal object`(`live/p3_a/steps.jsonl:7`). 뒤 줄 `Store Preset 4.301` 은 OK(`:8`) → **이름만 있는 빈 프리셋 4.301**(자식 0, `live/p3_a_readback.txt`)이 남았다. 지우지 않음(삭제는 승인 범위 밖). 묶음 2 이후는 안 보냄 — 시퀀스 300 없음.
+- 🔴 **묶음 안에서 한 줄이 실패해도 나머지 줄이 계속 나갔다.** 원인은 콘솔이 아니라 **이 프로브의 반복문**이다: `.moai/reports/t506/tc_probe.py:220-231` 은 줄마다 `execute` 하고 실패해도 `all_ok` 만 내릴 뿐 멈추지 않는다(멈추는 건 묶음 사이, `m1_common.py:192-194`). 콘솔 쪽 사실은 「각 줄이 따로 실행된다 — 앞 줄 거절이 뒤 줄을 막지 않는다」까지. **앱 송신기(emit 경로)가 실패 줄에서 멈추는지는 안 쟀다** — 앱 설계에 쓰기 전에 그쪽 코드를 따로 읽어야 한다.
+- ④ 묶음 1~3, 19줄 전부 OK(`live/p4_a/steps.jsonl`). `Attribute 'Dimmer' At Measure 1`·`At SpeedMaster 15`·`At Preset 21.301`(Attribute 접두 없는 호출) 모두 콘솔이 받았다. 시퀀스 301 CURRENTCUE = `Sequence 301.1`(`live/p4_held_readback.txt`). 프리셋 21.301 `SPEEDMASTER` 읽기 `"None"`, `PRESETDATA` 빈 문자열 → 이 두 속성으로는 SM15·Measure 저장 여부를 못 가린다. 끄기 묶음은 감독 확인 뒤(`--release-only`).
+- v3 문면(③⑤⑨ `Attribute '<X>' At Preset` → `At Preset`, ③ 프리셋 번호 301→302): 바뀐 줄 10, `approval-diff-v3.md`. 리허설 3/3, 실기 전부-거절 3/3(실행 줄 0). 이전 문면은 `denyall_v2/`.
 
 - 새 번호 비어 있음 실측: `.moai/reports/t531/r1_free_slots.txt`(실기 읽기). 실행 직전에 다시 읽는다.
 - 실기 쇼 상태(읽기): 시퀀스 1-15·210·219·220-233·1999·2000, 타임코드 1·2·7·8·9·19·20·21 — t520 기록의 시퀀스 250번대·TC 22/23 은 없다(`r0_pools.txt`·`r0b_pools.txt`). Speed15 `NORMEDVALUE` 69.
 - 리허설은 게이트 심사만 증명한다 — 가짜 콘솔은 명령의 콘솔 의미를 흉내 내지 않는다.
 - 미측정 문법: ③ 프리셋 수정 줄, ⑥ `Goto Time 5 Timecode 31`(전례 0 — 거절은 「미확인 — 문법 불명」), ④·⑤·⑨ 그룹 선택 프리셋 호출.
-- **9항목 모두 미실행이므로 REQ-LDBEAT-001 게이트상 M4 송신은 어떤 항목에도 기대지 못한다.**
+- **통과 판정은 ①(구조)뿐이다. ②④는 눈 판정 전, ③⑥은 미확인, ⑤⑦⑧⑨는 미실행 — REQ-LDBEAT-001 게이트상 M4 송신은 ① 말고 어떤 항목에도 기대지 못한다.**
 
 ## §E.3 Run-phase Audit-Ready Signal
 

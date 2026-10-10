@@ -1,0 +1,12 @@
+
+>>> state:ShowData/DataPools/Default/PresetPools/4/301
+    wire: Plugin "CopilotResponder" "state 007a74b6 ShowData/DataPools/Default/PresetPools/4/301"
+<<< {"children": [], "id": "007a74b6", "kind": "state", "node": {"childCount": 0, "class": "Preset", "enumeration": "ok", "name": "LDBEAT M1 - P3 propagation"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/301", "truncated": false, "v": 1}
+
+>>> introspect:ShowData/DataPools/Default/PresetPools/4/301
+    wire: Plugin "CopilotResponder" "introspect 1d3edbf2 ShowData/DataPools/Default/PresetPools/4/301"
+<<< {"class": "Preset", "fields": [{"n": "IGNORENETWORK", "t": "UInt64"}, {"n": "STRUCTURELOCKED", "t": "UInt64"}, {"n": "SYSTEMLOCKED", "t": "UInt64"}, {"n": "LOCK", "t": "UInt64"}, {"n": "INDEX", "t": "UInt32"}, {"n": "COUNT", "t": "UInt32"}, {"n": "NO", "t": "UInt32"}, {"n": "NAME", "t": "String"}, {"n": "USEREXPANDED", "t": "UInt64"}, {"n": "FADERENABLED", "t": "Bool"}, {"n": "OWNED", "t": "Bool"}, {"n": "HIDDEN", "t": "UInt64"}, {"n": "DEPENDENCYEXPORT", "t": "String"}, {"n": "MEMORYFOOTPRINT", "t": "Int64"}, {"n": "GUID", "t": "Custom"}, {"n": "SCRIBBLE", "t": "Handle"}, {"n": "APPEARANCE", "t": "Handle"}, {"n": "NOTE", "t": "String"}, {"n": "TAGS", "t": "Custom"}, {"n": "PREVIEWCOPY", "t": "Handle"}, {"n": "ACTIVE", "t": "UInt8"}, {"n": "HASANYMATRICKSDATA", "t": "Bool"}, {"n": "SHUFFLEMODE", "t": "UInt8"}, {"n": "INITIALNAME", "t": "String"}, {"n": "INITIALMATRICKS", "t": "Handle"}, {"n": "X", "t": "Int32"}, {"n": "Y", "t": "Int32"}], "id": "1d3edbf2", "kind": "introspect", "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/PresetPools/4/301", "source": "property_accessors", "total": 138, "truncated": true, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences@28
+    wire: Plugin "CopilotResponder" "state 07c7e130 ShowData/DataPools/Default/Sequences offset=28"
+<<< {"children": [{"class": "Sequence", "i": 231, "name": "RHYTHM PROBE v3 - L3 PULSE SPEEDMASTER MEASURE 2"}, {"class": "Sequence", "i": 232, "name": "RHYTHM PROBE v3 - L4 TILT WAVE SPEED 112"}, {"class": "Sequence", "i": 233, "name": "RHYTHM PROBE v3 - L5 TILT WAVE SPEEDMASTER"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "07c7e130", "kind": "state", "node": {"childCount": 33, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 28, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}

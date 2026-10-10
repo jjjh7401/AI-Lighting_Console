@@ -1,19 +1,19 @@
-{"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.004, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/302)"}
-{"step": "store_cue", "t": 0.005, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "Attribute 'Position' At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 60", "reasons": []}, {"command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Position' At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Relative 8", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Attribute 'Tilt' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.005, "kind": "exec", "command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.006, "kind": "exec", "command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
-{"step": "store_cue", "t": 0.006, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
-{"step": "play", "t": 0.006, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': no body fetcher configured — reference bodies unverifiable"]}]}
-{"step": "play", "t": 0.006, "kind": "exec", "command": "Goto Cue 1 Sequence 302", "fired": true, "ok": true, "detail": "OK"}
-{"step": "release", "t": 0.006, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': no body fetcher configured — reference bodies unverifiable"]}]}
-{"step": "release", "t": 0.006, "kind": "exec", "command": "Off Sequence 302", "fired": true, "ok": true, "detail": "OK"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/302", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/302", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/302)"}
+{"step": "store_cue", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11", "reasons": []}, {"command": "At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Attribute 'Tilt' At Relative 8", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0", "reasons": []}, {"command": "Attribute 'Tilt' At Phase 90", "reasons": []}, {"command": "Attribute 'Pan' At Speed 60", "reasons": []}, {"command": "Attribute 'Tilt' At Speed 60", "reasons": []}, {"command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "reasons": []}, {"command": "ClearAll", "reasons": []}]}
+{"step": "store_cue", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Group 11", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Relative 8", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Phase 0", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Phase 90", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Attribute 'Tilt' At Speed 60", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Store Sequence 302 Cue 1 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "Set Sequence 302 Property 'Name' 'LDBEAT M1 - P5 relative-on-preset'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_cue", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 302", "fired": true, "ok": true, "detail": "OK"}
+{"step": "release", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 302", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 302': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "release", "t": 0.003, "kind": "exec", "command": "Off Sequence 302", "fired": true, "ok": true, "detail": "OK"}

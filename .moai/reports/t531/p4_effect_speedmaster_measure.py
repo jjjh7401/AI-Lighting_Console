@@ -112,7 +112,7 @@ PLAY = [f"Goto Cue 1 Sequence {SEQ_NO}"]
 RELEASE = [f"Off Sequence {SEQ_NO}"]
 
 
-def run(gate: SafetyGate, out: Path, *, deny_all: bool = False) -> dict:
+def run(gate: SafetyGate, out: Path, *, deny_all: bool = False, hold: bool = False) -> dict:
     # deny_all: 묶음이 거절돼도 멈추지 않고 다음 묶음의 승인 요청까지 띄운다 —
     # 전부-거절 1회로 보낼 명령 전체의 승인 문면을 모으기 위해서다(쓰기는 0).
     probe = Probe(gate, out)
@@ -164,6 +164,11 @@ def run(gate: SafetyGate, out: Path, *, deny_all: bool = False) -> dict:
         return finish(probe, result)
 
     bundles["play"] = probe.fire("play", PLAY)
+    if hold:
+        # 감독이 켜진 상태를 볼 수 있게 끄기 전에 멈춘다 — 끄기는 --release-only 로 따로.
+        result["bundles"] = bundles
+        result["verdict"] = "held — played, release not sent (감독 관찰 대기)"
+        return finish(probe, result)
     bundles["release"] = probe.fire("release", RELEASE)
     result["bundles"] = bundles
     if deny_all:
@@ -195,6 +200,8 @@ def main() -> int:
     parser.add_argument("out")
     parser.add_argument("--rehearse", action="store_true")
     parser.add_argument("--approve", default=None)
+    parser.add_argument("--hold", action="store_true", help="재생 후 끄기 전에 멈춘다")
+    parser.add_argument("--release-only", action="store_true", help="승인된 끄기 묶음만 보낸다")
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -267,7 +274,13 @@ def main_live(args, out: Path, skipped: list[str]) -> int:
         if health.get("verdict") != "responder_ok":
             print(json.dumps(dict(preflight=health), ensure_ascii=False, indent=2))
             return 1
-        result = run(stack.gate, out, deny_all=(pinned is None))
+        if args.release_only:
+            probe = Probe(stack.gate, out)
+            result = dict(item="P4", bundles=dict(release=probe.fire("release", RELEASE)))
+            result["verdict"] = "release only"
+            finish(probe, result)
+        else:
+            result = run(stack.gate, out, deny_all=(pinned is None), hold=args.hold)
         result["preflight"] = health.get("verdict")
     finally:
         stack.stop()

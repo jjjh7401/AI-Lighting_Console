@@ -1,0 +1,8 @@
+
+>>> props:ShowData/DataPools/Default/Sequences/301|NAME,CURRENTCUE,PLAYBACKSTATUS
+    wire: Plugin "CopilotResponder" "props 9a3db979 NAME,CURRENTCUE,PLAYBACKSTATUS ShowData/DataPools/Default/Sequences/301"
+<<< {"id": "9a3db979", "kind": "props", "ok": true, "path": "ShowData/DataPools/Default/Sequences/301", "reads": [{"n": "NAME", "ok": true, "t": "string", "v": "LDBEAT M1 - P4 recall SM15 measure"}, {"n": "CURRENTCUE", "ok": true, "t": "userdata", "v": "Sequence 301.1"}, {"e": "property not readable: PLAYBACKSTATUS", "n": "PLAYBACKSTATUS", "ok": false}], "truncated": false, "v": 1}
+
+>>> state:ShowData/DataPools/Default/Sequences/301
+    wire: Plugin "CopilotResponder" "state c2ae5048 ShowData/DataPools/Default/Sequences/301"
+<<< {"children": [{"class": "Cue", "i": 1, "name": "OffCue"}, {"class": "Cue", "cueNo": 0, "i": 2, "name": "CueZero"}, {"class": "Cue", "cueNo": 1, "i": 3, "name": "LDBEAT M1 - P4 recall"}], "id": "c2ae5048", "kind": "state", "node": {"childCount": 3, "class": "Sequence", "enumeration": "ok", "name": "LDBEAT M1 - P4 recall SM15 measure"}, "offset": 0, "ok": true, "path": "ShowData/DataPools/Default/Sequences/301", "truncated": false, "v": 1}

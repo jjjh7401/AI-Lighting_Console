@@ -38,7 +38,8 @@ def _base(seq_no: int, name: str) -> list[str]:
         "ChangeDestination Root",
         "ClearAll",
         f"Group {GROUP_MOVER_ALL}",
-        f"Attribute 'Position' At Preset {POS_POOL}.{BASE_PRESET}",
+        # v3: Attribute 접두 없이 — 실기 2026-10-10 `Attribute 'Color' At Preset 4.9` 가 Illegal object
+        f"At Preset {POS_POOL}.{BASE_PRESET}",
     ]
 
 
