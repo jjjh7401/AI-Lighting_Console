@@ -1,0 +1,4 @@
+
+>>> state:ShowData/DataPools/Default/Sequences@40
+    wire: Plugin "CopilotResponder" "state 8c0114f5 ShowData/DataPools/Default/Sequences offset=40"
+<<< {"children": [{"class": "Sequence", "i": 309, "name": "LDBEAT M1 - P10 dimmer phase spread"}, {"class": "Sequence", "i": 310, "name": "LDBEAT M1 - P11 t520 step order"}, {"class": "Sequence", "i": 311, "name": "T538 - A0 A2 replay"}, {"class": "Sequence", "i": 1999, "name": "Sequence 1999"}, {"class": "Sequence", "i": 2000, "name": "Sequence 2000"}], "id": "8c0114f5", "kind": "state", "node": {"childCount": 45, "class": "Sequences", "enumeration": "ok", "name": "Sequences"}, "offset": 40, "ok": true, "path": "ShowData/DataPools/Default/Sequences", "truncated": false, "v": 1}
