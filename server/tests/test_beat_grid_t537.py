@@ -22,6 +22,7 @@ from server.design import beat_grid as beat_grid_module
 from server.design.beat_grid import (
     LOVE_ATTACK_TITLE,
     attach_beat_grid_runtime_extras,
+    classify_scene_cell_assignment,
     default_beat_grid,
     find_overlapping_group_tracks,
     normalize_beat_grid_cue,
@@ -181,6 +182,105 @@ class TestSceneMemos:
         assert grid["scene_memos"] == []
 
 
+class TestSceneCellAssignmentRule:
+    """REQ-LDBEAT-006(iv-2) "세 조건" 규칙의 파라미터화 시험(plan-audit
+    iteration 3 D4). 리그·곡 전용 그룹 이름은 이 클래스의 테스트 데이터에만
+    있다 — `beat_grid.py`의 `classify_scene_cell_assignment` 자체는 어떤
+    리그·곡 이름도 모른다(카드 t537 추가 지시 2, 로더 일반화와 같은 원칙)."""
+
+    def test_condition_1_fails_when_the_cell_does_not_name_a_group(self) -> None:
+        verdict = classify_scene_cell_assignment(
+            named_group=None,
+            confirmed_track_group_names=["BACK"],
+            group_has_existing_cue_at_bar=False,
+        )
+        assert verdict == "memo"
+
+    def test_condition_2_fails_when_the_named_group_has_no_confirmed_track(self) -> None:
+        verdict = classify_scene_cell_assignment(
+            named_group="WASH",
+            confirmed_track_group_names=["BACK", "SIDE-ALL"],
+            group_has_existing_cue_at_bar=False,
+        )
+        assert verdict == "memo"
+
+    def test_condition_3_fails_when_the_group_already_has_a_cue_at_that_bar(self) -> None:
+        verdict = classify_scene_cell_assignment(
+            named_group="BACK",
+            confirmed_track_group_names=["BACK"],
+            group_has_existing_cue_at_bar=True,
+        )
+        assert verdict == "memo"
+
+    def test_all_three_conditions_true_moves_the_value_to_a_track_cue(self) -> None:
+        verdict = classify_scene_cell_assignment(
+            named_group="BACK",
+            confirmed_track_group_names=["BACK"],
+            group_has_existing_cue_at_bar=False,
+        )
+        assert verdict == "track"
+
+    def test_love_attack_section_4_scene_cells_all_classify_as_memo(self) -> None:
+        # beat_grid_data/love_attack.yaml 주석(2026-10-10 전수 재검토)이
+        # 수동으로 판단한 여섯 자리를 이 순수 함수로 재도출한다 — 아래
+        # 입력(named_group/confirmed_track_group_names/
+        # group_has_existing_cue_at_bar)은 §4 원문 + YAML 주석이 적은 근거를
+        # 그대로 옮긴 **이 테스트 전용** 데이터이고, `beat_grid.py`의
+        # 함수 로직에는 올라가지 않는다(리그 전용 상수를 app 로직에 더하지
+        # 않는다).
+        love_attack_confirmed_tracks = ["BACK", "SIDE-ALL", "MOVER-U", "MOVER-D", "BLIND"]
+        section_4_scene_inputs: dict[int, dict[str, object]] = {
+            # bar 0 — BACK을 직접 부르고 그룹 번호도 확인돼 있지만, 그
+            # 마디에 이미 펄스 큐("앞박 1회")가 있어 조건 3이 거짓.
+            0: {
+                "named_group": "BACK",
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": True,
+            },
+            # bar 7 — WASH/FOH 이름이 나오지만 이 곡 트랙에 그 그룹이 없다
+            # (조건 2가 거짓).
+            7: {
+                "named_group": "WASH",
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": False,
+            },
+            # bar 11/14/18/22 — 칸 자체가 그룹 이름을 부르지 않는다(조건 1이
+            # 거짓).
+            11: {
+                "named_group": None,
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": False,
+            },
+            14: {
+                "named_group": None,
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": False,
+            },
+            18: {
+                "named_group": None,
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": False,
+            },
+            22: {
+                "named_group": None,
+                "confirmed_track_group_names": love_attack_confirmed_tracks,
+                "group_has_existing_cue_at_bar": False,
+            },
+        }
+
+        derived_verdicts = {
+            bar: classify_scene_cell_assignment(**inputs)  # type: ignore[arg-type]
+            for bar, inputs in section_4_scene_inputs.items()
+        }
+        assert all(verdict == "memo" for verdict in derived_verdicts.values())
+
+        # 이 순수 함수가 도출한 "전부 memo"가, YAML이 실제로 싣고 있는
+        # scene_memos의 bar 집합과 바이트 단위로 일치하는지 확인한다.
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        yaml_memo_bars = sorted(memo["bar"] for memo in grid["scene_memos"])
+        assert yaml_memo_bars == sorted(section_4_scene_inputs.keys())
+
+
 class TestOverlapIndependentOfCellStructuring:
     """REQ-LDBEAT-006(iii) — 겹침 거절은 칸 레벨 구조화 변경과 독립이다."""
 
@@ -215,6 +315,45 @@ class TestOverlapIndependentOfCellStructuring:
         assert reason_legacy is not None
         assert reason_structured is not None
         assert reason_legacy == reason_structured  # 바이트 동일 — 칸 내용 무관
+
+    def test_overlap_functions_have_no_scene_memos_parameter_or_reference(self) -> None:
+        # AC-LDBEAT-016(l)/plan-audit iteration 3 D2 — find_overlapping_group_
+        # tracks·validate_beat_grid_tracks 둘 다 scene_memos를 매개변수로 받지
+        # 않고(함수 시그니처가 구조적으로 배제), 소스 자체에도 scene_memos
+        # 참조가 0건이다(REQ-LDBEAT-006(iv-4)).
+        import inspect
+
+        overlap_signature = inspect.signature(find_overlapping_group_tracks)
+        validate_signature = inspect.signature(validate_beat_grid_tracks)
+        assert "scene_memos" not in overlap_signature.parameters
+        assert "scene_memos" not in validate_signature.parameters
+
+        overlap_source = inspect.getsource(find_overlapping_group_tracks)
+        validate_source = inspect.getsource(validate_beat_grid_tracks)
+        assert "scene_memos" not in overlap_source
+        assert "scene_memos" not in validate_source
+
+    def test_scene_memo_bars_that_coincide_with_existing_cues_do_not_affect_validation(
+        self,
+    ) -> None:
+        # 행동 시험(AC-LDBEAT-016(l)) — scene_memos가 큐처럼 취급됐다면 같은
+        # 마디에 이미 있는 트랙 큐와 "충돌"할 법도 한데, scene_memos는 이
+        # 함수에 아예 전달되지 않으므로(위 시험이 확인한 시그니처 배제)
+        # 겹침 판정 결과가 전혀 바뀌지 않는다 — LOVE ATTACK 기본값으로
+        # 겹치는 마디가 실제로 있는지부터 양성 대조한다.
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        memo_bars = {memo["bar"] for memo in grid["scene_memos"]}
+        cue_bars_colliding_with_memos = {
+            cue["bar"]
+            for track in grid["tracks"]
+            for cue in track["cues"]
+            if cue["bar"] in memo_bars
+        }
+        # 양성 대조 — 메모 자리와 큐 자리가 실제로 겹치지 않으면 이 시험은
+        # scene_memos 독립성에 대해 아무것도 증명하지 못한다.
+        assert cue_bars_colliding_with_memos, "전제 깨짐: 메모·큐가 공유하는 마디가 없다"
+
+        assert validate_beat_grid_tracks(grid["tracks"]) is None
 
 
 class TestProbeResultsEmbedding:

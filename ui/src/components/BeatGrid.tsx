@@ -461,6 +461,41 @@ export function sceneMemoForBar(
   return memos.find((memo) => memo.bar === rowStart) ?? null;
 }
 
+/** t537 ② plan-audit iteration 3 D1 — "이 마디 한눈에" 패널이 실제로
+ * 그리는 것(미정 배지 + §4 원문 텍스트 + `source_ref`, REQ-LDBEAT-006
+ * (iv-3))을 DOM 없이 단언할 수 있게 뽑은 순수 파생. `visibleBarRange`에
+ * 걸린 4마디 행마다 그 행에 메모가 있으면 하나씩 돌려준다(없는 행은
+ * 결과에서 빠진다 — 추측 0건). `label`은 항상 `UNSET_FIELD_LABEL`("미정")
+ * 이다 — 실제 화면은 이 자리에 "⚠" 배지로 보여주지만, 그 배지가 가리키는
+ * 의미는 "이 칸은 트랙으로 못 옮겨 미정으로 남았다"는 것이고, `text` 자신도
+ * §4 원문 그대로 "배정 미정 — ..."로 시작한다(`beat_grid_data/love_attack.yaml`
+ * 참조) — 두 표기가 서로 다른 말이 아니다. */
+export interface SceneMemoMarker {
+  bar: number;
+  label: string;
+  text: string;
+  sourceRef: string;
+}
+
+export function sceneMemoMarkers(
+  memos: readonly BeatGridSceneMemo[],
+  visibleBarRange: readonly [number, number],
+): SceneMemoMarker[] {
+  const [rangeStart, rangeEnd] = visibleBarRange;
+  const rowStarts: number[] = [];
+  for (const [rowStart, rowEnd] of BEAT_GRID_BAR_ROWS) {
+    if (rowEnd < rangeStart || rowStart > rangeEnd) continue;
+    rowStarts.push(rowStart);
+  }
+  const markers: SceneMemoMarker[] = [];
+  for (const rowStart of rowStarts) {
+    const memo = memos.find((candidate) => candidate.bar === rowStart);
+    if (!memo) continue;
+    markers.push({ bar: rowStart, label: UNSET_FIELD_LABEL, text: memo.text, sourceRef: memo.source_ref });
+  }
+  return markers;
+}
+
 /** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠를 derive하는 데 필요한
  * 최소 필드. `ui/src/protocol.ts`의 `SongTimelineSection`은 상위집합이라
  * 그대로 넘겨도 된다(구조적 타이핑). */
@@ -588,7 +623,9 @@ export function BeatGrid({
   const selectedCue = selectedTrack && selected ? cueForBar(selectedTrack, selected.bar) : null;
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
   const viewBar = selected?.bar ?? grid.bar_range.start;
-  const viewBarSceneMemo = sceneMemoForBar(grid.scene_memos, viewBar);
+  // t537 ② plan-audit iteration 3 D1 — 실제로 렌더하는 배지+원문+source_ref
+  // 묶음은 `sceneMemoMarkers`가 반환하는 모양 그대로다(DOM 없이 단언 가능).
+  const viewBarSceneMemo = sceneMemoMarkers(grid.scene_memos, [viewBar, viewBar])[0] ?? null;
   // t537 레이아웃 교정 — 곡 전체 지도 구간 띠(데이터 없으면 빈 배열, 호출부가
   // 숫자 띠로 떨어진다) + SCENE 메모 오버레이의 퍼센트 위치 헬퍼.
   const sectionBlocks = useMemo(
@@ -1000,7 +1037,7 @@ export function BeatGrid({
           {viewBarSceneMemo && (
             <p className="beat-grid-scene-memo-note">
               ⚠ {viewBarSceneMemo.text}
-              <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.source_ref})</span>
+              <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.sourceRef})</span>
             </p>
           )}
           <table className="beat-grid-glance-table">

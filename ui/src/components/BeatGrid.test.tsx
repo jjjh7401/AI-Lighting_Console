@@ -37,6 +37,7 @@ import {
   probeStatusClass,
   projectFixture,
   sceneMemoForBar,
+  sceneMemoMarkers,
   secondsToBar,
   trackCueSegments,
   type BeatGridFixturePoint,
@@ -363,6 +364,111 @@ describe("sceneMemoForBar — t537 ② 리드 추가 지시 (SCENE 열 값은 �
 
   it("표시 범위 밖의 마디는 null", () => {
     expect(sceneMemoForBar(memos, 99)).toBeNull();
+  });
+});
+
+describe("sceneMemoMarkers — t537 ② plan-audit iteration 3 D1 (렌더 파생 — 미정 배지+§4 원문+source_ref)", () => {
+  // REQ-LDBEAT-006(iv-3) — glance 패널이 실제로 렌더하는 세 요소(⚠ 배지,
+  // §4 원문 텍스트, source_ref)를 DOM 없이도 단언한다(이 프로젝트는
+  // jsdom이 없다). 여섯 값 전부는 `beat_grid_data/love_attack.yaml`의
+  // 실제 SCENE 메모 텍스트·source_ref와 바이트 동일하다.
+  const LOVE_ATTACK_MEMOS: BeatGridSceneMemo[] = [
+    {
+      bar: 0,
+      text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:104",
+    },
+    {
+      bar: 7,
+      text: "배정 미정 — SCENE 원값 「라벤더 워시 40%(2마디 번짐) · FOH 켬」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:106",
+    },
+    {
+      bar: 11,
+      text: "배정 미정 — SCENE 원값 「틴트 한 단계」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:107",
+    },
+    {
+      bar: 14,
+      text: "배정 미정 — SCENE 원값 「워시 25% 덜어냄」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:108",
+    },
+    {
+      bar: 18,
+      text: "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:109",
+    },
+    {
+      bar: 22,
+      text: "배정 미정 — SCENE 원값 「22마디 핑크→피치 1마디 번짐」",
+      source_ref: "reports/effect-arrangement-rules-20261007.md:110",
+    },
+  ];
+
+  it("표시 범위 전체(0~25)에서 여섯 메모 전부가 배지+원문+source_ref로 뽑힌다", () => {
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [0, 25]);
+
+    expect(markers.map((marker) => marker.bar)).toEqual([0, 7, 11, 14, 18, 22]);
+    for (const marker of markers) {
+      expect(marker.label).toBe(UNSET_FIELD_LABEL);
+    }
+    expect(markers[0].text).toBe(LOVE_ATTACK_MEMOS[0].text);
+    expect(markers[0].sourceRef).toBe(LOVE_ATTACK_MEMOS[0].source_ref);
+    expect(markers[4].text).toBe(LOVE_ATTACK_MEMOS[4].text);
+    expect(markers[4].sourceRef).toBe(LOVE_ATTACK_MEMOS[4].source_ref);
+  });
+
+  it("단일 마디로 좁힌 범위는 그 마디가 속한 행의 메모 하나만 돌려준다(glance 패널과 같은 호출 모양)", () => {
+    // 9마디는 7~10행에 속한다 — sceneMemoForBar(memos, 9)와 같은 행 규칙.
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [9, 9]);
+
+    expect(markers).toHaveLength(1);
+    expect(markers[0]).toEqual({
+      bar: 7,
+      label: UNSET_FIELD_LABEL,
+      text: LOVE_ATTACK_MEMOS[1].text,
+      sourceRef: LOVE_ATTACK_MEMOS[1].source_ref,
+    });
+  });
+
+  it("표시 범위 밖에 걸린 메모는 결과에서 빠진다(추측 0건)", () => {
+    const markers = sceneMemoMarkers(LOVE_ATTACK_MEMOS, [0, 6]);
+
+    expect(markers).toEqual([
+      {
+        bar: 0,
+        label: UNSET_FIELD_LABEL,
+        text: LOVE_ATTACK_MEMOS[0].text,
+        sourceRef: LOVE_ATTACK_MEMOS[0].source_ref,
+      },
+    ]);
+  });
+
+  it("메모가 하나도 없는 곡은 빈 배열이다 — 지어내지 않는다", () => {
+    const noMemoSong: BeatGridSceneMemo[] = [];
+
+    expect(sceneMemoMarkers(noMemoSong, [0, 25])).toEqual([]);
+  });
+
+  it("리그·곡이 전혀 다른 가짜 곡의 메모도 같은 규칙으로 뽑힌다(REQ-LDBEAT-006(v-1)(v-2) — 로더 일반화와 같은 원칙)", () => {
+    const differentFakeSongMemos: BeatGridSceneMemo[] = [
+      {
+        bar: 3,
+        text: "배정 미정 — 다른 곡 SCENE 원값 「테스트 전용 자리」",
+        source_ref: "fake-song-report.md:1",
+      },
+    ];
+
+    const markers = sceneMemoMarkers(differentFakeSongMemos, [0, 10]);
+
+    expect(markers).toEqual([
+      {
+        bar: 3,
+        label: UNSET_FIELD_LABEL,
+        text: "배정 미정 — 다른 곡 SCENE 원값 「테스트 전용 자리」",
+        sourceRef: "fake-song-report.md:1",
+      },
+    ]);
   });
 });
 

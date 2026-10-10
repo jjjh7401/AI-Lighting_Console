@@ -401,6 +401,8 @@ $ git diff edc537db -- ui/src/App.tsx
 
 **SPEC 개정 후기(2026-10-10, 같은 카드, 코드 변경 0줄)** — 위 (5)(6)이 "REQ-006 밖"·"다음 라운드 판단 대상"으로 남겨 둔 `scene_memos`와 로더의 리그·곡 일반화를 spec.md REQ-LDBEAT-006(iv-1)~(iv-4)·(v-1)(v-2)과 acceptance.md AC-LDBEAT-016(i)(j)(k)(l)(m)·§A.1 매핑으로 정식 편입하는 SPEC 개정 커밋이 이 구현 위에 쌓였다 — 위 "새로 추가된 안 잰 것(Gaps)" 앞의 §Gaps 항목 "scene_memos 리드 추가 지시의 SPEC 편입 여부"는 이로써 해소.
 
+**plan-audit iteration 3 FAIL(0.60) D1/D2/D4/D5 보강(같은 카드)** — D1: `BeatGrid.tsx`에 순수함수 `sceneMemoMarkers(memos, visibleBarRange)` 신설("이 마디 한눈에" 패널이 실제로 그리는 배지+§4 원문+`source_ref` derivation, DOM 없이 단언)해 `BeatGrid.test.tsx`에 LOVE ATTACK 여섯 메모+가짜 다른 곡 메모 단위시험 5개 추가(85개로 증가). D2: `TestOverlapIndependentOfCellStructuring`에 `inspect.signature`/`inspect.getsource` 기반 `scene_memos` 매개변수·참조 부재 단언 + LOVE ATTACK 실제 데이터로 메모·큐 공유 마디(겹침 자리)가 있어도 `validate_beat_grid_tracks`가 그대로 PASS하는 행동시험 2개 추가. D4: REQ-LDBEAT-006(iv-2) "세 조건" 규칙을 파라미터화한 순수함수 `classify_scene_cell_assignment`(`beat_grid.py`) 신설 + 조건별 독립 단위시험 4개와 LOVE ATTACK §4 SCENE 여섯 자리 재도출 대조시험 1개(`TestSceneCellAssignmentRule`, `test_beat_grid_t537.py` 21→28개). D5: `love_attack_data/love_attack.yaml` 주석의 "나머지 셋(11~13·18~21·22~25)"을 bar 14 포함 "나머지 넷(11~13·14~17·18~21·22~25)"으로 정정. 전수 재검증: `pytest` 58 passed·`ruff check`/`format --check` 2 files 통과·`tsc --noEmit` 0·`vitest`(BeatGrid/RunbookMode/App) 131 passed. D3(AC-016(m) 인용 테스트 파일 정정)는 acceptance.md 편집이 범위 밖이라 보류.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_

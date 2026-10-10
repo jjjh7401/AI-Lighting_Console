@@ -53,9 +53,11 @@ __all__ = [
     "BeatGridEntry",
     "BeatGridTrack",
     "BeatGridView",
+    "SceneCellAssignment",
     "SceneMemo",
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
+    "classify_scene_cell_assignment",
     "default_beat_grid",
     "find_overlapping_group_tracks",
     "normalize_beat_grid_cue",
@@ -68,6 +70,37 @@ BrightnessMode = Literal["value", "dimmer_preset", "dimmer_effect"]
 
 #: REQ-LDBEAT-006(i-3)(D9 교정) — 효과 프리셋이 속한 풀의 종류.
 EffectKind = Literal["position", "color", "dimmer", "mixed"]
+
+#: REQ-LDBEAT-006(iv-2) — §4 SCENE 칸 값이 트랙 큐로 옮겨지는지(``"track"``)
+#: 메모로 남는지(``"memo"``).
+SceneCellAssignment = Literal["track", "memo"]
+
+
+def classify_scene_cell_assignment(
+    *,
+    named_group: str | None,
+    confirmed_track_group_names: Sequence[str],
+    group_has_existing_cue_at_bar: bool,
+) -> SceneCellAssignment:
+    """REQ-LDBEAT-006(iv-2)의 "세 조건" 규칙을 파라미터화한 순수 함수
+    (plan-audit iteration 3 D4 — 이전까지는 ``beat_grid_data/*.yaml``을
+    작성할 때 사람이 수동으로 재검토하던 판단이었다). 세 조건 — 그 칸이
+    그룹을 **직접 지칭**하고, 그 그룹의 번호가 **이미 확인된 트랙**으로
+    존재하며, 그 마디·트랙 자리에 **기존 큐와 충돌이 없을 때만** 값이
+    (iv-1)의 메모가 아니라 해당 트랙의 큐로 옮겨진다 — 하나라도 거짓이면
+    메모로 남는다.
+
+    이 함수는 어떤 리그·곡의 그룹 이름도 모른다(카드 t537 추가 지시 2와
+    같은 일반화 원칙) — ``named_group``/``confirmed_track_group_names``는
+    호출자가 그 곡의 데이터에서 넘긴다.
+    """
+    if named_group is None:
+        return "memo"
+    if named_group not in confirmed_track_group_names:
+        return "memo"
+    if group_has_existing_cue_at_bar:
+        return "memo"
+    return "track"
 
 
 class BeatGridBrightness(TypedDict):
