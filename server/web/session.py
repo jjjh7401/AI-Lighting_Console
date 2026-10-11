@@ -9749,13 +9749,29 @@ class ChatSession:
         updated["beat_grid"] = updated_grid
         return updated
 
+    def _beat_grid_note_created_presets(self, numbers: Iterable[str]) -> None:
+        """카드 t595 — 승인=송신까지 확인된 반영이 만든 번호(t592)를 기억한 풀에
+        「있음」으로 더한다. 판독이 아니라 송신 성공에서 나온 **추정**이라, 그 풀을
+        다음에 실제로 읽으면 ``_beat_grid_learn_pools``가 풀 전체를 판독값으로
+        갈아 끼운다(추정이 판독을 이기지 않는다). 그 풀을 읽은 적이 없으면 추정을
+        만들지 않는다(빈 슬롯 목록에 하나만 있는 풀처럼 보이면 다른 번호가 「빈
+        프리셋」으로 잘못 찍힌다)."""
+        for number in numbers:
+            pool_no = preset_pool_no(number)
+            slots = self._beat_grid_pool_slots.get(pool_no) if pool_no is not None else None
+            if slots is not None:
+                slots[int(number.partition(".")[2])] = None
+
     def _beat_grid_learn_pools(
         self, pool_slots: Mapping[int, dict[int, str | None] | None]
     ) -> None:
         """카드 t595 — 방금 콘솔에서 완전 판독한 풀을 기억하고, 그 때문에 지금
         곡의 빈 프리셋 표식이 달라졌으면 격자를 한 번 다시 보낸다(달라지지
         않았으면 보내지 않는다 — 서랍을 열 때마다 격자를 흔들지 않는다)."""
-        self._beat_grid_pool_slots.update(pool_slots)
+        # 사본으로 기억한다 — ``_beat_grid_note_created_presets``가 제자리에서 더한다.
+        self._beat_grid_pool_slots.update(
+            {no: (dict(slots) if slots is not None else None) for no, slots in pool_slots.items()}
+        )
         store = self._timeline_store
         latest = store.latest if store is not None else None
         if latest is None or not isinstance(latest.get("beat_grid"), Mapping):
@@ -10173,6 +10189,8 @@ class ChatSession:
                 self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
                     beat_grid_cell_snapshot(grid)
                 )
+                # 카드 t595 — 방금 만든 위치 프리셋은 빈 프리셋 표식에서 뺀다(추정).
+                self._beat_grid_note_created_presets(position_plan.creations)
                 store = self._timeline_store
                 latest = store.latest if store is not None else None
                 if latest is not None:

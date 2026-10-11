@@ -4,7 +4,7 @@
 서버가 이미 읽은 풀(반영 때 승인 대기 번호의 풀 판독 · 프리셋 서랍 판독)로만
 가른 ``beat_grid["empty_preset_cells"]``를 격자 이벤트에 실어 보낸다 — UI 는 이
 목록만 읽는다. 아직 읽지 않은 풀의 번호는 판정하지 않는다. 이미 승인된 칸의 빈
-번호도 표식 대상이지만 ``held: False``(반영에서 보류되지 않음)로 가른다.
+번호도 표식 대상이지만 ``state``(held·create·approved)로 가른다.
 
 하네스: t577/t590 가짜 콘솔(반영), t551 가짜 콘솔(서랍·편집). 콘솔 쓰기 0건.
 """
@@ -16,9 +16,11 @@ import pytest
 from server.design.beat_grid import (
     EMPTY_PRESET_HOLD,
     POOL_UNREAD_HOLD,
+    POSITION_CREATE_ON_APPLY,
     classify_empty_preset,
     empty_preset_cells,
 )
+from server.design.beat_grid_position_presets import POSITION_TARGET_MISSING
 from server.web.session import SongTimelineStore
 
 from . import test_session_beat_grid_edit_t551 as t551
@@ -64,7 +66,7 @@ class TestClassifier:
 
 
 class TestEmptyPresetCells:
-    def test_pending_and_approved_cells_are_split_by_held(self) -> None:
+    def test_pending_and_approved_cells_are_split_by_state(self) -> None:
         grid = _grid(
             {"bar": 1, "effect_preset_no": "4.99", "evidence": None},
             {"bar": 2, "color_preset_no": "4.98", "evidence": dict(_APPROVED)},
@@ -72,8 +74,8 @@ class TestEmptyPresetCells:
         )
         marks = _marks_by_bar(empty_preset_cells(grid, {4: {21: "P21"}}))
         assert set(marks) == {1, 2}
-        assert marks[1]["held"] is True
-        assert marks[2]["held"] is False
+        assert marks[1]["state"] == "held"
+        assert marks[2]["state"] == "approved"
         assert marks[1]["fields"] == [
             {
                 "field": "effect_preset_no",
@@ -139,8 +141,8 @@ class TestApplySendsMarks:
         assert types.index("song_timeline") < types.index("execution_preview")
         marks = _marks_by_bar(_grids(sent)[0]["empty_preset_cells"])
         assert set(marks) == {1, 2}, "있는 번호(4.21)에 표식이 붙었거나 빈 번호가 빠졌다"
-        assert marks[1]["held"] is True
-        assert marks[2]["held"] is False
+        assert marks[1]["state"] == "held"
+        assert marks[2]["state"] == "approved"
 
     def test_every_later_grid_event_keeps_the_marks(self, tmp_path) -> None:
         _status, sent = _apply(tmp_path, [dict(c) for c in self.CUES], pool4=[21])
@@ -183,7 +185,7 @@ class TestDrawerReadSendsMarks:
         session.beat_grid_preset_drawer()
         assert console.executed == []
         (cell,) = _grids(sent)[-1]["empty_preset_cells"]
-        assert (cell["bar"], cell["held"], cell["fields"][0]["value"]) == (1, False, "2.99")
+        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "approved", "2.99")
 
     def test_same_read_twice_does_not_resend_the_grid(self, tmp_path) -> None:
         session, _console, _store, sent = _drawer_session(
@@ -225,7 +227,7 @@ class TestNewPresetDialogMarksItsNumber:
         session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
         assert console.executed == []
         (cell,) = _grids(sent)[-1]["empty_preset_cells"]
-        assert (cell["bar"], cell["held"], cell["fields"][0]["value"]) == (1, True, "2.61")
+        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "held", "2.61")
 
 
 class TestEditRecomputesMarks:
@@ -239,3 +241,95 @@ class TestEditRecomputesMarks:
         cue = store.latest["beat_grid"]["tracks"][0]["cues"][0]
         assert cue["color_preset_no"] == "4.21", sent[-3:]
         assert _grids(sent)[-1]["empty_preset_cells"] == []
+
+
+# -- t592(#634) 합친 뒤: 빈 위치 번호는 반영 때 만들어질 수 있다 ----------------
+
+_RECIPE = {
+    "preset_targets": {"2.71": {"x": 0.0, "y": 0.0, "z": 0.0}},
+    "preset_labels": {"2.71": "LA Center"},
+}
+
+
+def _position_grid(cue: dict, **extra: object) -> dict:
+    grid: dict = {
+        "tracks": [{"group_name": "BACK", "group_no": 7, "group_no_confirmed": True, "cues": [cue]}]
+    }
+    grid.update(extra)
+    return grid
+
+
+class TestPositionCreateOnApply:
+    def test_pending_empty_position_with_recipe_is_create(self) -> None:
+        grid = _position_grid({"bar": 1, "position_preset_no": "2.71", "evidence": None}, **_RECIPE)
+        (cell,) = empty_preset_cells(grid, {2: {1: "P1"}})
+        assert cell["state"] == "create"
+        assert cell["fields"][0]["kind"] == "create_on_apply"
+        assert cell["fields"][0]["reason"] == POSITION_CREATE_ON_APPLY
+
+    def test_missing_target_stays_held_with_t592_reason(self) -> None:
+        grid = _position_grid({"bar": 1, "position_preset_no": "2.71", "evidence": None})
+        (cell,) = empty_preset_cells(grid, {2: {1: "P1"}})
+        assert cell["state"] == "held"
+        assert cell["fields"][0]["kind"] == "empty"
+        assert POSITION_TARGET_MISSING in cell["fields"][0]["reason"]
+
+    def test_approved_only_reference_is_not_created(self) -> None:
+        """승인 대기 칸이 가리키지 않으면 t592 후보가 아니다 — 반영해도 안 만든다."""
+        cue = {"bar": 1, "position_preset_no": "2.71", "evidence": dict(_APPROVED)}
+        (cell,) = empty_preset_cells(_position_grid(cue, **_RECIPE), {2: {1: "P1"}})
+        assert cell["state"] == "approved"
+        assert cell["fields"][0]["kind"] == "empty"
+
+
+class TestCreatedEstimateYieldsToARead:
+    """리드 조건 ① — 송신 성공에서 나온 「있음」은 추정이다. 다음 실제 판독이 이긴다."""
+
+    def test_estimate_clears_the_mark_then_a_real_read_restores_it(self, tmp_path) -> None:
+        cue = {"bar": 1, "position_preset_no": "2.71", "evidence": dict(_APPROVED)}
+        session, _console, store, sent = _drawer_session(tmp_path, [cue])
+        session.beat_grid_preset_drawer()  # 실제 판독: 풀 2 = {41}
+        assert _grids(sent)[-1]["empty_preset_cells"]
+        session._beat_grid_note_created_presets(["2.71"])  # 추정: 만들었다
+        grid = store.latest["beat_grid"]
+        assert empty_preset_cells(grid, session._beat_grid_pool_slots) == []
+        session.beat_grid_preset_drawer()  # 다시 실제 판독: 콘솔엔 여전히 {41}
+        (cell,) = _grids(sent)[-1]["empty_preset_cells"]
+        assert cell["fields"][0]["value"] == "2.71", "추정이 판독을 이겼다"
+
+    def test_never_read_pool_gets_no_estimate(self, tmp_path) -> None:
+        session, _console, _store, _sent = _drawer_session(tmp_path, [])
+        session._beat_grid_note_created_presets(["9.5"])
+        assert 9 not in session._beat_grid_pool_slots
+
+
+class TestApplyThatCreatesClearsTheMark:
+    """t592 실제 만들기 흐름 — 승인=송신 성공 뒤 격자에서 표식이 사라진다."""
+
+    def test_created_number_loses_its_mark_after_apply(self, tmp_path) -> None:
+        from .test_position_preset_create_t592 import _FRAMES, _MEMBERS
+
+        timeline = _timeline()
+        timeline["beat_grid"]["tracks"][0]["cues"] = [
+            {"bar": 1, "position_preset_no": "2.71", "evidence": None}
+        ]
+        timeline["beat_grid"].update(_RECIPE)
+        tree = _state_tree()
+        tree["DataPool/PresetPools/2"] = _pool("DataPool/PresetPools/2", [1, 2])
+        store = SongTimelineStore()
+        store.latest = timeline
+        sent: list[dict] = []
+        session, _console, approval, _audit = _new_session(
+            tmp_path, store=store, state_tree=tree, sent=sent
+        )
+        session._beat_grid_group_members = lambda names: {
+            n: _MEMBERS[n] for n in names if n in _MEMBERS
+        }
+        session._beat_grid_pointing_frames = lambda: _FRAMES
+        status = session.beat_grid_apply()
+        assert status["ok"] is True
+        assert "Store Preset 2.71" in [i.command for r in approval.requests for i in r.items]
+        grids = _grids(sent)
+        (before,) = grids[0]["empty_preset_cells"]
+        assert before["state"] == "create"
+        assert grids[-1]["empty_preset_cells"] == [], "만든 번호에 빈 프리셋 표식이 남았다"

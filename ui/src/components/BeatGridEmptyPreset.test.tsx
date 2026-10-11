@@ -36,7 +36,7 @@ function cue(bar: number, overrides: Partial<BeatGridCue> = {}): BeatGridCue {
 const HELD: BeatGridEmptyPresetCell = {
   group_name: "BACK",
   bar: 1,
-  held: true,
+  state: "held",
   fields: [
     { field: "effect_preset_no", field_label: "효과 프리셋", value: "4.99", kind: "empty", reason: HOLD },
   ],
@@ -45,7 +45,7 @@ const HELD: BeatGridEmptyPresetCell = {
 const APPROVED: BeatGridEmptyPresetCell = {
   group_name: "BACK",
   bar: 2,
-  held: false,
+  state: "approved",
   fields: [
     { field: "color_preset_no", field_label: "색 프리셋", value: "4.98", kind: "empty", reason: HOLD },
     { field: "position_preset_no", field_label: "위치 프리셋", value: "2.7", kind: "pool_unread", reason: UNREAD },
@@ -56,6 +56,26 @@ describe("emptyPresetBadge / emptyPresetTitle", () => {
   it("빈 번호를 배지에 담고, 못 읽은 풀의 번호엔 ? 를 붙인다", () => {
     expect(emptyPresetBadge(HELD)).toBe("⚠ 빈 프리셋(4.99)");
     expect(emptyPresetBadge(APPROVED)).toBe("⚠ 빈 프리셋(4.98, 2.7?)");
+  });
+
+  it("반영 때 만들어질 칸(t592)은 「새로 만들 프리셋」으로 따로 말한다", () => {
+    const create: BeatGridEmptyPresetCell = {
+      group_name: "BACK",
+      bar: 4,
+      state: "create",
+      fields: [
+        {
+          field: "position_preset_no",
+          field_label: "위치 프리셋",
+          value: "2.71",
+          kind: "create_on_apply",
+          reason: "빈 위치 프리셋 — 반영 때 목표 좌표로 만듦",
+        },
+      ],
+    };
+    expect(emptyPresetBadge(create)).toBe("⚠ 새로 만들 프리셋(2.71)");
+    expect(emptyPresetTitle(create)).toContain("만들어 함께 보냅니다");
+    expect(emptyPresetTitle(create)).not.toContain("송신 보류");
   });
 
   it("보류 칸과 이미 승인된 칸의 결과를 가른다", () => {

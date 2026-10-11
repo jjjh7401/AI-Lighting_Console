@@ -63,6 +63,7 @@ __all__ = [
     "CELL_HOLD",
     "EMPTY_PRESET_HOLD",
     "POOL_UNREAD_HOLD",
+    "POSITION_CREATE_ON_APPLY",
     "apply_pending_approval",
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
@@ -795,6 +796,10 @@ def pending_preset_approvals(grid: Mapping[str, object]) -> list[dict[str, objec
 EMPTY_PRESET_HOLD = "빈 프리셋 — 아직 콘솔에 만들 길 없음"
 POOL_UNREAD_HOLD = "풀을 못 읽어 빈 프리셋인지 확인 못 함"
 CELL_HOLD = "같은 칸에 보류 번호가 있어 함께 보류"
+#: 카드 t595 — 빈 위치 번호 가운데 반영 때 t592 레시피로 만들 수 있는 것의 표식 문구.
+POSITION_CREATE_ON_APPLY = (
+    "빈 위치 프리셋 — 반영 때 목표 좌표로 만듦(그룹 소속·장비 좌표를 다 읽을 때만, 못 읽으면 보류)"
+)
 
 
 def preset_pool_no(value: object) -> int | None:
@@ -843,12 +848,33 @@ def empty_preset_cells(
 
     승인 여부와 무관하게 칸의 모든 프리셋 번호를 본다 — 이미 승인된 칸이 빈
     번호를 가리키면 반영 때 보류되지 않고 빈 번호를 가리킨 큐가 나가므로(가드 D
-    범위 밖), ``held``로 두 경우를 가른다: ``True`` = 승인 대기라 반영에서 송신
-    보류, ``False`` = 이미 승인돼 반영하면 그대로 나감. 아직 읽지 않은 풀의
-    번호는 판정하지 않는다(표식 없음).
+    범위 밖) 그것도 알린다. 아직 읽지 않은 풀의 번호는 판정하지 않는다(표식 없음).
 
-    칸마다 ``{group_name, bar, held, fields: [{field, field_label, value, kind,
-    reason}]}`` — ``kind``는 ``"empty"``/``"pool_unread"``."""
+    t592 이후 빈 **위치** 번호는 반영 때 만들어질 수 있다 — 승인 대기 칸이 가리키고
+    격자 조건(``position_grid_blocker``: 목표 좌표·영문 이름·그룹 확인)이 다
+    있으면 ``kind == "create_on_apply"``(남은 조건은 반영 때 읽는 그룹 소속·장비
+    좌표뿐). 격자 조건이 빠졌으면 그 사유를 ``reason``에 붙인다.
+
+    칸마다 ``{group_name, bar, state, fields: [{field, field_label, value, kind,
+    reason}]}``. ``kind``: ``"empty"``/``"pool_unread"``/``"create_on_apply"``.
+    ``state``: ``"create"``(빈 번호가 전부 반영 때 만들어짐) · ``"held"``(승인 대기 —
+    반영에서 송신 보류) · ``"approved"``(이미 승인 — 반영하면 빈 번호를 가리킨 큐가
+    그대로 나감)."""
+    # 순환 import 회피(그 모듈이 이 모듈을 import 한다).
+    from server.design.beat_grid_position_presets import (
+        POSITION_PRESET_POOL,
+        position_grid_blocker,
+    )
+
+    pending_position_numbers = {
+        str(value)
+        for track in grid.get("tracks") or []
+        if isinstance(track, Mapping)
+        for cue in track.get("cues") or []
+        if isinstance(cue, Mapping)
+        for field, value in pending_preset_fields(cue)
+        if field == "position_preset_no"
+    }
     cells: list[dict[str, object]] = []
     for track in grid.get("tracks") or []:
         if not isinstance(track, Mapping):
@@ -861,21 +887,40 @@ def empty_preset_cells(
                 reason = classify_empty_preset(value, pool_slots, unknown_pool_unread=False)
                 if reason is None:
                     continue
+                kind = "pool_unread" if reason == POOL_UNREAD_HOLD else "empty"
+                if (
+                    kind == "empty"
+                    and field == "position_preset_no"
+                    and preset_pool_no(value) == POSITION_PRESET_POOL
+                    and str(value) in pending_position_numbers
+                ):
+                    blocker = position_grid_blocker(grid, str(value))
+                    if blocker is None:
+                        kind = "create_on_apply"
+                        reason = POSITION_CREATE_ON_APPLY
+                    else:
+                        reason = f"{reason}({blocker})"
                 fields.append(
                     {
                         "field": field,
                         "field_label": _PENDING_PRESET_FIELD_LABELS.get(field, field),
                         "value": value,
-                        "kind": "pool_unread" if reason == POOL_UNREAD_HOLD else "empty",
+                        "kind": kind,
                         "reason": reason,
                     }
                 )
             if fields:
+                if all(f["kind"] == "create_on_apply" for f in fields):
+                    state = "create"
+                elif check_evidence_approval(cue) is not None:
+                    state = "held"
+                else:
+                    state = "approved"
                 cells.append(
                     {
                         "group_name": track.get("group_name"),
                         "bar": cue.get("bar"),
-                        "held": check_evidence_approval(cue) is not None,
+                        "state": state,
                         "fields": fields,
                     }
                 )

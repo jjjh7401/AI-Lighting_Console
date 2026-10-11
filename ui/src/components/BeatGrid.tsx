@@ -779,17 +779,19 @@ export function emptyPresetCellIndex(
 }
 
 /** 격자 칸 배지 — `⚠ 빈 프리셋(4.99)`. 풀을 못 읽은 번호는 `?`를 붙여 「비었는지
- * 모름」을 「빈 것 확인」과 가른다. */
+ * 모름」을 「빈 것 확인」과 가른다. 반영 때 만들어질 칸(`state: "create"`)은
+ * `⚠ 새로 만들 프리셋(2.71)`. */
 export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
   const values = cell.fields.map((f) => (f.kind === "pool_unread" ? `${f.value}?` : f.value));
-  return `⚠ 빈 프리셋(${values.join(", ")})`;
+  const title = cell.state === "create" ? "새로 만들 프리셋" : "빈 프리셋";
+  return `⚠ ${title}(${values.join(", ")})`;
 }
 
-/** 배지·편집 칸에 붙는 뒷말 — 반영에서 무슨 일이 생기는지(`held`). */
+/** 배지·편집 칸에 붙는 뒷말 — 반영에서 무슨 일이 생기는지(`state`). */
 function emptyPresetConsequence(cell: BeatGridEmptyPresetCell): string {
-  return cell.held
-    ? "「⇪ 콘솔에 반영」에서 이 칸은 송신 보류됩니다"
-    : "이미 승인된 칸이라 반영하면 빈 번호를 가리킨 큐가 그대로 나갑니다";
+  if (cell.state === "create") return "「⇪ 콘솔에 반영」 승인 때 콘솔에 만들어 함께 보냅니다";
+  if (cell.state === "held") return "「⇪ 콘솔에 반영」에서 이 칸은 송신 보류됩니다";
+  return "이미 승인된 칸이라 반영하면 빈 번호를 가리킨 큐가 그대로 나갑니다";
 }
 
 export function emptyPresetTitle(cell: BeatGridEmptyPresetCell): string {
