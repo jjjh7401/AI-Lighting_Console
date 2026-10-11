@@ -1,0 +1,70 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-abf15f97e808768c0
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-abf15f97e808768c0
+Installed 97 packages in 204ms
+.............F........F                                                  [100%]
+=================================== FAILURES ===================================
+___ TestBuildPresetDrawer.test_usage_counts_match_cues_referencing_that_slot ___
+
+self = <server.tests.test_beat_grid_presets_t551.TestBuildPresetDrawer object at 0x1093755d0>
+
+    def test_usage_counts_match_cues_referencing_that_slot(self) -> None:
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={
+                "Dimmer": (1, {1: "LA Full"}),
+                "Position": (2, {41: "Center"}),
+                "Color": (4, {21: "LA Pink"}),
+            },
+            policy={"confirmed": True, "pools": {}},
+        )
+        position_section = next(s for s in sections if s["pool_name"] == "Position")
+>       assert position_section["entries"][0] == {
+            "preset_no": "2.41",
+            "name": "Center",
+            "usage_count": 2,
+            "used_by": [{"group_name": "MOVER-U", "bar": 11}, {"group_name": "MOVER-U", "bar": 18}],
+            # 조건1(코디네이터 지시 2026-10-11) — 빈 ``pools`` 정책이라 어느
+            # kind도 선언된 효과 풀이 없다 → 전부 False(효과로 분류하지
+            # 않는다, 모르면 base 쪽에 남긴다).
+            "is_effect_band": False,
+            # 카드 t568(REQ-LDBEAT-023(c)) — 콘솔 풀 자식 판독
+            # (``paged_pool_children``, t480)은 슬롯 번호·이름만 돌려주고
+            # 설명 텍스트를 읽는 경로가 이 저장소에 없다(아래
+            # TestPresetDrawerDescription 참조) — 지어내지 않고 명시적
+            # ``None``.
+            "description": None,
+        }
+E       AssertionError: assert {'preset_no':...r': 18}], ...} == {'preset_no':...r': 18}], ...}
+E         
+E         Omitting 5 identical items, use -vv to show
+E         Right contains 1 more item:
+E         {'description': None}
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_presets_t551.py:238: AssertionError
+_ TestPresetDrawerDescription.test_every_entry_carries_an_explicit_none_description _
+
+self = <server.tests.test_beat_grid_presets_t551.TestPresetDrawerDescription object at 0x109375fd0>
+
+    def test_every_entry_carries_an_explicit_none_description(self) -> None:
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={
+                "Dimmer": (1, {1: "LA Full"}),
+                "Position": (2, {41: "Center"}),
+                "Color": (4, {21: "LA Pink"}),
+            },
+            policy={"confirmed": True, "pools": {}},
+        )
+        for section in sections:
+            for entry in section["entries"]:
+>               assert "description" in entry
+E               AssertionError: assert 'description' in {'preset_no': '1.1', 'name': 'LA Full', 'usage_count': 0, 'used_by': [], ...}
+
+server/tests/test_beat_grid_presets_t551.py:407: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_beat_grid_presets_t551.py::TestBuildPresetDrawer::test_usage_counts_match_cues_referencing_that_slot
+FAILED server/tests/test_beat_grid_presets_t551.py::TestPresetDrawerDescription::test_every_entry_carries_an_explicit_none_description
+2 failed, 21 passed in 0.39s

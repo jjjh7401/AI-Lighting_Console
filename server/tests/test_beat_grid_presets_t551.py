@@ -244,6 +244,12 @@ class TestBuildPresetDrawer:
             # kind도 선언된 효과 풀이 없다 → 전부 False(효과로 분류하지
             # 않는다, 모르면 base 쪽에 남긴다).
             "is_effect_band": False,
+            # 카드 t568(REQ-LDBEAT-023(c)) — 콘솔 풀 자식 판독
+            # (``paged_pool_children``, t480)은 슬롯 번호·이름만 돌려주고
+            # 설명 텍스트를 읽는 경로가 이 저장소에 없다(아래
+            # TestPresetDrawerDescription 참조) — 지어내지 않고 명시적
+            # ``None``.
+            "description": None,
         }
         dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
         assert dimmer_section["entries"][0]["usage_count"] == 1
@@ -360,3 +366,43 @@ class TestPresetDrawerEffectBand:
         )
         dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
         assert dimmer_section["entries"][0]["is_effect_band"] is False
+
+
+class TestPresetDrawerDescription:
+    """카드 t568(REQ-LDBEAT-023(c)) — 칩 툴팁이 쓰는 프리셋 "설명 텍스트"의
+    서버 쪽 출처 조사. 이 카드 범위에서 콘솔에 새 프로브를 추가하지
+    않는다는 전제로, 이미 있는 읽기 경로를 뒤졌다:
+
+    - ``server.design.console_slots.paged_pool_children``(t480) — 풀
+      자식을 판독하지만 응답기가 돌려주는 필드는 ``i``(슬롯 번호)와
+      ``name``(짧은 이름)뿐이다(PROTOCOL §4.2, 이 모듈의 ``_FakeQuery``가
+      흉내 내는 그 모양) — 설명 텍스트 필드가 없다.
+    - ``server/design/beat_grid_data/*.yaml``(measured_console.yaml·
+      preset_pools.yaml 등) — grep으로 "description"/"설명" 키를 찾았으나
+      0건(이 파일 자신이 그 grep으로 조사했다).
+
+    그래서 ``build_preset_drawer``는 ``description`` 을 지어내지 않고
+    명시적 ``None`` 으로 채운다(생략이 아니라 명시 — "이 자리는 비었다"는
+    사실 자체가 정보, REQ-LDBEAT-015(f)와 같은 원칙). 클라이언트
+    `presetChipTooltip.ts`의 `formatPresetChipTooltip`은 이미
+    `null`/`undefined`를 사용 수만 보이는 것으로 처리한다(카드 t560,
+    변경 없음) — 이 카드가 메운 것은 그 필드가 **항상** 응답에 명시적으로
+    존재한다는 것뿐이다."""
+
+    def _grid(self):
+        return {"tracks": []}
+
+    def test_every_entry_carries_an_explicit_none_description(self) -> None:
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={
+                "Dimmer": (1, {1: "LA Full"}),
+                "Position": (2, {41: "Center"}),
+                "Color": (4, {21: "LA Pink"}),
+            },
+            policy={"confirmed": True, "pools": {}},
+        )
+        for section in sections:
+            for entry in section["entries"]:
+                assert "description" in entry
+                assert entry["description"] is None

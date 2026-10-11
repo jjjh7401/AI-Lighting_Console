@@ -39,3 +39,13 @@ export function deriveCueDisplayState(input: CueDisplayStateInput): CueDisplaySt
 export function cueEditKey(groupName: string, bar: number): string {
   return `${groupName}|${bar}`;
 }
+
+/** 카드 t568 ② — 서버 `BeatGridView.unsent_cells`(마지막 반영(승인=송신)
+ * 뒤 바뀐 칸, t563 이 공급)를 「고침=초록」 키 집합으로 바꾼다. `null`(반영
+ * 기록 없음)·`undefined`(필드 없는 옛 응답)·빈 배열은 모두 초록 칸 0이다 —
+ * 반영 기록이 없을 때 모든 칸을 초록으로 칠하지 않는다. */
+export function editedCueKeysFromUnsent(
+  cells: readonly { group_name: string; bar: number }[] | null | undefined,
+): Set<string> {
+  return new Set((cells ?? []).map((cell) => cueEditKey(cell.group_name, cell.bar)));
+}
