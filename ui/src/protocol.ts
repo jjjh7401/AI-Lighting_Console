@@ -557,6 +557,25 @@ export interface BeatGridView {
    * (`beat_grid_edit.movement_vocabulary`)에서만 온다 — UI에 모양 이름 상수 없음.
    * 필드가 없는 옛 서버 응답이면 `undefined`(고르기 목록을 열지 않는다). */
   movement_vocabulary?: BeatGridMovementVocabulary | null;
+  /** 카드 t603 — 「＋ 새 프리셋 만들기」 효과 창이 고르는 효과 틀 목록. 서버가 출하 fx
+   * 라이브러리에서 내려 준다(콘솔 판독 0). `kinds` = 그 틀을 쓸 수 있는 번호대 종류
+   * (`position`/`color`/`mixed`) — 반영 때 서버가 받아 주는 판정과 같다. 옛 서버면 `undefined`. */
+  fx_templates?: BeatGridFxTemplate[] | null;
+}
+
+/** 카드 t603 — 효과 틀 하나(`server/design/beat_grid_effect_presets.effect_template_catalog`). */
+export interface BeatGridFxTemplate {
+  fx_id: string;
+  display_name: string;
+  attributes: string[];
+  kinds: string[];
+}
+
+/** 카드 t603 — 효과 프리셋 레시피(t593 `preset_fx_recipes` 모양). 주기는 음악 단위만. */
+export interface BeatGridFxRecipe {
+  fx_id: string;
+  period_unit: "beat" | "bar";
+  period_value: number;
 }
 
 /** 카드 t584 — `unverified`는 M1 표만으로 본 「⚠」(고르기 전 목록 표시). 고른 뒤
@@ -1227,7 +1246,10 @@ export function buildBeatGridDrawerRequest(): string {
  * 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 목표 좌표(``aim``,
  * x·y·z 미터, `server/spatial/pointing.py` 틀)를 함께 올린다. 주어졌을
  * 때만 싣는다 — 다른 네 필드는 이 키 자체가 없다(생략과 값이 다른
- * undefined 를 섞지 않는다). */
+ * undefined 를 섞지 않는다).
+ *
+ * 카드 t603 — "effect" 필드만 효과 레시피(``fx``: 효과 틀·주기 박/마디)를 함께
+ * 올린다. 서버가 이 필드에 필수로 받는다. 주어졌을 때만 싣는다(aim 과 같은 규칙). */
 export function buildBeatGridNewPreset(
   bar: number,
   target: string,
@@ -1235,6 +1257,7 @@ export function buildBeatGridNewPreset(
   label: string,
   description: string,
   aim?: { x: number; y: number; z: number },
+  fx?: BeatGridFxRecipe,
 ): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,
@@ -1245,6 +1268,7 @@ export function buildBeatGridNewPreset(
     label,
     description,
     ...(aim !== undefined ? { aim } : {}),
+    ...(fx !== undefined ? { fx } : {}),
   });
 }
 
