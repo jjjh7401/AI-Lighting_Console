@@ -2018,10 +2018,10 @@ export function BeatGrid({
         {/* 큐 편집 칸 — 시안처럼 "타임라인 바로 오른쪽에 늘 있음"(선택 전엔
             빈 안내, t537 레이아웃 교정 — `.beat-grid-mid`의 두 번째 칸).
             밝기/위치/색/들어올 때 네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)).
-            카드 t551(M3) — 밝기 "값"(%)만 `onEditRequest`가 있으면 그
-            자리에서 고칠 수 있다(mockup "표의 ... 칸을 누르면 그 자리에서
-            바로 고쳐지고"); 위치/색/효과/디머 프리셋은 프리셋 카탈로그가
-            없어 여전히 읽기 전용이다(progress.md "## Missing Inputs"). */}
+            `onEditRequest`가 있으면 밝기(값·디머 프리셋·디머 효과)·위치·
+            색·효과·움직임 칸이 늘 열린 고르기로 그 자리에서 고쳐진다(t588,
+            시안 `.sidepane .ed`) — 프리셋 목록은 서랍이 읽은 카탈로그에서
+            온다. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
           {pendingSuggestion ? (
             // mockup `#bAi` 핸들러(지시 1항) — AI 제안이 보류 중인 동안은
@@ -2198,8 +2198,8 @@ export function BeatGrid({
                           {editing && isBrightnessRow ? (
                             // 카드 t551 계속 — 밝기 단일모드(값/디머 프리셋/디머
                             // 효과, REQ-LDBEAT-015(c)) — mockup `#eM`/`eDimMode`
-                            // 3항 선택 그대로. "디머 효과"는 아직 목록이 없어
-                            // 읽기 전용 안내만(Missing Inputs).
+                            // 3항 선택 그대로. 디머 프리셋·디머 효과 목록은
+                            // 서랍의 디머 섹션에서 온다(못 읽었으면 고르기가 꺼진다).
                             <span className="beat-grid-cue-field-edit">
                               <select
                                 value={brightnessModeDraft}
