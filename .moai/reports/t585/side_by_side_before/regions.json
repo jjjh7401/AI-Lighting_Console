@@ -1,0 +1,1070 @@
+{
+  "1450x900": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 235.6875,
+          "width": 1402.5,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 389.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 288.234375,
+          "width": 1402.5,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 388.078125,
+          "width": 1092.5,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 788.75,
+          "y": 829.078125,
+          "width": 637.5,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 511.078125,
+          "width": 765,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 70.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 70.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 88,
+          "width": 1378,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 509.921875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 154,
+          "width": 1378,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 287,
+          "width": 1058,
+          "height": 71
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 792.1875,
+          "y": 366,
+          "width": 621.8125,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 366,
+          "width": 746.1875,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 71
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 71
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1450_1_topbar.png",
+      "1450_2_play_cluster.png",
+      "1450_3_song_map.png",
+      "1450_4_timeline.png",
+      "1450_5_glance_table.png",
+      "1450_6_stage_2d.png",
+      "1450_7_edit_panel.png",
+      "1450_8_transition.png"
+    ]
+  },
+  "1450x1000": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 235.6875,
+          "width": 1402.5,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 389.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 288.234375,
+          "width": 1402.5,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 388.078125,
+          "width": 1092.5,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 788.75,
+          "y": 829.078125,
+          "width": 637.5,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 611.078125,
+          "width": 765,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 170.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 170.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 88,
+          "width": 1378,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 509.921875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 154,
+          "width": 1378,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 287,
+          "width": 1058,
+          "height": 171
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 792.1875,
+          "y": 466,
+          "width": 621.8125,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 466,
+          "width": 746.1875,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 171
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 171
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1450_1_topbar.png",
+      "1450_2_play_cluster.png",
+      "1450_3_song_map.png",
+      "1450_4_timeline.png",
+      "1450_5_glance_table.png",
+      "1450_6_stage_2d.png",
+      "1450_7_edit_panel.png",
+      "1450_8_transition.png"
+    ]
+  },
+  "1450x1200": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 235.6875,
+          "width": 1402.5,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 389.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 288.234375,
+          "width": 1402.5,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 388.078125,
+          "width": 1092.5,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 788.75,
+          "y": 829.078125,
+          "width": 637.5,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 23.75,
+          "y": 811.078125,
+          "width": 765,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 370.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1116.25,
+          "y": 370.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 88,
+          "width": 1378,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 509.921875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 154,
+          "width": 1378,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 287,
+          "width": 1058,
+          "height": 371
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 792.1875,
+          "y": 666,
+          "width": 621.8125,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 36,
+          "y": 666,
+          "width": 746.1875,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 371
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1104,
+          "y": 287,
+          "width": 310,
+          "height": 371
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1450_1_topbar.png",
+      "1450_2_play_cluster.png",
+      "1450_3_song_map.png",
+      "1450_4_timeline.png",
+      "1450_5_glance_table.png",
+      "1450_6_stage_2d.png",
+      "1450_7_edit_panel.png",
+      "1450_8_transition.png"
+    ]
+  },
+  "1700x900": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 235.6875,
+          "width": 1636,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 514.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 288.234375,
+          "width": 1636,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 388.078125,
+          "width": 1326,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 924.359375,
+          "y": 829.078125,
+          "width": 743.640625,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 511.078125,
+          "width": 892.359375,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 70.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 70.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 88,
+          "width": 1616,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 586.171875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 154,
+          "width": 1616,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 287,
+          "width": 1296,
+          "height": 71
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 928,
+          "y": 366,
+          "width": 730,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 366,
+          "width": 876,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 71
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 71
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1700_1_topbar.png",
+      "1700_2_play_cluster.png",
+      "1700_3_song_map.png",
+      "1700_4_timeline.png",
+      "1700_5_glance_table.png",
+      "1700_6_stage_2d.png",
+      "1700_7_edit_panel.png",
+      "1700_8_transition.png"
+    ]
+  },
+  "1700x1000": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 235.6875,
+          "width": 1636,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 514.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 288.234375,
+          "width": 1636,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 388.078125,
+          "width": 1326,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 924.359375,
+          "y": 829.078125,
+          "width": 743.640625,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 611.078125,
+          "width": 892.359375,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 170.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 170.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 88,
+          "width": 1616,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 586.171875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 154,
+          "width": 1616,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 287,
+          "width": 1296,
+          "height": 171
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 928,
+          "y": 466,
+          "width": 730,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 466,
+          "width": 876,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 171
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 171
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1700_1_topbar.png",
+      "1700_2_play_cluster.png",
+      "1700_3_song_map.png",
+      "1700_4_timeline.png",
+      "1700_5_glance_table.png",
+      "1700_6_stage_2d.png",
+      "1700_7_edit_panel.png",
+      "1700_8_transition.png"
+    ]
+  },
+  "1700x1200": {
+    "mockup": {
+      "1_topbar": {
+        "selector": ".top",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 235.6875,
+          "width": 1636,
+          "height": 52.546875
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".top .play",
+        "found": true,
+        "box": {
+          "x": 514.09375,
+          "y": 243.6875,
+          "width": 554.3125,
+          "height": 35.546875
+        }
+      },
+      "3_song_map": {
+        "selector": ".ov",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 288.234375,
+          "width": 1636,
+          "height": 99.84375
+        }
+      },
+      "4_timeline": {
+        "selector": "#scroller",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 388.078125,
+          "width": 1326,
+          "height": 440
+        }
+      },
+      "5_glance_table": {
+        "selector": ".pane.tpane",
+        "found": true,
+        "box": {
+          "x": 924.359375,
+          "y": 829.078125,
+          "width": 743.640625,
+          "height": 389
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".pane.stage",
+        "found": true,
+        "box": {
+          "x": 32,
+          "y": 811.078125,
+          "width": 892.359375,
+          "height": 389
+        }
+      },
+      "7_edit_panel": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 370.078125,
+          "width": 310,
+          "height": 440
+        }
+      },
+      "8_transition": {
+        "selector": "#sidePane",
+        "found": true,
+        "box": {
+          "x": 1358,
+          "y": 370.078125,
+          "width": 310,
+          "height": 440
+        }
+      }
+    },
+    "app": {
+      "1_topbar": {
+        "selector": ".beat-grid-topbar",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 88,
+          "width": 1616,
+          "height": 58
+        }
+      },
+      "2_play_cluster": {
+        "selector": ".beat-grid-play-cluster",
+        "found": true,
+        "box": {
+          "x": 586.171875,
+          "y": 95,
+          "width": 567.671875,
+          "height": 44
+        }
+      },
+      "3_song_map": {
+        "selector": ".song-overview",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 154,
+          "width": 1616,
+          "height": 99
+        }
+      },
+      "4_timeline": {
+        "selector": ".beat-grid-lanes",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 287,
+          "width": 1296,
+          "height": 371
+        }
+      },
+      "5_glance_table": {
+        "selector": ".beat-grid-glance-pane",
+        "found": true,
+        "box": {
+          "x": 928,
+          "y": 666,
+          "width": 730,
+          "height": 320
+        }
+      },
+      "6_stage_2d": {
+        "selector": ".beat-grid-stage-pane",
+        "found": true,
+        "box": {
+          "x": 42,
+          "y": 666,
+          "width": 876,
+          "height": 320
+        }
+      },
+      "7_edit_panel": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 371
+        }
+      },
+      "8_transition": {
+        "selector": ".beat-grid-cue-panel",
+        "found": true,
+        "box": {
+          "x": 1348,
+          "y": 287,
+          "width": 310,
+          "height": 371
+        }
+      },
+      "cue_count": 33
+    },
+    "app_page_errors": [],
+    "pairs": [
+      "1700_1_topbar.png",
+      "1700_2_play_cluster.png",
+      "1700_3_song_map.png",
+      "1700_4_timeline.png",
+      "1700_5_glance_table.png",
+      "1700_6_stage_2d.png",
+      "1700_7_edit_panel.png",
+      "1700_8_transition.png"
+    ]
+  }
+}

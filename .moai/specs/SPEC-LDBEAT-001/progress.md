@@ -746,6 +746,16 @@ REQ-LDBEAT-001/006(vi) 후속. cycle_type=tdd. Part ①(측정된 무빙 허용�
 - **재현**: `serve_fake.py`(FakeConsole + LOVE ATTACK 실측 분석 t509 + 제품 기본 격자 + t525 무대 좌표) → `capture.py`(Playwright). 실행 명령은 diff-list.md 머리말.
 - **안 잰 것**: 세로 1000px 한 높이만 · ✎/이음매 ◆/무대 장비 클릭 미조작 · 프리셋이 채워진 곡 미사용(「미정」 칸 상당수는 데이터 탓, 목록에 ⚪ 로 구분) · 171px 원인 CSS 미조사.
 
+### M7 step 5 후속 — 배치 결함 🔴 4건 고침 (카드 t585, 2026-10-11)
+
+t583 diff-list 🔴 4건을 원인 CSS 부터 재고 고쳤다(CSS 두 파일 + 회귀 시험 5개, 🟡 는 손대지 않음, 콘솔 0). 전체 verdict `.moai/reports/t585/run-verdict.md`.
+
+- **원인(계산된 스타일 실측)**: ① `.beat-grid-mid{flex:1}` 가 남은 공간만 받아 1000px 창 171px·900px 창 71px · ② 줄 이름 배경이 글자 높이 15px 뿐 + 폴더 머리가 고정 대상 아님 · ③ 편집 칸이 타임라인 높이에 묶여 171px · ④ 겹침이 아니라 경고 목록 64px 에 15px 줄이 4.27줄 들어가 다섯째 줄이 반만 잘림(t583 판독 정정).
+- **고친 것**: 타임라인 440px 고정(REQ-016(b) 시안 수치) + 틀 `overflow-y:auto` · 줄 이름 `align-self:stretch` · 폴더 `max-content` + 폴더 머리 sticky · 경고 줄 높이 16px.
+- **증거**: 1450·1700 × 세로 900·1000·1200 전후 캡처 — 타임라인·편집·전환 칸 전부 440px(전 71/171/371), 페이지 오류 0. 새 시험 5개는 main CSS 에서 5개 전부 실패·고친 CSS 에서 통과. vitest 1162 passed.
+- **해석 하나**: REQ-004(b) 「한 화면 높이로 고정」을 시안 원문대로 「칸이 줄 수에 따라 늘지 않음」으로 읽고, 칸 합이 창보다 크면 틀째 스크롤하게 했다 — run-verdict 에 리드 판단 요청으로 적음.
+- **새 카드 후보**: 세로 900px 에서 상단 바 「⇪ 반영」 잘림 + 긴 BPM 문구 — main 에도 있는 기존 결함.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_

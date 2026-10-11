@@ -275,10 +275,14 @@
 }
 
 /* 카드 t565 — 무대 판독이 못 읽은 이유(잘림·응답기 버전·그룹 없음). */
+/* 카드 t585 — 줄 높이를 16px 로 고정해 64px 칸에 정확히 4줄이 들어가게 한다.
+   전에는 글꼴 기본 줄 높이(약 15px)라 다섯째 줄이 칸 아래 끝에서 반만 잘려
+   바로 밑 범례 줄과 겹쳐 보였다(넘치는 줄은 칸 안에서 스크롤). */
 .beat-grid-stage-notes {
   margin: 4px 0 0;
   padding: 0 0 0 2px;
   list-style: none;
+  line-height: 16px;
   max-height: 64px;
   overflow: auto;
   color: var(--muted);
