@@ -1,5 +1,6 @@
 """t603 사본(원본 t583/t599) — 콘솔 없이 앱 서버를 띄워 런북 박자 격자 화면을 헤드리스로 찍는
-일회용 실행기. t599 에서 바뀐 것: 가짜 풀에 혼합 효과 풀(All 1, 22 — 앱이 찾는 이름 `beat_grid_presets._POOL_NAME_TO_EFFECT_KIND`)을 더했다.
+일회용 실행기. t599 에서 바뀐 것: 가짜 풀에 혼합 효과 풀(All 1, 22)을 더했다 — 이름은
+앱이 찾는 `beat_grid_presets._POOL_NAME_TO_EFFECT_KIND` 그대로.
 
 제품 코드와 같은 `create_app` 에 시험과 같은 FakeConsole(쓰기 0 · 실기 포트 0)과
 임시 폴더만 물린다. 사용자 앱 데이터 폴더(`~/Library/Application Support/...`)·
@@ -169,7 +170,7 @@ def main() -> None:
             # t589 — 캡처 전용: 서랍이 풀을 읽어 편집 칸 드롭다운이 켜지도록 작은
             # 가짜 풀 셋(이름은 시안 예시 'LA …'를 흉내 낸 시험값, 실기 값 아님).
             # 위치 풀 2.61 은 이름 없는 점유 슬롯 — 빈 번호가 2.62 로 가야 한다.
-            # t603 — 혼합 효과 풀(All 1, 22 — 앱이 찾는 이름 `beat_grid_presets._POOL_NAME_TO_EFFECT_KIND`)을 더했다. 22.5 만 점유(시험값).
+            # t603 — 혼합 효과 풀(All 1, 22)을 더했다. 22.5 만 점유(시험값).
             "DataPool/PresetPools": _pools({"Dimmer": 1, "Position": 2, "Color": 4, "All 1": 22}),
             "DataPool/PresetPools/1": _slots({1: "LA Full", 21: "LA Dim Pulse"}),
             "DataPool/PresetPools/2": _slots({41: "LA Center", 61: None}),

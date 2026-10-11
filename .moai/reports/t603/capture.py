@@ -1,4 +1,4 @@
-"""t603 — 효과 칸에서 「＋ 새 프리셋 만들기…」를 고르고 만든 뒤, 「⇪ 콘솔에 반영」 승인 카드까지 전후로 찍는다.
+"""t603 — 효과 칸에서 「＋ 새 프리셋 만들기…」를 고르고 만든 모습을 전후로 찍는다.
 
 실행(serve_fake.py 가 떠 있어야 한다 — 콘솔은 FakeConsole):
   uv run --with uvicorn python .moai/reports/t603/serve_fake.py 8874
