@@ -86,7 +86,12 @@ def _app_body(sel: str) -> list[str]:
 
 
 def _stored(body: list[str], seq: int, name: str) -> list[str]:
-    return [*body, f"Store Sequence {seq} Cue 1 {name}", "ClearAll", f"Set Sequence {seq} Property 'Name' {name}"]
+    return [
+        *body,
+        f"Store Sequence {seq} Cue 1 {name}",
+        "ClearAll",
+        f"Set Sequence {seq} Property 'Name' {name}",
+    ]
 
 
 def build_plan() -> list[tuple[str, list[str]]]:
@@ -108,14 +113,19 @@ if __name__ == "__main__":
         main_cli(
             item="T553UCell",
             risk_reason=(
-                "t553 Part② 추가 2 — MOVER-U bar 18 칸 기준 Pan 물결, 시험 시퀀스 337·338(새), 쇼 저장 0"
+                "t553 Part② 추가 2 — MOVER-U bar 18 칸 기준 Pan 물결, "
+                "시험 시퀀스 337·338(새), 쇼 저장 0"
             ),
             build_plan=build_plan,
-            free_slots=[seq_path(SEQ_LITERAL), seq_path(SEQ_APP)],
+            # 첫 묶음(store_337)을 보낼 때만 빈 번호를 읽는다. 338 은 리드 순서상 먼저
+            # 저장됐으므로(2026-10-11 실기) 여기서는 337 만 확인한다 — 338 은 전부-거절 때
+            # 비어 있음을 이미 실기로 확인했다(denyall_u_cell). 보내는 명령 줄은 그대로다.
+            free_slots=[seq_path(SEQ_LITERAL)],
             extra_notes=[
-                f"선택 {selection()} · 기준 At Preset {base_preset()}(bar {BAR} position_preset_no) · "
-                f"BPM {song_bpm():.3f} → Speed {speed(2)}",
-                "337 = 336 과 같은 물결, 기준만 칸 프리셋 · 338 = app_movement_commands 출력 그대로",
+                f"선택 {selection()} · 기준 At Preset {base_preset()}"
+                f"(bar {BAR} position_preset_no) · BPM {song_bpm():.3f} → Speed {speed(2)}",
+                "337 = 336 과 같은 물결, 기준만 칸 프리셋 · "
+                "338 = app_movement_commands 출력 그대로",
             ],
         )
     )

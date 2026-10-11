@@ -189,3 +189,23 @@ $ grep -n "^Store " .moai/reports/t553/approval_t553.txt
 - 파일 변경: `server/design/beat_grid_emit.py`(수정), `server/design/beat_grid_measured.py`(신설), `server/design/beat_grid_data/measured_movements.yaml`(신설), `server/tests/test_beat_grid_measured_t553.py`(신설), `server/tests/test_beat_grid_emit_t549.py`(수정), `.moai/specs/SPEC-LDBEAT-001/progress.md`(수정, 대체 고지 + §E.2 항목), `.moai/reports/t553/**`(신설, 보고서+스크립트).
 - PRESERVE diff: 0줄(`emit.py`/`songcue.py`/`CueSheetTimeline.tsx`/`safety/**`/`console/lua/**`/spec·plan·acceptance body).
 - 콘솔 쓰기: Part ① 0건, Part ② 0건(전부-거절까지만) — 승인 목록은 리드 「실행」 대기.
+
+## 실기 실행 결과 (레인, 2026-10-11 — 리드 「실행」 뒤)
+
+이 위의 「실행 금지」·「PASS여도 게이트를 열지 않는다」는 실행 전 시점 문면이다. 아래가 실행 뒤 사실이다.
+보낼 때마다 승인 목록 sha256 을 다시 재 일치 확인했고, 묶음마다 멈춰 리드 판정을 받았다. 쇼 저장 0.
+
+| 묶음 | 승인 목록 줄 | 콘솔 | 판정(리드) | 근거 |
+|---|---|---|---|---|
+| ① 8트랙 TC 32 | `approval_t553.txt` 1~22 | 22줄 OK | PASS — childCount 9, TARGET 226..233 | `live/p1b/`, `live/p1b_readback.txt` |
+| 336 기울인 기준 켜기 | 23~26 | 4줄 OK | 8대 켜짐·기울어짐 | `live/u_t0/` |
+| 336 저장·재생 | 27~44 | 18줄 OK | 움직임 4.5~5.3% | `live/u_store_play/` |
+| 336 끄기 | 45~46 | OK | — | `live/u_off/` |
+| 338 저장·재생(앱 출력) | `approval_t553_cell.txt` 20~35 | 16줄 OK | 판정 불가 0.00~0.01% | `live/cell_338_on/` |
+| 338 끄기 | 36~37 | OK | — | `live/cell_338_off/` |
+| 337 저장·재생(336 + 기준 2.1) | 1~17 | 17줄 OK(첫 시도는 빈 번호 확인에 걸려 0줄) | 판정 불가 0.01~0.02% | `live/cell_337_on/`, `live/cell_337_on_stopped_slotcheck/` |
+| 337 끄기 | 18~19 | OK | — | `live/cell_337_off/` |
+
+- 단계 (2)에서 리드 범위(23~27줄) 중 27줄 `ClearAll` 은 캡처 전에 빛을 끄므로 (3) 직전으로 미뤘다 — 문면·순서 무변경.
+- 결론: 타임코드 8트랙 확인 → `measured_console.yaml` 상한 8. MOVER-U Pan 단독은 기울인 기준에서만 보이고 2.1(수직) 기준에선 판정 불가 → bar 18 닫힘, `measured_movements.yaml` 에 기록만. 열려면 기울인 위치 프리셋을 칸에 지정(감독 결정 대상).
+- 안 잰 것: 8 초과 트랙, 타임코드 재생 중 큐 TrigTime 진행, 337·338·336 시퀀스와 TC 32 는 콘솔에 남아 있다(쇼 저장 0 이라 쇼를 다시 열면 사라짐, 삭제는 승인 범위 밖).
