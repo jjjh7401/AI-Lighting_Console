@@ -430,12 +430,11 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
         tracks = grid["tracks"]
         probe_results = read_m1_probe_results_from_path(default_progress_md_path())
 
-        # LOVE ATTACK은 트랙(콘솔 그룹) 8개다 — 전부를 타임코드 하나에
-        # 몰면 MEASURED_MAX_TIMECODE_TRACKS(6, ①이 구조로 확인한 실제
-        # 최대)를 넘어 트랙 레벨에서 전부 거절된다(그 자체로 중요한
-        # 발견 — run-verdict에 별도로 기록). 이 시험은 M1 **칸** 게이트를
-        # 재는 것이 목적이라 타임코드를 둘로 쪼개 그 트랙-레벨 상한을
-        # 피한다(시험 입력, 콘솔 번호 아님).
+        # LOVE ATTACK은 트랙(콘솔 그룹) 8개다. 카드 t549 당시 측정 최대는 6이라
+        # 타임코드 하나에 몰면 트랙 레벨에서 전부 거절됐다(2026-10-11 t553 실기로
+        # 8까지 확인 — 상한은 measured_console.yaml). 이 시험은 M1 **칸** 게이트를
+        # 재는 것이 목적이라 타임코드를 둘로 쪼개 트랙-레벨 상한과 무관하게 둔다
+        # (시험 입력, 콘솔 번호 아님).
         sequence_numbers = {t["group_name"]: 300 + i for i, t in enumerate(tracks)}
         timecode_numbers = {t["group_name"]: (30 if i < 4 else 31) for i, t in enumerate(tracks)}
         dimmer_attributes = {t["group_name"]: ("Dimmer",) for t in tracks}
@@ -499,18 +498,21 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
         }
         assert expected_allowed <= allowed_with_content
 
-    def test_all_eight_love_attack_tracks_on_one_timecode_exceeds_measured_max(self) -> None:
-        # 중요한 발견 — LOVE ATTACK은 콘솔 그룹 트랙 8개(FOH·WASH-ALL·
-        # BACK·SIDE-ALL·MOVER-U·MOVER-D·BLIND·STROBE)다. "한 곡 = 타임코드
-        # 하나"로 전부 몰면 ①이 구조로 확인한 실제 최대(6)를 넘어 **트랙
-        # 레벨**에서 전부 거절된다 — 쪼개거나(둘 이상의 타임코드) M1 ①을
-        # 6개 초과로 재확인해야 전부 한 타임코드에 들어간다.
+    def test_one_track_beyond_the_measured_max_still_refuses_the_whole_timecode(self) -> None:
+        # 2026-10-11 대체 고지(카드 t553): 이 시험은 원래 「LOVE ATTACK 8트랙을
+        # 한 타임코드에 몰면 측정 최대 6을 넘어 전부 거절」을 확인했다. t553
+        # 실기 되읽기(타임코드 32, 트랙 8)로 상한이 8이 되어 8트랙은 이제
+        # 들어간다(test_beat_grid_timecode_cap_t553.py). 같은 경계 — 측정한 수를
+        # 하나라도 넘으면 그 타임코드 트랙 전부 거절 — 를 9번째 가짜 트랙으로 잰다.
         from server.design.beat_grid import LOVE_ATTACK_TITLE
         from server.design.beat_grid_probes import read_m1_probe_results_from_path
 
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
-        tracks = grid["tracks"]
-        assert len(tracks) == 8
+        tracks = list(grid["tracks"])
+        extra = dict(tracks[0], group_name="EXTRA-TRACK", cues=[])
+        tracks = tracks + [extra] * (MEASURED_MAX_TIMECODE_TRACKS + 1 - len(tracks))
+        assert len(tracks) == MEASURED_MAX_TIMECODE_TRACKS + 1
+        tracks = [dict(t, group_name=f"{t['group_name']}-{i}") for i, t in enumerate(tracks)]
         probe_results = read_m1_probe_results_from_path(default_progress_md_path())
         sequence_numbers = {t["group_name"]: 300 + i for i, t in enumerate(tracks)}
         timecode_numbers = {t["group_name"]: 30 for t in tracks}

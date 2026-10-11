@@ -50,6 +50,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
 
 from server.design.app_movement import app_movement_commands, brightness_value_commands
 from server.design.beat_grid import check_app_movement_axis_conflict, check_evidence_approval
@@ -85,12 +88,26 @@ _APP_MOVEMENT_ITEMS: frozenset[int] = frozenset({5, 7, 9})
 #: 이 접두사로 시작하지 않는다.
 _M1_PASS_PREFIX = "통과"
 
-#: ①이 구조로 확인한 실제 최대 트랙 수(`.moai/specs/SPEC-LDBEAT-001/
-#: progress.md` "TC 30 에 시퀀스 트랙 6개(228→233)") — ①이 PASS라도 이
-#: 수를 넘는 묶음은 측정 범위 밖이다(이 모듈이 독자적으로 추가한 보수적
-#: 상한, 배차서 매핑을 "느슨하게 풀지 않는다"는 지시의 반대 방향 — 더
-#: 엄격하게 좁힌다).
-MEASURED_MAX_TIMECODE_TRACKS = 6
+#: 실기에서 잰 측정값 파일 — 타임코드 하나에 붙여 본 최대 트랙 수 등
+#: (카드 t553). 값과 근거는 코드가 아니라 이 데이터 파일에 산다.
+_MEASURED_CONSOLE_PATH = (
+    Path(__file__).resolve().parent / "beat_grid_data" / "measured_console.yaml"
+)
+
+
+def _load_measured_max_timecode_tracks() -> int:
+    with _MEASURED_CONSOLE_PATH.open("r", encoding="utf-8") as handle:
+        value = yaml.safe_load(handle)["max_timecode_tracks"]
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"max_timecode_tracks 가 양의 정수가 아닙니다: {value!r}")
+    return value
+
+
+#: ①이 구조로 확인한 실제 최대 트랙 수 — ①이 PASS라도 이 수를 넘는 묶음은
+#: 측정 범위 밖이라 그 타임코드의 트랙 전부를 거절한다. 처음엔 t531의 6이었고
+#: (카드 t549), 카드 t553 실기 되읽기(타임코드 32, 트랙 8)로 8이 됐다 —
+#: 근거는 ``beat_grid_data/measured_console.yaml``.
+MEASURED_MAX_TIMECODE_TRACKS = _load_measured_max_timecode_tracks()
 
 
 def required_m1_items_for_cue(cue: Mapping[str, object]) -> frozenset[int]:
@@ -423,7 +440,8 @@ def emit_beat_grid_write_bundle(
             track_count = len(timecode_groups.get(timecode_number, []))
             reason = (
                 f"타임코드 {timecode_number}에 트랙 {track_count}개 — ①이 구조로 확인한 "
-                f"최대 {MEASURED_MAX_TIMECODE_TRACKS}개(progress.md M1 ①)를 넘습니다"
+                f"최대 {MEASURED_MAX_TIMECODE_TRACKS}개"
+                "(beat_grid_data/measured_console.yaml)를 넘습니다"
             )
             track_results.append(
                 _blocked_track(
