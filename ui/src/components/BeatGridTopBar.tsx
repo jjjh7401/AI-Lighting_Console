@@ -9,6 +9,8 @@
 // 없으면 버튼이 비활성으로 남고, 그 사실을 title 로 말한다(지어낸 동작 0).
 import { useEffect } from "react";
 
+import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
+
 export interface TopBarAction {
   id: "preview" | "apply" | "drawer";
   full: string;
@@ -51,6 +53,27 @@ export function formatTopBarBpm(bpm: number | null | undefined): string {
   return `BPM ${Number(bpm.toFixed(2))}`;
 }
 
+/** 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데). 로직은
+ * `beatgrid/playbackClock.ts`·`beatgrid/audioAutoConnect.ts`에 있고, 이
+ * 컴포넌트는 그 결과를 받아 마운트만 한다. `playback`을 안 넘기면(즉
+ * 생략) 기존(카드 t559)과 바이트 동일하게 렌더된다(additive). */
+export interface BeatGridTopBarPlaybackProps {
+  playing: boolean;
+  positionSeconds: number;
+  onTogglePlay: () => void;
+  onRewindToStart: () => void;
+  /** ⏪10초/10초⏩(REQ-LDBEAT-024(d)) — 초 단위 이동(음수 = 뒤로). */
+  onSeek: (deltaSeconds: number) => void;
+  /** `audioAutoConnect.audioButtonLabel`의 결과 그대로("✓ <파일명>" 등). */
+  audioButtonLabel: string;
+  onSelectAudioFile: (file: File | null) => void;
+  /** AC-LDBEAT-024(c) — 연결 실패 이유. 없으면 칸 자체가 없다. */
+  audioFailureReason?: string | null;
+  /** 「콘솔 같이」 토글이 늘 비활성인 이유(송신 경로 t563 준비 전) —
+   * `consoleSyncAudio.CONSOLE_FOLLOW_DISABLED_REASON`. */
+  consoleFollowDisabledReason: string;
+}
+
 export interface BeatGridTopBarProps {
   songTitle: string;
   /** 격자 출처 안내(`BeatGridView.note`) — 기존 머리줄에 있던 값을 그대로 옮긴다. */
@@ -66,6 +89,9 @@ export interface BeatGridTopBarProps {
   /** 콘솔에 아직 안 보낸 편집 수. 출처가 없으면 생략 — 숫자를 지어내지 않는다. */
   pendingApplyCount?: number | null;
   onDrawerToggle?: () => void;
+  /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
+   * 동일. */
+  playback?: BeatGridTopBarPlaybackProps | null;
 }
 
 function ShortenedLabel({ action }: { action: TopBarAction }) {
@@ -90,6 +116,7 @@ export function BeatGridTopBar({
   onApply,
   pendingApplyCount,
   onDrawerToggle,
+  playback = null,
 }: BeatGridTopBarProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -112,6 +139,30 @@ export function BeatGridTopBar({
     return () => window.removeEventListener("keydown", onKey);
   }, [currentBar, barRange, onBarChange]);
 
+  // 카드 t570(REQ-LDBEAT-024(a)) — 스페이스바로 재생/일시정지(mockup
+  // `document.addEventListener("keydown", ...Space...)`). `playback`을
+  // 안 넘기면(즉 플레이 묶음 자체가 없음) 리스너를 걸지 않는다.
+  useEffect(() => {
+    if (!playback || typeof window === "undefined") return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        !isPlaybackSpaceToggleKey({
+          code: event.code,
+          key: event.key,
+          targetTag: target?.tagName,
+          isContentEditable: target?.isContentEditable,
+        })
+      ) {
+        return;
+      }
+      event.preventDefault();
+      playback.onTogglePlay();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [playback]);
+
   const [preview, apply, drawer] = TOP_BAR_SHORTENED_ACTIONS;
   const titleFor = (full: string, wired: boolean) => (wired ? full : full + UNWIRED_NOTE);
 
@@ -125,6 +176,53 @@ export function BeatGridTopBar({
       </span>
       {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />
+      {/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데).
+          두 번째 스페이서(아래)로 가운데 고정 — `playback`이 없으면(즉
+          생략) 이 블록 전체가 안 나오고 위 스페이서 하나만 남아 기존
+          (카드 t559)과 바이트 동일하다. */}
+      {playback && (
+        <>
+          {/* 시안 순서 그대로(proposal.html `.play`): 플레이 · ⏮ · ⏪ 10초 ·
+              ▶ 재생 · 10초 ⏩ · 시계 · ♪ 음원 · 콘솔 같이. */}
+          <span className="beat-grid-play-cluster">
+            <span className="beat-grid-play-label">플레이</span>
+            <button type="button" className="tbtn" title="처음으로" onClick={playback.onRewindToStart}>
+              ⏮
+            </button>
+            <button type="button" className="tbtn" title="10초 뒤로" onClick={() => playback.onSeek(-10)}>
+              ⏪ 10초
+            </button>
+            <button
+              type="button"
+              className="tbtn pri"
+              title="재생 / 일시정지 (스페이스)"
+              onClick={playback.onTogglePlay}
+            >
+              {playback.playing ? "❚❚ 일시정지" : "▶ 재생"}
+            </button>
+            <button type="button" className="tbtn" title="10초 앞으로" onClick={() => playback.onSeek(10)}>
+              10초 ⏩
+            </button>
+            <span className="beat-grid-clock">{formatPlaybackClock(playback.positionSeconds)}</span>
+            <label className="tbtn beat-grid-audio-label" title="음원 파일을 불러오면 음악에 맞춰 재생">
+              ♪ {playback.audioButtonLabel}
+              <input
+                type="file"
+                accept="audio/*"
+                hidden
+                onChange={(event) => playback.onSelectAudioFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
+              콘솔 같이 끔
+            </button>
+            {playback.audioFailureReason && (
+              <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>
+            )}
+          </span>
+          <span className="beat-grid-topbar-spacer" />
+        </>
+      )}
       <button
         type="button"
         className="tbtn"

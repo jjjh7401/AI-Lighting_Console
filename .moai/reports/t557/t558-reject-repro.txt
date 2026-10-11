@@ -1,0 +1,2 @@
+REJECTED {'effect_preset_no': '2.63', 'effect_kind': 'position'} -> 프리셋 번호가 있지만 evidence.approval이 없습니다 — REQ-LDBEAT-015(f) 위반
+REJECTED {'brightness': {'mode': 'dimmer_effect', 'value_percent': None, 'preset_no': '1.21'}} -> 프리셋 번호가 있지만 evidence.approval이 없습니다 — REQ-LDBEAT-015(f) 위반

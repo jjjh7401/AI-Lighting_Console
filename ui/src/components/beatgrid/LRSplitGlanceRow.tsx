@@ -6,17 +6,28 @@
 // 경계) — 이 자식 줄은 **표시 전용**이다. 실제 장비 패치·칸별 편집
 // 가능한 큐 데이터를 몰라, 나머지 다섯 칸(밝기~전환)을 지어내지 않고
 // 하나로 합쳐 "—"(미정)로 둔다.
+//
+// 카드 t570(REQ-LDBEAT-024(e)) — `onSelect`가 생기면(`LRSplitRow.tsx`와
+// 같은 패턴) 이 줄을 눌러 "보는 중"으로 선택할 수 있다.
 import type { LRChildRow } from "./lrSplit";
 
 export interface LRSplitGlanceRowProps {
   child: LRChildRow;
   /** 나머지 다섯 칸(밝기·위치·색·움직임·전환)을 합쳐 보이는 칸 수. */
   remainingColSpan: number;
+  /** 카드 t570 — 이 자식 줄을 "보는 중"으로 선택. 없으면 기존과 바이트
+   * 동일하다. */
+  onSelect?: () => void;
 }
 
-export function LRSplitGlanceRow({ child, remainingColSpan }: LRSplitGlanceRowProps) {
+export function LRSplitGlanceRow({ child, remainingColSpan, onSelect }: LRSplitGlanceRowProps) {
   return (
-    <tr className="beat-grid-glance-row beat-grid-glance-child-row">
+    <tr
+      className={`beat-grid-glance-row beat-grid-glance-child-row${
+        onSelect ? " beat-grid-glance-child-row-selectable" : ""
+      }`}
+      onClick={onSelect}
+    >
       <td>
         └ {child.label} <small>· {child.memberCount}대</small>
       </td>

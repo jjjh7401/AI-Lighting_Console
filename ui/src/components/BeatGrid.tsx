@@ -79,7 +79,17 @@ import { GlanceCell } from "./beatgrid/GlanceCell";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitRow } from "./beatgrid/LRSplitRow";
+import {
+  audioButtonLabel,
+  audioSourceId,
+  formatAudioConnectFailureReason,
+  resolvePlayIntentOnReady,
+  shouldAutoConnectAudio,
+  shouldDeferPlayPress,
+  type AudioConnectStatus,
+} from "./beatgrid/audioAutoConnect";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
+import { CONSOLE_FOLLOW_DISABLED_REASON } from "./beatgrid/consoleSyncAudio";
 import {
   brightnessCell,
   changedFieldsLabel,
@@ -94,9 +104,18 @@ import {
   clearLRSplit,
   declareLRSplit,
   lrChildRowsForTrack,
+  resolveLRSplitViewAfterBarChange,
   type LRSplitDeclarations,
   type LRSplitStage,
+  type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
+import {
+  autoScrollTargetForPlayhead,
+  clampPlaybackSeconds,
+  elapsedPlaybackSeconds,
+  hasReachedPlaybackEnd,
+  runPlaybackFrameUpdate,
+} from "./beatgrid/playbackClock";
 import { formatPresetChipTooltip } from "./beatgrid/presetChipTooltip";
 import { roleFieldHints } from "./beatgrid/roleFields";
 import { buildGlanceFocusTarget, glanceFocusAction, type GlanceFocusTarget } from "./beatgrid/tableFocus";
@@ -547,6 +566,12 @@ export interface BeatGridProps {
    * 바꿀 때만 쓴다 — 없으면 박 입력이 비활성이다(한 마디 박 수를 지어내지
    * 않음). */
   timeSignature?: string;
+  /** 카드 t570(REQ-LDBEAT-024(c)) — 이 세션에서 이미 첨부된 곡 음원(기존
+   * 업로드 경로 — `App.tsx` `uploadSongAudio`가 읽는 그 File). 런북
+   * 전체화면 뷰를 열 때(이 컴포넌트가 처음 마운트될 때) 자동으로
+   * 연결한다. 없으면(`null`/생략) 자동 연결하지 않고 ♪ 버튼으로 직접
+   * 고르는 기존 경로만 남는다(기존과 바이트 동일). */
+  attachedSongAudioFile?: File | null;
 }
 
 /** t537 — 구조화 필드가 미정(`null`)일 때 공통으로 쓰는 표시 문구. "0"이나
@@ -705,8 +730,14 @@ export const NEW_PRESET_OPTION_VALUE = "__new";
 
 /** 카드 t551 계속 — 직접 고르기 드롭다운 한 옵션의 표시 문구. mockup
  * `opts()`의 `${i} ${P[i].nm}`과 같은 모양("번호 이름"). */
-export function formatDrawerEntryOptionLabel(entry: BeatGridDrawerEntry): string {
-  return `${entry.preset_no} ${entry.name}`;
+export function formatDrawerEntryOptionLabel(
+  entry: BeatGridDrawerEntry,
+  options: { markEffect?: boolean } = {},
+): string {
+  // 카드 t557 — 위치·색 드롭다운에는 기본·효과 항목이 함께 있어, 효과 번호대
+  // 항목에 「· 효과」를 붙여 가른다(시안 opts() 의 「(쇼·효과)」 표기).
+  const suffix = options.markEffect && entry.is_effect_band ? " · 효과" : "";
+  return `${entry.preset_no} ${entry.name}${suffix}`;
 }
 
 /** 카드 t551 계속 — 서랍 섹션 하나를 "이 곡 프리셋"(이 격자가 실제로
@@ -777,12 +808,38 @@ export function buildBrightnessPresetChanges(presetNo: string): Record<string, u
   return { brightness: { mode: "dimmer_preset", value_percent: null, preset_no: presetNo } };
 }
 
-/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 효과(움직임) 프리셋
- * 직접 고르기. 이 드롭다운은 무빙(`hints.includes("움직임")`, 위치 풀의
- * 효과 번호대) 전용이라 `effect_kind`는 "position"으로 고정한다 — 이
- * 값은 번호대 리터럴이 아니라 REQ-LDBEAT-006(i-3)의 닫힌 종류 어휘다. */
-export function buildEffectPresetChanges(presetNo: string): Record<string, unknown> {
-  return { effect_preset_no: presetNo, effect_kind: "position" };
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 효과 프리셋 직접
+ * 고르기. `effect_kind` 는 REQ-LDBEAT-006(i-3)의 닫힌 종류 어휘이고(번호대
+ * 리터럴 아님), 카드 t557 부터 고른 항목이 나온 풀이 정한다
+ * (`presetPickChanges`). 기본값 "position" 은 예전 호출과 같다. */
+export function buildEffectPresetChanges(
+  presetNo: string,
+  kind: "position" | "color" | "dimmer" | "mixed" = "position",
+): Record<string, unknown> {
+  return { effect_preset_no: presetNo, effect_kind: kind };
+}
+
+/** 카드 t557 — 서랍 풀 이름 → 효과 종류·기본 저장 필드. 디머 풀은 밝기
+ * 단일모드(값·디머 프리셋·디머 효과)가 따로 맡는다(REQ-LDBEAT-015(c)). */
+const PICK_POOLS: Record<string, { kind: "position" | "color"; baseField: "position_preset_no" | "color_preset_no" }> = {
+  Position: { kind: "position", baseField: "position_preset_no" },
+  Color: { kind: "color", baseField: "color_preset_no" },
+};
+
+/** 카드 t557 — 위치·색·효과 드롭다운에서 고른 번호를 어느 필드에 담을지 정한다.
+ * 그 풀의 **효과 번호대** 항목(`is_effect_band`, 서버가 `preset_pools.yaml` 로
+ * 판정 — 번호대 리터럴은 여기 없다)이면 그 풀 종류의 효과(`effect_preset_no` +
+ * `effect_kind`), 아니면 그 풀의 기본 필드다. 서랍에 없는 번호나 서랍을 아직
+ * 못 받았으면 효과로 지어내지 않고 기본 필드로 둔다(서버 검사는 그대로 받는다). */
+export function presetPickChanges(
+  section: BeatGridDrawerSection | null,
+  poolName: "Position" | "Color",
+  presetNo: string,
+): Record<string, unknown> {
+  const pool = PICK_POOLS[poolName];
+  const entry = section?.entries.find((candidate) => candidate.preset_no === presetNo);
+  if (entry?.is_effect_band) return buildEffectPresetChanges(presetNo, pool.kind);
+  return { [pool.baseField]: presetNo };
 }
 
 /** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 밝기 단일모드 중
@@ -945,20 +1002,23 @@ export function barPercentInRange(bar: number, rangeStart: number, rangeEnd: num
  * 둘 다 순수·시험됨)은 호출자가 끝내고, 이 함수는 그 결과를 그대로
  * JSX로만 옮긴다(카드 t551 계속 — 효과 드롭다운과 공유하려고 섹션이
  * 아니라 이미 가른 쌍을 받는다). */
-function renderPresetOptions({
-  thisSong,
-  showExisting,
-}: {
-  thisSong: BeatGridDrawerEntry[];
-  showExisting: BeatGridDrawerEntry[];
-}) {
+function renderPresetOptions(
+  {
+    thisSong,
+    showExisting,
+  }: {
+    thisSong: BeatGridDrawerEntry[];
+    showExisting: BeatGridDrawerEntry[];
+  },
+  markEffect = false,
+) {
   return (
     <>
       {thisSong.length > 0 && (
         <optgroup label="이 곡 프리셋">
           {thisSong.map((entry) => (
             <option key={entry.preset_no} value={entry.preset_no}>
-              {formatDrawerEntryOptionLabel(entry)}
+              {formatDrawerEntryOptionLabel(entry, { markEffect })}
             </option>
           ))}
         </optgroup>
@@ -967,7 +1027,7 @@ function renderPresetOptions({
         <optgroup label="쇼에 이미 있는 프리셋">
           {showExisting.map((entry) => (
             <option key={entry.preset_no} value={entry.preset_no}>
-              {formatDrawerEntryOptionLabel(entry)}
+              {formatDrawerEntryOptionLabel(entry, { markEffect })}
             </option>
           ))}
         </optgroup>
@@ -1007,6 +1067,7 @@ export function BeatGrid({
   editedCueKeys,
   onGlanceFocusRequest,
   timeSignature,
+  attachedSongAudioFile = null,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -1074,6 +1135,176 @@ export function BeatGrid({
   // 한눈에」 표 클릭(카드 t560)이 이 값을 정한다 — 막대를 누르면 지운다.
   const [focusField, setFocusField] = useState<BeatGridFocusField | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // 카드 t570(REQ-LDBEAT-024) — 재생 묶음. `playing`은 지금 재생 중인가,
+  // `audioStatus`/`audioFailureReason`/`connectedAudioSourceId`는 음원
+  // 연결 상태(`beatgrid/audioAutoConnect.ts`), `pendingPlayIntent`는
+  // "불러오는 중에 ▶ 를 눌렀다"(AC-LDBEAT-024(b)). `lastPlaybackError`는
+  // 화면 쪽 오류를 흡수한 뒤 보일 로그(REQ-LDBEAT-024(f)) — 재생 자체는
+  // 이 값과 무관하게 계속된다.
+  const [playing, setPlaying] = useState(false);
+  const [audioStatus, setAudioStatus] = useState<AudioConnectStatus>("idle");
+  const [audioFailureReason, setAudioFailureReason] = useState<string | null>(null);
+  const [connectedAudioSourceId, setConnectedAudioSourceId] = useState<string | null>(null);
+  const [pendingPlayIntent, setPendingPlayIntent] = useState(false);
+  const [lastPlaybackError, setLastPlaybackError] = useState<string | null>(null);
+  // 카드 t570(REQ-LDBEAT-024(e)) — 편집 칸이 보고 있는 L·R 자식 줄(없으면
+  // 부모 그룹 줄). `resolveLRSplitViewAfterBarChange`가 마디 변화에 따라
+  // 매 렌더 다시 계산한다 — 별도 clear 코드 없이 구간을 벗어나면 저절로
+  // 부모로 떨어진다.
+  const [lrSplitViewedSide, setLrSplitViewedSide] = useState<LRSplitViewedChild | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const playbackAnchorRef = useRef<{ anchorSeconds: number; anchorPerfMs: number } | null>(null);
+  // 카드 t570 — RAF 틱(아래 effect)이 매 프레임 읽는 "지금 최신 값" 묶음.
+  // 그 틱은 effect 의존 배열에 없는 렌더 중 계산값(`pxPerBar`·
+  // `laneView.visibleWidth`·지금 고른 칸)을 훅 순서 규칙을 어기지 않고
+  // 읽으려고 ref 하나로 미러링한다(렌더 바디가 매번 `.current`를 최신화,
+  // 아래 `pxPerBar` 계산 직후) — React의 흔한 "latest ref" 패턴.
+  const livePlaybackContextRef = useRef<{
+    pxPerBar: number;
+    visibleWidth: number;
+    rangeStart: number;
+    selected: { trackIndex: number; bar: number } | null;
+  }>({ pxPerBar: PX_PER_BAR, visibleWidth: 0, rangeStart: 0, selected: null });
+
+  // 카드 t570(REQ-LDBEAT-024(c)) — 음원 연결(자동·수동 공통 경로). DOM
+  // 쪽(objectURL·`<audio>` 이벤트)만 여기서 걸고, 상태 전이 판정은
+  // `beatgrid/audioAutoConnect.ts` 순수 함수가 한다.
+  const connectAudioFile = (file: File) => {
+    setAudioStatus("loading");
+    setAudioFailureReason(null);
+    setAudioName(file.name);
+    setConnectedAudioSourceId(audioSourceId(file));
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = URL.createObjectURL(file);
+  };
+
+  // REQ-LDBEAT-024(a) — ▶ 재생/❚❚ 일시정지. 불러오는 중이면(AC-LDBEAT-
+  // 024(b)) 지금 시작하지 않고 큐잉만 한다 — 아래 "연결 완료" effect가
+  // 큐잉을 풀어 즉시 시작한다. 일시정지는 `playbackSeconds`를 그대로 둔다
+  // (멈춘 자리부터 이어 재생 — AC-LDBEAT-024(d)).
+  const togglePlay = () => {
+    if (playing) {
+      setPlaying(false);
+      audioRef.current?.pause();
+      return;
+    }
+    if (shouldDeferPlayPress(audioStatus)) {
+      setPendingPlayIntent(true);
+      return;
+    }
+    playbackAnchorRef.current = { anchorSeconds: playbackSeconds, anchorPerfMs: performance.now() };
+    setPlaying(true);
+    if (audioStatus === "connected" && audioRef.current) {
+      try {
+        audioRef.current.currentTime = playbackSeconds;
+      } catch {
+        // 일부 브라우저는 메타데이터가 아직 없으면 던진다 — 무시하고
+        // BPM 시계만으로 재생을 이어간다(mockup `audioGo`의 try/catch와
+        // 같은 경계).
+      }
+      void audioRef.current.play().catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        setLastPlaybackError(`[음원 재생 실패] ${message}`);
+      });
+    }
+  };
+
+  // REQ-LDBEAT-024(a) — ⏮ 처음. 재생 중이면 0초로 다시 앵커를 두고 계속
+  // 재생한다(mockup `bTop`의 "재생 중이면 멈췄다 다시 시작" 과 같은
+  // 결과 — 끊김 없이 0초부터). 멈춰 있으면 ▶ 가 그 자리(0초)부터 잇는다.
+  const rewindToStart = () => {
+    setPlaybackSeconds(0);
+    if (playing) {
+      playbackAnchorRef.current = { anchorSeconds: 0, anchorPerfMs: performance.now() };
+      if (audioRef.current) {
+        try {
+          audioRef.current.currentTime = 0;
+        } catch {
+          // 위 togglePlay 와 같은 경계.
+        }
+      }
+    } else if (audioRef.current) {
+      try {
+        audioRef.current.currentTime = 0;
+      } catch {
+        // 위와 같은 경계.
+      }
+    }
+  };
+
+  // 카드 t570(REQ-LDBEAT-024(c)) — 런북 전체화면 뷰를 열 때(이 컴포넌트가
+  // 처음 그려질 때) 이미 첨부된 곡 음원을 자동으로 연결한다. 첨부된 음원이
+  // 없으면(`null`) 아무것도 하지 않는다 — ♪ 버튼으로 직접 고르는 기존
+  // 경로만 남는다. `shouldAutoConnectAudio`가 "같은 음원에 이미 연결됨"
+  // 반복을 막는다(무한 재연결 루프 방지).
+  useEffect(() => {
+    if (!grid) return;
+    const sourceId = audioSourceId(attachedSongAudioFile);
+    if (!shouldAutoConnectAudio({ status: audioStatus, connectedSourceId: connectedAudioSourceId }, sourceId)) {
+      return;
+    }
+    if (attachedSongAudioFile) connectAudioFile(attachedSongAudioFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grid, attachedSongAudioFile, audioStatus, connectedAudioSourceId]);
+
+  // 카드 t570(REQ-LDBEAT-024(b)) — 큐잉된 재생(불러오는 중에 ▶ 를 눌렀던
+  // 의도)이 연결 상태가 바뀔 때마다 풀리는지 확인한다. `connected`가
+  // 되면 즉시 시작(대기 없이), `failed`가 되면 큐잉만 지운다.
+  useEffect(() => {
+    const { shouldStart, nextPending } = resolvePlayIntentOnReady(pendingPlayIntent, audioStatus);
+    if (nextPending !== pendingPlayIntent) setPendingPlayIntent(nextPending);
+    if (shouldStart) togglePlay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioStatus]);
+
+  // 카드 t570(REQ-LDBEAT-024(b)(d)(f)(h)) — 재생 시계 자체. `playing`일
+  // 때만 돈다. 매 프레임: 화면 쪽 갱신(갱신 "이번 마디로 바뀌었는지"
+  // 판정 + 보이는 칸·자동 스크롤)을 `runPlaybackFrameUpdate`로 감싸
+  // 예외가 나도 재생(오디오·시계)은 멈추지 않는다(REQ-LDBEAT-024(f)).
+  useEffect(() => {
+    if (!playing || typeof window === "undefined") return;
+    const totalSeconds = grid ? barToSeconds(grid.bar_range.end, secondsPerBar) : null;
+    let previousBar: number | null = null;
+    const tick = () => {
+      const anchor = playbackAnchorRef.current;
+      if (!anchor) return;
+      const nowMs = performance.now();
+      const next = elapsedPlaybackSeconds(anchor.anchorSeconds, anchor.anchorPerfMs, nowMs);
+      setPlaybackSeconds(next);
+      runPlaybackFrameUpdate(
+        () => {
+          if (!grid) return;
+          const bar = secondsToBar(next, secondsPerBar, grid.bar_range.end);
+          if (bar === null || bar === previousBar) return;
+          previousBar = bar;
+          const ctx = livePlaybackContextRef.current;
+          setBarCursor((prev) => ({ bar, anchor: ctx.selected ?? prev?.anchor ?? null }));
+          if (ctx.selected) setSelected({ trackIndex: ctx.selected.trackIndex, bar });
+          const el = lanesRef.current;
+          if (el) {
+            const target = autoScrollTargetForPlayhead(bar, ctx.pxPerBar, ctx.rangeStart, el.scrollLeft, ctx.visibleWidth);
+            if (target !== null) el.scrollLeft = target;
+          }
+        },
+        (message) => {
+          // eslint-disable-next-line no-console
+          console.error(`[재생 — 화면 오류, 재생은 계속] ${message}`);
+          setLastPlaybackError(message);
+        },
+      );
+      if (totalSeconds !== null && hasReachedPlaybackEnd(next, totalSeconds)) {
+        setPlaying(false);
+        audioRef.current?.pause();
+        return;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [playing, grid, secondsPerBar]);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
   // t537 — M1 상태의 살아있는 소스는 `grid.probe_results`(서버가 progress.md를
@@ -1130,6 +1361,15 @@ export function BeatGrid({
   });
   const pxPerBar = pxPerBarForZoom(overviewZoom, laneView.visibleWidth, overviewModel.totalBars, PX_PER_BAR);
   const barToX = (bar: number) => barToXAt(bar, pxPerBar);
+  // 카드 t570 — RAF 틱이 읽는 "지금 최신 값" 미러(위 `livePlaybackContextRef`
+  // 선언 주석 참조). 렌더마다 갱신해 틱이 항상 이번 렌더의 레이아웃·선택을
+  // 본다.
+  livePlaybackContextRef.current = {
+    pxPerBar,
+    visibleWidth: laneView.visibleWidth,
+    rangeStart: grid.bar_range.start,
+    selected,
+  };
   const isFolderOpen = (role: string) => allOpen || openFolders.has(role);
   const toggleFolder = (role: string) => {
     setOpenFolders((prev) => {
@@ -1158,6 +1398,16 @@ export function BeatGrid({
   const selectedTrack = selected ? grid.tracks[selected.trackIndex] : null;
   const selectedCue = selectedTrack && selected ? cueForBar(selectedTrack, selected.bar) : null;
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
+  // 카드 t570(REQ-LDBEAT-024(e)) — 지금 보고 있는 L·R 자식 줄. 선택한 뒤
+  // 마디가 그 선언 구간을 벗어나면 매 렌더 다시 계산해 저절로 부모로
+  // 떨어진다(별도 clear 코드 없음).
+  const effectiveLRSplitSide =
+    selected && selectedTrack
+      ? resolveLRSplitViewAfterBarChange(lrSplitViewedSide, lrSplits, selected.bar)
+      : null;
+  const selectedLRSplitRange = selectedTrack ? lrSplits.get(selectedTrack.group_name) : undefined;
+  const selectedIsLRSplitStartBar =
+    selected !== null && selectedLRSplitRange !== undefined && selectedLRSplitRange.startBar === selected.bar;
   const viewBar = barCursor && barCursor.anchor === selected ? barCursor.bar : (selected?.bar ?? grid.bar_range.start);
   // t537 ② plan-audit iteration 3 D1 — 실제로 렌더하는 배지+원문+source_ref
   // 묶음은 `sceneMemoMarkers`가 반환하는 모양 그대로다(DOM 없이 단언 가능).
@@ -1189,28 +1439,59 @@ export function BeatGrid({
     setFocusField(null);
     setActiveEditField(null);
     setNewPresetNote(null);
+    // 카드 t570(REQ-LDBEAT-024(e)) — 다른 칸·막대를 고르면 부모 그룹
+    // 줄로 돌아간다. L·R 자식 줄을 "보는 중"으로 두는 선택은
+    // `selectLRSplitChild`가 이 함수 뒤에 다시 설정한다.
+    setLrSplitViewedSide(null);
+  };
+
+  // 카드 t570(REQ-LDBEAT-024(e)) — L·R 자식 줄(`LRSplitRow`/
+  // `LRSplitGlanceRow`)을 눌러 "보는 중"으로 선택. 실제 편집 데이터는
+  // 여전히 부모 트랙 것뿐이다(§Gaps) — 그 구간 시작 마디의 부모 큐를
+  // 연다.
+  const selectLRSplitChild = (trackIndex: number, groupName: string, side: "L" | "R", startBar: number) => {
+    selectCue(trackIndex, startBar, false);
+    setLrSplitViewedSide({ groupName, side });
   };
 
   const onSelectAudio = (file: File | null) => {
     if (!file) return;
-    setAudioName(file.name);
-    if (audioRef.current) {
-      audioRef.current.src = URL.createObjectURL(file);
-    }
+    connectAudioFile(file);
   };
 
   const seek = (delta: number) => {
     const totalSeconds = barToSeconds(maxBar, secondsPerBar) ?? playbackSeconds;
-    const next = clampSkipSeconds(playbackSeconds, delta, totalSeconds);
+    const next = clampPlaybackSeconds(playbackSeconds, delta, totalSeconds);
     setPlaybackSeconds(next);
+    // AC-LDBEAT-024(d) — 재생 중이면 음원·앵커를 같이 옮겨 끊김 없이
+    // 이어가고, 멈춰 있으면 ▶ 가 나중에 이 자리에서 잇는다(앵커는 다시
+    // 재생을 시작할 때 setPlaybackSeconds 로 이미 읽는다).
+    if (playing) playbackAnchorRef.current = { anchorSeconds: next, anchorPerfMs: performance.now() };
     if (audioRef.current) audioRef.current.currentTime = next;
   };
 
   // 카드 t559 — ◀▶·←→·지도 클릭 공통: 그 마디를 보고, 타임라인을 그 마디가
   // 보이도록 옮긴다. 격자 칸 데이터가 있는 범위 밖으로는 가지 않는다.
+  // 카드 t570(REQ-LDBEAT-024(b)(h)) — 재생 중이면 그 자리부터 이어 재생한다
+  // (처음으로 되돌아가지 않는다) — `secondsPerBar`가 없으면(환산 불가)
+  // 보기만 옮기고 재생 위치는 그대로 둔다(지어내지 않음).
   const jumpToBar = (bar: number) => {
     const target = Math.max(grid.bar_range.start, Math.min(grid.bar_range.end, bar));
     setBarCursor({ bar: target, anchor: selected });
+    if (playing) {
+      const targetSeconds = barToSeconds(target, secondsPerBar);
+      if (targetSeconds !== null) {
+        setPlaybackSeconds(targetSeconds);
+        playbackAnchorRef.current = { anchorSeconds: targetSeconds, anchorPerfMs: performance.now() };
+        if (audioRef.current) {
+          try {
+            audioRef.current.currentTime = targetSeconds;
+          } catch {
+            // togglePlay 와 같은 경계.
+          }
+        }
+      }
+    }
     const el = lanesRef.current;
     if (el && laneView.visibleWidth > 0) {
       const left = (target - grid.bar_range.start) * pxPerBar;
@@ -1243,6 +1524,17 @@ export function BeatGrid({
         onApply={onApply}
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
+        playback={{
+          playing,
+          positionSeconds: playbackSeconds,
+          onTogglePlay: togglePlay,
+          onRewindToStart: rewindToStart,
+          onSeek: seek,
+          audioButtonLabel: audioButtonLabel(audioStatus, audioName),
+          onSelectAudioFile: onSelectAudio,
+          audioFailureReason,
+          consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,
+        }}
       />
 
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
@@ -1273,23 +1565,31 @@ export function BeatGrid({
           [모두 접기/펴기]
         </button>
         <span className="beat-grid-transport">
-          <button type="button" onClick={() => seek(-10)}>
-            ⏪ 10초
-          </button>
-          <button type="button" onClick={() => seek(10)}>
-            10초 ⏩
-          </button>
-          <span className="beat-grid-clock">{playbackSeconds.toFixed(1)}초</span>
-          <label className="beat-grid-audio-label">
-            ♪ {audioName ?? "음원"}
-            <input
-              type="file"
-              accept="audio/*"
-              hidden
-              onChange={(event) => onSelectAudio(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <audio ref={audioRef} hidden />
+          {/* 카드 t570 — ⏪ 10초 / 10초 ⏩ 는 시안대로 상단 바 플레이 묶음 안으로 옮겼다. */}
+          {/* 카드 t570(REQ-LDBEAT-024(a)) — 시계·♪ 음원·콘솔 같이는
+              상단 바 가운데 플레이 묶음으로 옮겼다(위 `<BeatGridTopBar
+              playback={...}>`). 이 엘리먼트는 그대로 여기 남는다 — 실제
+              재생 엔진(`connectAudioFile`/`togglePlay`/RAF 틱)이 거는
+              DOM 핸들이라, 화면에 보이는 자리와 분리해도 된다. */}
+          <audio
+            ref={audioRef}
+            hidden
+            onCanPlay={() => {
+              setAudioStatus("connected");
+              setAudioFailureReason(null);
+            }}
+            onError={() => {
+              setAudioStatus("failed");
+              setAudioFailureReason(formatAudioConnectFailureReason(audioName ?? "음원"));
+            }}
+          />
+          {/* REQ-LDBEAT-024(f) — 화면 쪽 오류가 나도 재생은 계속되고,
+              그 사실을 로그(console.error)뿐 아니라 여기에도 보인다. */}
+          {lastPlaybackError && (
+            <span className="beat-grid-playback-error" title={lastPlaybackError}>
+              ⚠ 재생 로그: {lastPlaybackError}
+            </span>
+          )}
         </span>
         {writeLocked && (
           <span className="beat-grid-locked" title="M1 프로브 9항목 중 미확인 항목이 있어 쓰기가 잠겨 있습니다">
@@ -1500,6 +1800,9 @@ export function BeatGrid({
                           child={child}
                           left={barToX(child.startBar)}
                           width={barToX(child.endBar) - barToX(child.startBar) - 2}
+                          onSelect={() =>
+                            selectLRSplitChild(trackIndex, track.group_name, child.side, child.startBar)
+                          }
                         />
                       ))}
                       </Fragment>
@@ -1573,7 +1876,14 @@ export function BeatGrid({
             <>
               <header>
                 <span>
-                  {selectedTrack.group_name} · {selected.bar}마디
+                  {selectedTrack.group_name}
+                  {effectiveLRSplitSide ? ` ${effectiveLRSplitSide.side}` : ""} · {selected.bar}마디
+                  {/* 카드 t570(REQ-LDBEAT-024(e)) — 갈라지는 시작 마디
+                      표시. 선언 구간의 시작 마디를 보고 있을 때만(부모
+                      줄 기준 — 자식 줄 쪽에서도 같은 시작 마디다). */}
+                  {selectedIsLRSplitStartBar && (
+                    <small className="beat-grid-split-start-marker"> · 여기서 갈라짐</small>
+                  )}
                 </span>
                 <span className="beat-grid-cue-panel-actions">
                   <button
@@ -1628,7 +1938,9 @@ export function BeatGrid({
                       if (hints.includes("색")) {
                         rows.push({ field: "색 프리셋", value: formatPresetField(selectedCue.color_preset_no) });
                       }
-                      if (hints.includes("움직임")) {
+                      // 카드 t557 — 무빙이 아닌 줄에 색 효과처럼 다른 종류의 효과가
+                      // 저장돼 있어도 보이게 한다(고치기는 아래에서 무빙만).
+                      if (hints.includes("움직임") || selectedCue.effect_preset_no !== null) {
                         const effectValue = formatPresetField(selectedCue.effect_preset_no);
                         rows.push({
                           field: "효과 프리셋",
@@ -1669,7 +1981,8 @@ export function BeatGrid({
                       const isColorRow = row.field === "색 프리셋";
                       // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1/3) —
                       // 효과(움직임) 프리셋 직접 고르기(무빙 전용 행).
-                      const isEffectRow = row.field === "효과 프리셋";
+                      // 이 행의 드롭다운은 위치 풀 효과(움직임) 목록이라 무빙 줄에서만 고친다.
+                      const isEffectRow = row.field === "효과 프리셋" && hints.includes("움직임");
                       const editable =
                         !!onEditRequest &&
                         (isBrightnessRow || isPositionRow || isColorRow || isEffectRow);
@@ -1820,7 +2133,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(positionSection))}
+                                {renderPresetOptions(splitDrawerSectionEntries(positionSection), true)}
                               </select>
                               <button
                                 type="button"
@@ -1834,7 +2147,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildPositionPresetChanges(positionPresetDraft),
+                                      // 카드 t557 — 효과 번호대 항목이면 위치 효과로.
+                                      changes: presetPickChanges(positionSection, "Position", positionPresetDraft),
                                     });
                                   }
                                   closeEdit();
@@ -1868,7 +2182,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(colorSection))}
+                                {renderPresetOptions(splitDrawerSectionEntries(colorSection), true)}
                               </select>
                               <button
                                 type="button"
@@ -1882,7 +2196,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildColorPresetChanges(colorPresetDraft),
+                                      // 카드 t557 — 효과 번호대 항목이면 색 효과(effect_kind color)로.
+                                      changes: presetPickChanges(colorSection, "Color", colorPresetDraft),
                                     });
                                   }
                                   closeEdit();
@@ -1932,7 +2247,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildEffectPresetChanges(effectPresetDraft),
+                                      // 카드 t557 — 종류는 고른 항목의 풀이 정한다(이 목록은 위치 풀 효과).
+                                      changes: presetPickChanges(positionSection, "Position", effectPresetDraft),
                                     });
                                   }
                                   closeEdit();
@@ -2224,7 +2540,14 @@ export function BeatGrid({
                         <GlanceRowDetailCells detail={detail} colSpan={6} lrSplit={lrSplitControl} />
                       )}
                       {glanceChildRows.map((childRow) => (
-                        <LRSplitGlanceRow key={childRow.side} child={childRow} remainingColSpan={5} />
+                        <LRSplitGlanceRow
+                          key={childRow.side}
+                          child={childRow}
+                          remainingColSpan={5}
+                          onSelect={() =>
+                            selectLRSplitChild(trackIndex, track.group_name, childRow.side, childRow.startBar)
+                          }
+                        />
                       ))}
                     </Fragment>
                   );
