@@ -148,6 +148,15 @@ class BeatGridEntry(TypedDict):
 
     fade_bars: int | None
     mib_mode: str | None
+    # 카드 t574 — SPEC-LDBEAT-001 0.5.0 REQ-LDBEAT-006(i-4a)~(i-4e). 전부 음악
+    # 단위(박)이고 초는 저장하지 않는다. 미정(``None``)은 각 필드의 기본 동작을
+    # 뜻한다 — trigger_beat: 1박(마디 시작), position_late_beats: 같이,
+    # tracking: 정하지 않음. fade_beats 와 fade_bars 는 동시에 숫자일 수 없다.
+    fade_beats: int | None
+    trigger_beat: int | None
+    delay_beats: int | None
+    position_late_beats: int | None
+    tracking: str | None
 
 
 class BeatGridAppMovement(TypedDict):
@@ -408,6 +417,11 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
         entry=BeatGridEntry(
             fade_bars=entry_source.get("fade_bars"),  # type: ignore[typeddict-item]
             mib_mode=entry_source.get("mib_mode"),  # type: ignore[typeddict-item]
+            fade_beats=entry_source.get("fade_beats"),  # type: ignore[typeddict-item]
+            trigger_beat=entry_source.get("trigger_beat"),  # type: ignore[typeddict-item]
+            delay_beats=entry_source.get("delay_beats"),  # type: ignore[typeddict-item]
+            position_late_beats=entry_source.get("position_late_beats"),  # type: ignore[typeddict-item]
+            tracking=entry_source.get("tracking"),  # type: ignore[typeddict-item]
         ),
         source_ref=raw.get("source_ref"),  # type: ignore[typeddict-item]
         app_movement=app_movement,

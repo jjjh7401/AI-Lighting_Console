@@ -1,0 +1,26 @@
+spec.md REQ-LDBEAT-006: 114 문장 중 사라짐 0
+spec.md REQ-LDBEAT-015: 30 문장 중 사라짐 0
+spec.md REQ-LDBEAT-020: 21 문장 중 사라짐 2
+    - (e) **The** 화면의 시간 표시 **shall** 초를 먼저, 박·마디는 괄호로 보여준다(예: 「2.14초 (1마디)」)
+    - 박 입력도 허용하되, 콘솔 저장과 `entry.fade_bars`(마디 수, REQ-LDBEAT-006(i-4))의 저장 단위는 **shall not** 바뀐다(표시 전용 변환).
+spec.md REQ-LDBEAT-023: 18 문장 중 사라짐 1
+    - (a)는 `.beat-grid-glance-table`(1118-1134행)로 구현(열 이름 완전 일치는 미측정).
+spec.md REQ-LDBEAT-025: 15 문장 중 사라짐 0
+spec.md 합계 사라진 문장: 3
+acceptance.md AC-LDBEAT-016: 119 문장 중 사라짐 6
+    - (e) 그 30개 큐의 네 프리셋 **번호** 필드(`brightness`의 디머 프리셋·디머 효과 프리셋 번호·`position_preset_no`·`color_preset_no`·`effect_preset_no`)를 조회한다.
+    - (a) 각 효과가 선언된 종류별 풀 번호대 밖에 저장되면 거절된다.
+    - (e) 배치 규칙서 §4에 프리셋 번호가 없으므로 그 네 **번호** 필드는 30개 큐 전부에서 `null`(미정)이다
+    - 어느 하나라도 숫자가 채워져 있으면(배치 규칙서·t525 출처 없이) FAIL이다.
+    - (a) 풀 번호대 화이트리스트 위반 거절 사유 문자열 확인, (b) 밝기 필드 복수 지정 입력 → 거절 + 격자 상태 변경 0 확인, (c) 저장된 프리셋 이름 문자열에 `[^0-9A-Za-z _.-]` 정규식 매치 0건, (d) 쇼 원본 프리셋 번호(사전 조회) 쓰기 시도 → 거절 사유 문자열 확인 (REQ-LDBEAT-015).
+    - 30개 큐 전수 순회 → 네 프리셋 번호 필드 == `null` assert, 0건 예외 (REQ-LDBEAT-015(f)).
+acceptance.md AC-LDBEAT-020: 8 문장 중 사라짐 2
+    - (e) 화면은 "N.NN초 (M마디)"로 보이고 저장된 `entry.fade_bars`는 바뀌지 않는다
+    - 버튼 class/disabled 속성 + 토글 전후 DOM diff(별도 상자 추가 0건) + 표시 포맷 정규식 + `entry.fade_bars` 불변 assert.
+acceptance.md AC-LDBEAT-025: 8 문장 중 사라짐 3
+    - (d) 그 프리셋을 쓰는 큐 수가 보이고, 쓰는 막대가 강조되며, 풀 번호대 리터럴이 코드에 0건이다(쇼 파일에서 읽음)
+    - (d) 프리셋 서랍 자체가 코드에 없음(grep 0건, research.md §명령창·AI·프리셋 서랍 기록)
+    - 풀 번호대 하드코딩 금지는 REQ-LDBEAT-015(e)의 기존 grep 패턴을 재사용한다 (REQ-LDBEAT-025)
+acceptance.md REQ-LDBEAT-006: 5 문장 중 사라짐 0
+acceptance.md REQ-LDBEAT-015: 1 문장 중 사라짐 0
+acceptance.md 합계 사라진 문장: 11

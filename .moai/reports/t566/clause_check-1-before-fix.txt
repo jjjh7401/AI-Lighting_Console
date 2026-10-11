@@ -1,0 +1,14 @@
+spec.md REQ-LDBEAT-006 chars 15184 -> 17485 missing: none added: ['i-4a', 'i-4b', 'i-4c', 'i-4d', 'i-4e', 'i-4f']
+spec.md REQ-LDBEAT-015 chars 3965 -> 4784 missing: none added: ['h', 'i-6a']
+spec.md REQ-LDBEAT-020 chars 2478 -> 2863 missing: none added: ['i-4a']
+spec.md REQ-LDBEAT-023 chars 1941 -> 2398 missing: none added: []
+spec.md REQ-LDBEAT-025 chars 1310 -> 1655 missing: none added: []
+spec.md non-table removed lines: 1
+    - version: "0.4.1"
+acceptance.md AC-LDBEAT-016 chars 14668 -> 16373 missing: ['e'] added: ['v']
+acceptance.md AC-LDBEAT-020 chars 686 -> 2411 missing: none added: ['f', 'g', 'h', 'i', 'i-4', 'i-4a', 'i-4f', 'j', 'k', 'm', 's']
+acceptance.md AC-LDBEAT-025 chars 625 -> 959 missing: none added: []
+acceptance.md REQ-LDBEAT-006 chars 692 -> 855 missing: none added: ['i-4a', 'i-4f']
+acceptance.md REQ-LDBEAT-015 chars 138 -> 182 missing: none added: ['h', 'v']
+acceptance.md non-table removed lines: 1
+    - plan-audit iter1 D2/D3(Traceability 0.50)의 교정 — REQ-LDBEAT-009·012가 블랭킷 메타 기준(AC-LDBEAT-011, bookkeeping 완전성 검사일 뿐)에만 걸려 있던 것을 각각 전용 AC(AC-LDBEAT-014/015)로 승격

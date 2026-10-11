@@ -5,11 +5,15 @@
 import type { BeatGridCue, BeatGridTrack } from "../protocol";
 import { barToX, PX_PER_BAR } from "./BeatGrid";
 import {
-  formatFadeSecondsFirst,
+  entryFadeInBars,
+  entryHasFade,
+  formatEntryFade,
   jointMarker,
   sceneChangeRows,
+  sceneEntryEdits,
   transitionMib,
   transitionWarnings,
+  type FullBeatGridEntry,
 } from "./beatGridTransition";
 import "./beatGridPanels.css";
 
@@ -24,6 +28,7 @@ export function BeatGridJoint({
   isOn,
   onOpen,
   pxPerBar = PX_PER_BAR,
+  beatsPerBar = null,
 }: {
   prev: BeatGridCue;
   cue: BeatGridCue;
@@ -37,10 +42,15 @@ export function BeatGridJoint({
   onOpen: () => void;
   /** 곡 전체 지도 확대 단계별 마디 폭(카드 t559). */
   pxPerBar?: number;
+  /** 카드 t574 — 박 페이드·트리거 박 위치 환산(곡 박자표, 모르면 null). */
+  beatsPerBar?: number | null;
 }) {
-  const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null);
-  const fadeBars = cue.entry.fade_bars ?? 0;
-  const left = barToX(cue.bar, pxPerBar);
+  const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null, beatsPerBar);
+  const fadeBars = entryHasFade(cue.entry) ? (entryFadeInBars(cue.entry, beatsPerBar) ?? 0) : 0;
+  // 시안 `.jt` 위치 = 마디 + (트리거 박 - 1) 칸 — 박자표를 모르면 마디 시작에 둔다.
+  const triggerOffset =
+    beatsPerBar !== null && cue.entry.trigger_beat ? ((cue.entry.trigger_beat - 1) / beatsPerBar) * pxPerBar : 0;
+  const left = barToX(cue.bar, pxPerBar) + triggerOffset;
   const bleedFrom = prevFill ?? (prev.label.trim() === "—" ? "#25252c" : "#d8d8d8");
   return (
     <>
@@ -111,7 +121,8 @@ export function BeatGridScenePanel({
   sectionStartBars,
   onClose,
   onSelectRow,
-  onCutAll,
+  onBulkEntry,
+  beatsPerBar = null,
 }: {
   bar: number;
   tracks: readonly BeatGridTrack[];
@@ -119,8 +130,10 @@ export function BeatGridScenePanel({
   sectionStartBars: readonly number[] | null;
   onClose: () => void;
   onSelectRow: (trackIndex: number) => void;
-  /** 「모두 끊기」 — 편집 경로가 없으면 버튼은 비활성. */
-  onCutAll?: (rows: { target: string; mibMode: string | null }[]) => void;
+  /** 「모두 끊기」·「모두 1박 페이드」 — 줄마다 다른 entry 값은 그대로 둔 새 entry
+   * 를 받는다(카드 t574). 편집 경로가 없으면 두 버튼 모두 비활성. */
+  onBulkEntry?: (edits: { target: string; entry: FullBeatGridEntry }[]) => void;
+  beatsPerBar?: number | null;
 }) {
   const rows = sceneChangeRows(tracks, bar);
   return (
@@ -144,9 +157,9 @@ export function BeatGridScenePanel({
               <tr key={row.track.group_name} onClick={() => onSelectRow(row.trackIndex)}>
                 <td className="rn">{row.track.group_name}</td>
                 <td>
-                  {row.cue.entry.fade_bars
-                    ? `페이드 ${formatFadeSecondsFirst(row.cue.entry.fade_bars, secondsPerBar)}`
-                    : formatFadeSecondsFirst(row.cue.entry.fade_bars, secondsPerBar)}
+                  {entryHasFade(row.cue.entry)
+                    ? `페이드 ${formatEntryFade(row.cue.entry, secondsPerBar, beatsPerBar)}`
+                    : formatEntryFade(row.cue.entry, secondsPerBar, beatsPerBar)}
                 </td>
                 <td>{mib.kind === "auto" ? "MIB 자동" : mib.kind === "lit" ? "켜진 채 이동" : "—"}</td>
                 <td>{warnings.length ? <span className="u">⚠ [제안] {warnings.join(" · ")}</span> : null}</td>
@@ -159,18 +172,17 @@ export function BeatGridScenePanel({
         <button
           type="button"
           className="tbtn"
-          disabled={!onCutAll}
-          onClick={() =>
-            onCutAll?.(rows.map((row) => ({ target: row.track.group_name, mibMode: row.cue.entry.mib_mode })))
-          }
+          disabled={!onBulkEntry}
+          onClick={() => onBulkEntry?.(sceneEntryEdits(tracks, bar, { fade_bars: 0, fade_beats: null }))}
         >
           모두 끊기
         </button>
+        {/* 카드 t574 — fade_beats 저장 칸(REQ-LDBEAT-006(i-4a))이 생겨 1박도 저장된다. */}
         <button
           type="button"
           className="tbtn"
-          disabled
-          title="1박 페이드는 마디보다 짧아 지금 저장 단위(정수 마디, entry.fade_bars)로 저장할 수 없습니다"
+          disabled={!onBulkEntry}
+          onClick={() => onBulkEntry?.(sceneEntryEdits(tracks, bar, { fade_bars: null, fade_beats: 1 }))}
         >
           모두 1박 페이드
         </button>

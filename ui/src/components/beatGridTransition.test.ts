@@ -7,7 +7,10 @@ import {
   SCENE_CHANGE_MIN_ROWS,
   cueConsoleCommandLines,
   cueIsLit,
-  fadeDraftToBars,
+  entryFadeIsCut,
+  entryWith,
+  fadeDraftToEntry,
+  formatEntryFade,
   formatFadeSecondsFirst,
   jointMarker,
   parseBeatsPerBar,
@@ -18,6 +21,7 @@ import {
   transitionConsoleCommandLines,
   transitionMib,
   transitionWarnings,
+  triggerSeconds,
 } from "./beatGridTransition";
 
 function cue(bar: number, overrides: Partial<BeatGridCue> = {}): BeatGridCue {
@@ -57,27 +61,64 @@ describe("formatFadeSecondsFirst — 초 먼저, 마디는 괄호(REQ-LDBEAT-020
   });
 });
 
-describe("parseBeatsPerBar / fadeDraftToBars — 박 입력은 허용하되 저장은 정수 마디", () => {
+describe("parseBeatsPerBar / fadeDraftToEntry — 정수 마디면 fade_bars, 아니면 fade_beats(REQ-020(e), 카드 t574)", () => {
   it("박자표 분자를 읽는다", () => {
     expect(parseBeatsPerBar("4/4")).toBe(4);
     expect(parseBeatsPerBar("3/4")).toBe(3);
     expect(parseBeatsPerBar(undefined)).toBeNull();
     expect(parseBeatsPerBar("엉터리")).toBeNull();
   });
-  it("마디 단위 입력은 그대로 정수 마디", () => {
-    expect(fadeDraftToBars("2", "bar", null)).toEqual({ fadeBars: 2 });
+  it("마디 단위 입력은 그대로 fade_bars", () => {
+    expect(fadeDraftToEntry("2", "bar", null)).toEqual({ fade: { fade_bars: 2, fade_beats: null } });
   });
-  it("박 입력은 한 마디 박 수로 나눠 정수일 때만 받는다", () => {
-    expect(fadeDraftToBars("8", "beat", 4)).toEqual({ fadeBars: 2 });
-    expect(fadeDraftToBars("2", "beat", 4).error).toMatch(/마디/);
+  it("박 입력이 정수 마디로 떨어지면 fade_bars, 아니면 fade_beats", () => {
+    expect(fadeDraftToEntry("8", "beat", 4)).toEqual({ fade: { fade_bars: 2, fade_beats: null } });
+    expect(fadeDraftToEntry("2", "beat", 4)).toEqual({ fade: { fade_bars: null, fade_beats: 2 } });
+    expect(fadeDraftToEntry("1", "beat", 3)).toEqual({ fade: { fade_bars: null, fade_beats: 1 } });
+    expect(fadeDraftToEntry("6", "beat", 3)).toEqual({ fade: { fade_bars: 2, fade_beats: null } });
   });
   it("박자표를 모르면 박 입력을 거절한다(4를 지어내지 않음)", () => {
-    expect(fadeDraftToBars("4", "beat", null).error).toMatch(/박자표/);
+    expect(fadeDraftToEntry("4", "beat", null).error).toMatch(/박자표/);
   });
-  it("음수·소수 마디·빈 값은 거절", () => {
-    expect(fadeDraftToBars("-1", "bar", 4).error).toBeTruthy();
-    expect(fadeDraftToBars("1.5", "bar", 4).error).toBeTruthy();
-    expect(fadeDraftToBars("", "bar", 4).error).toBeTruthy();
+  it("음수·소수·빈 값은 거절", () => {
+    expect(fadeDraftToEntry("-1", "bar", 4).error).toBeTruthy();
+    expect(fadeDraftToEntry("1.5", "bar", 4).error).toBeTruthy();
+    expect(fadeDraftToEntry("0.5", "beat", 4).error).toBeTruthy();
+    expect(fadeDraftToEntry("", "bar", 4).error).toBeTruthy();
+  });
+});
+
+describe("entry 확장 필드(SPEC 0.5.0, 카드 t574)", () => {
+  it("entryWith 는 바꾼 필드 말고는 그대로 — 서버가 entry 를 통째로 바꾸므로 빠진 필드가 지워지지 않게", () => {
+    const stored = { fade_bars: 1, mib_mode: "dark", trigger_beat: 3, delay_beats: 2, tracking: "Block" };
+    expect(entryWith(stored, { fade_bars: 0 })).toEqual({
+      fade_bars: 0,
+      mib_mode: "dark",
+      fade_beats: null,
+      trigger_beat: 3,
+      delay_beats: 2,
+      position_late_beats: null,
+      tracking: "Block",
+    });
+  });
+  it("박 페이드 표시는 초 먼저, 박은 괄호", () => {
+    expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 2 }, 2.14, 4)).toBe("1.07초 (2박)");
+    expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 0 }, 2.14, 4)).toBe("끊기 (0초)");
+    expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 1 }, 2.14, null)).toBe("— 초 (1박)");
+    expect(formatEntryFade({ fade_bars: 1, mib_mode: null }, 2.14, 4)).toBe("2.14초 (1마디)");
+  });
+  it("끊기 판정은 두 단위 모두 본다", () => {
+    expect(entryFadeIsCut({ fade_bars: 0, mib_mode: null })).toBe(true);
+    expect(entryFadeIsCut({ fade_bars: null, mib_mode: null, fade_beats: 0 })).toBe(true);
+    expect(entryFadeIsCut({ fade_bars: null, mib_mode: null, fade_beats: 1 })).toBe(false);
+    expect(entryFadeIsCut({ fade_bars: null, mib_mode: null })).toBe(false);
+  });
+  it("트리거 시각은 마디 + (박-1)/마디당 박 수 — 곡 0초 기준", () => {
+    expect(triggerSeconds(cue(4), 2, 4)).toBe(8);
+    expect(triggerSeconds(cue(4, { entry: { fade_bars: null, mib_mode: null, trigger_beat: 3 } }), 2, 4)).toBe(9);
+    expect(triggerSeconds(cue(4, { entry: { fade_bars: null, mib_mode: null, trigger_beat: 2 } }), 3, 3)).toBe(13);
+    // 박을 정했는데 박자표를 모르면 지어내지 않는다.
+    expect(triggerSeconds(cue(4, { entry: { fade_bars: null, mib_mode: null, trigger_beat: 2 } }), 2, null)).toBeNull();
   });
 });
 
@@ -149,6 +190,31 @@ describe("jointMarker — 이음매 표시(M · ! · ◢)", () => {
   });
   it("아무것도 없으면 빈 이음매", () => {
     expect(jointMarker(cue(0), cue(4), null).glyph).toBe("");
+  });
+});
+
+describe("박 페이드·트리거 박이 이음매·경고·명령에 반영(카드 t574)", () => {
+  const lit = cue(0, { position_preset_no: "2.1" });
+  it("박 단위 끊기(0박)도 경고 판정 대상, 1박 페이드는 경고 없음", () => {
+    const cut = cue(4, { position_preset_no: "2.2", entry: { fade_bars: null, mib_mode: null, fade_beats: 0 } });
+    expect(transitionWarnings(lit, cut, [])).toContain("켜진 채 위치가 끊어 바뀜");
+    const soft = cue(4, { position_preset_no: "2.2", entry: { fade_bars: null, mib_mode: null, fade_beats: 1 } });
+    expect(transitionWarnings(lit, soft, [])).toEqual([]);
+  });
+  it("박 페이드 이음매는 ◢", () => {
+    const m = jointMarker(cue(0), cue(4, { entry: { fade_bars: null, mib_mode: null, fade_beats: 1 } }), null, 2.14, 4);
+    expect(m.glyph).toBe("◢");
+    expect(m.title).toMatch(/0\.54초 \(1박\)/);
+  });
+  it("전환 명령: 박 페이드 CueFade 초, 트리거 박 시각, 딜레이 [미확인]·트래킹 송신 없음", () => {
+    const c = cue(4, {
+      entry: { fade_bars: null, mib_mode: null, fade_beats: 2, trigger_beat: 3, delay_beats: 1, tracking: "Block" },
+    });
+    const text = transitionConsoleCommandLines(c, 2, null, 4).join("\n");
+    expect(text).toMatch(/CueFade 1\.00/);
+    expect(text).toMatch(/4마디 3박 = 곡 9\.00초/);
+    expect(text).toMatch(/딜레이 1박.*\[미확인\]/);
+    expect(text).toMatch(/트래킹 Block.*콘솔 송신 없음/);
   });
 });
 

@@ -19,6 +19,7 @@ import {
 import { BeatGridStage, stageViewWidth } from "./BeatGridStage";
 import { BeatGridJoint, BeatGridScenePanel, BeatGridSceneRow } from "./BeatGridTimelineParts";
 import { BeatGridTransitionView } from "./BeatGridTransitionView";
+import { sceneEntryEdits } from "./beatGridTransition";
 
 const SOURCE = readFileSync(new URL("./BeatGrid.tsx", import.meta.url), "utf-8");
 const PANEL_CSS = readFileSync(new URL("./beatGridPanels.css", import.meta.url), "utf-8");
@@ -75,10 +76,70 @@ describe("AC-LDBEAT-020(d)(e) — 전환 화면", () => {
     expect(html).toMatch(/\d+\.\d{2}초 \(1마디\)/);
   });
 
-  it("딜레이는 [미확인] 표기를 유지하고 저장 칸 없는 컨트롤은 비활성", () => {
+  it("딜레이는 [미확인], 위치만 따로는 ⚠미확인 표기를 유지한다", () => {
     expect(html).toContain("[미확인]");
-    expect(html).toMatch(/<select disabled=""[^>]*aria-label="트래킹"/);
-    expect(html).toMatch(/<select disabled=""[^>]*aria-label="위치만 따로"/);
+    expect(html).toContain("⚠미확인");
+  });
+
+  // 카드 t574 — SPEC 0.5.0 이 저장 칸을 만들었으니 편집 경로가 있으면 켜진다.
+  it("편집 경로가 있으면 트리거 박·딜레이·위치만 따로·트래킹이 켜진다", () => {
+    for (const label of ["트리거 박", "딜레이(박)", "위치만 따로", "트래킹"]) {
+      const control = new RegExp(`<(select|input)[^>]*aria-label="${label.replace(/[()]/g, "\\$&")}"[^>]*>`);
+      const tag = html.match(control)?.[0] ?? "";
+      expect(tag, label).not.toBe("");
+      expect(tag, label).not.toContain('disabled=""');
+    }
+  });
+
+  it("트리거 박 선택지는 그 곡 박자표만큼(3/4 → 1~3)", () => {
+    const threeFour = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [prev, cur])}
+        cue={cur}
+        prevCue={prev}
+        secondsPerBar={2.14}
+        beatsPerBar={3}
+        sectionStartBars={null}
+        onEditRequest={() => undefined}
+      />,
+    );
+    const select = threeFour.match(/<select[^>]*aria-label="트리거 박"[^>]*>([\s\S]*?)<\/select>/)?.[1] ?? "";
+    expect((select.match(/<option/g) ?? []).length).toBe(3);
+  });
+
+  it("박자표를 모르면 트리거 박은 비활성(4를 지어내지 않음)", () => {
+    const unknown = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [prev, cur])}
+        cue={cur}
+        prevCue={prev}
+        secondsPerBar={2.14}
+        beatsPerBar={null}
+        sectionStartBars={null}
+        onEditRequest={() => undefined}
+      />,
+    );
+    expect(unknown.match(/<select[^>]*aria-label="트리거 박"[^>]*>/)?.[0]).toContain('disabled=""');
+  });
+
+  it("저장된 박 페이드·트리거 박·트래킹을 보여 준다", () => {
+    const stored = cue(4, {
+      entry: { fade_bars: null, mib_mode: null, fade_beats: 2, trigger_beat: 3, tracking: "Block" },
+    });
+    const shown = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [prev, stored])}
+        cue={stored}
+        prevCue={prev}
+        secondsPerBar={2}
+        beatsPerBar={4}
+        sectionStartBars={null}
+        onEditRequest={() => undefined}
+      />,
+    );
+    expect(shown).toContain("1.00초 (2박)");
+    expect(shown).toMatch(/<option value="3" selected="">3<\/option>/);
+    expect(shown).toMatch(/<option value="Block" selected="">Block<\/option>/);
   });
 
   it("저장된 MIB 모드를 그대로 보여 준다", () => {
@@ -97,6 +158,7 @@ describe("AC-LDBEAT-020(d)(e) — 전환 화면", () => {
       />,
     );
     expect(readOnly).not.toContain('aria-label="페이드 길이"');
+    expect(readOnly.match(/<select[^>]*aria-label="트래킹"[^>]*>/)?.[0]).toContain('disabled=""');
   });
 
   it("경고 판정은 [제안] 표기", () => {
@@ -189,13 +251,51 @@ describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
         sectionStartBars={null}
         onClose={() => undefined}
         onSelectRow={() => undefined}
-        onCutAll={() => undefined}
+        onBulkEntry={() => undefined}
       />,
     );
     expect(html).toContain("이 순간 3줄이 함께 바뀜");
     expect(html).toContain("모두 끊기");
     expect(html).toContain("모두 1박 페이드");
     expect((html.match(/<tr>/g) ?? []).length).toBe(3);
+  });
+
+  // 카드 t574 — fade_beats 저장 칸이 생겨 「모두 1박 페이드」가 켜진다(AC-020(j)).
+  it("편집 경로가 있으면 「모두 끊기」「모두 1박 페이드」 둘 다 켜진다", () => {
+    const tracks = ["A", "B", "C"].map((name) => track(name, [cue(0), cue(8)]));
+    const html = renderToStaticMarkup(
+      <BeatGridScenePanel
+        bar={8}
+        tracks={tracks}
+        secondsPerBar={2.14}
+        beatsPerBar={4}
+        sectionStartBars={null}
+        onClose={() => undefined}
+        onSelectRow={() => undefined}
+        onBulkEntry={() => undefined}
+      />,
+    );
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>모두 1박 페이드/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*>모두 끊기/);
+  });
+
+  it("일괄 전환은 각 줄의 다른 entry 값을 보존한다", () => {
+    const keep = cue(8, { entry: { fade_bars: 2, mib_mode: "dark", trigger_beat: 2, tracking: "Block" } });
+    const tracks = [track("A", [cue(0), keep]), track("B", [cue(0), cue(8)]), track("C", [cue(0), cue(8)])];
+    const edits = sceneEntryEdits(tracks, 8, { fade_bars: null, fade_beats: 1 });
+    expect(edits[0]).toEqual({
+      target: "A",
+      entry: {
+        fade_bars: null,
+        mib_mode: "dark",
+        fade_beats: 1,
+        trigger_beat: 2,
+        delay_beats: null,
+        position_late_beats: null,
+        tracking: "Block",
+      },
+    });
+    expect(edits.map((e) => e.target)).toEqual(["A", "B", "C"]);
   });
 });
 

@@ -46,6 +46,7 @@ from server.design.beat_grid_edit import (
     BeatGridEditError,
     apply_beat_grid_edit,
     apply_beat_grid_edit_range,
+    beats_per_bar_from_timeline,
     load_preset_pool_policy,
 )
 from server.design.beat_grid_emit import (
@@ -9385,14 +9386,21 @@ class ChatSession:
             )
 
         grid = self._beat_grid_view(timeline)
+        # 카드 t574 — 트리거 박 범위 검증에 쓰는 마디당 박 수는 곡 데이터에서만.
+        beats_per_bar = beats_per_bar_from_timeline(timeline)
         try:
             if bar_end is not None and bar_end != bar:
                 updated_grid, report = apply_beat_grid_edit_range(
-                    grid, bar_start=bar, bar_end=bar_end, target=target, changes=changes
+                    grid,
+                    bar_start=bar,
+                    bar_end=bar_end,
+                    target=target,
+                    changes=changes,
+                    beats_per_bar=beats_per_bar,
                 )
             else:
                 updated_grid, report = apply_beat_grid_edit(
-                    grid, bar=bar, target=target, changes=changes
+                    grid, bar=bar, target=target, changes=changes, beats_per_bar=beats_per_bar
                 )
         except BeatGridEditError as error:
             return self._beat_grid_rejection(str(error))

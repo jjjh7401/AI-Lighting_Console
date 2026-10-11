@@ -1,0 +1,4 @@
+=========================== short test summary info ============================
+ERROR server/tests/test_beat_grid_entry_t574.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.26s
