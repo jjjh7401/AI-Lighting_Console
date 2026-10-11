@@ -45,7 +45,7 @@ RED→GREEN 순서는 구현 에이전트가 기록했다(`progress.md` M3 절).
 
 | AC | 판정 | 근거 |
 |---|---|---|
-| AC-LDBEAT-005 세 길 → 새 연산 | PASS | 세 길이 모두 전용 채널을 거쳐 `apply_beat_grid_edit` 로 간다. UI `changes={` 0건. 격자 UI 소스에 `parse_cue_sheet_edit_request\|apply_cue_sheet_edit` 0건(에이전트 grep, 파일 목록 progress.md). AI 제안은 「적용」 전 상태 diff 0 을 시험이 확인한다. |
+| AC-LDBEAT-005 세 길 → 새 연산 | PASS | 세 길이 모두 전용 채널을 거쳐 `apply_beat_grid_edit` 로 간다. UI `changes={` 0건. 격자 UI 소스에 `parse_cue_sheet_edit_request\|apply_cue_sheet_edit` 0건이다. lane-3 가 `ui/src` 전체를 grep 하니 2건이 나왔는데, 둘 다 격자와 무관한 기존 큐 레벨 컴포넌트의 주석이다(`PlanCueRequestGenerator.tsx:6`·`cueRequestSentence.ts:5`). AI 제안은 「적용」 전 상태 diff 0 을 시험이 확인한다. |
 | AC-LDBEAT-010 범위 밖 요청 거절 | PASS | 단일 원인 거절 문자열이 UI 에 그대로 보이고, 거절 시 격자 변경 0. 시험 `test_session_beat_grid_edit_t551.py` |
 | AC-LDBEAT-016(a) 번호대 밖 거절 | **문면 불일치 — 판단 필요** | AC 문면은 무조건 「거절된다」다. 리드 결정 A 이후 구현은 confirmed:false 동안 경고만 한다. spec REQ-015 증거 칸은 번호대를 「재확인 대상」이라 적고 있다. acceptance.md 개정이 필요하다(manager-spec 소관, 이 카드에서 고치지 않았다). |
 
