@@ -705,8 +705,14 @@ export const NEW_PRESET_OPTION_VALUE = "__new";
 
 /** 카드 t551 계속 — 직접 고르기 드롭다운 한 옵션의 표시 문구. mockup
  * `opts()`의 `${i} ${P[i].nm}`과 같은 모양("번호 이름"). */
-export function formatDrawerEntryOptionLabel(entry: BeatGridDrawerEntry): string {
-  return `${entry.preset_no} ${entry.name}`;
+export function formatDrawerEntryOptionLabel(
+  entry: BeatGridDrawerEntry,
+  options: { markEffect?: boolean } = {},
+): string {
+  // 카드 t557 — 위치·색 드롭다운에는 기본·효과 항목이 함께 있어, 효과 번호대
+  // 항목에 「· 효과」를 붙여 가른다(시안 opts() 의 「(쇼·효과)」 표기).
+  const suffix = options.markEffect && entry.is_effect_band ? " · 효과" : "";
+  return `${entry.preset_no} ${entry.name}${suffix}`;
 }
 
 /** 카드 t551 계속 — 서랍 섹션 하나를 "이 곡 프리셋"(이 격자가 실제로
@@ -777,12 +783,38 @@ export function buildBrightnessPresetChanges(presetNo: string): Record<string, u
   return { brightness: { mode: "dimmer_preset", value_percent: null, preset_no: presetNo } };
 }
 
-/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 효과(움직임) 프리셋
- * 직접 고르기. 이 드롭다운은 무빙(`hints.includes("움직임")`, 위치 풀의
- * 효과 번호대) 전용이라 `effect_kind`는 "position"으로 고정한다 — 이
- * 값은 번호대 리터럴이 아니라 REQ-LDBEAT-006(i-3)의 닫힌 종류 어휘다. */
-export function buildEffectPresetChanges(presetNo: string): Record<string, unknown> {
-  return { effect_preset_no: presetNo, effect_kind: "position" };
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 효과 프리셋 직접
+ * 고르기. `effect_kind` 는 REQ-LDBEAT-006(i-3)의 닫힌 종류 어휘이고(번호대
+ * 리터럴 아님), 카드 t557 부터 고른 항목이 나온 풀이 정한다
+ * (`presetPickChanges`). 기본값 "position" 은 예전 호출과 같다. */
+export function buildEffectPresetChanges(
+  presetNo: string,
+  kind: "position" | "color" | "dimmer" | "mixed" = "position",
+): Record<string, unknown> {
+  return { effect_preset_no: presetNo, effect_kind: kind };
+}
+
+/** 카드 t557 — 서랍 풀 이름 → 효과 종류·기본 저장 필드. 디머 풀은 밝기
+ * 단일모드(값·디머 프리셋·디머 효과)가 따로 맡는다(REQ-LDBEAT-015(c)). */
+const PICK_POOLS: Record<string, { kind: "position" | "color"; baseField: "position_preset_no" | "color_preset_no" }> = {
+  Position: { kind: "position", baseField: "position_preset_no" },
+  Color: { kind: "color", baseField: "color_preset_no" },
+};
+
+/** 카드 t557 — 위치·색·효과 드롭다운에서 고른 번호를 어느 필드에 담을지 정한다.
+ * 그 풀의 **효과 번호대** 항목(`is_effect_band`, 서버가 `preset_pools.yaml` 로
+ * 판정 — 번호대 리터럴은 여기 없다)이면 그 풀 종류의 효과(`effect_preset_no` +
+ * `effect_kind`), 아니면 그 풀의 기본 필드다. 서랍에 없는 번호나 서랍을 아직
+ * 못 받았으면 효과로 지어내지 않고 기본 필드로 둔다(서버 검사는 그대로 받는다). */
+export function presetPickChanges(
+  section: BeatGridDrawerSection | null,
+  poolName: "Position" | "Color",
+  presetNo: string,
+): Record<string, unknown> {
+  const pool = PICK_POOLS[poolName];
+  const entry = section?.entries.find((candidate) => candidate.preset_no === presetNo);
+  if (entry?.is_effect_band) return buildEffectPresetChanges(presetNo, pool.kind);
+  return { [pool.baseField]: presetNo };
 }
 
 /** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 밝기 단일모드 중
@@ -945,20 +977,23 @@ export function barPercentInRange(bar: number, rangeStart: number, rangeEnd: num
  * 둘 다 순수·시험됨)은 호출자가 끝내고, 이 함수는 그 결과를 그대로
  * JSX로만 옮긴다(카드 t551 계속 — 효과 드롭다운과 공유하려고 섹션이
  * 아니라 이미 가른 쌍을 받는다). */
-function renderPresetOptions({
-  thisSong,
-  showExisting,
-}: {
-  thisSong: BeatGridDrawerEntry[];
-  showExisting: BeatGridDrawerEntry[];
-}) {
+function renderPresetOptions(
+  {
+    thisSong,
+    showExisting,
+  }: {
+    thisSong: BeatGridDrawerEntry[];
+    showExisting: BeatGridDrawerEntry[];
+  },
+  markEffect = false,
+) {
   return (
     <>
       {thisSong.length > 0 && (
         <optgroup label="이 곡 프리셋">
           {thisSong.map((entry) => (
             <option key={entry.preset_no} value={entry.preset_no}>
-              {formatDrawerEntryOptionLabel(entry)}
+              {formatDrawerEntryOptionLabel(entry, { markEffect })}
             </option>
           ))}
         </optgroup>
@@ -967,7 +1002,7 @@ function renderPresetOptions({
         <optgroup label="쇼에 이미 있는 프리셋">
           {showExisting.map((entry) => (
             <option key={entry.preset_no} value={entry.preset_no}>
-              {formatDrawerEntryOptionLabel(entry)}
+              {formatDrawerEntryOptionLabel(entry, { markEffect })}
             </option>
           ))}
         </optgroup>
@@ -1628,7 +1663,9 @@ export function BeatGrid({
                       if (hints.includes("색")) {
                         rows.push({ field: "색 프리셋", value: formatPresetField(selectedCue.color_preset_no) });
                       }
-                      if (hints.includes("움직임")) {
+                      // 카드 t557 — 무빙이 아닌 줄에 색 효과처럼 다른 종류의 효과가
+                      // 저장돼 있어도 보이게 한다(고치기는 아래에서 무빙만).
+                      if (hints.includes("움직임") || selectedCue.effect_preset_no !== null) {
                         const effectValue = formatPresetField(selectedCue.effect_preset_no);
                         rows.push({
                           field: "효과 프리셋",
@@ -1669,7 +1706,8 @@ export function BeatGrid({
                       const isColorRow = row.field === "색 프리셋";
                       // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1/3) —
                       // 효과(움직임) 프리셋 직접 고르기(무빙 전용 행).
-                      const isEffectRow = row.field === "효과 프리셋";
+                      // 이 행의 드롭다운은 위치 풀 효과(움직임) 목록이라 무빙 줄에서만 고친다.
+                      const isEffectRow = row.field === "효과 프리셋" && hints.includes("움직임");
                       const editable =
                         !!onEditRequest &&
                         (isBrightnessRow || isPositionRow || isColorRow || isEffectRow);
@@ -1820,7 +1858,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(positionSection))}
+                                {renderPresetOptions(splitDrawerSectionEntries(positionSection), true)}
                               </select>
                               <button
                                 type="button"
@@ -1834,7 +1872,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildPositionPresetChanges(positionPresetDraft),
+                                      // 카드 t557 — 효과 번호대 항목이면 위치 효과로.
+                                      changes: presetPickChanges(positionSection, "Position", positionPresetDraft),
                                     });
                                   }
                                   closeEdit();
@@ -1868,7 +1907,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(colorSection))}
+                                {renderPresetOptions(splitDrawerSectionEntries(colorSection), true)}
                               </select>
                               <button
                                 type="button"
@@ -1882,7 +1921,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildColorPresetChanges(colorPresetDraft),
+                                      // 카드 t557 — 효과 번호대 항목이면 색 효과(effect_kind color)로.
+                                      changes: presetPickChanges(colorSection, "Color", colorPresetDraft),
                                     });
                                   }
                                   closeEdit();
@@ -1932,7 +1972,8 @@ export function BeatGrid({
                                     onEditRequest!({
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
-                                      changes: buildEffectPresetChanges(effectPresetDraft),
+                                      // 카드 t557 — 종류는 고른 항목의 풀이 정한다(이 목록은 위치 풀 효과).
+                                      changes: presetPickChanges(positionSection, "Position", effectPresetDraft),
                                     });
                                   }
                                   closeEdit();

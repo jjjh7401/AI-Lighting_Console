@@ -3,6 +3,8 @@
 // 같은 바운드: 이 프로젝트는 DOM/jsdom 시험대가 없다(RunbookMode.test.tsx와
 // 같은 메모) — 컴포넌트 자체를 렌더하지 않고, 내보낸 순수 함수만 직접
 // 부른다.
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -44,6 +46,7 @@ import {
   formatAppMovementField,
   formatBrightnessField,
   formatDrawerEntryOptionLabel,
+  presetPickChanges,
   formatEvidenceField,
   formatFadeBarsField,
   formatPresetField,
@@ -1271,5 +1274,57 @@ describe("buildEffectPresetChanges/buildBrightnessDimmerEffectChanges — 카드
     expect(buildBrightnessDimmerEffectChanges("1.21")).toEqual({
       brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
     });
+  });
+});
+
+// 카드 t557 — 효과 드롭다운이 무빙(위치 효과) 전용이던 것을 필드별로 나눈다.
+// 정본 시안: 색 효과는 색 드롭다운(「(쇼·효과)」), 움직임 효과는 무빙의
+// 「움직임 효과」 드롭다운, 디머 효과는 밝기 「디머 효과」 모드.
+describe("presetPickChanges — 고른 항목의 풀·효과 번호대로 저장 필드를 정한다(카드 t557)", () => {
+  const color = drawerSection({
+    pool_name: "Color",
+    pool_no: 4,
+    entries: [
+      drawerEntry({ preset_no: "4.24", name: "LA Pink", is_effect_band: false }),
+      drawerEntry({ preset_no: "4.41", name: "LA Wave CM", is_effect_band: true }),
+    ],
+  });
+  const position = drawerSection({
+    pool_name: "Position",
+    entries: [
+      drawerEntry({ preset_no: "2.41", name: "LA Floor", is_effect_band: false }),
+      drawerEntry({ preset_no: "2.63", name: "LA Sweep 4", is_effect_band: true }),
+    ],
+  });
+
+  it("재현: 색 풀의 효과 번호대 항목은 색 효과(effect_kind color)로 — 예전에는 color_preset_no 로 나갔다", () => {
+    expect(presetPickChanges(color, "Color", "4.41")).toEqual({ effect_preset_no: "4.41", effect_kind: "color" });
+  });
+  it("색 풀의 기본 항목은 그대로 color_preset_no", () => {
+    expect(presetPickChanges(color, "Color", "4.24")).toEqual({ color_preset_no: "4.24" });
+  });
+  it("위치 풀의 효과 항목은 위치 효과, 기본 항목은 position_preset_no", () => {
+    expect(presetPickChanges(position, "Position", "2.63")).toEqual({ effect_preset_no: "2.63", effect_kind: "position" });
+    expect(presetPickChanges(position, "Position", "2.41")).toEqual({ position_preset_no: "2.41" });
+  });
+  it("서랍에 없는 번호·서랍을 아직 못 받음은 기본 필드(효과로 지어내지 않음)", () => {
+    expect(presetPickChanges(color, "Color", "4.99")).toEqual({ color_preset_no: "4.99" });
+    expect(presetPickChanges(null, "Color", "4.41")).toEqual({ color_preset_no: "4.41" });
+  });
+  it("buildEffectPresetChanges 는 종류를 받는다(기본값은 예전과 같은 position)", () => {
+    expect(buildEffectPresetChanges("4.41", "color")).toEqual({ effect_preset_no: "4.41", effect_kind: "color" });
+    expect(buildEffectPresetChanges("2.61")).toEqual({ effect_preset_no: "2.61", effect_kind: "position" });
+  });
+  it("위치·색 드롭다운에서는 효과 항목에 「· 효과」를 붙인다(시안 「(쇼·효과)」)", () => {
+    const fx = drawerEntry({ preset_no: "4.41", name: "LA Wave CM", is_effect_band: true });
+    expect(formatDrawerEntryOptionLabel(fx, { markEffect: true })).toBe("4.41 LA Wave CM · 효과");
+    expect(formatDrawerEntryOptionLabel(fx)).toBe("4.41 LA Wave CM");
+  });
+  it("편집 칸의 위치·색·효과 「적용」이 모두 presetPickChanges 를 거친다", () => {
+    const source = readFileSync(new URL("./BeatGrid.tsx", import.meta.url), "utf-8");
+    expect(source).not.toMatch(/changes: buildColorPresetChanges\(/);
+    expect(source).not.toMatch(/changes: buildPositionPresetChanges\(/);
+    expect(source).not.toMatch(/changes: buildEffectPresetChanges\(effectPresetDraft\)/);
+    expect((source.match(/changes: presetPickChanges\(/g) ?? []).length).toBe(3);
   });
 });
