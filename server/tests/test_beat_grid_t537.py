@@ -192,7 +192,16 @@ class TestLegacyCueReadPath:
         assert cue["color_preset_no"] is None
         assert cue["effect_preset_no"] is None
         assert cue["effect_kind"] is None
-        assert cue["entry"] == {"fade_bars": None, "mib_mode": None}
+        # 카드 t574 — SPEC 0.5.0 REQ-LDBEAT-006(i-4a)~(i-4e) 다섯 필드도 미정으로 채운다.
+        assert cue["entry"] == {
+            "fade_bars": None,
+            "mib_mode": None,
+            "fade_beats": None,
+            "trigger_beat": None,
+            "delay_beats": None,
+            "position_late_beats": None,
+            "tracking": None,
+        }
         assert cue["source_ref"] is None
 
     def test_no_label_parsing_function_exists_in_the_legacy_read_path(self) -> None:
@@ -215,7 +224,16 @@ class TestLegacyCueReadPath:
             "color_preset_no": None,
             "effect_preset_no": None,
             "effect_kind": None,
-            "entry": {"fade_bars": None, "mib_mode": None},
+            # 카드 t574 — SPEC 0.5.0 의 entry 다섯 필드까지 갖춘 완전 구조화 칸.
+            "entry": {
+                "fade_bars": None,
+                "mib_mode": None,
+                "fade_beats": None,
+                "trigger_beat": None,
+                "delay_beats": None,
+                "position_late_beats": None,
+                "tracking": None,
+            },
             "source_ref": "reports/effect-arrangement-rules-20261007.md:106",
             # 카드 t548 — REQ-LDBEAT-006(vi)(vii) 신설 필드. 선언하지 않은
             # 레거시 입력에서도 normalize_beat_grid_cue는 이 둘을 `None`으로
