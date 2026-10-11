@@ -35,6 +35,15 @@
   - `test_the_leading_verb_is_the_discriminator_not_the_object_type`·`test_a_selection_carrying_a_value_is_still_deduped` — 면제 판별(맨 선택형만 면제)은 그대로 재고, 기준만 앞선 호출 집합으로.
 - `test_dedupe_value_lines_t476.py::test_artifact_lines_are_still_deduped`(10 케이스) — 앞선 호출 기준으로. 세 면제 정의(`tools`·`fx`·`groupgen`)가 모두 False 인 단언은 그대로.
 
+## 보호 구역 허가 2건 — **감독 승인 필요** (t476 선례)
+
+- `tools.py` 의 면제 튜플과 중복 제거 실행 고리는 두 보호 시험이 위치로 봉쇄한다: `server/tests/test_overlap_preserve.py::TestToolsProtectedRegions`(기준 `95687a0e`, 구간 537..582)와 `server/tests/test_songcue_bundle.py::test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state`(기준 `38a6e7e2`, 구간 524..569). 전체 서버 시험에서는 커밋 전이라 안 걸렸고, 푸시 전 검사(ci-local)가 잡았다.
+- 이 카드의 목적이 그 고리를 고치는 것이라, t476 과 같은 꼴로 **봉쇄는 두고 허용분을 글자까지 고정**했다:
+  - 헝크 ①(옛 538 / 525, 9줄 → 10줄): 옛 주석 8줄 + `already_executed = set(context.executed_ok)` → 새 `@MX:WARN` 주석 9줄 + `already_executed = context.executed_ok`. 추가 줄 10개는 `_T601_LOOP_ADDED_LINES` 로 글자 고정, 지운 줄은 마지막이 그 대입이고 나머지가 전부 주석인지 단언.
+  - 헝크 ②(옛 574 / 561, 1줄 삭제): 지운 줄이 정확히 `already_executed.add(command)` 하나, 추가 0.
+- t476 허가는 「감독 승인」으로 났다. 이 허가도 같은 무게라 **머지 전에 감독 확인이 필요하다** — 리드에게 그렇게 올렸다.
+- 측정: `.moai/reports/t601/measure_hunks.py` → `measure_hunks.out.txt`(커밋 뒤 실행). songcue 헝크 93 → 95(새 시작점 525·561, 사라진 시작점 0).
+
 ## 검증
 
 - 재현 먼저: `server/tests/test_dedupe_legit_repeat_t601.py` 를 쓰고 고치기 전 실행 → `2 failed, 3 passed`. 효과 묶음 둘(`sweep-soft-wide`·`wave-soft-rise`, 22.1·22.2)에서 **둘째 묶음의 `ChangeDestination Root` 와 `Step 2` 두 줄이 빠졌다**(`At index 11 diff: 'ClearAll' != 'ChangeDestination Root'`, `Right contains 2 more items`). 카드가 적은 `Step 2` 만이 아니었다.
