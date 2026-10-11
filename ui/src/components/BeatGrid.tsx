@@ -59,6 +59,7 @@ import {
 import { BeatGridStage } from "./BeatGridStage";
 import { BeatGridJoint, BeatGridScenePanel, BeatGridSceneRow } from "./BeatGridTimelineParts";
 import { BeatGridTransitionView } from "./BeatGridTransitionView";
+import { fixtureBelongsTo } from "./beatGridStageModel";
 import {
   cueConsoleCommandLines,
   parseBeatsPerBar,
@@ -303,6 +304,11 @@ export interface BeatGridFixturePoint {
    * 대응" 표(파일 93~103행, 표 본문 100~103행)가 그 전체 목록이다 — MOVER-ALL(501·502) ·
    * BACK(201·202) · SIDE-L(301·302) · BLIND(601·602). */
   confirmedGroupName?: string | null;
+  /** 카드 t565 — 콘솔 SELECTIONDATA 판독(`beat_grid_stage`)으로 확인된 소속
+   * 그룹 이름 **전부**. 한 장비가 부모·자식 그룹(SIDE-ALL ⊇ SIDE-L)에 함께 들
+   * 수 있어 목록이다. 판정은 `fixtureBelongsTo`(`beatGridStageModel.ts`) 한
+   * 곳이 이 필드와 위 한 개짜리 필드를 함께 본다. */
+  confirmedGroupNames?: readonly string[];
 }
 
 interface StageBounds {
@@ -367,9 +373,8 @@ export function fixtureDisplayColor(
   fixture: BeatGridFixturePoint,
   tracks: readonly BeatGridTrack[],
 ): string {
-  if (!fixture.confirmedGroupName) return UNCONFIRMED_FIXTURE_COLOR;
-  const confirmedKey = fixture.confirmedGroupName.toUpperCase();
-  const index = tracks.findIndex((track) => track.group_name.toUpperCase() === confirmedKey);
+  // 카드 t565 — 여러 그룹 소속이면 트랙 순서상 첫 일치 트랙의 색.
+  const index = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
   if (index < 0) return UNCONFIRMED_FIXTURE_COLOR;
   return TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
 }
@@ -391,9 +396,7 @@ export function fixtureDisplayOpacity(
   tracks: readonly BeatGridTrack[],
   viewBar: number,
 ): number {
-  if (!fixture.confirmedGroupName) return UNCONFIRMED_FIXTURE_OPACITY;
-  const confirmedKey = fixture.confirmedGroupName.toUpperCase();
-  const track = tracks.find((t) => t.group_name.toUpperCase() === confirmedKey);
+  const track = tracks.find((t) => fixtureBelongsTo(fixture, t.group_name));
   if (!track) return UNCONFIRMED_FIXTURE_OPACITY;
   const cue = cueForBar(track, viewBar);
   if (!cue) return INACTIVE_FIXTURE_OPACITY;
@@ -406,6 +409,9 @@ export interface BeatGridProps {
    * 읽기 경로가 없으면 지어내지 않는다). 비어 있으면 무대 칸은 "무대 좌표
    * 미제공" 안내로 떨어진다. */
   fixtures?: BeatGridFixturePoint[];
+  /** 카드 t565 — 무대 판독이 못 읽은 이유(`beat_grid_stage.unread`) 그대로.
+   * 무대 칸 아래에 보인다 — 비어 있는 무대를 「장비 없음」으로 읽지 않게. */
+  stageNotes?: readonly string[];
   probeResults?: Readonly<Record<number, ProbeStatus>>;
   secondsPerBar?: number | null;
   /** t537 (3) — 색 프리셋 번호 → 실제 콘솔 색(hex). 이 카드는 콘솔 접촉
@@ -935,6 +941,7 @@ const barToXAt = barToX;
 export function BeatGrid({
   grid,
   fixtures = [],
+  stageNotes,
   probeResults,
   secondsPerBar = null,
   colorPresetHex,
@@ -1104,9 +1111,7 @@ export function BeatGrid({
       ? (trackCueSegments(selectedTrack, maxBar).find((s) => s.cue === selectedCue)?.endBar ?? maxBar + 1)
       : maxBar + 1;
   const selectedConfirmedFixtures = selectedTrack
-    ? fixtures.filter(
-        (f) => f.confirmedGroupName && f.confirmedGroupName.toUpperCase() === selectedTrack.group_name.toUpperCase(),
-      ).length
+    ? fixtures.filter((f) => fixtureBelongsTo(f, selectedTrack.group_name)).length
     : 0;
   const selectCue = (trackIndex: number, bar: number, transition: boolean) => {
     setSelected({ trackIndex, bar });
@@ -1952,6 +1957,7 @@ export function BeatGrid({
           <h5>무대 (2D)</h5>
           {/* 카드 t561 — 선택 테두리·그룹 이름표·장비 영역 클릭(REQ-LDBEAT-022). */}
           <BeatGridStage
+            notes={stageNotes}
             fixtures={fixtures}
             tracks={grid.tracks}
             viewBar={viewBar}

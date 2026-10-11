@@ -406,9 +406,12 @@ class TestIntrospectAndPropsGate:
             "path",
             "offset",
         ]
+        # 카드 t565 — 1.6.6 props 표 값 나눠 읽기(PROTOCOL.md §4.8)도 같은 이유로
+        # 선언 표면에 든다(enumerate_fields 의 offset 과 같은 확장).
         assert list(inspect.signature(gate.state_port.query_properties).parameters) == [
             "path",
             "property_names",
+            "offset",
         ]
         assert list(inspect.signature(FieldEnumerationPort.enumerate_fields).parameters) == [
             "self",
@@ -419,6 +422,7 @@ class TestIntrospectAndPropsGate:
             "self",
             "path",
             "property_names",
+            "offset",
         ]
 
     def test_successful_field_enumeration_is_audited_once(self, tmp_path):

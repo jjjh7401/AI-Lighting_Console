@@ -55,6 +55,7 @@ from server.design.beat_grid_presets import (
     resolve_preset_name,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
+from server.design.beat_grid_stage import read_beat_grid_stage
 from server.design.beat_grid_suggestion import (
     BeatGridSuggestion,
     NullSuggestionSource,
@@ -268,6 +269,7 @@ from server.web.messages import (
     answer_delta_event,
     approval_request_event,
     beat_grid_drawer_event,
+    beat_grid_stage_event,
     beat_grid_suggestion_consumed_event,
     beat_grid_suggestion_event,
     chat_response_event,
@@ -3975,6 +3977,9 @@ class ChatSession:
         # 카드 t479 — 곡 되읽기가 큐 속성(TrigType·TrigTime)을 읽는 포트. 실기 응답기의
         # 시퀀스 `state` 자식에는 속성이 없어서 큐 경로를 `props` 로 따로 읽는다.
         self._readback_props_port = gate.state_port
+        # 카드 t565 — 박자 격자 2D 무대 판독(좌표 + 그룹 소속)도 같은 감사 포트를
+        # 탄다(읽기 세 가지만 쓴다). 테스트는 이 속성을 직접 스텁한다.
+        self._stage_port = gate.state_port
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -9193,6 +9198,37 @@ class ChatSession:
         policy = load_preset_pool_policy()
         sections = build_preset_drawer(grid, pools=pools, policy=policy)
         event = beat_grid_drawer_event(sections=sections)
+        self._send(event)
+        return event
+
+    def beat_grid_stage(self) -> dict:
+        """카드 t565(SPEC-LDBEAT-001 REQ-022) — 박자 격자 2D 무대에 쓸 장비 좌표와
+        트랙 이름과 같은 콘솔 그룹의 소속 장비를 읽어 보낸다. 콘솔 **읽기**만(쓰기 0).
+        경로는 리그 설정(`rig_paths`)에서 오고, 못 읽은 것은 ``unread`` 에 이유로 남긴다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = self._beat_grid_view(timeline) if timeline is not None else {"tracks": []}
+        track_names = [
+            str(track.get("group_name"))
+            for track in grid.get("tracks", [])
+            if isinstance(track, dict) and track.get("group_name")
+        ]
+        fixtures_path = self._rig_paths.get("fixtures")
+        groups_path = self._rig_paths.get("groups")
+        if not fixtures_path or not groups_path:
+            payload: dict = {
+                "fixtures": [],
+                "groups": [],
+                "unread": ["리그 설정에 패치(fixtures)·그룹(groups) 경로가 없음"],
+            }
+        else:
+            payload = read_beat_grid_stage(
+                self._stage_port,
+                fixtures_path=fixtures_path,
+                groups_path=groups_path,
+                track_names=track_names,
+            )
+        event = beat_grid_stage_event(**payload)
         self._send(event)
         return event
 

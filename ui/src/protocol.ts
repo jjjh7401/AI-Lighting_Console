@@ -549,6 +549,33 @@ export interface BeatGridDrawerSection {
  * 막대 + 수락/거절(`#bAi`/`aOk`/`aNo` 핸들러)과 같은 모양. 서버의
  * `NullSuggestionSource`가 기본값이라 생산 환경에서는 거의 발생하지
  * 않는다 — 렌더 경로는 시험용 가짜 제안 소스로 검증한다. */
+/** 카드 t565(SPEC-LDBEAT-001 REQ-022) — 2D 무대 장비 하나. 패치 좌표 그대로
+ * (`server/orchestrator/tools.py` `read_spatial_fixtures`). */
+export interface BeatGridStageFixture {
+  fid: number;
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+}
+
+/** 카드 t565 — 박자 격자 트랙 이름과 같은 콘솔 그룹의 소속 장비(SELECTIONDATA
+ * 나눠 읽기 + SUBFIXTUREINDEX 대응). `complete=false` 면 일부만 읽혔다 — 이유는
+ * `BeatGridStageView.unread`. 부모·자식 그룹은 `member_fids` 포함 관계로 안다. */
+export interface BeatGridStageGroup {
+  group_no: number;
+  group_name: string;
+  member_fids: number[];
+  complete: boolean;
+}
+
+/** 카드 t565 — `beat_grid_stage` 이벤트 본문. */
+export interface BeatGridStageView {
+  fixtures: BeatGridStageFixture[];
+  groups: BeatGridStageGroup[];
+  unread: string[];
+}
+
 export interface BeatGridPendingSuggestion {
   suggestion_id: string;
   bar: number;
@@ -824,6 +851,8 @@ export type ServerEvent =
   | SongTimelineEvent
   // 카드 t551 후속(지시 1항) — 프리셋 서랍(실제 콘솔 판독, 데모 데이터 0건).
   | { v: 1; type: "beat_grid_drawer"; sections: BeatGridDrawerSection[] }
+  // 카드 t565 — 2D 무대(장비 좌표 + 그룹 소속, 콘솔 읽기만).
+  | ({ v: 1; type: "beat_grid_stage" } & BeatGridStageView)
   // AI 제안(경로 ③) 보류 카드 생성 — `NullSuggestionSource`가 기본값이라
   // 생산 환경에서는 거의 발생하지 않는다(시험용 가짜 소스로 렌더 검증).
   | ({ v: 1; type: "beat_grid_suggestion" } & BeatGridPendingSuggestion)
@@ -859,6 +888,7 @@ const SERVER_EVENT_TYPES = new Set([
   "song_timeline",
   // 카드 t551 후속 — 박자 격자 프리셋 서랍 + AI 제안 보류/소비.
   "beat_grid_drawer",
+  "beat_grid_stage",
   "beat_grid_suggestion",
   "beat_grid_suggestion_consumed",
 ]);
@@ -955,6 +985,12 @@ export function buildBeatGridSuggestionReject(suggestionId: string): string {
  * 없음(현재 격자의 사용처는 서버가 이미 안다). */
 export function buildBeatGridDrawerRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_drawer_request" });
+}
+
+/** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는
+ * 서버가 안다). */
+export function buildBeatGridStageRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_stage_request" });
 }
 
 export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
@@ -1367,6 +1403,8 @@ export interface UiState {
    * 요청 전에는 `null`(서랍을 열어도 아직 못 받은 상태 — 지어낸 목록
    * 0건, mockup 데모 `P` 객체가 아니라 서버의 실제 판독 결과). */
   beatGridDrawer: BeatGridDrawerSection[] | null;
+  /** 카드 t565 — 마지막으로 받은 2D 무대. `null` 이면 아직 안 받음. */
+  beatGridStage: BeatGridStageView | null;
   /** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. 소비(적용·
    * 거절)되면 `null`로 돌아간다(`beat_grid_suggestion_consumed`). */
   pendingBeatGridSuggestion: BeatGridPendingSuggestion | null;
@@ -1377,6 +1415,7 @@ export const initialState: UiState = {
   status: null,
   songTimeline: { timeline: null, stale: false },
   beatGridDrawer: null,
+  beatGridStage: null,
   pendingBeatGridSuggestion: null,
   pendingApprovals: [],
   pendingReviews: [],
@@ -1604,6 +1643,11 @@ export function reduceServerEvent(
       };
     case "beat_grid_drawer":
       return { ...state, beatGridDrawer: event.sections };
+    case "beat_grid_stage":
+      return {
+        ...state,
+        beatGridStage: { fixtures: event.fixtures, groups: event.groups, unread: event.unread },
+      };
     case "beat_grid_suggestion":
       return {
         ...state,
