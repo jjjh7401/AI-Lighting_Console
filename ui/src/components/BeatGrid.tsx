@@ -39,6 +39,7 @@ import type {
   BeatGridCue,
   BeatGridDrawerEntry,
   BeatGridDrawerSection,
+  BeatGridEmptyPresetCell,
   BeatGridEvidence,
   BeatGridPendingSuggestion,
   BeatGridSceneMemo,
@@ -747,6 +748,55 @@ export function pendingApprovalBadge(cue: BeatGridCue): string | null {
   return `⚠ 승인 대기(${fields.join(", ")})`;
 }
 
+/** 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 서버 `empty_preset_cells`를
+ * `cueEditKey` → 칸으로 묶는다. 빈 번호 판정은 서버가 이미 읽은 풀로만 했고,
+ * 화면은 그 목록을 그대로 쓴다(서랍 항목과 대조해 다시 추측하지 않는다). */
+export function emptyPresetCellIndex(
+  cells: readonly BeatGridEmptyPresetCell[] | null | undefined,
+): Map<string, BeatGridEmptyPresetCell> {
+  const index = new Map<string, BeatGridEmptyPresetCell>();
+  for (const cell of cells ?? []) index.set(cueEditKey(cell.group_name, cell.bar), cell);
+  return index;
+}
+
+/** 격자 칸 배지 — `⚠ 빈 프리셋(4.99)`. 풀을 못 읽은 번호는 `?`를 붙여 「비었는지
+ * 모름」을 「빈 것 확인」과 가른다. */
+export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
+  const values = cell.fields.map((f) => (f.kind === "pool_unread" ? `${f.value}?` : f.value));
+  return `⚠ 빈 프리셋(${values.join(", ")})`;
+}
+
+/** 배지·편집 칸에 붙는 뒷말 — 반영에서 무슨 일이 생기는지(`held`). */
+function emptyPresetConsequence(cell: BeatGridEmptyPresetCell): string {
+  return cell.held
+    ? "「⇪ 콘솔에 반영」에서 이 칸은 송신 보류됩니다"
+    : "이미 승인된 칸이라 반영하면 빈 번호를 가리킨 큐가 그대로 나갑니다";
+}
+
+export function emptyPresetTitle(cell: BeatGridEmptyPresetCell): string {
+  const reasons = cell.fields.map((f) => `${f.field_label} ${f.value}: ${f.reason}`);
+  return `${reasons.join(" · ")} — ${emptyPresetConsequence(cell)}`;
+}
+
+/** 편집 칸 행 이름 → 서버 필드 키. 행 이름과 키를 잇는 구조 대응일 뿐이다. */
+const EMPTY_PRESET_ROW_FIELDS: Readonly<Record<string, string>> = {
+  밝기: "brightness.preset_no",
+  "위치 프리셋": "position_preset_no",
+  "색 프리셋": "color_preset_no",
+  "효과 프리셋": "effect_preset_no",
+};
+
+/** 편집 칸의 그 행이 빈 번호를 가리키면 한 줄 안내, 아니면 `null`. */
+export function emptyPresetFieldNote(
+  cell: BeatGridEmptyPresetCell | undefined,
+  rowField: string,
+): string | null {
+  const key = EMPTY_PRESET_ROW_FIELDS[rowField];
+  const field = cell && key ? cell.fields.find((f) => f.field === key) : undefined;
+  if (!cell || !field) return null;
+  return `⚠ ${field.value} — ${field.reason} · ${emptyPresetConsequence(cell)}`;
+}
+
 /** 카드 t551 계속 — 직접 고르기(①) 드롭다운의 "+ 새 프리셋" 선택지 값.
  * `ldbeat-runbook-mockup-20261008.html` `opts()`의 `"__new"` 리터럴
  * 그대로(값이 이 값이면 적용하지 않는다 — 그 모양 자체가 새 창을 여는
@@ -1140,6 +1190,11 @@ export function BeatGrid({
   const unverifiedCells = useMemo(
     () => unverifiedCellIndex(grid?.unverified_cells),
     [grid?.unverified_cells],
+  );
+  // 카드 t595 — 「⚠ 빈 프리셋」 칸(서버가 이미 읽은 풀로 가른 목록).
+  const emptyPresetCells = useMemo(
+    () => emptyPresetCellIndex(grid?.empty_preset_cells),
+    [grid?.empty_preset_cells],
   );
   // 카드 t560(REQ-LDBEAT-023(b)) — 「이 마디 한눈에」 줄 이름 ▸ 로 펼친
   // 트랙(콘솔 그룹 이름 키 — 이 표는 트랙당 한 줄뿐이라 마디는 필요 없다).
@@ -1941,6 +1996,14 @@ export function BeatGrid({
                                       {pendingApprovalBadge(segment.cue)}
                                     </span>
                                   )}
+                                  {(() => {
+                                    const empty = emptyPresetCells.get(cueEditKey(track.group_name, segment.cue.bar));
+                                    return empty ? (
+                                      <span className="beat-grid-empty-preset-warn" title={emptyPresetTitle(empty)}>
+                                        {emptyPresetBadge(empty)}
+                                      </span>
+                                    ) : null;
+                                  })()}
                                 </button>
                                 {hasNext && (
                                   // 카드 t561 — 이음매 표시(M·!·◢)와 페이드 번짐(REQ-LDBEAT-020(a)).
@@ -2516,6 +2579,18 @@ export function BeatGrid({
                               {row.value}
                             </span>
                           )}
+                          {/* 카드 t595 — 이 행이 빈 프리셋 번호를 가리키면(서버 판정) 한 줄. */}
+                          {(() => {
+                            const note = selectedCue
+                              ? emptyPresetFieldNote(
+                                  emptyPresetCells.get(cueEditKey(selectedTrack.group_name, selectedCue.bar)),
+                                  row.field,
+                                )
+                              : null;
+                            return note ? (
+                              <p className="beat-grid-cue-field-note beat-grid-empty-preset-warn">{note}</p>
+                            ) : null;
+                          })()}
                         </div>
                       );
                     });

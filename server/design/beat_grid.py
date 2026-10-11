@@ -69,7 +69,9 @@ __all__ = [
     "check_app_movement_axis_conflict",
     "check_evidence_approval",
     "classify_scene_cell_assignment",
+    "classify_empty_preset",
     "default_beat_grid",
+    "empty_preset_cells",
     "find_overlapping_group_tracks",
     "normalize_beat_grid_cue",
     "pan_only_vertical_base_warning",
@@ -741,15 +743,22 @@ def pending_preset_fields(cue: Mapping[str, object]) -> list[tuple[str, object]]
     (plan.md M10 1단계, 되돌리기 비용 최소화 결정)."""
     if check_evidence_approval(cue) is None:
         return []
-    pending: list[tuple[str, object]] = []
+    return _preset_number_fields(cue)
+
+
+def _preset_number_fields(cue: Mapping[str, object]) -> list[tuple[str, object]]:
+    """이 칸의 non-null 프리셋 **번호** 필드 전부 — 승인 여부와 무관하게
+    `(필드 키, 번호)` 쌍으로 돌려준다(``pending_preset_fields``가 승인 대기
+    칸에서 쓰는 같은 열거, 카드 t595가 승인된 칸의 빈 번호까지 보려고 뽑았다)."""
+    fields: list[tuple[str, object]] = []
     brightness = cue.get("brightness")
     if isinstance(brightness, Mapping) and brightness.get("preset_no") is not None:
-        pending.append(("brightness.preset_no", brightness["preset_no"]))
+        fields.append(("brightness.preset_no", brightness["preset_no"]))
     for field in ("position_preset_no", "color_preset_no", "effect_preset_no"):
         value = cue.get(field)
         if value is not None:
-            pending.append((field, value))
-    return pending
+            fields.append((field, value))
+    return fields
 
 
 def pending_preset_approvals(grid: Mapping[str, object]) -> list[dict[str, object]]:
@@ -796,6 +805,83 @@ def preset_pool_no(value: object) -> int | None:
     return int(pool)
 
 
+def classify_empty_preset(
+    value: object,
+    pool_slots: Mapping[int, Mapping[int, object] | None],
+    *,
+    unknown_pool_unread: bool,
+) -> str | None:
+    """번호 하나의 빈 프리셋 판정 — 보류(``split_empty_preset_holds``)와 격자 표식
+    (``empty_preset_cells``)이 같은 판정을 쓰도록 한 자리에 둔다(카드 t595).
+
+    ``EMPTY_PRESET_HOLD``(slot 없음·``pool.slot`` 꼴 아님) · ``POOL_UNREAD_HOLD``
+    (풀을 못 읽음) · ``None``(slot 있음). ``pool_slots``에 그 풀 번호 키가 아예
+    없을 때는 ``unknown_pool_unread``가 정한다 — 반영은 그 번호의 풀을 방금
+    읽었으므로 「못 읽음」, 표식은 서버가 그 풀을 아직 읽지 않았으므로 판정 없음
+    (``None``, 지어내지 않는다). 키는 ``in``으로 가린다(``.get()``은 없는 키와
+    못 읽은 풀을 같은 ``None``으로 돌려준다)."""
+    pool_no = preset_pool_no(value)
+    if pool_no is None:
+        return EMPTY_PRESET_HOLD
+    if pool_no not in pool_slots:
+        return POOL_UNREAD_HOLD if unknown_pool_unread else None
+    slots = pool_slots[pool_no]
+    if slots is None:
+        return POOL_UNREAD_HOLD
+    if int(str(value).partition(".")[2]) not in slots:
+        return EMPTY_PRESET_HOLD
+    return None
+
+
+def empty_preset_cells(
+    grid: Mapping[str, object],
+    pool_slots: Mapping[int, Mapping[int, object] | None],
+) -> list[dict[str, object]]:
+    """카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 서버가 이미 읽은 풀
+    (``pool_slots``: 풀 번호 → ``{slot: 이름}``, 못 읽었으면 ``None``)로 격자의
+    빈 프리셋 칸을 가른다. UI 는 이 목록만 읽는다(번호를 다시 추측하지 않는다).
+
+    승인 여부와 무관하게 칸의 모든 프리셋 번호를 본다 — 이미 승인된 칸이 빈
+    번호를 가리키면 반영 때 보류되지 않고 빈 번호를 가리킨 큐가 나가므로(가드 D
+    범위 밖), ``held``로 두 경우를 가른다: ``True`` = 승인 대기라 반영에서 송신
+    보류, ``False`` = 이미 승인돼 반영하면 그대로 나감. 아직 읽지 않은 풀의
+    번호는 판정하지 않는다(표식 없음).
+
+    칸마다 ``{group_name, bar, held, fields: [{field, field_label, value, kind,
+    reason}]}`` — ``kind``는 ``"empty"``/``"pool_unread"``."""
+    cells: list[dict[str, object]] = []
+    for track in grid.get("tracks") or []:
+        if not isinstance(track, Mapping):
+            continue
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping):
+                continue
+            fields: list[dict[str, object]] = []
+            for field, value in _preset_number_fields(cue):
+                reason = classify_empty_preset(value, pool_slots, unknown_pool_unread=False)
+                if reason is None:
+                    continue
+                fields.append(
+                    {
+                        "field": field,
+                        "field_label": _PENDING_PRESET_FIELD_LABELS.get(field, field),
+                        "value": value,
+                        "kind": "pool_unread" if reason == POOL_UNREAD_HOLD else "empty",
+                        "reason": reason,
+                    }
+                )
+            if fields:
+                cells.append(
+                    {
+                        "group_name": track.get("group_name"),
+                        "bar": cue.get("bar"),
+                        "held": check_evidence_approval(cue) is not None,
+                        "fields": fields,
+                    }
+                )
+    return cells
+
+
 def split_empty_preset_holds(
     pending: Sequence[Mapping[str, object]],
     pool_slots: Mapping[int, Mapping[int, object] | None],
@@ -811,16 +897,9 @@ def split_empty_preset_holds(
     ``hold_reason``을 단 사본이다."""
     reasons: dict[int, str] = {}
     for index, entry in enumerate(pending):
-        value = entry.get("value")
-        pool_no = preset_pool_no(value)
-        if pool_no is None:
-            reasons[index] = EMPTY_PRESET_HOLD
-            continue
-        slots = pool_slots.get(pool_no)
-        if slots is None:
-            reasons[index] = POOL_UNREAD_HOLD
-        elif int(str(value).partition(".")[2]) not in slots:
-            reasons[index] = EMPTY_PRESET_HOLD
+        reason = classify_empty_preset(entry.get("value"), pool_slots, unknown_pool_unread=True)
+        if reason is not None:
+            reasons[index] = reason
     held_cells = {(pending[i].get("group_name"), pending[i].get("bar")) for i in reasons}
     approvable: list[dict[str, object]] = []
     held: list[dict[str, object]] = []
