@@ -21,6 +21,7 @@ from server.design.beat_grid import (
     classify_empty_preset,
     empty_preset_cells,
 )
+from server.design.beat_grid_effect_presets import EFFECT_RECIPE_MISSING
 from server.design.beat_grid_position_presets import POSITION_TARGET_MISSING
 from server.web.session import SongTimelineStore
 
@@ -83,7 +84,8 @@ class TestEmptyPresetCells:
                 "field_label": "효과 프리셋",
                 "value": "4.99",
                 "kind": "empty",
-                "reason": EMPTY_PRESET_HOLD,
+                # 카드 t593 — 빈 효과 번호도 반영 때 만들 수 있게 되어, 못 만드는 사유를 붙인다.
+                "reason": f"{EMPTY_PRESET_HOLD}({EFFECT_RECIPE_MISSING})",
             }
         ]
 
