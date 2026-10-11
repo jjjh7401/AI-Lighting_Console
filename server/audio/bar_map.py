@@ -19,7 +19,6 @@
 
 from __future__ import annotations
 
-import io
 import math
 import statistics
 from collections.abc import Sequence
@@ -32,6 +31,7 @@ from server.audio.analyze import (
     _MIN_DECODED_FRACTION,
     MANUAL_BPM_FALLBACK_REASON,
     _mp3_length_is_a_bitrate_guess,
+    _read_audio,
     _tempo_from_beat_regression,
     analysis_available,
 )
@@ -186,9 +186,8 @@ def _decode_mono_audio(audio_bytes: bytes) -> _DecodedAudio | BeatGridFailure:
         return BeatGridFailure(MANUAL_BPM_FALLBACK_REASON)
 
     try:
-        info = soundfile.info(io.BytesIO(payload))
+        info, samples, sample_rate, payload = _read_audio(soundfile, payload)
         declared_frames = info.frames
-        samples, sample_rate = soundfile.read(io.BytesIO(payload), dtype="float32", always_2d=True)
     except Exception as error:  # soundfile 은 형식마다 다른 예외를 낸다
         return BeatGridFailure(f"오디오 형식을 읽지 못했습니다: {error}")
 

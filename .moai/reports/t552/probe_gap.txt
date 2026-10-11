@@ -1,0 +1,4 @@
+tag_end 81 first_sync_at 707 gap_len 626 gap_all_zero True sync_bytes fffbb064
+tag+gap stripped OK (4766976, 2)
+tag kept, gap removed OK (4766976, 2)
+only tag stripped ERR Error opening <_io.BytesIO object at 0x101582d90>: Format not recognised.
