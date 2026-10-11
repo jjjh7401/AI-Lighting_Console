@@ -218,6 +218,8 @@ M10이 "승인 대기" 칸·필드를 정의했다 — M11은 그 승인 대기 
 
 이 SPEC 개정(카드 t590)은 이 마일스톤을 **명세만** 한다 — 구현은 후속 카드 t592의 범위다. 보류 칸의 종류가 위치(position)일 때, 무대 목표 좌표를 조준 경로(`server/spatial/pointing.py:368-373`, 기존 위치 프리셋 `Store Preset 2.<n>` + `Label Preset` 선례)로 환산해 값을 만든다 — 레시피 자체의 설계(좌표 입력 UX, 조준 결과를 그 칸의 `position_preset_no`에 되써넣는 경로)는 t592가 M12로서 이어받는다.
 
+> **추가 — 카드 t598, 리드 경유, 콘솔 접촉 0건(REQ-LDBEAT-015(i-10)).** M12(와 그 생성 경로를 타는 모든 「⇪ 콘솔에 반영」 배치)가 만드는 `Store Preset` 줄은 승인 카드를 구성하는 시점(M11 step 1의 반영 시점 판독)과 실제 송신 사이에 승인 창이 열려 있다 — 그 사이 콘솔에 직접 값을 넣어 M12가 채우려던 번호를 먼저 채울 수 있다. 이 레이스를 막기 위해, 승인 뒤·실제 송신 직전에 그 배치가 만드는 번호들의 풀을 **다시** 완전 판독한다(`server/safety/gate.py` `BatchRisk.recheck` 콜백, `server/web/session.py` `_beat_grid_recheck_new_presets`) — 재판독 결과 하나라도 채워져 있거나 판독 자체가 실패하면 그 배치 전체를 0줄 송신하고 승인도 기록하지 않는다(부분 송신·부분 승인 없음, 다시 「⇪ 콘솔에 반영」을 눌러야 한다). 구현됨(커밋 `942873a1`, `server/tests/test_presend_reread_t598.py` + `ui/src/components/BeatGridApplyFailure.test.tsx`).
+
 ### M13 — 효과 값 출처 레시피 (REQ-LDBEAT-015(i-4), 카드 t593 — **별도 카드, 아직 착수 전**)
 
 명세만 — 구현은 후속 카드 t593의 범위다. 보류 칸의 종류가 효과(effect)일 때, 효과 템플릿 + 주기를 조합해 값을 만든다 — 기존 효과 생성 도구 경로(`find_fx`/`instantiate_fx`/`compose_fx`, `design/ldbeat-runbook-mockup-20261008.md:36`가 가리킨 도구, `server/fx/instantiate.py:177,717-737`의 `Store Preset <pool>.<n> /Universal` + `Label Preset` 명령 문형 선례)를 재사용한다 — 새 명령 문형을 발명하지 않는다.
