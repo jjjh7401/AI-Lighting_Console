@@ -68,7 +68,7 @@ from server.design.beat_grid_send import (
     beat_grid_reapply_summary,
     build_song_timing_from_bar_map,
     pick_sequence_numbers,
-    resolve_dimmer_attributes,
+    resolve_group_dimmer_attributes,
     unsent_beat_grid_cells,
     verify_owned_sequences,
 )
@@ -9339,6 +9339,34 @@ class ChatSession:
         self._send(event)
         return event
 
+    def _beat_grid_group_members(self, group_names: list[str]) -> dict[str, list[int]]:
+        """카드 t573 — 트랙 이름 -> 소속 fid. 무대 칸과 같은 판독을 재사용하고
+        (콘솔 읽기만), **전수로 읽힌** 그룹만 싣는다. 경로가 없거나 판독이
+        실패하면 빈 표 — 그때 디머 속성은 리그 전체 규칙으로 되돌아간다."""
+        fixtures_path = self._rig_paths.get("fixtures")
+        groups_path = self._rig_paths.get("groups")
+        if not fixtures_path or not groups_path or not group_names:
+            return {}
+        try:
+            payload = read_beat_grid_stage(
+                self._stage_port,
+                fixtures_path=fixtures_path,
+                groups_path=groups_path,
+                track_names=group_names,
+            )
+        except Exception:  # noqa: BLE001 — 소속을 모르면 리그 전체 규칙으로 되돌아간다
+            return {}
+        by_upper = {name.upper(): name for name in group_names}
+        members: dict[str, list[int]] = {}
+        for group in payload.get("groups") or []:
+            if not isinstance(group, dict) or group.get("complete") is not True:
+                continue
+            track = by_upper.get(str(group.get("group_name", "")).upper())
+            fids = group.get("member_fids")
+            if track is not None and isinstance(fids, list) and fids:
+                members[track] = list(fids)
+        return members
+
     def beat_grid_edit(
         self,
         bar: int | None,
@@ -9687,7 +9715,11 @@ class ChatSession:
                 self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
             )
             rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
-            dimmer_attributes = resolve_dimmer_attributes(rig_read, group_names)
+            # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
+            # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.
+            dimmer_attributes, dimmer_reasons = resolve_group_dimmer_attributes(
+                rig_read, group_names, self._beat_grid_group_members(group_names)
+            )
 
             probe_results = grid.get("probe_results") or {}
             # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
@@ -9707,6 +9739,7 @@ class ChatSession:
                 dimmer_attributes=dimmer_attributes,
                 probe_results=probe_results,
                 recorded_cue_numbers=recorded_cue_numbers,
+                dimmer_attribute_reasons=dimmer_reasons,
             )
             if result.blocked_reason is not None or not result.commands:
                 return self._beat_grid_send_status(

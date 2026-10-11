@@ -278,6 +278,7 @@ def _cue_attribute_commands(
     group_no: int,
     timing: SongTiming,
     dimmer_attributes: Mapping[str, Sequence[str]],
+    dimmer_attribute_reasons: Mapping[str, str] | None = None,
 ) -> tuple[tuple[str, ...], str | None]:
     """칸 내용(선택+속성 설정) 줄만 — ``Store Cue``/트리거 시각 줄은 뺀다.
     ``(명령 튜플, 사유)`` — 사유가 있으면 명령은 항상 빈 튜플이다(부분
@@ -319,6 +320,10 @@ def _cue_attribute_commands(
             return (), "brightness.mode == 'value' 인데 value_percent 가 없습니다(지어내지 않음)"
         attrs = dimmer_attributes.get(group_name) or ()
         if not attrs:
+            # 카드 t573 — 호출자가 왜 못 골랐는지 알면 그 사유를 그대로 쓴다.
+            specific = (dimmer_attribute_reasons or {}).get(group_name)
+            if specific:
+                return (), specific
             return (), (
                 f"'{group_name}' 트랙의 디머 속성 목록이 없어 밝기 값을 낼 수 "
                 "없습니다(dimmer_attributes 누락)"
@@ -450,6 +455,7 @@ def _emit_cue(
     timing: SongTiming,
     probe_results: Mapping[int, str],
     dimmer_attributes: Mapping[str, Sequence[str]],
+    dimmer_attribute_reasons: Mapping[str, str] | None = None,
 ) -> CueEmitResult:
     bar = int(cue["bar"])  # type: ignore[arg-type]
 
@@ -473,6 +479,7 @@ def _emit_cue(
         group_no=group_no,
         timing=timing,
         dimmer_attributes=dimmer_attributes,
+        dimmer_attribute_reasons=dimmer_attribute_reasons,
     )
     if reason is not None:
         return CueEmitResult(bar=bar, commands=(), blocked_reason=reason)
@@ -548,6 +555,7 @@ def emit_beat_grid_write_bundle(
     dimmer_attributes: Mapping[str, Sequence[str]],
     probe_results: Mapping[int, str],
     recorded_cue_numbers: Mapping[str, Mapping[int, int]] | None = None,
+    dimmer_attribute_reasons: Mapping[str, str] | None = None,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
@@ -677,6 +685,7 @@ def emit_beat_grid_write_bundle(
                 timing=timing,
                 probe_results=probe_results,
                 dimmer_attributes=dimmer_attributes,
+                dimmer_attribute_reasons=dimmer_attribute_reasons,
             )
             if result.commands and recorded_number is None:
                 next_cue_number += 1
