@@ -577,14 +577,14 @@ export interface BeatGridUnverifiedCell {
 }
 
 /** 카드 t595 — `BeatGridView.empty_preset_cells` 의 한 칸. `state`:
- * `"held"` = 승인 대기 칸이라 「⇪ 콘솔에 반영」에서 송신 보류(t590 가드 D) ·
+ * `"held"` = 「⇪ 콘솔에 반영」에서 송신 보류(t590 가드 D, t600 부터 승인된 칸 포함) ·
  * `"create"` = 빈 위치 번호를 반영 때 목표 좌표로 만들어 보냄(t592, 그룹 소속·장비
- * 좌표를 다 읽을 때만) · `"approved"` = 이미 승인된 칸이라 반영하면 빈 번호를
- * 가리킨 큐가 그대로 나감. */
+ * 좌표를 다 읽을 때만). 카드 t600 — 이미 승인된 칸도 반영이 같은 규칙으로 보류·생성하므로
+ * 「그대로 나감」 상태는 없다. */
 export interface BeatGridEmptyPresetCell {
   group_name: string;
   bar: number;
-  state: "held" | "create" | "approved";
+  state: "held" | "create";
   fields: {
     /** 서버 필드 키 — `"position_preset_no"`·`"color_preset_no"`·
      * `"effect_preset_no"`·`"brightness.preset_no"`. */
