@@ -48,6 +48,7 @@ from server.design.beat_grid_edit import (
     apply_beat_grid_edit_range,
     beats_per_bar_from_timeline,
     load_preset_pool_policy,
+    movement_vocabulary,
 )
 from server.design.beat_grid_emit import (
     beat_grid_sequence_label,
@@ -9516,6 +9517,7 @@ class ChatSession:
         # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
         # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
         updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
+        updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
         updated["beat_grid"] = updated_grid
         return updated
 

@@ -540,6 +540,19 @@ export interface BeatGridView {
    * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
    * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
   unverified_cells?: BeatGridUnverifiedCell[] | null;
+  /** 카드 t584 — 편집 칸 「움직임」 고르기 목록의 닫힌 어휘. 서버
+   * (`beat_grid_edit.movement_vocabulary`)에서만 온다 — UI에 모양 이름 상수 없음.
+   * 필드가 없는 옛 서버 응답이면 `undefined`(고르기 목록을 열지 않는다). */
+  movement_vocabulary?: BeatGridMovementVocabulary | null;
+}
+
+/** 카드 t584 — `unverified`는 M1 표만으로 본 「⚠」(고르기 전 목록 표시). 고른 뒤
+ * 칸 배지는 그룹·축까지 보는 `unverified_cells`가 정한다. */
+export interface BeatGridMovementVocabulary {
+  shapes: { name: NonNullable<BeatGridAppMovement["shape"]>; unverified: boolean }[];
+  axes: BeatGridAppMovement["axes"];
+  period_units: NonNullable<BeatGridAppMovement["period_unit"]>[];
+  phase_spread_unverified: boolean;
 }
 
 /** 카드 t579 — `terms`는 그 칸이 쓰는 미확인 어휘(`"circle"`·`"ballyhoo"`·

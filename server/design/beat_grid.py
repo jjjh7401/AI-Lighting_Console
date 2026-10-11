@@ -593,6 +593,10 @@ def attach_beat_grid_runtime_extras(
     from server.design.beat_grid_unverified import unverified_beat_grid_cells
 
     grid["unverified_cells"] = unverified_beat_grid_cells(grid)
+    # 카드 t584 — 「움직임」 고르기 목록의 닫힌 어휘(같은 M1 표 기준).
+    from server.design.beat_grid_edit import movement_vocabulary
+
+    grid["movement_vocabulary"] = movement_vocabulary(grid["probe_results"])
     # 카드 t570(REQ-LDBEAT-024(a)) — 이 필드가 생기기 전에 저장된 격자도
     # 같은 쇼 전역 측정값을 받는다(곡별 데이터가 아니라 콘솔 전역 측정이라
     # `setdefault` — 이미 있으면(드물게 다른 값으로 저장돼 있으면) 덮어쓰지

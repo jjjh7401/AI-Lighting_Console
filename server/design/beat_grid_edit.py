@@ -47,6 +47,7 @@ from server.design.cue_sheet_edit import MIB_MODES, TRACKING_VALUES
 from server.spatial.position_fx import POSITION_FX_EFFECTS
 
 __all__ = [
+    "movement_vocabulary",
     "AXES_VALUES",
     "EDITABLE_CUE_FIELD_LABELS",
     "PERIOD_UNITS",
@@ -88,6 +89,31 @@ AXES_VALUES: frozenset[str] = frozenset({"Pan", "Tilt"})
 PERIOD_UNITS: frozenset[str] = frozenset({"beat", "bar"})
 
 _EVIDENCE_GRADES: tuple[str, ...] = ("measured", "measured_other_group", "name_only")
+
+
+def movement_vocabulary(probe_results: Mapping[object, object]) -> dict[str, object]:
+    """카드 t584 — 편집 칸 「움직임」 고르기 목록이 쓸 닫힌 어휘. 화면은 모양·축·
+    주기 단위 이름을 이것에서만 받는다(UI 상수 0, REQ-LDBEAT-006(vi-2)~(vi-4)).
+
+    ``unverified``·``phase_spread_unverified``는 M1 표만으로 본 값이다
+    (`unverified_movement_terms`, 그룹 없이) — 고르기 전 목록의 「⚠」다. 고른
+    뒤 칸의 배지는 그룹·축까지 보는 ``unverified_cells``가 정한다(실측 기록이
+    그 그룹을 열었으면 배지가 없을 수 있다)."""
+    return {
+        "shapes": [
+            {
+                "name": shape,
+                "unverified": bool(unverified_movement_terms({"shape": shape}, probe_results)),  # type: ignore[arg-type]
+            }
+            for shape in POSITION_FX_EFFECTS
+        ],
+        "axes": sorted(AXES_VALUES),
+        "period_units": sorted(PERIOD_UNITS),
+        "phase_spread_unverified": bool(
+            unverified_movement_terms({"phase_spread": True}, probe_results)  # type: ignore[arg-type]
+        ),
+    }
+
 
 _BRIGHTNESS_MODES: tuple[str, ...] = ("value", "dimmer_preset", "dimmer_effect")
 _EFFECT_KINDS: tuple[str, ...] = ("position", "color", "dimmer", "mixed")

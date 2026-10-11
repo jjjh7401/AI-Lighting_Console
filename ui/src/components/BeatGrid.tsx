@@ -1139,7 +1139,7 @@ export function BeatGrid({
   // "같은 자리에서" 그대로 한 번에 한 필드만 연다 — `activeEditField`가
   // 그 "자리"다.
   const [activeEditField, setActiveEditField] = useState<
-    "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋" | null
+    "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋" | "움직임" | null
   >(null);
   const [brightnessModeDraft, setBrightnessModeDraft] = useState<
     "value" | "dimmer_preset" | "dimmer_effect"
@@ -2452,6 +2452,26 @@ export function BeatGrid({
                       }
                       isUnset={!selectedCue.app_movement}
                       unverifiedTerms={unverifiedCells.get(cueEditKey(selectedTrack.group_name, selectedCue.bar)) ?? null}
+                      // 카드 t584 — 다른 행과 같은 직접 고르기(①). 어휘는 서버에서만.
+                      edit={
+                        onEditRequest && grid.movement_vocabulary && selected
+                          ? {
+                              current: selectedCue.app_movement,
+                              vocabulary: grid.movement_vocabulary,
+                              editing: activeEditField === "움직임",
+                              onOpen: () => setActiveEditField("움직임"),
+                              onApply: (movement) => {
+                                onEditRequest({
+                                  bar: selected.bar,
+                                  target: selectedTrack.group_name,
+                                  changes: { app_movement: movement },
+                                });
+                                setActiveEditField(null);
+                              },
+                              onCancel: () => setActiveEditField(null),
+                            }
+                          : null
+                      }
                     />
                   )}
                   {selectedTrack.layer_role === "side" && <BeatGridSideRow />}

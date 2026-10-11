@@ -9,10 +9,13 @@ import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import type { BeatGridCue, BeatGridTrack } from "../protocol";
+import type { BeatGridCue, BeatGridMovementVocabulary, BeatGridTrack } from "../protocol";
 import {
   BeatGridConsoleCommand,
+  BeatGridMovementPicker,
   BeatGridMovementRow,
+  movementChangesFromDraft,
+  movementDraftFrom,
   BeatGridSideRow,
   focusFieldRowNames,
 } from "./BeatGridCuePanelParts";
@@ -393,5 +396,100 @@ describe("AC-LDBEAT-022 — 2D 무대", () => {
       <BeatGridStage fixtures={[]} tracks={tracks} viewBar={0} selectedTrackName={null} onSelectTrack={() => undefined} />,
     );
     expect(html).toContain("무대 좌표 미제공");
+  });
+});
+
+// 카드 t584 — 「움직임」 고르기 목록(REQ-LDBEAT-006(vi)·010·021(b)).
+const VOCAB: BeatGridMovementVocabulary = {
+  shapes: [
+    { name: "sweep", unverified: false },
+    { name: "circle", unverified: true },
+    { name: "wave", unverified: false },
+  ],
+  axes: ["Pan", "Tilt"],
+  period_units: ["bar", "beat"],
+  phase_spread_unverified: true,
+};
+const noop = () => {};
+
+describe("카드 t584 — 움직임 고르기 초안", () => {
+  it("빈 칸은 「없음」에서 출발한다 — 미확인 모양을 먼저 고르지 않는다", () => {
+    expect(movementDraftFrom(null)).toEqual({
+      shape: "",
+      axesKey: "",
+      periodUnit: "",
+      periodValue: "",
+      phaseSpread: false,
+    });
+  });
+  it("지금 칸 값으로 채운다", () => {
+    const draft = movementDraftFrom({
+      shape: "wave",
+      axes: ["Pan", "Tilt"],
+      period_unit: "bar",
+      period_value: 2,
+      phase_spread: true,
+    });
+    expect(draft).toEqual({ shape: "wave", axesKey: "Pan+Tilt", periodUnit: "bar", periodValue: "2", phaseSpread: true });
+  });
+  it("「없음」은 움직임 지우기(null)", () => {
+    expect(movementChangesFromDraft(movementDraftFrom(null))).toBeNull();
+  });
+  it("축이 없거나 주기 수가 틀리면 적용할 수 없다(undefined)", () => {
+    const base = { shape: "wave", axesKey: "Tilt", periodUnit: "", periodValue: "", phaseSpread: false };
+    expect(movementChangesFromDraft({ ...base, axesKey: "" })).toBeUndefined();
+    expect(movementChangesFromDraft({ ...base, periodUnit: "beat", periodValue: "" })).toBeUndefined();
+    expect(movementChangesFromDraft({ ...base, periodUnit: "beat", periodValue: "0" })).toBeUndefined();
+    expect(movementChangesFromDraft({ ...base, periodUnit: "beat", periodValue: "1.5" })).toBeUndefined();
+  });
+  it("서버 apply_beat_grid_edit 의 app_movement 모양 그대로 — 음악 단위만", () => {
+    expect(
+      movementChangesFromDraft({ shape: "circle", axesKey: "Pan+Tilt", periodUnit: "beat", periodValue: "4", phaseSpread: false }),
+    ).toEqual({ shape: "circle", axes: ["Pan", "Tilt"], period_unit: "beat", period_value: 4, phase_spread: null });
+    expect(
+      movementChangesFromDraft({ shape: "wave", axesKey: "Tilt", periodUnit: "", periodValue: "", phaseSpread: true }),
+    ).toEqual({ shape: "wave", axes: ["Tilt"], period_unit: null, period_value: null, phase_spread: true });
+  });
+});
+
+describe("카드 t584 — 움직임 고르기 칸 렌더", () => {
+  it("모양 목록은 서버 어휘 그대로, 미확인 모양엔 ⚠", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridMovementPicker current={null} vocabulary={VOCAB} onApply={noop} onCancel={noop} />,
+    );
+    // 빈 칸이면 「없음」이 선택돼 있고, 미확인 모양은 선택돼 있지 않다.
+    expect(html).toContain('<option value="" selected="">— 없음 —</option>');
+    expect(html).toContain('<option value="circle">circle ⚠</option>');
+    expect(html).toContain('<option value="sweep">sweep</option>');
+    expect(html).not.toContain("ballyhoo");
+    // 빈 칸에서 열면 미확인 안내가 없다(아무것도 고르지 않았다).
+    expect(html).not.toContain("직접 고른 칸에만");
+  });
+  it("미확인 모양이 들어 있는 칸을 열면 축·주기·위상 칸과 안내가 보인다", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridMovementPicker
+        current={{ shape: "circle", axes: ["Pan", "Tilt"], period_unit: "beat", period_value: 4, phase_spread: null }}
+        vocabulary={VOCAB}
+        onApply={noop}
+        onCancel={noop}
+      />,
+    );
+    expect(html).toContain('aria-label="움직임 축"');
+    expect(html).toContain('<option value="Pan+Tilt" selected="">Pan+Tilt</option>');
+    expect(html).toContain('<option value="beat" selected="">박</option>');
+    expect(html).toContain("위상 펼침 ⚠");
+    expect(html).toContain("⚠ 실기 미확인 — circle: 직접 고른 칸에만 들어가요");
+  });
+  it("행은 편집 가능할 때만 ✎, 편집 중이면 고르기 칸", () => {
+    const edit = { current: null, vocabulary: VOCAB, editing: false, onOpen: noop, onApply: noop, onCancel: noop };
+    expect(renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset edit={edit} />)).toContain("✎");
+    expect(renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset />)).not.toContain("✎");
+    expect(
+      renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset edit={{ ...edit, editing: true }} />),
+    ).toContain('aria-label="움직임 모양"');
+  });
+  it("저장은 onEditRequest(app_movement) 한 길, 어휘는 grid.movement_vocabulary 에서만", () => {
+    expect(SOURCE).toContain("changes: { app_movement: movement }");
+    expect(SOURCE).toContain("vocabulary: grid.movement_vocabulary");
   });
 });
