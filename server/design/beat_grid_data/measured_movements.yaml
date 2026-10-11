@@ -41,3 +41,17 @@ entries:
       회전으로만 보임). D2'(seq 335, 기준 Attribute 'Tilt' At 45로 교체) —
       움직임 확인(프레임 변화 3.7~5.1%). 기준을 기울여야만 보였다 — 이
       앱은 position_preset_no가 실제로 기운 자리를 가리키는지 못 읽는다.
+  - group_no: 11
+    shape: wave
+    axes: [Pan]
+    base_condition: requires_tilted_base_unverifiable
+    source: >-
+      카드 t553 실기 2026-10-11(리드 「실행」·onPC 캡처 판정).
+      seq 336 — 기준 Attribute 'Tilt' At 45(기울임): Pan ±30 2단계·곡선·
+      Phase 0 Thru 360·2박 → 움직임(프레임 변화 4.5~5.3%, 8대 빔 좌우로 쓸림).
+      seq 338 — bar 18 칸 그대로(app_movement_commands 출력, 기준 At Preset 2.1,
+      ±12, 위상 줄 없음) → 판정 불가(0.00~0.01%). seq 337 — 기준 At Preset 2.1,
+      그 밖은 336 과 같음 → 판정 불가(0.01~0.02%). 2.1 기준(빔 거의 수직)에선
+      Pan 단독이 안 보인다 — 원인은 기준이지 진폭·위상 줄이 아니다. 열려면
+      기울인 위치 프리셋을 칸에 지정해야 한다(감독 결정 대상).
+      근거 .moai/reports/t553/live/u_store_play/, cell_338_on/, cell_337_on/.

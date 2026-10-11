@@ -582,6 +582,12 @@ REQ-LDBEAT-001/006(vi) 후속. cycle_type=tdd. Part ①(측정된 무빙 허용�
 - **검증**: `uv run --quiet pytest server/tests/ -k "beat_grid or app_movement" -q` → 171 passed(회귀 0). `ruff check`/`format --check` 통과(touched files). `git diff` — `server/director/emit.py`·`server/looks/songcue.py`·`ui/src/components/CueSheetTimeline.tsx`·`server/safety/**`·`console/lua/**` 0줄.
 - **작업 위치**: 이 구현 서브에이전트는 배차서가 지정한 `.claude/worktrees/t553`(`WT-ldbeat-gate-update`)가 아니라 런타임이 자동 격리한 다른 워크트리(`.claude/worktrees/agent-a6fd8f53bcc5b099d`, 브랜치 `worktree-agent-a6fd8f53bcc5b099d`)에서 커밋했다 — HEAD는 `ae3afea6`의 자손(`git merge-base --is-ancestor` 확인). 레인/리드가 이 브랜치를 `WT-ldbeat-gate-update`로 fast-forward 해야 한다.
 - **안 잰 것**: D4(Pan+Tilt circle, t548 seq 334)는 `app_movement_commands`가 아직 `shape="wave"`만 구현해(circle 미구현) 허용목록 엔트리로 옮기지 않았다(이 카드 범위 밖) · MOVER-U의 Pan 단독은 Part ②의 새 프로브가 실행·판정되기 전까지는 허용목록에 올리지 않는다(리드 "do NOT open bar 18... until the lead executes and judges it moved") · MOVER-D bar 7·22가 실제로 켜진 채 움직이는지(Dimmer2 공백 참조)는 데이터 보강 없이는 확인 불가.
+- **실기 실행 (2026-10-11, 리드 「실행」 뒤, 레인이 묶음마다 멈춰 전송, 쇼 저장 0)** — 승인 목록 sha256 은 보낼 때마다 다시 재 일치 확인.
+  - **① 8트랙** — `approval_t553.txt`(sha256 `cc7f5881…902e`) 1~22줄 전부 OK. 되읽기 `Timecodes/32/1` childCount 9(Marker 1 + Track 8), TARGET Sequence 226..233 순서 일치 → 리드 PASS. 상한을 `server/design/beat_grid_data/measured_console.yaml`(`max_timecode_tracks: 8`, 근거 포함)에서 읽도록 바꿨다 — `MEASURED_MAX_TIMECODE_TRACKS` 6→8, LOVE ATTACK 8트랙이 타임코드 하나에 들어간다(`test_beat_grid_timecode_cap_t553.py`, RED 3 실패 → GREEN). 8 초과는 여전히 안 쟀다.
+  - **MOVER-U(Group 11) Pan 단독** — 336(기준 `Tilt At 45`): 리드 판정 움직임(프레임 변화 4.5~5.3%). 338(bar 18 칸 그대로 = `app_movement_commands` 출력, 기준 `At Preset 2.1`, ±12, 위상 줄 없음): 판정 불가 0.00~0.01%. 337(기준 `At Preset 2.1`, 나머지 336 과 같음): 판정 불가 0.01~0.02%. → **2.1 기준(빔 거의 수직)에선 Pan 단독이 안 보인다** — 원인은 기준이지 진폭·위상 줄이 아니다(t548 D2 와 같은 그림). **bar 18 은 닫힌 채.** 열려면 기울인 위치 프리셋을 칸에 지정해야 한다(감독 결정 대상). `measured_movements.yaml` 에 group 11 Pan 기록 추가(`requires_tilted_base_unverifiable`, 게이트 안 엶).
+  - 레인이 고친 것: 337 첫 시도는 스크립트 빈 번호 확인이 337·338 을 함께 봐서 「338 이미 있음」으로 0줄 보내고 멈췄다(안전장치 정상) — 확인 대상을 337 하나로 고쳐 다시 보냄(명령 줄 무변경, 승인 sha 그대로). 근거 `.moai/reports/t553/live/cell_337_on_stopped_slotcheck/`.
+  - 이 카드 최종: MOVER-D 7·22 열림, MOVER-U 11·18 닫힘, 효과 프리셋(④) 닫힘, 타임코드 8트랙 허용.
+- **작업 위치 정정**: 위 「작업 위치」 줄은 서브에이전트 시점 기록이다 — 레인이 그 커밋을 `WT-ldbeat-gate-update` 로 fast-forward 했고 머지 대상은 이 브랜치다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 

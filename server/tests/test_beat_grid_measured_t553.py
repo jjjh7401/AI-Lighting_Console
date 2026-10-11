@@ -43,9 +43,20 @@ class TestIsMovementMeasuredOpen:
         # 읽는다(M1 ⑥과 같은 한계) → 기록은 있어도 게이트는 영구히 닫힌다.
         assert is_movement_measured_open(12, "wave", ("Pan",)) is False
 
-    def test_mover_u_pan_wave_group_11_was_never_measured(self) -> None:
-        # MOVER-U(group 11)는 2단계 무빙 자체는 t538이 쟀지만, Pan 단독
-        # wave는 이 카드(t553) 시점까지 한 번도 라이브로 재지 않았다.
+    def test_mover_u_pan_wave_group_11_is_measured_but_stays_closed(self) -> None:
+        # 2026-10-11 대체 고지(카드 t553 실기): 원래 「group 11 Pan 단독은 잰 적
+        # 없음」이었다. 실기로 336(Tilt 45 기준) 움직임, 337·338(bar 18 칸 기준
+        # At Preset 2.1) 판정 불가 — 기울인 기준에서만 보인다. 기록은 생겼지만
+        # MOVER-D Pan 과 같은 이유로 게이트는 닫힌 채다(감독 결정 대상).
+        from server.design.beat_grid_measured import MEASURED_MOVEMENTS
+
+        recorded = [
+            e
+            for e in MEASURED_MOVEMENTS
+            if e.group_no == 11 and e.shape == "wave" and e.axes == frozenset({"Pan"})
+        ]
+        assert len(recorded) == 1
+        assert recorded[0].base_condition == "requires_tilted_base_unverifiable"
         assert is_movement_measured_open(11, "wave", ("Pan",)) is False
 
     def test_unknown_group_is_closed(self) -> None:
