@@ -1,0 +1,58 @@
+Store Sequence 300
+Set Sequence 300 Property 'Name' 'LDBEAT FOH'
+Group 3 ; At Preset 1.1
+Store Cue 1 Sequence 300
+ClearAll
+Set Cue 1 Sequence 300 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 300 Property 'TrigTime' 13.5
+Assign Sequence 300 At Timecode 30
+Store Sequence 301
+Set Sequence 301 Property 'Name' 'LDBEAT WASH-ALL'
+Group 10 ; Attribute 'Dimmer' At 40
+Store Cue 1 Sequence 301
+ClearAll
+Set Cue 1 Sequence 301 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 301 Property 'TrigTime' 13.5
+Group 10 ; Attribute 'Dimmer' At 25
+Store Cue 2 Sequence 301
+ClearAll
+Set Cue 2 Sequence 301 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 301 Property 'TrigTime' 27.5
+Assign Sequence 301 At Timecode 30
+Store Sequence 302
+Set Sequence 302 Property 'Name' 'LDBEAT BACK'
+Assign Sequence 302 At Timecode 30
+Store Sequence 303
+Set Sequence 303 Property 'Name' 'LDBEAT SIDE-ALL'
+Assign Sequence 303 At Timecode 30
+Store Sequence 304
+Set Sequence 304 Property 'Name' 'LDBEAT MOVER-U'
+Assign Sequence 304 At Timecode 31
+Store Sequence 305
+Set Sequence 305 Property 'Name' 'LDBEAT MOVER-D'
+Group 12 ; At Preset 2.1
+Store Cue 1 Sequence 305
+ClearAll
+Set Cue 1 Sequence 305 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 305 Property 'TrigTime' 35.5
+Assign Sequence 305 At Timecode 31
+Store Sequence 306
+Set Sequence 306 Property 'Name' 'LDBEAT BLIND'
+Group 14 ; At Preset 1.6
+Store Cue 1 Sequence 306
+ClearAll
+Set Cue 1 Sequence 306 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 306 Property 'TrigTime' 33.5
+Group 14 ; Attribute 'Dimmer' At 100
+Store Cue 2 Sequence 306
+ClearAll
+Set Cue 2 Sequence 306 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 306 Property 'TrigTime' 35.5
+Assign Sequence 306 At Timecode 31
+Store Sequence 307
+Set Sequence 307 Property 'Name' 'LDBEAT STROBE'
+Assign Sequence 307 At Timecode 31
+Store Timecode 30
+Set Timecode 30 Property 'Name' 'LDBEAT Timecode 30'
+Store Timecode 31
+Set Timecode 31 Property 'Name' 'LDBEAT Timecode 31'
