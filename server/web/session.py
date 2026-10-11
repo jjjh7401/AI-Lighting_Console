@@ -41,7 +41,12 @@ from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.approval_vs_sent import verify_approval_vs_sent
-from server.design.beat_grid import attach_beat_grid_default, attach_beat_grid_runtime_extras
+from server.design.beat_grid import (
+    apply_pending_approval,
+    attach_beat_grid_default,
+    attach_beat_grid_runtime_extras,
+    pending_preset_approvals,
+)
 from server.design.beat_grid_edit import (
     BeatGridEditError,
     apply_beat_grid_edit,
@@ -9670,6 +9675,12 @@ class ChatSession:
         grid = self._beat_grid_view(timeline)
         tracks = list(grid.get("tracks") or [])
         group_names = [str(track.get("group_name")) for track in tracks]
+        # 카드 t577(REQ-LDBEAT-015(h-2)) — 이 호출 시점의 초안(``grid``)을
+        # 기준으로 승인 대기 칸·필드를 모은다. 이 집합이 승인 카드가 보여줄
+        # "새로 만드는 프리셋 N개" 그 자체이고, 승인 뒤 `evidence.approval`을
+        # 적는 대상도 **정확히 이 집합**이다(과다·과소 열거 금지, h-4) —
+        # 아래에서 두 번 쓰이므로 한 번만 계산해 둔다.
+        pending_before = pending_preset_approvals(grid)
 
         song_key = self._beat_grid_song_key(timeline)
         record = store.beat_grid_allocation(song_key) if store is not None else None
@@ -9792,6 +9803,17 @@ class ChatSession:
                     f"{name} {bar}마디({reason})" for name, bar, reason in unsent_entry
                 )
                 risk_reason += f" · 보내지 않은 전환 칸 {len(unsent_entry)}개: {listed}"
+            # 카드 t577(REQ-LDBEAT-015(h-2)) — 편집 시점에 거절하지 않고
+            # 초안에 받아들인 승인 대기 프리셋 번호를 이 승인 카드가 "새로
+            # 만드는 프리셋 N개"로 따로 열거한다. 기존 두 문구(막혀서 그대로
+            # 둔 칸·보내지 않은 전환 칸)를 대신하지 않고 나란히 둔다.
+            if pending_before:
+                listed = ", ".join(
+                    f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
+                    f"{entry['value']}"
+                    for entry in pending_before
+                )
+                risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
             risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(
@@ -9815,6 +9837,34 @@ class ChatSession:
                     )
                     + (f": {detail}" if detail else "."),
                 )
+
+            # 카드 t577(REQ-LDBEAT-015(h-3)(h-4)) — 승인이 통과한 뒤에만,
+            # 그 카드가 열거한(``pending_before``) 칸·필드에 한해 정확히
+            # `evidence.approval`을 기록한다. 카드 구성 뒤 다른 편집으로
+            # 추가된 새 번호는 `pending_before`에 없으므로(이 호출 시점의
+            # ``grid`` 스냅샷으로 고정) 자연히 이번 기록 대상 밖이다 —
+            # `emit_beat_grid_write_bundle`이 애초에 같은 스냅샷으로
+            # 커맨드를 만들었으므로 송신 집합도 이미 그 밖이다(0 송신).
+            # 승인 창이 떠 있는 동안 들어온 편집을 지우지 않도록, 카드 구성
+            # 시점의 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다 — 그
+            # 사이 번호가 바뀐 칸은 `apply_pending_approval`이 값 대조로 건너뛴다.
+            if pending_before:
+                current = store.latest if store is not None else None
+                if current is not None:
+                    timeline = current
+                approved_grid = apply_pending_approval(
+                    self._beat_grid_view(timeline),
+                    pending_before,
+                    by="supervisor",
+                    date=until,
+                    source=f"beat_grid_apply:{batch.sha256}",
+                )
+                updated_timeline = dict(timeline)
+                updated_timeline["beat_grid"] = approved_grid
+                if store is not None:
+                    store.latest = updated_timeline
+                timeline = updated_timeline
+                grid = approved_grid
 
             verdict = self._beat_grid_verify_approval_vs_sent(batch, since=since, until=until)
             cue_numbers: dict[str, dict[int, int]] = {}

@@ -196,6 +196,15 @@ M7/M8과 같은 이유로 결정 번복 비용이 큰 것부터 — 데이터·�
 8. **(저렴) 상단 바를 시안 모양(곡·버전·BPM·마디 이동·이 마디 콘솔에서 보기·끄기·콘솔에 반영·프리셋 서랍, 1450px 줄임)으로 다시 짠다(REQ-LDBEAT-017)**: 현재 `.beat-grid-toolbar`(722-806행)의 모두-접기/±10초/시계/음원/쓰기잠김은 유지하되, 시안이 요구하는 나머지 컨트롤을 추가한다.
 9. **(가장 저렴, 마무리) 명령창·AI·프리셋 서랍을 배선한다(REQ-LDBEAT-025)**: 「바로 적용(문장)」·「AI 제안」 버튼(1143-1148행, 현재 `disabled`)을 M3의 새 서버측 편집 연산(REQ-LDBEAT-007~009)에 연결하고, 프리셋 서랍(풀별 목록·사용 큐 수·막대 강조·프리셋 고치기)을 신설한다 — 풀 번호대는 쇼 파일에서 읽는다(REQ-LDBEAT-015(e)).
 
+### M10 — 승인 시점을 편집에서 「⇪ 콘솔에 반영」으로 이동 (REQ-LDBEAT-015(h-1)~(h-6), 카드 t577 — **아직 미구현, 명세만**)
+
+리드 결정(원문, `design/ldbeat-runbook-mockup-20261008.md:37`): 「모든 길은 같은 서버 검사를 거쳐 초안만 바꿈. 콘솔은 「고친 것 콘솔에 반영」 승인 1회(새 프리셋 N개 + 다시 저장할 큐 M개 표시)에서만.」 시안에는 편집 시점 승인 입력이 없다. 결정 번복 비용 순으로 둔다 — "승인 대기"를 무엇으로 관찰하느냐(1단계)가 가장 비싸고, 그 위에 얹는 승인 카드 문구·기록 지점(2·3단계)이 다음이며, UI 배지·시험(4단계)이 가장 저렴하다.
+
+1. **(가장 비쌈) 편집 시점의 즉시 거절을 없앤다(REQ-LDBEAT-015(h-1))**: `server/design/beat_grid_edit.py` `apply_beat_grid_edit`(444행)의 `check_evidence_approval` 호출 두 곳(551행 `effect_preset_no` 경로, 569행 디머 효과 `preset_no` 경로)이 `BeatGridEditError`를 던지지 않도록 바꾼다 — 그 변경을 초안에 그대로 받아들인다. 세 편집 길(직접 고르기·문장·AI 제안의 「적용」) 전부가 이 연산 하나로 수렴하므로(REQ-LDBEAT-007/008) 다른 곳을 고칠 필요가 없다. **"승인 대기"는 새 불리언 필드가 아니라 파생 상태로 둔다** — `_cell_preset_numbers`(이미 존재, `server/design/beat_grid.py:632`)가 non-null로 보는 프리셋 번호 필드 중 `check_evidence_approval`(`:646`)이 불완전으로 보는 것이 그대로 그 정의다. 이 결정이 가장 되돌리기 비싸다 — 새 필드를 신설하면 그 필드의 생명주기(레거시 칸 읽기·마이그레이션·초기화)가 뒤 단계 전부에 번진다. `position_preset_no`·`color_preset_no` 변경도 (h-1)이 다루는 네 필드에 포함되므로, 이 두 필드가 아직 `check_evidence_approval` 호출 경로에 없는 현재 상태(이 plan-phase 실측, §3.7 근거 칸 참조)를 이 단계에서 함께 메운다.
+2. **반영 승인 카드에 "새로 만드는 프리셋 N개" 열거를 추가한다(REQ-LDBEAT-015(h-2))**: `server/web/session.py` `beat_grid_apply`(9616행)가 `emit_beat_grid_write_bundle` 호출 전에, 그 시점 초안(`grid`)의 트랙·칸을 순회해 (1단계가 정의한) 승인 대기 칸·필드를 모은다. 그 목록을 `risk_reason` 구성부(9736행 부근, 기존 "막혀서 그대로 둔 칸"·"보내지 않은 전환 칸" 문구와 같은 자리)에 "새로 만드는 프리셋 N개: ..."로 추가한다 — 기존 두 문구를 대신하지 않고 나란히 둔다.
+3. **승인 뒤에만 `evidence.approval`을 기록하고, 카드 밖의 새 번호는 0 송신으로 둔다(REQ-LDBEAT-015(h-3)(h-4)(h-5))**: `_dispatch_declared` 승인이 통과한 뒤, 2단계가 모은 칸·필드 집합에 **한해** `evidence.approval = {by: "supervisor", date: <ISO 타임스탬프>, source: <이 반영 배치를 가리키는 참조>}`를 그 타임라인 사본(`self._timeline_store`)에 써넣는다. `emit_beat_grid_write_bundle`은 이미 호출 시점의 초안 스냅샷으로 커맨드를 만들므로, 카드 구성 **뒤** 다른 편집으로 추가된 새 번호는 자연히 이번 송신 집합 밖이다 — 이 사실(0 송신)을 run-phase 시험으로 고정한다. 이미 저장된 승인(예: REQ-LDBEAT-006(i-6a) 밝기 100% 승인)을 새 번호의 근거로 재사용하지 않는다는 결정(카드 t555/t566)은 그대로 유지한다 — `fresh_approval_cue`(533행)의 "칸의 `evidence`를 `changes`에 없으면 `None`으로 덮어쓴 뒤 검사"하는 로직은 지금 편집 시점 거절에 묶여 있으므로, 그 핵심(저장된 승인 무시)만 반영 시점의 승인-대기 판정으로 옮긴다.
+4. **(가장 저렴, 마무리) UI 배지 + 승인 카드 텍스트 연동 + 시험**: `ui/src/components/BeatGrid.tsx`의 기존 "⚠ 번호대 미확인"(731행)·"⚠ 실기 미확인"(1768행) 배지와 같은 자리에 승인 대기 배지(정확한 문구·아이콘은 run-phase 선택 — 기존 "⚠" 접두 관례를 따르거나 별도 기호를 쓸 수 있다)를 추가해, `evidence.approval`이 불완전한 non-null 프리셋 번호 칸을 표시한다. `ui/src/components/BeatGridTopBar.tsx`의 「⇪ 콘솔에 반영」 버튼이 여는 승인 다이얼로그가 2단계의 "새로 만드는 프리셋 N개" 문구를 그대로 보여주는지 연동한다. `server/tests/`에 새 시험(가칭 `test_beat_grid_apply_pending_approval_t577.py`)을 추가해 acceptance.md AC-LDBEAT-016(v-1)~(v-5)를 각각 재현한다 — 기존 `test_beat_grid_bright_default_t555.py`의 재현 시험 3건은 "편집 시점 거절"에서 "반영 시점 거절"로 갱신한다(행동이 아니라 발화 시점만 바뀐다).
+
 ## §F 안티패턴
 
 - **격자를 편한 대로 로컬 데이터 구조로 직접 콘솔 커맨드에 매핑하지 마라** — REQ-LDBEAT-007/008. 문장 → 새 서버측 편집 연산 → 서버 경로를 거쳐야 한다. AI 제안의 「적용」도 예외가 아니다.
@@ -226,6 +235,9 @@ M7/M8과 같은 이유로 결정 번복 비용이 큰 것부터 — 데이터·�
 - **(카드 t554) "상세 창 3칸"(구조4) 같은 대체된 시안 절을 그대로 다시 구현하지 마라** — design.md §3이 "대체됨→승자"로 표시한 절은 그 승자 결정(REQ-LDBEAT-021/022/023로 분산)을 따른다. 특히 "오른쪽 칸은 전환·AI 열 때만 나타남"(이미 대체됨)을 되살리지 않는다 — 오른쪽 칸은 상시 고정이다(REQ-LDBEAT-021(b)).
 - **(카드 t554) 음원 자동 연결·"갈라짐 시 넘어가는 줄"을 LOVE ATTACK의 구체 경로·그룹 이름으로 하드코딩하지 마라** — REQ-LDBEAT-024(c)(e). 리드가 일반화한 shall 절("곡에 연결된 로컬 음원", "갈라지기 전 부모 그룹 줄")을 그대로 구현하고, 원문의 Mac 경로·SIDE-ALL은 예시로만 남긴다(감독 1010 일반화 지시와 같은 원칙).
 - **(카드 t566) `trigger_beat`/`delay_beats`/`position_late_beats`가 가리키는 "마디당 박 수"에 4를 하드코딩하지 마라** — REQ-LDBEAT-006(i-4f). 그 곡의 박자표(time signature)에서 읽는다(UI측 `beatGridTransition.parseBeatsPerBar` 선례와 같은 원칙) — 3/4·6/8 같은 곡에서 조용히 틀려지는 결함을 피한다.
+- **(카드 t577) 새 프리셋 번호를 편집 시점에 거절하지 마라** — REQ-LDBEAT-015(h-1). 시안(`design/ldbeat-runbook-mockup-20261008.md:37`)은 모든 편집 길이 서버 검사를 거쳐 **초안만** 바꾸고, 승인은 「⇪ 콘솔에 반영」 1회뿐이라고 명시한다 — 편집 연산 안에 거절을 그대로 두면 시안과 어긋난다.
+- **(카드 t577) 승인 대기를 새 필드로 신설하지 마라** — REQ-LDBEAT-015(h-1). `_cell_preset_numbers`(non-null 프리셋 번호)와 `check_evidence_approval`(완전성 판정)이 이미 있는 두 함수의 교차로 파생된다 — 세 번째 필드를 더하면 레거시 칸 읽기·마이그레이션 책임이 그 필드에도 번진다.
+- **(카드 t577) 승인 카드가 구성된 뒤 추가된 새 번호를 "어차피 다음에 또 승인받겠지"라며 같이 보내지 마라** — REQ-LDBEAT-015(h-4). 카드가 열거한 집합에 없는 번호는 이번 반영에서 0줄 송신이어야 한다.
 
 ## §G 교차 참조
 
@@ -260,3 +272,8 @@ M7/M8과 같은 이유로 결정 번복 비용이 큰 것부터 — 데이터·�
 - `.moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.md`(+`.html`, 17:51판) — REQ-LDBEAT-016~025(카드 t554)의 1차 출처, 23개 "— 시안에 적용됨" 절 전수. `.moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-mockup-20261008.md`(+`.html`, 15:16판) — 이미 REQ-LDBEAT-007~009·015로 흡수됨.
 - `.moai/reports/t554/coverage-draft.md` — 시안 23개 항목의 1차 분류 초안(유효/대체됨/부분대체), design.md가 이 초안을 리드 확정 3건으로 보강해 승계.
 - `.moai/specs/SPEC-LDBEAT-001/design.md`·`research.md`(Tier L 신설, 카드 t554) — 시안 전수 매핑과 현재 구현 대조. M9는 이 둘이 기록한 격차를 좁히는 작업이다.
+- `.moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-mockup-20261008.md:37`(+`.html`의 `bApply`) — REQ-LDBEAT-015(h-1)~(h-6)(카드 t577, 승인 시점을 편집에서 「⇪ 콘솔에 반영」으로 이동)의 1차 출처.
+- `server/design/beat_grid_edit.py:444,533,551,569` — `apply_beat_grid_edit`·`fresh_approval_cue`·편집 시점 `check_evidence_approval` 두 호출(M10이 제거/완화할 지점, 이 plan-phase가 재확인한 줄 번호).
+- `server/design/beat_grid.py:632,646` — `_cell_preset_numbers`·`check_evidence_approval`(M10이 "승인 대기" 파생 상태로 재사용할 두 함수).
+- `server/web/session.py:9616,9731` — `beat_grid_apply`·`build_write_approval_batch` 호출부(M10이 승인 카드 열거·사후 `evidence.approval` 기록을 추가할 지점).
+- `server/design/send_approval.py:41` — `build_write_approval_batch`(반영 승인 아티팩트 생성, 변경 없이 재사용).
