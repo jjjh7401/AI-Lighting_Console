@@ -1,0 +1,43 @@
+# 측정된 무빙 허용목록 — M1 ⑤⑦⑨가 progress.md 표에서 "통과"가 아니어도
+# beat_grid_emit의 M1 게이트를 우회할 (그룹, 모양, 축) 조합 전수 (카드 t553,
+# REQ-LDBEAT-001/006(vi)). 리그 전용 숫자(그룹 번호)는 이 데이터 파일에만
+# 산다 — server/design/beat_grid_measured.py의 매칭 로직은 어떤 그룹이
+# 몇 번인지 몰라도 되는 일반 코드다(love_attack.yaml과 같은 분리 원칙).
+#
+# base_condition:
+#   any                                — 이 축 조합은 기준 위치와 무관하게
+#                                         눈으로 보인다. Tilt는 빔의 상하
+#                                         각도 자체가 바뀌므로 기준이
+#                                         수직이든 기울었든 움직임이 보인다.
+#   requires_tilted_base_unverifiable  — 기준이 기울어 있어야만 보이는데
+#                                         (Pan 단독 — 빔이 거의 수직이면
+#                                         Pan은 빔 축 회전으로만 나타나
+#                                         판정 불가, probe-moverd.md D2
+#                                         vs D2'), 이 앱은 position_preset_no
+#                                         가 가리키는 실제 틸트값을 읽을
+#                                         방법이 없다(M1 ⑥·t538 "프리셋
+#                                         값 읽기" 행과 같은 한계). 그래서
+#                                         이 조건의 엔트리는 게이트를
+#                                         **절대 열지 않는다** — 측정한
+#                                         사실을 기록만 해 둔다(부분 적용
+#                                         0건, 느슨하게 풀지 않는다).
+entries:
+  - group_no: 12
+    shape: wave
+    axes: [Tilt]
+    base_condition: any
+    source: >-
+      .moai/reports/t548/probe-moverd.md D1(seq 331, Tilt ±30 2단계, 한 바퀴
+      2마디, 위상 펼침)·D3(seq 333, Tilt ±30 2단계, 한 바퀴 2박) — Spiider
+      MOVER-D(Group 12), 리드 onPC 3D 캡처 프레임 변화 D1 1.3~1.4%·D3
+      1.0~1.3%(정지 대조 0.00%, v0b 재전송).
+  - group_no: 12
+    shape: wave
+    axes: [Pan]
+    base_condition: requires_tilted_base_unverifiable
+    source: >-
+      .moai/reports/t548/probe-moverd.md D2(seq 332, 기준 At Preset 2.1) —
+      판정 불가(프레임 변화 0.02~0.03%, 빔이 거의 수직이라 Pan이 빔 축
+      회전으로만 보임). D2'(seq 335, 기준 Attribute 'Tilt' At 45로 교체) —
+      움직임 확인(프레임 변화 3.7~5.1%). 기준을 기울여야만 보였다 — 이
+      앱은 position_preset_no가 실제로 기운 자리를 가리키는지 못 읽는다.

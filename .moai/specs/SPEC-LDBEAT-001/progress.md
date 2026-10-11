@@ -109,7 +109,66 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 - 미측정 문법(설계 당시): ③ 프리셋 수정 줄, ⑥ `Goto Time 5 Timecode 31`, ④·⑤·⑨ 그룹 선택 프리셋 호출. → 실기 뒤: `Attribute '<X>' At Preset` 은 거절, `At Preset` 은 받음, `Store Preset … /Merge` 받음, ⑥ 은 여전히 문법 불명.
 - **통과 판정은 ①(구조)·⑧·⑩·⑪(감독 눈) 넷이다.** ②④ 미확인, ③⑦ 부분, ⑤⑨ 움직임 없음(⑨ circle·발리후 미확인), ⑥ 미확인 — REQ-LDBEAT-001 게이트상 M4 송신은 ①⑧⑩⑪ 말고 어떤 항목에도 기대지 못한다.
 
-### M1 후속 — 무빙 움직임 원인 가르기 + 위치 프리셋 큐 (카드 t538, lane-3, 브랜치 `WT-mover-probe`)
+**2026-10-11 대체 고지 (카드 t553)** — 위 ⑤⑨ 판정 문자열("움직임 없음"/
+"wave 움직임 없음 · circle·발리후 미확인")은 **고치지 않는다**(원래 표
+그대로 보존, 위 두 줄은 수정 없이 남겨 둔다). 다만 그 뒤 두 카드가 더
+구체적인 실기 증거로 두 M1 항목의 일부를 대체했다:
+
+- 원인: ⑤⑨가 "움직임 없음"으로 찍힌 건 **1단계 상대값**(`Step` 없음)을
+  썼기 때문이었다 — grandMA3의 페이저는 최소 2단계가 필요하다(MA 공식
+  문서 "two or more steps", `server/fx/schema.py:67` `MIN_STEPS=2`). 이
+  사실은 카드 t540(앱 결함 카드, PR #588 머지 `72b5d042`)으로 고쳐졌다.
+- MOVER-U(Group 11, Robin MegaPointe) — 카드 t538(2026-10-10)이 2단계
+  해법을 실기로 확인했다: A0′(2단계 Tilt wave, 시퀀스 312) 물결로 움직임,
+  A1(Group 11 선택, 313) 같은 물결, A3(기준 `At Preset 2.1`, 315) 프리셋
+  자리 중심 물결, A5b(Pan+Tilt 위상 0/90 + 곡선, 323) 동그란 원 — 전부
+  감독 육안 확인(`progress.md` 위 "M1 후속" 절 결과 표 참조, 상세 근거
+  `.moai/reports/t538/`).
+- MOVER-D(Group 12, Martin/Chauvet 계열 Spiider) — 카드 t548(2026-10-11)이
+  같은 2단계 형태를 Spiider에서 처음 쟀다(`.moai/reports/t548/
+  probe-moverd.md`): **D1**(seq 331, Tilt ±30 2단계 + 곡선 + 위상 펼침,
+  한 바퀴 2마디) 프레임 변화 1.3~1.4%(정지 대조 0.00%) — 움직임. **D3**
+  (seq 333, Tilt ±30 2단계 + 곡선, 한 바퀴 2박) 프레임 변화 1.0~1.3%,
+  D1보다 빠름 — 움직임, 2박 vs 2마디와 일치. **D2**(seq 332, Pan ±30
+  2단계, 기준 `At Preset 2.1`) 프레임 변화 0.02~0.03% — **판정 불가**
+  (2.1 자리는 빔이 거의 수직 아래라 Pan이 빔 축 회전으로만 보임). **D2'**
+  (seq 335, 같은 Pan 2단계지만 기준을 `Attribute 'Tilt' At 45`로 바꿈)
+  프레임 변화 3.7~5.1% — 움직임(기준을 기울이자 비로소 보임).
+  v0a(Dimmer만, 기준 2.1)는 **안 켜짐**, v0b(Dimmer+Dimmer2 추가)는
+  **켜짐** — Spiider는 Dimmer2 없이는 안 켜진다.
+
+**허용목록으로 옮긴 결론 (측정된 그룹·모양·축만, 느슨하게 풀지 않음)**:
+`server/design/beat_grid_data/measured_movements.yaml` +
+`server/design/beat_grid_measured.py`(카드 t553)가 `beat_grid_emit`의
+M1 게이트를 다음 두 조합에서만 선택적으로 연다 — 둘 다 **group_no +
+shape="wave" + axes 정확 일치**로만 매칭한다:
+
+| 그룹 | 모양·축 | 게이트 | 근거 |
+|---|---|---|---|
+| MOVER-D(12) | wave, axes=[Tilt] | **열림**(base_condition=`any`) | D1·D3 — Tilt는 빔 각도 자체가 바뀌어 기준과 무관하게 보인다 |
+| MOVER-D(12) | wave, axes=[Pan] | **영구 닫힘**(base_condition=`requires_tilted_base_unverifiable`) | D2(판정 불가)·D2'(기운 기준에서만 움직임) — 이 앱은 `position_preset_no`가 실제로 기운 자리인지 읽을 방법이 없다(M1 ⑥과 같은 한계) |
+| MOVER-U(11) | wave, axes=[Pan] | 매칭 자체가 없음 → **그대로 닫힘** | Pan 단독은 MOVER-U에서 한 번도 라이브로 재지 않았다(t538은 2단계 Tilt·원만 쟀다) |
+
+결과: LOVE ATTACK 데이터의 MOVER-D bar 7·22(둘 다 `app_movement`
+shape=wave axes=[Tilt])는 이제 열린다. MOVER-U bar 11·18(둘 다
+axes=[Pan])은 그대로 막힌다 — bar 11은 애초에 `period_unit`/
+`period_value`가 없어(레이블이 주기를 말하지 않음) `app_movement_
+commands`가 그 전에 먼저 거절한다(지어내지 않음, M1 게이트와 무관한
+별개 사유).
+
+**Dimmer2 확인(코드 추적, 콘솔 접촉 0)**: `app_movement.brightness_
+value_commands`는 `dimmer_attributes` 인자로 받은 **모든** 디머 계열
+속성(정규식 `^dimmer\d*$`)에 한 줄씩 낸다 — Spiider처럼 Dimmer+Dimmer2
+둘 다 필요한 기구도 호출자가 두 이름을 넘기기만 하면 이미 일반적으로
+처리된다(코드 수정 불필요). 다만 `love_attack.yaml`의 MOVER-D 큐
+전체(bar 0·3·7·11·14·18·22)를 grep하면 **`brightness` 필드가 하나도
+없다** — bar 7·22의 `app_movement`(이제 게이트가 열림) 큐는 Dimmer/
+Dimmer2 명령을 **전혀 내지 않는다**. 이 트랙의 다른 큐에도 brightness가
+없어, 이 데이터 그대로는 MOVER-D가 격자 전체에서 한 번도 켜지는 큐가
+없다(이전 큐에서 이미 켜져 있지 않은 한 빔이 안 보일 수 있다) — **이건
+보고만 한다, 이 카드 범위를 벗어난 데이터 보강이라 고치지 않았다.**
+
+
 
 기준 `156a1d08`(origin/main, #582 뒤). 측정일 2026-10-10. 실기 쓰기는 승인 문면 안의 줄만 보냈다. 승인 목록은 `approval_t538.txt` → `approval_t3.txt` → `approval_t45.txt` → `approval_t538_v3.txt`(215줄, sha256 `430e2ab4…`)이고, 모두 리허설과 실기 전부-거절을 먼저 거쳤다. 쇼 저장은 0회다. 감독 판정은 모두 리드를 거쳐 전달받았다. 근거는 `.moai/reports/t538/`에 있다(진단 `a0-stop-diag.md`, 실기 `live/`).
 
@@ -509,6 +568,20 @@ REQ-LDBEAT-001/003/011~013 구현. cycle_type=tdd. 콘솔 접촉 0건, 콘솔 �
 - **검증**: 신규 `test_approval_vs_sent_t549.py`(10)·`test_send_approval_t549.py`(7)·`test_beat_grid_emit_t549.py`(27) + 기존 관련 181개 = 225 passed, 회귀 0. `ruff check`/`format --check` 통과. `git diff af00ffb2 -- server/director/emit.py ui/src/components/CueSheetTimeline.tsx server/looks/songcue.py` → 0줄(AC-LDBEAT-012).
 - **작업 위치**: 구현 서브에이전트가 자동 격리 워크트리(`agent-a96dd8e7…`)에서 커밋했고, 레인이 그 4커밋을 `WT-ldbeat-console-send`(`.claude/worktrees/t549`)로 fast-forward 했다 — 머지 대상은 이 브랜치다.
 - **안 잰 것**: 이 에미터 출력의 콘솔 송신 0건(전부 순수 함수)·`_timecode_commands` 함수 자체 재사용 불가(SongCueBundle 결합 — 문자열 모양만 재현, grep으로 재확인)·AI 제안→적용→전송 전체 UI/서버 배선(카드 범위 밖, Deliverables 5)·`PreviewApprovalSession`의 서버 세션 배선·승인=송신 비교를 이 에미터 송신 뒤 호출하는 배선·8트랙 전체를 한 타임코드에 담는 결정(쪼갤지 ①을 재확인할지)·`Store Cue` 뒤 `ClearAll` 삽입(이 레인의 설계 판단, t538 전례 인용 — 실기 미확인).
+
+### M4 후속 — 게이트 증거 갱신 + 8트랙 타임코드 재측정 (카드 t553)
+
+REQ-LDBEAT-001/006(vi) 후속. cycle_type=tdd. Part ①(측정된 무빙 허용목록) 콘솔 접촉 0건. Part ②(실기 프로브)는 전부-거절까지만 — 실행은 리드 승인 뒤. 전체 verdict는 `.moai/reports/t553/run-verdict.md`.
+
+- **Part ① — 측정된 무빙 허용목록** — 위 "2026-10-11 대체 고지" 참조. `server/design/beat_grid_data/measured_movements.yaml`(신설, 리그 전용 group_no·shape·axes 숫자는 전부 여기에만) + `server/design/beat_grid_measured.py`(신설, `is_movement_measured_open` — group_no+shape+axes **정확 일치**만, `base_condition != "any"`는 매칭돼도 영구 닫힘). `beat_grid_emit.blocked_m1_items_for_cue`에 키워드 전용 `group_no` 매개변수 추가(기본값 `None` — 기존 2-위치-인자 호출부는 바이트 동일하게 동작), `_emit_cue`가 이미 가진 `group_no`를 넘겨준다.
+- **RED 먼저**: `server/tests/test_beat_grid_measured_t553.py`(9개, 신설) — 모듈이 없어 `ModuleNotFoundError`로 전부 실패 확인(`.moai/state/verify/` 아래 명령 출력 참조, run-verdict에 전재). GREEN: 모듈 구현 뒤 9개 전부 통과.
+- **기존 t549 시험 갱신(behavior 변경, 삭제 아님)** — `test_beat_grid_emit_t549.py`의 LOVE ATTACK 전수 통합 시험(`test_blocked_and_allowed_cells_match_the_m1_gate_mapping`)이 `("MOVER-D", 7)`·`("MOVER-D", 22)`를 "거절"에서 "허용"으로 옮김(새 측정 증거가 그 통합 시험이 검증하던 실제 동작을 바꿨다 — 날짜 붙은 주석으로 사유를 남김). `TestBlockedM1ItemsForCue`에 `group_no` 오버라이드 전용 단위 시험 4개 추가(열림/안열림/기본값 유지/다른 항목 무영향).
+- **Dimmer2 확인(코드 추적만, 콘솔 접촉 0)** — `app_movement.brightness_value_commands`는 호출자가 넘긴 `dimmer_attributes`의 모든 디머 계열 속성에 이미 일반적으로 명령을 낸다(Spiider의 Dimmer+Dimmer2 둘 다 포함, 코드 수정 불필요). 다만 `love_attack.yaml`의 MOVER-D 트랙은 전체 큐에 `brightness` 필드가 0건이라, 이제 열린 bar 7·22의 `app_movement` 큐도 Dimmer/Dimmer2 명령을 전혀 안 낸다 — 데이터 보강은 이 카드 범위 밖이라 고치지 않고 보고만 한다.
+- **Part ② — 8트랙 타임코드 + MOVER-U 기운 기준 Pan 프로브** — 설계·리허설·전부-거절만(실행 금지). 상세는 `.moai/reports/t553/run-verdict.md`.
+- **검증**: `uv run --quiet pytest server/tests/ -k "beat_grid or app_movement" -q` → 171 passed(회귀 0). `ruff check`/`format --check` 통과(touched files). `git diff` — `server/director/emit.py`·`server/looks/songcue.py`·`ui/src/components/CueSheetTimeline.tsx`·`server/safety/**`·`console/lua/**` 0줄.
+- **작업 위치**: 이 구현 서브에이전트는 배차서가 지정한 `.claude/worktrees/t553`(`WT-ldbeat-gate-update`)가 아니라 런타임이 자동 격리한 다른 워크트리(`.claude/worktrees/agent-a6fd8f53bcc5b099d`, 브랜치 `worktree-agent-a6fd8f53bcc5b099d`)에서 커밋했다 — HEAD는 `ae3afea6`의 자손(`git merge-base --is-ancestor` 확인). 레인/리드가 이 브랜치를 `WT-ldbeat-gate-update`로 fast-forward 해야 한다.
+- **안 잰 것**: D4(Pan+Tilt circle, t548 seq 334)는 `app_movement_commands`가 아직 `shape="wave"`만 구현해(circle 미구현) 허용목록 엔트리로 옮기지 않았다(이 카드 범위 밖) · MOVER-U의 Pan 단독은 Part ②의 새 프로브가 실행·판정되기 전까지는 허용목록에 올리지 않는다(리드 "do NOT open bar 18... until the lead executes and judges it moved") · MOVER-D bar 7·22가 실제로 켜진 채 움직이는지(Dimmer2 공백 참조)는 데이터 보강 없이는 확인 불가.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
