@@ -392,6 +392,9 @@ export default function App() {
     sendChat,
     sendTimelineDraftUndo,
     sendTimelineDraftRedo,
+    sendBeatGridEdit,
+    sendBeatGridEditSentence,
+    sendBeatGridSuggest,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,
@@ -1125,6 +1128,9 @@ export default function App() {
             grid={state.songTimeline.timeline?.beat_grid ?? null}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             sections={state.songTimeline.timeline?.sections}
+            onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
+            onSentenceEditRequest={sendBeatGridEditSentence}
+            onSuggestionRequest={sendBeatGridSuggest}
           />
         </div>
       ) : runbookMode ? (

@@ -5,6 +5,9 @@ import { backendBase } from "./launchContext";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBeatGridEdit,
+  buildBeatGridEditSentence,
+  buildBeatGridSuggest,
   buildChat,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
@@ -192,6 +195,12 @@ export interface CopilotSocket {
   sendChat: (text: string, selectedCue?: number | null) => void;
   sendTimelineDraftUndo: () => void;
   sendTimelineDraftRedo: () => void;
+  /** 카드 t551(SPEC-LDBEAT-001 M3) — 편집 경로 ①(직접 고르기). */
+  sendBeatGridEdit: (bar: number, target: string, changes: Record<string, unknown>) => void;
+  /** 카드 t551(M3) — 편집 경로 ②(문장). */
+  sendBeatGridEditSentence: (sentence: string) => void;
+  /** 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. */
+  sendBeatGridSuggest: (bar: number, target: string) => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
@@ -350,6 +359,22 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   /** t281 — 큐시트 초안 되돌리기/다시하기. 콘솔·라이브러리와 무관하다. */
   const sendTimelineDraftUndo = useCallback(() => send(buildTimelineDraftUndo()), [send]);
   const sendTimelineDraftRedo = useCallback(() => send(buildTimelineDraftRedo()), [send]);
+  // 카드 t551(SPEC-LDBEAT-001 M3) — 편집 세 길. 직접 고르기(changes)/문장
+  // (sentence) 모두 콘솔 무접촉 전용 메시지 타입(`beat_grid_edit`)으로
+  // 올라간다 — 채팅(`sendChat`)과는 분리된 채널이다(AC-LDBEAT-005).
+  const sendBeatGridEdit = useCallback(
+    (bar: number, target: string, changes: Record<string, unknown>) =>
+      send(buildBeatGridEdit(bar, target, changes)),
+    [send],
+  );
+  const sendBeatGridEditSentence = useCallback(
+    (sentence: string) => send(buildBeatGridEditSentence(sentence)),
+    [send],
+  );
+  const sendBeatGridSuggest = useCallback(
+    (bar: number, target: string) => send(buildBeatGridSuggest(bar, target)),
+    [send],
+  );
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -439,6 +464,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendChat,
     sendTimelineDraftUndo,
     sendTimelineDraftRedo,
+    sendBeatGridEdit,
+    sendBeatGridEditSentence,
+    sendBeatGridSuggest,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,

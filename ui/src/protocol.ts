@@ -857,6 +857,30 @@ export function buildTimelineDraftRedo(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "timeline_draft_redo" });
 }
 
+/** 카드 t551(SPEC-LDBEAT-001 M3) — 박자 격자 편집 경로 ①(직접 고르기).
+ * UI는 콘솔 페이로드를 짓지 않는다 — 고른 필드·값을 그대로 올리고 서버의
+ * `apply_beat_grid_edit`가 검증·적용한다(AC-LDBEAT-005/007/008). */
+export function buildBeatGridEdit(
+  bar: number,
+  target: string,
+  changes: Record<string, unknown>,
+): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_edit", bar, target, changes });
+}
+
+/** 카드 t551(M3) — 편집 경로 ②(문장). 해석은 전부 서버의
+ * `beat_grid_sentence.parse_beat_grid_sentence`가 한다. */
+export function buildBeatGridEditSentence(sentence: string): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_edit", sentence });
+}
+
+/** 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. 실제 AI 백엔드가 이 카드
+ * 범위 밖이라(서버 `NullSuggestionSource`) 오늘은 "제안 없음" 응답이
+ * 일반 `chat_response`로 돌아온다 — 지어낸 제안 0건. */
+export function buildBeatGridSuggest(bar: number, target: string): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_suggest", bar, target });
+}
+
 export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

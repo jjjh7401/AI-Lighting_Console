@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBeatGridEdit,
+  buildBeatGridEditSentence,
+  buildBeatGridSuggest,
   buildChat,
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
@@ -125,6 +128,33 @@ describe("builders", () => {
       approved: true,
     });
     expect(JSON.parse(buildLock(true))).toEqual({ v: 1, type: "lock", active: true });
+  });
+
+  it("builds beat grid edit frames — 카드 t551(SPEC-LDBEAT-001 M3)", () => {
+    expect(
+      JSON.parse(
+        buildBeatGridEdit(11, "MOVER-U", {
+          brightness: { mode: "value", value_percent: 70, preset_no: null },
+        }),
+      ),
+    ).toEqual({
+      v: 1,
+      type: "beat_grid_edit",
+      bar: 11,
+      target: "MOVER-U",
+      changes: { brightness: { mode: "value", value_percent: 70, preset_no: null } },
+    });
+    expect(JSON.parse(buildBeatGridEditSentence("11마디 MOVER-U 밝기를 70%로"))).toEqual({
+      v: 1,
+      type: "beat_grid_edit",
+      sentence: "11마디 MOVER-U 밝기를 70%로",
+    });
+    expect(JSON.parse(buildBeatGridSuggest(7, "BACK"))).toEqual({
+      v: 1,
+      type: "beat_grid_suggest",
+      bar: 7,
+      target: "BACK",
+    });
   });
 });
 

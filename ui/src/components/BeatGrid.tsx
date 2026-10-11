@@ -7,9 +7,15 @@
 // 사이에 **추가되는 새 블록**이다(REQ-LDBEAT-004).
 //
 // M2 범위 — 읽기 전용: 트랙·격자 데이터 모델과 레이아웃이 안정된 뒤에 M3가
-// 실제 편집(세 경로 — 직접 고르기/문장/AI 제안)을 얹는다. 여기서는 선택·접기
-// 상태만 바뀌고, 콘솔에도 초안에도 아무것도 쓰지 않는다. 명령창의 두 제출
-// 버튼은 M3 배선 전까지 비활성이다.
+// 실제 편집(세 경로 — 직접 고르기/문장/AI 제안)을 얹는다. 콘솔에는 이
+// 컴포넌트 자신이 여전히 아무것도 쓰지 않는다 — 편집 콜백(`onEditRequest`/
+// `onSentenceEditRequest`/`onSuggestionRequest`)이 서버의 새 편집 연산
+// (`apply_beat_grid_edit`)으로 올라가고, 그 연산이 혼자 검증·적용한다
+// (REQ-LDBEAT-007/008, 카드 t551/M3). 밝기 "값"(%) 필드만 편집 가능하다 —
+// 위치·색·효과·디머 프리셋 목록 선택은 프리셋 카탈로그(이름↔번호, 쇼
+// 기존 포함)가 필요한데 이 앱 어디에도 그 카탈로그를 읽는 경로가 없다
+// (progress.md SPEC-LDBEAT-001 "## Missing Inputs" 참조, 콜백 미제공 시
+// 모든 편집 UI는 기존과 바이트 동일하게 읽기 전용으로 남는다).
 import { useMemo, useRef, useState } from "react";
 
 import type {
@@ -371,6 +377,37 @@ export interface BeatGridProps {
    * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
    * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
   sections?: readonly BeatGridSectionLite[];
+  /**
+   * 카드 t551(M3) — 편집 경로 ①(직접 고르기). UI는 서버 페이로드를 직접
+   * 구성하지 않는다(AC-LDBEAT-005) — 이 콜백은 사용자가 고른 필드·값을
+   * 그대로 담아 올리고, 서버의 `apply_beat_grid_edit`가 검증·적용한다.
+   * 지금은 밝기 **값**(%) 모드만 편집 가능하다(mockup "구조" 4/"막대 →
+   * 오른쪽 큐 편집": 밝기 값/디머 프리셋/디머 효과 중 "값"만 프리셋
+   * 카탈로그가 필요 없는 평문 숫자다 — 위치·색·효과는 "목록 선택(이 곡 +
+   * 쇼 기존 + 새 프리셋)"이 필요한데 그 카탈로그를 읽는 경로가 이 앱에
+   * 아직 없다, progress.md "## Missing Inputs" 참조). 생략하면(미제공)
+   * 밝기 칸도 읽기 전용이다(기존 동작과 바이트 동일).
+   */
+  onEditRequest?: (request: {
+    bar: number;
+    target: string;
+    changes: Record<string, unknown>;
+  }) => void;
+  /**
+   * 카드 t551(M3) — 편집 경로 ②(문장). 명령창 "바로 적용(문장)" 버튼이
+   * 입력 문자열을 그대로 올린다 — 해석(마디·역할·항목·값)은 전부 서버의
+   * `beat_grid_sentence.parse_beat_grid_sentence`가 한다(REQ-LDBEAT-007).
+   * 생략하면 버튼은 비활성이다(기존 동작과 바이트 동일, M3 배선 전 상태).
+   */
+  onSentenceEditRequest?: (sentence: string) => void;
+  /**
+   * 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. "AI 제안" 버튼이 지금
+   * 고른 칸(bar·그룹)을 서버의 `beat_grid_suggest`로 올린다 — 실제 AI
+   * 백엔드는 이 카드 범위 밖이라(`NullSuggestionSource`) 오늘은 "제안
+   * 없음" 응답이 채팅 로그에 그대로 뜬다(지어낸 제안 0건). 생략하면
+   * 버튼은 비활성이다.
+   */
+  onSuggestionRequest?: (bar: number, target: string) => void;
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -485,6 +522,23 @@ export function panOnlyVerticalBaseWarning(cue: BeatGridCue): string | null {
   if (movement.axes.length !== 1 || movement.axes[0] !== "Pan") return null;
   if (cue.position_preset_no !== null) return null;
   return "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 눈에 보이지 않을 수 있습니다";
+}
+
+/** 카드 t551(M3) — 밝기 "값"(%) 모드만 프리셋 카탈로그 없이 바로 고칠 수
+ * 있다(mockup "밝기 값/디머 프리셋/디머 효과" 중 "값"만 평문 숫자). 칸이
+ * 없거나(`null`) 디머 프리셋/디머 효과 참조 중이면 편집 불가 — 둘 다
+ * "어느 프리셋으로 바꿀까"가 목록 선택을 요구해 이 카드 범위 밖이다. */
+export function isBrightnessValueEditable(cue: BeatGridCue | null): boolean {
+  if (!cue) return false;
+  return cue.brightness.mode !== "dimmer_preset" && cue.brightness.mode !== "dimmer_effect";
+}
+
+/** 서버의 `apply_beat_grid_edit`가 받는 ``changes`` 모양 그대로 — UI는 이
+ * 모양을 조립할 뿐 검증하지 않는다(검증은 서버 하나의 진실 지점,
+ * REQ-LDBEAT-008). `percent`가 유한하지 않으면(빈 입력 등) `null`. */
+export function buildBrightnessValueChanges(percent: number): Record<string, unknown> | null {
+  if (!Number.isFinite(percent)) return null;
+  return { brightness: { mode: "value", value_percent: percent, preset_no: null } };
 }
 
 export interface BeatGridCueColorFill {
@@ -626,6 +680,9 @@ export function BeatGrid({
   secondsPerBar = null,
   colorPresetHex,
   sections,
+  onEditRequest,
+  onSentenceEditRequest,
+  onSuggestionRequest,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -634,6 +691,11 @@ export function BeatGrid({
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
   const [audioName, setAudioName] = useState<string | null>(null);
   const [commandText, setCommandText] = useState("");
+  // 카드 t551(M3) — 밝기 "값"(%) 인라인 편집(mockup "구조" 4). 선택이
+  // 바뀌면(다른 칸을 클릭) 편집 중이던 입력을 닫는다 — 이전 칸의 입력값이
+  // 새 칸에 실수로 적용되는 것을 막는다.
+  const [brightnessEditing, setBrightnessEditing] = useState(false);
+  const [brightnessDraft, setBrightnessDraft] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
@@ -904,6 +966,7 @@ export function BeatGrid({
                                   onClick={() => {
                                     setSelected({ trackIndex, bar: segment.cue.bar });
                                     setTransitionView(false);
+                                    setBrightnessEditing(false);
                                   }}
                                 >
                                   {segment.cue.label}
@@ -923,6 +986,7 @@ export function BeatGrid({
                                       const nextCue = segments[segIndex + 1].cue;
                                       setSelected({ trackIndex, bar: nextCue.bar });
                                       setTransitionView(true);
+                                      setBrightnessEditing(false);
                                     }}
                                   >
                                     ◆
@@ -952,8 +1016,11 @@ export function BeatGrid({
 
         {/* 큐 편집 칸 — 시안처럼 "타임라인 바로 오른쪽에 늘 있음"(선택 전엔
             빈 안내, t537 레이아웃 교정 — `.beat-grid-mid`의 두 번째 칸).
-            M2/M3 경계: 값 표시는 읽기 전용이고, 밝기/위치/색/들어올 때
-            네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)) — 편집 반영은 M3. */}
+            밝기/위치/색/들어올 때 네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)).
+            카드 t551(M3) — 밝기 "값"(%)만 `onEditRequest`가 있으면 그
+            자리에서 고칠 수 있다(mockup "표의 ... 칸을 누르면 그 자리에서
+            바로 고쳐지고"); 위치/색/효과/디머 프리셋은 프리셋 카탈로그가
+            없어 여전히 읽기 전용이다(progress.md "## Missing Inputs"). */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
           {selected && selectedTrack ? (
             <>
@@ -989,6 +1056,7 @@ export function BeatGrid({
                   {(() => {
                     const hints = roleFieldHints(selectedTrack.layer_role);
                     const rows: { field: string; value: string; sourceRef?: string | null }[] = [];
+                    const brightnessEditable = isBrightnessValueEditable(selectedCue);
                     if (selectedCue) {
                       rows.push({ field: "밝기", value: formatBrightnessField(selectedCue.brightness) });
                       if (hints.includes("위치")) {
@@ -1020,11 +1088,59 @@ export function BeatGrid({
                     return rows.map((row) => (
                       <div className="beat-grid-cue-field" key={row.field}>
                         <span className="beat-grid-cue-field-label">{row.field}</span>
-                        <span
-                          className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}`}
-                        >
-                          {row.value}
-                        </span>
+                        {row.field === "밝기" && onEditRequest && brightnessEditable && brightnessEditing ? (
+                          // 카드 t551(M3) — mockup "표의 밝기 칸을 누르면 그
+                          // 자리에 ... 바로 고쳐지고" (값 모드, 평문 숫자).
+                          <span className="beat-grid-cue-field-edit">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={brightnessDraft}
+                              onChange={(event) => setBrightnessDraft(event.target.value)}
+                              aria-label="밝기 값(%)"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const changes = buildBrightnessValueChanges(Number(brightnessDraft));
+                                if (changes && selected && selectedTrack) {
+                                  onEditRequest({
+                                    bar: selected.bar,
+                                    target: selectedTrack.group_name,
+                                    changes,
+                                  });
+                                }
+                                setBrightnessEditing(false);
+                              }}
+                            >
+                              적용
+                            </button>
+                            <button type="button" onClick={() => setBrightnessEditing(false)}>
+                              취소
+                            </button>
+                          </span>
+                        ) : (
+                          <span
+                            className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}${
+                              row.field === "밝기" && onEditRequest && brightnessEditable
+                                ? " is-editable"
+                                : ""
+                            }`}
+                            onClick={
+                              row.field === "밝기" && onEditRequest && brightnessEditable
+                                ? () => {
+                                    const current = selectedCue?.brightness.value_percent;
+                                    setBrightnessDraft(current != null ? String(current) : "");
+                                    setBrightnessEditing(true);
+                                  }
+                                : undefined
+                            }
+                          >
+                            {row.value}
+                            {row.field === "밝기" && onEditRequest && brightnessEditable && " ✎"}
+                          </span>
+                        )}
                       </div>
                     ));
                   })()}
@@ -1131,7 +1247,13 @@ export function BeatGrid({
         </div>
       </div>
 
-      {/* 하단 명령 입력 — M3 배선 전까지 제출 두 경로 모두 비활성. */}
+      {/* 하단 명령 입력 — mockup "구조" 5 + 조작 방법(ldbeat-runbook-ui-
+          proposal-20261008.md "22~25마디 MOVER-D 효과를 Sweep 2박으로" →
+          바로 적용 · AI 제안). 카드 t551(M3) 배선 — 이 모듈이 받는 문장
+          항목은 밝기/위치/색뿐이다("효과"는 프리셋 이름 카탈로그가 필요해
+          아직 없음, progress.md "## Missing Inputs"). 플레이스홀더는
+          mockup 원문 그대로 두고 바꾸지 않았다 — 지원하지 않는 예시를
+          제출하면 서버가 단일-원인으로 거절한다(지어낸 성공 0건). */}
       <div className="beat-grid-cmd">
         <input
           className="beat-grid-cmd-input"
@@ -1139,10 +1261,33 @@ export function BeatGrid({
           onChange={(event) => setCommandText(event.target.value)}
           placeholder="예: 22~25마디 MOVER-D 효과를 Sweep 2박으로"
         />
-        <button type="button" disabled title="M3에서 배선">
+        <button
+          type="button"
+          disabled={!onSentenceEditRequest || !commandText.trim()}
+          title={
+            onSentenceEditRequest
+              ? "지원 항목: 밝기/위치/색(REQ-LDBEAT-007 문장 경로 부분집합)"
+              : "M3에서 배선"
+          }
+          onClick={() => onSentenceEditRequest?.(commandText)}
+        >
           바로 적용(문장)
         </button>
-        <button type="button" disabled title="M3에서 배선">
+        <button
+          type="button"
+          disabled={!onSuggestionRequest || !selected || !selectedTrack}
+          title={
+            !onSuggestionRequest
+              ? "M3에서 배선"
+              : !selected || !selectedTrack
+                ? "먼저 타임라인에서 칸을 선택하세요"
+                : "실제 AI 백엔드는 이 카드 범위 밖 — 제안 소스가 비어 있으면 " +
+                  "'제안 없음'이 그대로 뜹니다(지어낸 제안 0건)"
+          }
+          onClick={() => {
+            if (selected && selectedTrack) onSuggestionRequest?.(selected.bar, selectedTrack.group_name);
+          }}
+        >
           AI 제안
         </button>
       </div>
