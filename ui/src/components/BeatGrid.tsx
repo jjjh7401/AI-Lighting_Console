@@ -547,6 +547,8 @@ export interface BeatGridProps {
     field: NewPresetField;
     label: string;
     description: string;
+    /** 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 싣는다. */
+    aim?: { x: number; y: number; z: number };
   }) => void;
   /** 카드 t589 — 서버의 가장 최근 답. 「만들기」 뒤 배정 결과·거절 사유를
    * 그 칸 아래에 보이는 데 쓴다(`newPresetReplyFor`). 생략하면 안 보인다. */
@@ -835,6 +837,16 @@ export function isValidConsoleLabel(label: string): boolean {
   return /^[\x20-\x7E]+$/.test(label.trim());
 }
 
+/** 카드 t599(REQ-LDBEAT-015(i-3)) — 「＋ 새 프리셋 만들기」 위치 다이얼로그의
+ * 좌표 입력(x·y·z, 미터) 즉시 확인. 빈 문자열·수가 아님·무한대/NaN 은
+ * 모두 거절 — 서버의 `_validate_new_preset_aim`(세션)과 같은 뜻의 화면
+ * 쪽 즉시 확인이다(최종 판정은 항상 서버가 한다). */
+export function isValidAimCoordinate(value: string): boolean {
+  if (value.trim() === "") return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed);
+}
+
 /** 카드 t589 — 「만들기」를 누른 칸의 지금 값(서버가 번호를 씌웠는지 보는 열쇠).
  * 밝기 두 칸은 모드까지 묶는다 — 모드가 바뀌어도 다시 채워야 한다. */
 export function newPresetFieldValue(cue: BeatGridCue | null, field: NewPresetField): string | null {
@@ -914,6 +926,20 @@ export interface NewPresetDialogProps {
   onDescriptionChange: (value: string) => void;
   onCreate: () => void;
   onCancel: () => void;
+  /**
+   * 카드 t599(REQ-LDBEAT-015(i-3)) — "위치" 필드만 목표 좌표(x·y·z,
+   * 미터) 세 입력을 추가로 받는다. 라벨은 `server/spatial/pointing.py`
+   * 모듈 설명(실측)이 정한 그 틀 그대로다 — Pan0/Tilt0 은 무대 -Z(바로
+   * 아래)를 보고, +Z 가 위, +Tilt 가 무대 +Y(뒤)로 기울인다. 다른 네
+   * 필드는 이 props를 넘기지 않는다(생략 — `showAim` 기본값 거짓).
+   */
+  showAim?: boolean;
+  x?: string;
+  y?: string;
+  z?: string;
+  onXChange?: (value: string) => void;
+  onYChange?: (value: string) => void;
+  onZChange?: (value: string) => void;
 }
 
 export function NewPresetDialog({
@@ -924,6 +950,13 @@ export function NewPresetDialog({
   onDescriptionChange,
   onCreate,
   onCancel,
+  showAim = false,
+  x = "",
+  y = "",
+  z = "",
+  onXChange,
+  onYChange,
+  onZChange,
 }: NewPresetDialogProps) {
   if (!enabled) {
     return (
@@ -934,7 +967,8 @@ export function NewPresetDialog({
   }
   const labelValid = isValidConsoleLabel(label);
   const descriptionValid = description.trim().length > 0;
-  const canCreate = labelValid && descriptionValid;
+  const aimValid = !showAim || (isValidAimCoordinate(x) && isValidAimCoordinate(y) && isValidAimCoordinate(z));
+  const canCreate = labelValid && descriptionValid && aimValid;
   return (
     <span className="beat-grid-new-preset-dialog" data-testid="beat-grid-new-preset-dialog">
       <label className="beat-grid-new-preset-field">
@@ -960,6 +994,40 @@ export function NewPresetDialog({
         <p className="beat-grid-cue-field-note u">
           콘솔 이름은 영문·숫자만 허용됩니다 — 한글/비-ASCII 문자는 받지 않습니다.
         </p>
+      )}
+      {showAim && (
+        <>
+          <label className="beat-grid-new-preset-field">
+            X (m)
+            <input
+              type="number"
+              step="0.1"
+              value={x}
+              aria-label="X (m)"
+              onChange={(event) => onXChange?.(event.target.value)}
+            />
+          </label>
+          <label className="beat-grid-new-preset-field">
+            Y (m, + = 무대 뒤)
+            <input
+              type="number"
+              step="0.1"
+              value={y}
+              aria-label="Y (m, + = 무대 뒤)"
+              onChange={(event) => onYChange?.(event.target.value)}
+            />
+          </label>
+          <label className="beat-grid-new-preset-field">
+            Z (m, + = 위)
+            <input
+              type="number"
+              step="0.1"
+              value={z}
+              aria-label="Z (m, + = 위)"
+              onChange={(event) => onZChange?.(event.target.value)}
+            />
+          </label>
+        </>
       )}
       <button type="button" disabled={!canCreate} onClick={onCreate}>
         만들기
@@ -1404,7 +1472,15 @@ export function BeatGrid({
   // 카드 t597 — 일반 편집 「적용」을 누른 칸과 그때의 서버 답 순번.
   const [editPending, setEditPending] = useState<{ field: EditReplyField; sinceSeq: number } | null>(null);
   const [newPresetDrafts, setNewPresetDrafts] = useState<
-    Partial<Record<NewPresetField, { label: string; description: string }>>
+    Partial<
+      Record<
+        NewPresetField,
+        // 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 칸만 x·y·z 를 쓴다
+        // (다른 네 필드는 항상 빈 문자열로 둔다 — `NewPresetDialog`가 그
+        // 기본값으로 `showAim`을 끈다).
+        { label: string; description: string; x: string; y: string; z: string }
+      >
+    >
   >({});
   // 카드 t551 후속(지시 1항) — 프리셋 서랍 열림/강조 상태(mockup `.drawer.open`/
   // `hlP`). 강조는 서랍을 닫아도 유지하지 않는다 — 다시 열면 깨끗한 상태.
@@ -2447,27 +2523,50 @@ export function BeatGrid({
                     // 드롭다운을 막대의 현재 값으로 되돌린다 — 만들기·취소 뒤
                     // 「＋ 새 프리셋」에 머물러 창이 남지 않게.
                     const renderNewPresetDialog = (field: NewPresetField, resetSelectDraft: () => void) => {
-                      const draft = newPresetDrafts[field] ?? { label: "", description: "" };
-                      const setDraft = (next: { label: string; description: string }) =>
-                        setNewPresetDrafts((prev) => ({ ...prev, [field]: next }));
+                      const draft =
+                        newPresetDrafts[field] ?? { label: "", description: "", x: "", y: "", z: "" };
+                      const setDraft = (
+                        next: Partial<{
+                          label: string;
+                          description: string;
+                          x: string;
+                          y: string;
+                          z: string;
+                        }>,
+                      ) => setNewPresetDrafts((prev) => ({ ...prev, [field]: { ...draft, ...next } }));
                       const finish = () => {
                         resetSelectDraft();
                         setNewPresetDrafts((prev) => ({ ...prev, [field]: undefined }));
                       };
+                      // 카드 t599 — "position"만 목표 좌표를 받는다.
+                      const showAim = field === "position";
                       return (
                         <NewPresetDialog
                           enabled={!!onNewPresetRequest}
                           label={draft.label}
                           description={draft.description}
-                          onLabelChange={(label) => setDraft({ ...draft, label })}
-                          onDescriptionChange={(description) => setDraft({ ...draft, description })}
+                          onLabelChange={(label) => setDraft({ label })}
+                          onDescriptionChange={(description) => setDraft({ description })}
+                          showAim={showAim}
+                          x={draft.x}
+                          y={draft.y}
+                          z={draft.z}
+                          onXChange={(x) => setDraft({ x })}
+                          onYChange={(y) => setDraft({ y })}
+                          onZChange={(z) => setDraft({ z })}
                           onCreate={() => {
                             const labelValid = isValidConsoleLabel(draft.label);
                             const descriptionValid = draft.description.trim().length > 0;
+                            const aimValid =
+                              !showAim ||
+                              (isValidAimCoordinate(draft.x) &&
+                                isValidAimCoordinate(draft.y) &&
+                                isValidAimCoordinate(draft.z));
                             if (
                               !onNewPresetRequest ||
                               !labelValid ||
                               !descriptionValid ||
+                              !aimValid ||
                               !selected ||
                               !selectedTrack
                             ) {
@@ -2479,6 +2578,15 @@ export function BeatGrid({
                               field,
                               label: draft.label.trim(),
                               description: draft.description.trim(),
+                              ...(showAim
+                                ? {
+                                    aim: {
+                                      x: Number(draft.x),
+                                      y: Number(draft.y),
+                                      z: Number(draft.z),
+                                    },
+                                  }
+                                : {}),
                             });
                             setNewPresetPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
                             finish();

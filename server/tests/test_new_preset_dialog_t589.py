@@ -326,7 +326,11 @@ class TestBeatGridNewPresetHandler:
         assert "설명이 비어" in event["text"]
         assert console.executed == []
 
-    @pytest.mark.parametrize("field", ["dimmer_preset", "position", "color"])
+    # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"은 더는 이 거절에 들지
+    # 않는다(base 위치 풀도 콘솔 빈 슬롯으로 지원한다). 그 새 동작은
+    # `test_new_position_preset_t599.py`가 전수로 잠근다. dimmer_preset·
+    # color 거절은 회귀 없이 그대로다.
+    @pytest.mark.parametrize("field", ["dimmer_preset", "color"])
     def test_base_pool_fields_rejected_with_the_no_band_reason(self, tmp_path, field) -> None:
         store = SongTimelineStore()
         store.latest = _timeline()
@@ -571,5 +575,10 @@ class TestParseClientMessageBeatGridNewPreset:
         "field", ["dimmer_preset", "dimmer_effect", "position", "color", "effect"]
     )
     def test_all_five_fields_are_accepted(self, field) -> None:
-        parsed = self._parse(self._valid_payload(field=field))
+        # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"만 목표 좌표(aim)가
+        # 필수다(`TestParseClientMessageAim`가 그 모양을 전수로 잠근다).
+        overrides: dict[str, object] = {"field": field}
+        if field == "position":
+            overrides["aim"] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        parsed = self._parse(self._valid_payload(**overrides))
         assert parsed["field"] == field
