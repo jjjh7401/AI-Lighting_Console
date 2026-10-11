@@ -186,8 +186,11 @@ class TestFirstFreePresetNumber:
             "pools": {"position_effect": {"start": "2.61", "end": "2.68"}},
         }
         grid = {"tracks": []}
+        # 카드 t607 — `console_children`은 풀 번호로 가른 지도다(position_effect
+        # 가 가리키는 풀 번호 2). 해당 풀을 읽었지만 빈 딕셔너리(그 풀에 아무
+        # 것도 없다)라는 뜻 — 지도에 그 번호 자체가 없는 것과는 다르다.
         preset_no, reason, warning = first_free_preset_number(
-            "position", policy=policy, grid=grid, console_children={}
+            "position", policy=policy, grid=grid, console_children={2: {}}
         )
         assert reason is None
         assert preset_no == "2.61"
@@ -204,7 +207,7 @@ class TestFirstFreePresetNumber:
             ]
         }
         preset_no, reason, _warning = first_free_preset_number(
-            "position", policy=policy, grid=grid, console_children={}
+            "position", policy=policy, grid=grid, console_children={2: {}}
         )
         assert reason is None
         assert preset_no == "2.62"
@@ -216,7 +219,10 @@ class TestFirstFreePresetNumber:
         }
         grid = {"tracks": []}
         preset_no, reason, _warning = first_free_preset_number(
-            "position", policy=policy, grid=grid, console_children={61: "Existing Show Preset"}
+            "position",
+            policy=policy,
+            grid=grid,
+            console_children={2: {61: "Existing Show Preset"}},
         )
         assert reason is None
         assert preset_no == "2.62"
@@ -229,7 +235,7 @@ class TestFirstFreePresetNumber:
             "pools": {"position_effect": {"start": "2.61", "end": "2.68"}},
         }
         preset_no, reason, _warning = first_free_preset_number(
-            "position", policy=policy, grid={"tracks": []}, console_children={61: None}
+            "position", policy=policy, grid={"tracks": []}, console_children={2: {61: None}}
         )
         assert reason is None
         assert preset_no == "2.62"
@@ -255,7 +261,7 @@ class TestFirstFreePresetNumber:
             ]
         }
         preset_no, reason, _warning = first_free_preset_number(
-            "dimmer", policy=policy, grid=grid, console_children={}
+            "dimmer", policy=policy, grid=grid, console_children={1: {}}
         )
         assert reason is None
         assert preset_no == "1.31"
@@ -271,7 +277,7 @@ class TestFirstFreePresetNumber:
             ]
         }
         preset_no, reason, _warning = first_free_preset_number(
-            "position", policy=policy, grid=grid, console_children={}
+            "position", policy=policy, grid=grid, console_children={2: {}}
         )
         assert preset_no is None
         assert reason is not None
@@ -299,6 +305,26 @@ class TestFirstFreePresetNumber:
         assert preset_no is None
         assert reason is not None
         assert "번호대를 지어내지 않습니다" in reason
+
+    def test_a_different_pools_children_never_mark_a_candidate_occupied(self) -> None:
+        # 카드 t607 — 지도에 "다른" 풀 번호(21)만 있고 이 종류가 쓰는 풀(2)이
+        # 없으면, 설령 21번 풀에 슬롯 61이 점유돼 있어도 후보 2.61을 점유로
+        # 읽지 않는다 — 그 번호 자체가 지도에 없으니 "미확인"(배정+경고)이다.
+        policy = {
+            "confirmed": False,
+            "pools": {"position_effect": {"start": "2.61", "end": "2.68"}},
+        }
+        grid = {"tracks": []}
+        preset_no, reason, warning = first_free_preset_number(
+            "position",
+            policy=policy,
+            grid=grid,
+            console_children={21: {61: "Unrelated Pool's Preset"}},
+        )
+        assert reason is None
+        assert preset_no == "2.61"  # 21번 풀의 점유를 빌려 쓰지 않았다
+        assert warning is not None
+        assert "콘솔" in warning
 
 
 # == ② 서버 핸들러 ===========================================================

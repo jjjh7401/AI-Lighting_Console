@@ -35,6 +35,7 @@ __all__ = [
     "first_free_base_position_number",
     "first_free_preset_number",
     "pool_name_to_effect_kind",
+    "read_effect_pools_by_number",
     "read_named_pool",
     "record_app_preset_description",
     "record_app_preset_label",
@@ -121,6 +122,56 @@ def read_named_pool(
     if children is None:
         return None
     return pool_no, children
+
+
+def read_effect_pools_by_number(
+    query: StateQuery,
+    pool_root: str,
+    kind: str,
+    *,
+    policy: Mapping[str, object],
+    probe_prefix: str,
+) -> dict[int, dict[int, str | None]]:
+    """카드 t607(REQ-LDBEAT-015(h)/(b) 계속) — 「＋ 새 프리셋 만들기」 다이얼로그가
+    `first_free_preset_number`에 넘길 콘솔 점유를, 풀 **이름**이 아니라
+    ``policy``(=`preset_pools.yaml`)가 ``kind``에 선언한 번호대의 풀 **번호**로
+    직접 읽는다.
+
+    **근본 원인**: `effect_kind_to_pool_name`(풀 이름 사전)과 `preset_pools.yaml`
+    (번호대 사전)은 서로 다른 자리에서 따로 관리돼, 실측으로 어긋남이 발견됐다
+    (카드 t604 — 혼합 효과는 이름으로 풀 21("All 1")을 가리키지만 번호대는 풀
+    22(``mixed_all: 22.0~22.99``)다). 이름으로 읽은 점유를 번호대가 다른 풀의
+    점유로 쓰면 — 즉 21번 풀의 점유로 22.x 번호가 비었는지를 판정하면 — 틀린
+    번호를 배정한다. 리드 결정(카드 t607): 풀 이름 규칙을 전혀 쓰지 않는다 —
+    이름은 쇼마다 바뀔 수 있어 믿을 자리가 아니다.
+
+    디머처럼 한 ``kind``가 여러 번호대 키를 가져도(``_KIND_TO_POOL_KEYS``) 같은
+    풀 번호를 가리키면 그 풀은 한 번만 읽는다. 못 읽은 풀(이름 해석이 아니라
+    ``paged_pool_children`` 판독 실패)은 돌려주는 지도에 아예 담지 않는다 —
+    `first_free_preset_number`가 "그 풀 번호가 지도에 없으면 미확인으로 다룬다"
+    (오늘까지의 "배정+경고" 동작을 그대로 유지한다)."""
+    pool_keys = _KIND_TO_POOL_KEYS.get(kind)
+    if not pool_keys:
+        return {}
+    pools = policy.get("pools") if isinstance(policy, Mapping) else None
+    pools = pools if isinstance(pools, Mapping) else {}
+    pool_numbers: list[int] = []
+    for key in pool_keys:
+        band = pools.get(key)
+        bounds = _parse_band_bounds(band) if isinstance(band, Mapping) else None
+        if bounds is None:
+            continue
+        pool_no = bounds[0]
+        if pool_no not in pool_numbers:
+            pool_numbers.append(pool_no)
+    result: dict[int, dict[int, str | None]] = {}
+    for pool_no in pool_numbers:
+        children = paged_pool_children(
+            query, f"{pool_root}/{pool_no}", probe_id=f"{probe_prefix}-pool{pool_no}-slots"
+        )
+        if children is not None:
+            result[pool_no] = children
+    return result
 
 
 def _resolve_preset_name_with_pool(
@@ -318,19 +369,29 @@ def first_free_preset_number(
     *,
     policy: Mapping[str, object],
     grid: Mapping[str, object],
-    console_children: Mapping[int, object] | None,
+    console_children: Mapping[int, Mapping[int, object] | None] | None,
 ) -> tuple[str | None, str | None, str | None]:
     """카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그가 쓰는
     번호 배정. ``kind``(``effect_kind``)가 `preset_pools.yaml`에서 쓰는
     효과 풀 번호대(들, 디머는 서브 밴드 a→b 순서) 안에서, 격자가 이미
     참조하지 않고(``_referenced_preset_numbers``) **콘솔에서도 비어
-    있는**(``console_children``, 드로워가 이미 읽는 그 풀) 첫 슬롯을
-    돌려준다. 코드 상수로 번호대를 짜지 않는다 — 전부 ``policy``
-    (`load_preset_pool_policy`가 읽은 그 데이터)에서만 읽는다.
+    있는** 첫 슬롯을 돌려준다. 코드 상수로 번호대를 짜지 않는다 — 전부
+    ``policy``(`load_preset_pool_policy`가 읽은 그 데이터)에서만 읽는다.
 
-    ``console_children``이 ``None``이면(그 풀을 콘솔에서 못 읽었다)
-    배정은 그대로 하되 경고를 돌려준다 — 거절하지 않는다(격자 참조만
-    보고 고른 상태를 감독에게 알릴 뿐).
+    ``console_children``은 **풀 번호**로 가른 지도다 — ``{풀 번호: {슬롯:
+    이름}}``(카드 t607). 후보 ``pool.slot``의 점유는 반드시 그 ``pool``
+    번호 키로만 본다 — **다른 풀의 자리를 그 후보가 비었는지 판단에 쓰지
+    않는다**. 어느 종류의 콘솔 풀 **이름**과 그 종류의 번호대가 가리키는
+    풀 **번호**가 어긋날 수 있다는 것이 실측으로 드러났다(카드 t604 —
+    혼합 효과는 이름으로 풀 21("All 1")을, 번호대는 풀 22를 가리킨다).
+    그래서 이 함수는 풀 이름을 전혀 모른다 — 호출자가 `read_effect_pools_
+    by_number`로 번호째 읽어 넘긴다.
+
+    어느 후보의 풀 번호가 이 지도에 없으면(그 풀을 못 읽었거나 시도하지
+    않았다) 오늘까지의 동작을 그대로 유지한다 — 거절하지 않고 배정하되
+    경고를 돌려준다(격자 참조만 보고 고른 상태를 감독에게 알릴 뿐).
+    ``console_children`` 자체가 ``None``이면(풀을 아예 하나도 못 읽었다)
+    모든 후보가 이 경로를 탄다.
 
     반환: ``(번호 또는 None, 거절 사유 또는 None, 경고 또는 None)``.
     번호대가 그 종류에 아예 없거나(base 풀) 번호대가 전부 찼으면 번호는
@@ -353,17 +414,21 @@ def first_free_preset_number(
             continue
         found_band = True
         pool_no, slot_start, slot_end = bounds
+        # 이 후보의 풀 번호로만 점유를 본다 — 다른 풀의 children 을
+        # 빌려 쓰지 않는다(카드 t607). 지도에 그 풀 번호가 없으면(못
+        # 읽음·시도 안 함 둘 다 `.get()` 으로 같은 None) "미확인"이다.
+        pool_children = console_children.get(pool_no) if console_children is not None else None
         for slot in range(slot_start, slot_end + 1):
             candidate = f"{pool_no}.{slot}"
             if candidate in referenced:
                 continue
             # 키가 있으면 콘솔에 그 번호가 있다 — 이름 없는 프리셋은 값이
             # None 이라 `.get()` 으로는 빈칸과 구분이 안 된다(`paged_pool_children`).
-            if console_children is not None and slot in console_children:
+            if pool_children is not None and slot in pool_children:
                 continue
             warning = (
                 None
-                if console_children is not None
+                if pool_children is not None
                 else "⚠ 콘솔 빈칸 미확인 — 풀을 읽지 못해 격자 참조만 보고 골랐습니다"
             )
             return candidate, None, warning

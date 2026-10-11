@@ -99,11 +99,11 @@ from server.design.beat_grid_presets import (
     app_preset_description,
     app_preset_label,
     build_preset_drawer,
-    effect_kind_to_pool_name,
     first_free_base_color_number,
     first_free_base_position_number,
     first_free_preset_number,
     pool_name_to_effect_kind,
+    read_effect_pools_by_number,
     read_named_pool,
     record_app_preset_description,
     record_app_preset_label,
@@ -9825,23 +9825,22 @@ class ChatSession:
                     f"효과 틀 '{fx_recipe['fx_id']}' — {template_problem}."
                 )
 
-        # 콘솔 점유 확인 — 드로워가 이미 쓰는 그 읽기(`read_named_pool`)를
-        # 종류 하나에 맞는 풀 하나만 재사용한다(새 콘솔 읽기 규율 없음).
-        console_children: dict[int, str | None] | None = None
-        pool_name = effect_kind_to_pool_name(kind)
-        if pool_name is not None:
-            query = _registry_state_query(self._registry)
-            pool_root = self._beat_grid_preset_pool_root()
-            result = read_named_pool(
-                query, pool_root, pool_name, probe_prefix="beat-grid-new-preset"
-            )
-            if result is not None:
-                console_children = result[1]
-                # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다. 바로 아래 편집
-                # 이벤트가 표식을 싣고 나가므로 여기서는 기억만 한다.
-                self._beat_grid_pool_slots[result[0]] = dict(result[1])
-
+        # 콘솔 점유 확인 — 이 종류(kind)가 `preset_pools.yaml`에서 쓰는 번호대의
+        # 풀 "번호"로 직접 읽는다(카드 t607). 풀 "이름"으로는 읽지 않는다 —
+        # 혼합 효과는 이름으로 풀 21("All 1")을 가리키지만 번호대는 풀 22라,
+        # 이름으로 읽으면 다른 풀의 점유를 보고 번호를 잘못 배정한다(카드
+        # t604 실측). 이름 규칙은 쇼마다 바뀔 수 있어 믿을 자리가 아니다.
         policy = load_preset_pool_policy()
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        console_children = read_effect_pools_by_number(
+            query, pool_root, kind, policy=policy, probe_prefix="beat-grid-new-preset"
+        )
+        for pool_no, children in console_children.items():
+            # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다. 바로 아래 편집
+            # 이벤트가 표식을 싣고 나가므로 여기서는 기억만 한다.
+            self._beat_grid_pool_slots[pool_no] = dict(children)
+
         preset_no, reject_reason, assign_warning = first_free_preset_number(
             kind, policy=policy, grid=grid, console_children=console_children
         )
