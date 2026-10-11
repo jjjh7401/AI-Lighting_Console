@@ -403,6 +403,8 @@ export default function App() {
     sendBeatGridApply,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
+    sendBeatGridConsolePlay,
+    sendBeatGridConsoleStop,
     sendBeatGridStageRequest,
     sendDecision,
     sendReviewDecision,
@@ -1170,6 +1172,9 @@ export default function App() {
             onDrawerRequest={sendBeatGridDrawerRequest}
             onPreviewBar={sendBeatGridPreview}
             onPreviewOff={sendBeatGridPreviewOff}
+            onConsolePlay={sendBeatGridConsolePlay}
+            onConsoleStop={sendBeatGridConsoleStop}
+            sendStatus={state.beatGridSendStatus}
             onApply={sendBeatGridApply}
             pendingApplyCount={state.songTimeline.timeline?.beat_grid?.unsent_cells?.length}
             fixtures={beatGridStageFixtures}

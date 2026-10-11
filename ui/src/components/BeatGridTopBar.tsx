@@ -72,6 +72,12 @@ export interface BeatGridTopBarPlaybackProps {
   /** 「콘솔 같이」 토글이 늘 비활성인 이유(송신 경로 t563 준비 전) —
    * `consoleSyncAudio.CONSOLE_FOLLOW_DISABLED_REASON`. */
   consoleFollowDisabledReason: string;
+  /** 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 켬/끔. `onToggleConsoleFollow`가
+   * 없으면(송신 경로를 안 넘겼으면) 토글은 기존처럼 비활성이다. */
+  consoleFollowOn?: boolean;
+  onToggleConsoleFollow?: () => void;
+  /** 콘솔 재생이 거절된 이유(반영 기록 없음 등). 없으면 칸 자체가 없다. */
+  consoleFollowError?: string | null;
 }
 
 export interface BeatGridTopBarProps {
@@ -213,9 +219,24 @@ export function BeatGridTopBar({
                 onChange={(event) => playback.onSelectAudioFile(event.target.files?.[0] ?? null)}
               />
             </label>
-            <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
-              콘솔 같이 끔
-            </button>
+            {playback.onToggleConsoleFollow ? (
+              <button
+                type="button"
+                className={`tbtn${playback.consoleFollowOn ? " pri" : ""}`}
+                title="켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다"
+                aria-pressed={!!playback.consoleFollowOn}
+                onClick={playback.onToggleConsoleFollow}
+              >
+                {playback.consoleFollowOn ? "콘솔 같이 켬" : "콘솔 같이 끔"}
+              </button>
+            ) : (
+              <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
+                콘솔 같이 끔
+              </button>
+            )}
+            {playback.consoleFollowError && (
+              <span className="beat-grid-audio-error">{playback.consoleFollowError}</span>
+            )}
             {playback.audioFailureReason && (
               <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>
             )}

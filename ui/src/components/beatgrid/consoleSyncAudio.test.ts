@@ -9,7 +9,11 @@
 // 데이터 유무와 무관) — 그 비활성 이유 문자열도 여기서 상수로 둔다.
 import { describe, expect, it } from "vitest";
 
-import { CONSOLE_FOLLOW_DISABLED_REASON, consoleSyncAudioStartOffsetSeconds } from "./consoleSyncAudio";
+import {
+  CONSOLE_FOLLOW_DISABLED_REASON,
+  consoleSyncAudioStartOffsetSeconds,
+  resolveConsolePlayResponse,
+} from "./consoleSyncAudio";
 
 describe("consoleSyncAudioStartOffsetSeconds — 지연 데이터 정규화", () => {
   it("유효한 양수 지연은 그대로 돌려준다", () => {
@@ -35,5 +39,32 @@ describe("consoleSyncAudioStartOffsetSeconds — 지연 데이터 정규화", ()
 describe("CONSOLE_FOLLOW_DISABLED_REASON — 토글 비활성 이유(코디네이터 재확인 2026-10-11)", () => {
   it("송신 경로 자체가 없다는 고정 문구다(t563 머지 후에도 그 경로는 없음)", () => {
     expect(CONSOLE_FOLLOW_DISABLED_REASON).toBe("타임코드 재생 송신 경로 없음");
+  });
+});
+
+describe("resolveConsolePlayResponse — 「콘솔 같이」 재생 응답 처리 (카드 t578)", () => {
+  const ok = { last_action: "console_play", ok: true, reason: null };
+
+  it("기다리는 중이 아니거나 다른 응답이면 아무것도 하지 않는다", () => {
+    expect(resolveConsolePlayResponse(false, ok, 3.002)).toEqual({ kind: "none" });
+    expect(resolveConsolePlayResponse(true, null, 3.002)).toEqual({ kind: "none" });
+    expect(resolveConsolePlayResponse(true, { ...ok, last_action: "preview" }, 3.002)).toEqual({
+      kind: "none",
+    });
+  });
+
+  it("성공이면 측정된 지연 뒤에 음원을 시작한다", () => {
+    expect(resolveConsolePlayResponse(true, ok, 3.002)).toEqual({ kind: "start", delaySeconds: 3.002 });
+  });
+
+  it("서버가 거절하면 그 이유로 멈추고 음원만 따로 틀지 않는다", () => {
+    expect(resolveConsolePlayResponse(true, { ...ok, ok: false, reason: "반영 기록 없음" }, 3.002)).toEqual({
+      kind: "fail",
+      reason: "반영 기록 없음",
+    });
+  });
+
+  it("지연 측정값이 없으면 지어내지 않고 멈춘다", () => {
+    expect(resolveConsolePlayResponse(true, ok, null).kind).toBe("fail");
   });
 });
