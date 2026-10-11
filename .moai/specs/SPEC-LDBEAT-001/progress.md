@@ -587,6 +587,39 @@ UI 변경 전 확인(지시 4항, 2차 라운드 시작 시점): `ui/` 어떤 �
 - **안 한 것(지시 1~3항에는 없었지만, 이전 (b) 요청과의 간극 — 정직하게 기록)**: 직접 고르기 패널의 위치·색·효과·디머 프리셋 **드롭다운**("이 곡 + 쇼 기존 + 새 프리셋")은 만들지 않았다 — 밝기 "값"만 인라인 편집이고, 나머지는 여전히 명령창 문장(이름 또는 번호)으로만 고친다. 드로워 데이터(`drawerSections`)가 이미 있으니 다음 카드가 그대로 드롭다운 옵션으로 재사용할 수 있다.
 - **잔여 위험**: (1) 사용처 계산(`_usage_for_slot`)이 `build_preset_drawer` 안에서 항목마다 중복 호출되지 않도록(이전 턴에서 1회로 캐싱) 고쳤지만, 전체 그리드를 매 항목마다 스캔하는 O(풀 항목 수 × 큐 수) 구조는 그대로다 — 큰 격자에서는 드로워 열기가 느려질 수 있다(이번 LOVE ATTACK 규모에서는 측정상 체감 없음, 별도 프로파일링은 안 함). (2) `.pr`/`.u` 같은 짧은 CSS 클래스 이름은 mockup과 맞추려 그대로 썼는데, 다른 전역 스타일과 충돌할 가능성이 있다(이 세션에서는 `npx vite build` 성공만 확인했고, 실제 화면에서의 시각적 충돌은 안 쟀다).
 
+### M3 후속 4차 — 직접 고르기(①) 드롭다운: 위치·색·밝기(디머 프리셋) (카드 t551 계속, 코디네이터 지시 "build the direct-pick lists exactly as the mockup defines them")
+
+위 M3 후속 3차의 "안 한 것"이 가리킨 바로 그 드롭다운. UI 전용 — `server/`·`ui/src/protocol.ts`·`ui/src/useCopilotSocket.ts`·`ui/src/App.tsx` 전부 diff 0줄(아래 검증). 기존 `onEditRequest`→`sendBeatGridEdit`→`buildBeatGridEdit(bar, target, changes)` 경로가 이미 임의 `changes` 모양을 그대로 올려 보내고, 서버 `apply_beat_grid_edit`의 화이트리스트가 이미 `position_preset_no`/`color_preset_no`/`brightness`를 받으므로 — 드롭다운 **데이터**(`drawerSections`)와 **적용 버튼**만 새로 짠 BeatGrid.tsx 안쪽 일이었다. TDD(RED-GREEN), cycle_type=tdd.
+
+- **mockup 재확인 — 그룹 레이블의 정본 출처**: progress.md M3 후속 3차가 인용한 "이 곡 + 쇼 기존 + 새 프리셋"은 `ldbeat-runbook-ui-proposal-20261008.html`(최신 시안)의 `opts()`에는 없다 — 그 파일의 `opts()`(452/461행)는 평평한 목록 + "+ 새 프리셋"만이다(그렙으로 확인, "이 곡"/"쇼 기존" 0건). 정본은 **더 이른** `ldbeat-runbook-mockup-20261008.html`(이 카드 지시가 읽으라고 한 두 번째 파일)의 `opts()`(343~345행) — `<optgroup label="이 곡 프리셋">`+`<optgroup label="쇼에 이미 있는 프리셋">`(그 안 옵션은 `disabled` — 데모 `SHOW_PRESETS`에 번호가 없어서였다, 실제 데이터에는 번호가 있으므로 이 카드는 비활성화하지 않았다)+`"+ 새 프리셋 만들기…"` 셋. 이 카드는 이 레이블·순서를 바이트 그대로 썼다.
+- **신규 순수 함수(BeatGrid.tsx) — 전부 RED-GREEN**: `NEW_PRESET_OPTION_VALUE`("__new", mockup 리터럴)·`formatDrawerEntryOptionLabel`("번호 이름")·`splitDrawerSectionEntries`(섹션을 `usage_count>0`="이 곡 프리셋"/`usage_count===0`="쇼에 이미 있는 프리셋"으로 가름, `null`·`unread`(POOL_UNREAD)면 둘 다 빈 배열)·`findDrawerSection`(풀 이름으로 섹션 찾기)·`buildPositionPresetChanges`/`buildColorPresetChanges`/`buildBrightnessPresetChanges`(각각 `{position_preset_no}`/`{color_preset_no}`/`{brightness:{mode:"dimmer_preset",...}}`).
+- **UI 와이어링** — 큐 편집 칸의 "밝기"/"위치 프리셋"/"색 프리셋" 세 행이 이제 `onEditRequest` 있을 때 항상(기존 모드와 무관하게) 편집 가능(✎). 한 번에 한 필드만 열린다(`activeEditField`, mockup "같은 자리에서"). 밝기 행은 mockup `#eM`/`eDimMode` 그대로 값/디머 프리셋/디머 효과 3항 모드 선택을 먼저 보여주고, 모드별 하위 컨트롤이 바뀐다(값=숫자 입력(기존 동작 바이트 동일)·디머 프리셋=드롭다운(신규)·디머 효과=읽기 전용 안내(아래 Missing Inputs)). 위치·색 행은 각각 `drawerSections`의 Position/Color 섹션에서 드롭다운을 채운다. 세 필드 다 "적용"/"취소" 버튼 쌍을 쓴다 — mockup의 즉시-onChange 적용이 아니라 **이 프로젝트가 이미 밝기 "값" 모드에 쓰던 관행**을 그대로 따른 것(일관성, 네트워크 왕복이 매 키 입력마다 일어나지 않게). "+ 새 프리셋 만들기…"를 고르면 적용하지 않고 안내 문구만 뜬다(mockup `newPreset()`과 같은 "표시만, 쓰지 않음" 동작).
+- **POOL_UNREAD/미열람 — 지어내지 않는다(코디네이터 지시)**: 드로워 섹션이 아직 안 왔으면(`null`, 서랍을 한 번도 안 열었음) 셀렉트가 비활성(`disabled`) + "프리셋 서랍을 먼저 열어야 선택할 수 있습니다." 안내. 열렸지만 그 풀을 콘솔에서 못 읽었으면(`section.unread`, POOL_UNREAD) 역시 비활성 + "이 풀을 콘솔에서 읽지 못했습니다." — 기존 드로워 렌더(1455행 부근)와 같은 문구, 두 "못 고름" 상태를 또렷이 구별했다.
+- **거절 사유 그대로 노출 — 변경 없음**: 서버가 `apply_beat_grid_edit`에서 거절하면(예: 알 수 없는 번호) 기존 제네릭 `case "error"` 리듀서가 `event.message`를 그대로 `entries`에 싣는다(신규 리듀서 분기 0개, M3 후속 3차와 같은 경로) — 이 카드가 새 거절 표시 로직을 만들지 않았다.
+- **검증 — 세 그렙(코디네이터 지시)**:
+  1. `grep -rnE "changes\s*=\s*\{" ui/src` → 매칭 0건(exit 1) — UI는 여전히 서버 페이로드를 직접 구성하지 않는다.
+  2. `git diff --stat HEAD -- server/design/beat_grid.py` → 출력 없음(0줄) — lane-2/t549 경계 유지.
+  3. `git diff --stat HEAD -- ui/src/protocol.ts` → 출력 없음(**0줄, 추가도 0줄**) — 이 카드는 기존 `buildBeatGridEdit`가 이미 임의 `changes`를 받으므로 protocol.ts 쪽에 새 빌더가 전혀 필요 없었다(App.tsx·useCopilotSocket.ts도 diff 0줄, 같은 이유).
+- **RED→GREEN**: 새 순수 함수 12개를 먼저 테스트에 import하고 구현은 비워 둔 채 `npx vitest run src/components/BeatGrid.test.tsx` → RED `12 failed | 122 passed (134)`(`buildPositionPresetChanges is not a function` 등, 마지막은 `NEW_PRESET_OPTION_VALUE` `undefined` AssertionError). 구현 추가 후 같은 명령 → GREEN `134 passed (134)`.
+- **회귀(레인 로컬, 전체 — 이 프로젝트는 파일 단위 실행도 전체와 같은 속도)**: `npx tsc --noEmit` → 깨끗(출력 0줄). `npx vitest run` → `876 passed`(원래 864 + 신규 12). `npx vite build --mode=development` → 성공(68 modules transformed, `dist/` gitignore).
+- **AC-LDBEAT-005 PASS 근거(이어서)**: 세 필드(위치·색·밝기) 전부 `onEditRequest`→`buildBeatGridEdit`를 거치고(그렙 1), 서버 `apply_beat_grid_edit`가 검증·적용하는 경로는 M3 1차와 바이트 동일(이 카드가 서버를 전혀 건드리지 않았으므로).
+- **AC PASS/FAIL 매트릭스(이 라운드가 손댄 범위만)**:
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| REQ-LDBEAT-015(c)(밝기 단일모드, 값/디머 프리셋/디머 효과 중 하나) | PASS | UI 모드 선택이 서버 `_validate_brightness`(기존, 변경 없음)와 같은 세 값을 쓴다 — 모드 전환 시 이전 모드의 값을 같이 보내지 않는다(`buildBrightnessValueChanges`/`buildBrightnessPresetChanges` 각각 다른 두 필드만 채움) |
+| AC-LDBEAT-005(UI가 서버 페이로드를 직접 구성하지 않음) | PASS | 그렙 1, 0건 |
+
+**## Missing Inputs (아직 못 한 것 — 코디네이터 결정 대기, 개선하지 않고 정지)**
+
+| 항목 | 막힌 이유 |
+|---|---|
+| **효과(움직임, `effect_preset_no`) 직접 고르기 드롭다운** | `effect_preset_no`는 서버 `resolve_effect_preset_name`/`EFFECT_SEARCH_POOL_NAMES`가 네 풀(Position/Color/Dimmer/**All 1**) 전부를 뒤진다(이름 해석 경로, M3 후속 2차) — 그런데 `drawerSections`는 Dimmer/Position/Color **세 풀뿐**이고 "All 1"(이 곡 전용 혼합 풀, `mixed_all: 22.0~22.99`)은 어느 섹션에도 없다. 거기다 Position/Color 풀 안에서도 "기본 위치·색 프리셋"과 "위치 효과·색 효과 프리셋"(`preset_pools.yaml`의 `position_effect`/`color_effect` 번호대)이 **같은 섹션의 번호 구분 없는 한 목록**에 섞여 있어, 지금의 `drawerSections` 모양만으로는 "효과만" 걸러낼 수 없다(걸러내려면 드로워 섹션에 새 분류 필드를 더해야 하는데, 이번 카드 지시 "feed from drawerSections, not from new data"가 막는다). 지어내지 않고 정지 |
+| **디머 "효과"(`brightness.mode==="dimmer_effect"`) 드롭다운** | 같은 근본 원인 — `preset_pools.yaml`의 `dimmer_effect_a`(1.21~1.26)/`dimmer_effect_b`(1.31~1.33)가 Dimmer 풀 **안의 번호대**로만 "디머 프리셋"과 "디머 효과"를 가르는데, `drawerSections`의 Dimmer 섹션은 그 구분 없이 전체를 한 목록으로 준다. (참고: 서버 `_validate_brightness`는 `dimmer_preset` 모드의 `preset_no`를 번호대 검사하지 않는다 — REQ-LDBEAT-015(b) "base 풀은 번호대 검사 대상 아님" — 그래서 "디머 프리셋" 드롭다운에 Dimmer 풀 전체를 넣는 것은 서버 쪽에서 안전하다. 하지만 `dimmer_effect` 모드 쪽은 서버가 번호대를 검사하므로(코드 475~489행), 무엇이 "효과"인지 모른 채 목록을 주면 사용자가 거절될 선택지를 고를 수 있다 — 안내만 보이고 목록은 비워둔 이유) |
+| 두 항목을 풀려면 필요한 것 | `drawerSections`에 `All 1` 풀 섹션을 추가하고, 세 풀(Position/Color/Dimmer) 각 항목에 `preset_pools.yaml` 번호대 기준 base/effect 분류 플래그를 더하는 서버 변경(새 데이터) — 이번 카드 지시가 "drawerSections 에서만, 새 데이터 없이"라 범위 밖. 다음 카드가 `build_preset_drawer`를 확장하면 이 UI 쪽은 `renderPresetOptions`/`splitDrawerSectionEntries`를 그대로 재사용할 수 있다(이미 범용) |
+
+- **잔여 위험**: (1) `isBrightnessValueEditable`(이전 라운드가 만든 순수 함수)는 이제 컴포넌트 안에서 아무도 안 부른다(모드 전환 자체가 새 게이트 역할을 하므로) — export·테스트는 그대로 남겨 뒀다(죽은 호출부만 제거, 공개 함수·시험은 이 카드 범위 밖이라 안 지웠다). 다음 정리 카드의 후보. (2) 세 드롭다운 다 "적용" 전까지 로컬 draft 상태로만 있고, 서버가 거절해도 draft가 자동으로 되돌아가지 않는다(기존 밝기 "값" 모드와 같은 동작, 이 카드가 새로 만든 결함은 아니다 — M3 1차부터 있던 패턴). (3) 디머 프리셋 드롭다운이 Dimmer 풀 전체(실제로는 효과 프리셋도 섞여 있을 수 있는 번호)를 보여주므로, 사용자가 실제로는 "효과" 프리셋을 "프리셋" 모드로 잘못 골라도 서버가 막지 않는다(REQ-015(b) 설계가 base 참조는 번호대 검사 안 함이라 — 이게 결함인지는 director 판단 필요, 이 카드가 만든 간극이 아니라 기존 서버 설계의 결과임을 기록).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
