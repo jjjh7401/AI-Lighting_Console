@@ -4,7 +4,8 @@
 서버가 이미 읽은 풀(반영 때 승인 대기 번호의 풀 판독 · 프리셋 서랍 판독)로만
 가른 ``beat_grid["empty_preset_cells"]``를 격자 이벤트에 실어 보낸다 — UI 는 이
 목록만 읽는다. 아직 읽지 않은 풀의 번호는 판정하지 않는다. 이미 승인된 칸의 빈
-번호도 표식 대상이지만 ``state``(held·create·approved)로 가른다.
+번호도 표식 대상이다 — 카드 t600 이후 반영이 승인된 칸도 같은 규칙으로 보류·생성하므로
+``state``는 held·create 둘이다(옛 ``approved``「그대로 나감」은 없어졌다).
 
 하네스: t577/t590 가짜 콘솔(반영), t551 가짜 콘솔(서랍·편집). 콘솔 쓰기 0건.
 """
@@ -76,7 +77,7 @@ class TestEmptyPresetCells:
         marks = _marks_by_bar(empty_preset_cells(grid, {4: {21: "P21"}}))
         assert set(marks) == {1, 2}
         assert marks[1]["state"] == "held"
-        assert marks[2]["state"] == "approved"
+        assert marks[2]["state"] == "held"  # 카드 t600 — 승인된 칸도 송신 보류
         assert marks[1]["fields"] == [
             {
                 "field": "effect_preset_no",
@@ -144,7 +145,7 @@ class TestApplySendsMarks:
         marks = _marks_by_bar(_grids(sent)[0]["empty_preset_cells"])
         assert set(marks) == {1, 2}, "있는 번호(4.21)에 표식이 붙었거나 빈 번호가 빠졌다"
         assert marks[1]["state"] == "held"
-        assert marks[2]["state"] == "approved"
+        assert marks[2]["state"] == "held"  # 카드 t600 — 승인된 칸도 송신 보류
 
     def test_every_later_grid_event_keeps_the_marks(self, tmp_path) -> None:
         _status, sent = _apply(tmp_path, [dict(c) for c in self.CUES], pool4=[21])
@@ -187,7 +188,7 @@ class TestDrawerReadSendsMarks:
         session.beat_grid_preset_drawer()
         assert console.executed == []
         (cell,) = _grids(sent)[-1]["empty_preset_cells"]
-        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "approved", "2.99")
+        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "held", "2.99")
 
     def test_same_read_twice_does_not_resend_the_grid(self, tmp_path) -> None:
         session, _console, _store, sent = _drawer_session(
@@ -276,12 +277,12 @@ class TestPositionCreateOnApply:
         assert cell["fields"][0]["kind"] == "empty"
         assert POSITION_TARGET_MISSING in cell["fields"][0]["reason"]
 
-    def test_approved_only_reference_is_not_created(self) -> None:
-        """승인 대기 칸이 가리키지 않으면 t592 후보가 아니다 — 반영해도 안 만든다."""
+    def test_approved_only_reference_is_created(self) -> None:
+        """카드 t600 — 승인된 칸만 가리켜도 t592 후보다(반영이 같은 규칙으로 만든다)."""
         cue = {"bar": 1, "position_preset_no": "2.71", "evidence": dict(_APPROVED)}
         (cell,) = empty_preset_cells(_position_grid(cue, **_RECIPE), {2: {1: "P1"}})
-        assert cell["state"] == "approved"
-        assert cell["fields"][0]["kind"] == "empty"
+        assert cell["state"] == "create"
+        assert cell["fields"][0]["kind"] == "create_on_apply"
 
 
 class TestCreatedEstimateYieldsToARead:

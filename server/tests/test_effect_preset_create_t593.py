@@ -448,3 +448,16 @@ class TestApplyCreatesTheEffect:
         assert "t601" in status["reason"]
         assert approval.requests == []
         assert not [c for c in console.executed if "Preset" in c]
+
+    def test_approved_cell_empty_effect_is_created_too(self, tmp_path) -> None:
+        # 카드 t600 규칙(승인된 칸의 빈 번호도 같은 보류·생성 규칙)이 효과에도 먹는다.
+        approved = {"approval": {"by": "supervisor", "date": "2026-10-10", "source": "t593"}}
+        status, store, approval, _console = _apply(
+            tmp_path, [{**_CUE, "evidence": approved}], pool22=[5]
+        )
+        assert status["ok"] is True
+        assert "Store Preset 22.1 'LA Wave' /Universal" in _sent(approval)
+        risk = _risk(approval)
+        assert "새로 만드는 효과 프리셋 1개" in risk
+        assert "새로 만드는 프리셋 " not in risk  # 이미 승인된 칸 — 승인 기록 대상이 아니다
+        assert check_evidence_approval(_cue_of(store.latest["beat_grid"], "BACK", 1)) is None

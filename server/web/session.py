@@ -42,8 +42,10 @@ from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.beat_grid import (
+    CELL_HOLD,
     EMPTY_PRESET_HOLD,
     apply_pending_approval,
+    approved_preset_numbers,
     attach_beat_grid_default,
     attach_beat_grid_runtime_extras,
     empty_preset_cells,
@@ -9965,7 +9967,13 @@ class ChatSession:
         # (또는 풀을 못 읽은) 번호의 칸은 칸 단위로 송신 보류한다. 보류 칸은
         # 승인 기록 대상(`pending_before`)에서 빠지므로 승인 뒤에도 승인
         # 대기로 남고, 에미터가 승인 없는 칸을 막으므로 커맨드도 0줄이다.
-        pending_before, held_presets = self._beat_grid_split_empty_presets(pending_before)
+        # 카드 t600 — 이미 승인된 칸의 번호도 같은 판독·같은 규칙으로 가른다. 승인은
+        # 「그 번호를 쓴다」는 결정일 뿐 콘솔 풀에 slot 이 있다는 사실이 아니다 —
+        # 안 가르면 빈 번호를 가리킨 큐가 그대로 나간다(t595 판정서). 승인된 칸은
+        # 승인 기록 대상이 아니므로 ``approved`` 표시로 아래에서 다시 갈라낸다.
+        checked, held_presets = self._beat_grid_split_empty_presets(
+            [*pending_before, *approved_preset_numbers(grid)]
+        )
         # 카드 t592(REQ-LDBEAT-015(i-3)(i-7)(i-8)) — 보류 칸 가운데 「풀은 읽혔고
         # slot 이 없는」 위치 번호는 목표 좌표 레시피로 이번 묶음에서 만든다.
         # 만들 수 있는 칸만 승인 기록 대상으로 돌아가고, 하나라도 빠지면 사유를
@@ -9973,8 +9981,19 @@ class ChatSession:
         # 카드 t593(REQ-LDBEAT-015(i-4)) — 빈 효과 번호도 같은 칸 판정으로 템플릿·주기
         # 레시피에서 만든다. 위치·효과가 한 칸에 같이 있어도 함께 판정한다(``plan_cells``).
         position_plan = self._beat_grid_plan_new_presets(grid, held_presets, timeline)
-        pending_before = [*pending_before, *position_plan.released]
+        pending_before = [
+            entry for entry in [*checked, *position_plan.released] if not entry.get("approved")
+        ]
         held_presets = position_plan.held
+        # 승인 대기 보류 칸은 에미터가 승인 없음으로 이미 막는다. 승인된 보류 칸은
+        # 에미터가 모르므로 칸 단위 보류 목록으로 넘긴다(커맨드 0줄·큐 번호 안 씀).
+        approved_held_cells: dict[tuple[str, int], str] = {}
+        for entry in held_presets:
+            if entry.get("approved"):
+                key = (str(entry.get("group_name")), int(entry.get("bar")))  # type: ignore[arg-type]
+                reason = str(entry.get("hold_reason"))
+                if key not in approved_held_cells or approved_held_cells[key] == CELL_HOLD:
+                    approved_held_cells[key] = reason
 
         song_key = self._beat_grid_song_key(timeline)
         record = store.beat_grid_allocation(song_key) if store is not None else None
@@ -10051,6 +10070,7 @@ class ChatSession:
                 probe_results=probe_results,
                 recorded_cue_numbers=recorded_cue_numbers,
                 dimmer_attribute_reasons=dimmer_reasons,
+                held_cells=approved_held_cells,
             )
             if result.blocked_reason is not None or not result.commands:
                 return self._beat_grid_send_status(
@@ -10185,7 +10205,8 @@ class ChatSession:
             # (2026-10-11)대로 경고는 이 한 줄로 합치고 이름·설명을 붙인다.
             if held_presets:
                 listed = ", ".join(
-                    f"{_pending_entry_text(entry)}({entry['hold_reason']})"
+                    f"{_pending_entry_text(entry)}({entry['hold_reason']}"
+                    f"{' · 이미 승인된 칸' if entry.get('approved') else ''})"
                     for entry in held_presets
                 )
                 risk_reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"

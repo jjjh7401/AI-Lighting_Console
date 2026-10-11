@@ -69,8 +69,20 @@ def _timeline() -> dict:
     }
 
 
+#: 카드 t600 — 이 시험들의 칸이 가리키는 프리셋 번호가 콘솔 풀에 **있는** 상태.
+_EXISTING_PRESET_POOLS = {
+    f"DataPool/PresetPools/{pool}": {
+        "children": [{"i": i, "name": f"P{pool}.{i}"} for i in range(1, 6)]
+    }
+    for pool in (1, 2, 3, 4)
+}
+
+
 def _state_tree() -> dict:
     return {
+        # 카드 t600 — 반영은 승인된 칸의 프리셋 번호도 콘솔 풀을 읽어 가른다(빈
+        # 번호·못 읽은 풀은 송신 보류). 이 시험들이 쓰는 번호는 콘솔에 있는 프리셋이다.
+        **_EXISTING_PRESET_POOLS,
         "DataPool/Sequences": {"children": []},
         "DataPool/Timecodes": {"children": [], "node": {"childCount": 0, "enumeration": "ok"}},
     }

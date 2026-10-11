@@ -42,10 +42,11 @@ const HELD: BeatGridEmptyPresetCell = {
   ],
 };
 
+// 카드 t600 — 이미 승인된 칸의 빈 번호도 「송신 보류」다(옛 `approved` 상태 없음).
 const APPROVED: BeatGridEmptyPresetCell = {
   group_name: "BACK",
   bar: 2,
-  state: "approved",
+  state: "held",
   fields: [
     { field: "color_preset_no", field_label: "색 프리셋", value: "4.98", kind: "empty", reason: HOLD },
     { field: "position_preset_no", field_label: "위치 프리셋", value: "2.7", kind: "pool_unread", reason: UNREAD },
@@ -78,9 +79,10 @@ describe("emptyPresetBadge / emptyPresetTitle", () => {
     expect(emptyPresetTitle(create)).not.toContain("송신 보류");
   });
 
-  it("보류 칸과 이미 승인된 칸의 결과를 가른다", () => {
+  it("승인된 칸의 빈 번호도 송신 보류로 말한다(카드 t600)", () => {
     expect(emptyPresetTitle(HELD)).toContain("송신 보류");
-    expect(emptyPresetTitle(APPROVED)).toContain("그대로 나갑니다");
+    expect(emptyPresetTitle(APPROVED)).toContain("송신 보류");
+    expect(emptyPresetTitle(APPROVED)).not.toContain("그대로 나갑니다");
     expect(emptyPresetTitle(APPROVED)).toContain(UNREAD);
   });
 });
