@@ -515,8 +515,19 @@ def apply_beat_grid_edit(
         # 새 프리셋 번호의 승인(REQ-LDBEAT-015(f)(g))은 이번 changes 에 함께 온
         # evidence.approval 만 인정한다 — 칸에 이미 있던 승인(예: t555 밝기
         # 100% 승인)이 새 번호를 통과시키면 안 된다(감독 선택 2026-10-11,
-        # 합친 CI run 38112994889 빨강의 원인).
+        # 합친 CI run 38112994889 빨강의 원인). 카드 t577(REQ-LDBEAT-015(h-5))
+        # 이후로도 이 "저장된 승인 재사용 금지" 자체는 그대로 유지한다 —
+        # 바뀌는 것은 거절이 발화하는 시점뿐이다(h-6).
         fresh_approval_cue = merged if "evidence" in changes else {**merged, "evidence": None}
+
+        # 카드 t577(REQ-LDBEAT-015(h-1)) — 새 프리셋 번호를 완전한
+        # evidence.approval 없이 넣어도 **거절하지 않는다**. 그 칸·필드는
+        # 초안에 그대로 받아들여지고 "승인 대기" 상태로 남는다 — 관찰
+        # 가능한 상태는 새 필드가 아니라 `check_evidence_approval`(완전성
+        # 판정)과 non-null 프리셋 번호의 교차로 파생된다. 승인은 이제
+        # 편집 시점이 아니라 「⇪ 콘솔에 반영」 승인 카드에서만 일어난다
+        # (`server/web/session.py` `beat_grid_apply`, h-2~h-4).
+        pending_fields: list[str] = []
 
         effect_kind = merged.get("effect_kind")
         effect_number = merged.get("effect_preset_no")
@@ -534,9 +545,8 @@ def apply_beat_grid_edit(
                 if policy.get("confirmed"):
                     raise BeatGridEditError(pool_reason)
                 warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
-            approval_reason = check_evidence_approval(fresh_approval_cue)
-            if approval_reason is not None:
-                raise BeatGridEditError(approval_reason)
+            if check_evidence_approval(fresh_approval_cue) is not None:
+                pending_fields.append(EDITABLE_CUE_FIELD_LABELS["effect_preset_no"])
 
         brightness = merged.get("brightness") or {}
         if (
@@ -552,9 +562,43 @@ def apply_beat_grid_edit(
                 if policy.get("confirmed"):
                     raise BeatGridEditError(pool_reason)
                 warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
-            approval_reason = check_evidence_approval(fresh_approval_cue)
-            if approval_reason is not None:
-                raise BeatGridEditError(approval_reason)
+            if check_evidence_approval(fresh_approval_cue) is not None:
+                pending_fields.append("디머 효과 프리셋")
+
+        # 카드 t577(REQ-LDBEAT-015(h-1)) — position_preset_no·color_preset_no
+        # 도 그 네 필드에 포함되지만(h-1 본문), 이전까지 이 승인 완전성
+        # 판정 경로에 아예 없었다(plan M10 1단계가 메우라고 지목한 틈) —
+        # 여기서 같은 모양으로 메운다. 둘 다 풀 번호대 자체가 없으므로
+        # `validate_preset_pool_assignment` 호출은 없다(위치/색 프리셋은
+        # 그 검사의 대상이 아니다).
+        if (
+            merged.get("position_preset_no") is not None
+            and "position_preset_no" in changes
+            and check_evidence_approval(fresh_approval_cue) is not None
+        ):
+            pending_fields.append(EDITABLE_CUE_FIELD_LABELS["position_preset_no"])
+
+        if (
+            merged.get("color_preset_no") is not None
+            and "color_preset_no" in changes
+            and check_evidence_approval(fresh_approval_cue) is not None
+        ):
+            pending_fields.append(EDITABLE_CUE_FIELD_LABELS["color_preset_no"])
+
+        if pending_fields:
+            group_name = track.get("group_name")
+            warnings.append(
+                f"⚠ 승인 대기 — {group_name} {bar}마디 {', '.join(pending_fields)}: "
+                "「⇪ 콘솔에 반영」 승인 카드에서 승인해야 콘솔로 나갑니다"
+            )
+            # REQ-LDBEAT-015(h-5) — 이 칸에 저장될 `evidence`는 `fresh_
+            # approval_cue`가 본 값(이번 changes 가 "evidence" 를 안 실었으면
+            # None)과 같아야 한다. 안 그러면 base 의 **낡은** 승인이 그대로
+            # 남아, 나중에 `check_evidence_approval(merged)`을 그 칸에 다시
+            # 돌리면 "승인됨"으로 거짓 통과한다(이번 CI가 실측으로 잡은
+            # 결함 — 승인 재사용 금지는 판정 단계뿐 아니라 **저장**에도
+            # 적용돼야 한다).
+            merged = {**merged, "evidence": fresh_approval_cue.get("evidence")}
 
         conflict_reason = check_app_movement_axis_conflict(merged)
         if conflict_reason is not None:

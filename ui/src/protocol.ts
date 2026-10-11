@@ -484,6 +484,14 @@ export interface BeatGridCue {
   app_movement: BeatGridAppMovement | null;
   /** 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `null`. */
   evidence: BeatGridEvidence | null;
+  /** 카드 t577, REQ-LDBEAT-015(h-1) — 뷰 전용 파생 필드(서버
+   * `attach_beat_grid_runtime_extras`가 매 서빙마다 다시 계산해 붙인다,
+   * 저장되는 값이 아니다). 완전한 `evidence.approval` 없이 넣어진
+   * non-null 프리셋 번호 필드들의 사람이 읽는 이름 — 비어 있으면 이 칸은
+   * 승인 대기가 아니다. UI는 이 값으로만 "승인 대기" 배지를 그린다
+   * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
+   * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
+  pending_preset_fields?: string[];
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성

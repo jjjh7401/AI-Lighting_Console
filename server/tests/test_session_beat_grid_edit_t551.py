@@ -373,8 +373,11 @@ class TestSentenceNameLookup:
         assert resolved["effect_kind"] == "position"
         # MOVER-U bar 14 에는 기존 번호(21.5)의 승인(카드 t543)이 있지만, 새
         # 번호 2.61 은 이번 변경에 함께 온 승인만 인정한다(REQ-LDBEAT-015(f)(g),
-        # 감독 선택 2026-10-11 — 카드 t555). 문장 경로는 승인을 싣지 못하므로
-        # 해석은 되지만 쓰기는 거절된다.
+        # 감독 선택 2026-10-11 — 카드 t555). 문장 경로는 승인을 싣지 못한다.
+        # 카드 t577(REQ-LDBEAT-015(h-1)) 갱신 — 이제는 편집 시점에 거절하지
+        # 않는다. 초안에 그대로 받아들여지고 "승인 대기"로 남는다 — 쓰기(콘솔
+        # 반영)는 여전히 별도의 「⇪ 콘솔에 반영」 승인 경로에서만 일어난다
+        # (콘솔 접촉은 이 편집 경로에서 전과 다름없이 0건).
         before = copy.deepcopy(store.latest)
         event = session.beat_grid_edit(
             bar=None,
@@ -382,9 +385,13 @@ class TestSentenceNameLookup:
             changes=None,
             sentence="14마디 MOVER-U 효과를 LA Sweep 2로",
         )
-        assert "거절" in event["summary"]
-        assert "REQ-LDBEAT-015" in event["text"]
-        assert store.latest == before
+        assert "수정" in event["summary"]
+        assert "승인 대기" in event["text"]
+        assert store.latest != before
+        updated_grid = store.latest["beat_grid"]
+        mover_u = next(t for t in updated_grid["tracks"] if t["group_name"] == "MOVER-U")
+        cue = next(c for c in mover_u["cues"] if c["bar"] == 14)
+        assert cue["effect_preset_no"] == "2.61"
         assert console.executed == []
 
     def test_name_not_found_is_rejected_without_fabricating_a_number(self, tmp_path) -> None:

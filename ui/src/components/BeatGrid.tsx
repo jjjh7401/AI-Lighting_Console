@@ -744,6 +744,18 @@ export function presetPoolBandBadge(section: BeatGridDrawerSection): string | nu
   return section.bands_confirmed ? null : "⚠ 번호대 미확인";
 }
 
+/** 카드 t577, REQ-LDBEAT-015(h-1). 서버가 칸마다 뷰 전용으로 붙인
+ * `pending_preset_fields`(`attach_beat_grid_runtime_extras`)를 그대로
+ * 읽어 "⚠ 승인 대기" 배지를 만든다 — 기존 "⚠ 번호대 미확인"/"⚠ 실기
+ * 미확인"과 같은 접두 관례를 재사용한다. UI는 이 판정을 다시 유추하지
+ * 않는다(서버 단일 진실 지점) — 그 리스트가 비어 있거나(또는 옛 격자라
+ * 필드 자체가 없으면) 배지를 달지 않는다. */
+export function pendingApprovalBadge(cue: BeatGridCue): string | null {
+  const fields = cue.pending_preset_fields;
+  if (!fields || fields.length === 0) return null;
+  return `⚠ 승인 대기(${fields.join(", ")})`;
+}
+
 /** 카드 t551 계속 — 직접 고르기(①) 드롭다운의 "+ 새 프리셋" 선택지 값.
  * `ldbeat-runbook-mockup-20261008.html` `opts()`의 `"__new"` 리터럴
  * 그대로(값이 이 값이면 적용하지 않는다 — 그 모양 자체가 새 창을 여는
@@ -1869,6 +1881,14 @@ export function BeatGrid({
                                       </span>
                                     ) : null;
                                   })()}
+                                  {pendingApprovalBadge(segment.cue) && (
+                                    <span
+                                      className="beat-grid-pending-approval-warn"
+                                      title="「⇪ 콘솔에 반영」 승인 카드에서 승인해야 콘솔로 나갑니다"
+                                    >
+                                      {pendingApprovalBadge(segment.cue)}
+                                    </span>
+                                  )}
                                 </button>
                                 {hasNext && (
                                   // 카드 t561 — 이음매 표시(M·!·◢)와 페이드 번짐(REQ-LDBEAT-020(a)).
