@@ -104,6 +104,15 @@ export function stageDecorations(
   return { floor, washes, beams };
 }
 
+/** 카드 t591 — 시안 `drawStage` 는 무빙 장비를 10×10 네모(`rect x-5 y-5`)로,
+ * 나머지를 동그라미로 그린다. 무빙인지는 층 역할이 mover 인 줄에 **소속이
+ * 확인된**(무대 판독 `member_fids`) 장비인가로만 정한다 — 그룹 이름 규칙 0. */
+export function fixtureIsMover(fixture: BeatGridFixturePoint, tracks: readonly BeatGridTrack[]): boolean {
+  return tracks.some((track) => track.layer_role === "mover" && fixtureBelongsTo(fixture, track.group_name));
+}
+
+const MOVER_HALF = 5;
+
 /** 칸 비율에 맞춘 그림 폭 — 시안 `Math.max(420, round(H * clientW/clientH))`. */
 export function stageViewWidth(clientWidth: number, clientHeight: number): number {
   if (clientWidth <= 0 || clientHeight <= 0) return STAGE_MIN_W;
@@ -197,16 +206,25 @@ export function BeatGridStage({
         ))}
         {fixtures.map((fixture) => {
           const { cx, cy } = project(fixture);
-          return (
-            <circle
+          const fill = fixtureDisplayColor(fixture, tracks);
+          const opacity = fixtureDisplayOpacity(fixture, tracks, viewBar);
+          const title = <title>{`${fixture.name} (fid ${fixture.fid})`}</title>;
+          return fixtureIsMover(fixture, tracks) ? (
+            <rect
               key={fixture.fid}
-              cx={cx}
-              cy={cy}
-              r={5}
-              fill={fixtureDisplayColor(fixture, tracks)}
-              opacity={fixtureDisplayOpacity(fixture, tracks, viewBar)}
+              className="beat-grid-stage-mover"
+              x={cx - MOVER_HALF}
+              y={cy - MOVER_HALF}
+              width={MOVER_HALF * 2}
+              height={MOVER_HALF * 2}
+              fill={fill}
+              opacity={opacity}
             >
-              <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
+              {title}
+            </rect>
+          ) : (
+            <circle key={fixture.fid} cx={cx} cy={cy} r={5} fill={fill} opacity={opacity}>
+              {title}
             </circle>
           );
         })}
