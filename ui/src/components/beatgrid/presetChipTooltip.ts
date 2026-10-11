@@ -2,15 +2,18 @@
 // 이 곡에서 쓰는 큐 수를 함께" 보여준다. SPEC-LDBEAT-001 M9 step 6, 카드
 // t560.
 //
-// §Gaps(카드 t560 보고) — 콘솔이 실제로 돌려주는 프리셋 "설명 텍스트"
-// (시안 원문 예시 「펄스 30↔60 · 4박」 꼴)는 지금 클라이언트 모델
-// (`BeatGridDrawerEntry`)에 없다 — `entry.name`은 콘솔이 읽은 짧은
-// **이름**일 뿐 효과 설명이 아니다(`server/design/beat_grid_presets.py`
-// `build_preset_drawer`가 콘솔 슬롯 이름을 그대로 옮긴다, 확인됨). 그래서
-// 이 함수는 설명 텍스트가 없을 때(`null`/`undefined`/빈 문자열) 사용 큐
-// 수만 보여준다 — 그 예시 문자열을 지어내 채우지 않는다(REQ-LDBEAT-015(f)
-// 와 같은 원칙). 설명 데이터가 실제로 생기면(서버가 그 필드를 채우면)
-// 호출부가 그 값을 그대로 넘기면 된다 — 이 함수 자체는 바꿀 필요 없다.
+// §Gaps(카드 t560 보고, 카드 t568 재조사로 재확인) — 콘솔이 실제로
+// 돌려주는 프리셋 "설명 텍스트"(시안 원문 예시 「펄스 30↔60 · 4박」 꼴)는
+// 읽는 경로가 이 저장소에 없다 — `entry.name`은 콘솔이 읽은 짧은
+// **이름**일 뿐 효과 설명이 아니고(`server/design/beat_grid_presets.py`
+// `build_preset_drawer`가 콘솔 슬롯 이름을 그대로 옮긴다, 확인됨),
+// `paged_pool_children`(t480)이 돌려받는 자식 필드는 슬롯 번호·이름뿐이다
+// (t568 조사, 새 콘솔 프로브 없이는 못 채움). 그래서 서버는 이 필드를
+// 명시적 `null`로 보내고(카드 t568), 이 함수는 설명 텍스트가 없을 때
+// (`null`/`undefined`/빈 문자열) 사용 큐 수만 보여준다 — 그 예시 문자열을
+// 지어내 채우지 않는다(REQ-LDBEAT-015(f)와 같은 원칙). 설명 데이터가
+// 실제로 생기면(서버가 새 프로브로 그 값을 읽게 되면) 호출부가 그 값을
+// 그대로 넘기면 된다 — 이 함수 자체는 바꿀 필요 없다.
 import type { BeatGridDrawerEntry, BeatGridDrawerSection } from "../../protocol";
 
 export function formatPresetChipTooltip(
