@@ -32,7 +32,7 @@ from server.audio.analyze import (
     _MIN_DECODED_FRACTION,
     MANUAL_BPM_FALLBACK_REASON,
     _mp3_length_is_a_bitrate_guess,
-    _tempo_from_beats,
+    _tempo_from_beat_regression,
     analysis_available,
 )
 
@@ -251,7 +251,10 @@ def detect_beat_grid(audio_bytes: bytes) -> BeatGridResult | BeatGridFailure:
     except Exception as error:  # 분석기 내부 실패도 예외로 새어 나가지 않는다
         return BeatGridFailure(f"오디오를 분석하지 못했습니다: {error}")
 
-    raw_bpm, confidence = _tempo_from_beats(numpy, beat_times)
+    # 카드 t550 — ``analyze()`` 와 같은 박 회귀 BPM. 중앙값은 hop 격자 값(참 112 →
+    # 112.347)이라 두 경로가 갈렸다. 아래 절반/두 배 검사는 t547 이후 박 시각만으로
+    # 판정하므로 BPM 숫자를 바꿔도 판정은 바뀌지 않는다.
+    raw_bpm, confidence = _tempo_from_beat_regression(numpy, beat_times)
     if raw_bpm is None:
         return BeatGridFailure("박을 찾지 못해 BPM 을 재지 못했습니다.")
 

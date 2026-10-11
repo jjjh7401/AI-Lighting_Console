@@ -385,10 +385,9 @@ def _tempo_from_beats(numpy, beat_times) -> tuple[float | None, float]:
     한 곡에 하나뿐이라 흔들림을 감출 수 있지만, 간격 분포는 흔들림을 그대로
     보여 준다 — 그리고 그 흔들림이 곧 ``bpm_confidence`` 다.
 
-    🔴 중앙값은 hop 격자에 묶여 참 112 BPM 을 112.347 로 낸다(카드 t546). ``analyze()`` 는
-    그래서 :func:`_tempo_from_beat_regression` 을 쓴다. 이 함수를 그대로 두는 이유는
-    ``bar_map.detect_beat_grid`` 다 — 그 뒤의 절반/두 배 검사(REQ-LDBARMAP-006)는 이
-    값에 맞춰져 있어, 정확한 BPM 을 주면 LOVE ATTACK 을 224 로 뒤집는다(카드 t547).
+    🔴 중앙값은 hop 격자에 묶여 참 112 BPM 을 112.347 로 낸다(카드 t546). ``analyze()`` 와
+    ``bar_map.detect_beat_grid`` 는 그래서 :func:`_tempo_from_beat_regression` 을 쓴다
+    (카드 t550). 이 함수는 회귀의 출발점(박 번호 매기기)과 확신 계산으로 남는다.
     """
     if len(beat_times) < 4:
         return None, 0.0
