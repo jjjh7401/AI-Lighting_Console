@@ -72,6 +72,7 @@ __all__ = [
     "classify_scene_cell_assignment",
     "classify_empty_preset",
     "default_beat_grid",
+    "approved_preset_numbers",
     "empty_preset_cells",
     "find_overlapping_group_tracks",
     "normalize_beat_grid_cue",
@@ -792,6 +793,36 @@ def pending_preset_approvals(grid: Mapping[str, object]) -> list[dict[str, objec
     return result
 
 
+def approved_preset_numbers(grid: Mapping[str, object]) -> list[dict[str, object]]:
+    """카드 t600 — 이미 완전한 `evidence.approval`을 가진 칸의 프리셋 번호를
+    ``pending_preset_approvals``와 같은 모양(+ ``"approved": True``)으로 돌려준다.
+
+    반영은 이 번호도 승인 대기 번호와 같은 규칙(가드 D·t592 만들기)으로 가른다 —
+    승인은 「그 번호를 쓴다」는 감독의 결정이지 「콘솔 풀에 그 slot 이 있다」는
+    사실이 아니므로, 빈 번호를 가리킨 승인된 칸도 그대로 내보내면 빈 프리셋을
+    부르는 큐가 나간다. 승인 기록 대상은 아니다(이미 승인됐다)."""
+    result: list[dict[str, object]] = []
+    for track in grid.get("tracks") or []:
+        if not isinstance(track, Mapping):
+            continue
+        group_name = track.get("group_name")
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping) or check_evidence_approval(cue) is not None:
+                continue
+            for field, value in _preset_number_fields(cue):
+                result.append(
+                    {
+                        "group_name": group_name,
+                        "bar": cue.get("bar"),
+                        "field": field,
+                        "field_label": _PENDING_PRESET_FIELD_LABELS.get(field, field),
+                        "value": value,
+                        "approved": True,
+                    }
+                )
+    return result
+
+
 #: 카드 t590(REQ-LDBEAT-015(i-1)) — 보류 표시 문구. 승인 카드와 시험이 같은 값을 읽는다.
 EMPTY_PRESET_HOLD = "빈 프리셋 — 아직 콘솔에 만들 길 없음"
 POOL_UNREAD_HOLD = "풀을 못 읽어 빈 프리셋인지 확인 못 함"
@@ -846,35 +877,25 @@ def empty_preset_cells(
     (``pool_slots``: 풀 번호 → ``{slot: 이름}``, 못 읽었으면 ``None``)로 격자의
     빈 프리셋 칸을 가른다. UI 는 이 목록만 읽는다(번호를 다시 추측하지 않는다).
 
-    승인 여부와 무관하게 칸의 모든 프리셋 번호를 본다 — 이미 승인된 칸이 빈
-    번호를 가리키면 반영 때 보류되지 않고 빈 번호를 가리킨 큐가 나가므로(가드 D
-    범위 밖) 그것도 알린다. 아직 읽지 않은 풀의 번호는 판정하지 않는다(표식 없음).
+    승인 여부와 무관하게 칸의 모든 프리셋 번호를 본다 — 카드 t600 이후 반영은
+    이미 승인된 칸의 빈 번호도 승인 대기 칸과 같은 규칙으로 보류하거나 만든다.
+    아직 읽지 않은 풀의 번호는 판정하지 않는다(표식 없음).
 
-    t592 이후 빈 **위치** 번호는 반영 때 만들어질 수 있다 — 승인 대기 칸이 가리키고
-    격자 조건(``position_grid_blocker``: 목표 좌표·영문 이름·그룹 확인)이 다
+    t592 이후 빈 **위치** 번호는 반영 때 만들어질 수 있다 — 칸(승인 여부 무관)이
+    가리키고 격자 조건(``position_grid_blocker``: 목표 좌표·영문 이름·그룹 확인)이 다
     있으면 ``kind == "create_on_apply"``(남은 조건은 반영 때 읽는 그룹 소속·장비
     좌표뿐). 격자 조건이 빠졌으면 그 사유를 ``reason``에 붙인다.
 
     칸마다 ``{group_name, bar, state, fields: [{field, field_label, value, kind,
     reason}]}``. ``kind``: ``"empty"``/``"pool_unread"``/``"create_on_apply"``.
-    ``state``: ``"create"``(빈 번호가 전부 반영 때 만들어짐) · ``"held"``(승인 대기 —
-    반영에서 송신 보류) · ``"approved"``(이미 승인 — 반영하면 빈 번호를 가리킨 큐가
-    그대로 나감)."""
+    ``state``: ``"create"``(빈 번호가 전부 반영 때 만들어짐) · ``"held"``(반영에서
+    송신 보류 — 승인 대기 칸이든 승인된 칸이든, 카드 t600)."""
     # 순환 import 회피(그 모듈이 이 모듈을 import 한다).
     from server.design.beat_grid_position_presets import (
         POSITION_PRESET_POOL,
         position_grid_blocker,
     )
 
-    pending_position_numbers = {
-        str(value)
-        for track in grid.get("tracks") or []
-        if isinstance(track, Mapping)
-        for cue in track.get("cues") or []
-        if isinstance(cue, Mapping)
-        for field, value in pending_preset_fields(cue)
-        if field == "position_preset_no"
-    }
     cells: list[dict[str, object]] = []
     for track in grid.get("tracks") or []:
         if not isinstance(track, Mapping):
@@ -892,7 +913,6 @@ def empty_preset_cells(
                     kind == "empty"
                     and field == "position_preset_no"
                     and preset_pool_no(value) == POSITION_PRESET_POOL
-                    and str(value) in pending_position_numbers
                 ):
                     blocker = position_grid_blocker(grid, str(value))
                     if blocker is None:
@@ -910,12 +930,9 @@ def empty_preset_cells(
                     }
                 )
             if fields:
-                if all(f["kind"] == "create_on_apply" for f in fields):
-                    state = "create"
-                elif check_evidence_approval(cue) is not None:
-                    state = "held"
-                else:
-                    state = "approved"
+                # 카드 t600 — 승인된 칸도 반영 때 같은 규칙으로 가르므로 「approved
+                # (그대로 나감)」 상태는 없다.
+                state = "create" if all(f["kind"] == "create_on_apply" for f in fields) else "held"
                 cells.append(
                     {
                         "group_name": track.get("group_name"),

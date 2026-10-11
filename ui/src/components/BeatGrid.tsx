@@ -790,8 +790,7 @@ export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
 /** 배지·편집 칸에 붙는 뒷말 — 반영에서 무슨 일이 생기는지(`state`). */
 function emptyPresetConsequence(cell: BeatGridEmptyPresetCell): string {
   if (cell.state === "create") return "「⇪ 콘솔에 반영」 승인 때 콘솔에 만들어 함께 보냅니다";
-  if (cell.state === "held") return "「⇪ 콘솔에 반영」에서 이 칸은 송신 보류됩니다";
-  return "이미 승인된 칸이라 반영하면 빈 번호를 가리킨 큐가 그대로 나갑니다";
+  return "「⇪ 콘솔에 반영」에서 이 칸은 송신 보류됩니다";
 }
 
 export function emptyPresetTitle(cell: BeatGridEmptyPresetCell): string {

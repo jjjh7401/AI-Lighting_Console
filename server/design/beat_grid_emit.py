@@ -556,6 +556,7 @@ def emit_beat_grid_write_bundle(
     probe_results: Mapping[int, str],
     recorded_cue_numbers: Mapping[str, Mapping[int, int]] | None = None,
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
+    held_cells: Mapping[tuple[str, int], str] | None = None,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
@@ -572,7 +573,11 @@ def emit_beat_grid_write_bundle(
     값이다(이 모듈은 번호를 지어내지 않는다). ``probe_results``는
     ``server.design.beat_grid_probes.read_m1_probe_results*``가 돌려주는
     것을 그대로 받는다(REQ-LDBEAT-003(b) — 이 모듈은 progress.md를 직접
-    읽지 않는다, 호출자가 읽어 넘긴다)."""
+    읽지 않는다, 호출자가 읽어 넘긴다).
+
+    카드 t600 — ``held_cells``((트랙 이름, 마디) -> 사유)는 호출자가 콘솔 풀을
+    읽어 송신 보류로 가른 칸이다(빈 프리셋·풀 못 읽음, REQ-LDBEAT-015(i-1)). 승인된
+    칸이라도 커맨드 0줄로 막고 큐 번호를 쓰지 않는다(거절된 칸과 같다)."""
     if (
         timing is None
         or timing.bpm is None
@@ -675,6 +680,10 @@ def emit_beat_grid_write_bundle(
             # 공백인 칸은 새 번호를 쓰지 않는다(아래 조건부 증가). 기록된
             # 마디는 기록된 번호를 그대로 쓴다(카드 t572).
             bar = int(cue["bar"])  # type: ignore[index]
+            hold_reason = (held_cells or {}).get((group_name, bar))
+            if hold_reason is not None:
+                cue_results.append(CueEmitResult(bar=bar, commands=(), blocked_reason=hold_reason))
+                continue
             recorded_number = recorded.get(bar)
             result = _emit_cue(
                 cue,
