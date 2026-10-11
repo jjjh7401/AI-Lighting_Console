@@ -1,0 +1,5 @@
+ Test Files  1 failed (1)
+      Tests  7 failed | 140 passed (147)
+   Start at  17:53:34
+   Duration  383ms (transform 135ms, setup 0ms, collect 174ms, tests 17ms, environment 0ms, prepare 30ms)
+
