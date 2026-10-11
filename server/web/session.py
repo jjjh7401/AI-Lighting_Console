@@ -68,6 +68,7 @@ from server.design.beat_grid_position_presets import (
     PositionPresetPlan,
     plan_position_preset_creation,
     position_preset_target,
+    referencing_tracks,
 )
 from server.design.beat_grid_presets import (
     build_preset_drawer,
@@ -10577,7 +10578,14 @@ class ChatSession:
         ]
         if not candidates:
             return PositionPresetPlan(held=list(held))
-        group_names = sorted({str(entry.get("group_name")) for entry in candidates})
+        # 그 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 읽는다.
+        group_names = sorted(
+            {
+                str(track.get("group_name"))
+                for entry in candidates
+                for track in referencing_tracks(grid, str(entry.get("value")))
+            }
+        )
         return plan_position_preset_creation(
             grid,
             held,

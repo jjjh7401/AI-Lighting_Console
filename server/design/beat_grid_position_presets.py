@@ -43,6 +43,7 @@ __all__ = [
     "plan_position_preset_creation",
     "position_preset_target",
     "record_position_preset_target",
+    "referencing_tracks",
 ]
 
 #: 보류 사유 — 승인 카드와 시험이 같은 값을 읽는다(t590 문구와 나란히).
@@ -146,22 +147,19 @@ def _preset_label(grid: Mapping[str, object], preset_no: str) -> str | None:
     return value.strip()
 
 
-def _referencing_tracks(
-    grid: Mapping[str, object], preset_no: str, cells: set[tuple[object, object]]
-) -> list[Mapping[str, object]]:
-    """``cells``(보류 칸) 가운데 ``preset_no``를 위치 번호로 가리키는 칸의 트랙."""
+def referencing_tracks(grid: Mapping[str, object], preset_no: str) -> list[Mapping[str, object]]:
+    """``preset_no``를 위치 번호로 가리키는 칸이 하나라도 있는 트랙 **전부** —
+    이번 승인 대기 칸만이 아니다. 이미 승인된 칸의 트랙 장비도 같은 프리셋을
+    부르므로, 빠지면 그 큐에서 안 움직인다(리드 지적, #634)."""
     result: list[Mapping[str, object]] = []
     for track in grid.get("tracks") or []:
         if not isinstance(track, Mapping):
             continue
-        for cue in track.get("cues") or []:
-            if (
-                isinstance(cue, Mapping)
-                and (track.get("group_name"), cue.get("bar")) in cells
-                and cue.get(_POSITION_FIELD) == preset_no
-            ):
-                result.append(track)
-                break
+        if any(
+            isinstance(cue, Mapping) and cue.get(_POSITION_FIELD) == preset_no
+            for cue in track.get("cues") or []
+        ):
+            result.append(track)
     return result
 
 
@@ -239,7 +237,7 @@ def plan_position_preset_creation(
     또는 「같은 칸이라 함께 보류」(slot 이 있는 번호)일 때만 그 칸 전체가
     승인 기록 대상으로 돌아간다. 풀을 못 읽은 항목·다른 종류의 빈 번호가 하나라도
     있으면 칸 전체가 보류로 남고, 그 칸의 위치 번호는 만들지 않는다.
-    같은 번호를 여러 트랙이 가리키면 그 트랙 소속 전부를 한 프리셋에 담는다 —
+    같은 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 한 프리셋에 담는다 —
     그중 하나라도 빠지면(그룹 미확인 등) 그 번호를 가리키는 칸 전부가 보류다."""
     plan = PositionPresetPlan()
     if not held:
@@ -256,7 +254,6 @@ def plan_position_preset_creation(
         )
 
     # 1) 번호마다 한 번 계획한다 — 후보 항목이 있는 칸 전부의 트랙을 모아서.
-    candidate_cells = {key for key, entries in cells.items() if any(map(_candidate, entries))}
     numbers = sorted(
         {str(e.get("value")) for entries in cells.values() for e in entries if _candidate(e)}
     )
@@ -264,7 +261,7 @@ def plan_position_preset_creation(
         number: _plan_one(
             grid,
             number,
-            _referencing_tracks(grid, number, candidate_cells),
+            referencing_tracks(grid, number),
             members=members,
             frames=frames,
         )

@@ -293,6 +293,57 @@ class TestCellScope:
         assert plan.creations == {}
         assert {e["hold_reason"] for e in plan.held} == {POSITION_GROUP_UNCONFIRMED}
 
+    @staticmethod
+    def _grid_with_approved_side(side_confirmed: bool) -> dict:
+        approved = {"by": "supervisor", "date": "2026-10-11", "source": "x"}
+        return {
+            "tracks": [
+                {
+                    "group_name": "BACK",
+                    "group_no": 7,
+                    "group_no_confirmed": True,
+                    "cues": [{"bar": 1, "position_preset_no": "2.71"}],
+                },
+                {
+                    "group_name": "SIDE",
+                    "group_no": 8 if side_confirmed else None,
+                    "group_no_confirmed": side_confirmed,
+                    "cues": [
+                        {
+                            "bar": 2,
+                            "position_preset_no": "2.71",
+                            "evidence": {"grade": None, "approval": approved},
+                        }
+                    ],
+                },
+            ],
+            **_RECIPE,
+        }
+
+    def test_already_approved_cells_of_the_same_number_are_included(self) -> None:
+        # 리드 지적(#634) — 이번 승인 대기 칸(BACK)만 모으면 이미 승인된 SIDE 칸의
+        # 장비가 프리셋에 빠져 그 큐에서 안 움직인다.
+        frames = PointingFrames(
+            positions={**_FRAMES.positions, 201: (0.0, 3.0, 5.0)}, rotz={}, rotation_skipped=()
+        )
+        plan = _plan(
+            self._grid_with_approved_side(True),
+            [_held("2.71")],
+            members={"BACK": [101, 102], "SIDE": [201]},
+            frames=frames,
+        )
+        fixtures = [line.split(" ;")[0] for line in plan.creations["2.71"][:3]]
+        assert fixtures == ["Fixture 101", "Fixture 102", "Fixture 201"]
+
+    def test_unconfirmed_track_of_an_approved_cell_holds_the_number(self) -> None:
+        plan = _plan(
+            self._grid_with_approved_side(False),
+            [_held("2.71")],
+            members={"BACK": [101, 102], "SIDE": [201]},
+        )
+        assert plan.creations == {}
+        assert [e["hold_reason"] for e in plan.held] == [POSITION_GROUP_UNCONFIRMED]
+
     def test_non_position_empty_number_is_untouched(self) -> None:
         cue = {"bar": 1, "effect_preset_no": "4.99", "effect_kind": "color", "evidence": None}
         held = [_held("4.99", field="effect_preset_no")]
