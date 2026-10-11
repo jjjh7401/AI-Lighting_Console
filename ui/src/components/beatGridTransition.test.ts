@@ -167,6 +167,15 @@ describe("transitionWarnings — [제안] 경고(규칙서 §2.3 규칙 2)", () 
     const next = cue(4, { color_preset_no: "4.2", position_preset_no: "2.1", entry: { fade_bars: 0, mib_mode: null } });
     expect(transitionWarnings(lit, next, null)).toEqual([]);
   });
+  it("카드 t567 — 강조(★) 마디에선 켜진 채 위치가 끊어 바뀌어도 경고하지 않는다(시안 warnOf, 히트는 끊기)", () => {
+    const next = cue(4, { position_preset_no: "2.2", entry: { fade_bars: 0, mib_mode: null } });
+    expect(transitionWarnings(lit, next, [], [4])).toEqual([]);
+    expect(transitionWarnings(lit, next, [], [8])).toContain("켜진 채 위치가 끊어 바뀜");
+  });
+  it("카드 t567 — ★ 예외는 위치 경고에만: ★ 마디라도 구간 경계가 아닌 색 끊김은 경고", () => {
+    const next = cue(4, { color_preset_no: "4.2", position_preset_no: "2.1", entry: { fade_bars: 0, mib_mode: null } });
+    expect(transitionWarnings(lit, next, [0, 8], [4])).toContain("구간 경계가 아닌데 색이 끊어 바뀜");
+  });
 });
 
 describe("jointMarker — 이음매 표시(M · ! · ◢)", () => {
@@ -190,6 +199,12 @@ describe("jointMarker — 이음매 표시(M · ! · ◢)", () => {
   });
   it("아무것도 없으면 빈 이음매", () => {
     expect(jointMarker(cue(0), cue(4), null).glyph).toBe("");
+  });
+  it("카드 t567 — ★ 마디의 켜진 채 위치 끊김은 ! 가 아니다", () => {
+    const lit = cue(0, { position_preset_no: "2.1" });
+    const m = jointMarker(lit, cue(4, { position_preset_no: "2.2", entry: { fade_bars: 0, mib_mode: null } }), null, null, null, [4]);
+    expect(m.glyph).toBe("");
+    expect(m.classes).not.toContain("is-warn");
   });
 });
 

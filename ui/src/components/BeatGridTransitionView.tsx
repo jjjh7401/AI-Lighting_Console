@@ -30,6 +30,8 @@ export interface BeatGridTransitionViewProps {
   secondsPerBar: number | null | undefined;
   beatsPerBar: number | null;
   sectionStartBars: readonly number[] | null;
+  /** 카드 t567 — 강조(★) 마디(곡 데이터). 위치 끊김 경고의 예외. */
+  accentBars?: readonly number[];
   onEditRequest?: (request: { bar: number; target: string; changes: Record<string, unknown> }) => void;
 }
 
@@ -40,6 +42,7 @@ export function BeatGridTransitionView({
   secondsPerBar,
   beatsPerBar,
   sectionStartBars,
+  accentBars = [],
   onEditRequest,
 }: BeatGridTransitionViewProps) {
   const storedBeats = cue.entry.fade_beats ?? null;
@@ -49,7 +52,7 @@ export function BeatGridTransitionView({
   const [fadeUnit, setFadeUnit] = useState<"bar" | "beat">(storedBeats !== null ? "beat" : "bar");
   const [fadeError, setFadeError] = useState<string | null>(null);
   const mib = transitionMib(prevCue, cue);
-  const warnings = transitionWarnings(prevCue, cue, sectionStartBars);
+  const warnings = transitionWarnings(prevCue, cue, sectionStartBars, accentBars);
   const triggerAt = triggerSeconds(cue, secondsPerBar, beatsPerBar);
   const editable = !!onEditRequest;
 
