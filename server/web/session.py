@@ -26,6 +26,7 @@ import copy
 import hashlib
 import inspect
 import json
+import math
 import os
 import re
 import tempfile
@@ -80,6 +81,7 @@ from server.design.beat_grid_position_presets import (
     plan_cells,
     position_preset_outcomes,
     position_preset_target,
+    record_position_preset_target,
     referencing_tracks,
 )
 from server.design.beat_grid_presets import (
@@ -87,6 +89,7 @@ from server.design.beat_grid_presets import (
     app_preset_label,
     build_preset_drawer,
     effect_kind_to_pool_name,
+    first_free_base_position_number,
     first_free_preset_number,
     pool_name_to_effect_kind,
     read_named_pool,
@@ -9565,9 +9568,40 @@ class ChatSession:
         "effect": "효과 프리셋",
     }
 
-    #: 효과 풀 번호대가 아예 없는 base 풀(REQ-LDBEAT-015(b) — base 위치
-    #: 2.41~·base 색 4.21~·디머 프리셋 풀은 preset_pools.yaml 밖이다).
-    _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset", "position", "color"})
+    #: 효과 풀 번호대가 아예 없는 base 풀(REQ-LDBEAT-015(b) — base 색
+    #: 4.21~·디머 프리셋 풀은 preset_pools.yaml 밖이다). base 위치
+    #: 2.41~ 는 카드 t599(REQ-LDBEAT-015(i-3))부터 "위치" 필드가 지원한다
+    #: — 효과 번호대가 없는 것은 같지만, 콘솔이 실제로 쥔 빈 슬롯으로
+    #: 배정한다(`first_free_base_position_number`).
+    _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset", "color"})
+
+    @staticmethod
+    def _validate_new_preset_aim(
+        aim: object,
+    ) -> tuple[tuple[float, float, float] | None, str | None]:
+        """카드 t599 — "위치" 필드가 받는 목표 좌표(x·y·z, 미터) 검증.
+        프로토콜 파서(`parse_client_message`)가 이미 한 번 같은 모양을
+        걸렀지만, 이 메서드는 파서 없이도 직접 불릴 수 있어(시험 관행,
+        `beat_grid_new_preset`을 직접 부르는 기존 호출) 여기서 다시
+        본다 — 2중 방어, 새 규칙이 아니라 같은 검증의 재확인이다.
+
+        좌표계는 `server/spatial/pointing.py` 모듈 설명이 실측으로 정한
+        그 틀 그대로다 — Pan0/Tilt0 은 무대 -Z(바로 아래)를 보고, +Z 가
+        위, +Tilt 가 무대 +Y(뒤)로 기울인다. 이 함수는 그 틀을 바꾸지
+        않고 x·y·z 세 수가 유한한지만 본다.
+
+        반환: ``(좌표 세 값 또는 None, 거절 사유 또는 None)``."""
+        if not isinstance(aim, Mapping):
+            return None, "위치 프리셋은 목표 좌표(x·y·z, 미터)가 필요합니다 — 받지 못했습니다."
+        values: list[float] = []
+        for axis in ("x", "y", "z"):
+            value = aim.get(axis)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return None, f"목표 좌표 '{axis}'가 수가 아닙니다."
+            if not math.isfinite(value):
+                return None, f"목표 좌표 '{axis}'가 유한한 수가 아닙니다."
+            values.append(float(value))
+        return (values[0], values[1], values[2]), None
 
     def beat_grid_new_preset(
         self,
@@ -9576,6 +9610,7 @@ class ChatSession:
         field: str | None,
         label: str | None,
         description: str | None,
+        aim: Mapping[str, object] | None = None,
     ) -> dict:
         """카드 t589(REQ-LDBEAT-015(h-1)~(h-6) 계속) — 영문 콘솔 이름·한국어
         설명을 받아 `preset_pools.yaml`의 효과 풀 번호대에서(격자 참조·
@@ -9585,9 +9620,11 @@ class ChatSession:
         똑같이 「⇪ 콘솔에 반영」 승인 전까지 승인 대기로 남는다(h-1) —
         이 메서드 자신은 콘솔에 **읽기**(점유 확인) 말고는 닿지 않는다.
 
-        base 위치/색/디머 프리셋 풀(효과 번호대가 아예 없는 풀)은 거절한다
-        — preset_pools.yaml 밖에서 번호대를 지어내지 않는다(REQ-LDBEAT-
-        015(b))."""
+        base 색/디머 프리셋 풀(효과 번호대가 아예 없는 풀)은 거절한다 —
+        preset_pools.yaml 밖에서 번호대를 지어내지 않는다(REQ-LDBEAT-
+        015(b)). "위치"는 카드 t599부터 같은 base 풀이지만 지원한다 —
+        목표 좌표(``aim``)를 함께 받아 ``_beat_grid_new_position_preset``
+        으로 넘긴다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -9613,6 +9650,18 @@ class ChatSession:
                 "신규 프리셋 설명이 비어 있습니다 — 무엇에 쓸지 적어 주세요."
             )
 
+        # 카드 t599(REQ-LDBEAT-015(i-3)) — "위치"만 목표 좌표를 받는다.
+        aim_target: tuple[float, float, float] | None = None
+        if field == "position":
+            aim_target, aim_error = self._validate_new_preset_aim(aim)
+            if aim_error is not None:
+                return self._beat_grid_rejection(aim_error)
+        elif aim is not None:
+            return self._beat_grid_rejection(
+                f"'{field_label}'은(는) 목표 좌표(aim)를 받지 않습니다 — "
+                "위치 프리셋에만 쓰는 입력입니다."
+            )
+
         if field in self._NEW_PRESET_NO_BAND_FIELDS:
             return self._beat_grid_rejection(
                 f"'{field_label}'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — "
@@ -9622,6 +9671,19 @@ class ChatSession:
 
         grid = self._beat_grid_view(timeline)
         tracks = list(grid.get("tracks") or [])
+
+        if field == "position":
+            assert aim_target is not None  # aim_error 가 None 이면 좌표도 있다.
+            return self._beat_grid_new_position_preset(
+                store,
+                timeline,
+                grid,
+                bar=bar,
+                target=target,
+                label=label,
+                description=description,
+                aim=aim_target,
+            )
 
         if field == "dimmer_effect":
             kind = "dimmer"
@@ -9717,6 +9779,89 @@ class ChatSession:
         ]
         if assign_warning:
             report_lines.append(assign_warning)
+        report_lines.extend(line for line in report if line.startswith("⚠"))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 새 프리셋",
+            text=(f"{' · '.join(report_lines)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def _beat_grid_new_position_preset(
+        self,
+        store: SongTimelineStore,
+        timeline: Mapping[str, object],
+        grid: Mapping[str, object],
+        *,
+        bar: int,
+        target: str,
+        label: str,
+        description: str,
+        aim: tuple[float, float, float],
+    ) -> dict:
+        """카드 t599(REQ-LDBEAT-015(i-3)) — "위치" 필드의 「＋ 새 프리셋
+        만들기」. `beat_grid_new_preset`의 "효과"/"디머 효과" 분기와 같은
+        길(`apply_beat_grid_edit`, 승인 대기로 남김)이지만, 번호는
+        `first_free_preset_number`(효과 풀)가 아니라
+        `first_free_base_position_number`(콘솔이 실제로 쥔 빈 슬롯,
+        REQ-LDBEAT-015(b) base 풀)로 고른다. 목표 좌표(``aim``)는
+        칸이 아니라 곡별 격자 ``preset_targets``에 남아(카드 t592의
+        ``record_position_preset_target``과 같은 저장 자리) 반영 때
+        `plan_position_preset_creation`이 그 번호를 조준 명령으로
+        환산한다 — 이 메서드 자신은 콘솔에 **읽기**(점유 확인) 말고는
+        닿지 않는다."""
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        result = read_named_pool(query, pool_root, "Position", probe_prefix="beat-grid-new-preset")
+        if result is not None:
+            # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다(효과 분기와 같은 관행).
+            self._beat_grid_pool_slots[result[0]] = dict(result[1])
+
+        policy = load_preset_pool_policy()
+        preset_no, reject_reason = first_free_base_position_number(
+            policy=policy, grid=grid, console_children=result
+        )
+        if reject_reason is not None:
+            return self._beat_grid_rejection(reject_reason)
+        assert preset_no is not None  # reject_reason 이 None 이면 번호도 있다.
+
+        changes: dict[str, object] = {
+            "position_preset_no": preset_no,
+            "new_preset_label": label,
+        }
+        beats_per_bar = beats_per_bar_from_timeline(timeline)
+        try:
+            updated_grid, report = apply_beat_grid_edit(
+                grid, bar=bar, target=target, changes=changes, beats_per_bar=beats_per_bar
+            )
+        except BeatGridEditError as error:
+            return self._beat_grid_rejection(str(error))
+
+        # REQ-LDBEAT-015(h) 이름·설명과 같은 저장 모양 + 카드 t592 목표 좌표.
+        updated_grid = record_app_preset_description(updated_grid, preset_no, description.strip())
+        updated_grid = record_app_preset_label(updated_grid, preset_no, label)
+        updated_grid = record_position_preset_target(updated_grid, preset_no, aim)
+
+        self._draft_history.record(timeline)
+        updated_timeline = dict(timeline)
+        updated_timeline["beat_grid"] = updated_grid
+        updated_timeline = self._draft_badge(
+            updated_timeline, depth=self._draft_history.depth, report=report
+        )
+        store.latest = updated_timeline
+        self._send(
+            song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
+        )
+        # 카드 t563 과 같은 계약 — 편집 하나가 성공할 때마다 대기 수 배지를 다시 보낸다.
+        self._beat_grid_send_status(last_action="edit", ok=True)
+
+        report_lines = [
+            f"새 위치 프리셋 {preset_no} '{label}' → 목표 "
+            f"({aim[0]:g}, {aim[1]:g}, {aim[2]:g}) m 배정 — 승인 대기"
+            "(「⇪ 콘솔에 반영」 때 콘솔에 만들고, 못 만들면 승인 카드에 보류 사유가 나옴)"
+        ]
         report_lines.extend(line for line in report if line.startswith("⚠"))
         event = chat_response_event(
             status="ok",

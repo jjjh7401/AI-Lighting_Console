@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 
 from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
@@ -465,6 +466,7 @@ def parse_client_message(raw: str) -> dict:
         field = message.get("field")
         label = message.get("label")
         description = message.get("description")
+        aim = message.get("aim")
         if not isinstance(bar, int) or isinstance(bar, bool):
             raise ProtocolError("beat_grid_new_preset.bar must be an integer")
         if not isinstance(target, str) or not target.strip():
@@ -477,7 +479,22 @@ def parse_client_message(raw: str) -> dict:
             raise ProtocolError("beat_grid_new_preset.label must be a non-empty string")
         if not isinstance(description, str) or not description.strip():
             raise ProtocolError("beat_grid_new_preset.description must be a non-empty string")
-        return {
+        # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"만 목표 좌표(x·y·z,
+        # 미터, `server/spatial/pointing.py` 틀)를 **필수**로 받는다. 다른
+        # 네 필드는 이 입력을 모른다 — 있으면 모양이 틀렸다고 거절한다
+        # (엄격 유지, 조용히 무시하지 않는다).
+        if field == "position":
+            if not isinstance(aim, dict):
+                raise ProtocolError("beat_grid_new_preset.aim is required when field is 'position'")
+            for axis in ("x", "y", "z"):
+                value = aim.get(axis)
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ProtocolError(f"beat_grid_new_preset.aim.{axis} must be a finite number")
+                if not math.isfinite(value):
+                    raise ProtocolError(f"beat_grid_new_preset.aim.{axis} must be a finite number")
+        elif aim is not None:
+            raise ProtocolError("beat_grid_new_preset.aim is only valid when field is 'position'")
+        parsed: dict[str, object] = {
             "v": PROTOCOL_VERSION,
             "type": "beat_grid_new_preset",
             "bar": bar,
@@ -486,6 +503,9 @@ def parse_client_message(raw: str) -> dict:
             "label": label,
             "description": description,
         }
+        if aim is not None:
+            parsed["aim"] = aim
+        return parsed
 
     if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):
         suggestion_id = message.get("suggestion_id")
