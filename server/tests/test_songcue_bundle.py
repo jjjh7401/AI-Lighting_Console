@@ -42,6 +42,7 @@ from server.looks.songcue import (
 )
 from server.orchestrator.ports import ExecutionResult
 from server.tests.test_looks_resolver import _code_string_constants
+from server.tests.test_overlap_preserve import _T601_LOOP_ADDED_LINES
 
 _SONGCUE_MODULE = Path("server/looks/songcue.py")
 #: 카드 t363 이 꼬리에 ``CueFade <초>`` 를 **선택적으로** 붙였다(정본 §9). 패턴을 넓히지
@@ -518,6 +519,14 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     477,
     481,
     483,
+    # 카드 t601 (중복 제거를 앞선 호출 기준으로, 2026-10-12) 갱신: 93 -> **95** hunks.
+    # 새 시작점 둘 — 525(실행 고리 앞 주석+대입 9줄 → 10줄)와 561(고리 안 ``add`` 한 줄
+    # 삭제). 사라진 시작점 **0**. 둘 다 보호 구간(524..569)과 **겹친다** — 이 카드의
+    # 목적이 그 고리를 고치는 것이다. 겹침 단언을 없애지 않고 두 헝크를 글자까지 고정한
+    # 허용분(`test_overlap_preserve._T601_*`)으로 좁힌다. 커밋 **뒤에** 잰 값이다
+    # (`.moai/reports/t601/measure_hunks.out.txt`).
+    525,
+    561,
     591,
     593,
     # 카드 t480 (업로드 길을 대화 길 조립기로 전환, 2026-09-28) 갱신: 82 -> **83** hunks.
@@ -878,8 +887,20 @@ def test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state():
         if _overlaps(start, count, protected_start, protected_end)
     ]
     # 카드 t476 허용분 하나만 겹칠 수 있다 — 자리(237 뒤 순수 삽입)와 글자가 둘 다 맞아야 한다.
-    assert crossings == [(_T476_GRANTED_OLD_START, 0)]
+    # 카드 t601 허용분 둘(중복 제거 고리) — 글자는 test_overlap_preserve 의 고정값과 같아야 한다.
+    assert crossings == [
+        (_T476_GRANTED_OLD_START, 0),
+        (_T601_LOOP_OLD_START, 9),
+        (_T601_ADD_OLD_START, 1),
+    ]
     assert _added_lines_of_hunk(_T476_GRANTED_OLD_START) == [_T476_GRANTED_TUPLE_LINE]
+    assert _added_lines_of_hunk(_T601_LOOP_OLD_START) == list(_T601_LOOP_ADDED_LINES)
+    assert _added_lines_of_hunk(_T601_ADD_OLD_START) == []
+
+
+#: 카드 t601 — 보호 구간(524..569, 이 시험의 기준 좌표) 안 허용분 두 헝크의 옛 시작점.
+_T601_LOOP_OLD_START = 525
+_T601_ADD_OLD_START = 561
 
 
 #: 카드 t476 — 보호 구간(면제 튜플) 안에 허락된 유일한 삽입. 기존 세 항목은 바이트 그대로다.

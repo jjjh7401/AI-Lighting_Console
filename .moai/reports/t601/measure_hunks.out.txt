@@ -1,0 +1,13 @@
+overlap base: 95687a0e0eba90b325daf76efbd0ac197e69e2fc
+overlap crossings: [(250, 0, (247, 251)), (538, 9, (537, 582)), (574, 1, (537, 582))]
+ added@ 250 ['    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),  # selected value line (t476)']
+ added@ 538 ['        # @MX:WARN: [AUTO] 이 집합에 무엇을 넣느냐가 「조용히 건너뜀」의 범위다.', '        # @MX:REASON: REQ-MVP-033 의 중복 제거는 **앞선 호출**(자가 수정 재전송)에서', '        #   이미 실행된 줄만 다시 보내지 않는 장치다 — ``context.executed_ok`` 그대로.', '        #   카드 M6c-6(82b83abc)이 같은 묶음 안 앞줄까지 넣자, 한 묶음에서 같은 글자가', '        #   다시 나와야 하는 줄(효과 묶음의 ``Step 2``·``ChangeDestination Root``, 같은', '        #   장비 그룹의 선택 체인, 두 큐가 같은 값을 쓰는 값 줄)이 skipped_already_executed', '        #   로 빠졌고 ``Store`` 는 그대로 ok 라 빈 효과·빈 그룹·틀린 값이 저장됐다', '        #   (4dd48e8f·db555da9·카드 t476 실기 107줄 승인/75줄 송신·카드 t593).', '        #   묶음은 승인된 그대로가 송신된다 — 묶음 안 반복은 작성자의 뜻이다(카드 t601).', '        already_executed = context.executed_ok']
+ added@ 574 []
+songcue base: 38a6e7e2157a4862721fcd868056e0dbbb09c4c0
+songcue hunk count: 95 expected: 93
+new starts: [525, 561]
+gone starts: []
+songcue crossings: [(237, 0), (525, 9), (561, 1)]
+ added@ 237 ['    re.compile(_SELECTED_VALUE_LINE, re.IGNORECASE),  # selected value line (t476)']
+ added@ 525 ['        # @MX:WARN: [AUTO] 이 집합에 무엇을 넣느냐가 「조용히 건너뜀」의 범위다.', '        # @MX:REASON: REQ-MVP-033 의 중복 제거는 **앞선 호출**(자가 수정 재전송)에서', '        #   이미 실행된 줄만 다시 보내지 않는 장치다 — ``context.executed_ok`` 그대로.', '        #   카드 M6c-6(82b83abc)이 같은 묶음 안 앞줄까지 넣자, 한 묶음에서 같은 글자가', '        #   다시 나와야 하는 줄(효과 묶음의 ``Step 2``·``ChangeDestination Root``, 같은', '        #   장비 그룹의 선택 체인, 두 큐가 같은 값을 쓰는 값 줄)이 skipped_already_executed', '        #   로 빠졌고 ``Store`` 는 그대로 ok 라 빈 효과·빈 그룹·틀린 값이 저장됐다', '        #   (4dd48e8f·db555da9·카드 t476 실기 107줄 승인/75줄 송신·카드 t593).', '        #   묶음은 승인된 그대로가 송신된다 — 묶음 안 반복은 작성자의 뜻이다(카드 t601).', '        already_executed = context.executed_ok']
+ added@ 561 []
