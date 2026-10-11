@@ -64,6 +64,7 @@ from server.design.beat_grid_emit import (
     emit_beat_grid_write_bundle,
 )
 from server.design.beat_grid_presets import (
+    APP_PRESET_NOT_ON_CONSOLE_WARNING,
     app_preset_description,
     app_preset_label,
     build_preset_drawer,
@@ -10008,9 +10009,9 @@ class ChatSession:
                     app_preset_label(grid, str(entry["value"])) is not None
                     for entry in pending_before
                 ):
-                    risk_reason += (
-                        " · 콘솔 프리셋 생성은 이 반영에 포함되지 않습니다(이름·설명은 앱 초안에만)"
-                    )
+                    # 리드 판단(카드 t589) — 승인하면 불이 바뀐다고 오해하지 않게
+                    # 눈에 띄게 적는다(콘솔 프리셋 생성은 카드 t590 몫).
+                    risk_reason += f" · {APP_PRESET_NOT_ON_CONSOLE_WARNING}"
             risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(

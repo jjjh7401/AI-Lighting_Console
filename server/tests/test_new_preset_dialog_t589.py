@@ -462,8 +462,10 @@ class TestApprovalCardShowsLabelAndDescription:
         assert "새로 만드는 프리셋 1개" in joined
         assert "2.61" in joined
         assert "'LA Wave' — 따뜻한 흰색" in joined
-        assert "콘솔 프리셋 생성은 이 반영에 포함되지 않습니다" in joined
-        assert "이름·설명은 앱 초안에만" in joined
+        # 리드 판단 문구 그대로(상수를 거치지 않고 글자로 단언한다).
+        assert (
+            "⚠ 콘솔에는 아직 만들어지지 않음 — 이 번호를 가리키는 큐는 빈 프리셋을 부름" in joined
+        )
 
     def test_a_directly_picked_new_number_without_a_label_is_not_mislabeled(self, tmp_path) -> None:
         # t577 류의 "번호를 직접 고르는" 승인 대기 — `app_preset_label`이
@@ -483,7 +485,7 @@ class TestApprovalCardShowsLabelAndDescription:
         joined = " ".join(risk_reasons)
         assert "새로 만드는 프리셋 1개" in joined
         assert "2.65" in joined
-        assert "콘솔 프리셋 생성은 이 반영에 포함되지 않습니다" not in joined
+        assert "콘솔에는 아직 만들어지지 않음" not in joined
 
 
 # == ③ 프로토콜 파서 =========================================================
