@@ -395,6 +395,9 @@ export default function App() {
     sendBeatGridEdit,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
+    sendBeatGridSuggestionApply,
+    sendBeatGridSuggestionReject,
+    sendBeatGridDrawerRequest,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,
@@ -1131,6 +1134,11 @@ export default function App() {
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
             onSentenceEditRequest={sendBeatGridEditSentence}
             onSuggestionRequest={sendBeatGridSuggest}
+            pendingSuggestion={state.pendingBeatGridSuggestion}
+            onSuggestionAccept={sendBeatGridSuggestionApply}
+            onSuggestionReject={sendBeatGridSuggestionReject}
+            drawerSections={state.beatGridDrawer}
+            onDrawerRequest={sendBeatGridDrawerRequest}
           />
         </div>
       ) : runbookMode ? (

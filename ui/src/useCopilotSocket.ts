@@ -5,9 +5,12 @@ import { backendBase } from "./launchContext";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBeatGridDrawerRequest,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
   buildBeatGridSuggest,
+  buildBeatGridSuggestionApply,
+  buildBeatGridSuggestionReject,
   buildChat,
   buildCueMonitorRequest,
   buildDashCatalogRequest,
@@ -201,6 +204,11 @@ export interface CopilotSocket {
   sendBeatGridEditSentence: (sentence: string) => void;
   /** 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. */
   sendBeatGridSuggest: (bar: number, target: string) => void;
+  /** 카드 t551 후속(지시 1항) — mockup aOk/aNo. */
+  sendBeatGridSuggestionApply: (suggestionId: string) => void;
+  sendBeatGridSuggestionReject: (suggestionId: string) => void;
+  /** 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍). */
+  sendBeatGridDrawerRequest: () => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
@@ -375,6 +383,20 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (bar: number, target: string) => send(buildBeatGridSuggest(bar, target)),
     [send],
   );
+  // 카드 t551 후속(지시 1항) — mockup aOk/aNo 핸들러.
+  const sendBeatGridSuggestionApply = useCallback(
+    (suggestionId: string) => send(buildBeatGridSuggestionApply(suggestionId)),
+    [send],
+  );
+  const sendBeatGridSuggestionReject = useCallback(
+    (suggestionId: string) => send(buildBeatGridSuggestionReject(suggestionId)),
+    [send],
+  );
+  // 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍 열기).
+  const sendBeatGridDrawerRequest = useCallback(
+    () => send(buildBeatGridDrawerRequest()),
+    [send],
+  );
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -467,6 +489,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendBeatGridEdit,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
+    sendBeatGridSuggestionApply,
+    sendBeatGridSuggestionReject,
+    sendBeatGridDrawerRequest,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,

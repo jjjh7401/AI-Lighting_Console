@@ -11,18 +11,25 @@
 // 컴포넌트 자신이 여전히 아무것도 쓰지 않는다 — 편집 콜백(`onEditRequest`/
 // `onSentenceEditRequest`/`onSuggestionRequest`)이 서버의 새 편집 연산
 // (`apply_beat_grid_edit`)으로 올라가고, 그 연산이 혼자 검증·적용한다
-// (REQ-LDBEAT-007/008, 카드 t551/M3). 밝기 "값"(%) 필드만 편집 가능하다 —
-// 위치·색·효과·디머 프리셋 목록 선택은 프리셋 카탈로그(이름↔번호, 쇼
-// 기존 포함)가 필요한데 이 앱 어디에도 그 카탈로그를 읽는 경로가 없다
-// (progress.md SPEC-LDBEAT-001 "## Missing Inputs" 참조, 콜백 미제공 시
-// 모든 편집 UI는 기존과 바이트 동일하게 읽기 전용으로 남는다).
+// (REQ-LDBEAT-007/008, 카드 t551/M3).
+//
+// 카드 t551 후속(리드 지시 2026-10-11, 근본 원인 정정) — 프리셋 카탈로그
+// 읽기 경로는 이미 있었다(server/design/console_slots.py·preset_names.py,
+// 콘솔 "읽기"는 쓰기 0 규칙과 충돌하지 않는다). 그래서 밝기 "값"(%) 외에도
+// 프리셋 **서랍**(`drawerSections`/`onDrawerRequest`)과 AI 제안 점선 막대
+// (`pendingSuggestion`/`onSuggestionAccept`/`onSuggestionReject`)가 추가로
+// 가능해졌다 — mockup "프리셋 서랍"/"AI 제안" 절 그대로(아래 각 함수의
+// 주석이 인용 절을 단다). 그 콜백들이 미제공이면 이 컴포넌트는 기존과
+// 바이트 동일하게 동작한다(additive).
 import { useMemo, useRef, useState } from "react";
 
 import type {
   BeatGridAppMovement,
   BeatGridBrightness,
   BeatGridCue,
+  BeatGridDrawerSection,
   BeatGridEvidence,
+  BeatGridPendingSuggestion,
   BeatGridSceneMemo,
   BeatGridTrack,
   BeatGridView,
@@ -408,6 +415,24 @@ export interface BeatGridProps {
    * 버튼은 비활성이다.
    */
   onSuggestionRequest?: (bar: number, target: string) => void;
+  /**
+   * 카드 t551 후속(지시 1항) — 보류 중인 AI 제안 하나. mockup의 점선
+   * 막대 + 수락/거절 카드(`#bAi`→`aOk`/`aNo`)와 같은 모양. 생략·`null`이면
+   * 아무 트랙에도 점선 막대가 뜨지 않는다(지금까지와 바이트 동일).
+   */
+  pendingSuggestion?: BeatGridPendingSuggestion | null;
+  /** 카드 t551 후속 — mockup `aOk`(수락 → 같은 편집 요청을 보낸다). */
+  onSuggestionAccept?: (suggestionId: string) => void;
+  /** 카드 t551 후속 — mockup `aNo`(거절 → 격자·콘솔 diff 0). */
+  onSuggestionReject?: (suggestionId: string) => void;
+  /**
+   * 카드 t551 후속(지시 1항) — 프리셋 서랍 섹션들(mockup "구조" 6,
+   * `drawDrawer()`). `null`이면 아직 안 받음(서랍을 열어도 "불러오는
+   * 중" 안내). 생략하면 서랍 버튼 자체가 없다(기존과 바이트 동일).
+   */
+  drawerSections?: BeatGridDrawerSection[] | null;
+  /** 카드 t551 후속 — mockup `#bLib`(서랍 열기, 매번 최신 판독 요청). */
+  onDrawerRequest?: () => void;
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -539,6 +564,43 @@ export function isBrightnessValueEditable(cue: BeatGridCue | null): boolean {
 export function buildBrightnessValueChanges(percent: number): Record<string, unknown> | null {
   if (!Number.isFinite(percent)) return null;
   return { brightness: { mode: "value", value_percent: percent, preset_no: null } };
+}
+
+/** 카드 t551 후속(지시 1항) — 이 칸이 `presetNo`를 쓰는가. 프리셋 서랍의
+ * "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내 문구, `hlP`
+ * 강조)를 타임라인 쪽에서 그대로 구현하는 술어다 — 서버의
+ * `beat_grid_presets._usage_for_slot`과 같은 네 자리(위치·색·효과·
+ * 디머 프리셋/디머 효과)를 본다. */
+export function cueReferencesPreset(cue: BeatGridCue, presetNo: string): boolean {
+  if (cue.position_preset_no === presetNo) return true;
+  if (cue.color_preset_no === presetNo) return true;
+  if (cue.effect_preset_no === presetNo) return true;
+  const mode = cue.brightness.mode;
+  if ((mode === "dimmer_preset" || mode === "dimmer_effect") && cue.brightness.preset_no === presetNo) {
+    return true;
+  }
+  return false;
+}
+
+/** 카드 t551 후속(지시 2항) — `preset_pools.yaml`의 `confirmed`가
+ * `false`일 때 보여줄 배지. mockup 자신에는 "번호대 자체가 미확인"이라는
+ * 상태가 없다(그 데모는 번호대가 이미 정해져 있다는 전제) — 그래서 가장
+ * 가까운 기존 관례인 "⚠ 실기 미확인"(모양 선택지 배지, `isUnconfirmedShapeCue`
+ * 와 같은 글자)을 폭을 넓혀 재사용한다(이 카드가 그 자리를 정한 이유).
+ * `confirmed`가 `true`(또는 알 수 없음)면 배지를 달지 않는다 — 번호대를
+ * 사실로 내보이지 않을 뿐, 확정된 상태를 과장해 경고하지도 않는다. */
+export function presetPoolBandBadge(section: BeatGridDrawerSection): string | null {
+  return section.bands_confirmed ? null : "⚠ 번호대 미확인";
+}
+
+/** 카드 t551 후속(지시 1항) — `pendingSuggestion`이 이 트랙(그룹 이름)을
+ * 겨냥하는가. mockup의 점선 막대(`GHOST=[{r:"movd",...}]`)가 그 트랙
+ * 줄에만 겹쳐 그려지는 것과 같은 판정이다. */
+export function isPendingSuggestionForTrack(
+  suggestion: BeatGridPendingSuggestion | null | undefined,
+  groupName: string,
+): boolean {
+  return !!suggestion && suggestion.target === groupName;
 }
 
 export interface BeatGridCueColorFill {
@@ -683,6 +745,11 @@ export function BeatGrid({
   onEditRequest,
   onSentenceEditRequest,
   onSuggestionRequest,
+  pendingSuggestion = null,
+  onSuggestionAccept,
+  onSuggestionReject,
+  drawerSections = null,
+  onDrawerRequest,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -696,6 +763,10 @@ export function BeatGrid({
   // 새 칸에 실수로 적용되는 것을 막는다.
   const [brightnessEditing, setBrightnessEditing] = useState(false);
   const [brightnessDraft, setBrightnessDraft] = useState("");
+  // 카드 t551 후속(지시 1항) — 프리셋 서랍 열림/강조 상태(mockup `.drawer.open`/
+  // `hlP`). 강조는 서랍을 닫아도 유지하지 않는다 — 다시 열면 깨끗한 상태.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [highlightedPresetNo, setHighlightedPresetNo] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
@@ -948,13 +1019,18 @@ export function BeatGrid({
                             // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
                             // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
                             const colorFill = cueColorFill(segment.cue, colorPresetHex);
+                            // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
+                            // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
+                            const isHighlighted =
+                              highlightedPresetNo !== null &&
+                              cueReferencesPreset(segment.cue, highlightedPresetNo);
                             return (
                               <span key={segment.cue.bar} className="beat-grid-cue-slot">
                                 <button
                                   type="button"
                                   className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}${
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
-                                  }`}
+                                  }${isHighlighted ? " is-preset-highlighted" : ""}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -1002,6 +1078,20 @@ export function BeatGrid({
                               title={`재생 위치 — ${playheadBar}마디`}
                             />
                           )}
+                          {/* mockup "AI 제안은 타임라인에 점선 막대로 미리 보임"
+                              (카드 t551 후속, 지시 1항 — "AI-suggestion dashed-bar
+                              render"). 「적용」·「거절」 전까지 격자는 바뀌지
+                              않는다 — 이 막대는 그 보류 상태의 시각 표시일
+                              뿐이다(결정④, 상태 diff 0). */}
+                          {isPendingSuggestionForTrack(pendingSuggestion, track.group_name) && (
+                            <span
+                              className="beat-grid-cue beat-grid-cue-ghost"
+                              style={{ left: barToX(pendingSuggestion!.bar), width: PX_PER_BAR - 2 }}
+                              title={`AI 제안(보류) — ${pendingSuggestion!.rationale}`}
+                            >
+                              AI 제안(보류)
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -1022,7 +1112,36 @@ export function BeatGrid({
             바로 고쳐지고"); 위치/색/효과/디머 프리셋은 프리셋 카탈로그가
             없어 여전히 읽기 전용이다(progress.md "## Missing Inputs"). */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
-          {selected && selectedTrack ? (
+          {pendingSuggestion ? (
+            // mockup `#bAi` 핸들러(지시 1항) — AI 제안이 보류 중인 동안은
+            // 이 칸이 "AI 제안" 카드로 바뀐다(평소 큐 편집 대신). 「적용」·
+            // 「거절」 전까지 격자·콘솔은 바뀌지 않는다(결정④).
+            <div className="beat-grid-ai-suggestion" aria-label="AI 제안">
+              <header>
+                <span>AI 제안</span>
+                <span>
+                  {pendingSuggestion.target} {pendingSuggestion.bar}마디
+                </span>
+              </header>
+              <p>{pendingSuggestion.rationale}</p>
+              <p className="fx">타임라인의 점선 막대가 제안이에요.</p>
+              <div className="beat-grid-ai-suggestion-actions">
+                <button
+                  type="button"
+                  className="tbtn pri"
+                  onClick={() => onSuggestionAccept?.(pendingSuggestion.suggestion_id)}
+                >
+                  수락
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSuggestionReject?.(pendingSuggestion.suggestion_id)}
+                >
+                  거절
+                </button>
+              </div>
+            </div>
+          ) : selected && selectedTrack ? (
             <>
               <header>
                 <span>
@@ -1249,11 +1368,11 @@ export function BeatGrid({
 
       {/* 하단 명령 입력 — mockup "구조" 5 + 조작 방법(ldbeat-runbook-ui-
           proposal-20261008.md "22~25마디 MOVER-D 효과를 Sweep 2박으로" →
-          바로 적용 · AI 제안). 카드 t551(M3) 배선 — 이 모듈이 받는 문장
-          항목은 밝기/위치/색뿐이다("효과"는 프리셋 이름 카탈로그가 필요해
-          아직 없음, progress.md "## Missing Inputs"). 플레이스홀더는
-          mockup 원문 그대로 두고 바꾸지 않았다 — 지원하지 않는 예시를
-          제출하면 서버가 단일-원인으로 거절한다(지어낸 성공 0건). */}
+          바로 적용 · AI 제안). 카드 t551 후속(근본 원인 정정) — "효과"
+          항목과 위치/색의 이름 값은 이제 서버가 콘솔 프리셋 카탈로그로
+          해석한다(console_slots/preset_names 재사용) — 번호 꼴 값은
+          여전히 카탈로그 조회 없이 그대로 받는다. 플레이스홀더는 mockup
+          원문 그대로다. */}
       <div className="beat-grid-cmd">
         <input
           className="beat-grid-cmd-input"
@@ -1264,11 +1383,7 @@ export function BeatGrid({
         <button
           type="button"
           disabled={!onSentenceEditRequest || !commandText.trim()}
-          title={
-            onSentenceEditRequest
-              ? "지원 항목: 밝기/위치/색(REQ-LDBEAT-007 문장 경로 부분집합)"
-              : "M3에서 배선"
-          }
+          title={onSentenceEditRequest ? "REQ-LDBEAT-007 문장 경로 — 밝기/위치/색/효과" : "M3에서 배선"}
           onClick={() => onSentenceEditRequest?.(commandText)}
         >
           바로 적용(문장)
@@ -1290,7 +1405,81 @@ export function BeatGrid({
         >
           AI 제안
         </button>
+        {/* mockup "구조" 1·6 `#bLib` — 프리셋 서랍(카드 t551 후속, 지시 1항). */}
+        <button
+          type="button"
+          disabled={!onDrawerRequest}
+          title={onDrawerRequest ? "풀별(디머 1·위치 2·색 4) 목록 — 실제 콘솔 판독" : "M3에서 배선"}
+          onClick={() => {
+            const next = !drawerOpen;
+            setDrawerOpen(next);
+            if (next) onDrawerRequest?.();
+          }}
+        >
+          📁 프리셋
+        </button>
       </div>
+
+      {/* 프리셋 서랍 — mockup `drawDrawer()` 그대로(지시 1항):
+          "풀별(디머 1 · 위치 2 · 색 4) 목록, 쓰는 큐 수, 누르면 쓰는
+          막대가 노랗게 · 콘솔 이름(영문) 표시". 데모 ``P`` 객체가 아니라
+          서버의 실제 콘솔 판독(`beat_grid_preset_drawer`)에서 온다 — 못
+          읽은 풀은 빈 목록(지어내지 않는다). */}
+      {drawerOpen && (
+        <div className="drawer open" role="complementary" aria-label="프리셋 서랍">
+          <h4>
+            프리셋
+            <span
+              style={{ float: "right", cursor: "pointer" }}
+              onClick={() => setDrawerOpen(false)}
+              aria-label="닫기"
+            >
+              ✕
+            </span>
+          </h4>
+          <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
+          {drawerSections === null ? (
+            <p className="beat-grid-drawer-loading">불러오는 중…</p>
+          ) : (
+            drawerSections.map((section) => (
+              <div key={section.pool_name} className="beat-grid-drawer-section">
+                <h6>
+                  {section.title}
+                  {presetPoolBandBadge(section) && (
+                    <span className="u beat-grid-drawer-band-badge">
+                      {" "}
+                      {presetPoolBandBadge(section)}
+                    </span>
+                  )}
+                </h6>
+                {section.unread && <p className="beat-grid-drawer-unread">이 풀을 콘솔에서 읽지 못했습니다.</p>}
+                {section.entries.map((entry) => (
+                  <div
+                    key={entry.preset_no}
+                    className={`pr${highlightedPresetNo === entry.preset_no ? " on" : ""}`}
+                    onClick={() =>
+                      setHighlightedPresetNo((current) =>
+                        current === entry.preset_no ? null : entry.preset_no,
+                      )
+                    }
+                    title={
+                      entry.used_by.length
+                        ? `쓰는 곳: 큐 ${entry.usage_count}개 — ` +
+                          entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
+                        : "쓰는 곳: 큐 0개"
+                    }
+                  >
+                    <span>
+                      <b>{entry.preset_no}</b> {entry.name}
+                    </span>
+                    <span className="c">큐 {entry.usage_count}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       <div className="beat-grid-probe-pane" aria-label="M1 프로브 9항목 상태">
         <h5>M1 콘솔 확인 프로브</h5>

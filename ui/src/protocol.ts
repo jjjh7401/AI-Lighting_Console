@@ -516,6 +516,41 @@ export interface BeatGridView {
   note: string | null;
 }
 
+/** 카드 t551 후속(지시 1항) — 프리셋 서랍의 항목 하나. mockup `drawDrawer()`
+ * `usage()` 계산과 같은 의미지만 데모 `P` 객체가 아니라 서버의 실제 콘솔
+ * 판독(`beat_grid_presets.build_preset_drawer`)에서 온다. */
+export interface BeatGridDrawerEntry {
+  preset_no: string;
+  name: string;
+  usage_count: number;
+  used_by: { group_name: string | null; bar: number | null }[];
+}
+
+/** 카드 t551 후속(지시 1항) — 서랍 섹션 하나(디머 1·위치 2·색 4 중 하나).
+ * ``unread``면 그 풀을 콘솔에서 못 읽었다(항목 0개, 지어내지 않음).
+ * ``bands_confirmed``는 `preset_pools.yaml`의 `confirmed` 값 그대로다 —
+ * `false`면 "번호대 미확인"을 보여야 한다(지시 2항). */
+export interface BeatGridDrawerSection {
+  pool_name: string;
+  title: string;
+  pool_no: number | null;
+  entries: BeatGridDrawerEntry[];
+  unread: boolean;
+  bands_confirmed: boolean;
+}
+
+/** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. mockup의 점선
+ * 막대 + 수락/거절(`#bAi`/`aOk`/`aNo` 핸들러)과 같은 모양. 서버의
+ * `NullSuggestionSource`가 기본값이라 생산 환경에서는 거의 발생하지
+ * 않는다 — 렌더 경로는 시험용 가짜 제안 소스로 검증한다. */
+export interface BeatGridPendingSuggestion {
+  suggestion_id: string;
+  bar: number;
+  target: string;
+  changes: Record<string, unknown>;
+  rationale: string;
+}
+
 export interface SongTimelineView {
   song_title: string;
   sequence_name: string | null;
@@ -780,7 +815,14 @@ export type ServerEvent =
       history: CueHistoryEntry[];
       cached?: boolean;
     }
-  | SongTimelineEvent;
+  | SongTimelineEvent
+  // 카드 t551 후속(지시 1항) — 프리셋 서랍(실제 콘솔 판독, 데모 데이터 0건).
+  | { v: 1; type: "beat_grid_drawer"; sections: BeatGridDrawerSection[] }
+  // AI 제안(경로 ③) 보류 카드 생성 — `NullSuggestionSource`가 기본값이라
+  // 생산 환경에서는 거의 발생하지 않는다(시험용 가짜 소스로 렌더 검증).
+  | ({ v: 1; type: "beat_grid_suggestion" } & BeatGridPendingSuggestion)
+  // approval_resolved와 같은 짝 — 적용됐든 거절됐든 보류 목록에서 지운다.
+  | { v: 1; type: "beat_grid_suggestion_consumed"; suggestion_id: string };
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -809,6 +851,10 @@ const SERVER_EVENT_TYPES = new Set([
   // Cue monitor (T-C, wave 2) — mirrored by CUE_* in server/web/messages.py.
   "cue_monitor",
   "song_timeline",
+  // 카드 t551 후속 — 박자 격자 프리셋 서랍 + AI 제안 보류/소비.
+  "beat_grid_drawer",
+  "beat_grid_suggestion",
+  "beat_grid_suggestion_consumed",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -879,6 +925,30 @@ export function buildBeatGridEditSentence(sentence: string): string {
  * 일반 `chat_response`로 돌아온다 — 지어낸 제안 0건. */
 export function buildBeatGridSuggest(bar: number, target: string): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_suggest", bar, target });
+}
+
+/** 카드 t551 후속(지시 1항) — 편집 경로 ③ 2단계, mockup `aOk` 핸들러. */
+export function buildBeatGridSuggestionApply(suggestionId: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_suggestion_apply",
+    suggestion_id: suggestionId,
+  });
+}
+
+/** 카드 t551 후속(지시 1항) — mockup `aNo` 핸들러(격자·콘솔 diff 0). */
+export function buildBeatGridSuggestionReject(suggestionId: string): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_suggestion_reject",
+    suggestion_id: suggestionId,
+  });
+}
+
+/** 카드 t551 후속(지시 1항) — 프리셋 서랍 열기(mockup `#bLib`). 페이로드
+ * 없음(현재 격자의 사용처는 서버가 이미 안다). */
+export function buildBeatGridDrawerRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_drawer_request" });
 }
 
 export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
@@ -1287,12 +1357,21 @@ export interface UiState {
    * 지우지 않으면 화면에 두 번 보인다.
    */
   streamingAnswer: { text: string; seq: number } | null;
+  /** 카드 t551 후속(지시 1항) — 프리셋 서랍의 마지막으로 받은 섹션들.
+   * 요청 전에는 `null`(서랍을 열어도 아직 못 받은 상태 — 지어낸 목록
+   * 0건, mockup 데모 `P` 객체가 아니라 서버의 실제 판독 결과). */
+  beatGridDrawer: BeatGridDrawerSection[] | null;
+  /** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. 소비(적용·
+   * 거절)되면 `null`로 돌아간다(`beat_grid_suggestion_consumed`). */
+  pendingBeatGridSuggestion: BeatGridPendingSuggestion | null;
 }
 
 export const initialState: UiState = {
   entries: [],
   status: null,
   songTimeline: { timeline: null, stale: false },
+  beatGridDrawer: null,
+  pendingBeatGridSuggestion: null,
   pendingApprovals: [],
   pendingReviews: [],
   pendingQuestions: [],
@@ -1517,6 +1596,24 @@ export function reduceServerEvent(
         ...state,
         songTimeline: { timeline: event.timeline, stale: false },
       };
+    case "beat_grid_drawer":
+      return { ...state, beatGridDrawer: event.sections };
+    case "beat_grid_suggestion":
+      return {
+        ...state,
+        pendingBeatGridSuggestion: {
+          suggestion_id: event.suggestion_id,
+          bar: event.bar,
+          target: event.target,
+          changes: event.changes,
+          rationale: event.rationale,
+        },
+      };
+    case "beat_grid_suggestion_consumed":
+      // approval_resolved와 같은 모양 — id가 다르면(이미 새 제안으로
+      // 덮였으면) 건드리지 않는다. 없는 id를 지우는 건 안전한 no-op이다.
+      if (state.pendingBeatGridSuggestion?.suggestion_id !== event.suggestion_id) return state;
+      return { ...state, pendingBeatGridSuggestion: null };
   }
 }
 

@@ -5,7 +5,14 @@
 // 부른다.
 import { describe, expect, it } from "vitest";
 
-import type { BeatGridCue, BeatGridSceneMemo, BeatGridTrack, BeatGridView } from "../protocol";
+import type {
+  BeatGridCue,
+  BeatGridDrawerSection,
+  BeatGridPendingSuggestion,
+  BeatGridSceneMemo,
+  BeatGridTrack,
+  BeatGridView,
+} from "../protocol";
 import {
   BEAT_GRID_BAR_ROWS,
   PX_PER_BAR,
@@ -38,7 +45,10 @@ import {
   isWriteLocked,
   layerFolderLabel,
   buildBrightnessValueChanges,
+  cueReferencesPreset,
   isBrightnessValueEditable,
+  isPendingSuggestionForTrack,
+  presetPoolBandBadge,
   panOnlyVerticalBaseWarning,
   probeStatusClass,
   projectFixture,
@@ -1007,5 +1017,96 @@ describe("buildBrightnessValueChanges — 카드 t551(M3), apply_beat_grid_edit 
 
   it("무한값도 null", () => {
     expect(buildBrightnessValueChanges(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+});
+
+describe("cueReferencesPreset — 카드 t551 후속(지시 1항), 프리셋 서랍 강조", () => {
+  it("position_preset_no 일치", () => {
+    const cue = structuredCue(11, { position_preset_no: "2.41" });
+    expect(cueReferencesPreset(cue, "2.41")).toBe(true);
+  });
+
+  it("color_preset_no 일치", () => {
+    const cue = structuredCue(7, { color_preset_no: "4.21" });
+    expect(cueReferencesPreset(cue, "4.21")).toBe(true);
+  });
+
+  it("effect_preset_no 일치", () => {
+    const cue = structuredCue(14, { effect_preset_no: "2.61", effect_kind: "position" });
+    expect(cueReferencesPreset(cue, "2.61")).toBe(true);
+  });
+
+  it("dimmer_preset 모드의 brightness.preset_no 일치", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
+    });
+    expect(cueReferencesPreset(cue, "1.1")).toBe(true);
+  });
+
+  it("dimmer_effect 모드의 brightness.preset_no 일치", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    });
+    expect(cueReferencesPreset(cue, "1.21")).toBe(true);
+  });
+
+  it("value 모드의 brightness.preset_no 는 무시한다(값 모드엔 의미 없는 자리)", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "value", value_percent: 50, preset_no: "1.1" },
+    });
+    expect(cueReferencesPreset(cue, "1.1")).toBe(false);
+  });
+
+  it("아무 필드도 일치하지 않으면 false", () => {
+    const cue = structuredCue(0, {});
+    expect(cueReferencesPreset(cue, "2.41")).toBe(false);
+  });
+});
+
+describe("presetPoolBandBadge — 카드 t551 후속(지시 2항), 번호대 미확인", () => {
+  function section(overrides: Partial<BeatGridDrawerSection> = {}): BeatGridDrawerSection {
+    return {
+      pool_name: "Position",
+      title: "위치 풀 2 — 위치·움직임(상대값)",
+      pool_no: 2,
+      entries: [],
+      unread: false,
+      bands_confirmed: true,
+      ...overrides,
+    };
+  }
+
+  it("bands_confirmed 가 false 면 배지를 단다", () => {
+    expect(presetPoolBandBadge(section({ bands_confirmed: false }))).toBe("⚠ 번호대 미확인");
+  });
+
+  it("bands_confirmed 가 true 면 배지 없음", () => {
+    expect(presetPoolBandBadge(section({ bands_confirmed: true }))).toBeNull();
+  });
+});
+
+describe("isPendingSuggestionForTrack — 카드 t551 후속(지시 1항), AI 제안 점선 막대", () => {
+  function suggestion(overrides: Partial<BeatGridPendingSuggestion> = {}): BeatGridPendingSuggestion {
+    return {
+      suggestion_id: "s-1",
+      bar: 18,
+      target: "MOVER-D",
+      changes: {},
+      rationale: "테스트",
+      ...overrides,
+    };
+  }
+
+  it("제안이 없으면 어느 트랙도 false", () => {
+    expect(isPendingSuggestionForTrack(null, "MOVER-D")).toBe(false);
+    expect(isPendingSuggestionForTrack(undefined, "MOVER-D")).toBe(false);
+  });
+
+  it("target 과 그룹 이름이 같으면 true", () => {
+    expect(isPendingSuggestionForTrack(suggestion(), "MOVER-D")).toBe(true);
+  });
+
+  it("target 과 그룹 이름이 다르면 false", () => {
+    expect(isPendingSuggestionForTrack(suggestion(), "MOVER-U")).toBe(false);
   });
 });
