@@ -10,7 +10,8 @@
 // usage-only 문자열로 떨어진다(지어내지 않음).
 import { describe, expect, it } from "vitest";
 
-import { formatPresetChipTooltip } from "./presetChipTooltip";
+import type { BeatGridDrawerSection } from "../../protocol";
+import { findDrawerEntryByPresetNo, formatPresetChipTooltip } from "./presetChipTooltip";
 
 describe("formatPresetChipTooltip", () => {
   it("설명 텍스트가 있으면 설명과 사용 큐 수를 ' · '로 함께 보여준다", () => {
@@ -29,5 +30,47 @@ describe("formatPresetChipTooltip", () => {
 
   it("undefined도 null과 같게 처리한다", () => {
     expect(formatPresetChipTooltip(undefined, 2)).toBe("이 곡에서 큐 2곳 사용");
+  });
+});
+
+// 카드 t560 후속(REQ-LDBEAT-023(c), plan.md M9 step 6) — 「이 마디 한눈에」
+// 표 칸의 프리셋 칩은 어느 풀(위치·색·디머)에 속하는지 미리 모르고
+// preset_no 하나만 가진다(예: 칸의 `effect_preset_no`는 위치 풀의 효과
+// 번호대다) — 그래서 풀 이름을 몰라도 번호 하나로 모든 섹션을 가로질러
+// 찾는 조회가 필요하다.
+const SECTIONS: BeatGridDrawerSection[] = [
+  {
+    pool_name: "Position",
+    title: "위치",
+    pool_no: 2,
+    unread: false,
+    bands_confirmed: true,
+    entries: [
+      { preset_no: "2.41", name: "LA Floor", usage_count: 2, used_by: [], is_effect_band: false },
+      { preset_no: "2.61", name: "LA Tilt Wave 8", usage_count: 1, used_by: [], is_effect_band: true, description: "틸트 웨이브 · 8박" },
+    ],
+  },
+  {
+    pool_name: "Dimmer",
+    title: "밝기",
+    pool_no: 1,
+    unread: false,
+    bands_confirmed: true,
+    entries: [{ preset_no: "1.31", name: "LA Dim 30", usage_count: 0, used_by: [], is_effect_band: false }],
+  },
+];
+
+describe("findDrawerEntryByPresetNo", () => {
+  it("어느 풀에 있든 번호로 항목을 찾는다", () => {
+    expect(findDrawerEntryByPresetNo(SECTIONS, "1.31")?.name).toBe("LA Dim 30");
+    expect(findDrawerEntryByPresetNo(SECTIONS, "2.61")?.description).toBe("틸트 웨이브 · 8박");
+  });
+
+  it("없는 번호면 null(지어내지 않음)", () => {
+    expect(findDrawerEntryByPresetNo(SECTIONS, "9.99")).toBeNull();
+  });
+
+  it("sections 자체가 null(서랍 미수신)이면 null", () => {
+    expect(findDrawerEntryByPresetNo(null, "1.31")).toBeNull();
   });
 });

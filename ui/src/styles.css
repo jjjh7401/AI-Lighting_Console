@@ -4738,6 +4738,47 @@ body {
   white-space: nowrap;
 }
 
+/* 카드 t560 후속(REQ-LDBEAT-023(c)) — 「이 마디 한눈에」 표 칸의 프리셋
+   칩(밝기·위치·색·움직임). 서랍 "pr" 항목과 같은 자리지만 표 칸 안에서
+   작게 — 툴팁(title)이 설명·사용 수를 보여준다. */
+.beat-grid-glance-chip {
+  display: inline-block;
+  background: #2b3a52;
+  border: 1px solid #3a4a66;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+/* 카드 t560 후속(REQ-LDBEAT-023(d)) — 줄 이름 칸 아래 「바뀐 것」 표시
+   (mockup `changedTxt`). */
+.beat-grid-glance-changed {
+  color: var(--warn);
+  font-size: 9.5px;
+}
+
+/* 카드 t560 후속(REQ-LDBEAT-019(c)) — "이 구간 왼쪽·오른쪽 따로"/"L·R
+   다시 합치기" 토글이 이제 펼침 상세 줄에 있다(mockup `detailRow` :434). */
+.beat-grid-glance-lr-split-toggle {
+  display: block;
+  margin-top: 4px;
+  background: none;
+  border: 1px solid #3a4a66;
+  border-radius: 3px;
+  color: #ffd84d;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+/* 카드 t560 후속 — 「이 마디 한눈에」 표의 자식 줄(└ L/R, 표시 전용). */
+.beat-grid-glance-child-row td {
+  color: var(--muted);
+  font-size: 10.5px;
+  padding-left: 20px;
+}
+
 /* t537 레이아웃 교정 — 시안의 `.sidepane`(310px 고정폭, 타임라인 바로
    오른쪽)과 같은 자리·폭. `.beat-grid-mid`의 둘째 칸이라 높이는 그
    줄(`.beat-grid-lanes`와 같은 높이)만큼 자동으로 늘어난다. */
