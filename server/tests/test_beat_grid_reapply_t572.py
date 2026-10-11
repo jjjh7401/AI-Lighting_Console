@@ -132,7 +132,7 @@ def _seed_record(store: SongTimelineStore, **overrides: object) -> dict:
             "BACK": {
                 "sequence_number": FIRST_SEQUENCE_NUMBER,
                 "sequence_name": OWNED_SEQUENCE_NAME,
-                "cue_numbers": [1],
+                "cues": {"1": 1},
             }
         },
     }
@@ -219,7 +219,7 @@ class TestReapplyFlows:
         first = session.beat_grid_apply()
         assert first["ok"] is True
         record = store.beat_grid_allocation(_song_key())
-        assert record["tracks"]["BACK"]["cue_numbers"] == [1, 2]
+        assert record["tracks"]["BACK"]["cues"] == {"1": 1, "2": 2}
 
         console.state_tree = _owned_state_tree()
         console.executed.clear()
@@ -229,7 +229,7 @@ class TestReapplyFlows:
         assert second["ok"] is True
         assert any(c == f"Delete Cue 2 Sequence {FIRST_SEQUENCE_NUMBER}" for c in console.executed)
         updated_record = store.beat_grid_allocation(_song_key())
-        assert updated_record["tracks"]["BACK"]["cue_numbers"] == [1]
+        assert updated_record["tracks"]["BACK"]["cues"] == {"1": 1}
 
     def test_track_added_between_applies_gets_a_fresh_number(self, tmp_path) -> None:
         store = SongTimelineStore()
@@ -496,3 +496,174 @@ class TestTimecodeResolutionBranches:
 
         assert number is None
         assert reason is not None
+
+
+# =============================================================================
+# 카드 t572 리드 결정 — 막힌 칸의 옛 큐는 지우지도 덮어쓰지도 않는다
+# =============================================================================
+
+_ALL_PASS = {1: "통과", 2: "통과", 4: "통과", 5: "통과", 7: "통과", 9: "통과"}
+
+
+def _effect_cue(bar: int, preset: str) -> dict:
+    """효과 프리셋 리콜 칸 — M1 ④가 「통과」가 아니면 에미터가 이 칸만 막는다
+    (``beat_grid_emit._EFFECT_PRESET_RECALL_ITEM``)."""
+    return {"bar": bar, "effect_preset_no": preset, "evidence": _APPROVED_EVIDENCE}
+
+
+def _three_cell_timeline(probe_results: dict) -> dict:
+    return _timeline(
+        beat_grid={
+            "tracks": [
+                {
+                    "group_name": "BACK",
+                    "group_no": 7,
+                    "group_no_confirmed": True,
+                    "cues": [_cue(1, "1.1"), _effect_cue(2, "3.1"), _cue(3, "1.3")],
+                }
+            ],
+            "probe_results": probe_results,
+        }
+    )
+
+
+class TestBlockedCellsArePreserved:
+    def test_a_blocked_cell_is_neither_deleted_nor_overwritten(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _three_cell_timeline(_ALL_PASS)
+        session, console, approval, _audit = _new_session(tmp_path, store=store)
+
+        first = session.beat_grid_apply()
+        assert first["ok"] is True
+        assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
+            "1": 1,
+            "2": 2,
+            "3": 3,
+        }
+
+        console.state_tree = _owned_state_tree()
+        console.executed.clear()
+        # 이번에는 M1 ④가 미확인 — 2마디(효과 칸)만 막힌다.
+        store.latest = _three_cell_timeline({**_ALL_PASS, 4: "미확인"})
+
+        second = session.beat_grid_apply()
+        assert second["ok"] is True
+        seq = FIRST_SEQUENCE_NUMBER
+        # 막힌 칸(큐 2)은 지우지도, 다른 칸 내용으로 덮어쓰지도 않는다.
+        assert not any(c.startswith(f"Delete Cue 2 Sequence {seq}") for c in console.executed)
+        assert not any(c.startswith(f"Store Cue 2 Sequence {seq}") for c in console.executed)
+        # 3마디는 당겨지지 않고 원래 번호 3에 덮어쓴다.
+        assert f"Store Cue 3 Sequence {seq} /Overwrite" in console.executed
+        # 기록에도 막힌 칸의 번호가 그대로 남는다.
+        assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
+            "1": 1,
+            "2": 2,
+            "3": 3,
+        }
+        # 승인 카드에 「막혀서 그대로 둔 칸」이 적힌다.
+        reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
+        assert any("막혀서 그대로 둔 칸 1개" in r and "BACK 2마디" in r for r in reasons)
+
+    def test_a_really_emptied_cell_is_deleted(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _three_cell_timeline(_ALL_PASS)
+        session, console, _approval, _audit = _new_session(tmp_path, store=store)
+        assert session.beat_grid_apply()["ok"] is True
+
+        console.state_tree = _owned_state_tree()
+        console.executed.clear()
+        # 2마디 칸을 초안에서 정말 지운다(막힘이 아니다).
+        store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(3, "1.3")])
+
+        second = session.beat_grid_apply()
+        assert second["ok"] is True
+        seq = FIRST_SEQUENCE_NUMBER
+        assert f"Delete Cue 2 Sequence {seq}" in console.executed
+        assert f"Store Cue 3 Sequence {seq} /Overwrite" in console.executed
+        assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
+            "1": 1,
+            "3": 3,
+        }
+
+    def test_a_wholly_blocked_owned_track_keeps_every_cue(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _three_cell_timeline(_ALL_PASS)
+        session, console, _approval, _audit = _new_session(tmp_path, store=store)
+        assert session.beat_grid_apply()["ok"] is True
+        record_before = store.beat_grid_allocation(_song_key())
+
+        console.state_tree = _owned_state_tree()
+        console.executed.clear()
+        timeline = _three_cell_timeline(_ALL_PASS)
+        # 트랙 전체가 막힌다(그룹 번호 미확인) — 같이 반영할 다른 트랙을 둔다.
+        timeline["beat_grid"]["tracks"][0]["group_no_confirmed"] = False
+        timeline["beat_grid"]["tracks"].append(
+            {
+                "group_name": "FRONT",
+                "group_no": 8,
+                "group_no_confirmed": True,
+                "cues": [_cue(1, "3.3")],
+            }
+        )
+        store.latest = timeline
+
+        second = session.beat_grid_apply()
+        assert second["ok"] is True
+        seq = FIRST_SEQUENCE_NUMBER
+        assert not any(f"Sequence {seq}" in c and "Delete" in c for c in console.executed)
+        assert (
+            store.beat_grid_allocation(_song_key())["tracks"]["BACK"]
+            == record_before["tracks"]["BACK"]
+        )
+
+
+class TestNewBarBetweenRecordedBars:
+    def test_a_new_bar_between_takes_the_next_number_and_is_reported(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(3, "1.3")])
+        session, console, approval, _audit = _new_session(tmp_path, store=store)
+        assert session.beat_grid_apply()["ok"] is True
+
+        console.state_tree = _owned_state_tree()
+        console.executed.clear()
+        store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(2, "1.2"), _cue(3, "1.3")])
+
+        second = session.beat_grid_apply()
+        assert second["ok"] is True
+        seq = FIRST_SEQUENCE_NUMBER
+        # 새 마디(2)는 최대 번호(2) 다음 정수 3을 받는다 — 소수점 번호 없음.
+        # 3마디는 기록된 번호 2를 그대로 쓴다.
+        assert f"Store Cue 3 Sequence {seq}" in console.executed
+        assert f"Store Cue 2 Sequence {seq} /Overwrite" in console.executed
+        assert not any("." in c.split()[2] for c in console.executed if c.startswith("Store Cue"))
+        assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
+            "1": 1,
+            "2": 3,
+            "3": 2,
+        }
+        reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
+        assert any("번호 순서와 시간 순서가 다른 큐 1개" in r for r in reasons)
+
+
+class TestApprovalSentMismatch:
+    def test_a_mismatch_leaves_the_record_untouched(self, tmp_path, monkeypatch) -> None:
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        session, console, _approval, _audit = _new_session(tmp_path, store=store)
+        assert session.beat_grid_apply()["ok"] is True
+        record_before = store.beat_grid_allocation(_song_key())
+
+        class _Mismatch:
+            passed = False
+            sent_not_approved = ("Store Cue 9 Sequence 1",)
+            approved_not_sent = ()
+
+        monkeypatch.setattr(
+            session, "_beat_grid_verify_approval_vs_sent", lambda *a, **k: _Mismatch()
+        )
+        console.state_tree = _owned_state_tree()
+        store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(2, "2.2")])
+
+        event = session.beat_grid_apply()
+        assert event["approval_vs_sent"]["match"] is False
+        assert store.beat_grid_allocation(_song_key()) == record_before

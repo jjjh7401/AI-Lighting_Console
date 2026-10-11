@@ -421,9 +421,17 @@ def emit_beat_grid_write_bundle(
     timecode_numbers: Mapping[str, int],
     dimmer_attributes: Mapping[str, Sequence[str]],
     probe_results: Mapping[int, str],
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]] | None = None,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
+
+    카드 t572 — ``recorded_cue_numbers``(트랙 이름 -> {마디: 큐 번호})는
+    다시 반영할 때 이 앱이 직전에 쓴 번호표다. 표에 있는 마디는 그 번호를
+    그대로 쓰고, 표에 없는 새 마디는 그 트랙에 기록된 최대 번호 다음
+    정수부터 받는다. 그래서 어떤 칸이 막혀도 뒤 칸들의 번호가 당겨지지
+    않는다(당겨지면 막힌 칸의 옛 큐가 덮어써진다). 생략하면(첫 반영)
+    지금까지처럼 1부터 차례로 매긴다.
 
     ``sequence_numbers``/``timecode_numbers``/``dimmer_attributes``는
     트랙 ``group_name``을 키로 하는, 호출자가 그 곡·그 쇼에서 결정한
@@ -526,21 +534,25 @@ def emit_beat_grid_write_bundle(
         raw_cues = track.get("cues") or []
         cues_sorted = sorted(raw_cues, key=lambda c: int(c["bar"]))  # type: ignore[index]
         cue_results: list[CueEmitResult] = []
-        next_cue_number = 1
+        recorded = (recorded_cue_numbers or {}).get(group_name) or {}
+        next_cue_number = max(recorded.values(), default=0) + 1
         for cue in cues_sorted:
-            # cue_number 는 "실제로 내용이 있는 칸"에만 1부터 매긴다 —
-            # 거절되거나 공백인 칸은 번호를 쓰지 않는다(아래 조건부 증가).
+            # cue_number 는 "실제로 내용이 있는 칸"에만 매긴다 — 거절되거나
+            # 공백인 칸은 새 번호를 쓰지 않는다(아래 조건부 증가). 기록된
+            # 마디는 기록된 번호를 그대로 쓴다(카드 t572).
+            bar = int(cue["bar"])  # type: ignore[index]
+            recorded_number = recorded.get(bar)
             result = _emit_cue(
                 cue,
                 group_name=group_name,
                 group_no=group_no,  # type: ignore[arg-type]
                 sequence_number=sequence_number,
-                cue_number=next_cue_number,
+                cue_number=recorded_number if recorded_number is not None else next_cue_number,
                 timing=timing,
                 probe_results=probe_results,
                 dimmer_attributes=dimmer_attributes,
             )
-            if result.commands:
+            if result.commands and recorded_number is None:
                 next_cue_number += 1
             cue_results.append(result)
 

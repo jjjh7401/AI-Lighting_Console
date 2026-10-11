@@ -65,6 +65,7 @@ from server.design.beat_grid_send import (
     BeatGridCellKey,
     apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
+    beat_grid_reapply_summary,
     build_song_timing_from_bar_map,
     pick_sequence_numbers,
     resolve_dimmer_attributes,
@@ -9677,6 +9678,15 @@ class ChatSession:
             dimmer_attributes = resolve_dimmer_attributes(rig_read, group_names)
 
             probe_results = grid.get("probe_results") or {}
+            # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
+            # 넘겨 기록된 마디는 같은 번호를 쓰게 한다(막힌 칸이 있어도 뒤 칸
+            # 번호가 당겨지지 않는다). JSON 키는 문자열이라 정수로 되돌린다.
+            recorded_cue_numbers: dict[str, dict[int, int]] = {}
+            for name in owned_sequences:
+                cues_record = (owned_tracks_record.get(name) or {}).get("cues") or {}
+                recorded_cue_numbers[name] = {
+                    int(bar): int(number) for bar, number in cues_record.items()
+                }
             result = emit_beat_grid_write_bundle(
                 tracks,
                 timing=timing,
@@ -9684,6 +9694,7 @@ class ChatSession:
                 timecode_numbers=timecode_numbers,
                 dimmer_attributes=dimmer_attributes,
                 probe_results=probe_results,
+                recorded_cue_numbers=recorded_cue_numbers,
             )
             if result.blocked_reason is not None or not result.commands:
                 return self._beat_grid_send_status(
@@ -9694,10 +9705,6 @@ class ChatSession:
                 )
 
             if owned_sequences or owned_timecode is not None:
-                recorded_cue_numbers = {
-                    name: tuple(info.get("cue_numbers") or ())
-                    for name, info in owned_tracks_record.items()
-                }
                 result = apply_beat_grid_ownership_reuse(
                     result,
                     owned_sequences=owned_sequences,
@@ -9705,12 +9712,23 @@ class ChatSession:
                     recorded_cue_numbers=recorded_cue_numbers,
                 )
 
+            next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
+                result, recorded_cue_numbers=recorded_cue_numbers
+            )
             cells = self._beat_grid_apply_cells(result)
             batch = build_write_approval_batch(cells)
-            risk = BatchRisk(
-                reason="박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))",
-                kind="beat_grid_apply",
-            )
+            # 카드 t572 — 승인 카드에 「막혀서 그대로 둔 칸」과 「번호 순서와
+            # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
+            # t563 그대로다.
+            risk_reason = "박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))"
+            if preserved_cells:
+                listed = ", ".join(
+                    f"{name} {bar}마디({reason})" for name, bar, reason in preserved_cells
+                )
+                risk_reason += f" · 막혀서 그대로 둔 칸 {len(preserved_cells)}개: {listed}"
+            if out_of_order:
+                risk_reason += f" · 번호 순서와 시간 순서가 다른 큐 {out_of_order}개"
+            risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(
                 ToolCall(
@@ -9768,11 +9786,24 @@ class ChatSession:
                     name for name in owned_tracks_record if name not in group_names
                 )
                 updated_tracks_record = dict(owned_tracks_record)
+                # 기록하는 트랙은 「원래 소유한 트랙」과 「이번에 실제로 만든
+                # 트랙」뿐이다. 통째로 막힌 새 트랙은 콘솔에 시퀀스가 생기지
+                # 않았으므로 적지 않는다 — 적으면 다음 반영이 「기록한 시퀀스가
+                # 콘솔에 없다」로 거절된다.
+                created = {
+                    track.group_name for track in result.tracks if track.blocked_reason is None
+                }
                 for name in group_names:
+                    if name not in owned_sequences and name not in created:
+                        continue
                     updated_tracks_record[name] = {
                         "sequence_number": sequence_numbers[name],
                         "sequence_name": beat_grid_sequence_label(name, sequence_numbers[name]),
-                        "cue_numbers": sorted(cue_numbers.get(name, {}).values()),
+                        # {마디: 큐 번호} — 막혀서 그대로 둔 칸의 번호도 포함한다.
+                        "cues": {
+                            str(bar): number
+                            for bar, number in sorted(next_cue_record.get(name, {}).items())
+                        },
                     }
                 if store is not None:
                     store.set_beat_grid_allocation(

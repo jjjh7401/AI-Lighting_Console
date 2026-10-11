@@ -35,6 +35,7 @@ __all__ = [
     "BeatGridCellKey",
     "apply_beat_grid_ownership_reuse",
     "beat_grid_cell_snapshot",
+    "beat_grid_reapply_summary",
     "build_song_timing_from_bar_map",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
@@ -359,7 +360,7 @@ def apply_beat_grid_ownership_reuse(
     *,
     owned_sequences: Mapping[str, int],
     owned_timecode: int | None,
-    recorded_cue_numbers: Mapping[str, Sequence[int]],
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]],
 ) -> BeatGridEmitResult:
     """재적용 — 소유권 확인을 이미 통과한 (그룹 -> 시퀀스 번호) 묶음과
     (있다면) 소유한 타임코드 번호를 받아, 방금 에미터가 낸 **전체** 번들
@@ -377,17 +378,24 @@ def apply_beat_grid_ownership_reuse(
       둘째 트랙을 만든다). 새 트랙(``owned_sequences``에 없는 그룹)은
       ``Assign`` 줄을 그대로 낸다(그 시퀀스는 아직 그 타임코드에
       배정된 적이 없다).
-    * 소유한 트랙의 ``Store Cue`` 줄에는 ``/Overwrite``를 붙인다.
-    * 소유한 트랙에서, 이번 적용이 더는 내지 않는 소유 큐 번호마다
-      ``Delete Cue <n> Sequence <s>``를 추가한다 — 레코드에 없던 트랙
-      (새 트랙)에는 비교할 소유 번호가 없으므로 삭제를 내지 않는다."""
+    * 소유한 트랙에서 **기록된 마디**의 ``Store Cue`` 줄에만 ``/Overwrite``를
+      붙인다(그 큐는 콘솔에 이미 있다). 새 마디는 새 번호라 그대로 둔다.
+    * 소유한 트랙에서, 기록된 마디 중 **이번 초안에서 정말 비워진** 칸
+      (격자에서 빠졌거나 낼 내용이 없음)의 번호마다 ``Delete Cue <n>
+      Sequence <s>``를 추가한다. **막힌 칸**(``blocked_reason`` 있음)은
+      지우지 않는다 — 막혔다는 건 이번에 그 칸을 확인하지 못했다는 뜻이지
+      비웠다는 뜻이 아니다(카드 t572 리드 결정, 콘솔 내용은 되돌릴 수
+      없다). 레코드에 없던 트랙(새 트랙)에는 삭제를 내지 않는다."""
     new_timecode_setup = () if owned_timecode is not None else result.timecode_setup_commands
 
     new_tracks = []
     for track in result.tracks:
         owned_number = owned_sequences.get(track.group_name)
         is_owned = owned_number is not None and owned_number == track.sequence_number
-        if not is_owned:
+        # 트랙 전체가 막힌 경우(그룹 번호 미확인 등)에는 에미터가 칸 목록을
+        # 비워 돌려준다 — 그걸 「칸이 다 비워졌다」로 읽으면 그 트랙의 큐를
+        # 전부 지우게 된다. 막힌 트랙은 손대지 않는다(명령 0줄 그대로).
+        if not is_owned or track.blocked_reason is not None:
             new_tracks.append(track)
             continue
 
@@ -397,12 +405,19 @@ def apply_beat_grid_ownership_reuse(
         assign_timecode_commands = (
             () if owned_timecode is not None else track.assign_timecode_commands
         )
+        recorded = recorded_cue_numbers.get(track.group_name) or {}
         cues = tuple(
-            _overwrite_store_cue(cue, sequence_number=track.sequence_number) for cue in track.cues
+            _overwrite_store_cue(cue, sequence_number=track.sequence_number)
+            if cue.bar in recorded
+            else cue
+            for cue in track.cues
         )
-        kept_numbers = {cue.cue_number for cue in cues if cue.cue_number is not None}
-        stale_numbers = sorted(
-            n for n in (recorded_cue_numbers.get(track.group_name) or ()) if n not in kept_numbers
+        emitted_bars = {cue.bar for cue in cues if cue.cue_number is not None}
+        blocked_bars = {cue.bar for cue in cues if cue.blocked_reason is not None}
+        emptied = sorted(
+            (bar, number)
+            for bar, number in recorded.items()
+            if bar not in emitted_bars and bar not in blocked_bars
         )
         # @MX:WARN: [AUTO] ``Delete Cue <n> Sequence <s>``도 ``/Overwrite``와
         #   같은 처지다 — 이 저장소 어디에도 실기로 확인된 선례가 없다
@@ -413,12 +428,12 @@ def apply_beat_grid_ownership_reuse(
         #   판정·레코드 쪽은 건드릴 필요가 없다(순수하게 명령 문자열 문제).
         delete_cues = tuple(
             CueEmitResult(
-                bar=-1,
-                commands=(f"Delete Cue {n} Sequence {track.sequence_number}",),
+                bar=bar,
+                commands=(f"Delete Cue {number} Sequence {track.sequence_number}",),
                 blocked_reason=None,
                 cue_number=None,
             )
-            for n in stale_numbers
+            for bar, number in emptied
         )
         new_tracks.append(
             replace(
@@ -430,3 +445,48 @@ def apply_beat_grid_ownership_reuse(
         )
 
     return replace(result, tracks=tuple(new_tracks), timecode_setup_commands=new_timecode_setup)
+
+
+def beat_grid_reapply_summary(
+    result: BeatGridEmitResult,
+    *,
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]],
+) -> tuple[dict[str, dict[int, int]], list[tuple[str, int, str]], int]:
+    """카드 t572 — 이번 반영이 콘솔에 남길 큐 번호표와, 승인 카드에 적을 두 숫자.
+
+    돌려주는 셋:
+
+    * 다음 소유 기록의 번호표(트랙 이름 -> {마디: 큐 번호}) — 이번에 쓴 칸에
+      **막혀서 그대로 둔 칸**의 기록 번호를 더한 것. 막힌 칸은 콘솔에 옛 큐가
+      남아 있으므로 기록에서도 빼지 않는다(빼면 다음 반영이 그 번호를 모른다).
+      트랙 전체가 막혔으면 그 트랙의 기록을 통째로 그대로 둔다.
+    * 막혀서 그대로 둔 칸 목록 (트랙, 마디, 사유) — 기록에 있던 칸만.
+    * 번호 순서와 시간(마디) 순서가 어긋난 큐의 수 — 콘솔에 남을 큐를 번호
+      순으로 늘어놓았을 때, 앞 번호의 마디보다 이른 마디를 가진 큐의 수. 새
+      마디가 기존 마디 사이에 끼면 최대 번호 다음 정수를 받으므로 생긴다.
+      타임코드 재생은 TrigTime 으로 맞더라도 사람이 Go 로 넘기면 순서가
+      어긋나므로 승인 카드에 알린다(리드 결정)."""
+    next_record: dict[str, dict[int, int]] = {}
+    preserved: list[tuple[str, int, str]] = []
+    out_of_order = 0
+    for track in result.tracks:
+        recorded = dict(recorded_cue_numbers.get(track.group_name) or {})
+        if track.blocked_reason is not None:
+            if recorded:
+                next_record[track.group_name] = recorded
+                preserved.extend(
+                    (track.group_name, bar, track.blocked_reason) for bar in sorted(recorded)
+                )
+            continue
+        numbers = {cue.bar: cue.cue_number for cue in track.cues if cue.cue_number is not None}
+        for cue in track.cues:
+            if cue.blocked_reason is not None and cue.bar in recorded:
+                numbers[cue.bar] = recorded[cue.bar]
+                preserved.append((track.group_name, cue.bar, cue.blocked_reason))
+        next_record[track.group_name] = numbers
+        latest_bar = -1
+        for _number, bar in sorted((number, bar) for bar, number in numbers.items()):
+            if bar < latest_bar:
+                out_of_order += 1
+            latest_bar = max(latest_bar, bar)
+    return next_record, preserved, out_of_order
