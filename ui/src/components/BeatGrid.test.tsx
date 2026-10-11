@@ -58,6 +58,8 @@ import {
   isValidConsoleLabel,
   NewPresetDialog,
   newPresetReplyFor,
+  editRejectionFor,
+  BEAT_GRID_REJECTION_SUMMARY,
   newPresetFieldValue,
   unverifiedCellIndex,
   isWriteLocked,
@@ -1564,6 +1566,31 @@ describe("newPresetReplyFor — 카드 t589, 「만들기」 뒤 서버 답(배�
   it("기다리는 요청이나 답이 없으면 아무것도 없다", () => {
     expect(newPresetReplyFor("position", null, { text: "답", seq: 5 })).toBeNull();
     expect(newPresetReplyFor("position", pending, null)).toBeNull();
+  });
+});
+
+describe("editRejectionFor — 카드 t597, 일반 편집 거절 사유를 그 칸 옆에 보인다", () => {
+  const pending = { field: "color" as const, sinceSeq: 7 };
+  const rejected = {
+    text: "박자 격자를 수정하지 않았습니다 — 그런 프리셋이 없습니다. 콘솔에는 아무것도 쓰지 않았습니다.",
+    seq: 8,
+    summary: "박자 격자 수정 거절",
+  };
+  it("적용을 누른 칸에, 누른 뒤에 온 거절 답만 보인다", () => {
+    expect(editRejectionFor("color", pending, rejected)).toBe(rejected.text);
+  });
+  it("성공 답은 보이지 않는다 — 값이 바뀐 칸이 곧 결과다", () => {
+    expect(editRejectionFor("color", pending, { ...rejected, summary: "박자 격자 수정" })).toBeNull();
+  });
+  it("누르기 전의 답·다른 칸·요청 없음은 보이지 않는다", () => {
+    expect(editRejectionFor("color", pending, { ...rejected, seq: 7 })).toBeNull();
+    expect(editRejectionFor("movement", pending, rejected)).toBeNull();
+    expect(editRejectionFor("color", null, rejected)).toBeNull();
+    expect(editRejectionFor("color", pending, null)).toBeNull();
+  });
+  it("거절 요약 글자는 서버 `_beat_grid_rejection`과 같다 — 어긋나면 사유가 조용히 사라진다", () => {
+    const server = readFileSync(new URL("../../../server/web/session.py", import.meta.url), "utf-8");
+    expect(server).toContain(`summary="${BEAT_GRID_REJECTION_SUMMARY}"`);
   });
 });
 

@@ -878,6 +878,28 @@ const NEW_PRESET_SEED_ROW: Record<NewPresetField, "밝기" | "위치 프리셋" 
 export interface BeatGridServerReply {
   text: string;
   seq: number;
+  /** 카드 t597 — 서버 답의 요약 줄(거절 여부를 가르는 데 쓴다). */
+  summary?: string;
+}
+
+/** 카드 t597 — 일반 편집(`beat_grid_edit`)이 거절될 때 서버가 붙이는 요약.
+ * `server/web/session.py` `_beat_grid_rejection`과 같은 글자여야 한다. */
+export const BEAT_GRID_REJECTION_SUMMARY = "박자 격자 수정 거절";
+
+/** 카드 t597 — 일반 편집을 보내는 여섯 칸. */
+export type EditReplyField = "brightness" | "position" | "color" | "effect" | "movement" | "transition";
+
+/** 카드 t597 — 「적용」을 누른 칸(`pending.field`)에, 누른 뒤에 온 **거절**
+ * 답만 돌려준다(`newPresetReplyFor`와 같은 순번 규칙). 성공은 칸 값이 바뀌는
+ * 것으로 보이므로 따로 적지 않는다. */
+export function editRejectionFor(
+  field: EditReplyField,
+  pending: { field: EditReplyField; sinceSeq: number } | null,
+  reply: BeatGridServerReply | null,
+): string | null {
+  if (!pending || !reply || pending.field !== field) return null;
+  if (reply.summary !== BEAT_GRID_REJECTION_SUMMARY) return null;
+  return reply.seq > pending.sinceSeq ? reply.text : null;
 }
 
 /** 카드 t589 — 「만들기」를 누른 칸(`pending.field`)에, 누른 뒤(`seq >
@@ -1448,6 +1470,8 @@ export function BeatGrid({
     field: NewPresetField;
     sinceSeq: number;
   } | null>(null);
+  // 카드 t597 — 일반 편집 「적용」을 누른 칸과 그때의 서버 답 순번.
+  const [editPending, setEditPending] = useState<{ field: EditReplyField; sinceSeq: number } | null>(null);
   const [newPresetDrafts, setNewPresetDrafts] = useState<
     Partial<
       Record<
@@ -1893,6 +1917,23 @@ export function BeatGrid({
   const selectedConfirmedFixtures = selectedTrack
     ? fixtures.filter((f) => fixtureBelongsTo(f, selectedTrack.group_name)).length
     : 0;
+  // 카드 t597 — 일반 편집을 보내고, 그 칸에 뒤따라 올 거절 사유를 기다린다.
+  const requestEdit = (
+    field: EditReplyField,
+    request: Parameters<NonNullable<BeatGridProps["onEditRequest"]>>[0],
+  ) => {
+    if (!onEditRequest) return;
+    onEditRequest(request);
+    setEditPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
+  };
+  const renderEditReply = (field: EditReplyField) => {
+    const reply = editRejectionFor(field, editPending, lastServerReply);
+    return reply ? (
+      <p className="beat-grid-cue-field-note beat-grid-edit-reject" role="status">
+        {reply}
+      </p>
+    ) : null;
+  };
   const selectCue = (trackIndex: number, bar: number, transition: boolean) => {
     setSelected({ trackIndex, bar });
     setTransitionView(transition);
@@ -1900,6 +1941,7 @@ export function BeatGrid({
     setFocusField(null);
     setNewPresetDrafts({});
     setNewPresetPending(null);
+    setEditPending(null);
     // 카드 t570(REQ-LDBEAT-024(e)) — 다른 칸·막대를 고르면 부모 그룹
     // 줄로 돌아간다. L·R 자식 줄을 "보는 중"으로 두는 선택은
     // `selectLRSplitChild`가 이 함수 뒤에 다시 설정한다.
@@ -2413,17 +2455,21 @@ export function BeatGrid({
               )}
               {transitionView && selectedCue && selectedPrevCue ? (
                 // 카드 t561 — 같은 자리에서 전환 화면으로 바뀐다(REQ-LDBEAT-020(d)).
-                <BeatGridTransitionView
-                  key={`${selectedTrack.group_name}-${selectedCue.bar}`}
-                  track={selectedTrack}
-                  cue={selectedCue}
-                  prevCue={selectedPrevCue}
-                  secondsPerBar={secondsPerBar}
-                  beatsPerBar={beatsPerBar}
-                  sectionStartBars={sectionStartBars}
-                  accentBars={overviewModel.accentBars}
-                  onEditRequest={onEditRequest}
-                />
+                <>
+                  <BeatGridTransitionView
+                    key={`${selectedTrack.group_name}-${selectedCue.bar}`}
+                    track={selectedTrack}
+                    cue={selectedCue}
+                    prevCue={selectedPrevCue}
+                    secondsPerBar={secondsPerBar}
+                    beatsPerBar={beatsPerBar}
+                    sectionStartBars={sectionStartBars}
+                    accentBars={overviewModel.accentBars}
+                    onEditRequest={onEditRequest ? (request) => requestEdit("transition", request) : undefined}
+                  />
+                  {/* 카드 t597 — 전환 편집의 거절 사유. */}
+                  {renderEditReply("transition")}
+                </>
               ) : (
                 <BeatGridCueFocus focusField={focusField} focusKey={`${selected.trackIndex}-${selected.bar}`}>
                   {/* t537 — 속성별 값을 각각 독립된 자리에(REQ-LDBEAT-004(c),
@@ -2639,7 +2685,7 @@ export function BeatGrid({
                                   if (brightnessModeDraft === "value") {
                                     const changes = buildBrightnessValueChanges(Number(brightnessDraft));
                                     if (changes && selected && selectedTrack) {
-                                      onEditRequest!({ bar: selected.bar, target: selectedTrack.group_name, changes });
+                                      requestEdit("brightness", { bar: selected.bar, target: selectedTrack.group_name, changes });
                                     }
                                   } else if (
                                     brightnessModeDraft === "dimmer_preset" &&
@@ -2648,7 +2694,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    onEditRequest!({
+                                    requestEdit("brightness", {
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
                                       changes: buildBrightnessPresetChanges(brightnessPresetDraft),
@@ -2660,7 +2706,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    onEditRequest!({
+                                    requestEdit("brightness", {
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
                                       changes: buildBrightnessDimmerEffectChanges(brightnessEffectDraft),
@@ -2705,6 +2751,7 @@ export function BeatGrid({
                                 renderNewPresetDialog("dimmer_effect", () => seedEditDrafts(selectedCue, "밝기"))}
                               {renderNewPresetReply("dimmer_preset")}
                               {renderNewPresetReply("dimmer_effect")}
+                              {renderEditReply("brightness")}
                             </span>
                           ) : editing && isPositionRow ? (
                             // 카드 t551 계속 — 위치 프리셋 직접 고르기(mockup
@@ -2729,7 +2776,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    onEditRequest!({
+                                    requestEdit("position", {
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
                                       // 카드 t557 — 효과 번호대 항목이면 위치 효과로.
@@ -2758,6 +2805,7 @@ export function BeatGrid({
                               {positionPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("position", () => seedEditDrafts(selectedCue, "위치 프리셋"))}
                               {renderNewPresetReply("position")}
+                              {renderEditReply("position")}
                             </span>
                           ) : editing && isColorRow ? (
                             // 카드 t551 계속 — 색 프리셋 직접 고르기(위치와 같은
@@ -2780,7 +2828,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    onEditRequest!({
+                                    requestEdit("color", {
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
                                       // 카드 t557 — 효과 번호대 항목이면 색 효과(effect_kind color)로.
@@ -2809,6 +2857,7 @@ export function BeatGrid({
                               {colorPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("color", () => seedEditDrafts(selectedCue, "색 프리셋"))}
                               {renderNewPresetReply("color")}
+                              {renderEditReply("color")}
                             </span>
                           ) : editing && isEffectRow ? (
                             // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1·2) —
@@ -2833,7 +2882,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    onEditRequest!({
+                                    requestEdit("effect", {
                                       bar: selected.bar,
                                       target: selectedTrack.group_name,
                                       // 카드 t557 — 종류는 고른 항목의 풀이 정한다(이 목록은 위치 풀 효과).
@@ -2868,6 +2917,7 @@ export function BeatGrid({
                               {effectPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("effect", () => seedEditDrafts(selectedCue, "효과 프리셋"))}
                               {renderNewPresetReply("effect")}
+                              {renderEditReply("effect")}
                             </span>
                           ) : (
                             <span
@@ -2919,7 +2969,7 @@ export function BeatGrid({
                               editing: true,
                               onOpen: () => undefined,
                               onApply: (movement) => {
-                                onEditRequest({
+                                requestEdit("movement", {
                                   bar: selected.bar,
                                   target: selectedTrack.group_name,
                                   changes: { app_movement: movement },
@@ -2931,6 +2981,7 @@ export function BeatGrid({
                       }
                     />
                   )}
+                  {renderEditReply("movement")}
                   {selectedTrack.layer_role === "side" && <BeatGridSideRow />}
                   {selectedCue?.source_ref && (
                     <div className="beat-grid-cue-field beat-grid-cue-field-source">
