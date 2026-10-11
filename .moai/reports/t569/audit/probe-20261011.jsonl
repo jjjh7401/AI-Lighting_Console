@@ -1,0 +1,7 @@
+{"ts": "2026-10-11T11:49:19.566934+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:19.633468+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/1", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:20.167370+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:20.233079+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:20.300215+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/2", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:21.433419+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools", "kind": "state_query", "ok": true, "detail": ""}
+{"ts": "2026-10-11T11:49:21.500083+00:00", "event": "executed", "command": "ShowData/DataPools/Default/PresetPools/4", "kind": "state_query", "ok": true, "detail": ""}

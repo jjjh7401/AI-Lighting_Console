@@ -32,7 +32,7 @@ function chipOrUnset(presetNo: string | null, sections: BeatGridDrawerSection[] 
     kind: "chip",
     presetNo,
     label: entry ? `${presetNo} ${entry.name}` : presetNo,
-    tooltip: formatPresetChipTooltip(entry?.description, entry?.usage_count ?? 0),
+    tooltip: formatPresetChipTooltip(entry?.description, entry?.usage_count ?? 0, entry?.description_source),
   };
 }
 
