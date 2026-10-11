@@ -9579,7 +9579,9 @@ class ChatSession:
                 return self._beat_grid_send_status(
                     last_action="apply",
                     ok=False,
-                    reason="콘솔 반영이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답 중 하나)"
+                    reason=(
+                        "콘솔 반영이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답 중 하나)"
+                    )
                     + (f": {detail}" if detail else "."),
                 )
 
