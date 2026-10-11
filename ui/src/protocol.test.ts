@@ -180,6 +180,34 @@ describe("builders", () => {
     });
   });
 
+  it('carries "aim" for the "position" new-preset field only — 카드 t599(REQ-LDBEAT-015(i-3))', () => {
+    // aim 이 주어지면 그대로 실린다("position" 필드 전용 입력).
+    expect(
+      JSON.parse(
+        buildBeatGridNewPreset(1, "BACK", "position", "LA Center", "스테이지 중앙", {
+          x: 0,
+          y: 1.5,
+          z: 2,
+        }),
+      ),
+    ).toEqual({
+      v: 1,
+      type: "beat_grid_new_preset",
+      bar: 1,
+      target: "BACK",
+      field: "position",
+      label: "LA Center",
+      description: "스테이지 중앙",
+      aim: { x: 0, y: 1.5, z: 2 },
+    });
+    // aim 을 안 주면(다른 네 필드) 프레임에 "aim" 키 자체가 없다 — 생략과
+    // 다른 값(undefined)을 같은 "없음"으로 섞지 않는다.
+    const withoutAim = JSON.parse(
+      buildBeatGridNewPreset(11, "MOVER-U", "effect", "LA Wave", "따뜻한 흰색"),
+    );
+    expect("aim" in withoutAim).toBe(false);
+  });
+
   it("builds the top-bar console-send frames — 카드 t563(SPEC-LDBEAT-001 M4)", () => {
     expect(JSON.parse(buildBeatGridApply())).toEqual({ v: 1, type: "beat_grid_apply" });
     expect(JSON.parse(buildBeatGridPreview(11))).toEqual({

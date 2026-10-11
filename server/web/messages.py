@@ -14,6 +14,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import math
 
 from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
@@ -465,6 +466,7 @@ def parse_client_message(raw: str) -> dict:
         field = message.get("field")
         label = message.get("label")
         description = message.get("description")
+        aim = message.get("aim")
         if not isinstance(bar, int) or isinstance(bar, bool):
             raise ProtocolError("beat_grid_new_preset.bar must be an integer")
         if not isinstance(target, str) or not target.strip():
@@ -477,7 +479,41 @@ def parse_client_message(raw: str) -> dict:
             raise ProtocolError("beat_grid_new_preset.label must be a non-empty string")
         if not isinstance(description, str) or not description.strip():
             raise ProtocolError("beat_grid_new_preset.description must be a non-empty string")
-        return {
+        # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"만 목표 좌표(x·y·z,
+        # 미터, `server/spatial/pointing.py` 틀)를 **필수**로 받는다. 다른
+        # 네 필드는 이 입력을 모른다 — 있으면 모양이 틀렸다고 거절한다
+        # (엄격 유지, 조용히 무시하지 않는다).
+        if field == "position":
+            if not isinstance(aim, dict):
+                raise ProtocolError("beat_grid_new_preset.aim is required when field is 'position'")
+            for axis in ("x", "y", "z"):
+                value = aim.get(axis)
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ProtocolError(f"beat_grid_new_preset.aim.{axis} must be a finite number")
+                if not math.isfinite(value):
+                    raise ProtocolError(f"beat_grid_new_preset.aim.{axis} must be a finite number")
+        elif aim is not None:
+            raise ProtocolError("beat_grid_new_preset.aim is only valid when field is 'position'")
+        # 카드 t603 — "effect"만 효과 레시피(fx_id·주기 박/마디)를 **필수**로 받는다
+        # (t593 `preset_fx_recipes` 모양). 다른 필드에 오면 거절한다(aim 과 같은 엄격함).
+        fx = message.get("fx")
+        if field == "effect":
+            if not isinstance(fx, dict):
+                raise ProtocolError("beat_grid_new_preset.fx is required when field is 'effect'")
+            fx_id = fx.get("fx_id")
+            unit = fx.get("period_unit")
+            value = fx.get("period_value")
+            if not isinstance(fx_id, str) or not fx_id.strip():
+                raise ProtocolError("beat_grid_new_preset.fx.fx_id must be a non-empty string")
+            if unit not in ("beat", "bar"):
+                raise ProtocolError("beat_grid_new_preset.fx.period_unit must be 'beat' or 'bar'")
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ProtocolError(
+                    "beat_grid_new_preset.fx.period_value must be a positive integer"
+                )
+        elif fx is not None:
+            raise ProtocolError("beat_grid_new_preset.fx is only valid when field is 'effect'")
+        parsed: dict[str, object] = {
             "v": PROTOCOL_VERSION,
             "type": "beat_grid_new_preset",
             "bar": bar,
@@ -486,6 +522,15 @@ def parse_client_message(raw: str) -> dict:
             "label": label,
             "description": description,
         }
+        if aim is not None:
+            parsed["aim"] = aim
+        if fx is not None:
+            parsed["fx"] = {
+                "fx_id": fx["fx_id"].strip(),
+                "period_unit": fx["period_unit"],
+                "period_value": fx["period_value"],
+            }
+        return parsed
 
     if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):
         suggestion_id = message.get("suggestion_id")

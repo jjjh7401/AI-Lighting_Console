@@ -106,6 +106,11 @@ class BatchRisk:
 
     reason: str
     kind: str
+    #: 카드 t598 — 승인 **뒤**·실행 **전**에 부르는 호출자의 전제 확인. 사유 문자열을
+    #: 돌려주면 묶음 전체가 0줄로 막힌다(lock-first 재확인과 같은 자리·같은 전부-아니면-
+    #: 전무). 승인 창이 떠 있는 사이 바뀔 수 있는 콘솔 사실(빈 프리셋 slot 등)을 송신
+    #: 직전에 다시 확인하는 데 쓴다. 기본값 ``None`` 이면 동작은 바이트 동일하다.
+    recheck: Callable[[], str | None] | None = None
 
 
 class WriteGateDeclarationError(RuntimeError):
@@ -497,6 +502,26 @@ class SafetyGate:
                 )
                 if locked is not None:
                     return locked
+
+                # 카드 t598 — 호출자의 송신 직전 전제 확인(승인 창 사이 콘솔이 바뀌었나).
+                # 거절과 같은 전부-아니면-전무: 한 줄도 실행하지 않는다.
+                if risk is not None and risk.recheck is not None:
+                    precondition = risk.recheck()
+                    if precondition is not None:
+                        for command in commands:
+                            self._audit.log_blocked(command, reason=precondition)
+                        return ScreenDecision(
+                            cleared=False,
+                            status="blocked_precondition",
+                            commands=tuple(
+                                CommandDecision(
+                                    command=f.command, status="blocked", reasons=(precondition,)
+                                )
+                                for f in findings
+                            ),
+                            approval_request=approval_request,
+                            notice=precondition,
+                        )
 
                 # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
                 if self._backup is not None:

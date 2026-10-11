@@ -31,6 +31,7 @@ __all__ = [
     "app_preset_label",
     "build_preset_drawer",
     "effect_kind_to_pool_name",
+    "first_free_base_position_number",
     "first_free_preset_number",
     "pool_name_to_effect_kind",
     "read_named_pool",
@@ -373,6 +374,62 @@ def first_free_preset_number(
         "새 프리셋을 더 만들 수 없습니다.",
         None,
     )
+
+
+def first_free_base_position_number(
+    *,
+    policy: Mapping[str, object],
+    grid: Mapping[str, object],
+    console_children: tuple[int, Mapping[int, object]] | None,
+) -> tuple[str | None, str | None]:
+    """카드 t599(REQ-LDBEAT-015(i-3)) — "+ 새 프리셋 만들기" **위치** 필드가
+    쓰는 base 위치 번호 배정. base 위치 풀(2.41~)은 효과 번호대가 없는
+    풀이라(REQ-LDBEAT-015(b)) `preset_pools.yaml`에서 번호대를 읽지
+    않는다 — 대신 그 풀의 **효과** 번호대(``policy["pools"]`` 중 풀 번호가
+    같은 밴드, 예: ``position_effect`` 2.61~2.68)만 건너뛰어 겹치지 않게
+    하고, 나머지는 콘솔이 실제로 쥔 첫 빈 슬롯이다 — 리그 상수를 짓지
+    않는다(번호대도 풀 번호도 코드에 없다).
+
+    ``console_children``은 `read_named_pool(query, pool_root, "Position",
+    ...)`가 돌려준 그 쌍 ``(풀 번호, {슬롯: 이름|None})`` 그대로다 — 이
+    함수 자신은 콘솔을 읽지 않는다(순수). 그 풀을 콘솔에서 못 읽었으면
+    (``None``) 거절한다 — `first_free_preset_number`(효과 풀)와 달리
+    "경고만 내고 배정"으로 떨어지지 않는다: base 풀은 번호대 보호가 없어
+    틀리게 고르면 기존 쇼 프리셋을 되찾을 길이 없다(손해가 비대칭이다).
+
+    반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
+    if console_children is None:
+        return None, (
+            "콘솔에서 Position 풀을 읽지 못해 빈 슬롯을 알 수 없습니다 — "
+            "번호대 보호가 없는 기본 풀이라 추측해 배정하지 않습니다."
+        )
+    pool_no, children = console_children
+
+    pools = policy.get("pools") if isinstance(policy, Mapping) else None
+    pools = pools if isinstance(pools, Mapping) else {}
+    skip_bands: list[tuple[int, int]] = []
+    for band in pools.values():
+        bounds = _parse_band_bounds(band) if isinstance(band, Mapping) else None
+        if bounds is None:
+            continue
+        band_pool, slot_start, slot_end = bounds
+        if band_pool == pool_no:
+            skip_bands.append((slot_start, slot_end))
+
+    def _in_skip_band(slot: int) -> bool:
+        return any(start <= slot <= end for start, end in skip_bands)
+
+    base_occupied = [slot for slot in children if not _in_skip_band(slot)]
+    start = max(base_occupied) + 1 if base_occupied else 1
+
+    referenced = _referenced_preset_numbers(grid)
+    slot = start
+    while True:
+        if not _in_skip_band(slot):
+            candidate = f"{pool_no}.{slot}"
+            if slot not in children and candidate not in referenced:
+                return candidate, None
+        slot += 1
 
 
 def build_preset_drawer(

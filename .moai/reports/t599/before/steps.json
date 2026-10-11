@@ -1,0 +1,13 @@
+{
+ "cue_index": 1,
+ "dialog_visible": 1,
+ "dialog_text": "콘솔 이름(영문·숫자)\n설명(한국어)\n만들기\n취소",
+ "coord_inputs": 0,
+ "create_enabled": true,
+ "reply_lines": [
+  "위치 프리셋",
+  "박자 격자를 수정하지 않았습니다 — '위치 프리셋'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — preset_pools.yaml 에 이 종류의 번호대가 없어 빈 번호를 정할 수 없습니다 — 번호대를 지어내지 않습니다. 콘솔에는 아무것도 쓰지 않았습니다.",
+  "5. 위치 프리셋 위 상대값 — 움직임 없음"
+ ],
+ "select_value_after": ""
+}

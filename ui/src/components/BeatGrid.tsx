@@ -41,6 +41,7 @@ import type {
   BeatGridDrawerSection,
   BeatGridEmptyPresetCell,
   BeatGridEvidence,
+  BeatGridFxRecipe,
   BeatGridPendingSuggestion,
   BeatGridSceneMemo,
   BeatGridStageGroup,
@@ -81,6 +82,13 @@ import {
 // 마운트·prop 전달만 한다(세 레인이 이 파일을 동시에 고치는 중이라 diff를
 // 최소로 둔다).
 import { GlanceCell } from "./beatgrid/GlanceCell";
+import {
+  type FxPeriodUnit,
+  NewPresetFxFields,
+  type NewPresetFxFieldsProps,
+  fxRecipeFromDraft,
+  fxTemplatesForKind,
+} from "./beatgrid/newPresetFx";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitRow } from "./beatgrid/LRSplitRow";
@@ -547,6 +555,10 @@ export interface BeatGridProps {
     field: NewPresetField;
     label: string;
     description: string;
+    /** 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 싣는다. */
+    aim?: { x: number; y: number; z: number };
+    /** 카드 t603 — "effect" 필드만 싣는다(효과 틀·주기 박/마디, 서버 필수). */
+    fx?: BeatGridFxRecipe;
   }) => void;
   /** 카드 t589 — 서버의 가장 최근 답. 「만들기」 뒤 배정 결과·거절 사유를
    * 그 칸 아래에 보이는 데 쓴다(`newPresetReplyFor`). 생략하면 안 보인다. */
@@ -781,6 +793,14 @@ export function emptyPresetCellIndex(
 /** 격자 칸 배지 — `⚠ 빈 프리셋(4.99)`. 풀을 못 읽은 번호는 `?`를 붙여 「비었는지
  * 모름」을 「빈 것 확인」과 가른다. 반영 때 만들어질 칸(`state: "create"`)은
  * `⚠ 새로 만들 프리셋(2.71)`. */
+/** 카드 t598 — 「⇪ 콘솔에 반영」이 실패했을 때 그 사유(서버 `beat_grid_send_status`).
+ * 반영이 아니거나 성공이면 `null`. 승인 창 사이 콘솔에서 번호가 채워져 송신을 통째로
+ * 멈춘 경우처럼, 감독이 「다시 반영」해야 하는지를 격자 화면에서 바로 본다. */
+export function applyFailureNote(status: BeatGridSendStatus | null | undefined): string | null {
+  if (!status || status.last_action !== "apply" || status.ok || !status.reason) return null;
+  return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
+}
+
 export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
   const values = cell.fields.map((f) => (f.kind === "pool_unread" ? `${f.value}?` : f.value));
   const title = cell.state === "create" ? "새로 만들 프리셋" : "빈 프리셋";
@@ -833,6 +853,16 @@ export type NewPresetField = "dimmer_preset" | "dimmer_effect" | "position" | "c
  * 공백만)은 통과하지 않는다. */
 export function isValidConsoleLabel(label: string): boolean {
   return /^[\x20-\x7E]+$/.test(label.trim());
+}
+
+/** 카드 t599(REQ-LDBEAT-015(i-3)) — 「＋ 새 프리셋 만들기」 위치 다이얼로그의
+ * 좌표 입력(x·y·z, 미터) 즉시 확인. 빈 문자열·수가 아님·무한대/NaN 은
+ * 모두 거절 — 서버의 `_validate_new_preset_aim`(세션)과 같은 뜻의 화면
+ * 쪽 즉시 확인이다(최종 판정은 항상 서버가 한다). */
+export function isValidAimCoordinate(value: string): boolean {
+  if (value.trim() === "") return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed);
 }
 
 /** 카드 t589 — 「만들기」를 누른 칸의 지금 값(서버가 번호를 씌웠는지 보는 열쇠).
@@ -914,6 +944,23 @@ export interface NewPresetDialogProps {
   onDescriptionChange: (value: string) => void;
   onCreate: () => void;
   onCancel: () => void;
+  /**
+   * 카드 t599(REQ-LDBEAT-015(i-3)) — "위치" 필드만 목표 좌표(x·y·z,
+   * 미터) 세 입력을 추가로 받는다. 라벨은 `server/spatial/pointing.py`
+   * 모듈 설명(실측)이 정한 그 틀 그대로다 — Pan0/Tilt0 은 무대 -Z(바로
+   * 아래)를 보고, +Z 가 위, +Tilt 가 무대 +Y(뒤)로 기울인다. 다른 네
+   * 필드는 이 props를 넘기지 않는다(생략 — `showAim` 기본값 거짓).
+   */
+  showAim?: boolean;
+  x?: string;
+  y?: string;
+  z?: string;
+  onXChange?: (value: string) => void;
+  onYChange?: (value: string) => void;
+  onZChange?: (value: string) => void;
+  /** 카드 t603 — "효과" 필드만 효과 틀·주기 칸을 넘긴다(생략하면 그 칸이 없다).
+   * 넘기면 레시피가 다 차야 「만들기」가 켜진다. */
+  fx?: NewPresetFxFieldsProps;
 }
 
 export function NewPresetDialog({
@@ -924,6 +971,14 @@ export function NewPresetDialog({
   onDescriptionChange,
   onCreate,
   onCancel,
+  showAim = false,
+  x = "",
+  y = "",
+  z = "",
+  onXChange,
+  onYChange,
+  onZChange,
+  fx,
 }: NewPresetDialogProps) {
   if (!enabled) {
     return (
@@ -934,7 +989,12 @@ export function NewPresetDialog({
   }
   const labelValid = isValidConsoleLabel(label);
   const descriptionValid = description.trim().length > 0;
-  const canCreate = labelValid && descriptionValid;
+  const aimValid = !showAim || (isValidAimCoordinate(x) && isValidAimCoordinate(y) && isValidAimCoordinate(z));
+  const fxValid =
+    !fx ||
+    (fxTemplatesForKind(fx.templates, fx.kind).some((t) => t.fx_id === fx.fxId) &&
+      fxRecipeFromDraft({ fxId: fx.fxId, period: fx.period, unit: fx.unit }) !== null);
+  const canCreate = labelValid && descriptionValid && aimValid && fxValid;
   return (
     <span className="beat-grid-new-preset-dialog" data-testid="beat-grid-new-preset-dialog">
       <label className="beat-grid-new-preset-field">
@@ -961,6 +1021,41 @@ export function NewPresetDialog({
           콘솔 이름은 영문·숫자만 허용됩니다 — 한글/비-ASCII 문자는 받지 않습니다.
         </p>
       )}
+      {showAim && (
+        <>
+          <label className="beat-grid-new-preset-field">
+            X (m)
+            <input
+              type="number"
+              step="0.1"
+              value={x}
+              aria-label="X (m)"
+              onChange={(event) => onXChange?.(event.target.value)}
+            />
+          </label>
+          <label className="beat-grid-new-preset-field">
+            Y (m, + = 무대 뒤)
+            <input
+              type="number"
+              step="0.1"
+              value={y}
+              aria-label="Y (m, + = 무대 뒤)"
+              onChange={(event) => onYChange?.(event.target.value)}
+            />
+          </label>
+          <label className="beat-grid-new-preset-field">
+            Z (m, + = 위)
+            <input
+              type="number"
+              step="0.1"
+              value={z}
+              aria-label="Z (m, + = 위)"
+              onChange={(event) => onZChange?.(event.target.value)}
+            />
+          </label>
+        </>
+      )}
+      {fx && <NewPresetFxFields {...fx} />}
       <button type="button" disabled={!canCreate} onClick={onCreate}>
         만들기
       </button>
@@ -1404,7 +1499,25 @@ export function BeatGrid({
   // 카드 t597 — 일반 편집 「적용」을 누른 칸과 그때의 서버 답 순번.
   const [editPending, setEditPending] = useState<{ field: EditReplyField; sinceSeq: number } | null>(null);
   const [newPresetDrafts, setNewPresetDrafts] = useState<
-    Partial<Record<NewPresetField, { label: string; description: string }>>
+    Partial<
+      Record<
+        NewPresetField,
+        // 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 칸만 x·y·z 를 쓴다
+        // (다른 네 필드는 항상 빈 문자열로 둔다 — `NewPresetDialog`가 그
+        // 기본값으로 `showAim`을 끈다).
+        // 카드 t603 — "effect" 칸만 fxId·period·unit 을 쓴다(나머지는 기본값 그대로).
+        {
+          label: string;
+          description: string;
+          x: string;
+          y: string;
+          z: string;
+          fxId?: string;
+          period?: string;
+          unit?: FxPeriodUnit;
+        }
+      >
+    >
   >({});
   // 카드 t551 후속(지시 1항) — 프리셋 서랍 열림/강조 상태(mockup `.drawer.open`/
   // `hlP`). 강조는 서랍을 닫아도 유지하지 않는다 — 다시 열면 깨끗한 상태.
@@ -1967,6 +2080,12 @@ export function BeatGrid({
           consoleFollowError,
         }}
       />
+      {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
+      {applyFailureNote(sendStatus) && (
+        <p className="beat-grid-apply-fail" role="status">
+          {applyFailureNote(sendStatus)}
+        </p>
+      )}
 
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
@@ -2447,27 +2566,79 @@ export function BeatGrid({
                     // 드롭다운을 막대의 현재 값으로 되돌린다 — 만들기·취소 뒤
                     // 「＋ 새 프리셋」에 머물러 창이 남지 않게.
                     const renderNewPresetDialog = (field: NewPresetField, resetSelectDraft: () => void) => {
-                      const draft = newPresetDrafts[field] ?? { label: "", description: "" };
-                      const setDraft = (next: { label: string; description: string }) =>
-                        setNewPresetDrafts((prev) => ({ ...prev, [field]: next }));
+                      const draft =
+                        newPresetDrafts[field] ?? { label: "", description: "", x: "", y: "", z: "" };
+                      const setDraft = (
+                        next: Partial<{
+                          label: string;
+                          description: string;
+                          x: string;
+                          y: string;
+                          z: string;
+                          fxId: string;
+                          period: string;
+                          unit: FxPeriodUnit;
+                        }>,
+                      ) => setNewPresetDrafts((prev) => ({ ...prev, [field]: { ...draft, ...next } }));
                       const finish = () => {
                         resetSelectDraft();
                         setNewPresetDrafts((prev) => ({ ...prev, [field]: undefined }));
                       };
+                      // 카드 t599 — "position"만 목표 좌표를 받는다.
+                      const showAim = field === "position";
+                      // 카드 t603 — "effect"만 효과 틀·주기를 받는다(서버 필수). 고를 수 있는
+                      // 틀은 그 칸의 효과 종류에 맞는 것뿐이다(서버 `kinds`).
+                      const fxDraft = {
+                        fxId: draft.fxId ?? "",
+                        period: draft.period ?? "",
+                        unit: draft.unit ?? ("beat" as FxPeriodUnit),
+                      };
+                      const fxKind = selectedCue?.effect_kind ?? null;
+                      const fxProps: NewPresetFxFieldsProps | undefined =
+                        field === "effect"
+                          ? {
+                              templates: grid?.fx_templates,
+                              kind: fxKind,
+                              ...fxDraft,
+                              onFxIdChange: (fxId) => setDraft({ fxId }),
+                              onPeriodChange: (period) => setDraft({ period }),
+                              onUnitChange: (unit) => setDraft({ unit }),
+                            }
+                          : undefined;
+                      const fxRecipe =
+                        fxProps &&
+                        fxTemplatesForKind(fxProps.templates, fxKind).some((t) => t.fx_id === fxDraft.fxId)
+                          ? fxRecipeFromDraft(fxDraft)
+                          : null;
                       return (
                         <NewPresetDialog
                           enabled={!!onNewPresetRequest}
                           label={draft.label}
                           description={draft.description}
-                          onLabelChange={(label) => setDraft({ ...draft, label })}
-                          onDescriptionChange={(description) => setDraft({ ...draft, description })}
+                          onLabelChange={(label) => setDraft({ label })}
+                          onDescriptionChange={(description) => setDraft({ description })}
+                          showAim={showAim}
+                          x={draft.x}
+                          y={draft.y}
+                          z={draft.z}
+                          onXChange={(x) => setDraft({ x })}
+                          onYChange={(y) => setDraft({ y })}
+                          onZChange={(z) => setDraft({ z })}
+                          fx={fxProps}
                           onCreate={() => {
                             const labelValid = isValidConsoleLabel(draft.label);
                             const descriptionValid = draft.description.trim().length > 0;
+                            const aimValid =
+                              !showAim ||
+                              (isValidAimCoordinate(draft.x) &&
+                                isValidAimCoordinate(draft.y) &&
+                                isValidAimCoordinate(draft.z));
                             if (
                               !onNewPresetRequest ||
                               !labelValid ||
                               !descriptionValid ||
+                              !aimValid ||
+                              (fxProps !== undefined && fxRecipe === null) ||
                               !selected ||
                               !selectedTrack
                             ) {
@@ -2479,6 +2650,16 @@ export function BeatGrid({
                               field,
                               label: draft.label.trim(),
                               description: draft.description.trim(),
+                              ...(showAim
+                                ? {
+                                    aim: {
+                                      x: Number(draft.x),
+                                      y: Number(draft.y),
+                                      z: Number(draft.z),
+                                    },
+                                  }
+                                : {}),
+                              ...(fxRecipe ? { fx: fxRecipe } : {}),
                             });
                             setNewPresetPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
                             finish();
