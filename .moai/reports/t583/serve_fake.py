@@ -88,7 +88,7 @@ def _sections(bar_map: dict) -> list[dict]:
                 "trig_time_seconds": None,
             }
         )
-    for current, nxt in zip(out, out[1:] + [None]):
+    for current, nxt in zip(out, out[1:] + [None], strict=True):
         end_bar = nxt["bar_start"] if nxt else max(b["bar"] for b in bar_map["bars"]) + 1
         current["bar_count"] = max(1, end_bar - current["bar_start"])
     return out
@@ -127,7 +127,9 @@ def _fake_stage(*_args, track_names, **_kwargs) -> dict:
     for no, name in enumerate(track_names, start=1):
         fids = [f["fid"] for f in fixtures if f.get("confirmedGroupName") == name]
         if fids:
-            groups.append({"group_no": no, "group_name": name, "member_fids": fids, "complete": False})
+            groups.append(
+                {"group_no": no, "group_name": name, "member_fids": fids, "complete": False}
+            )
         else:
             unread.append(f"(t583 하네스) '{name}' 소속은 t525 기록에 없음 — 지어내지 않음")
     points = [{k: f[k] for k in ("fid", "name", "x", "y", "z")} for f in fixtures]

@@ -118,8 +118,18 @@ def _pair(width: int, name: str) -> str | None:
     canvas = Image.new("RGB", (w, h), (20, 22, 26))
     draw = ImageDraw.Draw(canvas)
     font = _font(18)
-    draw.text((pad, 8), f"시안 · {width}px · {name}" + ("" if imgs[0] else " — 못 찾음"), fill=(230, 230, 230), font=font)
-    draw.text((left.width + pad * 2, 8), "앱(구현)" + ("" if imgs[1] else " — 못 찾음"), fill=(230, 230, 230), font=font)
+    draw.text(
+        (pad, 8),
+        f"시안 · {width}px · {name}" + ("" if imgs[0] else " — 못 찾음"),
+        fill=(230, 230, 230),
+        font=font,
+    )
+    draw.text(
+        (left.width + pad * 2, 8),
+        "앱(구현)" + ("" if imgs[1] else " — 못 찾음"),
+        fill=(230, 230, 230),
+        font=font,
+    )
     canvas.paste(left, (pad, head + pad))
     canvas.paste(right, (left.width + pad * 2, head + pad))
     target = OUT / f"{width}_{name}.png"
@@ -149,7 +159,15 @@ def main() -> None:
             a_page.close()
         browser.close()
     (OUT / "regions.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
-    print(json.dumps({w: {k: v for k, v in r.items() if k in ("pairs", "app_page_errors")} for w, r in report.items()}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                w: {k: v for k, v in r.items() if k in ("pairs", "app_page_errors")}
+                for w, r in report.items()
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
