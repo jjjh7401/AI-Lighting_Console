@@ -65,6 +65,11 @@ from server.design.beat_grid_edit import (
     movement_vocabulary,
     resolve_track_scope,
 )
+from server.design.beat_grid_effect_presets import (
+    default_effect_library,
+    effect_preset_outcomes,
+    effect_preset_recipe,
+)
 from server.design.beat_grid_emit import (
     beat_grid_sequence_label,
     beat_grid_timecode_label,
@@ -73,7 +78,8 @@ from server.design.beat_grid_emit import (
 from server.design.beat_grid_position_presets import (
     PointingFrames,
     PositionPresetPlan,
-    plan_position_preset_creation,
+    plan_cells,
+    position_preset_outcomes,
     position_preset_target,
     record_position_preset_target,
     referencing_tracks,
@@ -240,7 +246,10 @@ from server.design.song_plan import (
     apply_cue_sheet_section,
     apply_cue_sheet_view,
 )
-from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
+from server.fx.instantiate import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011), 카드 t593
+    FxInstantiationError,
+    is_programmer_state,
+)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
 from server.looks.songcue import (
@@ -3245,6 +3254,21 @@ def _position_creation_text(
     where = f" → ({target[0]:g}, {target[1]:g}, {target[2]:g})" if target else ""
     aimed = sum(1 for line in lines if line.startswith("Fixture "))
     return f"{preset_no} {label}{where} 장비 {aimed}대 조준"
+
+
+def _effect_creation_text(
+    *, timeline_grid: Mapping[str, object], preset_no: str, lines: Sequence[str]
+) -> str:
+    """카드 t593 — 승인 카드의 「새로 만드는 효과 프리셋」 한 항목.
+    ``22.1 'LA Wave' ← sweep-soft-wide · 2박 주기 · Group 7`` 꼴."""
+    label = next((line.split(" ", 3)[3] for line in lines if line.startswith("Label Preset ")), "")
+    recipe = effect_preset_recipe(timeline_grid, preset_no) or {}
+    unit = "마디" if recipe.get("period_unit") == "bar" else "박"
+    group = next((line for line in lines if line.startswith("Group ")), "")
+    return (
+        f"{preset_no} {label} ← {recipe.get('fx_id', '?')} · "
+        f"{recipe.get('period_value', '?')}{unit} 주기 · {group}"
+    )
 
 
 def _preset_release_command(fids: Sequence[int]) -> str:
@@ -10099,7 +10123,9 @@ class ChatSession:
         # slot 이 없는」 위치 번호는 목표 좌표 레시피로 이번 묶음에서 만든다.
         # 만들 수 있는 칸만 승인 기록 대상으로 돌아가고, 하나라도 빠지면 사유를
         # 단 채 보류로 남는다. 만들기 줄은 아래에서 묶음 맨 앞에 붙는다.
-        position_plan = self._beat_grid_plan_position_presets(grid, held_presets)
+        # 카드 t593(REQ-LDBEAT-015(i-4)) — 빈 효과 번호도 같은 칸 판정으로 템플릿·주기
+        # 레시피에서 만든다. 위치·효과가 한 칸에 같이 있어도 함께 판정한다(``plan_cells``).
+        position_plan = self._beat_grid_plan_new_presets(grid, held_presets, timeline)
         pending_before = [
             entry for entry in [*checked, *position_plan.released] if not entry.get("approved")
         ]
@@ -10217,6 +10243,33 @@ class ChatSession:
                 *position_plan.creations.values(),
                 *self._beat_grid_apply_cells(result),
             ]
+            # 카드 t593 — 효과 만들기 줄이 같은 묶음의 다른 줄과 겹치면 송신 중복 제거가
+            # 그 줄을 건너뛰어 빈 효과가 저장된다(카드 t601). 효과끼리는 계획이 이미
+            # 막았다 — 여기서는 큐 줄과의 겹침을 막고, 겹치면 아무것도 보내지 않는다.
+            effect_lines = {
+                line
+                for number, lines in position_plan.creations.items()
+                if position_plan.creation_fields.get(number) == "effect_preset_no"
+                for line in lines
+                if not is_programmer_state(line)
+            }
+            other_lines = [
+                line
+                for number, lines in position_plan.creations.items()
+                if position_plan.creation_fields.get(number) != "effect_preset_no"
+                for line in lines
+            ] + [line for cell in self._beat_grid_apply_cells(result) for line in cell]
+            overlap = sorted(effect_lines.intersection(other_lines))
+            if overlap:
+                return self._beat_grid_send_status(
+                    last_action="apply",
+                    ok=False,
+                    reason=(
+                        "새 효과 프리셋 만들기 줄이 같은 반영 묶음의 다른 줄과 겹쳐 "
+                        "반영을 멈췄습니다"
+                        f"(송신 중복 제거가 건너뜀, 카드 t601): {', '.join(overlap[:3])}"
+                    ),
+                )
             batch = build_write_approval_batch(cells)
             # 카드 t572 — 승인 카드에 「막혀서 그대로 둔 칸」과 「번호 순서와
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
@@ -10264,13 +10317,32 @@ class ChatSession:
             if pending_before:
                 listed = ", ".join(_pending_entry_text(entry) for entry in pending_before)
                 risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
-            if position_plan.creations:
+            position_creations = {
+                number: lines
+                for number, lines in position_plan.creations.items()
+                if position_plan.creation_fields.get(number) != "effect_preset_no"
+            }
+            effect_creations = {
+                number: lines
+                for number, lines in position_plan.creations.items()
+                if position_plan.creation_fields.get(number) == "effect_preset_no"
+            }
+            if position_creations:
                 listed = ", ".join(
                     _position_creation_text(timeline_grid=grid, preset_no=number, lines=lines)
-                    for number, lines in position_plan.creations.items()
+                    for number, lines in position_creations.items()
                 )
                 risk_reason += (
-                    f" · 새로 만드는 위치 프리셋 {len(position_plan.creations)}개"
+                    f" · 새로 만드는 위치 프리셋 {len(position_creations)}개"
+                    f"(콘솔 풀에서 빈 번호 확인): {listed}"
+                )
+            if effect_creations:
+                listed = ", ".join(
+                    _effect_creation_text(timeline_grid=grid, preset_no=number, lines=lines)
+                    for number, lines in effect_creations.items()
+                )
+                risk_reason += (
+                    f" · 새로 만드는 효과 프리셋 {len(effect_creations)}개"
                     f"(콘솔 풀에서 빈 번호 확인): {listed}"
                 )
             # 카드 t590(REQ-LDBEAT-015(i-1)) — 콘솔에 아직 없는 번호는 송신 보류.
@@ -10978,35 +11050,63 @@ class ChatSession:
             f"{pool_root}/{pool_no}", probe_id="song-design-preset-pool-read"
         )
 
-    def _beat_grid_plan_position_presets(
-        self, grid: Mapping[str, object], held: list[dict[str, object]]
+    def _beat_grid_plan_new_presets(
+        self,
+        grid: Mapping[str, object],
+        held: list[dict[str, object]],
+        timeline: Mapping[str, object],
     ) -> PositionPresetPlan:
-        """카드 t592 — 보류 칸 중 새 위치 프리셋으로 만들 수 있는 칸을 가린다.
-        후보(위치 풀에서 slot 이 비었다고 읽힌 번호)가 있을 때만 그룹 소속·장비
-        좌표를 콘솔에서 **읽는다**(쓰기 없음). 판정은
-        ``plan_position_preset_creation``(순수 함수)이 한다."""
-        candidates = [
-            entry
-            for entry in held
-            if entry.get("field") == "position_preset_no"
-            and entry.get("hold_reason") == EMPTY_PRESET_HOLD
+        """카드 t592·t593 — 보류 칸 중 새 프리셋(위치·효과)으로 만들 수 있는 칸을 가린다.
+        위치 후보가 있을 때만 그룹 소속·장비 좌표를 콘솔에서 **읽는다**(쓰기 없음).
+        효과는 격자 레시피·fx 라이브러리·곡 BPM 만 쓴다(콘솔 판독 0). 칸 판정은
+        ``plan_cells``(순수 함수) 한 곳이 두 종류를 함께 한다."""
+
+        def _numbers(field: str) -> list[str]:
+            return sorted(
+                {
+                    str(entry.get("value"))
+                    for entry in held
+                    if entry.get("field") == field
+                    and entry.get("hold_reason") == EMPTY_PRESET_HOLD
+                    and preset_pool_no(entry.get("value")) is not None
+                }
+            )
+
+        position_numbers = [
+            n for n in _numbers("position_preset_no") if preset_pool_no(n) == POSITION_PRESET_POOL
         ]
-        if not candidates:
+        effect_numbers = _numbers("effect_preset_no")
+        if not position_numbers and not effect_numbers:
             return PositionPresetPlan(held=list(held))
-        # 그 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 읽는다.
-        group_names = sorted(
-            {
-                str(track.get("group_name"))
-                for entry in candidates
-                for track in referencing_tracks(grid, str(entry.get("value")))
-            }
-        )
-        return plan_position_preset_creation(
-            grid,
-            held,
-            members=self._beat_grid_group_members(group_names),
-            frames=self._beat_grid_pointing_frames(),
-        )
+        outcomes: dict[tuple[str, str], tuple[tuple[str, ...] | None, str | None]] = {}
+        if position_numbers:
+            # 그 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 읽는다.
+            group_names = sorted(
+                {
+                    str(track.get("group_name"))
+                    for number in position_numbers
+                    for track in referencing_tracks(grid, number)
+                }
+            )
+            for number, outcome in position_preset_outcomes(
+                grid,
+                position_numbers,
+                members=self._beat_grid_group_members(group_names),
+                frames=self._beat_grid_pointing_frames(),
+            ).items():
+                outcomes[("position_preset_no", number)] = outcome
+        if effect_numbers:
+            timing = build_song_timing_from_bar_map(timeline.get("bar_map"))
+            for number, outcome in effect_preset_outcomes(
+                grid,
+                effect_numbers,
+                library=default_effect_library(),
+                policy=load_preset_pool_policy(),
+                bpm=timing.bpm if timing is not None else None,
+                beats_per_bar=timing.beats_per_bar if timing is not None else None,
+            ).items():
+                outcomes[("effect_preset_no", number)] = outcome
+        return plan_cells(held, outcomes)
 
     def _beat_grid_pointing_frames(self) -> PointingFrames | None:
         """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만

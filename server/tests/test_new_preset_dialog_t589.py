@@ -19,6 +19,7 @@ import json
 import pytest
 
 from server.design.beat_grid import pending_preset_approvals
+from server.design.beat_grid_effect_presets import EFFECT_RECIPE_MISSING
 from server.design.beat_grid_presets import (
     app_preset_description,
     app_preset_label,
@@ -482,8 +483,9 @@ class TestApprovalCardShowsLabelAndDescription:
         # 빈 번호라 「새로 만드는 프리셋」(승인 기록 대상)이 아니라 보류 줄에 온다.
         assert "새로 만드는 프리셋" not in joined
         assert "빈 프리셋 — 아직 콘솔에 만들 길 없음(송신 보류) 1개" in joined
-        # 이름·설명은 그 보류 줄에 그대로 보인다(t589 잠금).
-        assert "2.61 'LA Wave' — 따뜻한 흰색(빈 프리셋 — 아직 콘솔에 만들 길 없음)" in joined
+        # 이름·설명은 그 보류 줄에 그대로 보인다(t589 잠금). 카드 t593 부터 빈 효과
+        # 번호는 레시피가 있으면 반영 때 만들어지므로, 항목 사유는 못 만드는 까닭이다.
+        assert f"2.61 'LA Wave' — 따뜻한 흰색({EFFECT_RECIPE_MISSING})" in joined
         # 경고는 한 줄 — t589 의 옛 별도 문장은 없다.
         assert "콘솔에는 아직 만들어지지 않음" not in joined
         assert joined.count("(송신 보류)") == 1
