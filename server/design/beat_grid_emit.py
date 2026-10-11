@@ -65,6 +65,8 @@ __all__ = [
     "CueEmitResult",
     "SongTiming",
     "TrackEmitResult",
+    "beat_grid_sequence_label",
+    "beat_grid_timecode_label",
     "blocked_m1_items_for_cue",
     "emit_beat_grid_write_bundle",
     "required_m1_items_for_cue",
@@ -108,6 +110,24 @@ def _load_measured_max_timecode_tracks() -> int:
 #: (카드 t549), 카드 t553 실기 되읽기(타임코드 32, 트랙 8)로 8이 됐다 —
 #: 근거는 ``beat_grid_data/measured_console.yaml``.
 MEASURED_MAX_TIMECODE_TRACKS = _load_measured_max_timecode_tracks()
+
+
+def beat_grid_sequence_label(group_name: str, sequence_number: int) -> str:
+    """``emit_beat_grid_write_bundle``이 그 트랙의 시퀀스에 실제로 쓰는
+    ASCII 이름 — 재적용 소유권 비교(카드 t572, REQ-LDBEAT-011~013)가
+    이 이름을 **다시 계산**하는 대신 이 함수를 그대로 불러 쓴다. 한
+    자리에만 식을 두어, 에미터가 콘솔에 실제로 적은 이름과 소유권
+    레코드가 기억하는 이름이 따로 적혀 어긋나는 일이 없게 한다."""
+    return _ascii_label(f"LDBEAT {group_name}", fallback=f"Sequence {sequence_number}")
+
+
+def beat_grid_timecode_label(timecode_number: int) -> str:
+    """``emit_beat_grid_write_bundle``이 타임코드에 실제로 쓰는 ASCII
+    이름 — :func:`beat_grid_sequence_label`과 같은 이유로 소유권 비교가
+    재사용한다."""
+    return _ascii_label(
+        f"LDBEAT Timecode {timecode_number}", fallback=f"Timecode {timecode_number}"
+    )
 
 
 def required_m1_items_for_cue(cue: Mapping[str, object]) -> frozenset[int]:
@@ -497,7 +517,7 @@ def emit_beat_grid_write_bundle(
             continue
 
         group_no = track.get("group_no")
-        ascii_name = _ascii_label(f"LDBEAT {group_name}", fallback=f"Sequence {sequence_number}")
+        ascii_name = beat_grid_sequence_label(group_name, sequence_number)
         store_sequence_commands = (
             f"Store Sequence {sequence_number}",
             f"Set Sequence {sequence_number} Property 'Name' '{ascii_name}'",
@@ -544,9 +564,7 @@ def emit_beat_grid_write_bundle(
 
     timecode_setup_commands: list[str] = []
     for timecode_number in sorted(used_timecode_numbers):
-        name = _ascii_label(
-            f"LDBEAT Timecode {timecode_number}", fallback=f"Timecode {timecode_number}"
-        )
+        name = beat_grid_timecode_label(timecode_number)
         timecode_setup_commands.append(f"Store Timecode {timecode_number}")
         timecode_setup_commands.append(f"Set Timecode {timecode_number} Property 'Name' '{name}'")
 

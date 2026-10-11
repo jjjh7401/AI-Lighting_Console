@@ -241,6 +241,27 @@ class TestStorageRoundTrip:
         ]
         assert _named(reborn.latest, "BACK")["cues"][0]["label"] == "앞박 1회"
 
+    def test_song_timeline_store_persists_beat_grid_allocations_across_restart(
+        self, tmp_path
+    ) -> None:
+        """카드 t572 — 소유권 레코드(``beat_grid_allocations``)도 ``latest``/
+        ``setlist_sequence_nos``와 같은 atomic-write 저장소를 그대로 탄다."""
+        path = tmp_path / "song-timeline.json"
+        store = SongTimelineStore(path)
+        song_key = (LOVE_ATTACK_TITLE, 210)
+        allocation = {
+            "timecode_number": 20,
+            "timecode_name": "LDBEAT Timecode 20",
+            "tracks": {"BACK": {"sequence_number": 1, "sequence_name": "LDBEAT BACK"}},
+        }
+
+        store.set_beat_grid_allocation(song_key, allocation)
+
+        reborn = SongTimelineStore(path)  # 서버 재시작 흉내
+        assert reborn.beat_grid_allocation(song_key) == allocation
+        # 다른 곡 키는 영향을 받지 않는다(독립 사전).
+        assert reborn.beat_grid_allocation(("Sugar", 999)) is None
+
     def test_timeline_draft_history_undo_restores_the_grid_with_no_new_code(self) -> None:
         history = TimelineDraftHistory()
         before = attach_beat_grid_default({"song_title": LOVE_ATTACK_TITLE})

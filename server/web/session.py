@@ -48,7 +48,11 @@ from server.design.beat_grid_edit import (
     apply_beat_grid_edit_range,
     load_preset_pool_policy,
 )
-from server.design.beat_grid_emit import emit_beat_grid_write_bundle
+from server.design.beat_grid_emit import (
+    beat_grid_sequence_label,
+    beat_grid_timecode_label,
+    emit_beat_grid_write_bundle,
+)
 from server.design.beat_grid_presets import (
     build_preset_drawer,
     pool_name_to_effect_kind,
@@ -58,11 +62,13 @@ from server.design.beat_grid_presets import (
 )
 from server.design.beat_grid_send import (
     BeatGridCellKey,
+    apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
     build_song_timing_from_bar_map,
     pick_sequence_numbers,
     resolve_dimmer_attributes,
     unsent_beat_grid_cells,
+    verify_owned_sequences,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
 from server.design.beat_grid_stage import read_beat_grid_stage
@@ -3566,7 +3572,18 @@ class SongTimelineStore:
     the EXECUTED setlist allocation's slot order — written by the session's
     셋리스트 모드 only after its command bundle actually ran, read by the
     cue-monitor snapshot as the multi-song planned order. Same projection
-    rule: a stored order is bookkeeping, never a console capability."""
+    rule: a stored order is bookkeeping, never a console capability.
+
+    ``beat_grid_allocation``/``set_beat_grid_allocation`` (카드 t572,
+    SPEC-LDBEAT-001 REQ-LDBEAT-011~013) — 박자 격자 「콘솔에 반영」이
+    **이 앱 자신이 쓴** 시퀀스·타임코드 번호·이름을 곡별로 기억해 두는
+    소유권 레코드. 두 번째 이후의 「콘솔에 반영」(재적용)이 이 번호가
+    지금도 콘솔에 그대로 있는지 확인한 뒤에만 덮어쓴다 — 레코드가 콘솔
+    쓰기 권한을 주는 것은 아니다(``latest``/``setlist_sequence_nos``와
+    같은 사영 규칙: 전부 장부일 뿐, 매 쓰기는 여전히 승인 관문을 탄다).
+    키는 ``_beat_grid_song_key``가 쓰는 ``(song_title, sequence_number)``
+    튜플 그대로다(새 id 체계를 짓지 않는다) — JSON 저장을 위해 문자열로
+    바꿀 뿐 호출자는 튜플로만 다룬다."""
 
     def __init__(self, path: Path | str | None = None) -> None:
         self._path = Path(path) if path is not None else None
@@ -3575,6 +3592,12 @@ class SongTimelineStore:
         setlist = data.get("setlist") if data else None
         self._setlist: list[int] = (
             [no for no in setlist if isinstance(no, int)] if isinstance(setlist, list) else []
+        )
+        allocations = data.get("beat_grid_allocations") if data else None
+        self._beat_grid_allocations: dict[str, dict] = (
+            {k: v for k, v in allocations.items() if isinstance(v, dict)}
+            if isinstance(allocations, dict)
+            else {}
         )
 
     @property
@@ -3594,6 +3617,22 @@ class SongTimelineStore:
     @setlist_sequence_nos.setter
     def setlist_sequence_nos(self, nos: list[int]) -> None:
         self._setlist = [no for no in nos if isinstance(no, int)]
+        self._save()
+
+    @staticmethod
+    def _beat_grid_allocation_key(song_key: tuple[object, object]) -> str:
+        """``song_key``(``(song_title, sequence_number)``)를 JSON 저장용
+        문자열로 — 순서가 고정된 리스트 하나뿐이라 ``sort_keys``가 필요
+        없다(딕셔너리가 아니다)."""
+        return json.dumps(list(song_key), ensure_ascii=False)
+
+    def beat_grid_allocation(self, song_key: tuple[object, object]) -> dict | None:
+        return self._beat_grid_allocations.get(self._beat_grid_allocation_key(song_key))
+
+    def set_beat_grid_allocation(
+        self, song_key: tuple[object, object], allocation: Mapping[str, object]
+    ) -> None:
+        self._beat_grid_allocations[self._beat_grid_allocation_key(song_key)] = dict(allocation)
         self._save()
 
     def _load(self) -> dict | None:
@@ -3618,7 +3657,12 @@ class SongTimelineStore:
         # mid-write must leave the previous file intact.
         try:
             body = json.dumps(
-                {"version": 1, "timeline": self._latest, "setlist": self._setlist},
+                {
+                    "version": 1,
+                    "timeline": self._latest,
+                    "setlist": self._setlist,
+                    "beat_grid_allocations": self._beat_grid_allocations,
+                },
                 ensure_ascii=False,
             )
             self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -9430,11 +9474,14 @@ class ChatSession:
         reason: str | None = None,
         blocked_cells: Sequence[tuple[str, int, str]] = (),
         approval_vs_sent: Mapping[str, object] | None = None,
+        stale_tracks: Sequence[str] = (),
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
         출처로 삼는다(코디네이터 계약 5항 — "단일 출처") — 별도 카운터는
-        더 이상 없다."""
+        더 이상 없다. ``stale_tracks``(카드 t572)는 소유권 레코드에는
+        있지만 지금 격자에는 없는 트랙 이름 — 지우지 않고 그대로 두되
+        감독에게 알린다."""
         unsent = self._beat_grid_current_unsent_cells()
         event = beat_grid_send_status_event(
             pending_apply_count=len(unsent) if unsent is not None else None,
@@ -9445,6 +9492,7 @@ class ChatSession:
                 {"group_name": name, "bar": bar, "reason": why} for name, bar, why in blocked_cells
             ],
             approval_vs_sent=dict(approval_vs_sent) if approval_vs_sent is not None else None,
+            stale_tracks=list(stale_tracks),
         )
         self._send(event)
         return event
@@ -9464,11 +9512,19 @@ class ChatSession:
         section = rig_sections.get("sequences")
         return section if isinstance(section, Mapping) else {"reason": "console_unreachable"}
 
-    def _resolve_beat_grid_timecode_number(self, wanted: object) -> tuple[int | None, str | None]:
+    def _resolve_beat_grid_timecode_number(
+        self, wanted: object, *, recorded_name: str | None = None
+    ) -> tuple[int | None, str | None]:
         """director 가 격자에 적어 둔 타임코드 번호 하나(``timeline
         ["timecode_number"]``)의 점유 여부 — ``timecode_slot_verdict``의
         판정을 그대로 재사용한다(REQ-LDBEAT-013(b), 새 판정을 짓지 않음).
-        없음/점유/불명 셋 다 번호를 지어내지 않고 사유로 거절한다."""
+        없음/점유/불명 셋 다 번호를 지어내지 않고 사유로 거절한다.
+
+        ``recorded_name``이 있으면(카드 t572 재적용 — 소유권 레코드가
+        이 곡의 타임코드 이름을 기억하고 있다) 점유 중인 이름이 그
+        이름과 **같을 때만** 번호를 재사용으로 승인한다. 비어 있으면
+        (레코드가 기억하는 객체가 콘솔에서 사라졌다) 그 사실 자체를
+        거절 사유로 삼는다 — 번호를 지어내 되살리지 않는다."""
         if not isinstance(wanted, int) or isinstance(wanted, bool) or wanted < 1:
             return None, (
                 "곡 타이밍에 타임코드 번호(timeline.timecode_number)가 지정되지 않았습니다."
@@ -9476,11 +9532,23 @@ class ChatSession:
         path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
         occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
         if occupant is not None:
+            if recorded_name is not None and occupant == recorded_name:
+                return wanted, None
+            if recorded_name is not None:
+                return None, (
+                    f"Timecode {wanted}의 콘솔 이름('{occupant}')이 기록된 이름"
+                    f"('{recorded_name}')과 달라 재적용을 거절합니다."
+                )
             return None, f"Timecode {wanted}은 이미 '{occupant}'이(가) 쓰고 있어 반영을 거절합니다."
         if not axes.timecode_go:
             return None, (
                 axes.timecode_skip_reason
                 or "타임코드 점유 여부를 확인할 수 없어 반영을 거절합니다."
+            )
+        if recorded_name is not None:
+            return None, (
+                f"기록된 타임코드 {wanted}('{recorded_name}')이 콘솔에서 비어 있어 "
+                "재적용을 거절합니다(기록이 낡았습니다)."
             )
         return wanted, None
 
@@ -9530,7 +9598,14 @@ class ChatSession:
         않는다). 입력 넷(순서 번호·타임코드 번호·디머 속성·곡 타이밍)을
         이 메서드가 모아 ``emit_beat_grid_write_bundle``에 넘긴다 — 콘솔
         번호를 이 메서드가 지어내는 자리는 없다(전부 콘솔 읽기 또는
-        director 입력에서 온다)."""
+        director 입력에서 온다).
+
+        카드 t572(REQ-LDBEAT-011~013) — 이 곡으로 반영을 이미 한 번 한
+        적이 있으면(소유권 레코드 존재), 새 번호를 고르는 대신 **이
+        앱이 저번에 쓴** 번호를 먼저 콘솔에서 확인하고(이름까지 같아야
+        한다), 확인된 번호만 재사용한다. 레코드에 없는 트랙(새 트랙)만
+        새 번호를 받는다. 소유권 확인이 하나라도 실패하면 명령 0줄 —
+        부분 재적용은 없다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -9540,6 +9615,11 @@ class ChatSession:
         grid = self._beat_grid_view(timeline)
         tracks = list(grid.get("tracks") or [])
         group_names = [str(track.get("group_name")) for track in tracks]
+
+        song_key = self._beat_grid_song_key(timeline)
+        record = store.beat_grid_allocation(song_key) if store is not None else None
+        owned_tracks_record: dict[str, dict] = dict(record.get("tracks") or {}) if record else {}
+        recorded_timecode_name = record.get("timecode_name") if record else None
 
         # 카드 t563 — 이 메서드는 ``run_instruction`` 체인을 거치지 않는
         # 전용 진입점(``panel.py``의 ``fire()``와 같은 자리)이라, 게이트/
@@ -9552,22 +9632,35 @@ class ChatSession:
             timing = build_song_timing_from_bar_map(timeline.get("bar_map"))
 
             sequences_section = self._beat_grid_sequences_section()
-            sequence_numbers, sequence_reason = pick_sequence_numbers(
-                sequences_section, group_names
+
+            owned_sequences, ownership_reason = verify_owned_sequences(
+                sequences_section, owned_tracks_record
+            )
+            if ownership_reason is not None:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason=ownership_reason
+                )
+
+            new_group_names = [name for name in group_names if name not in owned_sequences]
+            fresh_sequence_numbers, sequence_reason = pick_sequence_numbers(
+                sequences_section, new_group_names
             )
             if sequence_reason is not None:
                 return self._beat_grid_send_status(
                     last_action="apply", ok=False, reason=sequence_reason
                 )
+            sequence_numbers = dict(owned_sequences)
+            sequence_numbers.update(fresh_sequence_numbers)
 
             timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
-                timeline.get("timecode_number")
+                timeline.get("timecode_number"), recorded_name=recorded_timecode_name
             )
             if timecode_reason is not None:
                 return self._beat_grid_send_status(
                     last_action="apply", ok=False, reason=timecode_reason
                 )
             timecode_numbers = {name: timecode_number for name in group_names}
+            owned_timecode = timecode_number if recorded_timecode_name is not None else None
 
             types_root = str(
                 self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
@@ -9590,6 +9683,18 @@ class ChatSession:
                     ok=False,
                     reason=result.blocked_reason or "콘솔에 반영할 내용이 없습니다.",
                     blocked_cells=result.blocked_cells,
+                )
+
+            if owned_sequences or owned_timecode is not None:
+                recorded_cue_numbers = {
+                    name: tuple(info.get("cue_numbers") or ())
+                    for name, info in owned_tracks_record.items()
+                }
+                result = apply_beat_grid_ownership_reuse(
+                    result,
+                    owned_sequences=owned_sequences,
+                    owned_timecode=owned_timecode,
+                    recorded_cue_numbers=recorded_cue_numbers,
                 )
 
             cells = self._beat_grid_apply_cells(result)
@@ -9636,6 +9741,7 @@ class ChatSession:
             # 줄이 있다는 뜻이라, "지금 격자 == 콘솔" 전제를 세울 수 없다
             # — 스냅샷을 그대로 두어 unsent_cells 가 계속 "미반영"으로
             # 남게 한다(거짓 초록 방지).
+            stale_tracks: list[str] = []
             if verdict.passed:
                 self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
                     beat_grid_cell_snapshot(grid)
@@ -9645,6 +9751,29 @@ class ChatSession:
                 if latest is not None:
                     self._send(
                         song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest))
+                    )
+                # 카드 t572 — 소유권 레코드 갈아 끼우기. 레코드에는 있지만
+                # 지금 격자에는 없는 트랙(stale)은 건드리지 않고 그대로
+                # 들고 간다(지우지 않는다) — 이번에 쓴 트랙만 새 값으로
+                # 갱신한다.
+                stale_tracks = sorted(
+                    name for name in owned_tracks_record if name not in group_names
+                )
+                updated_tracks_record = dict(owned_tracks_record)
+                for name in group_names:
+                    updated_tracks_record[name] = {
+                        "sequence_number": sequence_numbers[name],
+                        "sequence_name": beat_grid_sequence_label(name, sequence_numbers[name]),
+                        "cue_numbers": sorted(cue_numbers.get(name, {}).values()),
+                    }
+                if store is not None:
+                    store.set_beat_grid_allocation(
+                        song_key,
+                        {
+                            "timecode_number": timecode_number,
+                            "timecode_name": beat_grid_timecode_label(timecode_number),
+                            "tracks": updated_tracks_record,
+                        },
                     )
             return self._beat_grid_send_status(
                 last_action="apply",
@@ -9657,6 +9786,7 @@ class ChatSession:
                     "sent_not_approved": verdict.sent_not_approved,
                     "approved_not_sent": verdict.approved_not_sent,
                 },
+                stale_tracks=stale_tracks,
             )
         finally:
             reset_session_key(token)
