@@ -1247,6 +1247,15 @@ _EXPECTED_WEB_ROUTES = (
 # web-layer feature work.
 _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "approval_decision",
+    # 카드 t551 (2026-10-11, SPEC-LDBEAT-001 M3) — 박자 격자 칸 편집 전용 채널.
+    # 편집 세 길(직접 고르기·문장·AI 제안)이 모두 `apply_beat_grid_edit` 로
+    # 수렴하고, 콘솔에는 쓰지 않는다(서랍은 풀 판독만). PRECHK/OVERLAP 축과
+    # 무관한 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_drawer_request",
+    "beat_grid_edit",
+    "beat_grid_suggest",
+    "beat_grid_suggestion_apply",
+    "beat_grid_suggestion_reject",
     "chat",
     "cue_monitor_request",
     "dash_catalog_request",
@@ -1304,6 +1313,12 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "answer_delta",
     "approval_request",
     "approval_resolved",
+    # 카드 t551 (2026-10-11, SPEC-LDBEAT-001 M3) — 위 클라이언트 쪽 박자 격자
+    # 채널의 응답(서랍 판독 결과·보류 중인 AI 제안·제안 소비 통지). 같은 사유의
+    # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_drawer",
+    "beat_grid_suggestion",
+    "beat_grid_suggestion_consumed",
     "busy",
     "chat_response",
     "cue_monitor",

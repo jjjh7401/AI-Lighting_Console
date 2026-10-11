@@ -7,16 +7,30 @@
 // 사이에 **추가되는 새 블록**이다(REQ-LDBEAT-004).
 //
 // M2 범위 — 읽기 전용: 트랙·격자 데이터 모델과 레이아웃이 안정된 뒤에 M3가
-// 실제 편집(세 경로 — 직접 고르기/문장/AI 제안)을 얹는다. 여기서는 선택·접기
-// 상태만 바뀌고, 콘솔에도 초안에도 아무것도 쓰지 않는다. 명령창의 두 제출
-// 버튼은 M3 배선 전까지 비활성이다.
+// 실제 편집(세 경로 — 직접 고르기/문장/AI 제안)을 얹는다. 콘솔에는 이
+// 컴포넌트 자신이 여전히 아무것도 쓰지 않는다 — 편집 콜백(`onEditRequest`/
+// `onSentenceEditRequest`/`onSuggestionRequest`)이 서버의 새 편집 연산
+// (`apply_beat_grid_edit`)으로 올라가고, 그 연산이 혼자 검증·적용한다
+// (REQ-LDBEAT-007/008, 카드 t551/M3).
+//
+// 카드 t551 후속(리드 지시 2026-10-11, 근본 원인 정정) — 프리셋 카탈로그
+// 읽기 경로는 이미 있었다(server/design/console_slots.py·preset_names.py,
+// 콘솔 "읽기"는 쓰기 0 규칙과 충돌하지 않는다). 그래서 밝기 "값"(%) 외에도
+// 프리셋 **서랍**(`drawerSections`/`onDrawerRequest`)과 AI 제안 점선 막대
+// (`pendingSuggestion`/`onSuggestionAccept`/`onSuggestionReject`)가 추가로
+// 가능해졌다 — mockup "프리셋 서랍"/"AI 제안" 절 그대로(아래 각 함수의
+// 주석이 인용 절을 단다). 그 콜백들이 미제공이면 이 컴포넌트는 기존과
+// 바이트 동일하게 동작한다(additive).
 import { useMemo, useRef, useState } from "react";
 
 import type {
   BeatGridAppMovement,
   BeatGridBrightness,
   BeatGridCue,
+  BeatGridDrawerEntry,
+  BeatGridDrawerSection,
   BeatGridEvidence,
+  BeatGridPendingSuggestion,
   BeatGridSceneMemo,
   BeatGridTrack,
   BeatGridView,
@@ -371,6 +385,62 @@ export interface BeatGridProps {
    * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
    * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
   sections?: readonly BeatGridSectionLite[];
+  /**
+   * 카드 t551(M3) — 편집 경로 ①(직접 고르기). UI는 서버 페이로드를 직접
+   * 구성하지 않는다(AC-LDBEAT-005) — 이 콜백은 사용자가 고른 필드·값을
+   * 그대로 담아 올리고, 서버의 `apply_beat_grid_edit`가 검증·적용한다.
+   * 카드 t551 계속(progress.md "M3 후속 — 직접 고르기 드롭다운") — 밝기
+   * **값**(%) 평문 숫자 외에, 위치·색·밝기(디머 프리셋) 세 필드가
+   * `drawerSections`에서 "이 곡 프리셋"/"쇼에 이미 있는 프리셋"/"+ 새
+   * 프리셋" 목록 선택으로도 고쳐진다(앞선 `ldbeat-runbook-mockup-
+   * 20261008.html` `opts()` 그대로). 카드 t551 계속(코디네이터 지시
+   * 2026-10-11, 조건 1 — "lead 가 옵션 A를 골랐다") — 효과(움직임)
+   * 프리셋과 디머 "효과" 서브모드도 이제 같은 패턴으로 고쳐진다. mockup
+   * 자신이 같은 풀 안에서 번호대로 기본/효과를 가른다는 근거(`ldbeat-
+   * runbook-mockup-20261008.md` 14-17/26-29행) — 서버가 `preset_pools.
+   * yaml`(코드 상수 0건)로 각 항목의 `is_effect_band`를 판정해 보낸다
+   * (`drawerSections`의 기존 세 풀 그대로, 네 번째 풀("All 1")은 여전히
+   * 안 쓴다 — 조건1이 요구한 것만 더했다). 생략하면(미제공) 모든 칸이
+   * 읽기 전용이다(기존 동작과 바이트 동일).
+   */
+  onEditRequest?: (request: {
+    bar: number;
+    target: string;
+    changes: Record<string, unknown>;
+  }) => void;
+  /**
+   * 카드 t551(M3) — 편집 경로 ②(문장). 명령창 "바로 적용(문장)" 버튼이
+   * 입력 문자열을 그대로 올린다 — 해석(마디·역할·항목·값)은 전부 서버의
+   * `beat_grid_sentence.parse_beat_grid_sentence`가 한다(REQ-LDBEAT-007).
+   * 생략하면 버튼은 비활성이다(기존 동작과 바이트 동일, M3 배선 전 상태).
+   */
+  onSentenceEditRequest?: (sentence: string) => void;
+  /**
+   * 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. "AI 제안" 버튼이 지금
+   * 고른 칸(bar·그룹)을 서버의 `beat_grid_suggest`로 올린다 — 실제 AI
+   * 백엔드는 이 카드 범위 밖이라(`NullSuggestionSource`) 오늘은 "제안
+   * 없음" 응답이 채팅 로그에 그대로 뜬다(지어낸 제안 0건). 생략하면
+   * 버튼은 비활성이다.
+   */
+  onSuggestionRequest?: (bar: number, target: string) => void;
+  /**
+   * 카드 t551 후속(지시 1항) — 보류 중인 AI 제안 하나. mockup의 점선
+   * 막대 + 수락/거절 카드(`#bAi`→`aOk`/`aNo`)와 같은 모양. 생략·`null`이면
+   * 아무 트랙에도 점선 막대가 뜨지 않는다(지금까지와 바이트 동일).
+   */
+  pendingSuggestion?: BeatGridPendingSuggestion | null;
+  /** 카드 t551 후속 — mockup `aOk`(수락 → 같은 편집 요청을 보낸다). */
+  onSuggestionAccept?: (suggestionId: string) => void;
+  /** 카드 t551 후속 — mockup `aNo`(거절 → 격자·콘솔 diff 0). */
+  onSuggestionReject?: (suggestionId: string) => void;
+  /**
+   * 카드 t551 후속(지시 1항) — 프리셋 서랍 섹션들(mockup "구조" 6,
+   * `drawDrawer()`). `null`이면 아직 안 받음(서랍을 열어도 "불러오는
+   * 중" 안내). 생략하면 서랍 버튼 자체가 없다(기존과 바이트 동일).
+   */
+  drawerSections?: BeatGridDrawerSection[] | null;
+  /** 카드 t551 후속 — mockup `#bLib`(서랍 열기, 매번 최신 판독 요청). */
+  onDrawerRequest?: () => void;
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -485,6 +555,155 @@ export function panOnlyVerticalBaseWarning(cue: BeatGridCue): string | null {
   if (movement.axes.length !== 1 || movement.axes[0] !== "Pan") return null;
   if (cue.position_preset_no !== null) return null;
   return "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 눈에 보이지 않을 수 있습니다";
+}
+
+/** 카드 t551(M3) — 밝기 "값"(%) 모드만 프리셋 카탈로그 없이 바로 고칠 수
+ * 있다(mockup "밝기 값/디머 프리셋/디머 효과" 중 "값"만 평문 숫자). 칸이
+ * 없거나(`null`) 디머 프리셋/디머 효과 참조 중이면 편집 불가 — 둘 다
+ * "어느 프리셋으로 바꿀까"가 목록 선택을 요구해 이 카드 범위 밖이다. */
+export function isBrightnessValueEditable(cue: BeatGridCue | null): boolean {
+  if (!cue) return false;
+  return cue.brightness.mode !== "dimmer_preset" && cue.brightness.mode !== "dimmer_effect";
+}
+
+/** 서버의 `apply_beat_grid_edit`가 받는 ``changes`` 모양 그대로 — UI는 이
+ * 모양을 조립할 뿐 검증하지 않는다(검증은 서버 하나의 진실 지점,
+ * REQ-LDBEAT-008). `percent`가 유한하지 않으면(빈 입력 등) `null`. */
+export function buildBrightnessValueChanges(percent: number): Record<string, unknown> | null {
+  if (!Number.isFinite(percent)) return null;
+  return { brightness: { mode: "value", value_percent: percent, preset_no: null } };
+}
+
+/** 카드 t551 후속(지시 1항) — 이 칸이 `presetNo`를 쓰는가. 프리셋 서랍의
+ * "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내 문구, `hlP`
+ * 강조)를 타임라인 쪽에서 그대로 구현하는 술어다 — 서버의
+ * `beat_grid_presets._usage_for_slot`과 같은 네 자리(위치·색·효과·
+ * 디머 프리셋/디머 효과)를 본다. */
+export function cueReferencesPreset(cue: BeatGridCue, presetNo: string): boolean {
+  if (cue.position_preset_no === presetNo) return true;
+  if (cue.color_preset_no === presetNo) return true;
+  if (cue.effect_preset_no === presetNo) return true;
+  const mode = cue.brightness.mode;
+  if ((mode === "dimmer_preset" || mode === "dimmer_effect") && cue.brightness.preset_no === presetNo) {
+    return true;
+  }
+  return false;
+}
+
+/** 카드 t551 후속(지시 2항) — `preset_pools.yaml`의 `confirmed`가
+ * `false`일 때 보여줄 배지. mockup 자신에는 "번호대 자체가 미확인"이라는
+ * 상태가 없다(그 데모는 번호대가 이미 정해져 있다는 전제) — 그래서 가장
+ * 가까운 기존 관례인 "⚠ 실기 미확인"(모양 선택지 배지, `isUnconfirmedShapeCue`
+ * 와 같은 글자)을 폭을 넓혀 재사용한다(이 카드가 그 자리를 정한 이유).
+ * `confirmed`가 `true`(또는 알 수 없음)면 배지를 달지 않는다 — 번호대를
+ * 사실로 내보이지 않을 뿐, 확정된 상태를 과장해 경고하지도 않는다. */
+export function presetPoolBandBadge(section: BeatGridDrawerSection): string | null {
+  return section.bands_confirmed ? null : "⚠ 번호대 미확인";
+}
+
+/** 카드 t551 계속 — 직접 고르기(①) 드롭다운의 "+ 새 프리셋" 선택지 값.
+ * `ldbeat-runbook-mockup-20261008.html` `opts()`의 `"__new"` 리터럴
+ * 그대로(값이 이 값이면 적용하지 않는다 — 그 모양 자체가 새 창을 여는
+ * 자리라는 신호일 뿐, 번호가 아니다). */
+export const NEW_PRESET_OPTION_VALUE = "__new";
+
+/** 카드 t551 계속 — 직접 고르기 드롭다운 한 옵션의 표시 문구. mockup
+ * `opts()`의 `${i} ${P[i].nm}`과 같은 모양("번호 이름"). */
+export function formatDrawerEntryOptionLabel(entry: BeatGridDrawerEntry): string {
+  return `${entry.preset_no} ${entry.name}`;
+}
+
+/** 카드 t551 계속 — 서랍 섹션 하나를 "이 곡 프리셋"(이 격자가 실제로
+ * 쓰는 것, `usage_count > 0`)과 "쇼에 이미 있는 프리셋"(콘솔에서 읽혔지만
+ * 이 곡은 아직 안 쓰는 것, `usage_count === 0`)으로 가른다 — mockup
+ * `opts()`의 두 `<optgroup>`("이 곡 프리셋"/"쇼에 이미 있는 프리셋")과
+ * 같은 그룹·같은 이름이다. 섹션이 없거나(아직 서랍을 안 열었거나) 그
+ * 풀을 콘솔에서 못 읽었으면(POOL_UNREAD, `section.unread`) 둘 다 빈
+ * 배열이다 — 목록을 지어내지 않는다. */
+function splitEntriesByUsage(
+  entries: BeatGridDrawerEntry[],
+): { thisSong: BeatGridDrawerEntry[]; showExisting: BeatGridDrawerEntry[] } {
+  return {
+    thisSong: entries.filter((entry) => entry.usage_count > 0),
+    showExisting: entries.filter((entry) => entry.usage_count === 0),
+  };
+}
+
+export function splitDrawerSectionEntries(
+  section: BeatGridDrawerSection | null,
+): { thisSong: BeatGridDrawerEntry[]; showExisting: BeatGridDrawerEntry[] } {
+  if (!section || section.unread) return { thisSong: [], showExisting: [] };
+  return splitEntriesByUsage(section.entries);
+}
+
+/** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
+ * 골랐다") — 효과(움직임)·디머 "효과" 드롭다운은 같은 풀 섹션에서
+ * `is_effect_band`(서버가 `preset_pools.yaml` 번호대로 이미 판정한 값,
+ * 번호대 리터럴은 이 함수에도 없다)인 항목만 골라낸 뒤, 그 안에서 다시
+ * `splitDrawerSectionEntries`와 같은 "이 곡 프리셋"/"쇼에 이미 있는
+ * 프리셋" 그룹으로 가른다. */
+export function splitDrawerSectionEffectEntries(
+  section: BeatGridDrawerSection | null,
+): { thisSong: BeatGridDrawerEntry[]; showExisting: BeatGridDrawerEntry[] } {
+  if (!section || section.unread) return { thisSong: [], showExisting: [] };
+  return splitEntriesByUsage(section.entries.filter((entry) => entry.is_effect_band));
+}
+
+/** 카드 t551 계속 — `drawerSections`에서 풀 이름("Position"/"Color"/
+ * "Dimmer")으로 섹션 하나를 찾는다. 배열 자체가 `null`이면(서랍을 아직
+ * 한 번도 안 열어 못 받은 상태) `null` — `section.unread`(읽긴 했지만
+ * POOL_UNREAD)와는 다른 "아직 안 옴" 상태라 호출자가 구분해 보일 수
+ * 있다. */
+export function findDrawerSection(
+  sections: BeatGridDrawerSection[] | null,
+  poolName: string,
+): BeatGridDrawerSection | null {
+  if (!sections) return null;
+  return sections.find((section) => section.pool_name === poolName) ?? null;
+}
+
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 위치 프리셋 직접
+ * 고르기(드로워에서 고른 번호를 그대로 담는다, 검증은 서버 몫). */
+export function buildPositionPresetChanges(presetNo: string): Record<string, unknown> {
+  return { position_preset_no: presetNo };
+}
+
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 색 프리셋 직접
+ * 고르기. */
+export function buildColorPresetChanges(presetNo: string): Record<string, unknown> {
+  return { color_preset_no: presetNo };
+}
+
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 밝기 단일모드 중
+ * "디머 프리셋" 직접 고르기(REQ-LDBEAT-015(c), `buildBrightnessValueChanges`
+ * 의 "값" 모드와 같은 자리, 세 모드 중 정확히 하나). */
+export function buildBrightnessPresetChanges(presetNo: string): Record<string, unknown> {
+  return { brightness: { mode: "dimmer_preset", value_percent: null, preset_no: presetNo } };
+}
+
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 효과(움직임) 프리셋
+ * 직접 고르기. 이 드롭다운은 무빙(`hints.includes("움직임")`, 위치 풀의
+ * 효과 번호대) 전용이라 `effect_kind`는 "position"으로 고정한다 — 이
+ * 값은 번호대 리터럴이 아니라 REQ-LDBEAT-006(i-3)의 닫힌 종류 어휘다. */
+export function buildEffectPresetChanges(presetNo: string): Record<string, unknown> {
+  return { effect_preset_no: presetNo, effect_kind: "position" };
+}
+
+/** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 밝기 단일모드 중
+ * "디머 효과" 직접 고르기(REQ-LDBEAT-015(c), `buildBrightnessPresetChanges`
+ * 의 "디머 프리셋" 모드와 짝). */
+export function buildBrightnessDimmerEffectChanges(presetNo: string): Record<string, unknown> {
+  return { brightness: { mode: "dimmer_effect", value_percent: null, preset_no: presetNo } };
+}
+
+/** 카드 t551 후속(지시 1항) — `pendingSuggestion`이 이 트랙(그룹 이름)을
+ * 겨냥하는가. mockup의 점선 막대(`GHOST=[{r:"movd",...}]`)가 그 트랙
+ * 줄에만 겹쳐 그려지는 것과 같은 판정이다. */
+export function isPendingSuggestionForTrack(
+  suggestion: BeatGridPendingSuggestion | null | undefined,
+  groupName: string,
+): boolean {
+  return !!suggestion && suggestion.target === groupName;
 }
 
 export interface BeatGridCueColorFill {
@@ -619,6 +838,49 @@ export function barPercentInRange(bar: number, rangeStart: number, rangeEnd: num
   return ((bar - rangeStart) / span) * 100;
 }
 
+/** 카드 t551 계속 — 직접 고르기(①) 드롭다운 옵션 JSX. mockup `opts()`의
+ * 세 부분을 그대로 옮긴다: "— 없음 —"는 여기서는 쓰지 않고(세 필드 다
+ * 항상 값을 고른다, mockup의 `allowNone`은 위치·색이 "없음"을 허용하는
+ * 자리였지만 이 카드는 적용/취소 버튼이 그 "되돌리기" 역할을 대신한다)
+ * "이 곡 프리셋"(`usage_count > 0`) → "쇼에 이미 있는 프리셋"
+ * (`usage_count === 0`) → "+ 새 프리셋 만들기…" 순서로 쌓는다. 비표준
+ * JSX 헬퍼라 이 파일의 "DOM 없는 단위시험" 관례 밖에 있다 — 데이터
+ * 가름(`splitDrawerSectionEntries`/`splitDrawerSectionEffectEntries`,
+ * 둘 다 순수·시험됨)은 호출자가 끝내고, 이 함수는 그 결과를 그대로
+ * JSX로만 옮긴다(카드 t551 계속 — 효과 드롭다운과 공유하려고 섹션이
+ * 아니라 이미 가른 쌍을 받는다). */
+function renderPresetOptions({
+  thisSong,
+  showExisting,
+}: {
+  thisSong: BeatGridDrawerEntry[];
+  showExisting: BeatGridDrawerEntry[];
+}) {
+  return (
+    <>
+      {thisSong.length > 0 && (
+        <optgroup label="이 곡 프리셋">
+          {thisSong.map((entry) => (
+            <option key={entry.preset_no} value={entry.preset_no}>
+              {formatDrawerEntryOptionLabel(entry)}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      {showExisting.length > 0 && (
+        <optgroup label="쇼에 이미 있는 프리셋">
+          {showExisting.map((entry) => (
+            <option key={entry.preset_no} value={entry.preset_no}>
+              {formatDrawerEntryOptionLabel(entry)}
+            </option>
+          ))}
+        </optgroup>
+      )}
+      <option value={NEW_PRESET_OPTION_VALUE}>＋ 새 프리셋 만들기…</option>
+    </>
+  );
+}
+
 export function BeatGrid({
   grid,
   fixtures = [],
@@ -626,6 +888,14 @@ export function BeatGrid({
   secondsPerBar = null,
   colorPresetHex,
   sections,
+  onEditRequest,
+  onSentenceEditRequest,
+  onSuggestionRequest,
+  pendingSuggestion = null,
+  onSuggestionAccept,
+  onSuggestionReject,
+  drawerSections = null,
+  onDrawerRequest,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -634,6 +904,34 @@ export function BeatGrid({
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
   const [audioName, setAudioName] = useState<string | null>(null);
   const [commandText, setCommandText] = useState("");
+  // 카드 t551(M3) — 밝기 "값"(%) 인라인 편집(mockup "구조" 4). 선택이
+  // 바뀌면(다른 칸을 클릭) 편집 중이던 입력을 닫는다 — 이전 칸의 입력값이
+  // 새 칸에 실수로 적용되는 것을 막는다.
+  // 카드 t551 계속 — 직접 고르기(①) 드롭다운(밝기/위치/색). mockup
+  // "같은 자리에서" 그대로 한 번에 한 필드만 연다 — `activeEditField`가
+  // 그 "자리"다.
+  const [activeEditField, setActiveEditField] = useState<
+    "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋" | null
+  >(null);
+  const [brightnessModeDraft, setBrightnessModeDraft] = useState<
+    "value" | "dimmer_preset" | "dimmer_effect"
+  >("value");
+  const [brightnessDraft, setBrightnessDraft] = useState("");
+  const [brightnessPresetDraft, setBrightnessPresetDraft] = useState("");
+  // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 3) — 디머 "효과" 드롭다운
+  // (brightnessModeDraft==="dimmer_effect")의 선택 초안.
+  const [brightnessEffectDraft, setBrightnessEffectDraft] = useState("");
+  const [positionPresetDraft, setPositionPresetDraft] = useState("");
+  const [colorPresetDraft, setColorPresetDraft] = useState("");
+  // 카드 t551 계속 — 효과(움직임) 프리셋 직접 고르기(무빙 전용, "효과 프리셋" 행).
+  const [effectPresetDraft, setEffectPresetDraft] = useState("");
+  // mockup `newPreset()` — "+ 새 프리셋" 선택지는 적용하지 않고 안내만
+  // 띄운다(새 프리셋 생성은 이 카드 범위 밖, M4/별도 카드).
+  const [newPresetNote, setNewPresetNote] = useState<string | null>(null);
+  // 카드 t551 후속(지시 1항) — 프리셋 서랍 열림/강조 상태(mockup `.drawer.open`/
+  // `hlP`). 강조는 서랍을 닫아도 유지하지 않는다 — 다시 열면 깨끗한 상태.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [highlightedPresetNo, setHighlightedPresetNo] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
@@ -886,13 +1184,18 @@ export function BeatGrid({
                             // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
                             // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
                             const colorFill = cueColorFill(segment.cue, colorPresetHex);
+                            // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
+                            // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
+                            const isHighlighted =
+                              highlightedPresetNo !== null &&
+                              cueReferencesPreset(segment.cue, highlightedPresetNo);
                             return (
                               <span key={segment.cue.bar} className="beat-grid-cue-slot">
                                 <button
                                   type="button"
                                   className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}${
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
-                                  }`}
+                                  }${isHighlighted ? " is-preset-highlighted" : ""}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -904,6 +1207,8 @@ export function BeatGrid({
                                   onClick={() => {
                                     setSelected({ trackIndex, bar: segment.cue.bar });
                                     setTransitionView(false);
+                                    setActiveEditField(null);
+                                    setNewPresetNote(null);
                                   }}
                                 >
                                   {segment.cue.label}
@@ -923,6 +1228,8 @@ export function BeatGrid({
                                       const nextCue = segments[segIndex + 1].cue;
                                       setSelected({ trackIndex, bar: nextCue.bar });
                                       setTransitionView(true);
+                                      setActiveEditField(null);
+                                      setNewPresetNote(null);
                                     }}
                                   >
                                     ◆
@@ -938,6 +1245,20 @@ export function BeatGrid({
                               title={`재생 위치 — ${playheadBar}마디`}
                             />
                           )}
+                          {/* mockup "AI 제안은 타임라인에 점선 막대로 미리 보임"
+                              (카드 t551 후속, 지시 1항 — "AI-suggestion dashed-bar
+                              render"). 「적용」·「거절」 전까지 격자는 바뀌지
+                              않는다 — 이 막대는 그 보류 상태의 시각 표시일
+                              뿐이다(결정④, 상태 diff 0). */}
+                          {isPendingSuggestionForTrack(pendingSuggestion, track.group_name) && (
+                            <span
+                              className="beat-grid-cue beat-grid-cue-ghost"
+                              style={{ left: barToX(pendingSuggestion!.bar), width: PX_PER_BAR - 2 }}
+                              title={`AI 제안(보류) — ${pendingSuggestion!.rationale}`}
+                            >
+                              AI 제안(보류)
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -952,10 +1273,42 @@ export function BeatGrid({
 
         {/* 큐 편집 칸 — 시안처럼 "타임라인 바로 오른쪽에 늘 있음"(선택 전엔
             빈 안내, t537 레이아웃 교정 — `.beat-grid-mid`의 두 번째 칸).
-            M2/M3 경계: 값 표시는 읽기 전용이고, 밝기/위치/색/들어올 때
-            네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)) — 편집 반영은 M3. */}
+            밝기/위치/색/들어올 때 네 필드를 보여 준다(REQ-LDBEAT-004(c)(d)).
+            카드 t551(M3) — 밝기 "값"(%)만 `onEditRequest`가 있으면 그
+            자리에서 고칠 수 있다(mockup "표의 ... 칸을 누르면 그 자리에서
+            바로 고쳐지고"); 위치/색/효과/디머 프리셋은 프리셋 카탈로그가
+            없어 여전히 읽기 전용이다(progress.md "## Missing Inputs"). */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
-          {selected && selectedTrack ? (
+          {pendingSuggestion ? (
+            // mockup `#bAi` 핸들러(지시 1항) — AI 제안이 보류 중인 동안은
+            // 이 칸이 "AI 제안" 카드로 바뀐다(평소 큐 편집 대신). 「적용」·
+            // 「거절」 전까지 격자·콘솔은 바뀌지 않는다(결정④).
+            <div className="beat-grid-ai-suggestion" aria-label="AI 제안">
+              <header>
+                <span>AI 제안</span>
+                <span>
+                  {pendingSuggestion.target} {pendingSuggestion.bar}마디
+                </span>
+              </header>
+              <p>{pendingSuggestion.rationale}</p>
+              <p className="fx">타임라인의 점선 막대가 제안이에요.</p>
+              <div className="beat-grid-ai-suggestion-actions">
+                <button
+                  type="button"
+                  className="tbtn pri"
+                  onClick={() => onSuggestionAccept?.(pendingSuggestion.suggestion_id)}
+                >
+                  수락
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSuggestionReject?.(pendingSuggestion.suggestion_id)}
+                >
+                  거절
+                </button>
+              </div>
+            </div>
+          ) : selected && selectedTrack ? (
             <>
               <header>
                 <span>
@@ -1017,16 +1370,357 @@ export function BeatGrid({
                       const panOnly = panOnlyVerticalBaseWarning(selectedCue);
                       if (panOnly) rows.push({ field: "기준 위치", value: panOnly });
                     }
-                    return rows.map((row) => (
-                      <div className="beat-grid-cue-field" key={row.field}>
-                        <span className="beat-grid-cue-field-label">{row.field}</span>
-                        <span
-                          className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}`}
-                        >
-                          {row.value}
-                        </span>
-                      </div>
-                    ));
+                    // 카드 t551 계속 — 직접 고르기(①) 드롭다운(mockup "구조" 4 +
+                    // "막대 → 오른쪽 큐 편집": 위치·색·밝기(디머 프리셋)는
+                    // `drawerSections`에서 "이 곡 프리셋"/"쇼에 이미 있는
+                    // 프리셋"/"+ 새 프리셋"으로 고른다). 효과(움직임)·디머
+                    // "효과"는 아직 읽기 전용(아래 Missing Inputs 참조).
+                    const positionSection = findDrawerSection(drawerSections, "Position");
+                    const colorSection = findDrawerSection(drawerSections, "Color");
+                    const dimmerSection = findDrawerSection(drawerSections, "Dimmer");
+                    const closeEdit = () => {
+                      setActiveEditField(null);
+                      setNewPresetNote(null);
+                    };
+                    const poolStatusNote = (section: BeatGridDrawerSection | null): string | null => {
+                      if (!section) return "프리셋 서랍을 먼저 열어야 선택할 수 있습니다.";
+                      if (section.unread) return "이 풀을 콘솔에서 읽지 못했습니다.";
+                      return null;
+                    };
+                    return rows.map((row) => {
+                      const isBrightnessRow = row.field === "밝기";
+                      const isPositionRow = row.field === "위치 프리셋";
+                      const isColorRow = row.field === "색 프리셋";
+                      // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1/3) —
+                      // 효과(움직임) 프리셋 직접 고르기(무빙 전용 행).
+                      const isEffectRow = row.field === "효과 프리셋";
+                      const editable =
+                        !!onEditRequest &&
+                        (isBrightnessRow || isPositionRow || isColorRow || isEffectRow);
+                      const editing = editable && activeEditField === row.field;
+                      return (
+                        <div className="beat-grid-cue-field" key={row.field}>
+                          <span className="beat-grid-cue-field-label">{row.field}</span>
+                          {editing && isBrightnessRow ? (
+                            // 카드 t551 계속 — 밝기 단일모드(값/디머 프리셋/디머
+                            // 효과, REQ-LDBEAT-015(c)) — mockup `#eM`/`eDimMode`
+                            // 3항 선택 그대로. "디머 효과"는 아직 목록이 없어
+                            // 읽기 전용 안내만(Missing Inputs).
+                            <span className="beat-grid-cue-field-edit">
+                              <select
+                                value={brightnessModeDraft}
+                                aria-label="밝기 모드"
+                                onChange={(event) => {
+                                  const mode = event.target.value as typeof brightnessModeDraft;
+                                  setBrightnessModeDraft(mode);
+                                  setNewPresetNote(null);
+                                }}
+                              >
+                                <option value="value">값</option>
+                                <option value="dimmer_preset">디머 프리셋</option>
+                                <option value="dimmer_effect">디머 효과</option>
+                              </select>
+                              {brightnessModeDraft === "value" && (
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={brightnessDraft}
+                                  onChange={(event) => setBrightnessDraft(event.target.value)}
+                                  aria-label="밝기 값(%)"
+                                />
+                              )}
+                              {brightnessModeDraft === "dimmer_preset" && (
+                                <select
+                                  value={brightnessPresetDraft}
+                                  disabled={!dimmerSection || dimmerSection.unread}
+                                  aria-label="디머 프리셋"
+                                  onChange={(event) => {
+                                    const value = event.target.value;
+                                    setBrightnessPresetDraft(value);
+                                    setNewPresetNote(
+                                      value === NEW_PRESET_OPTION_VALUE
+                                        ? "＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드)."
+                                        : null,
+                                    );
+                                  }}
+                                >
+                                  {renderPresetOptions(splitDrawerSectionEntries(dimmerSection))}
+                                </select>
+                              )}
+                              {brightnessModeDraft === "dimmer_effect" && (
+                                <select
+                                  value={brightnessEffectDraft}
+                                  disabled={!dimmerSection || dimmerSection.unread}
+                                  aria-label="디머 효과"
+                                  onChange={(event) => {
+                                    const value = event.target.value;
+                                    setBrightnessEffectDraft(value);
+                                    setNewPresetNote(
+                                      value === NEW_PRESET_OPTION_VALUE
+                                        ? "＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드)."
+                                        : null,
+                                    );
+                                  }}
+                                >
+                                  {renderPresetOptions(splitDrawerSectionEffectEntries(dimmerSection))}
+                                </select>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (brightnessModeDraft === "value") {
+                                    const changes = buildBrightnessValueChanges(Number(brightnessDraft));
+                                    if (changes && selected && selectedTrack) {
+                                      onEditRequest!({ bar: selected.bar, target: selectedTrack.group_name, changes });
+                                    }
+                                  } else if (
+                                    brightnessModeDraft === "dimmer_preset" &&
+                                    brightnessPresetDraft &&
+                                    brightnessPresetDraft !== NEW_PRESET_OPTION_VALUE &&
+                                    selected &&
+                                    selectedTrack
+                                  ) {
+                                    onEditRequest!({
+                                      bar: selected.bar,
+                                      target: selectedTrack.group_name,
+                                      changes: buildBrightnessPresetChanges(brightnessPresetDraft),
+                                    });
+                                  } else if (
+                                    brightnessModeDraft === "dimmer_effect" &&
+                                    brightnessEffectDraft &&
+                                    brightnessEffectDraft !== NEW_PRESET_OPTION_VALUE &&
+                                    selected &&
+                                    selectedTrack
+                                  ) {
+                                    onEditRequest!({
+                                      bar: selected.bar,
+                                      target: selectedTrack.group_name,
+                                      changes: buildBrightnessDimmerEffectChanges(brightnessEffectDraft),
+                                    });
+                                  }
+                                  closeEdit();
+                                }}
+                              >
+                                적용
+                              </button>
+                              <button type="button" onClick={closeEdit}>
+                                취소
+                              </button>
+                              {(brightnessModeDraft === "dimmer_preset" ||
+                                brightnessModeDraft === "dimmer_effect") &&
+                                poolStatusNote(dimmerSection) && (
+                                  <p className="beat-grid-cue-field-note">{poolStatusNote(dimmerSection)}</p>
+                                )}
+                              {/* 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 2) —
+                                  confirmed:false 인 동안 디머 효과 드롭다운 옆에도
+                                  "번호대 미확인" 배지(서랍과 같은 배지, `presetPoolBandBadge`). */}
+                              {brightnessModeDraft === "dimmer_effect" &&
+                                dimmerSection &&
+                                presetPoolBandBadge(dimmerSection) && (
+                                  <p className="beat-grid-cue-field-note u">
+                                    {presetPoolBandBadge(dimmerSection)}
+                                  </p>
+                                )}
+                              {newPresetNote && <p className="beat-grid-cue-field-note">{newPresetNote}</p>}
+                            </span>
+                          ) : editing && isPositionRow ? (
+                            // 카드 t551 계속 — 위치 프리셋 직접 고르기(mockup
+                            // "이 곡 프리셋"/"쇼에 이미 있는 프리셋"/"+ 새
+                            // 프리셋", 앞선 `ldbeat-runbook-mockup-20261008.html`
+                            // `opts()` 그대로).
+                            <span className="beat-grid-cue-field-edit">
+                              <select
+                                value={positionPresetDraft}
+                                disabled={!positionSection || positionSection.unread}
+                                aria-label="위치 프리셋"
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setPositionPresetDraft(value);
+                                  setNewPresetNote(
+                                    value === NEW_PRESET_OPTION_VALUE
+                                      ? "＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드)."
+                                      : null,
+                                  );
+                                }}
+                              >
+                                {renderPresetOptions(splitDrawerSectionEntries(positionSection))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    positionPresetDraft &&
+                                    positionPresetDraft !== NEW_PRESET_OPTION_VALUE &&
+                                    selected &&
+                                    selectedTrack
+                                  ) {
+                                    onEditRequest!({
+                                      bar: selected.bar,
+                                      target: selectedTrack.group_name,
+                                      changes: buildPositionPresetChanges(positionPresetDraft),
+                                    });
+                                  }
+                                  closeEdit();
+                                }}
+                              >
+                                적용
+                              </button>
+                              <button type="button" onClick={closeEdit}>
+                                취소
+                              </button>
+                              {poolStatusNote(positionSection) && (
+                                <p className="beat-grid-cue-field-note">{poolStatusNote(positionSection)}</p>
+                              )}
+                              {newPresetNote && <p className="beat-grid-cue-field-note">{newPresetNote}</p>}
+                            </span>
+                          ) : editing && isColorRow ? (
+                            // 카드 t551 계속 — 색 프리셋 직접 고르기(위치와 같은
+                            // 패턴, `colorSection` 출처만 다르다).
+                            <span className="beat-grid-cue-field-edit">
+                              <select
+                                value={colorPresetDraft}
+                                disabled={!colorSection || colorSection.unread}
+                                aria-label="색 프리셋"
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setColorPresetDraft(value);
+                                  setNewPresetNote(
+                                    value === NEW_PRESET_OPTION_VALUE
+                                      ? "＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드)."
+                                      : null,
+                                  );
+                                }}
+                              >
+                                {renderPresetOptions(splitDrawerSectionEntries(colorSection))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    colorPresetDraft &&
+                                    colorPresetDraft !== NEW_PRESET_OPTION_VALUE &&
+                                    selected &&
+                                    selectedTrack
+                                  ) {
+                                    onEditRequest!({
+                                      bar: selected.bar,
+                                      target: selectedTrack.group_name,
+                                      changes: buildColorPresetChanges(colorPresetDraft),
+                                    });
+                                  }
+                                  closeEdit();
+                                }}
+                              >
+                                적용
+                              </button>
+                              <button type="button" onClick={closeEdit}>
+                                취소
+                              </button>
+                              {poolStatusNote(colorSection) && (
+                                <p className="beat-grid-cue-field-note">{poolStatusNote(colorSection)}</p>
+                              )}
+                              {newPresetNote && <p className="beat-grid-cue-field-note">{newPresetNote}</p>}
+                            </span>
+                          ) : editing && isEffectRow ? (
+                            // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1·2) —
+                            // 효과(움직임) 프리셋 직접 고르기. `positionSection`에서
+                            // `is_effect_band`인 항목만(위치 효과 풀, mockup
+                            // 14-17/26-29행 — "위치 효과 → 위치 풀 2") 고른다.
+                            <span className="beat-grid-cue-field-edit">
+                              <select
+                                value={effectPresetDraft}
+                                disabled={!positionSection || positionSection.unread}
+                                aria-label="효과(움직임) 프리셋"
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  setEffectPresetDraft(value);
+                                  setNewPresetNote(
+                                    value === NEW_PRESET_OPTION_VALUE
+                                      ? "＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드)."
+                                      : null,
+                                  );
+                                }}
+                              >
+                                {renderPresetOptions(splitDrawerSectionEffectEntries(positionSection))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (
+                                    effectPresetDraft &&
+                                    effectPresetDraft !== NEW_PRESET_OPTION_VALUE &&
+                                    selected &&
+                                    selectedTrack
+                                  ) {
+                                    onEditRequest!({
+                                      bar: selected.bar,
+                                      target: selectedTrack.group_name,
+                                      changes: buildEffectPresetChanges(effectPresetDraft),
+                                    });
+                                  }
+                                  closeEdit();
+                                }}
+                              >
+                                적용
+                              </button>
+                              <button type="button" onClick={closeEdit}>
+                                취소
+                              </button>
+                              {poolStatusNote(positionSection) && (
+                                <p className="beat-grid-cue-field-note">{poolStatusNote(positionSection)}</p>
+                              )}
+                              {/* 조건2 — confirmed:false 인 동안 서랍과 같은 배지. */}
+                              {positionSection && presetPoolBandBadge(positionSection) && (
+                                <p className="beat-grid-cue-field-note u">
+                                  {presetPoolBandBadge(positionSection)}
+                                </p>
+                              )}
+                              {newPresetNote && <p className="beat-grid-cue-field-note">{newPresetNote}</p>}
+                            </span>
+                          ) : (
+                            <span
+                              className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}${
+                                editable ? " is-editable" : ""
+                              }`}
+                              onClick={
+                                editable
+                                  ? () => {
+                                      if (isBrightnessRow) {
+                                        const mode = selectedCue?.brightness.mode ?? "value";
+                                        setBrightnessModeDraft(
+                                          mode === "dimmer_preset" || mode === "dimmer_effect" ? mode : "value",
+                                        );
+                                        const currentValue = selectedCue?.brightness.value_percent;
+                                        setBrightnessDraft(currentValue != null ? String(currentValue) : "");
+                                        setBrightnessPresetDraft(
+                                          mode === "dimmer_preset" ? selectedCue?.brightness.preset_no ?? "" : "",
+                                        );
+                                        setBrightnessEffectDraft(
+                                          mode === "dimmer_effect" ? selectedCue?.brightness.preset_no ?? "" : "",
+                                        );
+                                      } else if (isPositionRow) {
+                                        setPositionPresetDraft(selectedCue?.position_preset_no ?? "");
+                                      } else if (isColorRow) {
+                                        setColorPresetDraft(selectedCue?.color_preset_no ?? "");
+                                      } else if (isEffectRow) {
+                                        setEffectPresetDraft(selectedCue?.effect_preset_no ?? "");
+                                      }
+                                      setNewPresetNote(null);
+                                      setActiveEditField(
+                                        row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
+                                      );
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {row.value}
+                              {editable && " ✎"}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    });
                   })()}
                   <div className="beat-grid-cue-field beat-grid-cue-field-entry">
                     <span className="beat-grid-cue-field-label">들어올 때</span>
@@ -1131,7 +1825,13 @@ export function BeatGrid({
         </div>
       </div>
 
-      {/* 하단 명령 입력 — M3 배선 전까지 제출 두 경로 모두 비활성. */}
+      {/* 하단 명령 입력 — mockup "구조" 5 + 조작 방법(ldbeat-runbook-ui-
+          proposal-20261008.md "22~25마디 MOVER-D 효과를 Sweep 2박으로" →
+          바로 적용 · AI 제안). 카드 t551 후속(근본 원인 정정) — "효과"
+          항목과 위치/색의 이름 값은 이제 서버가 콘솔 프리셋 카탈로그로
+          해석한다(console_slots/preset_names 재사용) — 번호 꼴 값은
+          여전히 카탈로그 조회 없이 그대로 받는다. 플레이스홀더는 mockup
+          원문 그대로다. */}
       <div className="beat-grid-cmd">
         <input
           className="beat-grid-cmd-input"
@@ -1139,13 +1839,106 @@ export function BeatGrid({
           onChange={(event) => setCommandText(event.target.value)}
           placeholder="예: 22~25마디 MOVER-D 효과를 Sweep 2박으로"
         />
-        <button type="button" disabled title="M3에서 배선">
+        <button
+          type="button"
+          disabled={!onSentenceEditRequest || !commandText.trim()}
+          title={onSentenceEditRequest ? "REQ-LDBEAT-007 문장 경로 — 밝기/위치/색/효과" : "M3에서 배선"}
+          onClick={() => onSentenceEditRequest?.(commandText)}
+        >
           바로 적용(문장)
         </button>
-        <button type="button" disabled title="M3에서 배선">
+        <button
+          type="button"
+          disabled={!onSuggestionRequest || !selected || !selectedTrack}
+          title={
+            !onSuggestionRequest
+              ? "M3에서 배선"
+              : !selected || !selectedTrack
+                ? "먼저 타임라인에서 칸을 선택하세요"
+                : "실제 AI 백엔드는 이 카드 범위 밖 — 제안 소스가 비어 있으면 " +
+                  "'제안 없음'이 그대로 뜹니다(지어낸 제안 0건)"
+          }
+          onClick={() => {
+            if (selected && selectedTrack) onSuggestionRequest?.(selected.bar, selectedTrack.group_name);
+          }}
+        >
           AI 제안
         </button>
+        {/* mockup "구조" 1·6 `#bLib` — 프리셋 서랍(카드 t551 후속, 지시 1항). */}
+        <button
+          type="button"
+          disabled={!onDrawerRequest}
+          title={onDrawerRequest ? "풀별(디머 1·위치 2·색 4) 목록 — 실제 콘솔 판독" : "M3에서 배선"}
+          onClick={() => {
+            const next = !drawerOpen;
+            setDrawerOpen(next);
+            if (next) onDrawerRequest?.();
+          }}
+        >
+          📁 프리셋
+        </button>
       </div>
+
+      {/* 프리셋 서랍 — mockup `drawDrawer()` 그대로(지시 1항):
+          "풀별(디머 1 · 위치 2 · 색 4) 목록, 쓰는 큐 수, 누르면 쓰는
+          막대가 노랗게 · 콘솔 이름(영문) 표시". 데모 ``P`` 객체가 아니라
+          서버의 실제 콘솔 판독(`beat_grid_preset_drawer`)에서 온다 — 못
+          읽은 풀은 빈 목록(지어내지 않는다). */}
+      {drawerOpen && (
+        <div className="drawer open" role="complementary" aria-label="프리셋 서랍">
+          <h4>
+            프리셋
+            <span
+              style={{ float: "right", cursor: "pointer" }}
+              onClick={() => setDrawerOpen(false)}
+              aria-label="닫기"
+            >
+              ✕
+            </span>
+          </h4>
+          <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
+          {drawerSections === null ? (
+            <p className="beat-grid-drawer-loading">불러오는 중…</p>
+          ) : (
+            drawerSections.map((section) => (
+              <div key={section.pool_name} className="beat-grid-drawer-section">
+                <h6>
+                  {section.title}
+                  {presetPoolBandBadge(section) && (
+                    <span className="u beat-grid-drawer-band-badge">
+                      {" "}
+                      {presetPoolBandBadge(section)}
+                    </span>
+                  )}
+                </h6>
+                {section.unread && <p className="beat-grid-drawer-unread">이 풀을 콘솔에서 읽지 못했습니다.</p>}
+                {section.entries.map((entry) => (
+                  <div
+                    key={entry.preset_no}
+                    className={`pr${highlightedPresetNo === entry.preset_no ? " on" : ""}`}
+                    onClick={() =>
+                      setHighlightedPresetNo((current) =>
+                        current === entry.preset_no ? null : entry.preset_no,
+                      )
+                    }
+                    title={
+                      entry.used_by.length
+                        ? `쓰는 곳: 큐 ${entry.usage_count}개 — ` +
+                          entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
+                        : "쓰는 곳: 큐 0개"
+                    }
+                  >
+                    <span>
+                      <b>{entry.preset_no}</b> {entry.name}
+                    </span>
+                    <span className="c">큐 {entry.usage_count}</span>
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       <div className="beat-grid-probe-pane" aria-label="M1 프로브 9항목 상태">
         <h5>M1 콘솔 확인 프로브</h5>

@@ -5,9 +5,18 @@
 // 부른다.
 import { describe, expect, it } from "vitest";
 
-import type { BeatGridCue, BeatGridSceneMemo, BeatGridTrack, BeatGridView } from "../protocol";
+import type {
+  BeatGridCue,
+  BeatGridDrawerEntry,
+  BeatGridDrawerSection,
+  BeatGridPendingSuggestion,
+  BeatGridSceneMemo,
+  BeatGridTrack,
+  BeatGridView,
+} from "../protocol";
 import {
   BEAT_GRID_BAR_ROWS,
+  NEW_PRESET_OPTION_VALUE,
   PX_PER_BAR,
   UNCONFIRMED_PROBE_STATUS,
   UNSET_FIELD_LABEL,
@@ -15,6 +24,11 @@ import {
   barRowIndex,
   barToSeconds,
   barToX,
+  buildBrightnessDimmerEffectChanges,
+  buildBrightnessPresetChanges,
+  buildColorPresetChanges,
+  buildEffectPresetChanges,
+  buildPositionPresetChanges,
   buildProbeStatusTable,
   clampSkipSeconds,
   computeStageBounds,
@@ -24,10 +38,12 @@ import {
   cueIsActive,
   deriveFadeSeconds,
   deriveSectionBlocks,
+  findDrawerSection,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
   formatAppMovementField,
   formatBrightnessField,
+  formatDrawerEntryOptionLabel,
   formatEvidenceField,
   formatFadeBarsField,
   formatPresetField,
@@ -37,12 +53,19 @@ import {
   isUnconfirmedShapeCue,
   isWriteLocked,
   layerFolderLabel,
+  buildBrightnessValueChanges,
+  cueReferencesPreset,
+  isBrightnessValueEditable,
+  isPendingSuggestionForTrack,
+  presetPoolBandBadge,
   panOnlyVerticalBaseWarning,
   probeStatusClass,
   projectFixture,
   sceneMemoForBar,
   sceneMemoMarkers,
   secondsToBar,
+  splitDrawerSectionEffectEntries,
+  splitDrawerSectionEntries,
   trackCueSegments,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
@@ -949,5 +972,303 @@ describe("panOnlyVerticalBaseWarning — t548 감독 결정④", () => {
 
   it("app_movement 없으면 경고 없음", () => {
     expect(panOnlyVerticalBaseWarning(cueWith({}))).toBeNull();
+  });
+});
+
+describe("isBrightnessValueEditable — 카드 t551(M3), mockup 밝기 값 전용 편집", () => {
+  it("칸이 없으면(선택 안 됨) 편집 불가", () => {
+    expect(isBrightnessValueEditable(null)).toBe(false);
+  });
+
+  it("brightness.mode 가 null(미정)이면 편집 가능 — 처음 값을 넣는 경우", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: null, value_percent: null, preset_no: null },
+    });
+    expect(isBrightnessValueEditable(cue)).toBe(true);
+  });
+
+  it("brightness.mode 가 value 면 편집 가능", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "value", value_percent: 40, preset_no: null },
+    });
+    expect(isBrightnessValueEditable(cue)).toBe(true);
+  });
+
+  it("brightness.mode 가 dimmer_preset 이면 편집 불가(목록 선택 필요 — 카탈로그 없음)", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
+    });
+    expect(isBrightnessValueEditable(cue)).toBe(false);
+  });
+
+  it("brightness.mode 가 dimmer_effect 면 편집 불가(목록 선택 필요 — 카탈로그 없음)", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    });
+    expect(isBrightnessValueEditable(cue)).toBe(false);
+  });
+});
+
+describe("buildBrightnessValueChanges — 카드 t551(M3), apply_beat_grid_edit 와 바이트 동일 모양", () => {
+  it("유효한 숫자는 value 모드 changes 를 돌려준다", () => {
+    expect(buildBrightnessValueChanges(55)).toEqual({
+      brightness: { mode: "value", value_percent: 55, preset_no: null },
+    });
+  });
+
+  it("0 은 유효한 값이다(꺼짐)", () => {
+    expect(buildBrightnessValueChanges(0)).toEqual({
+      brightness: { mode: "value", value_percent: 0, preset_no: null },
+    });
+  });
+
+  it("NaN(빈 입력 등)은 null — 지어내지 않는다", () => {
+    expect(buildBrightnessValueChanges(Number.NaN)).toBeNull();
+  });
+
+  it("무한값도 null", () => {
+    expect(buildBrightnessValueChanges(Number.POSITIVE_INFINITY)).toBeNull();
+  });
+});
+
+describe("cueReferencesPreset — 카드 t551 후속(지시 1항), 프리셋 서랍 강조", () => {
+  it("position_preset_no 일치", () => {
+    const cue = structuredCue(11, { position_preset_no: "2.41" });
+    expect(cueReferencesPreset(cue, "2.41")).toBe(true);
+  });
+
+  it("color_preset_no 일치", () => {
+    const cue = structuredCue(7, { color_preset_no: "4.21" });
+    expect(cueReferencesPreset(cue, "4.21")).toBe(true);
+  });
+
+  it("effect_preset_no 일치", () => {
+    const cue = structuredCue(14, { effect_preset_no: "2.61", effect_kind: "position" });
+    expect(cueReferencesPreset(cue, "2.61")).toBe(true);
+  });
+
+  it("dimmer_preset 모드의 brightness.preset_no 일치", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
+    });
+    expect(cueReferencesPreset(cue, "1.1")).toBe(true);
+  });
+
+  it("dimmer_effect 모드의 brightness.preset_no 일치", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    });
+    expect(cueReferencesPreset(cue, "1.21")).toBe(true);
+  });
+
+  it("value 모드의 brightness.preset_no 는 무시한다(값 모드엔 의미 없는 자리)", () => {
+    const cue = structuredCue(7, {
+      brightness: { mode: "value", value_percent: 50, preset_no: "1.1" },
+    });
+    expect(cueReferencesPreset(cue, "1.1")).toBe(false);
+  });
+
+  it("아무 필드도 일치하지 않으면 false", () => {
+    const cue = structuredCue(0, {});
+    expect(cueReferencesPreset(cue, "2.41")).toBe(false);
+  });
+});
+
+describe("presetPoolBandBadge — 카드 t551 후속(지시 2항), 번호대 미확인", () => {
+  function section(overrides: Partial<BeatGridDrawerSection> = {}): BeatGridDrawerSection {
+    return {
+      pool_name: "Position",
+      title: "위치 풀 2 — 위치·움직임(상대값)",
+      pool_no: 2,
+      entries: [],
+      unread: false,
+      bands_confirmed: true,
+      ...overrides,
+    };
+  }
+
+  it("bands_confirmed 가 false 면 배지를 단다", () => {
+    expect(presetPoolBandBadge(section({ bands_confirmed: false }))).toBe("⚠ 번호대 미확인");
+  });
+
+  it("bands_confirmed 가 true 면 배지 없음", () => {
+    expect(presetPoolBandBadge(section({ bands_confirmed: true }))).toBeNull();
+  });
+});
+
+describe("isPendingSuggestionForTrack — 카드 t551 후속(지시 1항), AI 제안 점선 막대", () => {
+  function suggestion(overrides: Partial<BeatGridPendingSuggestion> = {}): BeatGridPendingSuggestion {
+    return {
+      suggestion_id: "s-1",
+      bar: 18,
+      target: "MOVER-D",
+      changes: {},
+      rationale: "테스트",
+      ...overrides,
+    };
+  }
+
+  it("제안이 없으면 어느 트랙도 false", () => {
+    expect(isPendingSuggestionForTrack(null, "MOVER-D")).toBe(false);
+    expect(isPendingSuggestionForTrack(undefined, "MOVER-D")).toBe(false);
+  });
+
+  it("target 과 그룹 이름이 같으면 true", () => {
+    expect(isPendingSuggestionForTrack(suggestion(), "MOVER-D")).toBe(true);
+  });
+
+  it("target 과 그룹 이름이 다르면 false", () => {
+    expect(isPendingSuggestionForTrack(suggestion(), "MOVER-U")).toBe(false);
+  });
+});
+
+/** 카드 t551 계속 — 직접 고르기(①) 드롭다운. mockup `ldbeat-runbook-
+ * mockup-20261008.html` `opts()`의 그룹·값 그대로("이 곡 프리셋"/
+ * "쇼에 이미 있는 프리셋"/"+ 새 프리셋"), `drawerSections`가 출처다. */
+function drawerEntry(overrides: Partial<BeatGridDrawerEntry> = {}): BeatGridDrawerEntry {
+  return {
+    preset_no: "2.41",
+    name: "LA Center",
+    usage_count: 0,
+    used_by: [],
+    is_effect_band: false,
+    ...overrides,
+  };
+}
+
+function drawerSection(overrides: Partial<BeatGridDrawerSection> = {}): BeatGridDrawerSection {
+  return {
+    pool_name: "Position",
+    title: "위치 풀 2 — 위치·움직임(상대값)",
+    pool_no: 2,
+    entries: [],
+    unread: false,
+    bands_confirmed: true,
+    ...overrides,
+  };
+}
+
+describe("formatDrawerEntryOptionLabel — 카드 t551 계속, mockup opts() 옵션 표시", () => {
+  it("번호와 이름을 공백으로 잇는다", () => {
+    expect(formatDrawerEntryOptionLabel(drawerEntry({ preset_no: "4.24", name: "LA Pink" }))).toBe(
+      "4.24 LA Pink",
+    );
+  });
+});
+
+describe("splitDrawerSectionEntries — 카드 t551 계속, mockup 두 optgroup(이 곡/쇼 기존)", () => {
+  it("섹션이 null 이면 둘 다 빈 배열(지어내지 않는다)", () => {
+    expect(splitDrawerSectionEntries(null)).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("POOL_UNREAD(section.unread)면 둘 다 빈 배열", () => {
+    expect(
+      splitDrawerSectionEntries(drawerSection({ unread: true, entries: [drawerEntry()] })),
+    ).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("usage_count > 0 은 이 곡 프리셋, 0 은 쇼에 이미 있는 프리셋", () => {
+    const used = drawerEntry({ preset_no: "2.41", usage_count: 2 });
+    const unused = drawerEntry({ preset_no: "2.42", usage_count: 0 });
+    expect(splitDrawerSectionEntries(drawerSection({ entries: [used, unused] }))).toEqual({
+      thisSong: [used],
+      showExisting: [unused],
+    });
+  });
+
+  it("entries 가 비어 있으면 둘 다 빈 배열", () => {
+    expect(splitDrawerSectionEntries(drawerSection({ entries: [] }))).toEqual({
+      thisSong: [],
+      showExisting: [],
+    });
+  });
+});
+
+describe("findDrawerSection — 카드 t551 계속", () => {
+  it("배열이 null 이면 null(아직 서랍을 안 받음)", () => {
+    expect(findDrawerSection(null, "Position")).toBeNull();
+  });
+
+  it("풀 이름이 일치하는 섹션을 찾는다", () => {
+    const position = drawerSection({ pool_name: "Position" });
+    const color = drawerSection({ pool_name: "Color", title: "색 풀 4" });
+    expect(findDrawerSection([position, color], "Color")).toBe(color);
+  });
+
+  it("일치하는 섹션이 없으면 null", () => {
+    expect(findDrawerSection([drawerSection({ pool_name: "Position" })], "Dimmer")).toBeNull();
+  });
+});
+
+describe("buildPositionPresetChanges/buildColorPresetChanges/buildBrightnessPresetChanges — 카드 t551 계속, apply_beat_grid_edit 와 바이트 동일 모양", () => {
+  it("위치 프리셋 changes", () => {
+    expect(buildPositionPresetChanges("2.41")).toEqual({ position_preset_no: "2.41" });
+  });
+
+  it("색 프리셋 changes", () => {
+    expect(buildColorPresetChanges("4.24")).toEqual({ color_preset_no: "4.24" });
+  });
+
+  it("디머 프리셋 changes — 밝기 단일모드(REQ-LDBEAT-015(c))", () => {
+    expect(buildBrightnessPresetChanges("1.1")).toEqual({
+      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
+    });
+  });
+});
+
+describe("NEW_PRESET_OPTION_VALUE — 카드 t551 계속, mockup opts() \"__new\" 리터럴", () => {
+  it("mockup 과 같은 리터럴 값", () => {
+    expect(NEW_PRESET_OPTION_VALUE).toBe("__new");
+  });
+});
+
+/** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
+ * 골랐다") — 효과(움직임)·디머 "효과" 드롭다운은 같은 drawerSections 풀
+ * 안에서 `is_effect_band`(서버가 `preset_pools.yaml` 번호대로 판정)로만
+ * 골라낸다. 번호대 리터럴은 이 시험에도 없다 — fixture가 `is_effect_band`
+ * 를 직접 지정한다(서버가 이미 판정을 끝낸 값을 그대로 받는다는 전제). */
+describe("splitDrawerSectionEffectEntries — 카드 t551 계속, is_effect_band 로 효과만 골라내기", () => {
+  it("섹션이 null 이면 둘 다 빈 배열", () => {
+    expect(splitDrawerSectionEffectEntries(null)).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("POOL_UNREAD 면 둘 다 빈 배열", () => {
+    expect(
+      splitDrawerSectionEffectEntries(
+        drawerSection({ unread: true, entries: [drawerEntry({ is_effect_band: true })] }),
+      ),
+    ).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("is_effect_band=false 인 항목(기본 프리셋)은 제외한다", () => {
+    const base = drawerEntry({ preset_no: "2.41", is_effect_band: false, usage_count: 3 });
+    expect(splitDrawerSectionEffectEntries(drawerSection({ entries: [base] }))).toEqual({
+      thisSong: [],
+      showExisting: [],
+    });
+  });
+
+  it("is_effect_band=true 인 항목만 골라, 그 안에서 다시 이 곡/쇼 기존으로 가른다", () => {
+    const effectUsed = drawerEntry({ preset_no: "2.61", is_effect_band: true, usage_count: 1 });
+    const effectUnused = drawerEntry({ preset_no: "2.62", is_effect_band: true, usage_count: 0 });
+    const base = drawerEntry({ preset_no: "2.41", is_effect_band: false, usage_count: 5 });
+    expect(
+      splitDrawerSectionEffectEntries(drawerSection({ entries: [effectUsed, effectUnused, base] })),
+    ).toEqual({ thisSong: [effectUsed], showExisting: [effectUnused] });
+  });
+});
+
+describe("buildEffectPresetChanges/buildBrightnessDimmerEffectChanges — 카드 t551 계속, apply_beat_grid_edit 와 바이트 동일 모양", () => {
+  it("효과(움직임) changes — 무빙 전용 effect_kind=\"position\"", () => {
+    expect(buildEffectPresetChanges("2.61")).toEqual({
+      effect_preset_no: "2.61",
+      effect_kind: "position",
+    });
+  });
+
+  it("디머 효과 changes — 밝기 단일모드(REQ-LDBEAT-015(c))", () => {
+    expect(buildBrightnessDimmerEffectChanges("1.21")).toEqual({
+      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    });
   });
 });

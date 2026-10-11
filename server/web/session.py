@@ -41,6 +41,26 @@ from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.beat_grid import attach_beat_grid_default, attach_beat_grid_runtime_extras
+from server.design.beat_grid_edit import (
+    BeatGridEditError,
+    apply_beat_grid_edit,
+    apply_beat_grid_edit_range,
+    load_preset_pool_policy,
+)
+from server.design.beat_grid_presets import (
+    build_preset_drawer,
+    pool_name_to_effect_kind,
+    read_named_pool,
+    resolve_effect_preset_name,
+    resolve_preset_name,
+)
+from server.design.beat_grid_sentence import parse_beat_grid_sentence
+from server.design.beat_grid_suggestion import (
+    BeatGridSuggestion,
+    NullSuggestionSource,
+    PendingSuggestionStore,
+    SuggestionSource,
+)
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
     paged_pool_children,
@@ -92,6 +112,7 @@ from server.design.phaser_pregen import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-0
 )
 from server.design.preset_names import (
     NAME_AMBIGUOUS,
+    POOL_UNREAD,
     match_preset_name,
     match_preset_name_across_pools,
 )
@@ -246,6 +267,9 @@ from server.web.messages import (
     CONSOLE_INPUT_UNDETERMINED,
     answer_delta_event,
     approval_request_event,
+    beat_grid_drawer_event,
+    beat_grid_suggestion_consumed_event,
+    beat_grid_suggestion_event,
     chat_response_event,
     error_event,
     execution_preview_event,
@@ -3801,6 +3825,7 @@ class ChatSession:
         timeline_library: SongTimelineLibrary | None = None,
         pending_plan_store: PendingSongPlanStore | None = None,
         spatial_memory: SpatialMemory | None = None,
+        beat_grid_suggestion_source: SuggestionSource | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -3842,6 +3867,16 @@ class ChatSession:
         # (chat 프레임이 실어 온다). 둘 다 콘솔과 무관하다.
         self._draft_history = TimelineDraftHistory()
         self._selected_cue: int | None = None
+        # 카드 t551 — 박자 격자 편집 경로 ③(AI 제안)의 보류 상태 + 교체
+        # 가능한 소스(기본값은 정직한 "제안 없음" — 이 카드는 AI 백엔드를
+        # 갖지 않는다). 보류 생성은 격자·콘솔 어느 쪽도 바꾸지 않는다
+        # (결정④) — `beat_grid_suggestion_apply`가 소비할 때만 바뀐다.
+        self._beat_grid_suggestions = PendingSuggestionStore()
+        self._beat_grid_suggestion_source: SuggestionSource = (
+            beat_grid_suggestion_source
+            if beat_grid_suggestion_source is not None
+            else NullSuggestionSource()
+        )
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
         # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
         # 비교하므로, 되돌리기로 원래 값이 된 큐는 반영 대상에서 빠진다.
@@ -9051,6 +9086,270 @@ class ChatSession:
         if timeline is None:
             return None
         return read_bar_map(timeline)
+
+    # -- 카드 t551 — 박자 격자 편집 세 길의 전용 서버 진입점(콘솔 무접촉) ----
+    #
+    # 이 세 메서드는 채팅 디스패치 체인(``run_instruction``, 그 안의
+    # ``_cue_sheet_draft_edit`` 등)을 거치지 않는다 — ``server/web/app.py``
+    # 의 전용 WS 메시지 타입(``beat_grid_edit``/``beat_grid_suggest``/
+    # ``beat_grid_suggestion_apply``)이 직접 부른다(AC-LDBEAT-005, "편집
+    # 세 길이 전부 새 서버 연산으로 수렴" — 그러나 큐시트 편집과는 분리된
+    # 별도 경로). ``_cue_sheet_draft_edit``와 같은 거절 관행을 따른다: 사유
+    # 문자열을 그대로 ``text``에 싣고(AC-LDBEAT-010), 거절 시 격자 상태는
+    # 바이트까지 그대로 보존한다.
+
+    def _beat_grid_rejection(self, message: str) -> dict:
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 수정 거절",
+            text=f"박자 격자를 수정하지 않았습니다 — {message} 콘솔에는 아무것도 쓰지 않았습니다.",
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def _beat_grid_view(self, timeline: Mapping[str, object]) -> dict:
+        grid = timeline.get("beat_grid")
+        if isinstance(grid, Mapping):
+            return dict(grid)
+        return dict(attach_beat_grid_default(dict(timeline))["beat_grid"])
+
+    def _beat_grid_preset_pool_root(self) -> str:
+        return self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+
+    def _beat_grid_name_lookup_reason(self, field: str, name: str, match: object) -> str:
+        """카드 t551 후속(근본 원인 정정) — `_draft_name_miss`(t477)와 같은
+        세 갈래 사유(이름 부재/모호/풀 못 읽음), POOL_UNREAD 는 "번호대
+        확인 불가"로 또렷이 다르게 말한다(지시 2항 — 번호대를 사실로
+        내보이지 않는다)."""
+        kind = getattr(match, "kind", None)
+        if kind == POOL_UNREAD:
+            return (
+                f"'{field}' 프리셋 풀을 콘솔에서 읽지 못해 번호대를 확인할 수 없습니다 "
+                f"(이름 '{name}')."
+            )
+        if kind == NAME_AMBIGUOUS:
+            candidates = ", ".join(str(c) for c in getattr(match, "candidates", ()))
+            return f"'{name}' 이름이 여러 슬롯({candidates})에 있어 특정할 수 없습니다."
+        return f"'{field}' 프리셋 중 '{name}'을 콘솔에서 찾지 못했습니다."
+
+    def _resolve_beat_grid_name_lookup(
+        self, name_lookup: Mapping[str, object]
+    ) -> tuple[dict[str, object] | None, str | None]:
+        """카드 t551 후속(근본 원인 정정, 리드 지시 2026-10-11) —
+        `parse_beat_grid_sentence`가 돌려준 ``name_lookup``({"field","name"})
+        을 콘솔 프리셋 카탈로그로 번호로 바꾼다. 콘솔 **읽기**만(쓰기
+        0) — 기존 `_resolve_named_pool_no`/`_paged_pool_children`이 쓰는
+        같은 질의 함수(`_registry_state_query`)를 그대로 재사용한다(새
+        판독 규율 없음, t480/t477 재사용).
+
+        ``(changes, None)`` 성공, ``(None, 사유)`` 실패(이름 부재·모호·
+        풀 못 읽음 — 번호를 지어내지 않는다)."""
+        field = str(name_lookup["field"])
+        name = str(name_lookup["name"])
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        if field == "효과":
+            match, pool_name = resolve_effect_preset_name(
+                query, pool_root, name, probe_prefix="beat-grid-effect"
+            )
+            if match.slot is None:
+                return None, self._beat_grid_name_lookup_reason(field, name, match)
+            effect_kind = pool_name_to_effect_kind(pool_name) if pool_name else None
+            return (
+                {"effect_preset_no": f"{match.pool_no}.{match.slot}", "effect_kind": effect_kind},
+                None,
+            )
+        match = resolve_preset_name(query, pool_root, field, name, probe_prefix="beat-grid-preset")
+        if match.slot is None:
+            return None, self._beat_grid_name_lookup_reason(field, name, match)
+        key = {"위치": "position_preset_no", "색": "color_preset_no"}.get(field)
+        if key is None:
+            return None, f"'{field}'은(는) 이름으로 찾을 수 있는 항목이 아닙니다."
+        return {key: f"{match.pool_no}.{match.slot}"}, None
+
+    #: 드로워 세 섹션이 읽는 풀 이름 — mockup `drawDrawer()`의 세 ``<h6>``
+    #: 제목과 같은 순서(`beat_grid_presets._DRAWER_SECTIONS`와 바이트 동일
+    #: 해야 한다 — 이 상수가 그 순서의 단일 진실 지점은 아니지만, 어느 쪽을
+    #: 먼저 읽어도 드로워 조립 순서는 그 모듈이 최종으로 정한다).
+    _BEAT_GRID_DRAWER_POOL_NAMES: tuple[str, ...] = ("Dimmer", "Position", "Color")
+
+    def beat_grid_preset_drawer(self) -> dict:
+        """카드 t551 후속(지시 1항) — mockup 프리셋 서랍과 같은 세 섹션을
+        **실제 콘솔 판독**으로 채운다(데모 데이터 0건). 풀을 못 읽으면
+        그 섹션은 빈 목록 + ``unread: true``(지어내지 않음). `preset_
+        pools.yaml`의 ``confirmed`` 값을 그대로 실어 UI가 "번호대 미확인"
+        을 보여줄 수 있게 한다(지시 2항) — 콘솔 **읽기**만, 쓰기 0건."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = self._beat_grid_view(timeline) if timeline is not None else {"tracks": []}
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        pools: dict[str, tuple[int, dict[int, str | None]] | None] = {}
+        for pool_name in self._BEAT_GRID_DRAWER_POOL_NAMES:
+            pools[pool_name] = read_named_pool(
+                query, pool_root, pool_name, probe_prefix="beat-grid-drawer"
+            )
+        policy = load_preset_pool_policy()
+        sections = build_preset_drawer(grid, pools=pools, policy=policy)
+        event = beat_grid_drawer_event(sections=sections)
+        self._send(event)
+        return event
+
+    def beat_grid_edit(
+        self,
+        bar: int | None,
+        target: str | None,
+        changes: dict[str, object] | None,
+        sentence: str | None = None,
+    ) -> dict:
+        """편집 경로 ①(직접 고르기, ``changes``) 또는 ②(문장, ``sentence``)
+        가 수렴하는 단일 진입점 — 둘 다 결국
+        ``beat_grid_edit.apply_beat_grid_edit``를 부른다(REQ-LDBEAT-007/008).
+        경로 ③(AI 제안)은 ``beat_grid_suggestion_apply``를 통해 이 메서드를
+        재사용한다(같은 편집 요청을 보낸다).
+
+        ``sentence``가 있으면 그 문장이 ``bar``(및 범위가 있으면
+        ``bar_end``)/``target``/``changes``를 전부 정하고(파서가 돌려준
+        값으로 덮는다) 호출자가 넘긴 ``bar``/``target``/``changes``는
+        무시한다 — 둘 다 동시에 의미 있는 값으로 오는 것은 프로토콜 검증
+        (``messages.py``)이 막는다. 문장 경로는 mockup 명령창과 같은
+        모양으로 **범위**("22~25마디")를 받으면 `apply_beat_grid_edit_
+        range`(이미 있는 칸만, 새 칸은 지어내지 않음)를 거치고, 단일
+        마디면(``bar_end == bar``) 직접 고르기와 같은 `apply_beat_grid_
+        edit`(새 칸 생성 허용)를 거친다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection(
+                "수정할 박자 격자가 아직 없습니다. 곡을 먼저 설계하거나 불러오세요."
+            )
+
+        bar_end: int | None = None
+        if sentence is not None:
+            parsed = parse_beat_grid_sentence(sentence)
+            if parsed is None:
+                return self._beat_grid_rejection(
+                    f"문장을 이해하지 못했습니다(받은 값: {sentence!r}) — 정해진 꼴 "
+                    "'(마디)[~(마디)]마디 (그룹) (밝기|위치|색)를 (값)으로'를 써 주세요."
+                )
+            bar = parsed["bar"]  # type: ignore[assignment]
+            bar_end = parsed["bar_end"]  # type: ignore[assignment]
+            target = parsed["target"]  # type: ignore[assignment]
+            name_lookup = parsed.get("name_lookup")
+            if name_lookup is not None:
+                # 카드 t551 후속(근본 원인 정정) — 문장 값이 번호가 아니라
+                # 이름이면(위치/색/효과) 적용 전에 콘솔 카탈로그로 번호를
+                # 해석한다(읽기만, 쓰기 0). 못 찾으면 번호를 지어내지
+                # 않고 그 사유로 거절한다 — apply_beat_grid_edit 를
+                # 아예 부르지 않는다(격자 상태 변경 0건).
+                resolved_changes, reason = self._resolve_beat_grid_name_lookup(name_lookup)
+                if resolved_changes is None:
+                    return self._beat_grid_rejection(reason or "프리셋 이름을 해석하지 못했습니다.")
+                changes = resolved_changes
+            else:
+                changes = parsed["changes"]  # type: ignore[assignment]
+
+        if bar is None or target is None or not changes:
+            return self._beat_grid_rejection(
+                "어느 마디·트랙을 고칠지 또는 무엇을 고칠지 못 읽었습니다."
+            )
+
+        grid = self._beat_grid_view(timeline)
+        try:
+            if bar_end is not None and bar_end != bar:
+                updated_grid, report = apply_beat_grid_edit_range(
+                    grid, bar_start=bar, bar_end=bar_end, target=target, changes=changes
+                )
+            else:
+                updated_grid, report = apply_beat_grid_edit(
+                    grid, bar=bar, target=target, changes=changes
+                )
+        except BeatGridEditError as error:
+            return self._beat_grid_rejection(str(error))
+
+        self._draft_history.record(timeline)
+        updated_timeline = dict(timeline)
+        updated_timeline["beat_grid"] = updated_grid
+        updated_timeline = self._draft_badge(
+            updated_timeline, depth=self._draft_history.depth, report=report
+        )
+        store.latest = updated_timeline
+        self._send(song_timeline_event(timeline=updated_timeline))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 수정",
+            text=(f"{' · '.join(report)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def beat_grid_suggest(self, bar: int, target: str) -> dict:
+        """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.
+        격자·콘솔 어느 쪽도 바뀌지 않는다(결정④, 상태 diff 0) — 제안
+        소스가 교체 가능(pluggable)하고, 이 카드의 기본값(``NullSuggestion
+        Source``)은 실제 AI 백엔드 없이 정직하게 "제안 없음"을 말한다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = self._beat_grid_view(timeline) if timeline is not None else {"tracks": []}
+        suggestion = self._beat_grid_suggestions.create(
+            grid, bar, target, source=self._beat_grid_suggestion_source
+        )
+        if suggestion is None:
+            event = chat_response_event(
+                status="ok",
+                summary="박자 격자 제안 없음",
+                text=(
+                    f"{target} {bar}마디에 대한 제안이 없습니다 (AI 제안 소스가 아직 연결"
+                    "되지 않았습니다 — 콘솔에는 아무것도 쓰지 않았습니다)."
+                ),
+                commands=[],
+            )
+            self._send(event)
+            return event
+        event = beat_grid_suggestion_event(
+            suggestion_id=suggestion.suggestion_id,
+            bar=suggestion.bar,
+            target=suggestion.target,
+            changes=suggestion.changes,
+            rationale=suggestion.rationale,
+        )
+        self._send(event)
+        return event
+
+    def beat_grid_suggestion_apply(self, suggestion_id: str) -> dict:
+        """편집 경로 ③ 2단계 — 감독의 명시적 「적용」. 보류 중인 제안을
+        **한 번만** 소비하고, 그 제안이 담은 편집 요청을 그대로
+        ``beat_grid_edit``(경로 ①과 같은 진입점)로 보낸다 — 같은 서버
+        연산을 거친다는 뜻이다. 모르는/이미 소비된 id는 지어내지 않고
+        단일-원인 거절이다."""
+        suggestion: BeatGridSuggestion | None = self._beat_grid_suggestions.consume(suggestion_id)
+        # approval_resolved 와 같은 짝 — 있었든 없었든 보낸다. UI가 보류
+        # 목록에서 이 id를 지운다(없는 id를 지우는 건 안전한 no-op).
+        self._send(beat_grid_suggestion_consumed_event(suggestion_id=suggestion_id))
+        if suggestion is None:
+            return self._beat_grid_rejection(
+                f"제안 '{suggestion_id}'을 찾을 수 없습니다(이미 적용됐거나 만료됐습니다)."
+            )
+        return self.beat_grid_edit(suggestion.bar, suggestion.target, dict(suggestion.changes))
+
+    def beat_grid_suggestion_reject(self, suggestion_id: str) -> dict:
+        """편집 경로 ③ — 감독의 명시적 「거절」(mockup `aNo` 핸들러, 지시
+        1항). 보류 중인 제안을 소비는 하지만 ``beat_grid_edit``는 **부르지
+        않는다** — 격자·콘솔 둘 다 바뀌지 않는다(결정④, 상태 diff 0).
+        ``beat_grid_suggestion_apply``와 같이 ``beat_grid_suggestion_
+        consumed_event``를 보내 UI가 보류 목록·점선 막대를 지운다."""
+        self._beat_grid_suggestions.consume(suggestion_id)
+        self._send(beat_grid_suggestion_consumed_event(suggestion_id=suggestion_id))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 제안 거절",
+            text="AI 제안을 거절했습니다 (콘솔에는 아무것도 쓰지 않았습니다).",
+            commands=[],
+        )
+        self._send(event)
+        return event
 
     def _setlist_mode(self, text: str) -> InstructionResult | None:
         """셋리스트 모드 (priority 4): allocate library songs to consecutive
