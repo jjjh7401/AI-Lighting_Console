@@ -72,6 +72,9 @@ def _state_tree() -> dict:
     return {
         "DataPool/Sequences": _SEQUENCES_SECTION,
         "DataPool/Timecodes": _TIMECODE_POOL_CHILDREN_EMPTY,
+        # 카드 t590(REQ-LDBEAT-015(i-1)) — 승인 대기 번호 4.21 은 콘솔 풀에
+        # 이미 있는 프리셋이다(없거나 못 읽으면 반영이 그 칸을 보류한다).
+        "DataPool/PresetPools/4": {"children": [{"i": 21, "name": "P21"}]},
     }
 
 

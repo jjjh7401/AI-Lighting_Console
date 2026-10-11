@@ -60,6 +60,9 @@ __all__ = [
     "BeatGridView",
     "SceneCellAssignment",
     "SceneMemo",
+    "CELL_HOLD",
+    "EMPTY_PRESET_HOLD",
+    "POOL_UNREAD_HOLD",
     "apply_pending_approval",
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
@@ -72,6 +75,8 @@ __all__ = [
     "pan_only_vertical_base_warning",
     "pending_preset_approvals",
     "pending_preset_fields",
+    "preset_pool_no",
+    "split_empty_preset_holds",
     "validate_beat_grid_tracks",
 ]
 
@@ -775,6 +780,56 @@ def pending_preset_approvals(grid: Mapping[str, object]) -> list[dict[str, objec
                     }
                 )
     return result
+
+
+#: 카드 t590(REQ-LDBEAT-015(i-1)) — 보류 표시 문구. 승인 카드와 시험이 같은 값을 읽는다.
+EMPTY_PRESET_HOLD = "빈 프리셋 — 아직 콘솔에 만들 길 없음"
+POOL_UNREAD_HOLD = "풀을 못 읽어 빈 프리셋인지 확인 못 함"
+CELL_HOLD = "같은 칸에 보류 번호가 있어 함께 보류"
+
+
+def preset_pool_no(value: object) -> int | None:
+    """``"4.21"`` → ``4``. ``pool.slot`` 꼴이 아니면 ``None``(지어내지 않는다)."""
+    pool, sep, slot = str(value).partition(".")
+    if not sep or not pool.isdigit() or not slot.isdigit():
+        return None
+    return int(pool)
+
+
+def split_empty_preset_holds(
+    pending: Sequence[Mapping[str, object]],
+    pool_slots: Mapping[int, Mapping[int, object] | None],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """카드 t590, REQ-LDBEAT-015(i-1) — ``pending_preset_approvals``의 열거를
+    (승인 기록 대상, 송신 보류)로 가른다.
+
+    ``pool_slots``는 풀 번호 → 완전 판독한 ``{slot: 이름}``(못 읽었으면
+    ``None``). slot 이 없는 번호는 아직 콘솔에 값을 만들 길이 없는 빈
+    프리셋이고, 풀을 못 읽으면 비었는지 모르므로 같은 보류다. 보류는 **칸
+    단위**다 — ``evidence.approval``이 칸 하나에 붙으므로, 칸에 보류 번호가
+    하나라도 있으면 그 칸의 다른 번호도 승인 기록 대상에서 뺀다. 보류 항목은
+    ``hold_reason``을 단 사본이다."""
+    reasons: dict[int, str] = {}
+    for index, entry in enumerate(pending):
+        value = entry.get("value")
+        pool_no = preset_pool_no(value)
+        if pool_no is None:
+            reasons[index] = EMPTY_PRESET_HOLD
+            continue
+        slots = pool_slots.get(pool_no)
+        if slots is None:
+            reasons[index] = POOL_UNREAD_HOLD
+        elif int(str(value).partition(".")[2]) not in slots:
+            reasons[index] = EMPTY_PRESET_HOLD
+    held_cells = {(pending[i].get("group_name"), pending[i].get("bar")) for i in reasons}
+    approvable: list[dict[str, object]] = []
+    held: list[dict[str, object]] = []
+    for index, entry in enumerate(pending):
+        if (entry.get("group_name"), entry.get("bar")) in held_cells:
+            held.append({**entry, "hold_reason": reasons.get(index, CELL_HOLD)})
+        else:
+            approvable.append(dict(entry))
+    return approvable, held
 
 
 def apply_pending_approval(

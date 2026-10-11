@@ -42,10 +42,13 @@ from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.beat_grid import (
+    EMPTY_PRESET_HOLD,
     apply_pending_approval,
     attach_beat_grid_default,
     attach_beat_grid_runtime_extras,
     pending_preset_approvals,
+    preset_pool_no,
+    split_empty_preset_holds,
 )
 from server.design.beat_grid_edit import (
     BeatGridEditError,
@@ -9681,6 +9684,11 @@ class ChatSession:
         # 적는 대상도 **정확히 이 집합**이다(과다·과소 열거 금지, h-4) —
         # 아래에서 두 번 쓰이므로 한 번만 계산해 둔다.
         pending_before = pending_preset_approvals(grid)
+        # 카드 t590(REQ-LDBEAT-015(i-1)) — 그 가운데 콘솔 풀에 slot 이 없는
+        # (또는 풀을 못 읽은) 번호의 칸은 칸 단위로 송신 보류한다. 보류 칸은
+        # 승인 기록 대상(`pending_before`)에서 빠지므로 승인 뒤에도 승인
+        # 대기로 남고, 에미터가 승인 없는 칸을 막으므로 커맨드도 0줄이다.
+        pending_before, held_presets = self._beat_grid_split_empty_presets(pending_before)
 
         song_key = self._beat_grid_song_key(timeline)
         record = store.beat_grid_allocation(song_key) if store is not None else None
@@ -9814,6 +9822,13 @@ class ChatSession:
                     for entry in pending_before
                 )
                 risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
+            if held_presets:
+                listed = ", ".join(
+                    f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
+                    f"{entry['value']}({entry['hold_reason']})"
+                    for entry in held_presets
+                )
+                risk_reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"
             risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(
@@ -10506,6 +10521,29 @@ class ChatSession:
         return self._paged_pool_children(
             f"{pool_root}/{pool_no}", probe_id="song-design-preset-pool-read"
         )
+
+    def _beat_grid_split_empty_presets(
+        self, pending: list[dict[str, object]]
+    ) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+        """카드 t590(REQ-LDBEAT-015(i-1)) — 승인 대기 번호의 풀을 번호별로 한 번씩
+        완전 판독해 (승인 기록 대상, 송신 보류)로 가른다. 콘솔 **읽기**만."""
+        if not pending:
+            return [], []
+        pool_root = self._beat_grid_preset_pool_root()
+        pool_numbers = sorted(
+            {
+                no
+                for no in (preset_pool_no(entry.get("value")) for entry in pending)
+                if no is not None
+            }
+        )
+        pool_slots = {
+            no: self._paged_pool_children(
+                f"{pool_root}/{no}", probe_id=f"beat-grid-apply-pool-{no}"
+            )
+            for no in pool_numbers
+        }
+        return split_empty_preset_holds(pending, pool_slots)
 
     def _paged_pool_children(self, path: str, *, probe_id: str) -> dict[int, str | None] | None:
         """``path`` 컨테이너의 자식 번호→이름 완전 판독 — 페이징 공용 몸통.
