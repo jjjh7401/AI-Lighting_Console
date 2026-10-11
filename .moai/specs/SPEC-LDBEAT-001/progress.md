@@ -496,6 +496,19 @@ REQ-LDBEAT-006(vi)(vii)·(iv-2) 재교정, REQ-LDBEAT-015(g) 구현. 콘솔 접�
 - **UI(`protocol.ts`/`BeatGrid.tsx`)** — `BeatGridAppMovement`/`BeatGridEvidence`/`BeatGridEvidenceApproval` 타입. `formatAppMovementField`/`formatEvidenceField`(shape+축+음악단위주기, grade+승인날짜) + `appMovementAxisConflictWarning`(⚠ 같은 축 충돌) + `panOnlyVerticalBaseWarning` 4개 순수 함수, `sceneMemoMarkers`와 같은 DOM-없는 단위시험 패턴.
 - **검증**: `pytest server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_probes_t537.py server/tests/test_beat_grid_t548.py server/tests/test_position_fx.py server/tests/test_position_fx_dedupe_t542.py server/tests/test_app_movement_t548.py` → 181 passed. `ruff check`/`format --check` 통과(7개 파일). `vitest run src/components/BeatGrid.test.tsx` → 101 passed. `tsc --noEmit` 클린.
 - **안 잰 것**: MOVER-U bar 11의 주기(레이블이 말하지 않음, 미정으로 둠)·이 앱 에미터가 낸 명령의 실기 송신(MOVER-D 실기 프로브는 2026-10-11 리드 「실행」 뒤 콘솔에서 실행돼 Dimmer2 필요·틸트 웨이브·원·기울인 자리 팬 웨이브 움직임을 확인했다 — `reports/t548-moverd-probe-20261011.md`. 다만 그 프로브는 손으로 쓴 승인 목록이었고, 이 에미터 출력 자체는 콘솔에 보내지 않았다)·이 4칸이 실제 콘솔에서 시각적으로 의도대로 보이는지(라이브 프로브는 화소 변화율만 잼)·non-null `position_preset_no`의 "수직인가" 판정(§5 항목 8 미해소분, 범위를 넓히지 않음).
+
+### M4 — 콘솔 송신 경로: 새 에미터 + 승인=송신 승격 + 승인 단위 (카드 t549)
+
+REQ-LDBEAT-001/003/011~013 구현. cycle_type=tdd. 콘솔 접촉 0건, 콘솔 쓰기 0건. 전체 verdict는 `.moai/reports/t549/run-verdict.md`.
+
+- **승인=송신 승격** — `.moai/reports/t512/approval_vs_sent.py`(리포트 스크립트)의 로직을 `server/design/approval_vs_sent.py`로 로직 그대로 포팅 — 판정 함수 본문 동일, 결과 객체로 감쌈(REQ-LDBEAT-011). `.moai/reports` import 0건(AST 전수 조사로 확인).
+- **새 에미터 `server/design/beat_grid_emit.py`** — `songcue.py`의 `_ascii_label`/`_format_seconds` 재사용(songcue.py diff 0줄), t520이 증명한 `Store Sequence`/`Assign Sequence At Timecode` 모양으로 역할별 시퀀스 × 타임코드 트랙 다대다 배선. 칸 내용은 `app_movement_commands`/`At Preset` 정적 리콜/`brightness_value_commands`로 구성.
+- **REQ-LDBEAT-001 M1 게이트** — progress.md의 실제 M1 판정(①⑧만 PASS)을 읽어, 효과 프리셋 리콜(④)·`app_movement`(⑤⑦⑨) 의존 칸을 전부 거절(부분 적용 0건). LOVE ATTACK 전수 확인: 효과 8칸(BACK 3·7·18·22, SIDE-ALL 11·14, MOVER-U 14, MOVER-D 14) + app_movement 4칸(MOVER-U 11·18, MOVER-D 7·22) = 12칸 거절, 허용 6칸(FOH 7, WASH-ALL 7·14, MOVER-D 18, BLIND 17·18). ⑩⑪은 `beat_grid_probes.DEFAULT_PROBE_IDS`(1~9)·REQ-001 조문 범위 밖이라 게이트에서 뺐다(이 레인의 판단, run-verdict §판단 콜 참조).
+- **추가 발견** — LOVE ATTACK 8트랙을 타임코드 하나에 몰면 M1 ①이 구조로 확인한 실제 최대(6)를 넘어 **트랙 레벨 전부 거절**(`MEASURED_MAX_TIMECODE_TRACKS=6`, 이 레인이 독자적으로 추가한 보수적 상한). 둘 이상 타임코드로 쪼개거나 ①을 6개 초과로 재확인해야 한다 — 감독/리드 판단 사항.
+- **승인 단위 `server/design/send_approval.py`** — `build_write_approval_batch`(쓰기 N≥2칸도 아티팩트 1개, AC-LDBEAT-015)·`PreviewApprovalSession`(미리보기 세션-1회-반복, AC-LDBEAT-002(b), 쓰기 승인과 완전 독립).
+- **검증**: 신규 `test_approval_vs_sent_t549.py`(10)·`test_send_approval_t549.py`(7)·`test_beat_grid_emit_t549.py`(27) + 기존 관련 181개 = 225 passed, 회귀 0. `ruff check`/`format --check` 통과. `git diff af00ffb2 -- server/director/emit.py ui/src/components/CueSheetTimeline.tsx server/looks/songcue.py` → 0줄(AC-LDBEAT-012).
+- **작업 위치**: 구현 서브에이전트가 자동 격리 워크트리(`agent-a96dd8e7…`)에서 커밋했고, 레인이 그 4커밋을 `WT-ldbeat-console-send`(`.claude/worktrees/t549`)로 fast-forward 했다 — 머지 대상은 이 브랜치다.
+- **안 잰 것**: 이 에미터 출력의 콘솔 송신 0건(전부 순수 함수)·`_timecode_commands` 함수 자체 재사용 불가(SongCueBundle 결합 — 문자열 모양만 재현, grep으로 재확인)·AI 제안→적용→전송 전체 UI/서버 배선(카드 범위 밖, Deliverables 5)·`PreviewApprovalSession`의 서버 세션 배선·승인=송신 비교를 이 에미터 송신 뒤 호출하는 배선·8트랙 전체를 한 타임코드에 담는 결정(쪼갤지 ①을 재확인할지)·`Store Cue` 뒤 `ClearAll` 삽입(이 레인의 설계 판단, t538 전례 인용 — 실기 미확인).
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<run-phase 대기>_
