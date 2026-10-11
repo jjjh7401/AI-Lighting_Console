@@ -1,0 +1,12 @@
+spec.md REQ-LDBEAT-006: 114 문장 중 사라짐 0
+spec.md REQ-LDBEAT-015: 30 문장 중 사라짐 0
+spec.md REQ-LDBEAT-020: 21 문장 중 사라짐 0
+spec.md REQ-LDBEAT-023: 18 문장 중 사라짐 0
+spec.md REQ-LDBEAT-025: 15 문장 중 사라짐 0
+spec.md 합계 사라진 문장: 0
+acceptance.md AC-LDBEAT-016: 119 문장 중 사라짐 0
+acceptance.md AC-LDBEAT-020: 8 문장 중 사라짐 0
+acceptance.md AC-LDBEAT-025: 8 문장 중 사라짐 0
+acceptance.md REQ-LDBEAT-006: 5 문장 중 사라짐 0
+acceptance.md REQ-LDBEAT-015: 1 문장 중 사라짐 0
+acceptance.md 합계 사라진 문장: 0
