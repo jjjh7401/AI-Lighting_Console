@@ -1,7 +1,7 @@
 # t588 run verdict — 편집 칸 고르기를 처음부터 열고, 2D 무대에 빔·워시 장식
 
 - 카드: t588 · SPEC-LDBEAT-001 REQ-021·022 · 리드 판단 「시안대로」(t586 판단 요청 답)
-- 브랜치: `WT-open-dropdowns` · 기준 `origin/main` 0a89a121 (PR 직전 재확인: main 이동 없음 → 합칠 것 없음)
+- 브랜치: `WT-open-dropdowns` · 기준 `origin/main` 0a89a121 → PR 직전 재확인 때 main 이 `6a7fc3c7`(t569 칩 설명, `BeatGrid.tsx` 겹침)로 움직여 합침(`e276751a`, 충돌 0). 합친 트리에서 빌드 통과 · vitest 1188 passed(`build_merged.txt`·`vitest_merged.txt`)
 - 콘솔 연결 0 · 콘솔 쓰기 0(`console_executed_883{1,2}.log` 0바이트) · 백그라운드 서버 2개 내림(8831·8832 리스너 0, 프로세스 0)
 
 ## ① 편집 칸 — 처음부터 열린 고르기 (시안 `.sidepane .ed`)
