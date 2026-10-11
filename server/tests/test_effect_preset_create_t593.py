@@ -6,9 +6,10 @@ fx 라이브러리 템플릿에 입혀 ``build_fx_preset_bundle``(``/Universal``
 ``preset_labels["22.n"]``(t589 와 같은 키·모양).
 
 핵심 잠금(t592 와 같다): ``Store Preset`` 은 풀 판독에서 slot 이 **비었다고 읽힌**
-번호에만 나간다(덮어쓰기 0). 한 반영 묶음엔 효과 프리셋을 하나만 만든다 — 모든 효과
-묶음이 같은 스텝 전환 줄을 내서, 둘이면 송신 중복 제거가 두 번째 줄을 건너뛴다
-(``server/fx/library/movement.yaml`` 머리 주석, 결함 자체는 카드 t601). 콘솔 접촉 0건.
+번호에만 나간다(덮어쓰기 0). 한 반영 묶음에 효과 프리셋을 몇 개 만들어도 전부
+나간다(카드 t605) — 모든 효과 묶음이 같은 스텝 전환 줄을 내지만(``server/fx/
+library/movement.yaml`` 머리 주석), 카드 t601 이 송신 중복 제거를 "앞선 호출에서
+실행된 줄만" 건너뛰도록 고쳐 묶음 안 반복을 더는 건너뛰지 않는다. 콘솔 접촉 0건.
 """
 
 from __future__ import annotations
@@ -25,7 +26,6 @@ from server.design.beat_grid import (
 from server.design.beat_grid_edit import load_preset_pool_policy
 from server.design.beat_grid_effect_presets import (
     EFFECT_BAND_UNKNOWN,
-    EFFECT_BATCH_COLLISION,
     EFFECT_CREATE_ON_APPLY,
     EFFECT_DIMMER_OUT_OF_SCOPE,
     EFFECT_GROUP_UNCONFIRMED,
@@ -260,8 +260,12 @@ class TestEveryMissingPieceHoldsWithItsReason:
         assert _outcomes(grid, ["22.1"])["22.1"] == (None, EFFECT_GROUP_UNCONFIRMED)
 
 
-class TestOnlyOneEffectPerBatch:
-    def test_second_number_is_held_for_the_next_apply(self) -> None:
+class TestBothEffectsInOneBatchAreBuilt:
+    """카드 t605 — t601 뒤로는 번호마다 독립으로 판정한다. 같은 반영에 효과
+    프리셋 둘이 있어도(스텝 전환 줄이 겹쳐도) 둘 다 만들기 줄을 받는다 — 보류로
+    밀리지 않는다."""
+
+    def test_second_number_is_also_built_not_held(self) -> None:
         extra = _recipe("22.1")
         extra["preset_fx_recipes"]["22.2"] = {
             "fx_id": "wave-soft-rise",
@@ -271,8 +275,12 @@ class TestOnlyOneEffectPerBatch:
         extra["preset_labels"]["22.2"] = "LA Rise"
         cues = [dict(_CUE), {**_CUE, "bar": 2, "effect_preset_no": "22.2"}]
         outcomes = _outcomes(_grid(cues, **extra), ["22.1", "22.2"])
-        assert outcomes["22.1"][1] is None
-        assert outcomes["22.2"] == (None, EFFECT_BATCH_COLLISION)
+        commands_1, reason_1 = outcomes["22.1"]
+        commands_2, reason_2 = outcomes["22.2"]
+        assert reason_1 is None and reason_2 is None
+        assert commands_1 is not None and commands_2 is not None
+        assert "Store Preset 22.1 'LA Wave' /Universal" in commands_1
+        assert "Store Preset 22.2 'LA Rise' /Universal" in commands_2
 
     def test_a_failed_first_number_does_not_block_the_second(self) -> None:
         extra = _recipe("22.2", label="LA Rise")
@@ -410,7 +418,12 @@ class TestApplyCreatesTheEffect:
         assert EFFECT_RECIPE_MISSING in _risk(approval)
         assert check_evidence_approval(_cue_of(store.latest["beat_grid"], "BACK", 1)) is not None
 
-    def test_two_new_effects_send_only_one_store(self, tmp_path) -> None:
+    def test_two_new_effects_send_both_stores(self, tmp_path) -> None:
+        """재현(카드 t605) — t593 우회(``EFFECT_BATCH_COLLISION``)가 걷히기 전에는
+        한 반영에 효과 프리셋 둘을 실으면 둘째가 다음 반영으로 보류됐다. t601 뒤로
+        ``run_commands`` 가 묶음 안 반복을 더는 건너뛰지 않으므로, 이제는 두 묶음
+        전부(``ChangeDestination Root``·``Step 2`` 포함) 통째로, 그 순서대로
+        콘솔까지 간다."""
         extra = _recipe("22.1")
         extra["preset_fx_recipes"]["22.2"] = {
             "fx_id": "wave-soft-rise",
@@ -419,11 +432,32 @@ class TestApplyCreatesTheEffect:
         }
         extra["preset_labels"]["22.2"] = "LA Rise"
         cues = [dict(_CUE), {**_CUE, "bar": 2, "effect_preset_no": "22.2"}]
-        status, _store, approval, _console = _apply(tmp_path, cues, pool22=[5], grid_extra=extra)
+        grid = _grid(cues, **extra)
+        # ``_apply``가 쓰는 ``_timeline()``의 곡 BPM(112.35)·박자(4)로 맞춰 계산해야
+        # 콘솔로 나가는 줄과 글자까지 같다(기본 ``_BPM`` 120.0 과는 속도 줄이 다르다).
+        outcomes = _outcomes(grid, ["22.1", "22.2"], bpm=112.35, beats_per_bar=4)
+        bundle_1, reason_1 = outcomes["22.1"]
+        bundle_2, reason_2 = outcomes["22.2"]
+        assert reason_1 is None and reason_2 is None, (reason_1, reason_2)
+        assert bundle_1 is not None and bundle_2 is not None
+
+        status, _store, approval, console = _apply(tmp_path, cues, pool22=[5], grid_extra=extra)
         assert status["ok"] is True
-        stores = [c for c in _sent(approval) if c.startswith("Store Preset")]
-        assert stores == ["Store Preset 22.1 'LA Wave' /Universal"]
-        assert EFFECT_BATCH_COLLISION in _risk(approval)
+        sent = _sent(approval)
+        stores = [c for c in sent if c.startswith("Store Preset")]
+        assert stores == [
+            "Store Preset 22.1 'LA Wave' /Universal",
+            "Store Preset 22.2 'LA Rise' /Universal",
+        ]
+        # 두 묶음이 겹치지 않고, 각자 만든 그대로 순서대로 콘솔에 닿는다.
+        start_1 = sent.index(bundle_1[0])
+        assert sent[start_1 : start_1 + len(bundle_1)] == list(bundle_1)
+        start_2 = sent.index(bundle_2[0], start_1 + len(bundle_1))
+        assert sent[start_2 : start_2 + len(bundle_2)] == list(bundle_2)
+        assert console.executed == sent
+        assert status["approval_vs_sent"]["match"] is True
+        risk = _risk(approval)
+        assert "새로 만드는 효과 프리셋 2개" in risk
 
     def test_refused_approval_creates_nothing(self, tmp_path) -> None:
         status, _store, _approval, console = _apply(
@@ -432,9 +466,11 @@ class TestApplyCreatesTheEffect:
         assert status["ok"] is False
         assert not [c for c in console.executed if "Preset" in c]
 
-    def test_overlap_with_a_cue_line_stops_the_whole_apply(self, tmp_path, monkeypatch) -> None:
-        # 큐 줄에 효과 줄과 같은 글자(``Step 2``)가 있으면 송신 중복 제거가 효과 줄을
-        # 건너뛴다(카드 t601) — 그 반영은 아무것도 보내지 않고 멈춘다.
+    def test_overlap_with_a_cue_line_no_longer_stops_the_apply(self, tmp_path, monkeypatch) -> None:
+        """재현(카드 t605) — t593 가 둔 겹침 가드(「효과 줄이 큐 줄과 겹치면 반영
+        중단」)가 걷히기 전에는 큐 줄에 효과 줄과 같은 글자(``Step 2``)가 끼면
+        반영 전체가 0 송신으로 멈췄다. t601 뒤로 그 글자가 겹쳐도 승인된 줄 모두가
+        콘솔에 닿는다 — 가드가 막던 결함(묶음 안 반복 건너뛰기) 자체가 없다."""
         from server.web.session import ChatSession
 
         original = ChatSession._beat_grid_apply_cells
@@ -444,10 +480,13 @@ class TestApplyCreatesTheEffect:
 
         monkeypatch.setattr(ChatSession, "_beat_grid_apply_cells", staticmethod(_with_step))
         status, _store, approval, console = _apply(tmp_path, [dict(_CUE)], pool22=[5])
-        assert status["ok"] is False
-        assert "t601" in status["reason"]
-        assert approval.requests == []
-        assert not [c for c in console.executed if "Preset" in c]
+        assert status["ok"] is True
+        sent = _sent(approval)
+        # 효과 묶음 안의 ``Step 2`` + 주입한 큐 줄의 ``Step 2`` — 둘 다 나간다.
+        assert sent.count("Step 2") == 2
+        assert "Store Preset 22.1 'LA Wave' /Universal" in sent
+        assert console.executed == sent
+        assert status["approval_vs_sent"]["match"] is True
 
     def test_approved_cell_empty_effect_is_created_too(self, tmp_path) -> None:
         # 카드 t600 규칙(승인된 칸의 빈 번호도 같은 보류·생성 규칙)이 효과에도 먹는다.

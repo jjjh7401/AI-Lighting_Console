@@ -304,9 +304,9 @@ def color_preset_outcomes(
     channel_names: Mapping[int, Sequence[str | None] | None],
 ) -> dict[str, Outcome]:
     """번호마다 만들기 줄 또는 (None, 보류 사유). 선택+값이 한 줄이라
-    (모듈 설명) 색 프리셋끼리는 송신 중복 제거 겹침을 막을 필요가 없다 —
-    효과(t593)의 ``EFFECT_BATCH_COLLISION``과 다른 점(``Store``/``Label``
-    줄은 번호가 달라 겹치지 않는다)."""
+    (모듈 설명) ``Store``/``Label`` 줄은 번호가 달라 색 프리셋끼리 겹치지
+    않는다 — 번호마다 독립으로 판정한다. 효과(t593·t605)도 카드 t601 뒤로는
+    같은 성질(묶음 안 반복이 전부 나간다)이라 번호마다 독립이다."""
     return {
         number: _one(grid, number, members=members, channel_names=channel_names)
         for number in numbers

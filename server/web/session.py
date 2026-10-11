@@ -258,10 +258,7 @@ from server.design.song_plan import (
     apply_cue_sheet_section,
     apply_cue_sheet_view,
 )
-from server.fx.instantiate import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011), 카드 t593
-    FxInstantiationError,
-    is_programmer_state,
-)
+from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
 from server.looks.songcue import (
@@ -10456,33 +10453,13 @@ class ChatSession:
                 *position_plan.creations.values(),
                 *self._beat_grid_apply_cells(result),
             ]
-            # 카드 t593 — 효과 만들기 줄이 같은 묶음의 다른 줄과 겹치면 송신 중복 제거가
-            # 그 줄을 건너뛰어 빈 효과가 저장된다(카드 t601). 효과끼리는 계획이 이미
-            # 막았다 — 여기서는 큐 줄과의 겹침을 막고, 겹치면 아무것도 보내지 않는다.
-            effect_lines = {
-                line
-                for number, lines in position_plan.creations.items()
-                if position_plan.creation_fields.get(number) == "effect_preset_no"
-                for line in lines
-                if not is_programmer_state(line)
-            }
-            other_lines = [
-                line
-                for number, lines in position_plan.creations.items()
-                if position_plan.creation_fields.get(number) != "effect_preset_no"
-                for line in lines
-            ] + [line for cell in self._beat_grid_apply_cells(result) for line in cell]
-            overlap = sorted(effect_lines.intersection(other_lines))
-            if overlap:
-                return self._beat_grid_send_status(
-                    last_action="apply",
-                    ok=False,
-                    reason=(
-                        "새 효과 프리셋 만들기 줄이 같은 반영 묶음의 다른 줄과 겹쳐 "
-                        "반영을 멈췄습니다"
-                        f"(송신 중복 제거가 건너뜀, 카드 t601): {', '.join(overlap[:3])}"
-                    ),
-                )
+            # 카드 t593 은 여기에 효과 만들기 줄이 같은 묶음의 다른 줄과 겹치면 반영을
+            # 멈추는 가드를 뒀다 — 당시엔 송신 중복 제거가 묶음 안 반복 줄을 건너뛰어
+            # 빈 효과가 저장됐기 때문이다(카드 t601). 카드 t601 이 그 중복 제거를
+            # "앞선 호출에서 실행된 줄만" 건너뛰도록 고친 뒤로는 한 반영의 다른 줄과
+            # 겹쳐도 전부 승인된 그대로 나간다(`run_commands`가 한 호출 안에서 두 번
+            # 이상 쓰이는 ``already_executed`` 를 더는 쌓지 않는다) — 가드가 막던 결함
+            # 자체가 없어졌으므로 가드도 걷었다(카드 t605).
             batch = build_write_approval_batch(cells)
             # 카드 t572 — 승인 카드에 「막혀서 그대로 둔 칸」과 「번호 순서와
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는

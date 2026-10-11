@@ -886,7 +886,8 @@ def empty_preset_cells(
     있으면 ``kind == "create_on_apply"``(남은 조건은 반영 때 읽는 그룹 소속·장비
     좌표뿐). 격자 조건이 빠졌으면 그 사유를 ``reason``에 붙인다. 카드 t593 부터 빈
     **효과** 번호도 같다 — 격자 조건(``effect_grid_blocker``: 레시피·템플릿·번호대·영문
-    이름·그룹)이 다 있으면 ``create_on_apply``(남은 조건은 곡 BPM·반영당 하나). 카드
+    이름·그룹)이 다 있으면 ``create_on_apply``(남은 조건은 곡 BPM, 카드 t605 —
+    반영당 하나 제약은 더 없다). 카드
     t594 부터 빈 **색** 번호도 같다 — 격자 조건(``color_grid_blocker``: RGB·영문
     이름·그룹)이 다 있으면 ``create_on_apply``(남은 조건은 반영 때 읽는 그룹 소속·
     장비 컬러 채널뿐).

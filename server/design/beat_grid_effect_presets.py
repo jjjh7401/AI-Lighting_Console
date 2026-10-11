@@ -27,17 +27,12 @@ from server.design.beat_grid_edit import (
 )
 from server.design.beat_grid_position_presets import POSITION_GROUP_UNCONFIRMED
 from server.design.beat_grid_presets import app_preset_label
-from server.fx.instantiate import (
-    FxInstantiationError,
-    build_fx_preset_bundle,
-    is_programmer_state,
-)
+from server.fx.instantiate import FxInstantiationError, build_fx_preset_bundle
 from server.fx.loader import FxSchemaError, load_library_from_dir
 from server.fx.schema import Fx, FxLibrary
 
 __all__ = [
     "EFFECT_BAND_UNKNOWN",
-    "EFFECT_BATCH_COLLISION",
     "EFFECT_BUILD_REFUSED",
     "EFFECT_CREATE_ON_APPLY",
     "EFFECT_DIMMER_OUT_OF_SCOPE",
@@ -72,11 +67,10 @@ EFFECT_MULTI_GROUP = (
 )
 EFFECT_TEMPO_MISSING = "곡 BPM·박자가 없어 주기를 속도로 바꿀 수 없음"
 EFFECT_BUILD_REFUSED = "효과 묶음을 만들 수 없음"
-EFFECT_BATCH_COLLISION = (
-    "같은 반영 묶음의 다른 효과와 줄이 겹침 — 다음 반영에서 만듦(송신 중복 제거, 카드 t601)"
-)
 #: 카드 t595 넓힘 — 반영 때 만들어질 빈 효과 번호의 표식 문구.
-EFFECT_CREATE_ON_APPLY = "빈 효과 프리셋 — 반영 때 템플릿·주기로 만듦(반영당 하나, BPM 없으면 보류)"
+#: 카드 t605 — t601 이 묶음 안 반복을 전부 보내게 고친 뒤로 "반영당 하나" 제약은
+#: 없다(한 반영에 효과 프리셋을 몇 개 만들어도 전부 나간다). BPM 조건만 남는다.
+EFFECT_CREATE_ON_APPLY = "빈 효과 프리셋 — 반영 때 템플릿·주기로 만듦(BPM 없으면 보류)"
 
 _EFFECT_FIELD = "effect_preset_no"
 _PERIOD_UNITS = ("beat", "bar")
@@ -338,22 +332,17 @@ def effect_preset_outcomes(
 ) -> dict[str, tuple[tuple[str, ...] | None, str | None]]:
     """번호마다 만들기 줄 또는 (None, 보류 사유).
 
-    한 반영 묶음에 줄이 겹치는 효과 둘을 싣지 않는다: 모든 효과 묶음이 같은 스텝 전환
-    줄(``Step 2``)을 내므로(``server/fx/library/movement.yaml`` 머리 주석), 둘이면
-    송신 중복 제거가 두 번째 묶음의 그 줄을 건너뛰고 빈 효과가 저장된다. 번호 순서로
-    앞선 것부터 받고, 앞서 받은 묶음과 면제 안 되는 줄이 겹치는 번호는
-    ``EFFECT_BATCH_COLLISION``으로 다음 반영에 넘긴다(결함 자체는 카드 t601)."""
-    outcomes: dict[str, tuple[tuple[str, ...] | None, str | None]] = {}
-    taken: set[str] = set()
-    for number in sorted(numbers):
-        commands, reason = _one(
+    모든 효과 묶음이 같은 스텝 전환 줄(``Step 2``)을 내므로(``server/fx/library/
+    movement.yaml`` 머리 주석), 한 반영에 효과 프리셋을 여럿 만들면 그 묶음들이
+    서로 줄을 공유한다. 카드 t601 전에는 송신 중복 제거가 같은 묶음 안의 반복
+    줄을 건너뛰어 빈 효과가 저장됐으므로(카드 t593 우회), 여기서 번호 순서로
+    먼저 받은 묶음과 줄이 겹치는 번호를 다음 반영으로 미뤘다. t601 이 그 중복
+    제거를 "앞선 호출에서 실행된 줄만" 건너뛰도록 고친 뒤로는 묶음 안 반복이
+    승인된 그대로 전부 나가므로, 이 함수는 번호마다 독립으로 판정한다(카드
+    t605)."""
+    return {
+        number: _one(
             grid, number, library=library, policy=policy, bpm=bpm, beats_per_bar=beats_per_bar
         )
-        if commands is not None:
-            lines = {c for c in commands if not is_programmer_state(c)}
-            if lines & taken:
-                outcomes[number] = (None, EFFECT_BATCH_COLLISION)
-                continue
-            taken |= lines
-        outcomes[number] = (commands, reason)
-    return outcomes
+        for number in sorted(numbers)
+    }
