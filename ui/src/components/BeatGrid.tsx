@@ -547,6 +547,9 @@ export interface BeatGridProps {
     label: string;
     description: string;
   }) => void;
+  /** 카드 t589 — 서버의 가장 최근 답. 「만들기」 뒤 배정 결과·거절 사유를
+   * 그 칸 아래에 보이는 데 쓴다(`newPresetReplyFor`). 생략하면 안 보인다. */
+  lastServerReply?: BeatGridServerReply | null;
   /**
    * 카드 t551(M3) — 편집 경로 ②(문장). 명령창 "바로 적용(문장)" 버튼이
    * 입력 문자열을 그대로 올린다 — 해석(마디·역할·항목·값)은 전부 서버의
@@ -779,6 +782,50 @@ export type NewPresetField = "dimmer_preset" | "dimmer_effect" | "position" | "c
  * 공백만)은 통과하지 않는다. */
 export function isValidConsoleLabel(label: string): boolean {
   return /^[\x20-\x7E]+$/.test(label.trim());
+}
+
+/** 카드 t589 — 「만들기」를 누른 칸의 지금 값(서버가 번호를 씌웠는지 보는 열쇠).
+ * 밝기 두 칸은 모드까지 묶는다 — 모드가 바뀌어도 다시 채워야 한다. */
+export function newPresetFieldValue(cue: BeatGridCue | null, field: NewPresetField): string | null {
+  if (!cue) return null;
+  switch (field) {
+    case "dimmer_preset":
+    case "dimmer_effect":
+      return `${cue.brightness.mode}:${cue.brightness.preset_no ?? ""}`;
+    case "position":
+      return cue.position_preset_no ?? null;
+    case "color":
+      return cue.color_preset_no ?? null;
+    case "effect":
+      return cue.effect_preset_no ?? null;
+  }
+}
+
+/** 카드 t589 — 다섯 칸이 `seedEditDrafts`에서 쓰는 행 이름. */
+const NEW_PRESET_SEED_ROW: Record<NewPresetField, "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋"> = {
+  dimmer_preset: "밝기",
+  dimmer_effect: "밝기",
+  position: "위치 프리셋",
+  color: "색 프리셋",
+  effect: "효과 프리셋",
+};
+
+/** 카드 t589 — 서버의 가장 최근 답(대화 기록의 마지막 assistant 글과 그 순번). */
+export interface BeatGridServerReply {
+  text: string;
+  seq: number;
+}
+
+/** 카드 t589 — 「만들기」를 누른 칸(`pending.field`)에, 누른 뒤(`seq >
+ * sinceSeq`)에 온 서버 답만 돌려준다. 배정 결과(「승인 대기」)와 거절 사유가
+ * 전체화면에서도 보이게 하려는 것 — 글자가 같아도 순번으로 앞뒤를 가른다. */
+export function newPresetReplyFor(
+  field: NewPresetField,
+  pending: { field: NewPresetField; sinceSeq: number } | null,
+  reply: BeatGridServerReply | null,
+): string | null {
+  if (!pending || !reply || pending.field !== field) return null;
+  return reply.seq > pending.sinceSeq ? reply.text : null;
 }
 
 /** 카드 t589 — 「＋ 새 프리셋 만들기」 창의 순수 표시 부품(이 프로젝트는
@@ -1196,6 +1243,7 @@ export function BeatGrid({
   sendStatus = null,
   onEditRequest,
   onNewPresetRequest,
+  lastServerReply = null,
   onSentenceEditRequest,
   onSuggestionRequest,
   pendingSuggestion = null,
@@ -1270,6 +1318,11 @@ export function BeatGrid({
   const [effectPresetDraft, setEffectPresetDraft] = useState("");
   // 카드 t589 — 「＋ 새 프리셋 만들기」 창의 두 입력. 카드 t588 부터 다섯
   // 드롭다운이 동시에 열려 있어 창도 여럿 뜰 수 있다 — 입력은 칸마다 따로 둔다.
+  // 카드 t589 — 「만들기」를 누른 칸과 그때의 서버 답 순번(그 뒤 답만 보인다).
+  const [newPresetPending, setNewPresetPending] = useState<{
+    field: NewPresetField;
+    sinceSeq: number;
+  } | null>(null);
   const [newPresetDrafts, setNewPresetDrafts] = useState<
     Partial<Record<NewPresetField, { label: string; description: string }>>
   >({});
@@ -1603,6 +1656,12 @@ export function BeatGrid({
     // seedCue 는 seedKey 가 바뀔 때의 값만 쓴다 — deps 에서 일부러 뺐다.
     seedEditDrafts(seedCue);
   }, [seedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 카드 t589 — 「만들기」 뒤 서버가 그 칸에 번호를 씌우면(값이 바뀌면) 그
+  // 드롭다운만 새 값으로 다시 채운다 — 창을 닫을 때는 아직 옛 값이었다.
+  const pendingSeedValue = newPresetPending ? newPresetFieldValue(seedCue, newPresetPending.field) : null;
+  useEffect(() => {
+    if (newPresetPending) seedEditDrafts(seedCue, NEW_PRESET_SEED_ROW[newPresetPending.field]);
+  }, [pendingSeedValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!grid) {
     return (
@@ -1707,6 +1766,7 @@ export function BeatGrid({
     setSceneBar(null);
     setFocusField(null);
     setNewPresetDrafts({});
+    setNewPresetPending(null);
     // 카드 t570(REQ-LDBEAT-024(e)) — 다른 칸·막대를 고르면 부모 그룹
     // 줄로 돌아간다. L·R 자식 줄을 "보는 중"으로 두는 선택은
     // `selectLRSplitChild`가 이 함수 뒤에 다시 설정한다.
@@ -2310,11 +2370,22 @@ export function BeatGrid({
                               label: draft.label.trim(),
                               description: draft.description.trim(),
                             });
+                            setNewPresetPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
                             finish();
                           }}
                           onCancel={finish}
                         />
                       );
+                    };
+                    // 카드 t589 — 「만들기」 뒤 서버 답(배정 「승인 대기」 또는 거절
+                    // 사유)을 그 칸 아래에 보인다. 창은 닫혀도 답은 남는다.
+                    const renderNewPresetReply = (field: NewPresetField) => {
+                      const reply = newPresetReplyFor(field, newPresetPending, lastServerReply);
+                      return reply ? (
+                        <p className="beat-grid-cue-field-note" role="status">
+                          {reply}
+                        </p>
+                      ) : null;
                     };
                     const poolStatusNote = (section: BeatGridDrawerSection | null): string | null => {
                       if (!section) return "프리셋 서랍을 먼저 열어야 선택할 수 있습니다.";
@@ -2459,6 +2530,8 @@ export function BeatGrid({
                               {brightnessModeDraft === "dimmer_effect" &&
                                 brightnessEffectDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("dimmer_effect", () => seedEditDrafts(selectedCue, "밝기"))}
+                              {renderNewPresetReply("dimmer_preset")}
+                              {renderNewPresetReply("dimmer_effect")}
                             </span>
                           ) : editing && isPositionRow ? (
                             // 카드 t551 계속 — 위치 프리셋 직접 고르기(mockup
@@ -2511,6 +2584,7 @@ export function BeatGrid({
                               )}
                               {positionPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("position", () => seedEditDrafts(selectedCue, "위치 프리셋"))}
+                              {renderNewPresetReply("position")}
                             </span>
                           ) : editing && isColorRow ? (
                             // 카드 t551 계속 — 색 프리셋 직접 고르기(위치와 같은
@@ -2561,6 +2635,7 @@ export function BeatGrid({
                               )}
                               {colorPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("color", () => seedEditDrafts(selectedCue, "색 프리셋"))}
+                              {renderNewPresetReply("color")}
                             </span>
                           ) : editing && isEffectRow ? (
                             // 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1·2) —
@@ -2619,6 +2694,7 @@ export function BeatGrid({
                               )}
                               {effectPresetDraft === NEW_PRESET_OPTION_VALUE &&
                                 renderNewPresetDialog("effect", () => seedEditDrafts(selectedCue, "효과 프리셋"))}
+                              {renderNewPresetReply("effect")}
                             </span>
                           ) : (
                             <span

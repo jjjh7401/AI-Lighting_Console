@@ -57,6 +57,8 @@ import {
   isFirstCueOfSong,
   isValidConsoleLabel,
   NewPresetDialog,
+  newPresetReplyFor,
+  newPresetFieldValue,
   unverifiedCellIndex,
   isWriteLocked,
   layerFolderLabel,
@@ -1430,5 +1432,44 @@ describe("presetPickChanges — 고른 항목의 풀·효과 번호대로 저장
     expect(source).not.toMatch(/changes: buildPositionPresetChanges\(/);
     expect(source).not.toMatch(/changes: buildEffectPresetChanges\(effectPresetDraft\)/);
     expect((source.match(/changes: presetPickChanges\(/g) ?? []).length).toBe(3);
+  });
+});
+
+describe("newPresetReplyFor — 카드 t589, 「만들기」 뒤 서버 답(배정·거절 사유)을 그 칸에 보인다", () => {
+  const pending = { field: "position" as const, sinceSeq: 4 };
+  it("만들기를 누른 칸에, 누른 뒤에 온 답만 보인다", () => {
+    expect(
+      newPresetReplyFor("position", pending, { text: "번호대가 없어 빈 번호를 정할 수 없습니다", seq: 5 }),
+    ).toBe("번호대가 없어 빈 번호를 정할 수 없습니다");
+  });
+  it("누르기 전의 답(같은 순번)은 보이지 않는다 — 같은 글자가 다시 와도 순번으로 가른다", () => {
+    expect(newPresetReplyFor("position", pending, { text: "옛 답", seq: 4 })).toBeNull();
+  });
+  it("다른 칸에는 보이지 않는다", () => {
+    expect(newPresetReplyFor("effect", pending, { text: "답", seq: 5 })).toBeNull();
+  });
+  it("기다리는 요청이나 답이 없으면 아무것도 없다", () => {
+    expect(newPresetReplyFor("position", null, { text: "답", seq: 5 })).toBeNull();
+    expect(newPresetReplyFor("position", pending, null)).toBeNull();
+  });
+});
+
+describe("newPresetFieldValue — 카드 t589, 서버가 번호를 씌우면 그 드롭다운을 새 값으로 다시 채운다", () => {
+  const cue = {
+    bar: 14,
+    brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    position_preset_no: "2.41",
+    color_preset_no: "4.21",
+    effect_preset_no: "22.0",
+  } as unknown as Parameters<typeof newPresetFieldValue>[0];
+  it("다섯 칸이 각자 자기 값을 본다", () => {
+    expect(newPresetFieldValue(cue, "effect")).toBe("22.0");
+    expect(newPresetFieldValue(cue, "position")).toBe("2.41");
+    expect(newPresetFieldValue(cue, "color")).toBe("4.21");
+    expect(newPresetFieldValue(cue, "dimmer_effect")).toBe("dimmer_effect:1.21");
+    expect(newPresetFieldValue(cue, "dimmer_preset")).toBe("dimmer_effect:1.21");
+  });
+  it("칸이 없으면 null", () => {
+    expect(newPresetFieldValue(null, "effect")).toBeNull();
   });
 });

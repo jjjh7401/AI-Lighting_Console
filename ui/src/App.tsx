@@ -677,13 +677,16 @@ export default function App() {
   // assistant 응답 텍스트". state.entries 는 이미 매 chat_response 를
   // {kind:"assistant", text} 로 쌓아 둔다(protocol.ts reduceServerEvent) —
   // 새 채널을 만들지 않고 그 값을 그대로 찾아 쓴다.
-  const lastAssistantText = useMemo(() => {
+  // 카드 t589 — 같은 값에 순번(기록 안 자리)을 붙인다: 박자 격자 「＋ 새 프리셋
+  // 만들기」가 누른 뒤에 온 답만 보이려면 같은 글자의 반복도 갈라야 한다.
+  const lastAssistantReply = useMemo(() => {
     for (let i = state.entries.length - 1; i >= 0; i -= 1) {
       const entry = state.entries[i];
-      if (entry.kind === "assistant") return entry.text;
+      if (entry.kind === "assistant") return { text: entry.text, seq: i };
     }
     return null;
   }, [state.entries]);
+  const lastAssistantText = lastAssistantReply?.text ?? null;
 
   // t460 — REQ-087~101 생성기 전송. sendChat 과 같은 모양(text, cueNumber)
   // 이라 생성기가 보낸 요청도 감독이 손으로 친 것과 같은 대화 경로를 탄다
@@ -1200,6 +1203,7 @@ export default function App() {
             onNewPresetRequest={({ bar, target, field, label, description }) =>
               sendBeatGridNewPreset(bar, target, field, label, description)
             }
+            lastServerReply={lastAssistantReply}
             onSentenceEditRequest={sendBeatGridEditSentence}
             onSuggestionRequest={sendBeatGridSuggest}
             pendingSuggestion={state.pendingBeatGridSuggestion}
