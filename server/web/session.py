@@ -69,6 +69,9 @@ from server.design.beat_grid_effect_presets import (
     default_effect_library,
     effect_preset_outcomes,
     effect_preset_recipe,
+    effect_template_catalog,
+    effect_template_problem,
+    record_effect_preset_recipe,
 )
 from server.design.beat_grid_emit import (
     beat_grid_sequence_label,
@@ -9576,6 +9579,26 @@ class ChatSession:
     _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset", "color"})
 
     @staticmethod
+    def _validate_new_preset_fx(
+        fx: object,
+    ) -> tuple[dict[str, object] | None, str | None]:
+        """카드 t603 — "효과" 필드가 받는 효과 레시피 검증(프로토콜 파서와 같은 뜻의
+        2중 방어, ``_validate_new_preset_aim``과 같은 이유). 주기는 음악 단위(박·마디)의
+        양의 정수만 — 초는 받지 않는다(t593 저장 자리와 같은 규칙)."""
+        if not isinstance(fx, Mapping):
+            return None, "효과 프리셋은 효과 틀·주기(박/마디)가 필요합니다 — 받지 못했습니다."
+        fx_id = fx.get("fx_id")
+        unit = fx.get("period_unit")
+        value = fx.get("period_value")
+        if not isinstance(fx_id, str) or not fx_id.strip():
+            return None, "효과 틀을 고르지 않았습니다."
+        if unit not in ("beat", "bar"):
+            return None, f"주기 단위 {unit!r}는 박(beat) 또는 마디(bar)여야 합니다."
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            return None, f"주기 {value!r}는 양의 정수(박/마디 수)여야 합니다."
+        return {"fx_id": fx_id.strip(), "period_unit": unit, "period_value": value}, None
+
+    @staticmethod
     def _validate_new_preset_aim(
         aim: object,
     ) -> tuple[tuple[float, float, float] | None, str | None]:
@@ -9611,6 +9634,7 @@ class ChatSession:
         label: str | None,
         description: str | None,
         aim: Mapping[str, object] | None = None,
+        fx: Mapping[str, object] | None = None,
     ) -> dict:
         """카드 t589(REQ-LDBEAT-015(h-1)~(h-6) 계속) — 영문 콘솔 이름·한국어
         설명을 받아 `preset_pools.yaml`의 효과 풀 번호대에서(격자 참조·
@@ -9662,6 +9686,19 @@ class ChatSession:
                 "위치 프리셋에만 쓰는 입력입니다."
             )
 
+        # 카드 t603 — "효과"만 효과 레시피(효과 틀·주기 박/마디)를 **필수**로 받는다.
+        # 반영 때 t593 이 이 레시피로 프리셋을 만든다 — 없으면 「레시피 없음」 보류가 된다.
+        fx_recipe: dict[str, object] | None = None
+        if field == "effect":
+            fx_recipe, fx_error = self._validate_new_preset_fx(fx)
+            if fx_error is not None:
+                return self._beat_grid_rejection(fx_error)
+        elif fx is not None:
+            return self._beat_grid_rejection(
+                f"'{field_label}'은(는) 효과 틀(fx)을 받지 않습니다 — "
+                "효과 프리셋에만 쓰는 입력입니다."
+            )
+
         if field in self._NEW_PRESET_NO_BAND_FIELDS:
             return self._beat_grid_rejection(
                 f"'{field_label}'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — "
@@ -9703,6 +9740,14 @@ class ChatSession:
                 return self._beat_grid_rejection(
                     "이 칸의 효과 종류를 아직 몰라 번호대를 정할 수 없습니다 — "
                     "먼저 효과(움직임) 종류를 정해 주세요."
+                )
+            # 카드 t603 — 고른 틀이 이 번호대 종류에 맞는지 번호를 정하기 **전에**
+            # 본다(반영 때 t593 이 같은 사유로 보류할 틀로 번호를 잡지 않는다).
+            assert fx_recipe is not None  # field == "effect" 이면 위에서 걸렀다.
+            template_problem = effect_template_problem(str(fx_recipe["fx_id"]), str(kind))
+            if template_problem is not None:
+                return self._beat_grid_rejection(
+                    f"효과 틀 '{fx_recipe['fx_id']}' — {template_problem}."
                 )
 
         # 콘솔 점유 확인 — 드로워가 이미 쓰는 그 읽기(`read_named_pool`)를
@@ -9758,6 +9803,14 @@ class ChatSession:
         assert preset_no is not None  # reject_reason 이 None 이면 번호도 있다.
         updated_grid = record_app_preset_description(updated_grid, preset_no, description.strip())
         updated_grid = record_app_preset_label(updated_grid, preset_no, label)
+        if fx_recipe is not None:
+            updated_grid = record_effect_preset_recipe(
+                updated_grid,
+                preset_no,
+                fx_id=str(fx_recipe["fx_id"]),
+                period_unit=str(fx_recipe["period_unit"]),
+                period_value=int(fx_recipe["period_value"]),  # type: ignore[call-overload]
+            )
 
         self._draft_history.record(timeline)
         updated_timeline = dict(timeline)
@@ -9914,6 +9967,8 @@ class ChatSession:
         # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
         updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
         updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
+        # 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 효과 틀 목록(출하 라이브러리, 콘솔 0).
+        updated_grid["fx_templates"] = effect_template_catalog()
         # 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 이미 읽은 풀로만 가른
         # 빈 프리셋 칸. 편집으로 번호가 바뀐 칸도 같은 자리에서 다시 계산된다.
         marks = empty_preset_cells(grid, self._beat_grid_pool_slots)

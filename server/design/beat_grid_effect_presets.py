@@ -53,6 +53,8 @@ __all__ = [
     "effect_grid_blocker",
     "effect_preset_outcomes",
     "effect_preset_recipe",
+    "effect_template_catalog",
+    "effect_template_problem",
     "record_effect_preset_recipe",
 ]
 
@@ -242,6 +244,42 @@ def _blocker_and_parts(
     if not _positive_int(group):
         return EFFECT_GROUP_UNCONFIRMED, None
     return None, (fx, recipe, label, int(group))  # type: ignore[arg-type]
+
+
+#: 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 수 있는 번호대 종류(디머는 범위 밖, (i-6)).
+_CATALOG_KINDS = ("position", "color", "mixed")
+
+
+def effect_template_catalog(library: FxLibrary | None = None) -> list[dict[str, object]]:
+    """카드 t603 — 창이 고르는 효과 틀 목록. 출하 fx 라이브러리 그대로(콘솔 판독 0).
+    ``kinds``는 그 틀을 쓸 수 있는 번호대 종류 — ``_template_fits``와 같은 판정이라
+    화면이 고를 수 있는 틀과 반영이 받아 주는 틀이 어긋나지 않는다."""
+    library = default_effect_library() if library is None else library
+    if library is None:
+        return []
+    return [
+        {
+            "fx_id": fx.fx_id,
+            "display_name": fx.display_name,
+            "attributes": list(fx.attributes),
+            "kinds": [kind for kind in _CATALOG_KINDS if _template_fits(kind, fx)],
+        }
+        for fx in library.fx
+    ]
+
+
+def effect_template_problem(fx_id: str, kind: str, library: FxLibrary | None = None) -> str | None:
+    """카드 t603 — 창에서 고른 틀을 그 칸의 효과 종류(번호대)에 쓸 수 있나. 반영 때
+    ``_blocker_and_parts``가 내는 것과 같은 사유 문자열을 돌려준다(없으면 ``None``)."""
+    library = default_effect_library() if library is None else library
+    fx = _find_fx(library, fx_id)
+    if fx is None:
+        return EFFECT_TEMPLATE_UNKNOWN
+    if kind == "dimmer":
+        return EFFECT_DIMMER_OUT_OF_SCOPE
+    if not _template_fits(kind, fx):
+        return EFFECT_TEMPLATE_KIND_MISMATCH
+    return None
 
 
 def effect_grid_blocker(

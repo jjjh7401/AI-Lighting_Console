@@ -36,6 +36,9 @@ from .test_safety_gate import FakeConsole
 
 PROTOCOL_VERSION = 1
 
+#: 카드 t603 — 「효과」 창은 효과 레시피(틀·주기)가 필수다(위치 효과 번호대에 맞는 Pan 틀).
+_FX_RECIPE = {"fx_id": "sweep-soft-wide", "period_unit": "beat", "period_value": 2}
+
 
 class RefusingProvider:
     def complete(self, *args, **kwargs):  # pragma: no cover - must not be called
@@ -353,7 +356,9 @@ class TestBeatGridNewPresetHandler:
         session, console, _approval, _audit = _new_session(
             tmp_path, store=store, state_tree=state_tree
         )
-        event = session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        event = session.beat_grid_new_preset(
+            1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE
+        )
         assert "거절" not in event.get("summary", ""), event["text"]
         assert "2.61" in event["text"]
         assert "승인 대기" in event["text"]
@@ -374,7 +379,7 @@ class TestBeatGridNewPresetHandler:
         session, _console, _approval, _audit = _new_session(
             tmp_path, store=store, state_tree=state_tree
         )
-        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE)
         grid = store.latest["beat_grid"]
         cue = _cue_of(grid, "BACK", 1)
         assert cue["evidence"] is None  # 아직 승인 없음
@@ -396,7 +401,7 @@ class TestBeatGridNewPresetHandler:
         session, _console, _approval, _audit = _new_session(
             tmp_path, store=store, state_tree=state_tree
         )
-        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE)
         grid = store.latest["beat_grid"]
         assert app_preset_label(grid, "2.61") == "LA Wave"
         assert app_preset_description(grid, "2.61") == "따뜻한 흰색"
@@ -420,13 +425,15 @@ class TestBeatGridNewPresetHandler:
         session, console, _approval, _audit = _new_session(
             tmp_path, store=store, state_tree=state_tree
         )
-        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE)
         assert console.executed == []
 
     def test_no_timeline_refuses_without_console_contact(self, tmp_path) -> None:
         store = SongTimelineStore()  # latest 는 None
         session, console, _approval, _audit = _new_session(tmp_path, store=store)
-        event = session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        event = session.beat_grid_new_preset(
+            1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE
+        )
         assert "박자 격자가 아직 없습니다" in event["text"]
         assert console.executed == []
 
@@ -444,7 +451,7 @@ class TestBeatGridNewPresetHandler:
         store.latest = _timeline(beat_grid=_grid_with_effect_cell(effect_kind="position"))
         store.latest["beat_grid"]["tracks"][0]["cues"][0]["effect_kind"] = None
         session, console, _approval, _audit = _new_session(tmp_path, store=store)
-        event = session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "설명")
+        event = session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "설명", fx=_FX_RECIPE)
         assert "효과 종류" in event["text"]
         assert console.executed == []
 
@@ -471,7 +478,7 @@ class TestApprovalCardShowsLabelAndDescription:
             tmp_path, store=store, state_tree=state_tree
         )
         new_preset_event = session.beat_grid_new_preset(
-            1, "BACK", "effect", "LA Wave", "따뜻한 흰색"
+            1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=_FX_RECIPE
         )
         assert "거절" not in new_preset_event.get("summary", ""), new_preset_event["text"]
 
@@ -480,15 +487,16 @@ class TestApprovalCardShowsLabelAndDescription:
         assert len(approval.requests) == 1
         risk_reasons = approval.requests[0].items[0].risk_reasons
         joined = " ".join(risk_reasons)
-        # 빈 번호라 「새로 만드는 프리셋」(승인 기록 대상)이 아니라 보류 줄에 온다.
-        assert "새로 만드는 프리셋" not in joined
-        assert "빈 프리셋 — 아직 콘솔에 만들 길 없음(송신 보류) 1개" in joined
-        # 이름·설명은 그 보류 줄에 그대로 보인다(t589 잠금). 카드 t593 부터 빈 효과
-        # 번호는 레시피가 있으면 반영 때 만들어지므로, 항목 사유는 못 만드는 까닭이다.
-        assert f"2.61 'LA Wave' — 따뜻한 흰색({EFFECT_RECIPE_MISSING})" in joined
+        # 카드 t603 — 창이 효과 레시피(틀·주기)도 남기므로, 빈 번호는 보류가 아니라
+        # 반영 묶음에서 만들어진다(t593). 이름·설명은 승인 대기 줄에 그대로 보인다(t589 잠금).
+        assert "새로 만드는 프리셋 1개" in joined
+        assert "2.61 'LA Wave' — 따뜻한 흰색" in joined
+        assert "새로 만드는 효과 프리셋 1개" in joined
+        assert "2.61 'LA Wave' ← sweep-soft-wide · 2박 주기" in joined
+        assert EFFECT_RECIPE_MISSING not in joined
         # 경고는 한 줄 — t589 의 옛 별도 문장은 없다.
         assert "콘솔에는 아직 만들어지지 않음" not in joined
-        assert joined.count("(송신 보류)") == 1
+        assert "(송신 보류)" not in joined
 
     def test_a_directly_picked_new_number_without_a_label_is_not_mislabeled(self, tmp_path) -> None:
         # t577 류의 "번호를 직접 고르는" 승인 대기 — `app_preset_label`이
@@ -525,8 +533,11 @@ class TestParseClientMessageBeatGridNewPreset:
             "field": "effect",
             "label": "LA Wave",
             "description": "따뜻한 흰색",
+            "fx": dict(_FX_RECIPE),
         }
         payload.update(overrides)
+        if payload["field"] != "effect":
+            payload.pop("fx")  # 카드 t603 — 효과 레시피는 "effect"만 받는다.
         return payload
 
     def _parse(self, payload: dict) -> dict:
