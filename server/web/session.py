@@ -63,6 +63,12 @@ from server.design.beat_grid_emit import (
     beat_grid_timecode_label,
     emit_beat_grid_write_bundle,
 )
+from server.design.beat_grid_position_presets import (
+    PointingFrames,
+    PositionPresetPlan,
+    plan_position_preset_creation,
+    position_preset_target,
+)
 from server.design.beat_grid_presets import (
     build_preset_drawer,
     pool_name_to_effect_kind,
@@ -3211,6 +3217,18 @@ class _PresetStoreRun:
 
 def _preset_slot_list(slots: Sequence[int], pool_no: int = POSITION_PRESET_POOL) -> str:
     return ", ".join(f"{pool_no}.{no}" for no in slots)
+
+
+def _position_creation_text(
+    *, timeline_grid: Mapping[str, object], preset_no: str, lines: Sequence[str]
+) -> str:
+    """카드 t592 — 승인 카드의 「새로 만드는 위치 프리셋」 한 항목.
+    ``2.71 'LA Center' → (0, 2, 0) 장비 8대 조준`` 꼴(이름은 Label 줄에서 읽는다)."""
+    label = next((line.split(" ", 3)[3] for line in lines if line.startswith("Label Preset ")), "")
+    target = position_preset_target(timeline_grid, preset_no)
+    where = f" → ({target[0]:g}, {target[1]:g}, {target[2]:g})" if target else ""
+    aimed = sum(1 for line in lines if line.startswith("Fixture "))
+    return f"{preset_no} {label}{where} 장비 {aimed}대 조준"
 
 
 def _preset_release_command(fids: Sequence[int]) -> str:
@@ -9689,6 +9707,13 @@ class ChatSession:
         # 승인 기록 대상(`pending_before`)에서 빠지므로 승인 뒤에도 승인
         # 대기로 남고, 에미터가 승인 없는 칸을 막으므로 커맨드도 0줄이다.
         pending_before, held_presets = self._beat_grid_split_empty_presets(pending_before)
+        # 카드 t592(REQ-LDBEAT-015(i-3)(i-7)(i-8)) — 보류 칸 가운데 「풀은 읽혔고
+        # slot 이 없는」 위치 번호는 목표 좌표 레시피로 이번 묶음에서 만든다.
+        # 만들 수 있는 칸만 승인 기록 대상으로 돌아가고, 하나라도 빠지면 사유를
+        # 단 채 보류로 남는다. 만들기 줄은 아래에서 묶음 맨 앞에 붙는다.
+        position_plan = self._beat_grid_plan_position_presets(grid, held_presets)
+        pending_before = [*pending_before, *position_plan.released]
+        held_presets = position_plan.held
 
         song_key = self._beat_grid_song_key(timeline)
         record = store.beat_grid_allocation(song_key) if store is not None else None
@@ -9785,7 +9810,13 @@ class ChatSession:
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
                 result, recorded_cue_numbers=recorded_cue_numbers
             )
-            cells = self._beat_grid_apply_cells(result)
+            # 카드 t592 — 새 위치 프리셋 만들기 줄(조준 → Store → Label → ClearAll)은
+            # 큐 줄보다 **앞**에 둔다: 끝의 ClearAll 이 프로그래머를 비운 뒤 에미터의
+            # 큐 줄이 시작한다(t474 run3 실기 선례와 같은 꼴).
+            cells = [
+                *position_plan.creations.values(),
+                *self._beat_grid_apply_cells(result),
+            ]
             batch = build_write_approval_batch(cells)
             # 카드 t572 — 승인 카드에 「막혀서 그대로 둔 칸」과 「번호 순서와
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
@@ -9822,6 +9853,15 @@ class ChatSession:
                     for entry in pending_before
                 )
                 risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
+            if position_plan.creations:
+                listed = ", ".join(
+                    _position_creation_text(timeline_grid=grid, preset_no=number, lines=lines)
+                    for number, lines in position_plan.creations.items()
+                )
+                risk_reason += (
+                    f" · 새로 만드는 위치 프리셋 {len(position_plan.creations)}개"
+                    f"(콘솔 풀에서 빈 번호 확인): {listed}"
+                )
             if held_presets:
                 listed = ", ".join(
                     f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
@@ -10520,6 +10560,42 @@ class ChatSession:
         pool_root = self._rig_paths.get("preset_pools", "DataPool/PresetPools")
         return self._paged_pool_children(
             f"{pool_root}/{pool_no}", probe_id="song-design-preset-pool-read"
+        )
+
+    def _beat_grid_plan_position_presets(
+        self, grid: Mapping[str, object], held: list[dict[str, object]]
+    ) -> PositionPresetPlan:
+        """카드 t592 — 보류 칸 중 새 위치 프리셋으로 만들 수 있는 칸을 가린다.
+        후보(위치 풀에서 slot 이 비었다고 읽힌 번호)가 있을 때만 그룹 소속·장비
+        좌표를 콘솔에서 **읽는다**(쓰기 없음). 판정은
+        ``plan_position_preset_creation``(순수 함수)이 한다."""
+        candidates = [
+            entry
+            for entry in held
+            if entry.get("field") == "position_preset_no"
+            and entry.get("hold_reason") == EMPTY_PRESET_HOLD
+        ]
+        if not candidates:
+            return PositionPresetPlan(held=list(held))
+        group_names = sorted({str(entry.get("group_name")) for entry in candidates})
+        return plan_position_preset_creation(
+            grid,
+            held,
+            members=self._beat_grid_group_members(group_names),
+            frames=self._beat_grid_pointing_frames(),
+        )
+
+    def _beat_grid_pointing_frames(self) -> PointingFrames | None:
+        """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만
+        읽혀도) ``None`` — 일부 장비만 조준한 프리셋을 만들지 않는다."""
+        frames = self._read_pointing_frames("beat-grid-position-preset-read")
+        if isinstance(frames, InstructionResult):
+            return None
+        fixtures, rotz_by_fid, rotation_skipped, _rotation_assumed = frames
+        return PointingFrames(
+            positions=dict(fixtures),
+            rotz=dict(rotz_by_fid),
+            rotation_skipped=tuple(rotation_skipped),
         )
 
     def _beat_grid_split_empty_presets(
