@@ -80,6 +80,7 @@ from server.design.beat_grid_suggestion import (
     PendingSuggestionStore,
     SuggestionSource,
 )
+from server.design.beat_grid_unverified import unverified_beat_grid_cells
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
     paged_pool_children,
@@ -9484,6 +9485,9 @@ class ChatSession:
         updated = dict(timeline)
         updated_grid = dict(grid)
         updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
+        # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
+        # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
+        updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
         updated["beat_grid"] = updated_grid
         return updated
 

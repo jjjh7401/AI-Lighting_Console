@@ -536,6 +536,18 @@ export interface BeatGridView {
    * 응답이면 `undefined`(둘 다 토글 비활성과 무관 — 그 토글은 송신 경로
    * 자체가 없어 이 카드 범위에서는 늘 비활성이다). */
   console_audio_offset_seconds?: number | null;
+  /** 카드 t579(REQ-LDBEAT-010) — 「⚠ 실기 미확인」을 달 칸. 서버가 M1 표(⑨,
+   * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
+   * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
+  unverified_cells?: BeatGridUnverifiedCell[] | null;
+}
+
+/** 카드 t579 — `terms`는 그 칸이 쓰는 미확인 어휘(`"circle"`·`"ballyhoo"`·
+ * `"위상 펼침"`). */
+export interface BeatGridUnverifiedCell {
+  group_name: string;
+  bar: number;
+  terms: string[];
 }
 
 /** 카드 t568 ② — `BeatGridView.unsent_cells` 의 한 칸. */

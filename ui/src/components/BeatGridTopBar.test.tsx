@@ -60,6 +60,13 @@ describe("상단 바 — 곡·버전·BPM", () => {
     expect(formatTopBarBpm(undefined)).toBe("BPM —");
   });
 
+  it("BPM 옆에 「콘솔에서 직접 설정」이 보인다 — 자동 설정처럼 보이지 않게(REQ-LDBEAT-014, 카드 t579)", () => {
+    const html = renderTopBar();
+    expect(html).toContain("스피드 마스터 — 콘솔에서 직접 설정");
+    expect(html).toContain("사람이 콘솔에서 직접 설정");
+    expect(html).not.toMatch(/자동 설정됨|자동으로 맞춤/);
+  });
+
   it("곡·버전·BPM 을 렌더한다", () => {
     const html = renderTopBar();
     expect(html).toContain("가짜 곡");
