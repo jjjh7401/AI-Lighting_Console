@@ -568,3 +568,84 @@ class TestAsciiPresetLabel:
         assert any("Slow Wave" in line for line in report)
         # new_preset_label 은 칸 필드로 저장되지 않는다(요청 메타데이터일 뿐).
         assert "new_preset_label" not in _cue(updated, "MOVER-U", 11)
+
+
+# -- 마디 범위(mockup 「22~25마디」 그대로, 카드 t551 후속) -------------------
+
+
+class TestApplyRange:
+    def test_range_edits_every_existing_cue_in_bounds(self) -> None:
+        from server.design.beat_grid_edit import apply_beat_grid_edit_range
+
+        grid = _grid()
+        # MOVER-U 는 0,3,7,11,14,18,22 마디에 큐가 있다 — 3~14 범위엔 3/7/11/14.
+        updated, report = apply_beat_grid_edit_range(
+            grid,
+            bar_start=3,
+            bar_end=14,
+            target="MOVER-U",
+            changes={"entry": {"fade_bars": 1, "mib_mode": None}},
+        )
+        for bar in (3, 7, 11, 14):
+            assert _cue(updated, "MOVER-U", bar)["entry"]["fade_bars"] == 1
+        # 범위 밖(0·18·22)은 그대로.
+        assert _cue(updated, "MOVER-U", 0) == _cue(grid, "MOVER-U", 0)
+        assert _cue(updated, "MOVER-U", 18) == _cue(grid, "MOVER-U", 18)
+        assert len(report) == 4
+
+    def test_range_with_no_matching_cues_is_rejected_with_boundaries(self) -> None:
+        from server.design.beat_grid_edit import apply_beat_grid_edit_range
+
+        grid = _grid()
+        with pytest.raises(BeatGridEditError) as excinfo:
+            apply_beat_grid_edit_range(
+                grid,
+                bar_start=100,
+                bar_end=110,
+                target="MOVER-U",
+                changes={"entry": {"fade_bars": 1, "mib_mode": None}},
+            )
+        assert "100" in str(excinfo.value) and "110" in str(excinfo.value)
+
+    def test_range_does_not_create_new_cues(self) -> None:
+        from server.design.beat_grid_edit import apply_beat_grid_edit_range
+
+        grid = _grid()
+        assert _cue(grid, "STROBE", 5) is None
+        with pytest.raises(BeatGridEditError):
+            apply_beat_grid_edit_range(
+                grid,
+                bar_start=0,
+                bar_end=25,
+                target="STROBE",
+                changes={"entry": {"fade_bars": 1, "mib_mode": None}},
+            )
+
+    def test_range_rejection_leaves_grid_unchanged(self) -> None:
+        from server.design.beat_grid_edit import apply_beat_grid_edit_range
+
+        grid = _grid()
+        before = copy.deepcopy(grid)
+        with pytest.raises(BeatGridEditError):
+            apply_beat_grid_edit_range(
+                grid,
+                bar_start=3,
+                bar_end=14,
+                target="MOVER-U",
+                changes={"not_a_real_field": 1},
+            )
+        assert grid == before
+
+    def test_single_bar_range_matches_apply_beat_grid_edit(self) -> None:
+        from server.design.beat_grid_edit import apply_beat_grid_edit_range
+
+        grid = _grid()
+        updated, report = apply_beat_grid_edit_range(
+            grid,
+            bar_start=7,
+            bar_end=7,
+            target="BACK",
+            changes={"entry": {"fade_bars": 2, "mib_mode": None}},
+        )
+        assert _cue(updated, "BACK", 7)["entry"]["fade_bars"] == 2
+        assert len(report) == 1

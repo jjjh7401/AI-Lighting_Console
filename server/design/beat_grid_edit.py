@@ -52,6 +52,7 @@ __all__ = [
     "UNVERIFIED_SHAPES",
     "BeatGridEditError",
     "apply_beat_grid_edit",
+    "apply_beat_grid_edit_range",
     "load_preset_pool_policy",
     "resolve_track_scope",
     "validate_preset_pool_assignment",
@@ -521,3 +522,51 @@ def apply_beat_grid_edit(
 
     report.extend(warnings)
     return updated, report
+
+
+def apply_beat_grid_edit_range(
+    grid: Mapping[str, object],
+    *,
+    bar_start: int,
+    bar_end: int,
+    target: str,
+    changes: Mapping[str, object],
+) -> tuple[dict[str, object], list[str]]:
+    """``apply_beat_grid_edit``의 마디 **범위** 판이다 — 문장 경로(②)가
+    받는 mockup 명령창의 실제 모양("22~25마디 MOVER-D ...")을 그대로
+    따른다(``reports/ldbeat-runbook-ui-proposal-20261008.html`` `#bRule`).
+
+    ``[bar_start, bar_end]``(양끝 포함) 구간에서 ``target``에 매칭되는
+    트랙의 **이미 있는 칸에만** 적용한다 — mockup의 ``bRule`` 핸들러와
+    같은 선택: 새 칸을 새로 만들지 않는다(``segs=SEG[...].filter(...)``,
+    없으면 거절). 직접 고르기(path ①)와 달리 "그 바에 칸이 없으면 새로
+    만든다"는 `apply_beat_grid_edit` 자신의 계약이 아니라 이 범위 함수가
+    의도적으로 좁힌 것이다 — 문장 범위 편집에서 새 칸을 지어내지 않는다.
+
+    **부분 적용 금지**는 전체 범위에 걸린다 — 범위 안 칸 중 하나라도
+    검증에 실패하면 전부 되돌린다(어느 칸도 바뀌지 않는다)."""
+    tracks = list(grid.get("tracks") or [])
+    scope = resolve_track_scope(tracks, target)
+    if not scope:
+        known = ", ".join(str(track.get("group_name") or "") for track in tracks)
+        raise BeatGridEditError(
+            f"트랙/역할 '{target}'을 찾을 수 없습니다 — 이 곡의 트랙: {known}. "
+            "이름을 지어내지 않습니다."
+        )
+    bars_in_range: set[int] = set()
+    for index in scope:
+        for cue in tracks[index].get("cues") or []:
+            cue_bar = cue.get("bar")
+            if isinstance(cue_bar, int) and bar_start <= cue_bar <= bar_end:
+                bars_in_range.add(cue_bar)
+    if not bars_in_range:
+        raise BeatGridEditError(
+            f"{bar_start}~{bar_end}마디에 '{target}'의 칸이 없습니다 — 문장 범위 편집은 "
+            "이미 있는 칸만 고칩니다(새 칸을 지어내지 않습니다)."
+        )
+    current = grid
+    report: list[str] = []
+    for bar in sorted(bars_in_range):
+        current, bar_report = apply_beat_grid_edit(current, bar=bar, target=target, changes=changes)
+        report.extend(bar_report)
+    return dict(current), report
