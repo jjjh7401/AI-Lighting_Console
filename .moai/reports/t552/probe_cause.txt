@@ -1,0 +1,24 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t552
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t552
+Installed 97 packages in 185ms
+libsndfile 1.2.2 soundfile 0.14.0
+== LoveMe.mp3 size 2594979
+   ID3v2.3.0 flags=0x00 tag_size=71 audio_starts_at=81 bytes_at_end=00000000
+   path .mp3: OK (4766976, 2) sr=44100
+   path no-ext: ERR Error opening '/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/tmp2r2ykxk1/copy_noext': Format not recognised.
+   bytes: ERR Error opening <_io.BytesIO object at 0x1058bc810>: Format not recognised.
+   bytes format=MP3: ERR Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+== Morning.mp3 size 3068475
+   ID3v2.2.0 flags=0x00 tag_size=2212 audio_starts_at=2222 bytes_at_end=fffba040
+   path .mp3: OK (6761088, 2) sr=44100
+   path no-ext: OK (6761088, 2) sr=44100
+   bytes: OK (6761088, 2) sr=44100
+   bytes format=MP3: ERR Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian
+== LOVE ATTACK.mp3 size 4733524
+   ID3v2.4.0 flags=0x00 tag_size=128 audio_starts_at=138 bytes_at_end=fffbb000
+   path .mp3: OK (8694784, 2) sr=44100
+   path no-ext: OK (8694784, 2) sr=44100
+   bytes: OK (8694784, 2) sr=44100
+   bytes format=MP3: ERR Not allowed for existing files (except 'RAW'): samplerate, channels, format, subtype, endian

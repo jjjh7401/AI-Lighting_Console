@@ -497,7 +497,8 @@ def test_ground_truth_parses_82_downbeats() -> None:
 def test_fixture_has_326_beats_matching_m1_report(love_attack_fixture: dict) -> None:
     beats = love_attack_fixture["beat_times_ms"]
     assert len(beats) == 326
-    assert love_attack_fixture["bpm"] == pytest.approx(112.347, abs=0.01)
+    # 카드 t550 — 박 회귀 BPM(112.002). 112.347 은 중앙값의 hop 격자 값이었다.
+    assert love_attack_fixture["bpm"] == pytest.approx(112.002, abs=0.01)
 
 
 def test_ac016_offset1_downbeat_and_bar_boundary_hit_rate_at_least_90_percent(
@@ -560,10 +561,11 @@ def test_detect_beat_grid_real_love_attack_matches_fixture_and_ac016() -> None:
     result = detect_beat_grid(audio_bytes)
     assert isinstance(result, BeatGridResult)
 
-    assert result.bpm == pytest.approx(112.35, rel=0.005)
-
     with LOVE_ATTACK_BEAT_GRID_PATH.open(encoding="utf-8") as handle:
         fixture = json.load(handle)
+    # 카드 t550 — ±0.5% 는 중앙값(112.347)과 회귀(112.002)를 둘 다 통과시켜 어느 경로인지
+    # 가리지 못했다. 픽스처에 고정한 값과 0.01 안에서 같아야 한다.
+    assert result.bpm == pytest.approx(fixture["bpm"], abs=0.01)
     fixture_beats = fixture["beat_times_ms"]
     assert len(result.beat_times_ms) == len(fixture_beats)
     for detected, fixed in zip(result.beat_times_ms, fixture_beats, strict=True):

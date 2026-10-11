@@ -1,0 +1,45 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/337", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/337", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/337)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/338", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/338", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/338)"}
+{"step": "store_337", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Group 11 ; Attribute 'Pan' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Pan' At Relative 30", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"command": "Step 1 At Decel -100", "reasons": []}, {"command": "Step 2 At Accel -100", "reasons": []}, {"command": "Step 2 At Decel -100", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Pan' At Speed 56", "reasons": []}, {"command": "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'", "reasons": []}]}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.002, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.003, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.003, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.003, "kind": "exec", "command": "Attribute 'Pan' At Speed 56", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.003, "kind": "exec", "command": "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_337", "t": 0.004, "kind": "exec", "command": "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_337", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 337", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 337': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_337", "t": 0.004, "kind": "exec", "command": "Goto Cue 1 Sequence 337", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_337", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 337", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 337': no body fetcher configured — reference bodies unverifiable"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "off_337", "t": 0.004, "kind": "exec", "command": "Off Sequence 337", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_337", "t": 0.004, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; At Preset 2.1", "reasons": []}, {"command": "Attribute 'Pan' At Relative -12", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Pan' At Relative 12", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"command": "Step 1 At Decel -100", "reasons": []}, {"command": "Step 2 At Accel -100", "reasons": []}, {"command": "Step 2 At Decel -100", "reasons": []}, {"command": "Attribute 'Pan' At Speed 56.001", "reasons": []}, {"command": "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'", "reasons": []}]}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Group 11 ; At Preset 2.1", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Relative -12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Relative 12", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Attribute 'Pan' At Speed 56.001", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_338", "t": 0.005, "kind": "exec", "command": "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_338", "t": 0.006, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 338", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 338': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_338", "t": 0.006, "kind": "exec", "command": "Goto Cue 1 Sequence 338", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_338", "t": 0.006, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 338", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 338': no body fetcher configured — reference bodies unverifiable"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "off_338", "t": 0.006, "kind": "exec", "command": "Off Sequence 338", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_338", "t": 0.006, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

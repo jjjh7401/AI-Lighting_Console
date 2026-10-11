@@ -1,0 +1,11 @@
+song                      analyze  grid_bpm  outcome  beats
+LOVE ATTACK.mp3           112.002   112.002     keep    326
+Club Diver.mp3            140.026   140.026     keep    331
+Cut and Run.mp3           107.666   107.666     keep    364
+Ice cream.mp3             100.446   100.446     keep    122
+Let's Dance.mp3           120.030   120.030     keep    156
+LoveMe.mp3                 99.994    99.994     keep    156
+Morning.mp3               117.454   117.454     keep    285
+Rain.mp3                   76.013    76.013     keep    251
+Too Cool.mp3              160.003   160.003     keep    475
+scott-buckley-neon.mp3    120.185   120.185     keep    498

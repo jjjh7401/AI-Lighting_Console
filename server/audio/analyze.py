@@ -258,6 +258,62 @@ def _mp3_frame(payload: bytes, at: int) -> tuple[int, int] | None:
     return size, kbps
 
 
+def _id3v2_end(payload: bytes) -> int:
+    """ID3v2 태그가 끝나는 오프셋 — 태그가 없으면 0."""
+    if payload[:3] != b"ID3" or len(payload) < 10:
+        return 0
+    end = 10 + ((payload[6] << 21) | (payload[7] << 14) | (payload[8] << 7) | payload[9])
+    if payload[5] & 0x10:  # ID3v2.4 꼬리표(footer)
+        end += 10
+    return end
+
+
+def _first_mp3_frame(payload: bytes, start: int) -> int | None:
+    """``start`` 부터 첫 진짜 프레임 동기 오프셋 — 다음 프레임까지 이어져야 진짜다."""
+    for at in range(start, min(len(payload), start + _MP3_SYNC_SEARCH_BYTES)):
+        frame = _mp3_frame(payload, at)
+        if frame and _mp3_frame(payload, at + frame[0]):
+            return at
+    return None
+
+
+def _without_zero_gap_before_mp3(payload: bytes) -> bytes | None:
+    """첫 MPEG 프레임 앞(ID3v2 태그 뒤, 또는 파일 머리)에 낀 0 바이트를 뺀 바이트열.
+
+    libsndfile 은 바이트열의 내용으로 형식을 알아낸다 — 태그 뒤에 프레임 동기 대신
+    0 바이트가 하나라도 있으면 MP3 로 알아보지 못한다. 파일 경로로 읽을 때는 확장자로
+    형식을 정하는 대체 경로가 있어 읽혔지만 업로드 바이트열에는 확장자가 없다(카드 t552,
+    ``.moai/reports/t552/probe_cause.txt`` — 실제 곡에서 태그 뒤 0 바이트 626개).
+
+    틈이 **전부 0** 일 때만 뺀다. 0 이 아닌 바이트는 무엇인지 모르므로 건드리지 않고
+    ``None`` — 호출자는 원래의 거절을 그대로 낸다. 틈이 없거나 프레임을 못 찾아도 ``None``.
+    """
+    start = _id3v2_end(payload)
+    at = _first_mp3_frame(payload, start)
+    if at is None or at == start or payload[start:at].count(0) != at - start:
+        return None
+    return payload[:start] + payload[at:]
+
+
+def _read_audio(soundfile, payload: bytes):
+    """바이트열 → ``(info, samples, sample_rate, payload)``. 실패하면 soundfile 의 예외.
+
+    ``analyze()`` 와 ``bar_map`` 이 같이 쓰는 디코드다. 처음 읽기가 실패했을 때만 첫
+    프레임 앞의 0 바이트 틈을 빼고 한 번 더 읽는다(카드 t552) — 지금 읽히는 파일은
+    바이트 하나 바뀌지 않는다. 돌려주는 ``payload`` 는 실제로 읽은 바이트열이다.
+    """
+    try:
+        info = soundfile.info(io.BytesIO(payload))
+    except Exception:
+        trimmed = _without_zero_gap_before_mp3(payload)
+        if trimmed is None:
+            raise
+        payload = trimmed
+        info = soundfile.info(io.BytesIO(payload))
+    samples, sample_rate = soundfile.read(io.BytesIO(payload), dtype="float32", always_2d=True)
+    return info, samples, sample_rate, payload
+
+
 def _mp3_length_is_a_bitrate_guess(payload: bytes) -> bool:
     """이 mp3 의 선언 길이가 **첫 프레임 비트레이트로 어림한 값**인가 (t443).
 
@@ -269,17 +325,11 @@ def _mp3_length_is_a_bitrate_guess(payload: bytes) -> bool:
     헤더가 없고 **프레임 비트레이트가 둘 이상 섞였을 때만** 참이다. 판단이 서지 않으면
     (프레임을 못 찾음, 헤더 있음, 한 비트레이트뿐) 거짓 — 절단 검사를 그대로 둔다.
     """
-    start = 0
-    if payload[:3] == b"ID3" and len(payload) >= 10:
-        start = 10 + ((payload[6] << 21) | (payload[7] << 14) | (payload[8] << 7) | payload[9])
-        if payload[5] & 0x10:  # ID3v2.4 꼬리표(footer)
-            start += 10
-    for at in range(start, min(len(payload), start + _MP3_SYNC_SEARCH_BYTES)):
-        frame = _mp3_frame(payload, at)
-        if frame and _mp3_frame(payload, at + frame[0]):  # 다음 프레임까지 이어져야 진짜 동기
-            break
-    else:
+    start = _id3v2_end(payload)
+    at = _first_mp3_frame(payload, start)
+    if at is None:
         return False
+    frame = _mp3_frame(payload, at)
     if any(tag in payload[at : at + frame[0]] for tag in (b"Xing", b"Info", b"VBRI")):
         return False
     first_kbps = frame[1]
@@ -311,9 +361,8 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
         return AnalysisFailure(MANUAL_BPM_FALLBACK_REASON)
 
     try:
-        info = soundfile.info(io.BytesIO(payload))
+        info, samples, sample_rate, payload = _read_audio(soundfile, payload)
         declared_frames = info.frames
-        samples, sample_rate = soundfile.read(io.BytesIO(payload), dtype="float32", always_2d=True)
     except Exception as error:  # soundfile 은 형식마다 다른 예외를 낸다
         return AnalysisFailure(f"오디오 형식을 읽지 못했습니다: {error}")
 
@@ -385,10 +434,9 @@ def _tempo_from_beats(numpy, beat_times) -> tuple[float | None, float]:
     한 곡에 하나뿐이라 흔들림을 감출 수 있지만, 간격 분포는 흔들림을 그대로
     보여 준다 — 그리고 그 흔들림이 곧 ``bpm_confidence`` 다.
 
-    🔴 중앙값은 hop 격자에 묶여 참 112 BPM 을 112.347 로 낸다(카드 t546). ``analyze()`` 는
-    그래서 :func:`_tempo_from_beat_regression` 을 쓴다. 이 함수를 그대로 두는 이유는
-    ``bar_map.detect_beat_grid`` 다 — 그 뒤의 절반/두 배 검사(REQ-LDBARMAP-006)는 이
-    값에 맞춰져 있어, 정확한 BPM 을 주면 LOVE ATTACK 을 224 로 뒤집는다(카드 t547).
+    🔴 중앙값은 hop 격자에 묶여 참 112 BPM 을 112.347 로 낸다(카드 t546). ``analyze()`` 와
+    ``bar_map.detect_beat_grid`` 는 그래서 :func:`_tempo_from_beat_regression` 을 쓴다
+    (카드 t550). 이 함수는 회귀의 출발점(박 번호 매기기)과 확신 계산으로 남는다.
     """
     if len(beat_times) < 4:
         return None, 0.0

@@ -1,0 +1,155 @@
+{
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "timecode_32_1": {
+    "childCount": 9,
+    "track_count": 8
+  },
+  "track_targets": [
+    {
+      "id": "gate-3",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/2",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 226"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-4",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/3",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 227"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-5",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/4",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 228"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-6",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/5",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 229"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-7",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/6",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 230"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-8",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/7",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 231"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-9",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/8",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 232"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    },
+    {
+      "id": "gate-10",
+      "kind": "props",
+      "ok": true,
+      "path": "ShowData/DataPools/Default/Timecodes/32/1/9",
+      "reads": [
+        {
+          "n": "TARGET",
+          "ok": true,
+          "t": "userdata",
+          "v": "Sequence 233"
+        }
+      ],
+      "truncated": false,
+      "v": 1
+    }
+  ],
+  "expected_target_order": [
+    226,
+    227,
+    228,
+    229,
+    230,
+    231,
+    232,
+    233
+  ],
+  "sequence_336": {
+    "exists": false,
+    "error": "path segment not found: '336' (in ShowData/DataPools/Default/Sequences/336)"
+  }
+}

@@ -1,0 +1,46 @@
+Store Timecode 32
+Set Timecode 32 Property 'Name' 'LDBEAT T553 - P1b eight tracks'
+Set Timecode 32 Property 'Duration' 10 'AutoStop' 0
+Store Timecode 32.1
+Assign Sequence 226 At Timecode 32.1.1
+Assign Sequence 227 At Timecode 32.1.2
+Assign Sequence 228 At Timecode 32.1.3
+Assign Sequence 229 At Timecode 32.1.4
+Assign Sequence 230 At Timecode 32.1.5
+Assign Sequence 231 At Timecode 32.1.6
+Assign Sequence 232 At Timecode 32.1.7
+Assign Sequence 233 At Timecode 32.1.8
+Go Timecode 32
+Off Timecode 32
+Off Sequence 226
+Off Sequence 227
+Off Sequence 228
+Off Sequence 229
+Off Sequence 230
+Off Sequence 231
+Off Sequence 232
+Off Sequence 233
+ChangeDestination Root
+ClearAll
+Group 11 ; Attribute 'Dimmer' At 70
+Group 11 ; Attribute 'Tilt' At 45
+ClearAll
+ChangeDestination Root
+ClearAll
+Group 11 ; Attribute 'Dimmer' At 70
+Group 11 ; Attribute 'Tilt' At 45
+Group 11 ; Attribute 'Pan' At Relative -30
+Step 2
+Attribute 'Pan' At Relative 30
+Step 1 At Accel -100
+Step 1 At Decel -100
+Step 2 At Accel -100
+Step 2 At Decel -100
+Attribute 'Pan' At Phase 0 Thru 360
+Attribute 'Pan' At Speed 56
+Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'
+ClearAll
+Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'
+Goto Cue 1 Sequence 336
+Off Sequence 336
+ClearAll

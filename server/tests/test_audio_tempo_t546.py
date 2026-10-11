@@ -74,33 +74,47 @@ class TestUnchangedContract:
         assert confidence == pytest.approx(expected)
 
 
-class TestTwoPathsSplit:
-    """``analyze()`` 만 회귀를 쓰고, ``bar_map`` 이 부르는 중앙값 함수는 그대로다.
+def _click_track_wav(true_bpm: float, seconds: int = 30, sample_rate: int = 44100) -> bytes:
+    """참 BPM 을 아는 클릭 트랙(WAV 바이트열) — 두 경로에 같은 입력을 준다."""
+    import io
 
-    ``bar_map.detect_beat_grid`` 뒤의 절반/두 배 검사(REQ-LDBARMAP-006)는 중앙값 BPM 에
-    맞춰져 있어, 정확한 BPM 을 주면 LOVE ATTACK 을 224 로 뒤집는다(카드 t547).
+    import soundfile as sf
+
+    audio = np.zeros(sample_rate * seconds, dtype=np.float32)
+    burst = np.sin(2 * np.pi * 1000 * np.arange(441) / sample_rate).astype(np.float32)
+    burst *= np.hanning(882)[441:].astype(np.float32)
+    period = 60.0 / true_bpm
+    for beat in range(int(seconds / period)):
+        start = int(round(beat * period * sample_rate))
+        end = min(start + burst.size, audio.size)
+        audio[start:end] += burst[: end - start]
+    buffer = io.BytesIO()
+    sf.write(buffer, audio, sample_rate, format="WAV")
+    return buffer.getvalue()
+
+
+class TestOneTempoPath:
+    """``analyze()`` 와 ``bar_map.detect_beat_grid`` 가 같은 박 회귀 BPM 을 낸다(카드 t550).
+
+    t546 에서는 ``detect_beat_grid`` 만 중앙값을 남겼다 — 그 뒤의 옛 절반/두 배 검사가
+    중앙값에 맞춰져 있었기 때문이다. t547 이 그 검사를 박 시각 기준 부호검정으로 바꿔
+    BPM 숫자에 기대지 않게 됐으므로 두 경로를 하나로 맞춘다.
     """
 
-    def test_the_median_function_keeps_its_hop_grid_value(self):
+    def test_the_median_function_alone_is_stuck_on_the_hop_grid(self):
+        # 회귀를 쓰는 이유의 기록 — 중앙값 함수 자체는 여전히 hop 격자 값을 낸다.
         bpm, _confidence = _tempo_from_beats(np, _quantized_beats(112.0))
         assert bpm == pytest.approx(112.347, abs=0.001)
 
-    def test_analyze_reports_the_regressed_tempo_of_a_click_track(self):
-        import io
+    @pytest.mark.parametrize("true_bpm", [112.0, 128.5, 160.0])
+    def test_both_paths_report_the_regressed_tempo_of_a_click_track(self, true_bpm):
+        from server.audio.bar_map import BeatGridResult, detect_beat_grid
 
-        import soundfile as sf
+        audio_bytes = _click_track_wav(true_bpm)
+        analyzed = analyze(audio_bytes)
+        grid = detect_beat_grid(audio_bytes)
+        assert isinstance(grid, BeatGridResult)
 
-        sample_rate = 44100
-        audio = np.zeros(sample_rate * 30, dtype=np.float32)
-        burst = np.sin(2 * np.pi * 1000 * np.arange(441) / sample_rate).astype(np.float32)
-        burst *= np.hanning(882)[441:].astype(np.float32)
-        period = 60.0 / 112.0
-        for beat in range(int(30 / period)):
-            start = int(round(beat * period * sample_rate))
-            end = min(start + burst.size, audio.size)
-            audio[start:end] += burst[: end - start]
-        buffer = io.BytesIO()
-        sf.write(buffer, audio, sample_rate, format="WAV")
-
-        result = analyze(buffer.getvalue())
-        assert result.bpm == pytest.approx(112.0, abs=0.05)
+        assert analyzed.bpm == pytest.approx(true_bpm, abs=0.05)
+        assert grid.bpm_check.raw_bpm == pytest.approx(true_bpm, abs=0.05)
+        assert grid.bpm == pytest.approx(analyzed.bpm, abs=1e-9)

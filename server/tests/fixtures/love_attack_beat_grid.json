@@ -1,7 +1,7 @@
 {
-  "_source_note": "LOVE ATTACK 326개 검출 비트 시각(ms) — server.audio.bar_map.detect_beat_grid()가 \"/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3\"에서 검출한 beat_times_ms를 그대로 고정한 숫자(derived numbers)다. 원곡 오디오 자체는 커밋하지 않는다(REQ-LDBARMAP-014) — 이 파일은 파생 숫자일 뿐이라 허용된다. 디코드 경로는 server/audio/analyze.py의 analyze()와 동일하다(soundfile 읽기 -> mono 다운믹스 -> librosa.beat.beat_track hop_length=512) — M1 후보 A(hop512)와 같은 비트 추적 경로이며 326개·BPM 112.347(지도 보고서 326개와 일치)로 M1 보정 결과(.moai/reports/SPEC-LDBARMAP-001-probes/m1-calibration.md)와 일치한다. 이 픽스처가 검증하는 것은 트래커 독립성이 아니라 derive_bars()의 오프셋/파생 로직이다(offset/derivation logic) — 비트 검출 자체가 아니라.",
+  "_source_note": "LOVE ATTACK 326개 검출 비트 시각(ms) — server.audio.bar_map.detect_beat_grid()가 \"/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3\"에서 검출한 beat_times_ms를 그대로 고정한 숫자(derived numbers)다. 원곡 오디오 자체는 커밋하지 않는다(REQ-LDBARMAP-014) — 이 파일은 파생 숫자일 뿐이라 허용된다. 디코드 경로는 server/audio/analyze.py의 analyze()와 동일하다(soundfile 읽기 -> mono 다운믹스 -> librosa.beat.beat_track hop_length=512) — M1 후보 A(hop512)와 같은 비트 추적 경로이며 326개(지도 보고서 326개와 일치)로 M1 보정 결과(.moai/reports/SPEC-LDBARMAP-001-probes/m1-calibration.md)와 일치한다. BPM 은 카드 t550 부터 박 회귀값(112.002)이다 — 그 전 값 112.347 은 박 간격 중앙값이라 hop 격자에 묶인 값이었다(카드 t546). 박 시각·확신은 그대로다(326개 전부 0ms 차이, 재측정 .moai/reports/t550/run-verdict.md). 이 픽스처가 검증하는 것은 트래커 독립성이 아니라 derive_bars()의 오프셋/파생 로직이다(offset/derivation logic) — 비트 검출 자체가 아니라.",
   "song": "LOVE ATTACK",
-  "bpm": 112.34714673913075,
+  "bpm": 112.00191993244025,
   "bpm_confidence": 0.9673129318451623,
   "beat_times_ms": [
     964,

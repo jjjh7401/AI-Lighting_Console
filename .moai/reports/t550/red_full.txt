@@ -1,0 +1,76 @@
+............FFF                                                          [100%]
+=================================== FAILURES ===================================
+_ TestOneTempoPath.test_both_paths_report_the_regressed_tempo_of_a_click_track[112.0] _
+
+self = <server.tests.test_audio_tempo_t546.TestOneTempoPath object at 0x10c059b50>
+true_bpm = 112.0
+
+    @pytest.mark.parametrize("true_bpm", [112.0, 128.5, 160.0])
+    def test_both_paths_report_the_regressed_tempo_of_a_click_track(self, true_bpm):
+        from server.audio.bar_map import BeatGridResult, detect_beat_grid
+    
+        audio_bytes = _click_track_wav(true_bpm)
+        analyzed = analyze(audio_bytes)
+        grid = detect_beat_grid(audio_bytes)
+        assert isinstance(grid, BeatGridResult)
+    
+        assert analyzed.bpm == pytest.approx(true_bpm, abs=0.05)
+>       assert grid.bpm_check.raw_bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 112.34714673913038 == 112.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 112.34714673913038
+E         Expected: 112.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:119: AssertionError
+_ TestOneTempoPath.test_both_paths_report_the_regressed_tempo_of_a_click_track[128.5] _
+
+self = <server.tests.test_audio_tempo_t546.TestOneTempoPath object at 0x10c059d90>
+true_bpm = 128.5
+
+    @pytest.mark.parametrize("true_bpm", [112.0, 128.5, 160.0])
+    def test_both_paths_report_the_regressed_tempo_of_a_click_track(self, true_bpm):
+        from server.audio.bar_map import BeatGridResult, detect_beat_grid
+    
+        audio_bytes = _click_track_wav(true_bpm)
+        analyzed = analyze(audio_bytes)
+        grid = detect_beat_grid(audio_bytes)
+        assert isinstance(grid, BeatGridResult)
+    
+        assert analyzed.bpm == pytest.approx(true_bpm, abs=0.05)
+>       assert grid.bpm_check.raw_bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 129.1992187499999 == 128.5 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 129.1992187499999
+E         Expected: 128.5 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:119: AssertionError
+_ TestOneTempoPath.test_both_paths_report_the_regressed_tempo_of_a_click_track[160.0] _
+
+self = <server.tests.test_audio_tempo_t546.TestOneTempoPath object at 0x10c059fd0>
+true_bpm = 160.0
+
+    @pytest.mark.parametrize("true_bpm", [112.0, 128.5, 160.0])
+    def test_both_paths_report_the_regressed_tempo_of_a_click_track(self, true_bpm):
+        from server.audio.bar_map import BeatGridResult, detect_beat_grid
+    
+        audio_bytes = _click_track_wav(true_bpm)
+        analyzed = analyze(audio_bytes)
+        grid = detect_beat_grid(audio_bytes)
+        assert isinstance(grid, BeatGridResult)
+    
+        assert analyzed.bpm == pytest.approx(true_bpm, abs=0.05)
+>       assert grid.bpm_check.raw_bpm == pytest.approx(true_bpm, abs=0.05)
+E       assert 161.49902343749977 == 160.0 ± 0.05
+E         
+E         comparison failed
+E         Obtained: 161.49902343749977
+E         Expected: 160.0 ± 0.05
+
+server/tests/test_audio_tempo_t546.py:119: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_audio_tempo_t546.py::TestOneTempoPath::test_both_paths_report_the_regressed_tempo_of_a_click_track[112.0]
+FAILED server/tests/test_audio_tempo_t546.py::TestOneTempoPath::test_both_paths_report_the_regressed_tempo_of_a_click_track[128.5]
+FAILED server/tests/test_audio_tempo_t546.py::TestOneTempoPath::test_both_paths_report_the_regressed_tempo_of_a_click_track[160.0]
+3 failed, 12 passed in 1.72s

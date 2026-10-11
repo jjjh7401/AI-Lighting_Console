@@ -1,0 +1,13 @@
+# 실기 콘솔에서 잰 구조 한계 (카드 t553, REQ-LDBEAT-001 M1 ①).
+# 숫자는 코드 상수가 아니라 이 파일에 근거와 함께 산다 — 다른 콘솔·쇼에서
+# 더 재면 이 값과 source 만 고친다. beat_grid_emit 은 이 값을 넘는 트랙을
+# 한 타임코드에 몰면 그 타임코드의 트랙 전부를 거절한다.
+max_timecode_tracks: 8
+source: >-
+  2026-10-11 실기(grandMA3 onPC, 응답기 1.6.6, 카드 t553 리드 「실행」) —
+  타임코드 32 에 시퀀스 226~233 을 트랙 8개로 Assign 한 뒤 되읽기:
+  Timecodes/32/1 childCount 9(Marker 1 + Track 8), Track TARGET 이
+  Sequence 226..233 순서와 일치 → 리드 판정 PASS.
+  근거 .moai/reports/t553/live/p1b/, .moai/reports/t553/live/p1b_readback.txt.
+  이전 값 6 은 t531 ①(타임코드 30, 트랙 6개) 측정이었다 — 8 보다 많은 트랙은
+  여전히 안 쟀다.

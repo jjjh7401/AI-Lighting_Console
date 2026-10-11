@@ -1,0 +1,81 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/336", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/336", "ok": false, "error": "path segment not found: '336' (in ShowData/DataPools/Default/Sequences/336)"}
+{"step": "t0_tilted_lit", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "t0_clear", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "store_U_pan", "t": 0.067, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Pan' At Relative -30", "reasons": ["bundle rejected (all-or-nothin
+{"step": "play_U_pan", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 336", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 336': state query failed for 'Sequence 336': path segment not found: '336' (in DataPool/Sequences/336)"]}]}
+{"step": "off_U_pan", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 336", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 336': state query failed for 'Sequence 336': path segment not found: '336' (in DataPool/Sequences/336)"]}]}
+{"step": "final_clear", "t": 0.2, "kind": "screen", "cleared": false, "commands": [{"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{
+  "item": "T553UPan",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/336"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "t0_tilted_lit": false,
+    "t0_clear": false,
+    "store_U_pan": false,
+    "play_U_pan": false,
+    "off_U_pan": false,
+    "final_clear": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'",
+        "ClearAll",
+        "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 336"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 336"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

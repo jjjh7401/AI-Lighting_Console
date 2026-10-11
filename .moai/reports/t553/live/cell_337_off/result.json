@@ -1,0 +1,24 @@
+{
+  "item": "T553UCell",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/337"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_337": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 337",
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}
