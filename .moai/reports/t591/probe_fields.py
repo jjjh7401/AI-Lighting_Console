@@ -20,7 +20,7 @@ with sync_playwright() as pw:
     for width in (1450, 1700):
         page = browser.new_page(viewport={"width": width, "height": 1000})
         errors: list[str] = []
-        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.on("pageerror", lambda e, sink=errors: sink.append(str(e)))
         page.goto(f"http://127.0.0.1:{port}/")
         page.get_by_role("button", name="런북 모드 켜기").click(timeout=15000)
         page.get_by_role("button", name="박자 배치 전체화면 열기").click(timeout=15000)
@@ -29,7 +29,9 @@ with sync_playwright() as pw:
         row = page.locator(
             ".beat-grid-track", has=page.locator(".beat-grid-track-name", has_text="MOVER-U")
         )
-        row.locator(".beat-grid-cue:not(.beat-grid-cue-gap):not(.beat-grid-cue-ghost)").nth(1).click()
+        row.locator(".beat-grid-cue:not(.beat-grid-cue-gap):not(.beat-grid-cue-ghost)").nth(
+            1
+        ).click()
         page.wait_for_timeout(500)
         panel = page.locator(".beat-grid-cue-panel")
         result = panel.evaluate(
@@ -38,7 +40,8 @@ with sync_playwright() as pw:
               const top = Math.max(p.top, 0), bottom = Math.min(p.bottom, window.innerHeight);
               const fields = [...panel.querySelectorAll('.beat-grid-cue-field')].map((f) => {
                 const r = f.getBoundingClientRect();
-                const label = (f.querySelector('.beat-grid-cue-field-label')||{}).textContent || f.dataset.field;
+                const lab = f.querySelector('.beat-grid-cue-field-label');
+                const label = (lab && lab.textContent) || f.dataset.field;
                 const state = r.top >= top && r.bottom <= bottom ? 'full'
                   : (r.bottom > top && r.top < bottom ? 'partial' : 'hidden');
                 return { label: label.trim(), editing: f.classList.contains('is-editing'),
@@ -60,5 +63,6 @@ with sync_playwright() as pw:
     browser.close()
 (OUT / f"probe_fields_{tag}.json").write_text(json.dumps(report, ensure_ascii=False, indent=1))
 for w, r in report.items():
-    print(w, "full", r["full"], "partial", r["partial"], "total", r["total"], "errors", len(r["page_errors"]),
-          [(f["label"], f["state"]) for f in r["fields"]])
+    states = [(f["label"], f["state"]) for f in r["fields"]]
+    print(w, "full", r["full"], "partial", r["partial"], "total", r["total"], states)
+    print(w, "page_errors", len(r["page_errors"]))

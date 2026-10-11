@@ -58,6 +58,7 @@ exit=0
 
 - 전후 캡처: `side_by_side_{before,after}/{1450,1700}x1000/` — before 는 수정 전 트리(eb63ec17)로 `ui/dist-before` 빌드, after 는 이 브랜치 `ui/dist`. 두 쪽 모두 앱 페이지 오류 0(`capture_{before,after}.log`).
 - 하네스: `serve_fake.py`·`capture.py` 는 t588 것을 그대로 복사.
+- `probe_fields.py` 는 측정 뒤 푸시 전 검사(ruff)에 맞춰 모양만 고쳤다(오류 콜백 변수 묶기·긴 줄 나누기·포맷). 세는 조건은 같다 — 고친 판으로는 다시 돌리지 않았다.
 
 ## 안 잰 것
 
