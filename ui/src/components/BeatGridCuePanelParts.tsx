@@ -234,8 +234,9 @@ export function BeatGridMovementPicker({
       <button type="button" disabled={changes === undefined} onClick={() => changes !== undefined && onApply(changes)}>
         적용
       </button>
+      {/* 카드 t588 — 고르기가 늘 열려 있어 「닫기」가 아니라 지금 값으로 「되돌리기」. */}
       <button type="button" onClick={onCancel}>
-        취소
+        되돌리기
       </button>
       {unverifiedChoice.length > 0 && (
         <p className="beat-grid-cue-field-note u">
