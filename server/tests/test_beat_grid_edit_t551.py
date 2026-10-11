@@ -27,7 +27,11 @@ import copy
 
 import pytest
 
-from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
+from server.design.beat_grid import (
+    LOVE_ATTACK_TITLE,
+    check_evidence_approval,
+    default_beat_grid,
+)
 from server.design.beat_grid_edit import (
     EDITABLE_CUE_FIELD_LABELS,
     UNVERIFIED_SHAPES,
@@ -571,19 +575,29 @@ class TestPresetPoolBandWarningWhileUnconfirmed:
 
 
 class TestEvidenceApprovalReuse:
-    def test_new_effect_preset_number_without_approval_is_rejected(self) -> None:
+    def test_new_effect_preset_number_without_approval_is_pending(self) -> None:
+        # 카드 t577(REQ-LDBEAT-015(h-1)) — 더는 편집 시점에 거절하지 않는다.
+        # 그 칸·필드는 초안에 그대로 받아들여지고 "승인 대기" 상태로 남는다
+        # — 승인은 이제 「⇪ 콘솔에 반영」 승인 카드에서만 일어난다(h-2~h-4).
+        # BACK bar 3(아래 시험과 같은 자리)은 기존 ``app_movement``가 없어
+        # 축 충돌(REQ-LDBEAT-006(vi-7))과 섞이지 않는다 — 순수하게 승인
+        # 완전성만 가린다. (옛 자리였던 MOVER-U bar 11은 기존 app_movement
+        # Pan 이 있어, 거절이 사라진 지금은 그 축 충돌이 먼저 걸린다 —
+        # 별도 시험이 그 경로를 직접 가린다.)
         grid = _grid()
         policy = load_preset_pool_policy()
         band = policy["pools"]["position_effect"]
         inside = str((float(band["start"]) + float(band["end"])) / 2)
-        with pytest.raises(BeatGridEditError) as excinfo:
-            apply_beat_grid_edit(
-                grid,
-                bar=11,
-                target="MOVER-U",
-                changes={"effect_preset_no": inside, "effect_kind": "position"},
-            )
-        assert "REQ-LDBEAT-015" in str(excinfo.value)
+        updated, report = apply_beat_grid_edit(
+            grid,
+            bar=3,
+            target="BACK",
+            changes={"effect_preset_no": inside, "effect_kind": "position"},
+        )
+        cue = _cue(updated, "BACK", 3)
+        assert cue["effect_preset_no"] == inside
+        assert check_evidence_approval(cue) is not None, "승인 완전성 없이도 통과했다"
+        assert any("승인 대기" in line for line in report)
 
     def test_new_effect_preset_number_with_full_approval_is_accepted(self) -> None:
         # BACK bar 3 에는 기존 app_movement 가 없다 — MOVER-U bar 11(기존

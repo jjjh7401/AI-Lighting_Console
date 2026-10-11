@@ -33,6 +33,7 @@ PULSE" 같은 역할·효과 혼성 문자열을 식별자로 쓰지 않는다(�
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Literal, TypedDict
@@ -59,6 +60,7 @@ __all__ = [
     "BeatGridView",
     "SceneCellAssignment",
     "SceneMemo",
+    "apply_pending_approval",
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
     "check_app_movement_axis_conflict",
@@ -68,6 +70,8 @@ __all__ = [
     "find_overlapping_group_tracks",
     "normalize_beat_grid_cue",
     "pan_only_vertical_base_warning",
+    "pending_preset_approvals",
+    "pending_preset_fields",
     "validate_beat_grid_tracks",
 ]
 
@@ -553,7 +557,7 @@ def attach_beat_grid_runtime_extras(
 ) -> dict[str, object]:
     """세션 서빙 경계에서만 호출하는 추가 단계(카드 t537) — ``attach_beat_
     grid_default``와는 별개다(그 함수의 "있으면 바이트 그대로 보존" 계약을
-    바꾸지 않기 위해서다). 두 가지를 한다:
+    바꾸지 않기 위해서다). 세 가지를 한다:
 
     1. **M1 판정 최신화**(REQ-LDBEAT-003(b)) — `progress_md_path`(없으면
        `beat_grid_probes.default_progress_md_path()`)를 그 자리에서 읽어
@@ -563,6 +567,11 @@ def attach_beat_grid_runtime_extras(
        이든 레거시 ``{bar,label}``뿐이든)의 모든 칸을 화면이 읽기 전에
        `normalize_beat_grid_cue`로 통과시켜, 구조화 필드가 없는 칸도
        `None`으로 채운 완전한 모양으로 보낸다 — ``label``은 그대로다.
+    3. **승인 대기 배지 파생**(카드 t577, REQ-LDBEAT-015(h-1)) — 각 칸에
+       `pending_preset_fields`(사람이 읽는 필드 이름 리스트, 비어 있으면
+       그 칸은 승인 대기가 아니다)를 덧붙인다. 저장되는 값이 아니라 이
+       서빙 경계에서만 파생되는 뷰 전용 필드다 — UI가 같은 판정을 다시
+       유추하지 않게 한다(REQ-LDBEAT-015(h-1), M10 4단계).
 
     ``beat_grid`` 키가 없으면 아무것도 하지 않는다(ADDITIVE, no-op)."""
     merged = dict(payload)
@@ -580,7 +589,15 @@ def attach_beat_grid_runtime_extras(
             track = dict(track)
             raw_cues = track.get("cues")
             if isinstance(raw_cues, list):
-                track["cues"] = [normalize_beat_grid_cue(cue) for cue in raw_cues]
+                normalized_cues = []
+                for raw_cue in raw_cues:
+                    cue = dict(normalize_beat_grid_cue(raw_cue))
+                    cue["pending_preset_fields"] = [  # type: ignore[typeddict-unknown-key]
+                        _PENDING_PRESET_FIELD_LABELS.get(field, field)
+                        for field, _value in pending_preset_fields(cue)
+                    ]
+                    normalized_cues.append(cue)
+                track["cues"] = normalized_cues
             normalized_tracks.append(track)
         grid["tracks"] = normalized_tracks
     from server.design.beat_grid_probes import default_progress_md_path
@@ -685,3 +702,122 @@ def pan_only_vertical_base_warning(cue: Mapping[str, object]) -> str | None:
         "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 "
         "눈에 보이지 않을 수 있습니다"
     )
+
+
+#: REQ-LDBEAT-015(h-2) — 「⇪ 콘솔에 반영」 승인 카드가 "새로 만드는 프리셋
+#: N개"로 열거할 때 보여줄 사람이 읽는 필드 이름. 칸 레벨(``evidence.
+#: approval``은 칸 하나에 한 객체)이 아니라 필드 레벨로 쪼개 보여준다 —
+#: 승인 카드는 어느 번호가 새로 생기는지 사람이 읽을 수 있어야 한다.
+_PENDING_PRESET_FIELD_LABELS: dict[str, str] = {
+    "brightness.preset_no": "디머/디머 효과 프리셋",
+    "position_preset_no": "위치 프리셋",
+    "color_preset_no": "색 프리셋",
+    "effect_preset_no": "효과 프리셋",
+}
+
+
+def pending_preset_fields(cue: Mapping[str, object]) -> list[tuple[str, object]]:
+    """카드 t577, REQ-LDBEAT-015(h-1)~(h-2) — 이 칸의 non-null 프리셋
+    **번호** 필드 중, 그 칸의 완전한 `evidence.approval`로 아직 덮이지
+    않은 것들 — `(필드 키, 번호)` 쌍의 리스트. `check_evidence_approval`
+    이 `None`을 돌려주면(그 칸의 승인이 이미 완전하거나, 프리셋 번호가
+    아예 없으면) 빈 리스트다 — "승인 대기"는 새 필드가 아니라
+    `check_evidence_approval`과 non-null 번호의 교차로 파생되는 상태다
+    (plan.md M10 1단계, 되돌리기 비용 최소화 결정)."""
+    if check_evidence_approval(cue) is None:
+        return []
+    pending: list[tuple[str, object]] = []
+    brightness = cue.get("brightness")
+    if isinstance(brightness, Mapping) and brightness.get("preset_no") is not None:
+        pending.append(("brightness.preset_no", brightness["preset_no"]))
+    for field in ("position_preset_no", "color_preset_no", "effect_preset_no"):
+        value = cue.get(field)
+        if value is not None:
+            pending.append((field, value))
+    return pending
+
+
+def pending_preset_approvals(grid: Mapping[str, object]) -> list[dict[str, object]]:
+    """카드 t577, REQ-LDBEAT-015(h-2) — `grid`(``BeatGridView``) 전수를
+    순회해 승인 대기 칸·필드를 `{group_name, bar, field, field_label,
+    value}` 사전 목록으로 돌려준다. 「⇪ 콘솔에 반영」 승인 카드의 "새로
+    만드는 프리셋 N개" 열거, 그리고 승인 뒤 `apply_pending_approval`이
+    그대로 받는 "열거된 집합"이 이 목록이다 — 카드가 보여준 것과 실제로
+    승인이 적히는 대상이 바이트까지 같은 자료에서 나온다(과다·과소 열거를
+    원리적으로 막는다)."""
+    result: list[dict[str, object]] = []
+    for track in grid.get("tracks") or []:
+        if not isinstance(track, Mapping):
+            continue
+        group_name = track.get("group_name")
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping):
+                continue
+            bar = cue.get("bar")
+            for field, value in pending_preset_fields(cue):
+                result.append(
+                    {
+                        "group_name": group_name,
+                        "bar": bar,
+                        "field": field,
+                        "field_label": _PENDING_PRESET_FIELD_LABELS.get(field, field),
+                        "value": value,
+                    }
+                )
+    return result
+
+
+def apply_pending_approval(
+    grid: Mapping[str, object],
+    pending: Sequence[Mapping[str, object]],
+    *,
+    by: str,
+    date: str,
+    source: str,
+) -> dict[str, object]:
+    """카드 t577, REQ-LDBEAT-015(h-2)(h-3)(h-4) — `pending`(``pending_
+    preset_approvals``가 돌려준 열거)이 가리키는 칸에 **한해서만**
+    `evidence.approval = {by, date, source}`를 기록한 **새 사본**을
+    돌려준다. `grid` 자체는 건드리지 않는다(`copy.deepcopy`).
+
+    `pending`에 없는 칸·트랙은 바이트까지 그대로 보존된다 — 승인 카드가
+    구성된 **뒤** 다른 편집으로 추가된 새 번호(h-4)는 이 함수가 받는
+    `pending`에 없으므로 자연히 승인되지 않는다. `evidence.grade`(증거
+    강도)는 그대로 보존하고 `approval`만 갈아 끼운다 — 두 축은 독립이다
+    (REQ-LDBEAT-006(vii-2)(vii-3))."""
+    updated = copy.deepcopy(dict(grid))
+    if not pending:
+        return updated
+    targets = {(entry.get("group_name"), entry.get("bar")) for entry in pending}
+    tracks = list(updated.get("tracks") or [])
+    for track_index, track in enumerate(tracks):
+        if not isinstance(track, Mapping):
+            continue
+        group_name = track.get("group_name")
+        cues = list(track.get("cues") or [])
+        changed = False
+        for cue_index, cue in enumerate(cues):
+            if not isinstance(cue, Mapping):
+                continue
+            if (group_name, cue.get("bar")) not in targets:
+                continue
+            existing_evidence = cue.get("evidence")
+            grade = (
+                existing_evidence.get("grade")
+                if isinstance(existing_evidence, Mapping)
+                else None
+            )
+            cues[cue_index] = {
+                **cue,
+                "evidence": {
+                    "grade": grade,
+                    "approval": {"by": by, "date": date, "source": source},
+                },
+            }
+            changed = True
+        if changed:
+            new_track = dict(track)
+            new_track["cues"] = cues
+            tracks[track_index] = new_track
+    updated["tracks"] = tracks
+    return updated

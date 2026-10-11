@@ -599,6 +599,14 @@ def apply_beat_grid_edit(
                 f"⚠ 승인 대기 — {group_name} {bar}마디 {', '.join(pending_fields)}: "
                 "「⇪ 콘솔에 반영」 승인 카드에서 승인해야 콘솔로 나갑니다"
             )
+            # REQ-LDBEAT-015(h-5) — 이 칸에 저장될 `evidence`는 `fresh_
+            # approval_cue`가 본 값(이번 changes 가 "evidence" 를 안 실었으면
+            # None)과 같아야 한다. 안 그러면 base 의 **낡은** 승인이 그대로
+            # 남아, 나중에 `check_evidence_approval(merged)`을 그 칸에 다시
+            # 돌리면 "승인됨"으로 거짓 통과한다(이번 CI가 실측으로 잡은
+            # 결함 — 승인 재사용 금지는 판정 단계뿐 아니라 **저장**에도
+            # 적용돼야 한다).
+            merged = {**merged, "evidence": fresh_approval_cue.get("evidence")}
 
         conflict_reason = check_app_movement_axis_conflict(merged)
         if conflict_reason is not None:
