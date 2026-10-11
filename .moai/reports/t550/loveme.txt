@@ -1,0 +1,2 @@
+analyze(bytes): None 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x105647ce0>: Format not recognised.
+LoveMe(path read, same functions as detect_beat_grid): raw=99.994 adopted=99.994 outcome=keep amb=False p_mid=7.02e-28 n=155
