@@ -1251,8 +1251,16 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 편집 세 길(직접 고르기·문장·AI 제안)이 모두 `apply_beat_grid_edit` 로
     # 수렴하고, 콘솔에는 쓰지 않는다(서랍은 풀 판독만). PRECHK/OVERLAP 축과
     # 무관한 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    # 카드 t563 (2026-10-11, SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋
+    # (REQ-LDBEAT-011~013/017). `beat_grid_edit`과 달리 이 셋은 콘솔에
+    # **쓴다**(기존 `run_commands` -> 안전 게이트 경로 재사용) — PRECHK/
+    # OVERLAP 축과 무관한 정당한 확장이고, 손으로 올려야 통과한다는 것이
+    # 이 게이트의 전부다.
+    "beat_grid_apply",
     "beat_grid_drawer_request",
     "beat_grid_edit",
+    "beat_grid_preview",
+    "beat_grid_preview_off",
     # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.
     # 콘솔 읽기만(좌표 + 그룹 소속). 같은 사유의 정당한 확장이다.
     "beat_grid_stage_request",
@@ -1320,6 +1328,9 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     # 채널의 응답(서랍 판독 결과·보류 중인 AI 제안·제안 소비 통지). 같은 사유의
     # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "beat_grid_drawer",
+    # 카드 t563 — 위 client 쪽 상단 바 버튼 셋의 공용 응답(대기 수·거절
+    # 사유·막힌 칸·승인=송신 대조). 같은 사유의 정당한 확장.
+    "beat_grid_send_status",
     # 카드 t565 — 위 무대 판독 요청의 응답(좌표·그룹 소속·못 읽은 이유).
     "beat_grid_stage",
     "beat_grid_suggestion",

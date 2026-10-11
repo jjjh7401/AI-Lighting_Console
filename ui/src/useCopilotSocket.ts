@@ -5,10 +5,13 @@ import { backendBase } from "./launchContext";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBeatGridApply,
   buildBeatGridDrawerRequest,
   buildBeatGridStageRequest,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
+  buildBeatGridPreview,
+  buildBeatGridPreviewOff,
   buildBeatGridSuggest,
   buildBeatGridSuggestionApply,
   buildBeatGridSuggestionReject,
@@ -210,6 +213,12 @@ export interface CopilotSocket {
   sendBeatGridSuggestionReject: (suggestionId: string) => void;
   /** 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍). */
   sendBeatGridDrawerRequest: () => void;
+  /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
+  sendBeatGridApply: () => void;
+  /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
+  sendBeatGridPreview: (bar: number) => void;
+  /** 카드 t563 — 상단 바 「■ 끄기」. */
+  sendBeatGridPreviewOff: () => void;
   /** 카드 t565 — 2D 무대 판독 요청(콘솔 읽기만). */
   sendBeatGridStageRequest: () => void;
   sendDecision: (requestId: string, approved: boolean) => void;
@@ -402,6 +411,14 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     () => send(buildBeatGridDrawerRequest()),
     [send],
   );
+  // 카드 t563 — 상단 바 콘솔 버튼 셋. 콘솔에 **쓰는** 경로라
+  // `beat_grid_edit` 류(콘솔 무접촉)와는 분리된 메시지 타입이다.
+  const sendBeatGridApply = useCallback(() => send(buildBeatGridApply()), [send]);
+  const sendBeatGridPreview = useCallback(
+    (bar: number) => send(buildBeatGridPreview(bar)),
+    [send],
+  );
+  const sendBeatGridPreviewOff = useCallback(() => send(buildBeatGridPreviewOff()), [send]);
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -497,6 +514,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
     sendBeatGridDrawerRequest,
+    sendBeatGridApply,
+    sendBeatGridPreview,
+    sendBeatGridPreviewOff,
     sendBeatGridStageRequest,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
