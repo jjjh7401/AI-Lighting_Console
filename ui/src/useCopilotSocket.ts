@@ -219,7 +219,8 @@ export interface CopilotSocket {
   sendBeatGridDrawerRequest: () => void;
   /** 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
    * 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 `aim`을 싣는다.
-   * 카드 t603 — "effect" 필드만 효과 레시피 `fx`를 싣는다. */
+   * 카드 t603 — "effect" 필드만 효과 레시피 `fx`를 싣는다.
+   * 카드 t594(REQ-LDBEAT-015(i-5)) — "color" 필드만 목표 RGB `rgb`를 싣는다. */
   sendBeatGridNewPreset: (
     bar: number,
     target: string,
@@ -228,6 +229,7 @@ export interface CopilotSocket {
     description: string,
     aim?: { x: number; y: number; z: number },
     fx?: { fx_id: string; period_unit: "beat" | "bar"; period_value: number },
+    rgb?: { r: number; g: number; b: number },
   ) => void;
   /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
   sendBeatGridApply: () => void;
@@ -441,6 +443,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   // 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
   // 카드 t599(REQ-LDBEAT-015(i-3)) — "position"만 `aim`을 함께 싣는다.
   // 카드 t603 — "effect"만 효과 레시피 `fx`를 함께 싣는다.
+  // 카드 t594(REQ-LDBEAT-015(i-5)) — "color"만 목표 RGB `rgb`를 함께 싣는다.
   const sendBeatGridNewPreset = useCallback(
     (
       bar: number,
@@ -450,7 +453,8 @@ export function useCopilotSocket(url?: string): CopilotSocket {
       description: string,
       aim?: { x: number; y: number; z: number },
       fx?: { fx_id: string; period_unit: "beat" | "bar"; period_value: number },
-    ) => send(buildBeatGridNewPreset(bar, target, field, label, description, aim, fx)),
+      rgb?: { r: number; g: number; b: number },
+    ) => send(buildBeatGridNewPreset(bar, target, field, label, description, aim, fx, rgb)),
     [send],
   );
   // 카드 t563 — 상단 바 콘솔 버튼 셋. 콘솔에 **쓰는** 경로라

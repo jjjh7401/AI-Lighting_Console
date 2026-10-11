@@ -1201,8 +1201,8 @@ export default function App() {
               state.songTimeline.timeline ? SONG_TIMELINE_LIFECYCLE_LABEL[state.songTimeline.timeline.lifecycle] : null
             }
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
-            onNewPresetRequest={({ bar, target, field, label, description, aim, fx }) =>
-              sendBeatGridNewPreset(bar, target, field, label, description, aim, fx)
+            onNewPresetRequest={({ bar, target, field, label, description, aim, fx, rgb }) =>
+              sendBeatGridNewPreset(bar, target, field, label, description, aim, fx, rgb)
             }
             lastServerReply={lastAssistantReply}
             onSentenceEditRequest={sendBeatGridEditSentence}
