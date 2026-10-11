@@ -1,0 +1,809 @@
+{
+ "1450x900": {
+  "viewport": [
+   1450,
+   900
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1465,
+  "bar_client_width": 1376,
+  "overflow": true,
+  "rows": 6,
+  "clipped": [
+   "⇪ 반영",
+   "▤"
+  ],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 247,
+    "right": 498,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 504,
+    "right": 504,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 510,
+    "right": 1078,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1084,
+    "right": 1084,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1090,
+    "right": 1125,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1131,
+    "right": 1195,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1201,
+    "right": 1237,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1243,
+    "right": 1311,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1317,
+    "right": 1385,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1391,
+    "right": 1461,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1467,
+    "right": 1502,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1450x1000": {
+  "viewport": [
+   1450,
+   1000
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1465,
+  "bar_client_width": 1376,
+  "overflow": true,
+  "rows": 6,
+  "clipped": [
+   "⇪ 반영",
+   "▤"
+  ],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 247,
+    "right": 498,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 504,
+    "right": 504,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 510,
+    "right": 1078,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1084,
+    "right": 1084,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1090,
+    "right": 1125,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1131,
+    "right": 1195,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1201,
+    "right": 1237,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1243,
+    "right": 1311,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1317,
+    "right": 1385,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1391,
+    "right": 1461,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1467,
+    "right": 1502,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1450x1200": {
+  "viewport": [
+   1450,
+   1200
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1465,
+  "bar_client_width": 1376,
+  "overflow": true,
+  "rows": 6,
+  "clipped": [
+   "⇪ 반영",
+   "▤"
+  ],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 247,
+    "right": 498,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 504,
+    "right": 504,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 510,
+    "right": 1078,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1084,
+    "right": 1084,
+    "top": 117,
+    "width": 0
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1090,
+    "right": 1125,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1131,
+    "right": 1195,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1201,
+    "right": 1237,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1243,
+    "right": 1311,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1317,
+    "right": 1385,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1391,
+    "right": 1461,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1467,
+    "right": 1502,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x900": {
+  "viewport": [
+   1700,
+   900
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 253,
+    "right": 504,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 510,
+    "right": 580,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 586,
+    "right": 1154,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1160,
+    "right": 1230,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x1000": {
+  "viewport": [
+   1700,
+   1000
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 253,
+    "right": 504,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 510,
+    "right": 580,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 586,
+    "right": 1154,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1160,
+    "right": 1230,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x1200": {
+  "viewport": [
+   1700,
+   1200
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정",
+    "left": 253,
+    "right": 504,
+    "top": 108,
+    "width": 251
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 510,
+    "right": 580,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 586,
+    "right": 1154,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1160,
+    "right": 1230,
+    "top": 117,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ }
+}

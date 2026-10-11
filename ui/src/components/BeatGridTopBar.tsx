@@ -188,7 +188,10 @@ export function BeatGridTopBar({
       <span className="beat-grid-pill beat-grid-song">{songTitle || "(곡 미지정)"}</span>
       {versionLabel && <span className="beat-grid-pill">{versionLabel}</span>}
       <span className="beat-grid-pill" title={SPEED_MASTER_MANUAL_TITLE}>
-        {formatTopBarBpm(bpm)} · <span className="beat-grid-pill-note">{SPEED_MASTER_MANUAL_NOTE}</span>
+        {/* 카드 t587 — 구분점까지 안내 칸에 넣어, 1450px 이상에서 칸을 숨기면
+            시안처럼 「BPM 112.35」만 남는다(안내는 알약 title 로). */}
+        {formatTopBarBpm(bpm)}
+        <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
       </span>
       {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />

@@ -4,6 +4,9 @@
 // jsdom 시험대가 없으므로(BeatGrid.test.tsx 같은 메모) 순수 함수는 직접
 // 부르고, 마크업은 `renderToStaticMarkup`으로 문자열을 단언한다
 // (runbookM7.test.tsx 와 같은 방식).
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
@@ -73,6 +76,32 @@ describe("상단 바 — 곡·버전·BPM", () => {
     expect(html).toContain("초안");
     expect(html).toContain("BPM 98.5");
     expect(html).toContain("3마디");
+  });
+});
+
+/** styles.css 의 `@media (min-width: 1450px) { … }` 블록 본문(안쪽 규칙들). */
+function wideMediaBlock(): string {
+  const css = readFileSync(fileURLToPath(new URL("../styles.css", import.meta.url)), "utf-8");
+  const start = css.indexOf("@media (min-width: 1450px) {");
+  expect(start).toBeGreaterThanOrEqual(0);
+  const end = css.indexOf("\n}\n", start);
+  return css.slice(start, end);
+}
+
+describe("상단 바 — 1450px 이상 한 줄 (카드 t587, REQ-LDBEAT-017(b))", () => {
+  it("BPM 알약의 안내 문구(구분점 포함)는 따로 감싸져 있어, 숨기면 「BPM 98.5」만 남는다", () => {
+    const html = renderTopBar();
+    expect(html).toMatch(/BPM 98\.5<span class="beat-grid-pill-note"> · 스피드 마스터 — 콘솔에서 직접 설정<\/span>/);
+  });
+
+  it("1450px 이상에서는 안내 문구를 숨기고(이름은 마우스를 올리면 — 알약 title) 줄임 문구를 쓴다", () => {
+    const block = wideMediaBlock();
+    expect(block).toMatch(/\.beat-grid-pill-note\s*\{\s*display:\s*none;?\s*\}/);
+    expect(block).toMatch(/\.lbl-short\s*\{\s*display:\s*inline;?\s*\}/);
+  });
+
+  it("넘쳐도 오른쪽 버튼을 잘라 버리지 않는다 — 시안 `.top{flex-wrap:wrap}` 처럼 줄바꿈 금지를 걸지 않는다", () => {
+    expect(wideMediaBlock()).not.toMatch(/flex-wrap:\s*nowrap/);
   });
 });
 
