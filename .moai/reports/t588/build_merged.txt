@@ -1,0 +1,17 @@
+
+> ma3-copilot-ui@0.1.0 prebuild
+> cp ../docs/user-guide.html public/user-guide.html
+
+
+> ma3-copilot-ui@0.1.0 build
+> tsc && vite build
+
+vite v5.4.11 building for production...
+transforming...
+✓ 93 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.46 kB │ gzip:   0.32 kB
+dist/assets/index-BzUgMQUQ.css   73.45 kB │ gzip:  14.28 kB
+dist/assets/index-yd8wT44o.js   351.92 kB │ gzip: 115.86 kB
+✓ built in 439ms
