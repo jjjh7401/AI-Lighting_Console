@@ -32,7 +32,7 @@ import threading
 import time
 from collections import Counter, OrderedDict
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from server.director.programmer_arbiter import ProgrammerArbiter, TargetBusyError
 from server.orchestrator.ports import ExecutionResult
@@ -110,7 +110,7 @@ class BatchRisk:
     #: 돌려주면 묶음 전체가 0줄로 막힌다(lock-first 재확인과 같은 자리·같은 전부-아니면-
     #: 전무). 승인 창이 떠 있는 사이 바뀔 수 있는 콘솔 사실(빈 프리셋 slot 등)을 송신
     #: 직전에 다시 확인하는 데 쓴다. 기본값 ``None`` 이면 동작은 바이트 동일하다.
-    recheck: Callable[[], str | None] | None = field(default=None, compare=False, repr=False)
+    recheck: Callable[[], str | None] | None = None
 
 
 class WriteGateDeclarationError(RuntimeError):

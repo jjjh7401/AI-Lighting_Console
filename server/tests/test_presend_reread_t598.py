@@ -18,6 +18,8 @@ from server.safety.gate import BatchRisk, SafetyGate
 from server.web.session import SongTimelineStore
 
 from .test_apply_time_approval_t577 import _cue_of, _new_session, _state_tree, _timeline
+from .test_effect_preset_create_t593 import _CUE as _EFFECT_CUE
+from .test_effect_preset_create_t593 import _recipe as _effect_recipe
 from .test_position_preset_create_t592 import _FRAMES, _MEMBERS, _RECIPE, _pool
 from .test_safety_gate import FakeConsole, ScriptedApproval
 
@@ -142,3 +144,34 @@ class TestGateRecheckHook:
             risk=BatchRisk(reason="r", kind="k", recheck=lambda: calls.append(1)),
         )
         assert calls == [], "거절된 묶음에서 재판독이 돌았다"
+
+
+class TestEffectSlotFilledDuringApproval:
+    """t593 이 같은 반영 묶음에 효과 프리셋 만들기 줄을 붙인 뒤 — 효과 풀도 같은
+    송신 직전 재판독을 받는다(합친 쪽이 맞춘 자리)."""
+
+    def test_filled_effect_number_aborts_the_bundle(self, tmp_path) -> None:
+        timeline = _timeline()
+        timeline["beat_grid"]["tracks"][0]["cues"] = [dict(_EFFECT_CUE)]
+        timeline["beat_grid"].update(_effect_recipe())
+        tree = _state_tree()
+        pool22 = "DataPool/PresetPools/22"
+        tree[pool22] = _pool(pool22, [5])
+        store = SongTimelineStore()
+        store.latest = timeline
+        session, console, approval, _audit = _new_session(
+            tmp_path, store=store, state_tree=tree, decisions=(True, True, True, True, True)
+        )
+        original = approval.request_approval
+
+        def request_approval(request):
+            console.state_tree[pool22] = _pool(pool22, [1, 5])
+            return original(request)
+
+        approval.request_approval = request_approval
+        status = session.beat_grid_apply()
+        card = [item.command for r in approval.requests for item in r.items]
+        assert any(c.startswith("Store Preset 22.1") for c in card)
+        assert status["ok"] is False
+        assert console.executed == []
+        assert "22.1" in status["reason"] and "다시 반영" in status["reason"]
