@@ -462,6 +462,11 @@ def apply_beat_grid_edit(
         base = dict(existing) if existing is not None else {"bar": bar}
         merged_raw = {**base, **{k: v for k, v in changes.items() if k != "new_preset_label"}}
         merged = normalize_beat_grid_cue(merged_raw)
+        # 새 프리셋 번호의 승인(REQ-LDBEAT-015(f)(g))은 이번 changes 에 함께 온
+        # evidence.approval 만 인정한다 — 칸에 이미 있던 승인(예: t555 밝기
+        # 100% 승인)이 새 번호를 통과시키면 안 된다(감독 선택 2026-10-11,
+        # 합친 CI run 38112994889 빨강의 원인).
+        fresh_approval_cue = merged if "evidence" in changes else {**merged, "evidence": None}
 
         effect_kind = merged.get("effect_kind")
         effect_number = merged.get("effect_preset_no")
@@ -479,7 +484,7 @@ def apply_beat_grid_edit(
                 if policy.get("confirmed"):
                     raise BeatGridEditError(pool_reason)
                 warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
-            approval_reason = check_evidence_approval(merged)
+            approval_reason = check_evidence_approval(fresh_approval_cue)
             if approval_reason is not None:
                 raise BeatGridEditError(approval_reason)
 
@@ -497,7 +502,7 @@ def apply_beat_grid_edit(
                 if policy.get("confirmed"):
                     raise BeatGridEditError(pool_reason)
                 warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
-            approval_reason = check_evidence_approval(merged)
+            approval_reason = check_evidence_approval(fresh_approval_cue)
             if approval_reason is not None:
                 raise BeatGridEditError(approval_reason)
 
