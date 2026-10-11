@@ -250,6 +250,8 @@ class TestBuildPresetDrawer:
             # TestPresetDrawerDescription 참조) — 지어내지 않고 명시적
             # ``None``.
             "description": None,
+            # 카드 t569 — 앱이 저장한 설명이 없으면 콘솔에서 읽은 쇼 프리셋.
+            "description_source": "show",
         }
         dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
         assert dimmer_section["entries"][0]["usage_count"] == 1

@@ -31,6 +31,19 @@ describe("formatPresetChipTooltip", () => {
   it("undefined도 null과 같게 처리한다", () => {
     expect(formatPresetChipTooltip(undefined, 2)).toBe("이 곡에서 큐 2곳 사용");
   });
+
+  // 카드 t569(리드 결정 B) — 설명 출처.
+  it("앱이 저장한 설명(app)은 설명과 사용 수를 함께 보여준다", () => {
+    expect(formatPresetChipTooltip("차가운 흰", 3, "app")).toBe("차가운 흰 · 이 곡에서 큐 3곳 사용");
+  });
+
+  it("쇼에 있던 프리셋(show)은 콘솔 이름을 다시 쓰지 않고 출처만 붙인다", () => {
+    expect(formatPresetChipTooltip(null, 2, "show")).toBe("쇼에 있던 프리셋 · 이 곡에서 큐 2곳 사용");
+  });
+
+  it("출처가 없으면 사용 수만 보여준다", () => {
+    expect(formatPresetChipTooltip(null, 1, null)).toBe("이 곡에서 큐 1곳 사용");
+  });
 });
 
 // 카드 t560 후속(REQ-LDBEAT-023(c), plan.md M9 step 6) — 「이 마디 한눈에」

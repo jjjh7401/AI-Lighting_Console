@@ -2928,13 +2928,11 @@ export function BeatGrid({
                     }
                     // 카드 t560(REQ-LDBEAT-023(c)) — 「설명 텍스트 · 이 곡에서 큐
                     // N곳 사용」 꼴을 앞에 두고(필수 모양), 기존 사용처 목록(카드
-                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). 카드 t568 조사 —
-                    // 콘솔 풀 자식 판독(`paged_pool_children`)은 슬롯 번호·이름만
-                    // 돌려줘서 `entry.description`은 서버가 명시적 `null`로 채운다
-                    // (새 프로브 없이는 채울 수 없는 자리, presetChipTooltip.ts
-                    // 모듈 주석) — 지금은 사용 수만 보인다. 지어내지 않는다.
+                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). 카드 t569 —
+                    // 설명은 앱이 저장한 것만, 쇼 프리셋은 출처만 붙인다
+                    // (presetChipTooltip.ts 모듈 주석).
                     title={
-                      formatPresetChipTooltip(entry.description, entry.usage_count) +
+                      formatPresetChipTooltip(entry.description, entry.usage_count, entry.description_source) +
                       (entry.used_by.length
                         ? " — " + entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
                         : "")
