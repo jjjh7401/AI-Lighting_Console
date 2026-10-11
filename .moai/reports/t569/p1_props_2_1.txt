@@ -1,0 +1,25 @@
+{
+  "mode": "props",
+  "payload": {
+    "id": "gate-1",
+    "kind": "props",
+    "ok": true,
+    "path": "ShowData/DataPools/Default/PresetPools/2/1",
+    "reads": [
+      {
+        "n": "NAME",
+        "ok": true,
+        "t": "string",
+        "v": "POS01 보컬 센터 페이스 · 합성좌표"
+      },
+      {
+        "n": "NOTE",
+        "ok": true,
+        "t": "string",
+        "v": ""
+      }
+    ],
+    "truncated": false,
+    "v": 1
+  }
+}

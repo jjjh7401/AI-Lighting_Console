@@ -64,7 +64,7 @@ import {
 import { BeatGridStage } from "./BeatGridStage";
 import { BeatGridJoint, BeatGridScenePanel, BeatGridSceneRow } from "./BeatGridTimelineParts";
 import { BeatGridTransitionView } from "./BeatGridTransitionView";
-import { fixtureBelongsTo } from "./beatGridStageModel";
+import { confirmedFixtureRange, fixtureBelongsTo, trackFixtureSummary } from "./beatGridStageModel";
 import {
   cueConsoleCommandLines,
   parseBeatsPerBar,
@@ -1490,6 +1490,8 @@ export function BeatGrid({
     fallbackRange: grid.bar_range,
   });
   const pxPerBar = pxPerBarForZoom(overviewZoom, laneView.visibleWidth, overviewModel.totalBars, PX_PER_BAR);
+  // 카드 t586 — 눈금(자)에 구간 이름을 다는 데 쓴다: 구간 시작 마디 → 이름.
+  const sectionLabelAtBar = new Map(overviewModel.sections.map((section) => [section.startBar, section.label]));
   const barToX = (bar: number) => barToXAt(bar, pxPerBar);
   // 카드 t570 — RAF 틱이 읽는 "지금 최신 값" 미러(위 `livePlaybackContextRef`
   // 선언 주석 참조). 렌더마다 갱신해 틱이 항상 이번 렌더의 레이아웃·선택을
@@ -1539,6 +1541,10 @@ export function BeatGrid({
   const selectedIsLRSplitStartBar =
     selected !== null && selectedLRSplitRange !== undefined && selectedLRSplitRange.startBar === selected.bar;
   const viewBar = barCursor && barCursor.anchor === selected ? barCursor.bar : (selected?.bar ?? grid.bar_range.start);
+  // 카드 t586 — 지금 보는 마디가 속한 구간 이름(한눈에 표 머리말).
+  const viewBarSectionLabel =
+    overviewModel.sections.find((section) => viewBar >= section.startBar && viewBar < section.endBar)?.label ??
+    null;
   // t537 ② plan-audit iteration 3 D1 — 실제로 렌더하는 배지+원문+source_ref
   // 묶음은 `sceneMemoMarkers`가 반환하는 모양 그대로다(DOM 없이 단언 가능).
   const viewBarSceneMemo = sceneMemoMarkers(grid.scene_memos, [viewBar, viewBar])[0] ?? null;
@@ -1753,17 +1759,24 @@ export function BeatGrid({
             <span className="beat-grid-track-label beat-grid-ruler-corner">마디</span>
             <div className="beat-grid-ruler" style={{ width: laneContentWidth }}>
               {Array.from({ length: maxBar - grid.bar_range.start + 1 }, (_, i) => grid.bar_range.start + i).map(
-                (bar) => (
-                  <span
-                    key={bar}
-                    className={`beat-grid-ruler-tick${playheadBar === bar ? " is-playhead" : ""}${
-                      viewBar === bar ? " is-view" : ""
-                    }`}
-                    style={{ left: barToX(bar), width: pxPerBar }}
-                  >
-                    {bar}
-                  </span>
-                ),
+                (bar) => {
+                  // 카드 t586 — 시안 `.rb.sec`/`.sl`: 구간이 시작하는 마디에 구간
+                  // 이름과 왼쪽 경계선. 구간은 곡 지도와 같은 `overviewModel`
+                  // (곡 데이터)에서만 온다 — 없으면 번호만(지어내지 않음).
+                  const sectionLabel = sectionLabelAtBar.get(bar);
+                  return (
+                    <span
+                      key={bar}
+                      className={`beat-grid-ruler-tick${playheadBar === bar ? " is-playhead" : ""}${
+                        viewBar === bar ? " is-view" : ""
+                      }${sectionLabel ? " is-section-start" : ""}`}
+                      style={{ left: barToX(bar), width: pxPerBar }}
+                    >
+                      {bar}
+                      {sectionLabel && <em className="beat-grid-ruler-section">{sectionLabel}</em>}
+                    </span>
+                  );
+                },
               )}
             </div>
           </div>
@@ -1804,12 +1817,19 @@ export function BeatGrid({
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
                         <span className="beat-grid-track-label">
-                          {track.group_name}
-                          {!track.group_no_confirmed && (
-                            <span className="beat-grid-unconfirmed-badge" title="콘솔 그룹 번호 미확인">
-                              ⚠
-                            </span>
-                          )}
+                          <span className="beat-grid-track-name">
+                            {track.group_name}
+                            {!track.group_no_confirmed && (
+                              <span className="beat-grid-unconfirmed-badge" title="콘솔 그룹 번호 미확인">
+                                ⚠
+                              </span>
+                            )}
+                          </span>
+                          {/* 카드 t586 — 시안 `.lhead small`: 그룹·장비 범위·대수. */}
+                          {(() => {
+                            const summary = trackFixtureSummary(track.group_no, track.group_name, fixtures);
+                            return summary ? <small className="beat-grid-track-meta">{summary}</small> : null;
+                          })()}
                         </span>
                         <div className="beat-grid-track-cues" style={{ width: laneContentWidth }}>
                           {segments.length === 0 && (
@@ -2053,6 +2073,7 @@ export function BeatGrid({
                   endBar={selectedSegmentEnd}
                   secondsPerBar={secondsPerBar}
                   confirmedFixtureCount={selectedConfirmedFixtures}
+                  confirmedFixtureRange={confirmedFixtureRange(selectedTrack.group_name, fixtures)}
                 />
               )}
               {transitionView && selectedCue && selectedPrevCue ? (
@@ -2544,7 +2565,18 @@ export function BeatGrid({
           같은 자리(타임라인 아래, 고정 높이, t537 레이아웃 교정). */}
       <div className="beat-grid-insp">
         <div className="beat-grid-stage-pane">
-          <h5>무대 (2D)</h5>
+          {/* 카드 t586 — 시안 `#stT` 「12마디 · 25.1초」: 지금 보는 마디와 그 시각
+              (곡 BPM 환산 — 모르면 마디만). */}
+          <h5 className="beat-grid-stage-title">
+            <span>무대 (2D)</span>
+            <span>
+              {viewBar}마디
+              {(() => {
+                const seconds = barToSeconds(viewBar, secondsPerBar);
+                return seconds === null ? "" : ` · ${seconds.toFixed(1)}초`;
+              })()}
+            </span>
+          </h5>
           {/* 카드 t561 — 선택 테두리·그룹 이름표·장비 영역 클릭(REQ-LDBEAT-022). */}
           <BeatGridStage
             notes={stageNotes}
@@ -2567,7 +2599,15 @@ export function BeatGrid({
           {/* 카드 t560(REQ-LDBEAT-023(d)) — 제목 줄은 스크롤 영역(아래
               `.beat-grid-glance-scroll`) 밖에 둔다 — 그래야 표 본문이
               아무리 길어져도 이 제목이 스크롤에 밀려 사라지지 않는다. */}
-          <h5>이 마디 한눈에 — {viewBar}마디</h5>
+          {/* 카드 t586 — 시안 `#bsT` 「12마디 한눈에 — 벌스1」 + 오른쪽 안내. 구간
+              이름은 곡 데이터(overviewModel)에서만 — 없으면 마디만. */}
+          <h5 className="beat-grid-glance-title">
+            <span>
+              {viewBar}마디 한눈에
+              {viewBarSectionLabel ? ` — ${viewBarSectionLabel}` : ""}
+            </span>
+            <span className="beat-grid-glance-hint">훑어보기 · 누르면 오른쪽에서 고치기</span>
+          </h5>
           {/* t537 ② — 이 행에 걸린 SCENE 메모(§4 역할·효과 혼성 값, 트랙에
               못 옮긴 자리)를 표 위에 그대로 보여준다 — 추측해 채우지 않고
               「미정」으로 남긴 이유를 그 자리에서 읽을 수 있게 한다. */}
@@ -2594,7 +2634,19 @@ export function BeatGrid({
                 </tr>
               </thead>
               <tbody>
-                {grid.tracks.map((track) => {
+                {/* 카드 t586 — 시안 `#bt tr.gh`: 줄을 타임라인과 같은 층 역할
+                    폴더로 묶어 「▾ 앞빛 · key」 머리 줄을 단다. 접기/펴기는
+                    타임라인 폴더와 같은 상태를 쓴다(시안 `OPEN` 공유). */}
+                {folders.map((folder) => (
+                  <Fragment key={folder.role}>
+                    <tr className="beat-grid-glance-folder" onClick={() => toggleFolder(folder.role)}>
+                      <td colSpan={6}>
+                        {isFolderOpen(folder.role) ? "▾" : "▸"} {folder.label}
+                        {folder.label !== folder.role && ` · ${folder.role}`}
+                      </td>
+                    </tr>
+                    {isFolderOpen(folder.role) &&
+                      folder.tracks.map((track) => {
                   const trackIndex = grid.tracks.indexOf(track);
                   const cue = cueForBar(track, viewBar);
                   const isExpanded = expandedGlanceRows.has(track.group_name);
@@ -2718,7 +2770,9 @@ export function BeatGrid({
                       ))}
                     </Fragment>
                   );
-                })}
+                      })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>
@@ -2733,6 +2787,8 @@ export function BeatGrid({
           여전히 카탈로그 조회 없이 그대로 받는다. 플레이스홀더는 mockup
           원문 그대로다. */}
       <div className="beat-grid-cmd">
+        {/* 카드 t586 — 시안 `.cmd` 의 「명령」 레이블. */}
+        <span className="beat-grid-cmd-label">명령</span>
         <input
           className="beat-grid-cmd-input"
           value={commandText}
@@ -2823,13 +2879,11 @@ export function BeatGrid({
                     }
                     // 카드 t560(REQ-LDBEAT-023(c)) — 「설명 텍스트 · 이 곡에서 큐
                     // N곳 사용」 꼴을 앞에 두고(필수 모양), 기존 사용처 목록(카드
-                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). 카드 t568 조사 —
-                    // 콘솔 풀 자식 판독(`paged_pool_children`)은 슬롯 번호·이름만
-                    // 돌려줘서 `entry.description`은 서버가 명시적 `null`로 채운다
-                    // (새 프로브 없이는 채울 수 없는 자리, presetChipTooltip.ts
-                    // 모듈 주석) — 지금은 사용 수만 보인다. 지어내지 않는다.
+                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). 카드 t569 —
+                    // 설명은 앱이 저장한 것만, 쇼 프리셋은 출처만 붙인다
+                    // (presetChipTooltip.ts 모듈 주석).
                     title={
-                      formatPresetChipTooltip(entry.description, entry.usage_count) +
+                      formatPresetChipTooltip(entry.description, entry.usage_count, entry.description_source) +
                       (entry.used_by.length
                         ? " — " + entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
                         : "")
@@ -2847,6 +2901,13 @@ export function BeatGrid({
         </div>
       )}
 
+      {/* 카드 t586 — 시안 `.log` 조작 안내 한 줄. 적힌 조작은 전부 앱에 있다:
+          ←→(상단 바 `barNavKeyDelta`), 이음매 글자(◢·M·! — `beatGridTransition`),
+          장면 전환 알약, 같은 프리셋 칩 강조. */}
+      <div className="beat-grid-hint-line">
+        ← → 마디 이동 · 막대 = 큐 편집 · 이음매 ◆ = 전환 편집(◢ 페이드 · M = MIB · ! = 경고) · 「장면
+        전환」 알약 = 그 순간 전체 · 칩 = 같은 프리셋 강조
+      </div>
       <div className="beat-grid-probe-pane" aria-label="M1 프로브 9항목 상태">
         <h5>M1 콘솔 확인 프로브</h5>
         <ul className="beat-grid-probe-list">

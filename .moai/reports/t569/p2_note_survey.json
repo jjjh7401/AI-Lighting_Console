@@ -1,0 +1,229 @@
+{
+  "pools": [
+    {
+      "name": "Dimmer",
+      "no": 1,
+      "presets": [
+        {
+          "slot": "1.1",
+          "name": "풀",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.2",
+          "name": "쇼 하이 OLD",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.3",
+          "name": "미드",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.4",
+          "name": "로우",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.5",
+          "name": "잔광",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.6",
+          "name": "아웃",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "1.7",
+          "name": "쇼 하이",
+          "note_ok": true,
+          "note": ""
+        }
+      ],
+      "slots_read": 7
+    },
+    {
+      "name": "Position",
+      "no": 2,
+      "presets": [
+        {
+          "slot": "2.1",
+          "name": "POS01 보컬 센터 페이스 · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.2",
+          "name": "POS02 무대 전체 커버 · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.3",
+          "name": "POS03 밴드 라인 백 · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.4",
+          "name": "POS04 틸트업 스타트 (무대 안쪽) · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.5",
+          "name": "POS05 팬아웃 종점 (객석 상단) · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.6",
+          "name": "POS06 센터 집중 (브리지) · 합성좌표",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.21",
+          "name": "Home",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.22",
+          "name": "Wall",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.23",
+          "name": "Audience",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.24",
+          "name": "Center",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.25",
+          "name": "Vocal DSC",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.26",
+          "name": "Fan Out",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.27",
+          "name": "Fan In",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.28",
+          "name": "Cross",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.29",
+          "name": "Ring Out",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "2.30",
+          "name": "Ring In",
+          "note_ok": true,
+          "note": ""
+        }
+      ],
+      "slots_read": 16
+    },
+    {
+      "name": "Color",
+      "no": 4,
+      "presets": [
+        {
+          "slot": "4.1",
+          "name": "골드 앰버 (=P1)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.2",
+          "name": "핫 핑크 (=P4)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.3",
+          "name": "딥 퍼플 (=P5)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.4",
+          "name": "터쿼이즈 (=P6)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.5",
+          "name": "선셋 오렌지 (=P7)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.6",
+          "name": "딥 블루",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.7",
+          "name": "웜 화이트 (=P2)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.8",
+          "name": "뉴트럴 화이트 (=P3)",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.9",
+          "name": "Breathe Warm",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.10",
+          "name": "Wave CM",
+          "note_ok": true,
+          "note": ""
+        },
+        {
+          "slot": "4.32",
+          "name": "Preset 32",
+          "note_ok": true,
+          "note": ""
+        }
+      ],
+      "slots_read": 11
+    }
+  ]
+}

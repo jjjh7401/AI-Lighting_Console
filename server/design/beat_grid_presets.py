@@ -187,6 +187,37 @@ def _usage_for_slot(grid: Mapping[str, object], preset_no: str) -> list[dict[str
     return used_by
 
 
+def app_preset_description(grid: Mapping[str, object], preset_no: str) -> str | None:
+    """카드 t569 — 앱이 만든 프리셋의 설명(곡별 ``grid["preset_descriptions"]``
+    ``{"pool.slot": 설명}``). 없거나 빈 글자면 ``None``(지어내지 않는다)."""
+    descriptions = grid.get("preset_descriptions")
+    if not isinstance(descriptions, Mapping):
+        return None
+    value = descriptions.get(preset_no)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value.strip()
+
+
+def record_app_preset_description(
+    grid: Mapping[str, object], preset_no: str, description: str
+) -> dict[str, object]:
+    """카드 t569 — 앱이 프리셋을 만들 때 그 설명을 곡별 격자에 남기는 단일
+    저장 자리. ``grid``의 사본을 돌려준다(원본은 그대로). 빈 설명은 거절한다
+    — 비어 있으면 저장하지 않는 것이 "설명 없음"이다.
+
+    한국어 설명은 화면에만 남는다(REQ-LDBEAT-015(c)) — 콘솔 이름은
+    ``new_preset_label``(영문·숫자) 자리이고 이 설명과 다르다."""
+    if not isinstance(description, str) or not description.strip():
+        raise ValueError("프리셋 설명이 비어 있습니다.")
+    updated = dict(grid)
+    existing = grid.get("preset_descriptions")
+    descriptions = dict(existing) if isinstance(existing, Mapping) else {}
+    descriptions[preset_no] = description.strip()
+    updated["preset_descriptions"] = descriptions
+    return updated
+
+
 def build_preset_drawer(
     grid: Mapping[str, object],
     *,
@@ -243,6 +274,7 @@ def build_preset_drawer(
             if name is None:
                 continue
             preset_no = f"{pool_no}.{slot}"
+            description = app_preset_description(grid, preset_no)
             used_by = _usage_for_slot(grid, preset_no)
             is_effect_band = (
                 kind is not None
@@ -255,16 +287,15 @@ def build_preset_drawer(
                     "usage_count": len(used_by),
                     "used_by": used_by,
                     "is_effect_band": is_effect_band,
-                    # 카드 t568(REQ-LDBEAT-023(c)) — 칩 툴팁이 쓰는 "설명
-                    # 텍스트"(시안 원문 예시 「펄스 30↔60 · 4박」 꼴).
-                    # `paged_pool_children`(t480)이 콘솔에서 돌려받는 자식
-                    # 필드는 슬롯 번호(`i`)와 이름(`name`)뿐이고(PROTOCOL
-                    # §4.2), 이 저장소에 설명 텍스트를 읽는 다른 경로도
-                    # 없다(새 프로브 없이 조사 완료 — 이 카드 범위 밖).
-                    # 지어내지 않고 명시적 `None` — 클라이언트
-                    # `presetChipTooltip.formatPresetChipTooltip`은 이미
-                    # `null`을 "설명 없음, 사용 수만 표시"로 처리한다.
-                    "description": None,
+                    # 카드 t569(REQ-LDBEAT-023(c), 리드 결정 B) — 칩 툴팁의
+                    # "설명 텍스트"는 앱이 그 프리셋을 만들 때 저장한 설명
+                    # (``grid["preset_descriptions"]``)이다. 없으면 콘솔에서
+                    # 읽은 쇼 프리셋이라 설명은 비우고 출처만 "show" — 칩
+                    # 위 글자가 이미 콘솔 이름이므로 툴팁에 다시 쓰지 않는다.
+                    # 콘솔 NOTE 는 읽지 않는다(t569 실측: 칩 서랍 34칸 모두
+                    # 빈 값, `.moai/reports/t569/run-verdict.md`).
+                    "description": description,
+                    "description_source": "app" if description else "show",
                 }
             )
         sections.append(

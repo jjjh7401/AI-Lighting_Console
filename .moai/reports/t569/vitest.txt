@@ -1,0 +1,27 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t569/ui
+
+ ✓ src/components/beatgrid/consoleSyncAudio.test.ts (9 tests) 3ms
+ ✓ src/components/beatgrid/tableFocus.test.ts (6 tests) 3ms
+ ✓ src/components/beatgrid/cueDisplayState.test.ts (12 tests) 4ms
+ ✓ src/components/beatgrid/playbackClock.test.ts (18 tests) 6ms
+ ✓ src/components/beatgrid/lrSplit.test.ts (33 tests) 5ms
+ ✓ src/components/beatgrid/presetChipTooltip.test.ts (10 tests) 2ms
+ ✓ src/components/beatgrid/songAudioLink.test.ts (4 tests) 3ms
+ ✓ src/components/beatgrid/audioAutoConnect.test.ts (20 tests) 4ms
+ ✓ src/components/beatgrid/LRSplitRow.test.tsx (4 tests) 4ms
+ ✓ src/components/beatgrid/LRSplitGlanceRow.test.tsx (2 tests) 5ms
+ ✓ src/components/beatgrid/glanceCells.test.ts (24 tests) 4ms
+ ✓ src/components/beatGridTransition.test.ts (41 tests) 12ms
+ ✓ src/components/beatgrid/glanceRowDetail.test.ts (7 tests) 2ms
+ ✓ src/components/BeatGridTopBar.test.tsx (17 tests) 12ms
+ ✓ src/components/beatGridStageModel.test.ts (7 tests) 2ms
+ ✓ src/components/BeatGridPanels.test.tsx (43 tests) 17ms
+ ✓ src/components/BeatGrid.test.tsx (151 tests) 25ms
+ ✓ src/components/beatgrid/roleFields.test.ts (4 tests) 3ms
+
+ Test Files  18 passed (18)
+      Tests  412 passed (412)
+   Start at  20:55:07
+   Duration  544ms (transform 1.12s, setup 0ms, collect 2.52s, tests 117ms, environment 2ms, prepare 1.30s)
+
