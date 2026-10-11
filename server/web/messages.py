@@ -153,6 +153,12 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_edit",
     "beat_grid_suggest",
     "beat_grid_suggestion_apply",
+    # 카드 t551 후속(지시 1항, mockup `aNo` 핸들러) — 제안 거절. 적용과
+    # 같은 모양(suggestion_id 하나)이지만 편집을 부르지 않는다.
+    "beat_grid_suggestion_reject",
+    # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기 요청. 페이로드 없음(현재
+    # 곡의 격자 사용처 집계는 서버가 안다, dash_catalog_request와 같은 모양).
+    "beat_grid_drawer_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
     *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
@@ -412,15 +418,13 @@ def parse_client_message(raw: str) -> dict:
             raise ProtocolError("beat_grid_suggest.target must be a non-empty string")
         return {"v": PROTOCOL_VERSION, "type": "beat_grid_suggest", "bar": bar, "target": target}
 
-    if message_type == "beat_grid_suggestion_apply":
+    if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):
         suggestion_id = message.get("suggestion_id")
         if not isinstance(suggestion_id, str) or not suggestion_id.strip():
-            raise ProtocolError(
-                "beat_grid_suggestion_apply.suggestion_id must be a non-empty string"
-            )
+            raise ProtocolError(f"{message_type}.suggestion_id must be a non-empty string")
         return {
             "v": PROTOCOL_VERSION,
-            "type": "beat_grid_suggestion_apply",
+            "type": message_type,
             "suggestion_id": suggestion_id,
         }
 
@@ -733,6 +737,9 @@ def parse_client_message(raw: str) -> dict:
         # 아래 마지막 줄이 이들을 통째로 ``status_request`` 로 바꿔치기한다.
         "timeline_draft_undo",
         "timeline_draft_redo",
+        # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기도 페이로드가 없다
+        # (현재 격자 사용처는 서버가 이미 안다).
+        "beat_grid_drawer_request",
     ):
         # Payload-free by design. The pin seed is the server's own
         # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the
@@ -779,6 +786,14 @@ def beat_grid_suggestion_consumed_event(*, suggestion_id: str) -> dict:
     보류 목록에서 지우게 한다. id가 애초에 없었어도(거절 경로) 보낸다 —
     UI 쪽 필터는 없는 id를 지우려 해도 안전한 no-op이다."""
     return _event("beat_grid_suggestion_consumed", suggestion_id=suggestion_id)
+
+
+def beat_grid_drawer_event(*, sections: list[dict]) -> dict:
+    """카드 t551 후속(지시 1항) — mockup 프리셋 서랍(디머 1·위치 2·색 4)과
+    같은 세 섹션. 내용은 `server.design.beat_grid_presets.
+    build_preset_drawer`의 실제 콘솔 판독 결과다 — 데모 데이터 0건,
+    못 읽은 풀은 ``unread: true``로 솔직하게 비어 있다."""
+    return _event("beat_grid_drawer", sections=sections)
 
 
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:

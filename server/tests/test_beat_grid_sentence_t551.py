@@ -6,9 +6,11 @@
 아니라 고정된 문장 모양의 규칙 파서(REQ-LDBEAT-007 "문장" 경로). 이해
 못 하는 문장은 지어내지 않고 `None`(호출자가 단일-원인 거절을 낸다).
 
-mockup과의 의도적 차이(카탈로그 부재로 인한 부분집합·deviation)는 모듈
-docstring과 progress.md "## Missing Inputs"에 기록돼 있다 — "효과" 항목
-미지원, 위치/색 값이 이름이 아니라 번호."""
+**근본 원인 정정(카드 t551 후속)**: 1차 구현은 "효과" 항목과 이름 값
+해석을 "카탈로그 부재"로 빼 두었다 — 틀렸다, 카탈로그 읽기 경로가 이미
+있다(`server.design.console_slots`/`preset_names`, t477/t480). 이 모듈
+자신은 여전히 콘솔 무접촉 순수 파서다 — 카탈로그 조회는 호출자(session)
+가 이 모듈이 돌려주는 ``name_lookup``을 받은 뒤에 한다."""
 
 from __future__ import annotations
 
@@ -32,8 +34,10 @@ class TestBrightnessForm:
         assert parsed["bar_end"] == 18
 
 
-class TestPresetForms:
-    def test_position_preset_form_parses(self) -> None:
+class TestPresetNumberForms:
+    """값이 "N.NN" 번호 꼴이면 카탈로그 조회 없이 그대로 받는다."""
+
+    def test_position_preset_number_parses_without_name_lookup(self) -> None:
         parsed = parse_beat_grid_sentence("7마디 BACK 위치를 2.5로")
         assert parsed == {
             "bar": 7,
@@ -41,8 +45,9 @@ class TestPresetForms:
             "target": "BACK",
             "changes": {"position_preset_no": "2.5"},
         }
+        assert "name_lookup" not in parsed
 
-    def test_color_preset_form_parses(self) -> None:
+    def test_color_preset_number_parses_without_name_lookup(self) -> None:
         parsed = parse_beat_grid_sentence("3마디 FOH 색을 4.9로")
         assert parsed == {
             "bar": 3,
@@ -50,11 +55,47 @@ class TestPresetForms:
             "target": "FOH",
             "changes": {"color_preset_no": "4.9"},
         }
+        assert "name_lookup" not in parsed
+
+
+class TestPresetNameLookupForms:
+    """카드 t551 후속(근본 원인 정정) — 값이 번호 꼴이 아니면 이름으로
+    보고 카탈로그 조회가 필요한 ``name_lookup``을 돌려준다."""
+
+    def test_position_name_value_returns_name_lookup(self) -> None:
+        parsed = parse_beat_grid_sentence("7마디 BACK 위치를 Center로")
+        assert parsed == {
+            "bar": 7,
+            "bar_end": 7,
+            "target": "BACK",
+            "name_lookup": {"field": "위치", "name": "Center"},
+        }
+        assert "changes" not in parsed
+
+    def test_color_name_value_returns_name_lookup(self) -> None:
+        parsed = parse_beat_grid_sentence("3마디 FOH 색을 LA Pink로")
+        assert parsed == {
+            "bar": 3,
+            "bar_end": 3,
+            "target": "FOH",
+            "name_lookup": {"field": "색", "name": "LA Pink"},
+        }
+
+    def test_effect_field_is_always_name_lookup(self) -> None:
+        # mockup 기본 문구 그대로 — "효과"는 항상 이름 조회다(effect_kind
+        # 는 매칭된 풀로만 정해지므로 번호 직접 입력은 받지 않는다).
+        parsed = parse_beat_grid_sentence("22~25마디 MOVER-D 효과를 Sweep 2박으로")
+        assert parsed == {
+            "bar": 22,
+            "bar_end": 25,
+            "target": "MOVER-D",
+            "name_lookup": {"field": "효과", "name": "Sweep 2박"},
+        }
 
 
 class TestBarRangeForm:
     """mockup 명령창 기본 문구 "22~25마디 MOVER-D 효과를 Sweep 2박으로"와
-    같은 범위 모양(효과 항목 자체는 미지원, 아래 TestUnparseable 참조)."""
+    같은 범위 모양."""
 
     def test_range_form_parses_start_and_end(self) -> None:
         parsed = parse_beat_grid_sentence("22~25마디 MOVER-D 밝기를 70%로")
@@ -74,11 +115,6 @@ class TestBarRangeForm:
 class TestUnparseable:
     def test_unrelated_sentence_returns_none(self) -> None:
         assert parse_beat_grid_sentence("오늘 날씨가 좋습니다") is None
-
-    def test_effect_field_token_is_not_supported(self) -> None:
-        # mockup의 네 번째 항목 "효과"는 프리셋 이름→번호 카탈로그 검색이
-        # 필요하다(이 앱에 그 카탈로그 경로가 없다) — 지어내지 않고 None.
-        assert parse_beat_grid_sentence("22~25마디 MOVER-D 효과를 Sweep 2박으로") is None
 
     def test_old_field_label_position_no_longer_matches(self) -> None:
         # "포지션"은 mockup 어휘가 아니다(mockup은 "위치") — 이제 안 받는다.

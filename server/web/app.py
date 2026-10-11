@@ -587,6 +587,21 @@ def create_app(deps: WebDeps) -> FastAPI:
                     await asyncio.to_thread(
                         session.beat_grid_suggestion_apply, message["suggestion_id"]
                     )
+                elif message_type == "beat_grid_suggestion_reject":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_suggestion_reject, message["suggestion_id"]
+                    )
+                elif message_type == "beat_grid_drawer_request":
+                    # 카드 t551 후속(지시 1항) — 프리셋 서랍. 콘솔 풀을 여러
+                    # 번 왕복해 읽으므로(최대 세 풀 × 페이지) busy-guard
+                    # 아래 스레드로 돌린다(다른 beat_grid_* 분기와 같은 패턴).
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_preset_drawer)
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))

@@ -12,6 +12,7 @@ import pytest
 from server.web.messages import (
     PROTOCOL_VERSION,
     ProtocolError,
+    beat_grid_drawer_event,
     beat_grid_suggestion_consumed_event,
     beat_grid_suggestion_event,
     parse_client_message,
@@ -116,6 +117,28 @@ class TestBeatGridSuggestionApplyMessage:
             parse_client_message(_raw(type="beat_grid_suggestion_apply"))
 
 
+class TestBeatGridSuggestionRejectMessage:
+    def test_valid_message_parses(self) -> None:
+        message = parse_client_message(
+            _raw(type="beat_grid_suggestion_reject", suggestion_id="abc-123")
+        )
+        assert message == {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_suggestion_reject",
+            "suggestion_id": "abc-123",
+        }
+
+    def test_missing_suggestion_id_is_rejected(self) -> None:
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="beat_grid_suggestion_reject"))
+
+
+class TestBeatGridDrawerRequestMessage:
+    def test_payload_free_message_parses(self) -> None:
+        message = parse_client_message(_raw(type="beat_grid_drawer_request"))
+        assert message == {"v": PROTOCOL_VERSION, "type": "beat_grid_drawer_request"}
+
+
 class TestBeatGridSuggestionEvent:
     def test_builder_shape(self) -> None:
         event = beat_grid_suggestion_event(
@@ -143,4 +166,15 @@ class TestBeatGridSuggestionConsumedEvent:
             "v": PROTOCOL_VERSION,
             "type": "beat_grid_suggestion_consumed",
             "suggestion_id": "abc-123",
+        }
+
+
+class TestBeatGridDrawerEvent:
+    def test_builder_shape(self) -> None:
+        sections = [{"pool_name": "Position", "title": "위치 풀 2", "entries": []}]
+        event = beat_grid_drawer_event(sections=sections)
+        assert event == {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_drawer",
+            "sections": sections,
         }

@@ -45,6 +45,14 @@ from server.design.beat_grid_edit import (
     BeatGridEditError,
     apply_beat_grid_edit,
     apply_beat_grid_edit_range,
+    load_preset_pool_policy,
+)
+from server.design.beat_grid_presets import (
+    build_preset_drawer,
+    pool_name_to_effect_kind,
+    read_named_pool,
+    resolve_effect_preset_name,
+    resolve_preset_name,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
 from server.design.beat_grid_suggestion import (
@@ -104,6 +112,7 @@ from server.design.phaser_pregen import (  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-0
 )
 from server.design.preset_names import (
     NAME_AMBIGUOUS,
+    POOL_UNREAD,
     match_preset_name,
     match_preset_name_across_pools,
 )
@@ -258,6 +267,7 @@ from server.web.messages import (
     CONSOLE_INPUT_UNDETERMINED,
     answer_delta_event,
     approval_request_event,
+    beat_grid_drawer_event,
     beat_grid_suggestion_consumed_event,
     beat_grid_suggestion_event,
     chat_response_event,
@@ -9104,6 +9114,88 @@ class ChatSession:
             return dict(grid)
         return dict(attach_beat_grid_default(dict(timeline))["beat_grid"])
 
+    def _beat_grid_preset_pool_root(self) -> str:
+        return self._rig_paths.get("preset_pools", "DataPool/PresetPools")
+
+    def _beat_grid_name_lookup_reason(self, field: str, name: str, match: object) -> str:
+        """카드 t551 후속(근본 원인 정정) — `_draft_name_miss`(t477)와 같은
+        세 갈래 사유(이름 부재/모호/풀 못 읽음), POOL_UNREAD 는 "번호대
+        확인 불가"로 또렷이 다르게 말한다(지시 2항 — 번호대를 사실로
+        내보이지 않는다)."""
+        kind = getattr(match, "kind", None)
+        if kind == POOL_UNREAD:
+            return (
+                f"'{field}' 프리셋 풀을 콘솔에서 읽지 못해 번호대를 확인할 수 없습니다 "
+                f"(이름 '{name}')."
+            )
+        if kind == NAME_AMBIGUOUS:
+            candidates = ", ".join(str(c) for c in getattr(match, "candidates", ()))
+            return f"'{name}' 이름이 여러 슬롯({candidates})에 있어 특정할 수 없습니다."
+        return f"'{field}' 프리셋 중 '{name}'을 콘솔에서 찾지 못했습니다."
+
+    def _resolve_beat_grid_name_lookup(
+        self, name_lookup: Mapping[str, object]
+    ) -> tuple[dict[str, object] | None, str | None]:
+        """카드 t551 후속(근본 원인 정정, 리드 지시 2026-10-11) —
+        `parse_beat_grid_sentence`가 돌려준 ``name_lookup``({"field","name"})
+        을 콘솔 프리셋 카탈로그로 번호로 바꾼다. 콘솔 **읽기**만(쓰기
+        0) — 기존 `_resolve_named_pool_no`/`_paged_pool_children`이 쓰는
+        같은 질의 함수(`_registry_state_query`)를 그대로 재사용한다(새
+        판독 규율 없음, t480/t477 재사용).
+
+        ``(changes, None)`` 성공, ``(None, 사유)`` 실패(이름 부재·모호·
+        풀 못 읽음 — 번호를 지어내지 않는다)."""
+        field = str(name_lookup["field"])
+        name = str(name_lookup["name"])
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        if field == "효과":
+            match, pool_name = resolve_effect_preset_name(
+                query, pool_root, name, probe_prefix="beat-grid-effect"
+            )
+            if match.slot is None:
+                return None, self._beat_grid_name_lookup_reason(field, name, match)
+            effect_kind = pool_name_to_effect_kind(pool_name) if pool_name else None
+            return (
+                {"effect_preset_no": f"{match.pool_no}.{match.slot}", "effect_kind": effect_kind},
+                None,
+            )
+        match = resolve_preset_name(query, pool_root, field, name, probe_prefix="beat-grid-preset")
+        if match.slot is None:
+            return None, self._beat_grid_name_lookup_reason(field, name, match)
+        key = {"위치": "position_preset_no", "색": "color_preset_no"}.get(field)
+        if key is None:
+            return None, f"'{field}'은(는) 이름으로 찾을 수 있는 항목이 아닙니다."
+        return {key: f"{match.pool_no}.{match.slot}"}, None
+
+    #: 드로워 세 섹션이 읽는 풀 이름 — mockup `drawDrawer()`의 세 ``<h6>``
+    #: 제목과 같은 순서(`beat_grid_presets._DRAWER_SECTIONS`와 바이트 동일
+    #: 해야 한다 — 이 상수가 그 순서의 단일 진실 지점은 아니지만, 어느 쪽을
+    #: 먼저 읽어도 드로워 조립 순서는 그 모듈이 최종으로 정한다).
+    _BEAT_GRID_DRAWER_POOL_NAMES: tuple[str, ...] = ("Dimmer", "Position", "Color")
+
+    def beat_grid_preset_drawer(self) -> dict:
+        """카드 t551 후속(지시 1항) — mockup 프리셋 서랍과 같은 세 섹션을
+        **실제 콘솔 판독**으로 채운다(데모 데이터 0건). 풀을 못 읽으면
+        그 섹션은 빈 목록 + ``unread: true``(지어내지 않음). `preset_
+        pools.yaml`의 ``confirmed`` 값을 그대로 실어 UI가 "번호대 미확인"
+        을 보여줄 수 있게 한다(지시 2항) — 콘솔 **읽기**만, 쓰기 0건."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = self._beat_grid_view(timeline) if timeline is not None else {"tracks": []}
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        pools: dict[str, tuple[int, dict[int, str | None]] | None] = {}
+        for pool_name in self._BEAT_GRID_DRAWER_POOL_NAMES:
+            pools[pool_name] = read_named_pool(
+                query, pool_root, pool_name, probe_prefix="beat-grid-drawer"
+            )
+        policy = load_preset_pool_policy()
+        sections = build_preset_drawer(grid, pools=pools, confirmed=bool(policy.get("confirmed")))
+        event = beat_grid_drawer_event(sections=sections)
+        self._send(event)
+        return event
+
     def beat_grid_edit(
         self,
         bar: int | None,
@@ -9144,7 +9236,19 @@ class ChatSession:
             bar = parsed["bar"]  # type: ignore[assignment]
             bar_end = parsed["bar_end"]  # type: ignore[assignment]
             target = parsed["target"]  # type: ignore[assignment]
-            changes = parsed["changes"]  # type: ignore[assignment]
+            name_lookup = parsed.get("name_lookup")
+            if name_lookup is not None:
+                # 카드 t551 후속(근본 원인 정정) — 문장 값이 번호가 아니라
+                # 이름이면(위치/색/효과) 적용 전에 콘솔 카탈로그로 번호를
+                # 해석한다(읽기만, 쓰기 0). 못 찾으면 번호를 지어내지
+                # 않고 그 사유로 거절한다 — apply_beat_grid_edit 를
+                # 아예 부르지 않는다(격자 상태 변경 0건).
+                resolved_changes, reason = self._resolve_beat_grid_name_lookup(name_lookup)
+                if resolved_changes is None:
+                    return self._beat_grid_rejection(reason or "프리셋 이름을 해석하지 못했습니다.")
+                changes = resolved_changes
+            else:
+                changes = parsed["changes"]  # type: ignore[assignment]
 
         if bar is None or target is None or not changes:
             return self._beat_grid_rejection(
@@ -9229,6 +9333,23 @@ class ChatSession:
                 f"제안 '{suggestion_id}'을 찾을 수 없습니다(이미 적용됐거나 만료됐습니다)."
             )
         return self.beat_grid_edit(suggestion.bar, suggestion.target, dict(suggestion.changes))
+
+    def beat_grid_suggestion_reject(self, suggestion_id: str) -> dict:
+        """편집 경로 ③ — 감독의 명시적 「거절」(mockup `aNo` 핸들러, 지시
+        1항). 보류 중인 제안을 소비는 하지만 ``beat_grid_edit``는 **부르지
+        않는다** — 격자·콘솔 둘 다 바뀌지 않는다(결정④, 상태 diff 0).
+        ``beat_grid_suggestion_apply``와 같이 ``beat_grid_suggestion_
+        consumed_event``를 보내 UI가 보류 목록·점선 막대를 지운다."""
+        self._beat_grid_suggestions.consume(suggestion_id)
+        self._send(beat_grid_suggestion_consumed_event(suggestion_id=suggestion_id))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 제안 거절",
+            text="AI 제안을 거절했습니다 (콘솔에는 아무것도 쓰지 않았습니다).",
+            commands=[],
+        )
+        self._send(event)
+        return event
 
     def _setlist_mode(self, text: str) -> InstructionResult | None:
         """셋리스트 모드 (priority 4): allocate library songs to consecutive
