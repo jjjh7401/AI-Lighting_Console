@@ -1222,13 +1222,19 @@ export function buildBeatGridDrawerRequest(): string {
 
 /** 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그. 번호는
  * 짓지 않는다(서버가 `preset_pools.yaml` 번호대에서 빈 번호를 고른다) —
- * UI는 영문 이름·한국어 설명·어느 필드인지만 올린다. */
+ * UI는 영문 이름·한국어 설명·어느 필드인지만 올린다.
+ *
+ * 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 목표 좌표(``aim``,
+ * x·y·z 미터, `server/spatial/pointing.py` 틀)를 함께 올린다. 주어졌을
+ * 때만 싣는다 — 다른 네 필드는 이 키 자체가 없다(생략과 값이 다른
+ * undefined 를 섞지 않는다). */
 export function buildBeatGridNewPreset(
   bar: number,
   target: string,
   field: "dimmer_preset" | "dimmer_effect" | "position" | "color" | "effect",
   label: string,
   description: string,
+  aim?: { x: number; y: number; z: number },
 ): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,
@@ -1238,6 +1244,7 @@ export function buildBeatGridNewPreset(
     field,
     label,
     description,
+    ...(aim !== undefined ? { aim } : {}),
   });
 }
 

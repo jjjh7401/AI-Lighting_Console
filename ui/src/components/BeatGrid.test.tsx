@@ -1332,6 +1332,119 @@ describe("NewPresetDialog — 카드 t589, 「＋ 새 프리셋 만들기」 순
   });
 });
 
+// 카드 t599(REQ-LDBEAT-015(i-3)) — "위치" 필드 다이얼로그만 목표 좌표
+// (x·y·z, 미터) 세 입력을 추가로 받는다. 좌표계 라벨은
+// `server/spatial/pointing.py` 모듈 설명(실측)이 정한 그 틀 — Pan0/
+// Tilt0 은 무대 -Z(바로 아래), +Tilt 는 무대 +Y(뒤)로 기울인다.
+describe("NewPresetDialog — 카드 t599, 위치 목표 좌표(showAim)", () => {
+  it("showAim 이 없으면(다른 네 필드) 좌표 입력이 전혀 뜨지 않는다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Wave"
+        description="따뜻한 흰색"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).not.toContain("X (m)");
+    expect(html).not.toContain("무대 뒤");
+    expect(html).not.toContain("위)");
+  });
+
+  it("showAim 이면 X·Y·Z 세 입력이 그 라벨로 뜬다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Center"
+        description="스테이지 중앙"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+        showAim
+        x="0"
+        y="1.5"
+        z="2"
+        onXChange={() => {}}
+        onYChange={() => {}}
+        onZChange={() => {}}
+      />,
+    );
+    expect(html).toContain('aria-label="X (m)"');
+    expect(html).toContain('aria-label="Y (m, + = 무대 뒤)"');
+    expect(html).toContain('aria-label="Z (m, + = 위)"');
+  });
+
+  it("showAim 인데 좌표가 비었으면 만들기가 disabled(라벨·설명이 유효해도)", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Center"
+        description="스테이지 중앙"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+        showAim
+        x=""
+        y=""
+        z=""
+        onXChange={() => {}}
+        onYChange={() => {}}
+        onZChange={() => {}}
+      />,
+    );
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("showAim 인데 좌표 하나가 수가 아니면 만들기가 disabled", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Center"
+        description="스테이지 중앙"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+        showAim
+        x="0"
+        y="abc"
+        z="2"
+        onXChange={() => {}}
+        onYChange={() => {}}
+        onZChange={() => {}}
+      />,
+    );
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("showAim 이고 세 좌표가 모두 유한한 수면 만들기가 활성", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Center"
+        description="스테이지 중앙"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+        showAim
+        x="0"
+        y="-1.5"
+        z="2"
+        onXChange={() => {}}
+        onYChange={() => {}}
+        onZChange={() => {}}
+      />,
+    );
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+});
+
 /** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
  * 골랐다") — 효과(움직임)·디머 "효과" 드롭다운은 같은 drawerSections 풀
  * 안에서 `is_effect_band`(서버가 `preset_pools.yaml` 번호대로 판정)로만
