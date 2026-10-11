@@ -184,3 +184,29 @@ export function lrChildRowsForTrack(
     { side: "R", label: `${track.group_name} R`, memberCount: rightCount, startBar: range.startBar, endBar: range.endBar },
   ];
 }
+
+/** 지금 편집 칸이 보고 있는 L·R 자식 줄(REQ-LDBEAT-021(b) "옆빛 L·R"과
+ * 같은 범위) — `null`이면 부모 그룹 줄을 보고 있다는 뜻이다. */
+export interface LRSplitViewedChild {
+  groupName: string;
+  side: "L" | "R";
+}
+
+/** REQ-LDBEAT-024(e)/AC-LDBEAT-024(e) — 보고 있는 줄이 L·R 자식 줄인데
+ * 마디(재생 위치·클릭한 마디)가 그 구간을 벗어나면 편집 칸이 부모
+ * 그룹 줄로 넘어간다(`null`). 이미 부모를 보고 있으면(`viewed`가
+ * `null`) 그대로 `null`. 선언이 없거나(다시 합치기로 지워짐) 범위
+ * 밖이면(끝은 배타적, `lrChildRowsForTrack`의 `endBar`와 같은 관례)
+ * `null`로 떨어진다 — 지어낸 자식 유지 없음. 범위 안이면 입력을 그대로
+ * 돌려준다(side 유지). */
+export function resolveLRSplitViewAfterBarChange(
+  viewed: LRSplitViewedChild | null,
+  declarations: LRSplitDeclarations,
+  bar: number,
+): LRSplitViewedChild | null {
+  if (!viewed) return null;
+  const range = declarations.get(viewed.groupName);
+  if (!range) return null;
+  if (bar < range.startBar || bar >= range.endBar) return null;
+  return viewed;
+}

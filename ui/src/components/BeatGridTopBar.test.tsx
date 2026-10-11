@@ -99,6 +99,54 @@ describe("상단 바 — 버튼 전부 + 1450px 줄임 (AC-LDBEAT-017(a)(b))", (
   });
 });
 
+describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () => {
+  const playback = {
+    playing: false,
+    positionSeconds: 12.3,
+    onTogglePlay: noop,
+    onRewindToStart: noop,
+    onSeek: noop,
+    audioButtonLabel: "✓ LOVE ATTACK.mp3",
+    onSelectAudioFile: noop,
+    consoleFollowDisabledReason: "타임코드 재생 송신 경로 없음",
+  };
+
+  it("playback 을 안 넘기면 기존과 바이트 동일(플레이 묶음 없음)", () => {
+    const html = renderTopBar();
+    expect(html).not.toContain("beat-grid-play-cluster");
+    expect(html).not.toContain("⏮");
+  });
+
+  it("시안 순서대로 플레이·⏮·⏪ 10초·▶ 재생·10초 ⏩·시계·♪·콘솔 같이 끔이 렌더된다", () => {
+    const html = renderTopBar({ playback });
+    const order = ["플레이", "⏮", "⏪ 10초", "▶ 재생", "10초 ⏩", "0:12.3", "✓ LOVE ATTACK.mp3", "콘솔 같이 끔"];
+    const positions = order.map((label) => html.indexOf(label));
+    expect(positions.every((p) => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+  });
+
+  it("재생 중이면 ▶ 대신 ❚❚ 일시정지를 보인다", () => {
+    const html = renderTopBar({ playback: { ...playback, playing: true } });
+    expect(html).toContain("❚❚ 일시정지");
+    expect(html).not.toContain("▶ 재생");
+  });
+
+  it("콘솔 같이 토글은 늘 비활성이고 이유를 title 로 말한다(송신 경로 자체가 없음)", () => {
+    const html = renderTopBar({ playback });
+    expect(html).toMatch(/title="타임코드 재생 송신 경로 없음"[^>]*disabled/);
+  });
+
+  it("연결 실패 이유가 있으면 보인다", () => {
+    const html = renderTopBar({ playback: { ...playback, audioFailureReason: "x.mp3 을 읽지 못했어요" } });
+    expect(html).toContain("x.mp3 을 읽지 못했어요");
+  });
+
+  it("실패 이유가 없으면 그 칸 자체가 없다", () => {
+    const html = renderTopBar({ playback });
+    expect(html).not.toContain("beat-grid-audio-error");
+  });
+});
+
 describe("곡 전체 지도 마크업 (AC-LDBEAT-018)", () => {
   const props = {
     filledRange: { start: 0, end: 9 },

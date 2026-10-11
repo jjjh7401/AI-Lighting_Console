@@ -4296,6 +4296,35 @@ body {
   display: none;
 }
 
+/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데). */
+/* 카드 t570 — 시안 `.play`/`.plab`/`.clk` 그대로(테두리 묶음 + 노란 「플레이」 + 고정폭 시계). */
+.beat-grid-play-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff0d;
+  border: 1px solid #3a3a44;
+  border-radius: 10px;
+  padding: 3px 8px;
+}
+
+.beat-grid-play-label {
+  color: #ffd84d;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+.beat-grid-audio-error {
+  color: var(--warn);
+  font-size: 11px;
+}
+
+.beat-grid-playback-error {
+  color: var(--warn);
+  font-size: 11px;
+}
+
 @media (min-width: 1450px) {
   .beat-grid-topbar {
     flex-wrap: nowrap;
@@ -4391,9 +4420,11 @@ body {
 }
 
 .beat-grid-clock {
-  color: var(--muted);
+  color: #fff;
+  font-family: var(--mono, ui-monospace, monospace);
   font-size: 12px;
-  min-width: 48px;
+  min-width: 58px;
+  text-align: center;
 }
 
 .beat-grid-audio-label {
