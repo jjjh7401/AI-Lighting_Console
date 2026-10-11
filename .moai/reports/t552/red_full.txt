@@ -1,0 +1,106 @@
+FFFFFF...                                                                [100%]
+=================================== FAILURES ===================================
+_ TestZeroGapBeforeFirstFrame.test_analyze_reads_it_like_the_clean_file[id3_then_626_zero_bytes] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c0f10>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e62a0>
+
+    def test_analyze_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = analyze(_id3(71) + click_mp3)
+        gapped = analyze(prefix() + click_mp3)
+        assert not isinstance(clean, AnalysisFailure), clean
+>       assert not isinstance(gapped, AnalysisFailure), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x10eeceac0>: Format not recognised.
+E       assert not True
+E        +  where True = isinstance(AnalysisFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x10eeceac0>: Format not recognised.'), AnalysisFailure)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:77: AssertionError
+_ TestZeroGapBeforeFirstFrame.test_analyze_reads_it_like_the_clean_file[id3_then_1_zero_byte] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c1150>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e6340>
+
+    def test_analyze_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = analyze(_id3(71) + click_mp3)
+        gapped = analyze(prefix() + click_mp3)
+        assert not isinstance(clean, AnalysisFailure), clean
+>       assert not isinstance(gapped, AnalysisFailure), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x1077de750>: Format not recognised.
+E       assert not True
+E        +  where True = isinstance(AnalysisFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x1077de750>: Format not recognised.'), AnalysisFailure)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:77: AssertionError
+_ TestZeroGapBeforeFirstFrame.test_analyze_reads_it_like_the_clean_file[626_zero_bytes_without_id3] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c1390>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e63e0>
+
+    def test_analyze_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = analyze(_id3(71) + click_mp3)
+        gapped = analyze(prefix() + click_mp3)
+        assert not isinstance(clean, AnalysisFailure), clean
+>       assert not isinstance(gapped, AnalysisFailure), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x1077df060>: Format not recognised.
+E       assert not True
+E        +  where True = isinstance(AnalysisFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x1077df060>: Format not recognised.'), AnalysisFailure)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:77: AssertionError
+_ TestZeroGapBeforeFirstFrame.test_detect_beat_grid_reads_it_like_the_clean_file[id3_then_626_zero_bytes] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c1e50>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e62a0>
+
+    def test_detect_beat_grid_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = detect_beat_grid(_id3(71) + click_mp3)
+        gapped = detect_beat_grid(prefix() + click_mp3)
+        assert isinstance(clean, BeatGridResult), clean
+>       assert isinstance(gapped, BeatGridResult), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x10f533150>: Format not recognised.
+E       assert False
+E        +  where False = isinstance(BeatGridFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x10f533150>: Format not recognised.'), BeatGridResult)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:85: AssertionError
+_ TestZeroGapBeforeFirstFrame.test_detect_beat_grid_reads_it_like_the_clean_file[id3_then_1_zero_byte] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c2090>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e6340>
+
+    def test_detect_beat_grid_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = detect_beat_grid(_id3(71) + click_mp3)
+        gapped = detect_beat_grid(prefix() + click_mp3)
+        assert isinstance(clean, BeatGridResult), clean
+>       assert isinstance(gapped, BeatGridResult), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x107c998a0>: Format not recognised.
+E       assert False
+E        +  where False = isinstance(BeatGridFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x107c998a0>: Format not recognised.'), BeatGridResult)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:85: AssertionError
+_ TestZeroGapBeforeFirstFrame.test_detect_beat_grid_reads_it_like_the_clean_file[626_zero_bytes_without_id3] _
+
+self = <server.tests.test_audio_mp3_zero_gap_t552.TestZeroGapBeforeFirstFrame object at 0x1077c22d0>
+click_mp3 = b'\xff\xfb\x90\xc4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00Xing\x00\x00\x00\x0f\x00\x00\x01...0\x00\x00 \x00\x004\x80\x00\x00\x04UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU'
+prefix = <function <lambda> at 0x1077e63e0>
+
+    def test_detect_beat_grid_reads_it_like_the_clean_file(self, click_mp3, prefix):
+        clean = detect_beat_grid(_id3(71) + click_mp3)
+        gapped = detect_beat_grid(prefix() + click_mp3)
+        assert isinstance(clean, BeatGridResult), clean
+>       assert isinstance(gapped, BeatGridResult), gapped.reason
+E       AssertionError: 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x107c998a0>: Format not recognised.
+E       assert False
+E        +  where False = isinstance(BeatGridFailure(reason='오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x107c998a0>: Format not recognised.'), BeatGridResult)
+
+server/tests/test_audio_mp3_zero_gap_t552.py:85: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_analyze_reads_it_like_the_clean_file[id3_then_626_zero_bytes]
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_analyze_reads_it_like_the_clean_file[id3_then_1_zero_byte]
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_analyze_reads_it_like_the_clean_file[626_zero_bytes_without_id3]
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_detect_beat_grid_reads_it_like_the_clean_file[id3_then_626_zero_bytes]
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_detect_beat_grid_reads_it_like_the_clean_file[id3_then_1_zero_byte]
+FAILED server/tests/test_audio_mp3_zero_gap_t552.py::TestZeroGapBeforeFirstFrame::test_detect_beat_grid_reads_it_like_the_clean_file[626_zero_bytes_without_id3]
+6 failed, 3 passed in 28.64s
