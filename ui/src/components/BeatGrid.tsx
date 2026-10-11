@@ -44,6 +44,7 @@ import type {
   BeatGridSceneMemo,
   BeatGridStageGroup,
   BeatGridTrack,
+  BeatGridUnverifiedCell,
   BeatGridView,
   BeatGridSendStatus,
 } from "../protocol";
@@ -56,6 +57,8 @@ import {
   BeatGridCueHeadMeta,
   BeatGridMovementRow,
   BeatGridSideRow,
+  UNVERIFIED_SHAPE_BADGE,
+  unverifiedShapeTitle,
   type BeatGridFocusField,
 } from "./BeatGridCuePanelParts";
 import { BeatGridStage } from "./BeatGridStage";
@@ -260,13 +263,16 @@ export function groupTracksByLayerFolder(tracks: BeatGridTrack[]): BeatGridFolde
   }));
 }
 
-/** REQ-LDBEAT-010/AC-LDBEAT-004 — 실기 미확인 모양(§6: circle·발리후·위상
- * 펼침). 배치 규칙서 §3이 "⚠"로 표기한 바로 그 모양들이다. */
-const UNCONFIRMED_SHAPE_KEYWORDS = ["서클", "발리후", "위상 펼침", "circle", "ballyhoo"];
-
-export function isUnconfirmedShapeCue(label: string): boolean {
-  const lower = label.toLowerCase();
-  return UNCONFIRMED_SHAPE_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
+/** 카드 t579 — 서버 `unverified_cells`(M1 표 ⑨ + 실측 무빙 기록으로 가른 칸)를
+ * `cueEditKey` → 미확인 어휘 목록으로 묶는다. 라벨 글자 맞추기(옛 상수 목록)는
+ * 폐기했다 — 라벨은 사람이 쓴 설명이라 모양 필드와 다를 수 있고, 확인 여부는
+ * 코드 상수가 아니라 M1 표가 정한다. 필드가 없으면 빈 지도(배지 없음). */
+export function unverifiedCellIndex(
+  cells: readonly BeatGridUnverifiedCell[] | null | undefined,
+): Map<string, readonly string[]> {
+  const index = new Map<string, readonly string[]>();
+  for (const cell of cells ?? []) index.set(cueEditKey(cell.group_name, cell.bar), cell.terms);
+  return index;
 }
 
 /** t537 — REQ-LDBEAT-003(b). M1 9항목 판정은 progress.md의 표 칸 텍스트를
@@ -730,7 +736,7 @@ export function cueReferencesPreset(cue: BeatGridCue, presetNo: string): boolean
 /** 카드 t551 후속(지시 2항) — `preset_pools.yaml`의 `confirmed`가
  * `false`일 때 보여줄 배지. mockup 자신에는 "번호대 자체가 미확인"이라는
  * 상태가 없다(그 데모는 번호대가 이미 정해져 있다는 전제) — 그래서 가장
- * 가까운 기존 관례인 "⚠ 실기 미확인"(모양 선택지 배지, `isUnconfirmedShapeCue`
+ * 가까운 기존 관례인 "⚠ 실기 미확인"(모양 배지, `UNVERIFIED_SHAPE_BADGE`
  * 와 같은 글자)을 폭을 넓혀 재사용한다(이 카드가 그 자리를 정한 이유).
  * `confirmed`가 `true`(또는 알 수 없음)면 배지를 달지 않는다 — 번호대를
  * 사실로 내보이지 않을 뿐, 확정된 상태를 과장해 경고하지도 않는다. */
@@ -1126,6 +1132,11 @@ export function BeatGrid({
   const effectiveEditedCueKeys = useMemo(
     () => editedCueKeys ?? editedCueKeysFromUnsent(grid?.unsent_cells),
     [editedCueKeys, grid?.unsent_cells],
+  );
+  // 카드 t579(REQ-LDBEAT-010) — 「⚠ 실기 미확인」 칸(서버가 M1 표로 가른 목록).
+  const unverifiedCells = useMemo(
+    () => unverifiedCellIndex(grid?.unverified_cells),
+    [grid?.unverified_cells],
   );
   // 카드 t560(REQ-LDBEAT-023(b)) — 「이 마디 한눈에」 줄 이름 ▸ 로 펼친
   // 트랙(콘솔 그룹 이름 키 — 이 표는 트랙당 한 줄뿐이라 마디는 필요 없다).
@@ -1862,11 +1873,14 @@ export function BeatGrid({
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
                                   {segment.cue.label}
-                                  {isUnconfirmedShapeCue(segment.cue.label) && (
-                                    <span className="beat-grid-shape-warn" title="실기 미확인 모양">
-                                      ⚠ 실기 미확인
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
+                                    return terms ? (
+                                      <span className="beat-grid-shape-warn" title={unverifiedShapeTitle(terms)}>
+                                        {UNVERIFIED_SHAPE_BADGE}
+                                      </span>
+                                    ) : null;
+                                  })()}
                                   {pendingApprovalBadge(segment.cue) && (
                                     <span
                                       className="beat-grid-pending-approval-warn"
@@ -2457,6 +2471,7 @@ export function BeatGrid({
                           : UNSET_FIELD_LABEL
                       }
                       isUnset={!selectedCue.app_movement}
+                      unverifiedTerms={unverifiedCells.get(cueEditKey(selectedTrack.group_name, selectedCue.bar)) ?? null}
                     />
                   )}
                   {selectedTrack.layer_role === "side" && <BeatGridSideRow />}

@@ -16,6 +16,7 @@ import type {
   BeatGridTrack,
   BeatGridView,
 } from "../protocol";
+import { cueEditKey } from "./beatgrid/cueDisplayState";
 import {
   BEAT_GRID_BAR_ROWS,
   NEW_PRESET_OPTION_VALUE,
@@ -53,7 +54,7 @@ import {
   formatSourceRefLabel,
   groupTracksByLayerFolder,
   isFirstCueOfSong,
-  isUnconfirmedShapeCue,
+  unverifiedCellIndex,
   isWriteLocked,
   layerFolderLabel,
   buildBrightnessValueChanges,
@@ -237,17 +238,24 @@ describe("layerFolderLabel", () => {
   });
 });
 
-describe("isUnconfirmedShapeCue — REQ-LDBEAT-010/AC-LDBEAT-004", () => {
-  it("flags a circle shape", () => {
-    expect(isUnconfirmedShapeCue("U·D 발리후 ⚠")).toBe(true);
+describe("unverifiedCellIndex — REQ-LDBEAT-010/AC-LDBEAT-004, 카드 t579", () => {
+  it("indexes the server list by track name and bar", () => {
+    const index = unverifiedCellIndex([{ group_name: "MOVER-U", bar: 14, terms: ["circle"] }]);
+    expect(index.get(cueEditKey("MOVER-U", 14))).toEqual(["circle"]);
+    expect(index.get(cueEditKey("MOVER-U", 13))).toBeUndefined();
+    expect(index.get(cueEditKey("MOVER-D", 14))).toBeUndefined();
   });
 
-  it("flags the English spelling too", () => {
-    expect(isUnconfirmedShapeCue("ballyhoo move")).toBe(true);
+  it("an old server without the field yields no badge", () => {
+    expect(unverifiedCellIndex(undefined).size).toBe(0);
+    expect(unverifiedCellIndex(null).size).toBe(0);
   });
 
-  it("does not flag a confirmed-shape cue", () => {
-    expect(isUnconfirmedShapeCue("틸트 웨이브, 한 바퀴 2마디")).toBe(false);
+  it("a label that merely mentions a shape is not a badge source any more", () => {
+    // 옛 상수 목록은 라벨 글자 「위상 펼침」 만으로 배지를 달았다 — 실측으로 열린
+    // MOVER-D 7마디(t548 D1)도 그래서 미확인으로 보였다. 이제 서버 목록에 없으면 없다.
+    const index = unverifiedCellIndex([]);
+    expect(index.get(cueEditKey("MOVER-D", 7))).toBeUndefined();
   });
 });
 

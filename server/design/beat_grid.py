@@ -604,6 +604,12 @@ def attach_beat_grid_runtime_extras(
 
     path = progress_md_path if progress_md_path is not None else default_progress_md_path()
     grid["probe_results"] = read_m1_probe_results_from_path(path)
+    # 카드 t579(REQ-LDBEAT-010) — 「⚠ 실기 미확인」 배지를 달 칸. 방금 읽은
+    # M1 표(위)와 실측 무빙 기록에서만 가른다 — 화면은 라벨 글자를 맞춰 보지
+    # 않고 이 목록만 읽는다.
+    from server.design.beat_grid_unverified import unverified_beat_grid_cells
+
+    grid["unverified_cells"] = unverified_beat_grid_cells(grid)
     # 카드 t570(REQ-LDBEAT-024(a)) — 이 필드가 생기기 전에 저장된 격자도
     # 같은 쇼 전역 측정값을 받는다(곡별 데이터가 아니라 콘솔 전역 측정이라
     # `setdefault` — 이미 있으면(드물게 다른 값으로 저장돼 있으면) 덮어쓰지

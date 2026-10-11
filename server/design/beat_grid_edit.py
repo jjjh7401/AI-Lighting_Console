@@ -42,6 +42,7 @@ from server.design.beat_grid import (
     check_evidence_approval,
     normalize_beat_grid_cue,
 )
+from server.design.beat_grid_unverified import unverified_movement_terms
 from server.design.cue_sheet_edit import MIB_MODES, TRACKING_VALUES
 from server.spatial.position_fx import POSITION_FX_EFFECTS
 
@@ -49,7 +50,6 @@ __all__ = [
     "AXES_VALUES",
     "EDITABLE_CUE_FIELD_LABELS",
     "PERIOD_UNITS",
-    "UNVERIFIED_SHAPES",
     "BeatGridEditError",
     "apply_beat_grid_edit",
     "apply_beat_grid_edit_range",
@@ -86,13 +86,6 @@ AXES_VALUES: frozenset[str] = frozenset({"Pan", "Tilt"})
 
 #: REQ-LDBEAT-006(vi-4) — 음악 단위만 허용한다(초 단위는 shall not).
 PERIOD_UNITS: frozenset[str] = frozenset({"beat", "bar"})
-
-#: REQ-LDBEAT-010 — §6의 "실기 미확인" 모양. 거절이 아니라 **경고**다:
-#: M1 프로브가 이 항목을 PASS로 확정하기 전에는 곡의 **기본값**으로
-#: 제공하지 않지만(§5 항목 9, REQ-LDBEAT-010 본문), 감독이 명시적으로
-#: 선택하는 것은 막지 않는다. `wave`는 M8(카드 t548)의 별도 라이브
-#: 프로브로 이미 확인됐으므로(progress.md M8 절) 여기 없다.
-UNVERIFIED_SHAPES: frozenset[str] = frozenset({"circle", "ballyhoo"})
 
 _EVIDENCE_GRADES: tuple[str, ...] = ("measured", "measured_other_group", "name_only")
 
@@ -238,29 +231,23 @@ def _validate_brightness(value: object) -> None:
             )
 
 
-def _validate_app_movement(value: object) -> list[str]:
-    """검증을 통과하면 경고 문자열 목록(비어 있을 수 있음)을 돌려준다 —
-    "⚠ 미확인" 플래그가 여기서 나온다(REQ-LDBEAT-010, 거절이 아니다)."""
+def _validate_app_movement(value: object) -> None:
+    """닫힌 어휘·축·주기·위상 값 검증. 「⚠ 실기 미확인」 경고는 여기서 내지
+    않는다 — 그 판정은 트랙(그룹)과 M1 표를 알아야 해서 `apply_beat_grid_edit`
+    의 병합 루프가 `unverified_movement_terms`로 낸다(카드 t579)."""
     if value is None:
-        return []
+        return
     if not isinstance(value, Mapping):
         raise BeatGridEditError(
             "app_movement 값은 {shape, axes, period_unit, period_value, phase_spread} "
             "모양이어야 합니다."
         )
     shape = value.get("shape")
-    warnings: list[str] = []
-    if shape is not None:
-        if shape not in POSITION_FX_EFFECTS:
-            raise BeatGridEditError(
-                f"app_movement.shape '{shape}'는 닫힌 어휘 "
-                f"{', '.join(POSITION_FX_EFFECTS)} 안에 없습니다 — REQ-LDBEAT-006(vi-2)."
-            )
-        if shape in UNVERIFIED_SHAPES:
-            warnings.append(
-                f"⚠ 미확인 — '{shape}' 모양은 실기 M1 프로브로 아직 확인되지 않았습니다 "
-                "(REQ-LDBEAT-010). 곡의 기본값으로는 쓰지 않습니다."
-            )
+    if shape is not None and shape not in POSITION_FX_EFFECTS:
+        raise BeatGridEditError(
+            f"app_movement.shape '{shape}'는 닫힌 어휘 "
+            f"{', '.join(POSITION_FX_EFFECTS)} 안에 없습니다 — REQ-LDBEAT-006(vi-2)."
+        )
     axes = value.get("axes") or ()
     for axis in axes:
         if axis not in AXES_VALUES:
@@ -290,7 +277,6 @@ def _validate_app_movement(value: object) -> list[str]:
         raise BeatGridEditError(
             f"app_movement.phase_spread는 참/거짓/미정이어야 합니다 (받은 값: {phase_spread!r})."
         )
-    return warnings
 
 
 def _validate_evidence(value: object) -> None:
@@ -503,7 +489,7 @@ def apply_beat_grid_edit(
     if "evidence" in changes:
         _validate_evidence(changes["evidence"])
     if "app_movement" in changes:
-        warnings.extend(_validate_app_movement(changes["app_movement"]))
+        _validate_app_movement(changes["app_movement"])
 
     new_preset_label = changes.get("new_preset_label")
     if "new_preset_label" in changes:
@@ -617,6 +603,23 @@ def apply_beat_grid_edit(
         conflict_reason = check_app_movement_axis_conflict(merged)
         if conflict_reason is not None:
             raise BeatGridEditError(conflict_reason)
+
+        if "app_movement" in changes:
+            # REQ-LDBEAT-010 — 미확인 어휘는 거절이 아니라 **경고**다(명시적 선택은
+            # 막지 않는다). 확인 여부는 M1 표(``grid["probe_results"]``)와 실측
+            # 무빙 기록에서만 읽는다 — 코드 상수 목록 없음(카드 t579).
+            group_no = track.get("group_no") if track.get("group_no_confirmed") else None
+            terms = unverified_movement_terms(
+                merged.get("app_movement"),
+                grid.get("probe_results") or {},  # type: ignore[arg-type]
+                group_no=group_no if isinstance(group_no, int) else None,
+            )
+            if terms:
+                warnings.append(
+                    f"⚠ 실기 미확인 — {track.get('group_name')} {bar}마디 "
+                    f"{'·'.join(terms)}: M1 프로브로 아직 확인되지 않았습니다 "
+                    "(REQ-LDBEAT-010). 곡의 기본값으로는 쓰지 않고, 송신은 M1 게이트를 거칩니다."
+                )
 
         merged_cues[index] = merged
 

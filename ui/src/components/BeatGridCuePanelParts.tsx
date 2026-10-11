@@ -12,6 +12,15 @@ import "./beatGridPanels.css";
  * REQ-LDBEAT-021(a)). 값은 편집 칸 행의 `data-field` 와 짝지어진다. */
 export type BeatGridFocusField = "밝기" | "위치" | "색" | "움직임" | "옆빛";
 
+/** REQ-LDBEAT-010/AC-LDBEAT-004 — 「⚠ 실기 미확인」 배지 글자(타임라인 막대와
+ * 「움직임」 행이 같이 쓴다). */
+export const UNVERIFIED_SHAPE_BADGE = "⚠ 실기 미확인";
+
+/** 카드 t579 — 배지 title: 무엇이 미확인인지와, 곡 기본값으로 넣지 않는다는 규칙. */
+export function unverifiedShapeTitle(terms: readonly string[]): string {
+  return `실기 미확인 — ${terms.join("·")} (M1 프로브 확인 전 · 곡 기본값으로 넣지 않음)`;
+}
+
 const FOCUS_FIELD_ROWS: Record<BeatGridFocusField, readonly string[]> = {
   밝기: ["밝기"],
   위치: ["위치 프리셋"],
@@ -90,12 +99,29 @@ export function BeatGridCueHeadMeta({
 }
 
 /** REQ-LDBEAT-021(b) 「움직임」 전용 행 — 앱 2단계 무빙(REQ-LDBEAT-006(vi)).
- * 값 표시는 기존 `formatAppMovementField` 결과를 그대로 받는다. */
-export function BeatGridMovementRow({ value, isUnset }: { value: string; isUnset: boolean }) {
+ * 값 표시는 기존 `formatAppMovementField` 결과를 그대로 받는다. 카드 t579
+ * (REQ-LDBEAT-010) — `unverifiedTerms`가 있으면(서버가 M1 표로 가른 미확인
+ * 칸) 타임라인 막대와 같은 「⚠ 실기 미확인」 배지를 값 옆에 단다. */
+export function BeatGridMovementRow({
+  value,
+  isUnset,
+  unverifiedTerms = null,
+}: {
+  value: string;
+  isUnset: boolean;
+  unverifiedTerms?: readonly string[] | null;
+}) {
   return (
     <div className="beat-grid-cue-field" data-field="움직임">
       <span className="beat-grid-cue-field-label">움직임</span>
-      <span className={`beat-grid-cue-field-value${isUnset ? " is-unset" : ""}`}>{value}</span>
+      <span className={`beat-grid-cue-field-value${isUnset ? " is-unset" : ""}`}>
+        {value}
+        {unverifiedTerms && unverifiedTerms.length > 0 && (
+          <span className="beat-grid-shape-warn" title={unverifiedShapeTitle(unverifiedTerms)}>
+            {UNVERIFIED_SHAPE_BADGE}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

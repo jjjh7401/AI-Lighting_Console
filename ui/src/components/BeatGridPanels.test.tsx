@@ -320,6 +320,24 @@ describe("AC-LDBEAT-021(b) — 편집 칸 필드 순서", () => {
     expect(renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset />)).toContain('data-field="움직임"');
     expect(renderToStaticMarkup(<BeatGridSideRow />)).toContain('data-field="옆빛 L·R"');
   });
+  it("움직임 행 — 서버가 미확인으로 가른 칸에만 「⚠ 실기 미확인」(카드 t579, REQ-LDBEAT-010)", () => {
+    const flagged = renderToStaticMarkup(
+      <BeatGridMovementRow value="circle · Pan+Tilt · 4박" isUnset={false} unverifiedTerms={["circle"]} />,
+    );
+    expect(flagged).toContain("⚠ 실기 미확인");
+    expect(flagged).toContain("곡 기본값으로 넣지 않음");
+    const plain = renderToStaticMarkup(<BeatGridMovementRow value="wave · Tilt · 2마디" isUnset={false} />);
+    expect(plain).not.toContain("실기 미확인");
+    const empty = renderToStaticMarkup(
+      <BeatGridMovementRow value="wave · Tilt · 2마디" isUnset={false} unverifiedTerms={[]} />,
+    );
+    expect(empty).not.toContain("실기 미확인");
+  });
+  it("타임라인 배지는 서버 목록만 읽는다 — 라벨 글자 맞추기 없음(카드 t579)", () => {
+    expect(SOURCE).toContain("unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar))");
+    expect(SOURCE).not.toContain("UNCONFIRMED_SHAPE_KEYWORDS");
+    expect(SOURCE).not.toContain("isUnconfirmedShapeCue(");
+  });
   it("초점 항목은 편집 칸 행 이름과 짝지어진다(카드 t560 연동용)", () => {
     expect(focusFieldRowNames("색")).toEqual(["색 프리셋"]);
     expect(focusFieldRowNames("옆빛")).toEqual(["옆빛 L·R"]);

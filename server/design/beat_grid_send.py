@@ -39,6 +39,7 @@ __all__ = [
     "build_song_timing_from_bar_map",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
+    "resolve_group_dimmer_attributes",
     "unsent_beat_grid_cells",
     "verify_owned_sequences",
 ]
@@ -148,6 +149,84 @@ def resolve_dimmer_attributes(
     if not uniform:
         return {}
     return {name: uniform for name in group_names}
+
+
+def resolve_group_dimmer_attributes(
+    design_rig: DesignRigRead,
+    group_names: Sequence[str],
+    group_members: Mapping[str, Sequence[int]],
+) -> tuple[dict[str, tuple[str, ...]], dict[str, str]]:
+    """트랙(콘솔 그룹)마다 디머 속성을 고른다 — ``(속성 표, 못 고른 사유 표)``.
+
+    카드 t573(REQ-LDBEAT-011~013). ``group_members``는 그룹 이름 -> 소속
+    fid 목록으로, :func:`server.design.beat_grid_stage.read_beat_grid_stage`가
+    읽은 ``member_fids`` 중 **전수(complete)** 로 읽힌 그룹만 담아 넘긴다
+    (호출자 몫 — 부분 소속은 넣지 않는다). 기종 이름·속성 이름은 이
+    함수에 하나도 없다 — 전부 리그 판독(``FixtureCapability.attributes``)에서
+    :func:`dimmer_attribute_names`로 걸러 온다.
+
+    한 그룹의 규칙:
+
+    - 소속을 안다 → 소속 장비 **전부**의 능력이 전수로 읽혀 있고, 모두 같은
+      (비지 않은) 디머 속성 튜플을 내면 그 튜플. 소속 장비 하나라도 능력을
+      못 읽었거나, 장비끼리 디머 속성이 다르면(섞인 그룹) 고르지 않는다 —
+      섞인 그룹에 합집합을 내는 것은 실기로 잰 적이 없어 지어내지 않는다.
+    - 소속을 모른다 → :func:`resolve_dimmer_attributes`(리그 전 기종이 같을
+      때만)로 되돌아간다. 그 규칙은 소속과 무관하게 맞다.
+
+    못 고른 트랙은 속성 표에서 빠지고 사유 표에 한 줄이 남는다 — 에미터가
+    그 트랙의 밝기 값 칸만 그 사유로 막는다(다른 트랙은 그대로 나간다)."""
+    uniform = resolve_dimmer_attributes(design_rig, group_names)
+    capabilities = design_rig.capabilities
+    resolved: dict[str, tuple[str, ...]] = {}
+    reasons: dict[str, str] = {}
+    for name in group_names:
+        members = group_members.get(name)
+        if not members:
+            if name in uniform:
+                resolved[name] = uniform[name]
+            else:
+                reasons[name] = (
+                    f"'{name}' 그룹의 소속 장비를 다 읽지 못했고 리그 기종마다 디머 "
+                    "속성이 같지 않아 디머 속성을 고를 수 없습니다"
+                )
+            continue
+        if capabilities is None:
+            reasons[name] = (
+                f"장비 능력을 콘솔에서 읽지 못해 '{name}' 그룹의 디머 속성을 고를 수 없습니다"
+            )
+            continue
+        tuples: dict[tuple[str, ...], list[int]] = {}
+        missing: list[int] = []
+        for fid in members:
+            capability = capabilities.fixtures.get(fid)
+            if capability is None or not capability.whole:
+                missing.append(fid)
+                continue
+            tuples.setdefault(dimmer_attribute_names(capability.attributes), []).append(fid)
+        if missing:
+            listed = ", ".join(str(fid) for fid in missing)
+            reasons[name] = (
+                f"'{name}' 그룹 장비(fid {listed})의 능력을 다 읽지 못해 디머 속성을 "
+                "고를 수 없습니다"
+            )
+            continue
+        if len(tuples) != 1:
+            listed = " / ".join(
+                f"{', '.join(attrs) or '없음'}(fid {', '.join(map(str, fids))})"
+                for attrs, fids in tuples.items()
+            )
+            reasons[name] = (
+                f"'{name}' 그룹 안에 디머 속성이 다른 장비가 섞여 있어 하나로 고를 수 "
+                f"없습니다 — {listed}"
+            )
+            continue
+        (attrs,) = tuples
+        if not attrs:
+            reasons[name] = f"'{name}' 그룹 장비에 디머 속성이 없습니다"
+            continue
+        resolved[name] = attrs
+    return resolved, reasons
 
 
 def build_song_timing_from_bar_map(bar_map: Mapping[str, object] | None) -> SongTiming | None:
