@@ -217,6 +217,19 @@ class TestFirstFreePresetNumber:
         assert reason is None
         assert preset_no == "2.62"
 
+    def test_skips_an_occupied_slot_whose_name_is_empty(self) -> None:
+        # `paged_pool_children`은 이름 없는 프리셋을 `{slot: None}`으로 돌려준다
+        # — 키가 있으면 콘솔에 그 번호가 있다(이름 유무와 무관).
+        policy = {
+            "confirmed": False,
+            "pools": {"position_effect": {"start": "2.61", "end": "2.68"}},
+        }
+        preset_no, reason, _warning = first_free_preset_number(
+            "position", policy=policy, grid={"tracks": []}, console_children={61: None}
+        )
+        assert reason is None
+        assert preset_no == "2.62"
+
     def test_dimmer_sub_band_a_before_b(self) -> None:
         policy = {
             "confirmed": False,

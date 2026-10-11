@@ -362,7 +362,9 @@ def first_free_preset_number(
             candidate = f"{pool_no}.{slot}"
             if candidate in referenced:
                 continue
-            if console_children is not None and console_children.get(slot) is not None:
+            # 키가 있으면 콘솔에 그 번호가 있다 — 이름 없는 프리셋은 값이
+            # None 이라 `.get()` 으로는 빈칸과 구분이 안 된다(`paged_pool_children`).
+            if console_children is not None and slot in console_children:
                 continue
             warning = (
                 None
