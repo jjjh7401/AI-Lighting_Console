@@ -1,0 +1,366 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/agent-abf15f97e808768c0/ui
+
+ ❯ src/components/beatgrid/lrSplit.test.ts (29 tests | 21 failed) 7ms
+   × computeLRSplitEligibility > fixtures 가 없으면(빈 배열) 분리 불가다 2ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 트랙 이름과 같은 그룹이 groups 에 없으면 분리 불가다(이름 추정 없음) 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 그룹 소속 장비가 한쪽에만 있으면 분리 불가다 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 그룹 소속 장비가 좌우 양쪽에 있으면 분리 가능하고 대수가 맞다 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 부모 그룹(member_fids 가 자식 그룹들의 합집합)도 그 자체 소속만으로 분리된다 — 카드 t568 핵심 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 그 그룹이 complete=false 면(일부만 읽힘) 분리 불가다 — 부분 데이터를 지어내지 않는다 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > 무대 중심에 정확히 있는 장비는 어느 쪽도 아니다 0ms
+     → fixtures.map is not a function
+   × computeLRSplitEligibility > member_fids 에 있는 fid 가 fixtures 목록에 없으면 세지 않는다(지어내지 않음) 0ms
+     → fixtures.map is not a function
+   × canDeclareLRSplit > 옆빛(side) 역할 + 좌우 양쪽 실측이면 선언 가능 0ms
+     → fixtures.map is not a function
+   × canDeclareLRSplit > 역할이 옆빛이어도 fixtures 가 없으면(분리 가능 데이터 없음) 불가 0ms
+     → fixtures.map is not a function
+   × canDeclareLRSplit > 역할이 옆빛이어도 그 그룹이 없으면 불가 0ms
+     → fixtures.map is not a function
+   × canDeclareLRSplit > 역할이 옆빛이어도 complete=false 면 불가 0ms
+     → fixtures.map is not a function
+   × canDeclareLRSplit > 역할이 옆빛이어도 한쪽에만 있으면 불가 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 선언 전에는 자식 줄이 0개다(AC-LDBEAT-019(c)) 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 선언 후에는 L·R 두 줄이 생기고, 그룹 이름을 그대로 쓴 라벨(L·R 접미사뿐 — 특정 리터럴 없음)과 실측 대수를 담는다 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 합친 뒤에는 다시 0개다 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 선언이 있어도 좌우 실측이 없으면(fixtures 변화) 0개다 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 선언이 있어도 그 그룹이 complete=false 면 0개다 0ms
+     → fixtures.map is not a function
+   × lrChildRowsForTrack > 다른 트랙의 선언은 섞이지 않는다 0ms
+     → fixtures.map is not a function
+   × L·R 방향(실측 확정 — 두 출처 인용, 카드 t568) > 더 작은 x 쪽이 L(출처1 MA3 house 좌표 규약 + 출처2 BeatGrid.tsx projectFixture 둘 다 일치) 0ms
+     → fixtures.map is not a function
+   × 그룹 이름 리터럴 없음(일반화 — feedback-generalize-beyond-test-rig) > 실제 제품 그룹 이름(SIDE-ALL 등)을 쓰지 않아도 완전히 같은 방식으로 동작한다 0ms
+     → fixtures.map is not a function
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 21 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > fixtures 가 없으면(빈 배열) 분리 불가다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:29:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 트랙 이름과 같은 그룹이 groups 에 없으면 분리 불가다(이름 추정 없음)
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:44:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 그룹 소속 장비가 한쪽에만 있으면 분리 불가다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:61:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 그룹 소속 장비가 좌우 양쪽에 있으면 분리 가능하고 대수가 맞다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:80:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 부모 그룹(member_fids 가 자식 그룹들의 합집합)도 그 자체 소속만으로 분리된다 — 카드 t568 핵심
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:101:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 그 그룹이 complete=false 면(일부만 읽힘) 분리 불가다 — 부분 데이터를 지어내지 않는다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:116:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > 무대 중심에 정확히 있는 장비는 어느 쪽도 아니다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:132:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > computeLRSplitEligibility > member_fids 에 있는 fid 가 fixtures 목록에 없으면 세지 않는다(지어내지 않음)
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:146:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > canDeclareLRSplit > 옆빛(side) 역할 + 좌우 양쪽 실측이면 선언 가능
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:164:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > canDeclareLRSplit > 역할이 옆빛이어도 fixtures 가 없으면(분리 가능 데이터 없음) 불가
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:173:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > canDeclareLRSplit > 역할이 옆빛이어도 그 그룹이 없으면 불가
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:178:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > canDeclareLRSplit > 역할이 옆빛이어도 complete=false 면 불가
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:186:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > canDeclareLRSplit > 역할이 옆빛이어도 한쪽에만 있으면 불가
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:197:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 선언 전에는 자식 줄이 0개다(AC-LDBEAT-019(c))
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:249:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 선언 후에는 L·R 두 줄이 생기고, 그룹 이름을 그대로 쓴 라벨(L·R 접미사뿐 — 특정 리터럴 없음)과 실측 대수를 담는다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:254:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 합친 뒤에는 다시 0개다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:264:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 선언이 있어도 좌우 실측이 없으면(fixtures 변화) 0개다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:276:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 선언이 있어도 그 그룹이 complete=false 면 0개다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:285:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > lrChildRowsForTrack > 다른 트랙의 선언은 섞이지 않는다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ Module.lrChildRowsForTrack src/components/beatgrid/lrSplit.ts:136:8
+ ❯ src/components/beatgrid/lrSplit.test.ts:291:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > L·R 방향(실측 확정 — 두 출처 인용, 카드 t568) > 더 작은 x 쪽이 L(출처1 MA3 house 좌표 규약 + 출처2 BeatGrid.tsx projectFixture 둘 다 일치)
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ Module.computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ src/components/beatgrid/lrSplit.test.ts:321:20
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/21]⎯
+
+ FAIL  src/components/beatgrid/lrSplit.test.ts > 그룹 이름 리터럴 없음(일반화 — feedback-generalize-beyond-test-rig) > 실제 제품 그룹 이름(SIDE-ALL 등)을 쓰지 않아도 완전히 같은 방식으로 동작한다
+TypeError: fixtures.map is not a function
+ ❯ stageCentreX src/components/beatgrid/lrSplit.ts:43:23
+     41| function stageCentreX(fixtures: readonly LRSplitFixture[]): number | n…
+     42|   if (fixtures.length === 0) return null;
+     43|   const xs = fixtures.map((f) => f.x);
+       |                       ^
+     44|   return (Math.min(...xs) + Math.max(...xs)) / 2;
+     45| }
+ ❯ computeLRSplitEligibility src/components/beatgrid/lrSplit.ts:61:18
+ ❯ Module.canDeclareLRSplit src/components/beatgrid/lrSplit.ts:82:10
+ ❯ src/components/beatgrid/lrSplit.test.ts:336:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/21]⎯
+
+ Test Files  1 failed (1)
+      Tests  21 failed | 8 passed (29)
+   Start at  16:34:37
+   Duration  233ms (transform 25ms, setup 0ms, collect 24ms, tests 7ms, environment 0ms, prepare 38ms)
+
