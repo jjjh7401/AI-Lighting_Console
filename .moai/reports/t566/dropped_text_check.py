@@ -9,6 +9,7 @@
 
 import re
 import sys
+from pathlib import Path
 
 OLD_DIR = sys.argv[1]
 SPEC = ".moai/specs/SPEC-LDBEAT-001"
@@ -16,8 +17,8 @@ ROW = re.compile(r"^\| ((?:REQ|AC)-LDBEAT-\d+) ")
 SPLIT = re.compile(r"(?<=[.。])\s+|\s+—\s+|\s*\|\s*")
 
 for name in ("spec.md", "acceptance.md"):
-    old = open(f"{OLD_DIR}/old-{name}", encoding="utf-8").read().splitlines()
-    new_text = open(f"{SPEC}/{name}", encoding="utf-8").read()
+    old = Path(f"{OLD_DIR}/old-{name}").read_text(encoding="utf-8").splitlines()
+    new_text = Path(f"{SPEC}/{name}").read_text(encoding="utf-8")
     new = new_text.splitlines()
     o = {m.group(1): line for line in old if (m := ROW.match(line))}
     n = {m.group(1): line for line in new if (m := ROW.match(line))}
