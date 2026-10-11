@@ -19,7 +19,16 @@ for row in r["runs"]["fixed/same_session"]:
 
 print("\n## fixed 이웃 쌍별 다음 곡 재사용")
 for p in r["analysis"]["fixed/same_session"]["adjacent"]["pairs"]:
-    print(p["a"], "->", p["b"], p["b_cues_reusing_a_look"], "/", p["b_cues"], "shared distinct", p["shared_distinct"])
+    print(
+        p["a"],
+        "->",
+        p["b"],
+        p["b_cues_reusing_a_look"],
+        "/",
+        p["b_cues"],
+        "shared distinct",
+        p["shared_distinct"],
+    )
 
 print("\n## fixed 앞 곡 Club Diver -> Cut and Run 큐 대조(처음 6개)")
 rows = r["runs"]["fixed/same_session"]

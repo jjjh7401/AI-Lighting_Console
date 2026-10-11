@@ -125,16 +125,18 @@ def _run_song(session, questions, song, path, slot, concept_index):
     start = len(questions.log)
     # 같은 세션의 다음 곡이 앞 곡의 시퀀스·타임코드 번호와 부딪치지 않게 곡마다
     # 번호를 비운다(번호 충돌은 이 측정의 질문이 아니다).
-    instruction = (
-        f"디자인 큐 시트, 시퀀스 {211 + slot}, 프리셋 21번부터, 타임코드 {11 + slot}"
-    )
+    instruction = f"디자인 큐 시트, 시퀀스 {211 + slot}, 프리셋 21번부터, 타임코드 {11 + slot}"
     captured_before = len(_CAPTURED)
     reply = session.run_instruction(instruction)
     new = _CAPTURED[captured_before:]
     bundle = new[-1].bundle if new and new[-1].bundle else None
     cues = [c for c in (bundle.cues if bundle else ()) if c.kind == "section"]
     concept = next(
-        (c["answer"] for c in questions.log[start:] if c["options"][:1] and "색 조합" not in c["answer"]),
+        (
+            c["answer"]
+            for c in questions.log[start:]
+            if c["options"][:1] and "색 조합" not in c["answer"]
+        ),
         None,
     )
     return {
@@ -208,7 +210,9 @@ def _summary(rows, pairs):
 
 def main():
     _install_capture()
-    paths = sorted(p for p in (T499 / "runs").glob("*/analysis.json") if p.parent.name != "Rain_first")
+    paths = sorted(
+        p for p in (T499 / "runs").glob("*/analysis.json") if p.parent.name != "Rain_first"
+    )
     assert len(paths) == 8, [p.parent.name for p in paths]
     songs = [(p.parent.name, p) for p in paths]
     out: dict = {"songs": [s for s, _ in songs], "runs": {}}
@@ -254,7 +258,9 @@ def main():
         print("  adjacent+fx  ", value["adjacent_with_fx"]["summary"])
         print("  all pairs    ", value["all_pairs"]["summary"])
     for key, rows in report["runs"].items():
-        print("--", key, [(r["song"], r["concept_answer"], r["status"], len(r["cues"])) for r in rows])
+        print(
+            "--", key, [(r["song"], r["concept_answer"], r["status"], len(r["cues"])) for r in rows]
+        )
 
 
 if __name__ == "__main__":
