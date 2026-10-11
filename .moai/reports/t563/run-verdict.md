@@ -52,3 +52,10 @@
 3. `unsent_cells`·반영 기록·미리보기 승인은 세션 메모리에만 있다. 다시 연결하면 `null`로 돌아간다(저장 안 함).
 4. 파이썬 `BeatGridView` TypedDict(`beat_grid.py`)에는 `unsent_cells`를 넣지 않고 세션 층에서 붙인다(`draft` 키와 같은 방식). 그 모듈은 콘솔·세션을 모르게 둔다는 기존 원칙 때문이다.
 5. 반영 실패 문구는 "승인 거절·게이트 차단·콘솔 무응답 중 하나" + 결과 내용으로 바꿨다. 원래 문구는 모든 실패를 "감독이 거절"로 단정했다.
+
+## 6. main 합치기 (origin/main 22커밋 앞섬 → 머지)
+
+- 충돌 7파일(`test_prechk_tool.py`·`app.py`·`messages.py`·`session.py`·`App.tsx`·`protocol.ts`·`useCopilotSocket.ts`) — 전부 같은 자리에 t565(2D 무대 판독)·t568(unsent_cells 소비)이 줄을 더한 것이라 **양쪽 다 살림**. 예외 하나: `BeatGridView.unsent_cells`는 먼저 머지된 t568의 선택 필드 모양(`unsent_cells?: … | null`, 옛 서버 응답 호환)을 따랐다.
+- 합친 뒤 `song_timeline_event(` 송신 7곳 전부가 `_beat_grid_refresh_unsent_cells`를 거친다(grep 확인).
+- 재검증(CI와 같은 순서): `npm --prefix ui run build` → `✓ built in 440ms` · `uv run pytest -q -rs` → `15134 passed, 33 skipped` exit 0 · `npm --prefix ui run test` → `Test Files 47 passed` · `Tests 1062 passed`.
+- 리드 참고: t565가 서버에 **그룹 소속 판독**을 새로 넣었다. 지금 디머 속성은 "리그 전 기종이 같을 때만" 규칙인데, 이 판독을 쓰면 그룹별로 정확히 고를 수 있다 — 후속 카드 후보.

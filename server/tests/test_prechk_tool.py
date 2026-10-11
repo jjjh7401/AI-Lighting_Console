@@ -1261,6 +1261,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_edit",
     "beat_grid_preview",
     "beat_grid_preview_off",
+    # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.
+    # 콘솔 읽기만(좌표 + 그룹 소속). 같은 사유의 정당한 확장이다.
+    "beat_grid_stage_request",
     "beat_grid_suggest",
     "beat_grid_suggestion_apply",
     "beat_grid_suggestion_reject",
@@ -1328,6 +1331,8 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     # 카드 t563 — 위 client 쪽 상단 바 버튼 셋의 공용 응답(대기 수·거절
     # 사유·막힌 칸·승인=송신 대조). 같은 사유의 정당한 확장.
     "beat_grid_send_status",
+    # 카드 t565 — 위 무대 판독 요청의 응답(좌표·그룹 소속·못 읽은 이유).
+    "beat_grid_stage",
     "beat_grid_suggestion",
     "beat_grid_suggestion_consumed",
     "busy",

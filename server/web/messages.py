@@ -165,6 +165,9 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_apply",
     "beat_grid_preview",
     "beat_grid_preview_off",
+    # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
+    # 경로는 서버가 안다). 콘솔 읽기만 한다.
+    "beat_grid_stage_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
     *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
@@ -761,6 +764,8 @@ def parse_client_message(raw: str) -> dict:
         # 보낼 것이 없다.
         "beat_grid_apply",
         "beat_grid_preview_off",
+        # 카드 t565 — 무대 판독 요청도 페이로드가 없다.
+        "beat_grid_stage_request",
     ):
         # Payload-free by design. The pin seed is the server's own
         # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the
@@ -842,6 +847,14 @@ def beat_grid_drawer_event(*, sections: list[dict]) -> dict:
     build_preset_drawer`의 실제 콘솔 판독 결과다 — 데모 데이터 0건,
     못 읽은 풀은 ``unread: true``로 솔직하게 비어 있다."""
     return _event("beat_grid_drawer", sections=sections)
+
+
+def beat_grid_stage_event(*, fixtures: list[dict], groups: list[dict], unread: list[str]) -> dict:
+    """카드 t565(SPEC-LDBEAT-001 REQ-022) — 2D 무대 한 장. ``fixtures`` 는 패치
+    좌표({fid,name,x,y,z}), ``groups`` 는 박자 격자 트랙과 이름이 같은 콘솔 그룹의
+    소속({group_no,group_name,member_fids,complete}), ``unread`` 는 못 읽은 이유
+    그대로다(`server.design.beat_grid_stage.read_beat_grid_stage`, 콘솔 읽기만)."""
+    return _event("beat_grid_stage", fixtures=fixtures, groups=groups, unread=unread)
 
 
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:

@@ -7,6 +7,7 @@ import {
   buildApprovalDecision,
   buildBeatGridApply,
   buildBeatGridDrawerRequest,
+  buildBeatGridStageRequest,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
   buildBeatGridPreview,
@@ -218,6 +219,8 @@ export interface CopilotSocket {
   sendBeatGridPreview: (bar: number) => void;
   /** 카드 t563 — 상단 바 「■ 끄기」. */
   sendBeatGridPreviewOff: () => void;
+  /** 카드 t565 — 2D 무대 판독 요청(콘솔 읽기만). */
+  sendBeatGridStageRequest: () => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
@@ -401,6 +404,8 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     (suggestionId: string) => send(buildBeatGridSuggestionReject(suggestionId)),
     [send],
   );
+  // 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속).
+  const sendBeatGridStageRequest = useCallback(() => send(buildBeatGridStageRequest()), [send]);
   // 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍 열기).
   const sendBeatGridDrawerRequest = useCallback(
     () => send(buildBeatGridDrawerRequest()),
@@ -512,6 +517,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendBeatGridApply,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
+    sendBeatGridStageRequest,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,

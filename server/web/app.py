@@ -630,6 +630,13 @@ def create_app(deps: WebDeps) -> FastAPI:
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_preview_off)
                         )
+                elif message_type == "beat_grid_stage_request":
+                    # 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속). 장비 수만큼
+                    # 콘솔을 왕복하므로 서랍과 같이 busy-guard 아래 스레드로.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_stage)
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))

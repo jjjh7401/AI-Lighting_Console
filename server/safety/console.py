@@ -791,17 +791,22 @@ class ConsoleLink:
             raise StateQueryError(str(payload.get("error") or f"introspect query failed: {path}"))
         return payload
 
-    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+    def query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
         """Bulk property read (REQ-INTROSPECT-018); raises on failure/timeout.
 
         Homologous to :meth:`query_state`: same id correlation, same timeout
         budget, same error type. The responder answers ``props`` on the STATE
         address (``console/lua/PROTOCOL.md`` §4.8), which :meth:`deliver`
         already accepts, so no new reply channel appears.
+
+        ``offset`` (PROTOCOL.md §4.8 표 값 나눠 읽기, 카드 t565) windows a table-valued property
+        by whole entries — see :func:`build_props_query`.
         """
         request_id = self._new_id()
         payload = self._round_trip(
-            build_props_query(request_id, path, property_names),
+            build_props_query(request_id, path, property_names, offset=offset),
             request_id,
             self._timeouts.state_query_seconds,
         )
