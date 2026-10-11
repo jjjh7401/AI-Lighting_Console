@@ -1449,6 +1449,7 @@ export function BeatGrid({
                                   <BeatGridJoint
                                     prev={segment.cue}
                                     pxPerBar={pxPerBar}
+                                    beatsPerBar={beatsPerBar}
                                     cue={segments[segIndex + 1].cue}
                                     nextSegmentWidth={
                                       barToX(segments[segIndex + 1].endBar) - barToX(segments[segIndex + 1].startBar) - 2
@@ -1558,11 +1559,12 @@ export function BeatGrid({
               sectionStartBars={sectionStartBars}
               onClose={() => setSceneBar(null)}
               onSelectRow={(trackIndex) => selectCue(trackIndex, sceneBar, true)}
-              onCutAll={
+              beatsPerBar={beatsPerBar}
+              onBulkEntry={
                 onEditRequest
-                  ? (rows) =>
-                      rows.forEach(({ target, mibMode }) =>
-                        onEditRequest({ bar: sceneBar, target, changes: { entry: { fade_bars: 0, mib_mode: mibMode } } }),
+                  ? (edits) =>
+                      edits.forEach(({ target, entry }) =>
+                        onEditRequest({ bar: sceneBar, target, changes: { entry } }),
                       )
                   : undefined
               }
@@ -2033,6 +2035,7 @@ export function BeatGrid({
                           selectedCue,
                           secondsPerBar,
                           transitionMib(selectedPrevCue, selectedCue),
+                          beatsPerBar,
                         )
                       : cueConsoleCommandLines(selectedTrack, selectedCue)
                   }

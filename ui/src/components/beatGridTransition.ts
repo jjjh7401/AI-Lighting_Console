@@ -4,10 +4,10 @@
 // 정본은 `.moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-
 // 20261008.html`의 `mibOf`·`warnOf`·`fadeLbl`·`clipsHTML`(이음매)·`drawTr`
 // (장면 전환)·`cueLines`(콘솔 명령) — 이 파일은 그 판단을 이 저장소의 실제
-// 데이터 모양(`BeatGridCue`)으로 옮긴다. 시안의 데모 값(트리거 박·딜레이·
-// 트래킹·이유)은 저장 칸이 없어 지어내지 않는다 — 그 자리는 화면에서
-// "미정/[미확인]"으로 남는다.
-import type { BeatGridCue, BeatGridTrack } from "../protocol";
+// 데이터 모양(`BeatGridCue`)으로 옮긴다. 카드 t574(SPEC 0.5.0)부터 트리거 박·
+// 딜레이·위치만 따로·트래킹·박 페이드도 `entry` 에 저장된다(전부 박 단위). 시안의
+// 「이유」는 여전히 저장 칸이 없어 지어내지 않는다.
+import type { BeatGridCue, BeatGridEntry, BeatGridTrack } from "../protocol";
 import type { BeatGridFixturePoint } from "./BeatGrid";
 import { fixtureBelongsTo } from "./beatGridStageModel";
 
@@ -37,28 +37,87 @@ export function parseBeatsPerBar(timeSignature: string | null | undefined): numb
   return beats > 0 ? beats : null;
 }
 
-/** 페이드 입력(마디 또는 박) → 저장 단위(정수 마디). REQ-LDBEAT-020(e)
- * "박 입력도 허용하되 저장 단위는 바뀌지 않는다" — 정수 마디로 떨어지지
- * 않는 박 수는 거절한다(반올림해서 다른 값을 저장하지 않는다). */
-export function fadeDraftToBars(
+/** 카드 t574 — 서버는 `entry` 를 통째로 바꾸므로, 화면이 한 필드만 고쳐도 나머지
+ * 필드를 함께 보내야 지워지지 않는다. 없는 필드는 `null`(미정)로 채운다. */
+export type FullBeatGridEntry = Required<{ [K in keyof BeatGridEntry]: NonNullable<BeatGridEntry[K]> | null }>;
+
+export function entryWith(entry: BeatGridEntry, patch: Partial<FullBeatGridEntry> = {}): FullBeatGridEntry {
+  return {
+    fade_bars: entry.fade_bars ?? null,
+    mib_mode: entry.mib_mode ?? null,
+    fade_beats: entry.fade_beats ?? null,
+    trigger_beat: entry.trigger_beat ?? null,
+    delay_beats: entry.delay_beats ?? null,
+    position_late_beats: entry.position_late_beats ?? null,
+    tracking: entry.tracking ?? null,
+    ...patch,
+  };
+}
+
+/** 페이드 입력(마디 또는 박) → 저장 필드. REQ-LDBEAT-020(e)(카드 t566 재교정):
+ * 박 입력이 마디당 박 수의 정수배면 `fade_bars`, 아니면 `fade_beats` 로 —
+ * 둘 중 하나만 채운다(REQ-LDBEAT-006(i-4a)). 초는 저장하지 않는다. */
+export function fadeDraftToEntry(
   draft: string,
   unit: "bar" | "beat",
   beatsPerBar: number | null,
-): { fadeBars?: number; error?: string } {
+): { fade?: { fade_bars: number | null; fade_beats: number | null }; error?: string } {
   const trimmed = draft.trim();
   if (trimmed === "") return { error: "값을 넣어 주세요." };
   const value = Number(trimmed);
   if (!Number.isFinite(value) || value < 0) return { error: "0 이상의 숫자여야 합니다." };
-  if (unit === "beat") {
-    if (beatsPerBar === null) return { error: "곡 박자표(한 마디 박 수)를 몰라 박을 마디로 바꿀 수 없습니다." };
-    const bars = value / beatsPerBar;
-    if (!Number.isInteger(bars)) {
-      return { error: `저장은 마디 단위입니다 — ${beatsPerBar}박의 배수만 넣을 수 있어요.` };
-    }
-    return { fadeBars: bars };
+  if (!Number.isInteger(value)) return { error: unit === "beat" ? "박은 정수로 넣어 주세요." : "마디는 정수로 넣어 주세요." };
+  if (unit === "bar") return { fade: { fade_bars: value, fade_beats: null } };
+  if (beatsPerBar === null) return { error: "곡 박자표(한 마디 박 수)를 몰라 박을 쓸 수 없습니다." };
+  return value % beatsPerBar === 0
+    ? { fade: { fade_bars: value / beatsPerBar, fade_beats: null } }
+    : { fade: { fade_bars: null, fade_beats: value } };
+}
+
+/** 페이드 표시 — 박 페이드면 「1.07초 (2박)」, 마디 페이드면 기존 표시. */
+export function formatEntryFade(
+  entry: BeatGridEntry,
+  secondsPerBar: number | null | undefined,
+  beatsPerBar: number | null,
+): string {
+  const beats = entry.fade_beats ?? null;
+  if (beats === null) return formatFadeSecondsFirst(entry.fade_bars, secondsPerBar);
+  if (beats === 0) return "끊기 (0초)";
+  if (secondsPerBar === null || secondsPerBar === undefined || beatsPerBar === null) return `— 초 (${beats}박)`;
+  return `${trimSeconds((beats * secondsPerBar) / beatsPerBar)}초 (${beats}박)`;
+}
+
+/** 끊어 바꿈(0) — 두 단위 중 정해진 쪽이 0일 때. 미정은 끊기가 아니다. */
+export function entryFadeIsCut(entry: BeatGridEntry): boolean {
+  return entry.fade_bars === 0 || entry.fade_beats === 0;
+}
+
+/** 페이드가 0보다 긴지(◢ 표시·번짐). */
+export function entryHasFade(entry: BeatGridEntry): boolean {
+  return (entry.fade_bars ?? 0) > 0 || (entry.fade_beats ?? 0) > 0;
+}
+
+/** 페이드 길이를 마디로(번짐 폭·CueFade 초 환산용). 박 페이드인데 박자표를
+ * 모르면 `null`. */
+export function entryFadeInBars(entry: BeatGridEntry, beatsPerBar: number | null): number | null {
+  if (entry.fade_beats !== null && entry.fade_beats !== undefined) {
+    return beatsPerBar === null ? null : entry.fade_beats / beatsPerBar;
   }
-  if (!Number.isInteger(value)) return { error: "저장은 정수 마디입니다." };
-  return { fadeBars: value };
+  return entry.fade_bars;
+}
+
+/** 트리거 시각(곡 0초 기준) — 마디 + (트리거 박 - 1) / 마디당 박 수. 박을 정했는데
+ * 박자표를 모르면 지어내지 않고 `null`. */
+export function triggerSeconds(
+  cue: BeatGridCue,
+  secondsPerBar: number | null | undefined,
+  beatsPerBar: number | null,
+): number | null {
+  if (secondsPerBar === null || secondsPerBar === undefined) return null;
+  const beat = cue.entry.trigger_beat ?? null;
+  if (beat === null) return cue.bar * secondsPerBar;
+  if (beatsPerBar === null) return null;
+  return (cue.bar + (beat - 1) / beatsPerBar) * secondsPerBar;
 }
 
 /** 칸이 켜져 있는지 — 배치 규칙서의 「—」 관례(`cueIsActive`와 같은 판단)에
@@ -100,7 +159,7 @@ export function transitionWarnings(
   cur: BeatGridCue,
   sectionStartBars: readonly number[] | null,
 ): string[] {
-  if (!prev || cur.entry.fade_bars !== 0) return [];
+  if (!prev || !entryFadeIsCut(cur.entry)) return [];
   const warnings: string[] = [];
   if (cur.position_preset_no !== null && prev.position_preset_no !== cur.position_preset_no && cueIsLit(prev)) {
     warnings.push("켜진 채 위치가 끊어 바뀜");
@@ -129,17 +188,18 @@ export function jointMarker(
   cur: BeatGridCue,
   sectionStartBars: readonly number[] | null,
   secondsPerBar: number | null = null,
+  beatsPerBar: number | null = null,
 ): JointMarker {
   const mib = transitionMib(prev, cur);
   const warnings = transitionWarnings(prev, cur, sectionStartBars);
-  const hasFade = (cur.entry.fade_bars ?? 0) > 0;
+  const hasFade = entryHasFade(cur.entry);
   const classes: string[] = [];
   if (hasFade) classes.push("is-fade");
   if (mib.kind === "auto") classes.push("is-mib");
   if (warnings.length) classes.push("is-warn");
   const glyph = mib.kind === "auto" ? "M" : warnings.length ? "!" : hasFade ? "◢" : "";
   const title =
-    `전환 ${cur.bar}마디 · 페이드 ${formatFadeSecondsFirst(cur.entry.fade_bars, secondsPerBar)}` +
+    `전환 ${cur.bar}마디 · 페이드 ${formatEntryFade(cur.entry, secondsPerBar, beatsPerBar)}` +
     (warnings.length ? ` · ⚠ [제안] ${warnings.join(" · ")}` : "") +
     " — 누르면 전환 편집";
   return { glyph, classes, title };
@@ -213,26 +273,47 @@ export function cueConsoleCommandLines(track: BeatGridTrack, cue: BeatGridCue): 
 
 /** 전환 화면의 「콘솔 명령」 미리보기 — 실측된 페이드 꼴은 `Store … Cue <n>
  * '<이름>' CueFade <초>` 하나뿐이다(`server/design/cue_fade.py`). 시퀀스·큐
- * 번호는 송신 때 정해지므로 자리만 둔다. */
+ * 번호는 송신 때 정해지므로 자리만 둔다. 카드 t574 — 박 페이드·트리거 박을
+ * 반영하고, 송신 꼴이 정해지지 않은 딜레이([미확인])·위치만 따로(⚠미확인)·
+ * 트래킹(콘솔 송신 없음)은 명령이 아니라 괄호 안 안내로만 적는다. */
 export function transitionConsoleCommandLines(
   cue: BeatGridCue,
   secondsPerBar: number | null | undefined,
   mib: TransitionMib | null,
+  beatsPerBar: number | null = null,
 ): string[] {
   const lines: string[] = [];
-  const fadeBars = cue.entry.fade_bars;
-  if (fadeBars === null) {
+  const entry = cue.entry;
+  const fadeLabel = entry.fade_beats !== null && entry.fade_beats !== undefined ? `${entry.fade_beats}박` : `${entry.fade_bars}마디`;
+  const fadeBars = entryFadeInBars(entry, beatsPerBar);
+  if (entry.fade_bars === null && (entry.fade_beats === null || entry.fade_beats === undefined)) {
     lines.push("(페이드 미정 — CueFade 줄 없음)");
-  } else if (secondsPerBar === null || secondsPerBar === undefined) {
-    lines.push(`(페이드 ${fadeBars}마디 — 곡 BPM이 없어 초로 못 바꿈)`);
+  } else if (secondsPerBar === null || secondsPerBar === undefined || fadeBars === null) {
+    lines.push(`(페이드 ${fadeLabel} — 곡 BPM·박자표가 없어 초로 못 바꿈)`);
   } else {
     lines.push(`Store Sequence <시퀀스> Cue <큐> CueFade ${trimSeconds(fadeBars * secondsPerBar)}`);
   }
-  const trigger =
-    secondsPerBar === null || secondsPerBar === undefined ? "" : ` = 곡 ${trimSeconds(cue.bar * secondsPerBar)}초`;
-  lines.push(`(트리거: ${cue.bar}마디 1박${trigger} · 타임코드 이벤트)`);
+  const beat = entry.trigger_beat ?? 1;
+  const at = triggerSeconds(cue, secondsPerBar, beatsPerBar);
+  lines.push(`(트리거: ${cue.bar}마디 ${beat}박${at === null ? "" : ` = 곡 ${trimSeconds(at)}초`} · 타임코드 이벤트)`);
   if (mib?.kind === "auto") lines.push("(MIB) 앞 큐 사이에 위치 전용 큐 — 밝기 0 유지");
+  if (entry.delay_beats) lines.push(`(딜레이 ${entry.delay_beats}박 — 속성별 송신 줄 꼴 [미확인])`);
+  if (entry.position_late_beats) lines.push(`(위치만 ${entry.position_late_beats}박 늦게 — ⚠미확인)`);
+  if (entry.tracking) lines.push(`(트래킹 ${entry.tracking} — 콘솔 송신 없음)`);
   return lines;
+}
+
+/** 「장면 전환」 일괄 바꾸기(모두 끊기·모두 1박 페이드) — 그 마디에서 바뀌는
+ * 줄마다 **다른 entry 값은 그대로 둔** 새 entry 를 만든다. */
+export function sceneEntryEdits(
+  tracks: readonly BeatGridTrack[],
+  bar: number,
+  patch: Partial<FullBeatGridEntry>,
+): { target: string; entry: FullBeatGridEntry }[] {
+  return sceneChangeRows(tracks, bar).map((row) => ({
+    target: row.track.group_name,
+    entry: entryWith(row.cue.entry, patch),
+  }));
 }
 
 export interface StageGroupZone {
