@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>런북 박자 배치 시안</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--ivory:#FAF9F5;--paper:#FFF;--slate:#141413;--clay:#D97757;--clay-d:#B85C3E;--oat:#E3DACC;--olive:#788C5D;--g100:#F0EEE6;--g300:#D1CFC5;--g500:#87867F;--g700:#3D3D3A;--sans:"Pretendard",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--max-width:1180px;--radius-panel:12px;--border:1.5px solid var(--g300);--stage:#15151a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ivory:#1b1b19;--paper:#24241f;--slate:#ecebe4;--oat:#3a3731;--g100:#2c2b26;--g300:#46443d;--g500:#9c9a90;--g700:#cfcdc3}}
+:root[data-theme="dark"]{--ivory:#1b1b19;--paper:#24241f;--slate:#ecebe4;--oat:#3a3731;--g100:#2c2b26;--g300:#46443d;--g500:#9c9a90;--g700:#cfcdc3}
+*{box-sizing:border-box}
+body{background:var(--ivory);color:var(--slate);font-family:var(--sans);line-height:1.6;margin:0;padding:24px 16px}
+main{max-width:var(--max-width);margin:auto}
+h1{font-size:1.55rem;margin:.2em 0}h2{margin-top:2.2em;border-bottom:2px solid var(--oat);padding-bottom:.3em}
+.lead{background:var(--g100);border-left:4px solid var(--clay);padding:.7em 1em;border-radius:8px}
+.tag{display:inline-block;font-size:.72rem;padding:1px 7px;border-radius:999px;border:1px solid var(--g300);margin-left:4px;vertical-align:middle;white-space:nowrap}
+.tag.m{background:#e6f0dc;color:#3d5a24;border-color:#b9cfa3}.tag.u{background:#fbe7dc;color:#9a3f1d;border-color:#efb99d}.tag.p{background:#ece8f6;color:#4b3f7a;border-color:#c8bfe6}
+code,pre{font-family:var(--mono);font-size:.82em}code{background:var(--g100);padding:0 3px;border-radius:4px}
+table{border-collapse:collapse;width:100%;background:var(--paper);font-size:.88rem;margin:.8em 0}th,td{border:1px solid var(--g300);padding:6px 8px;vertical-align:top;text-align:left}th{background:var(--oat)}
+.tw{overflow-x:auto}
+.app{border:2px solid var(--g700);border-radius:14px;overflow:hidden;background:var(--paper);margin:1em 0}
+.appbar{background:var(--g700);color:var(--ivory);padding:8px 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.appbar b{font-size:1rem}.appbar .pill{background:#ffffff22;border-radius:999px;padding:2px 10px}
+.collapsed{padding:6px 14px;border-bottom:1px dashed var(--g300);color:var(--g500);font-size:.85rem}
+.newblock{padding:12px 14px}
+.newblock h4{margin:0 0 8px;font-size:1rem}.newblock h4 .new{background:var(--clay);color:#fff;border-radius:4px;font-size:.7rem;padding:1px 6px;margin-left:6px}
+.gridwrap{overflow-x:auto;border:var(--border);border-radius:10px}
+.grid{display:grid;grid-template-columns:118px repeat(26,minmax(36px,1fr));min-width:1040px;font-size:.72rem}
+.gh{background:var(--oat);padding:3px 2px;text-align:center;border-right:1px solid var(--g300);border-bottom:1px solid var(--g300);cursor:pointer;user-select:none}
+.gh .bn{font-weight:700;font-size:.8rem}.gh .tm{color:var(--g700);font-size:.65rem}
+.gh.sec{border-top:3px solid var(--clay)}
+.rl{background:var(--g100);padding:4px 6px;border-right:1px solid var(--g300);border-bottom:1px solid var(--g300);font-weight:600;line-height:1.2}
+.rl small{display:block;font-weight:400;color:var(--g500);font-size:.64rem}
+.c{border-right:1px solid #0001;border-bottom:1px solid var(--g300);height:48px;position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:2px;font-size:.6rem;color:#fff;text-shadow:0 0 2px #000;line-height:1.15}
+.c .bar{position:absolute;left:0;right:0;bottom:0;background:#fff3}
+.c span{position:relative}
+.c .fxp{font-weight:700}
+.c.chg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--clay)}
+.c.hl{box-shadow:inset 0 0 0 3px #ffd84d}
+.col-sel{outline:3px solid var(--clay);outline-offset:-3px;z-index:1}
+.detail{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:14px;margin-top:12px}
+@media (max-width:900px){.detail{grid-template-columns:1fr}}
+.stage{background:var(--stage);border-radius:10px;padding:6px}
+.stage svg{width:100%;height:auto;display:block}
+.dpanel{border:var(--border);border-radius:10px;padding:10px 12px;background:var(--paper)}
+.dpanel .hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.dpanel .hd b{font-size:1.05rem}
+.rtab{width:100%;font-size:.8rem}.rtab td{padding:5px 6px}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;border:1px solid #0003;margin-right:3px}
+.chip{display:inline-flex;align-items:center;gap:3px;border:1.5px solid var(--g300);border-radius:7px;padding:1px 6px;margin:1px 2px 1px 0;font-size:.78rem;cursor:pointer;background:var(--paper);color:var(--slate);white-space:nowrap}
+.chip b{font-family:var(--mono);font-size:.76rem}
+.chip:hover,.chip.on{border-color:var(--clay);background:var(--g100)}
+.chgmark{color:var(--clay-d);font-weight:700}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.btn{border:1.5px solid var(--g700);background:var(--paper);color:var(--slate);border-radius:8px;padding:6px 12px;font:inherit;font-size:.86rem;cursor:pointer}
+.btn.pri{background:var(--clay);border-color:var(--clay);color:#fff}
+details{margin:.4em 0}summary{cursor:pointer;font-weight:600}
+pre.cmd{background:#16161a;color:#e8e6dc;border-radius:8px;padding:10px;overflow-x:auto;line-height:1.45;margin:.4em 0}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:.8em 0}
+.step{border:var(--border);border-radius:10px;padding:10px;background:var(--paper)}
+.step .n{display:inline-block;background:var(--clay);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;font-size:.8rem;margin-right:6px}
+.note{font-size:.85rem;color:var(--g700)}
+.log{font-family:var(--mono);font-size:.78rem;background:var(--g100);border-radius:8px;padding:8px;min-height:2.4em;white-space:pre-wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;margin:6px 0}
+.lib{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:12px}
+.libcol{border:var(--border);border-radius:10px;padding:8px 10px;background:var(--paper)}
+.libcol h5{margin:0 0 6px;font-size:.9rem}
+.prow{display:flex;justify-content:space-between;gap:6px;align-items:center;padding:3px 4px;border-radius:6px;cursor:pointer;font-size:.8rem}
+.prow:hover,.prow.on{background:var(--g100)}
+.prow .cnt{color:var(--g500);font-size:.72rem;white-space:nowrap}
+.pinfo{margin-top:10px;border:2px solid var(--clay);border-radius:10px;padding:10px 12px;background:var(--paper);display:none}
+@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes sway{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes nod{0%,100%{transform:rotate(-10deg) scaleY(.85)}50%{transform:rotate(10deg) scaleY(1.05)}}
+.anim-pulse{animation:pulse var(--per,1.07s) ease-in-out infinite}
+.anim-sway{animation:sway var(--per,1.07s) ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0%}
+.anim-nod{animation:nod var(--per,1.07s) ease-in-out infinite;transform-box:fill-box;transform-origin:50% 0%}
+@media (prefers-reduced-motion: reduce){.anim-pulse,.anim-sway,.anim-nod{animation:none}}
+</style>
+<style>
+.editor{margin-top:10px;border:2px solid var(--olive);border-radius:10px;padding:10px 12px;background:var(--paper);display:none}
+.tabs{display:flex;gap:6px;margin:6px 0 10px;flex-wrap:wrap}
+.tab{border:1.5px solid var(--g300);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:.85rem;background:var(--paper);color:var(--slate)}
+.tab.on{border-color:var(--olive);background:#e6f0dc;color:#3d5a24}
+.frm{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;align-items:center;font-size:.85rem}
+.frm select,.frm input,.ai textarea,.ai input{font:inherit;font-size:.85rem;padding:4px 6px;border:1.5px solid var(--g300);border-radius:6px;background:var(--paper);color:var(--slate);width:100%}
+.ai textarea{min-height:52px}
+.prop{border:1.5px dashed var(--olive);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:.85rem}
+.edbtn{font-size:.72rem;padding:1px 6px;border-radius:6px;border:1.5px solid var(--olive);background:var(--paper);color:var(--slate);cursor:pointer;margin-top:4px}
+</style>
+</head>
+<body>
+<main>
+<h1>런북 모드 박자 배치 — 화면 시안 (프리셋·고치기판)</h1>
+<p class="note">SPEC-LDBEAT-001 · LOVE ATTACK(112.35 BPM) · 0~25마디 · 2026-10-08 · <b>시안</b> — 앱 코드 0줄, 콘솔 명령 0건.
+표기: <span class="tag m">잰 것</span> 실기에서 확인됨 · <span class="tag u">미확인</span> 아직 안 잼 · <span class="tag p">제안</span> 결정 전</p>
+
+<p class="lead"><b>이번에 바뀐 점(감독 의견 2026-10-08)</b><br>
+① 색·위치·효과는 <b>프리셋</b>으로 저장하고 큐는 프리셋을 불러 써요. ② <b>밝기는 값 또는 디머 프리셋</b> 둘 다 쓸 수 있어요. ③ 효과 프리셋은 <b>종류별 풀</b>에 넣어요 — 위치 효과는 위치 풀 2, 색 효과는 색 풀 4, 밝기 효과는 디머 풀 1, 섞인 효과만 이 곡용 All 풀 22. ④ 칸마다 고치는 방법이 <b>세 가지</b>예요 — <b>직접 고르기 · 문장으로 · AI에게</b>. 아래 시안에서 역할 줄의 「✎ 고치기」를 눌러 보세요.</p>
+
+<h2>1. 런북 모드 화면 — 직접 눌러 보세요</h2>
+<p class="lead">마디 번호(또는 칸)를 누르면 그 마디의 무대 그림과 역할별 프리셋이 나와요. 프리셋 칩을 누르면 쓰는 곳이 격자에 <b>노란 테두리</b>로 표시돼요. 역할 줄의 <b>✎ 고치기</b>를 누르면 아래에 고치기 창이 열려요 — 「직접 고르기」에서 바꾸면 격자가 바로 바뀌어요(시안 안에서만).</p>
+
+<div class="app">
+  <div class="appbar"><b>런북 모드</b><span class="pill">곡: LOVE ATTACK</span><span class="pill">버전: RHYTHM v1 · 초안(콘솔 미반영)</span><span class="pill">BPM 112.35 · 스피드 마스터 15 — 콘솔에서 직접 설정</span></div>
+  <div class="collapsed">▸ 오늘의 곡 · 큐 순서 &nbsp;|&nbsp; ▸ 컨셉 패널 &nbsp;|&nbsp; ▸ 큐시트 타임라인 &nbsp;|&nbsp; ▸ 곡 타임라인 — 기존 블록은 그대로</div>
+  <div class="newblock">
+    <h4>박자 배치 — 역할 × 마디<span class="new">새 블록</span></h4>
+    <div class="legend"><span>칸 위 = <b>효과 프리셋</b> · 칸 아래 = 색 프리셋 · 칸 색 = 그 색 · 흰 막대 = 밝기</span><span>주황 세로줄 = 이 마디에서 바뀜 · 노란 테두리 = 고른 프리셋을 쓰는 칸 · 초록 테두리 = 이번에 고친 칸</span></div>
+    <div class="gridwrap"><div class="grid" id="grid"></div></div>
+    <div class="detail">
+      <div>
+        <div class="stage"><svg id="stage" viewBox="0 0 360 300" role="img" aria-label="무대 개념도"></svg></div>
+        <p class="note">무대 그림은 <b>개념도</b>예요(실제 좌표 아님). 위가 무대 뒤, 아래가 객석.</p>
+      </div>
+      <div class="dpanel">
+        <div class="hd"><b id="dTitle">—</b><span id="dSub" class="note"></span></div>
+        <div class="btns">
+          <button class="btn pri" id="bPreview">▶ 이 마디 콘솔에서 보기</button>
+          <button class="btn" id="bNext">다음 마디 ▶</button>
+          <button class="btn" id="bOff">■ 끄기</button>
+          <button class="btn" id="bApply">⇪ 고친 것 콘솔에 반영</button>
+        </div>
+        <div class="log" id="log">버튼을 누르면 앱이 콘솔로 보낼 명령과 승인 단계를 여기에 보여 줘요(시안이라 실제로 보내지 않아요).</div>
+        <div class="tw"><table class="rtab" id="rtab"></table></div>
+        <div class="editor" id="editor"></div>
+        <details><summary>이 마디 큐에 실제로 들어 있는 명령 보기(역할별)</summary><div id="cmds"></div></details>
+      </div>
+    </div>
+    <h4 style="margin-top:16px">이 곡의 프리셋 — 몇 군데서 쓰는지</h4>
+    <div class="lib" id="lib"></div>
+    <div class="pinfo" id="pinfo"></div>
+  </div>
+</div>
+
+<h2>2. 칸마다 고치는 세 가지 방법</h2>
+<p class="lead">어느 방법으로 고치든 <b>마지막에 고치는 곳은 서버 한 군데</b>예요. 서버가 값이 맞는지 검사한 뒤 초안(격자)을 바꾸고, 콘솔에는 「⇪ 고친 것 콘솔에 반영」을 눌러 승인할 때만 가요. AI도 직접 콘솔에 쓰지 못하고 <b>제안</b>만 만들어요.</p>
+<div class="tw"><table>
+<tr><th>방법</th><th>이럴 때</th><th>어떻게</th><th>바로 바뀌나</th><th>지금 앱에 있나</th></tr>
+<tr><td><b>① 직접 고르기</b></td><td>바꿀 프리셋을 알 때</td><td>칸 → ✎ → 밝기(값 또는 디머 프리셋) · 위치 · 색 · 효과를 목록에서 선택. 목록에는 이 곡 프리셋 + 쇼에 이미 있는 프리셋 + 「＋ 새 프리셋」</td><td>예 — 고르는 즉시 격자·무대 그림이 바뀜</td><td>새로 만듦 <span class="tag p">제안</span> (프리셋 이름 읽기는 있음)</td></tr>
+<tr><td><b>② 문장으로</b></td><td>짧게 정확히 말할 때</td><td>「22~25마디 아래 무빙 효과를 틸트 웨이브 1박으로」처럼 정해진 꼴로 입력 → 앱이 알아들은 내용을 보여 주고 적용</td><td>예 — 규칙으로 알아들어서 즉시, 결과가 늘 같음</td><td>큐 단위 문장은 있음(큐시트 편집) · <b>마디·역할 단위 문장은 새로</b></td></tr>
+<tr><td><b>③ AI에게</b></td><td>원하는 느낌만 있을 때, 새 프리셋이 필요할 때</td><td>「코러스 1 아래 무빙 더 화려하게」 「핑크보다 진한 마젠타 만들어」 → AI가 <b>바꿀 칸 목록 + 필요한 새 프리셋</b>을 제안 카드로 보여 줌 → 「적용」을 눌러야 바뀜</td><td>제안을 확인하고 「적용」을 누르면</td><td>효과 프리셋 만들기 도구는 있음(<code>find_fx</code>·<code>instantiate_fx</code>·<code>compose_fx</code>) · 위치 프리셋은 무대 지점 조준 도구 있음 · <b>색 프리셋 만들기·격자 제안은 새로</b></td></tr>
+</table></div>
+<p class="note">AI 제안도 ①·②와 똑같은 서버 검사를 거쳐요. 없는 프리셋·실기 미확인 효과·허용 밖 속성은 이유와 함께 거절돼요. 새 프리셋은 콘솔에 반영할 때 승인 카드에 「새로 만드는 프리셋 N개」로 함께 나와요.</p>
+
+<h2>3. 밝기 — 값 또는 디머 프리셋</h2>
+<div class="tw"><table>
+<tr><th>방식</th><th>큐에 들어가는 것</th><th>좋은 점</th><th>쓰는 곳 예</th></tr>
+<tr><td>값</td><td><code>Attribute 'Dimmer' At 70</code></td><td>마디마다 미세하게 다른 밝기</td><td>워시 25% → 70% 같은 한 번뿐인 값</td></tr>
+<tr><td>디머 프리셋(풀 1)</td><td><code>At Preset 1.31</code></td><td>「실루엣」「기본 밝기」처럼 여러 곳에서 같은 밝기 — 한 번에 조정</td><td>BACK 실루엣 30%, 무빙 기본 60%</td></tr>
+<tr><td>디머 효과 프리셋(풀 1)</td><td><code>At Preset 1.23</code></td><td>펄스·체이스(움직이는 밝기)</td><td>코러스 킥 펄스 30↔100</td></tr>
+</table></div>
+<p class="note">한 큐 안에서 밝기는 값·프리셋·효과 중 하나만 써요(여럿 넣으면 나중 것이 이겨서 헷갈려요). 직접 고르기 창에서 셋 중 하나를 고르게 해요.</p>
+
+<h2>4. 효과 프리셋은 종류별 풀에 — 실수를 막는 장치</h2>
+<div class="tw"><table>
+<tr><th>효과</th><th>풀</th><th>이 시안 번호(예시)</th></tr>
+<tr><td>팬·틸트 움직임</td><td>위치 풀 2(기본 위치 2.41~ 와 대역 분리)</td><td>2.61~2.68</td></tr>
+<tr><td>밝기 펄스·체이스 / 고정 밝기</td><td>디머 풀 1</td><td>1.21~1.26 / 1.31~1.33</td></tr>
+<tr><td>색 효과</td><td>색 풀 4(색 4.21~ 와 대역 분리)</td><td>4.41~ (이 범위엔 없음)</td></tr>
+<tr><td>섞인 효과(밝기+색 등)</td><td>이 곡용 All 풀 22</td><td>22.x (이 범위엔 없음)</td></tr>
+</table></div>
+<ul class="note">
+<li><b>허용 속성 목록</b>: 위치 효과는 Pan·Tilt만, 색 효과는 ColorRGB만, 밝기는 Dimmer(Spiider 는 Dimmer2)만 — 목록 밖 줄이 있으면 저장 거절</li>
+<li><b>저장 직전 비우기</b>: <code>ClearAll</code> → 그 프리셋의 선택·속성 줄만 → 저장(t520 꼴)</li>
+<li><b>승인한 그대로 보냈는지 대조</b>(t512 비교기) — 콘솔은 프리셋 내용을 읽어 주지 않아서(t516) 보낸 줄로 증명</li>
+<li><b>번호 대역·이름 「LA …」</b> — 앱은 자기가 만든 프리셋만 고치고, 쇼에 원래 있던 프리셋은 건드리지 않음</li>
+<li><b>콘솔에 들어가는 이름은 영문·숫자만</b>(프리셋·큐·시퀀스·타임코드) — 콘솔은 한글 이름을 못 씀. 앱의 이름 정리(<code>_ascii_label</code>)가 한글을 지워 버리므로(t513 확인) 만들 때부터 영문 이름을 정하고, 한글은 앱 화면의 설명으로만 보여 줌</li>
+<li>종류별 풀의 기본 입력 필터가 감독님이 콘솔에서 직접 고칠 때도 다른 값이 섞이는 걸 막아 줌(공식 문서)</li>
+</ul>
+
+<h2>5. 정해 주셔야 할 것</h2>
+<div class="tw"><table>
+<tr><th>결정</th><th>권고</th></tr>
+<tr><td>프리셋: 새로 만들기 / 쇼에 있는 것 쓰기</td><td>섞어서 — 쇼에 맞는 게 있으면 그걸, 없으면 새로(직접 고르기 목록에 둘 다)</td></tr>
+<tr><td>앱이 만든 이 곡 프리셋 덮어쓰기</td><td>허용(쇼 원래 프리셋은 금지) — 지금 규칙(덮어쓰기 금지)의 예외라 결정 필요</td></tr>
+<tr><td>AI 제안 적용</td><td>항상 제안 카드 → 감독 「적용」(바로 바꾸지 않음)</td></tr>
+<tr><td>미리보기 승인</td><td>미리보기 시작 때 한 번(Goto·Off 만)</td></tr>
+</table></div>
+
+<h2>6. 먼저 실기에서 잴 것(M1)</h2>
+<ul>
+<li><b>프리셋을 고치면 참조하는 큐가 따라 바뀌는지</b></li>
+<li>한 큐에서 위치·색·효과(·디머) 프리셋을 같이 불러 저장할 때 모두 참조로 남는지</li>
+<li>위치 풀에 <b>상대값</b> 움직임 프리셋을 저장하고 기본 위치 프리셋 위에 겹쳐 부를 수 있는지</li>
+<li>효과 프리셋이 <b>스피드 마스터 15</b> 묶음을 지니는지(지금까지 고정 속도만)</li>
+<li><b>필터 확인</b>: 밝기를 켜 둔 채 위치 효과를 위치 풀에 저장 → 불렀을 때 밝기가 안 따라오는지</li>
+<li><code>Goto Cue k Sequence S</code> 2번 이후 큐·6줄 동시 · 타임코드 트랙 3개 이상 · Measure 8·0.5</li>
+</ul>
+
+<script>
+const BPM=112.35,BEAT=60/BPM,LEAD=3.0;
+const BAR_T=[0.00,1.50,3.66,5.78,7.92,10.07,12.21,14.36,16.50,18.65,20.79,22.93,25.08,27.23,29.35,31.51,33.65,35.79,37.90,40.08,42.23,44.36,46.51,48.65,50.79,52.94];
+const SECT={0:"인트로 기타",3:"드럼머신",7:"벌스 1",14:"프리코러스 1",18:"코러스 1"};
+const P={
+ "4.21":{t:"색",n:"차가운 흰",nm:"LA Cold",rgb:[55,80,100],v:"R55 G80 B100 W0",st:"m"},
+ "4.22":{t:"색",n:"라벤더",nm:"LA Lavender",rgb:[60,30,100],v:"R60 G30 B100 W0",st:"m"},
+ "4.23":{t:"색",n:"라벤더 틴트",nm:"LA Lavender Tint",rgb:[48,38,100],v:"R48 G38 B100 W0",st:"m"},
+ "4.24":{t:"색",n:"핑크",nm:"LA Pink",rgb:[100,20,60],v:"R100 G20 B60 W0",st:"m"},
+ "4.25":{t:"색",n:"피치",nm:"LA Peach",rgb:[100,50,10],v:"R100 G50 B10 W0",st:"m"},
+ "2.41":{t:"위치",n:"Floor",nm:"LA Floor",v:"Pan 0 · Tilt 15 (바닥 쪽 좁은 빔)",tilt:15,st:"m"},
+ "2.42":{t:"위치",n:"Mid",nm:"LA Mid",v:"Pan 0 · Tilt 45 (무대 중간 높이)",tilt:45,st:"m"},
+ "2.43":{t:"위치",n:"Up Point",nm:"LA Up Point",v:"Pan 0 · Tilt 60 (위쪽 한 점)",tilt:60,st:"m"},
+ "2.44":{t:"위치",n:"Open Up",nm:"LA Open Up",v:"Pan 0 · Tilt 75 (위로 활짝)",tilt:75,st:"m"},
+ "2.45":{t:"위치",n:"D Snap",nm:"LA D Snap",v:"Pan -20 · Tilt 30",tilt:30,st:"m"},
+ "2.46":{t:"위치",n:"Back Aim",nm:"LA Back Aim",v:"Pan 180 · Tilt 80 (BACK 전용, 감독 결정 t519)",tilt:80,st:"m"},
+ "1.31":{t:"밝기",n:"Silhouette 30",nm:"LA Dim 30",v:"Dimmer 30%",dim:30,st:"m"},
+ "1.32":{t:"밝기",n:"Base 60",nm:"LA Dim 60",v:"Dimmer 60%",dim:60,st:"m"},
+ "1.33":{t:"밝기",n:"Full 100",nm:"LA Dim 100",v:"Dimmer 100%",dim:100,st:"m"},
+ "1.21":{t:"효과",pool:"디머",n:"Pulse 4박",nm:"LA Pulse 4",v:"디머 30↔60 · 마디 4박마다(Measure 4)",k:"펄스",per:4,lo:30,hi:60,st:"m"},
+ "1.22":{t:"효과",pool:"디머",n:"Pulse 1박 60",nm:"LA Pulse 1 60",v:"디머 30↔60 · 1박(Measure 1)",k:"펄스",per:1,lo:30,hi:60,st:"m"},
+ "1.23":{t:"효과",pool:"디머",n:"Pulse 1박 100",nm:"LA Pulse 1 100",v:"디머 30↔100 · 1박(Measure 1)",k:"펄스",per:1,lo:30,hi:100,st:"m"},
+ "1.24":{t:"효과",pool:"디머",n:"Chase 4박",nm:"LA Chase 4",v:"디머 0↔100 · 왼·오른 위상 0/180 · 2·4박 번갈아",k:"체이스",per:2,lo:0,hi:100,st:"m"},
+ "1.25":{t:"효과",pool:"디머",n:"Chase 2박",nm:"LA Chase 2",v:"디머 0↔100 · 위상 0/180 · 1박마다",k:"체이스",per:1,lo:0,hi:100,st:"m"},
+ "1.26":{t:"효과",pool:"디머",n:"Chase 1박",nm:"LA Chase 1",v:"디머 0↔100 · 위상 0/180 · 반 박마다",k:"체이스",per:.5,lo:0,hi:100,st:"u",why:"반 박(Measure 0.5) 미확인"},
+ "2.61":{t:"효과",pool:"위치",n:"Tilt Wave 8박",nm:"LA Tilt Wave 8",v:"Tilt ±12(상대값) · 한 바퀴 8박 · 위상 0→360 펼침",k:"T웨이브",per:8,st:"u",why:"8박(Measure 8)·위상 펼침 미확인 — 잰 박 길이는 Measure 1·4·기본 2박"},
+ "2.62":{t:"효과",pool:"위치",n:"Pan Sway 8박",nm:"LA Pan Sway 8",v:"Pan ±12(상대값) · 한 바퀴 8박 · 기울인 위치 위에서만 보임",k:"P흔들",per:8,st:"u",why:"모양은 잰 것(t516 246·247), 8박 한 바퀴는 미확인"},
+ "2.63":{t:"효과",pool:"위치",n:"Sweep 4박",nm:"LA Sweep 4",v:"Pan ±12 · 한 바퀴 4박 · U·D 함께",k:"스윕",per:4,st:"m"},
+ "2.64":{t:"효과",pool:"위치",n:"Sweep 2박",nm:"LA Sweep 2",v:"Pan ±12 · 한 바퀴 2박",k:"스윕",per:2,st:"m"},
+ "2.65":{t:"효과",pool:"위치",n:"Sweep 1박",nm:"LA Sweep 1",v:"Pan ±12 · 한 바퀴 1박",k:"스윕",per:1,st:"m"},
+ "2.66":{t:"효과",pool:"위치",n:"Sweep ½박",nm:"LA Sweep Half",v:"Pan ±12 · 한 바퀴 반 박(0.27초) · 17마디 1·2박만",k:"스윕",per:.5,st:"u",why:"반 박(Measure 0.5) 값 확인 불가(t516) · 무빙이 0.27초에 따라가는지 안 잼"},
+ "2.67":{t:"효과",pool:"위치",n:"Pan Wave 2박",nm:"LA Pan Wave 2",v:"Pan ±12(상대값) · 한 바퀴 2박 · 위상 0→360 펼침",k:"P흔들",per:2,st:"u",why:"위상 펼침 미확인"},
+ "2.68":{t:"효과",pool:"위치",n:"Tilt Wave 2박",nm:"LA Tilt Wave 2",v:"Tilt ±12(상대값) · 한 바퀴 2박 · 위 무빙이 멈춘 사이 아래 무빙이 움직임",k:"T웨이브",per:2,st:"m",why:"모양·박 길이 잰 것(t516 236·237)"}
+};
+const SHOW_PRESETS={"색":["4.1 White(쇼)","4.9 Breathe Warm(쇼·효과)","4.10 Wave CM(쇼·효과)"],"위치":["2.24 Center(쇼)","2.28 Cross(쇼)"],"효과":["21.7 Finale Slam(쇼·섞인 효과)"],"밝기":[]};
+const ROLES=[
+ {id:"scene",name:"SCENE",sub:"워시·얼굴빛",fix:"Group 10 · 401~410·421~430 · 20대 · Rush Par 2 / Group 3 · 111~118 · 8대 · FOH",seq:280,g:"Group 10"},
+ {id:"back",name:"BACK PULSE",sub:"역광",fix:"Group 4 · 201~212 · 12대 · Aura XB",seq:281,g:"Group 4"},
+ {id:"side",name:"SIDE CHASE",sub:"옆빛 좌·우",fix:"Group 7(5+6) · 301~306 / 311~316 · 12대 · Aura XB",seq:282,g:"Group 7"},
+ {id:"movu",name:"MOVER-U",sub:"위 무빙",fix:"Group 11 · 501~508 · 8대 · MegaPointe",seq:283,g:"Group 11"},
+ {id:"movd",name:"MOVER-D",sub:"아래 무빙",fix:"Group 12 · 521~528 · 8대 · Spiider(Dimmer2 같이)",seq:284,g:"Group 12"},
+ {id:"acc",name:"ACCENT",sub:"블라인더",fix:"Group 14 · 601~606 · 6대 · 블라인더(스트로브는 63·67마디)",seq:285,g:"Group 14"}
+];
+const SEG={
+ scene:[[0,6,{dim:0,col:"4.22",label:"Intro",note:"워시·얼굴빛 꺼짐 — 역광 실루엣만"}],
+  [7,10,{dim:40,col:"4.22",label:"Verse One",note:"워시 40% 2마디 번짐 · FOH 60%",fade:4.27}],
+  [11,13,{dim:40,col:"4.23",label:"Verse Tint",note:"틴트 한 단계"}],
+  [14,17,{dim:25,col:"4.23",label:"Pre One",note:"워시 25% 덜어냄 · 17마디 3·4박 10%"}],
+  [18,21,{dim:70,col:"4.24",label:"Chorus One",note:"핑크로 끊어 바뀜"}],
+  [22,25,{dim:70,col:"4.25",label:"Peach Bleed",note:"핑크→피치 1마디 번짐",fade:2.14}]],
+ back:[[0,0,{dim:"1.33",pos:"2.46",col:"4.21",label:"Start Hit",note:"첫 타격에 한 번 100%"}],
+  [1,2,{dim:"1.31",pos:"2.46",col:"4.21",label:"Intro Hold",note:"실루엣"}],
+  [3,6,{pos:"2.46",col:"4.21",fx:"1.21",label:"Kick Four",note:"4박 킥 깜박임"}],
+  [7,10,{pos:"2.46",col:"4.22",fx:"1.22",label:"Verse Pulse",note:"킥 박마다"}],
+  [11,17,{dim:"1.31",pos:"2.46",col:"4.22",label:"Back Hold",note:"펄스 멈춤 — 주인공은 SIDE·무빙"}],
+  [18,25,{pos:"2.46",col:"4.22",fx:"1.23",label:"Chorus Pulse",note:"킥 박마다 100% — 코러스 주인공"}]],
+ side:[[0,10,{dim:0,col:"4.22",label:"Side Off",note:"꺼짐"}],
+  [11,13,{col:"4.22",fx:"1.24",label:"Side Chase",note:"왼·오른 2·4박 번갈아 — 주인공"}],
+  [14,14,{col:"4.22",fx:"1.24",label:"Chase 4",note:"무빙 스윕과 함께 빨라짐"}],
+  [15,15,{col:"4.22",fx:"1.25",label:"Chase 2",note:"두 배"}],
+  [16,16,{col:"4.22",fx:"1.26",label:"Chase 1",note:"또 두 배"}],
+  [17,17,{dim:0,col:"4.22",label:"Pre Gap",note:"3·4박 비움(예고)"}],
+  [18,25,{dim:0,col:"4.22",label:"Side Off",note:"코러스는 BACK·무빙"}]],
+ movu:[[0,4,{dim:"1.32",pos:"2.41",col:"4.21",label:"Floor",note:"바닥 쪽 고정"}],
+  [5,10,{dim:"1.32",pos:"2.42",col:"4.21",label:"Mid",note:"벌스 동안 세워 둠(대비)"}],
+  [11,13,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.62",label:"Pan Sway",note:"기울인 자리에서 느린 좌우"}],
+  [14,14,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.63",label:"Sweep 4",note:"U·D 함께 — 「합」"}],
+  [15,15,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.64",label:"Sweep 2",note:"두 배"}],
+  [16,16,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.65",label:"Sweep 1",note:"또 두 배"}],
+  [17,17,{dim:"1.32",pos:"2.43",col:"4.21",fx:"2.66",label:"Pre Gap",note:"1·2박 반 박 → 3박 멈춤"}],
+  [18,18,{dim:"1.32",pos:"2.44",col:"4.24",label:"Open Up",note:"위로 활짝, 한 마디 그대로"}],
+  [19,21,{dim:"1.32",pos:"2.44",col:"4.24",fx:"2.67",label:"Pan Wave",note:"줄지어 좌우 웨이브"}],
+  [22,25,{dim:"1.32",pos:"2.44",col:"4.25",label:"U Hold",note:"멈춤 — 아래 무빙이 받음"}]],
+ movd:[[0,4,{dim:"1.32",pos:"2.41",col:"4.21",label:"Floor",note:"바닥 쪽 고정"}],
+  [5,6,{dim:"1.32",pos:"2.42",col:"4.21",label:"Mid",note:"한 칸 올림"}],
+  [7,10,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.61",label:"Tilt Wave",note:"벌스 1 움직임은 아래 무빙만"}],
+  [11,13,{dim:"1.32",pos:"2.45",col:"4.21",label:"D Snap",note:"새 자리로 옮겨 멈춤"}],
+  [14,14,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.63",label:"Sweep 4",note:"U 와 같은 동작"}],
+  [15,15,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.64",label:"Sweep 2",note:""}],
+  [16,16,{dim:"1.32",pos:"2.42",col:"4.21",fx:"2.65",label:"Sweep 1",note:""}],
+  [17,17,{dim:"1.32",pos:"2.43",col:"4.21",fx:"2.66",label:"Pre Gap",note:"U 와 같이 위쪽 한 점"}],
+  [18,21,{dim:"1.32",pos:"2.44",col:"4.24",label:"D Hold Up",note:"위에서 정지 — U 를 받쳐 줌"}],
+  [22,25,{dim:"1.32",pos:"2.44",col:"4.25",fx:"2.68",label:"D Wave",note:"아래 무빙이 위아래 — 주고받기"}]],
+ acc:[[0,17,{dim:0,label:"Accent Off",note:"꺼짐"}],
+  [18,18,{dim:"1.33",label:"Chorus Hit",note:"블라인더 100% 2박 · 스트로브 없음"}],
+  [19,25,{dim:0,label:"Accent Off",note:"꺼짐"}]]
+};
+const EDITED=new Set();
+const segOf=(r,b)=>SEG[r].find(s=>b>=s[0]&&b<=s[1]);
+const cueNo=(r,b)=>SEG[r].findIndex(s=>b>=s[0]&&b<=s[1])+1;
+const hexP=id=>{const p=P[id];if(!p||!p.rgb)return "#888";const [r,g,b]=p.rgb;return `rgb(${r*2.55|0},${g*2.55|0},${b*2.55|0})`};
+const isDimFx=id=>!!(id&&P[id]&&P[id].pool==="디머");
+function bright(s){if(isDimFx(s.fx))return P[s.fx].hi; if(typeof s.dim==="string")return P[s.dim].dim; return s.dim||0;}
+function dimLabel(s){if(isDimFx(s.fx))return chip(s.fx); if(typeof s.dim==="string")return chip(s.dim); return `${s.dim||0}% <span class="note">(값)</span>`;}
+const tc=t=>(LEAD+t).toFixed(2).replace(/\.?0+$/,"");
+const changed=(r,b)=>b===0||segOf(r,b-1)!==segOf(r,b);
+function diffTxt(r,b){if(b===0)return "곡 시작";const a=segOf(r,b-1)[2],c=segOf(r,b)[2];if(a===c)return "";const o=[];
+ if(String(a.dim)!==String(c.dim))o.push(`밝기 ${a.dim??"효과"}→${c.dim??"효과"}`);
+ for(const [k,lab] of [["pos","위치"],["col","색"],["fx","효과"]]) if(a[k]!==c[k]) o.push(`${lab} ${a[k]||"없음"}→${c[k]||"없음"}`);
+ return o.join(" · ")||"큐 바뀜";}
+function chip(id){if(!id)return '<span class="note">—</span>';const p=P[id];return `<span class="chip" data-p="${id}" title="${p.n}">${p.rgb?`<span class="sw" style="background:${hexP(id)}"></span>`:""}<b>${id}</b> ${p.nm}${p.st==="u"?' <span class="tag u">미확인</span>':""}</span>`;}
+function usage(){const U={};for(const r of ROLES)for(const s of SEG[r.id])for(const k of ["dim","pos","col","fx"]){const id=s[2][k];if(typeof id!=="string")continue;(U[id]=U[id]||[]).push({r,s});}return U;}
+const grid=document.getElementById("grid");
+let cur=18,prev=false,editRole=null,tab="pick";
+function renderGrid(){grid.innerHTML="";
+ const add=(cls,html,b)=>{const d=document.createElement("div");d.className=cls;d.innerHTML=html;if(b!==undefined){d.dataset.b=b;d.onclick=()=>sel(b);}grid.appendChild(d);return d;};
+ add("rl","역할 \\ 마디<small>구간 →</small>");
+ for(let b=0;b<26;b++)add("gh"+(SECT[b]?" sec":""),`<div class="bn">${b===0?"앞박":b}</div><div class="tm">${BAR_T[b].toFixed(1)}s</div>`,b);
+ add("rl","구간");for(let b=0;b<26;b++){const d=add("gh",SECT[b]||"");d.style.fontSize=".6rem";d.style.cursor="default";}
+ for(const r of ROLES){add("rl",`${r.name}<small>${r.sub}</small>`);
+  for(let b=0;b<26;b++){const seg=segOf(r.id,b),st=seg[2],h=bright(st);
+   const d=add("c"+(changed(r.id,b)?" chg":""),`<div class="bar" style="height:${h*0.44}px"></div><span class="fxp">${st.fx||(h?"":"·")}</span><span>${st.col&&h?st.col:""}</span>`,b);
+   d.dataset.r=r.id;d.style.background=h===0?"#2a2a30":(st.col?hexP(st.col):"#e8e8e8");if(!st.col&&h)d.style.color="#111";
+   if(EDITED.has(seg))d.style.boxShadow="inset 0 0 0 3px #7fc45a";}}}
+const svg=document.getElementById("stage");
+function stage(b){const S=id=>segOf(id,b)[2];const per=v=>`${(v*BEAT).toFixed(2)}s`;
+ const lamp=(x,y,r,s,cls,sty)=>{const h=bright(s);return `<circle cx="${x}" cy="${y}" r="${r}" fill="${h?(s.col?hexP(s.col):"#fff"):"#333"}" opacity="${h?Math.max(.35,h/100):1}" class="${cls||""}" style="${sty||""}"/>`};
+ let o=`<rect width="360" height="300" fill="#15151a"/><text x="180" y="14" fill="#888" font-size="10" text-anchor="middle">무대 뒤</text><text x="180" y="294" fill="#888" font-size="10" text-anchor="middle">객석</text><rect x="40" y="70" width="280" height="170" fill="#1f1f26" stroke="#333"/>`;
+ const sc=S("scene"),sh=bright(sc);if(sh)o+=`<rect x="40" y="70" width="280" height="170" fill="${hexP(sc.col)}" opacity="${sh/160}"/>`;
+ for(let i=0;i<10;i++){o+=lamp(58+i*27,226,4,sc);o+=lamp(58+i*27,86,4,sc);}
+ for(let i=0;i<8;i++)o+=lamp(75+i*30,262,4,{dim:b>=7?60:0});
+ const bk=S("back"),bp=isDimFx(bk.fx)?P[bk.fx]:null;for(let i=0;i<12;i++)o+=lamp(46+i*24.5,30,5,bk,bp?"anim-pulse":"",bp?`--per:${per(bp.per)}`:"");
+ const sd=S("side"),sp=isDimFx(sd.fx)?P[sd.fx]:null;for(let i=0;i<6;i++){o+=lamp(18,92+i*24,5,sd,sp?"anim-pulse":"",sp?`--per:${per(sp.per*2)}`:"");o+=lamp(342,92+i*24,5,sd,sp?"anim-pulse":"",sp?`--per:${per(sp.per*2)};animation-delay:${per(sp.per)}`:"");}
+ const mv=(id,y,x0)=>{const s=S(id),fp=s.fx&&!isDimFx(s.fx)?P[s.fx]:null,h=bright(s);let cls="";if(fp)cls=fp.k==="T웨이브"?"anim-nod":"anim-sway";
+  const len=40+(P[s.pos]?.tilt||45)*1.3;let g="";for(let i=0;i<8;i++){const x=x0+i*36;
+  g+=`<g class="${cls}" style="--per:${fp?per(fp.per):"1s"};animation-delay:${fp&&fp.v.includes("펼침")?(i*.12).toFixed(2)+"s":"0s"}"><polygon points="${x},${y} ${x-7},${y+len} ${x+7},${y+len}" fill="${hexP(s.col)}" opacity="${h/260}"/></g><rect x="${x-4}" y="${y-4}" width="8" height="8" fill="${hexP(s.col)}"/>`;}return g;};
+ o+=mv("movu",52,54)+mv("movd",118,54)+`<text x="6" y="56" fill="#aaa" font-size="8">U</text><text x="6" y="122" fill="#aaa" font-size="8">D</text>`;
+ const ac=S("acc"),ah=bright(ac);for(let i=0;i<6;i++)o+=`<rect x="${110+i*24}" y="40" width="14" height="8" fill="${ah?"#fff":"#444"}"/>`;if(ah)o+=`<rect width="360" height="300" fill="#fff" opacity=".18"/>`;
+ svg.innerHTML=o;}
+function cueLines(r,b){const s=segOf(r.id,b)[2],k=cueNo(r.id,b),L=[];const g=r.g;
+ if(r.id==="scene"){L.push(`Group 10 ; Attribute 'Dimmer' At ${s.dim}`,`At Preset ${s.col}`,`Group 3 ; Attribute 'Dimmer' At ${b>=7?60:0}`);}
+ else{L.push(r.id==="movd"?`${g} ; Attribute 'Dimmer2' At 100`:`${g}`);
+  if(typeof s.dim==="number"&&!isDimFx(s.fx))L.push(r.id==="movd"?`At ${s.dim}`:`Attribute 'Dimmer' At ${s.dim}`);
+  if(typeof s.dim==="string")L.push(`At Preset ${s.dim}`);
+  for(const k2 of ["pos","col","fx"]) if(s[k2]) L.push(`At Preset ${s[k2]}`);}
+ L.push(`Store Sequence ${r.seq} Cue ${k} '${s.label}' CueFade ${s.fade||0}`,"ClearAll");return L;}
+function sel(b){cur=b;document.querySelectorAll(".col-sel").forEach(e=>e.classList.remove("col-sel"));document.querySelectorAll(`[data-b="${b}"]`).forEach(e=>e.classList.add("col-sel"));
+ const sec=Object.keys(SECT).map(Number).filter(x=>x<=b).pop();
+ document.getElementById("dTitle").textContent=`${b===0?"앞박":b+"마디"} · ${SECT[sec]}`;
+ document.getElementById("dSub").textContent=`음악 ${BAR_T[b].toFixed(2)}초 · 타임코드 ${tc(BAR_T[b])}초`;
+ let h=`<tr><th>역할 · 장비</th><th>밝기</th><th>위치</th><th>색</th><th>효과</th><th>콘솔</th></tr>`;
+ for(const r of ROLES){const seg=segOf(r.id,b),s=seg[2],ch=changed(r.id,b);
+  h+=`<tr><td><b>${r.name}</b> <span class="note">${r.sub}</span><br><span class="note">${r.fix}</span>${ch?`<br><span class="chgmark">● ${diffTxt(r.id,b)}</span>`:""}<br><button class="edbtn" data-ed="${r.id}">✎ 고치기</button></td><td>${dimLabel(s)}${s.fade?`<br><span class="note">번짐 ${s.fade}초</span>`:""}</td><td>${chip(s.pos)}</td><td>${chip(s.col)}</td><td>${isDimFx(s.fx)?'<span class="note">(밝기 칸)</span>':chip(s.fx)}<br><span class="note">${s.note}</span></td><td class="note">Seq ${r.seq}<br>Cue ${cueNo(r.id,b)} '${s.label}'<br>트랙 ${ROLES.indexOf(r)+1} · ${tc(BAR_T[seg[0]])}초</td></tr>`;}
+ document.getElementById("rtab").innerHTML=h;
+ document.getElementById("cmds").innerHTML=ROLES.map(r=>`<div><b>${r.name}</b> — Seq ${r.seq} Cue ${cueNo(r.id,b)}<pre class="cmd">${cueLines(r,b).join("\n")}</pre></div>`).join("")+`<p class="note">큐에는 <code>At Preset</code> 참조가 들어가요(밝기는 값 또는 디머 프리셋). 한 큐에 프리셋 여럿을 같이 넣는 것은 <span class="tag u">미확인</span>.</p>`;
+ stage(b);bind();if(prev)logPrev(b,false);if(editRole)openEditor(editRole);}
+function bind(){document.querySelectorAll(".chip").forEach(c=>c.onclick=e=>{e.stopPropagation();pick(c.dataset.p);});
+ document.querySelectorAll(".edbtn").forEach(c=>c.onclick=()=>{editRole=c.dataset.ed;tab="pick";openEditor(editRole);document.getElementById("editor").scrollIntoView({block:"nearest"});});}
+function opts(type,curv,allowNone){const ids=Object.keys(P).filter(k=>P[k].t===type&&!(type==="효과"&&P[k].pool==="디머"));
+ let o=allowNone?`<option value="">— 없음 —</option>`:"";
+ o+=`<optgroup label="이 곡 프리셋">`+ids.map(i=>`<option value="${i}" ${i===curv?"selected":""}>${i} ${P[i].nm}${P[i].st==="u"?" ⚠미확인":""}</option>`).join("")+`</optgroup>`;
+ if(SHOW_PRESETS[type]&&SHOW_PRESETS[type].length)o+=`<optgroup label="쇼에 이미 있는 프리셋">`+SHOW_PRESETS[type].map(x=>`<option disabled>${x}</option>`).join("")+`</optgroup>`;
+ return o+`<option value="__new">＋ 새 프리셋 만들기…</option>`;}
+function openEditor(rid){const ed=document.getElementById("editor");ed.style.display="block";const r=ROLES.find(x=>x.id===rid),seg=segOf(rid,cur),s=seg[2];
+ const range=seg[0]===seg[1]?`${seg[0]}마디`:`${seg[0]}~${seg[1]}마디`;
+ let body=`<b>✎ ${r.name} · ${range}</b> <span class="note">(Cue ${cueNo(rid,cur)} '${s.label}' — 이 큐가 걸친 마디 전체에 적용)</span>
+ <div class="tabs"><span class="tab ${tab==="pick"?"on":""}" data-t="pick">① 직접 고르기</span><span class="tab ${tab==="text"?"on":""}" data-t="text">② 문장으로</span><span class="tab ${tab==="ai"?"on":""}" data-t="ai">③ AI에게</span></div>`;
+ if(tab==="pick"){const dimMode=isDimFx(s.fx)?"fx":(typeof s.dim==="string"?"preset":"value");
+  body+=`<div class="frm">
+   <label>밝기</label><div><select id="eDimMode" style="width:auto"><option value="value" ${dimMode==="value"?"selected":""}>값</option><option value="preset" ${dimMode==="preset"?"selected":""}>디머 프리셋</option><option value="fx" ${dimMode==="fx"?"selected":""}>디머 효과(펄스·체이스)</option></select><span id="eDimBox"></span></div>
+   ${rid!=="acc"&&rid!=="scene"&&rid!=="side"?`<label>위치</label><select id="ePos">${opts("위치",s.pos,true)}</select>`:""}
+   ${rid!=="acc"?`<label>색</label><select id="eCol">${opts("색",s.col,true)}</select>`:""}
+   ${rid==="movu"||rid==="movd"?`<label>움직임 효과</label><select id="eFx">${opts("효과",isDimFx(s.fx)?"":s.fx,true)}</select>`:""}
+  </div><p class="note">고르는 즉시 서버가 검사하고 격자·무대 그림이 바뀌어요(초안). 콘솔에는 「⇪ 고친 것 콘솔에 반영」을 눌러야 가요.</p>`;}
+ else if(tab==="text"){body+=`<div class="ai"><input id="eText" value="${range} ${r.name} ${rid.startsWith("mov")?"효과를 Sweep 2박으로":"색을 핑크로"}"><div class="btns"><button class="btn" id="eTextGo">알아듣기</button></div><div id="eTextOut"></div></div>
+  <p class="note">정해진 꼴: 「(마디 범위) (역할) (밝기|위치|색|효과)를/을 (값 또는 프리셋 이름)으로」. AI 없이 규칙으로 알아들어 결과가 늘 같아요. 모르는 낱말은 이유를 대며 거절해요.</p>`;}
+ else{body+=`<div class="ai"><textarea id="eAi">${rid==="movd"?"코러스 1에서 아래 무빙을 더 화려하게, 위 무빙이랑 반대로 움직이게":"핑크보다 더 진한 마젠타로 바꿔 줘"}</textarea><div class="btns"><button class="btn" id="eAiGo">AI에게 제안 받기</button></div><div id="eAiOut"></div></div>
+  <p class="note">AI는 <b>제안</b>만 만들어요 — 바꿀 칸과 새로 만들 프리셋을 보여 주고, 「적용」을 눌러야 격자가 바뀌어요. 새 프리셋은 콘솔에 반영할 때 승인 카드에 같이 나와요.</p>`;}
+ ed.innerHTML=body;
+ ed.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{tab=t.dataset.t;openEditor(rid);});
+ if(tab==="pick"){
+  const apply=()=>{const m=document.getElementById("eDimMode").value;const o=[];
+   if(m==="value"){const v=+document.getElementById("eDimV").value;s.dim=v;if(isDimFx(s.fx))delete s.fx;o.push(`밝기 값 ${v}%`);}
+   else if(m==="preset"){const v=document.getElementById("eDimP").value;if(v==="__new"){newPreset("밝기");return;}s.dim=v;if(isDimFx(s.fx))delete s.fx;o.push(`밝기 프리셋 ${v}`);}
+   else{const v=document.getElementById("eDimF").value;delete s.dim;s.fx=v;o.push(`디머 효과 ${v}`);}
+   for(const [id,k] of [["ePos","pos"],["eCol","col"],["eFx","fx"]]){const el=document.getElementById(id);if(!el)continue;const v=el.value;
+    if(v==="__new"){newPreset(k==="pos"?"위치":k==="col"?"색":"효과");return;}
+    if(k==="fx"&&m==="fx")continue; if(v)s[k]=v;else delete s[k];}
+   EDITED.add(seg);renderGrid();sel(cur);
+   log.textContent=`[서버 검사 통과 → 초안 적용] ${r.name} ${range}: ${o.join(" · ")}${s.pos?" · 위치 "+s.pos:""}${s.col?" · 색 "+s.col:""}${s.fx&&!isDimFx(s.fx)?" · 효과 "+s.fx:""}\n콘솔에는 아직 안 갔어요 — 「⇪ 고친 것 콘솔에 반영」`;};
+  const box=()=>{const m=document.getElementById("eDimMode").value;const el=document.getElementById("eDimBox");
+   if(m==="value")el.innerHTML=` <input id="eDimV" type="number" min="0" max="100" style="width:80px" value="${typeof s.dim==="number"?s.dim:bright(s)}"> %`;
+   else if(m==="preset")el.innerHTML=` <select id="eDimP" style="width:auto">${opts("밝기",typeof s.dim==="string"?s.dim:"",false)}</select>`;
+   else el.innerHTML=` <select id="eDimF" style="width:auto">${Object.keys(P).filter(k=>P[k].pool==="디머").map(i=>`<option value="${i}" ${i===s.fx?"selected":""}>${i} ${P[i].nm}</option>`).join("")}</select>`;
+   el.querySelectorAll("input,select").forEach(x=>x.onchange=apply);};
+  document.getElementById("eDimMode").onchange=()=>{box();apply();};box();
+  ["ePos","eCol","eFx"].forEach(id=>{const el=document.getElementById(id);if(el)el.onchange=apply;});}
+ if(tab==="text")document.getElementById("eTextGo").onclick=()=>{const t=document.getElementById("eText").value;
+  document.getElementById("eTextOut").innerHTML=`<div class="prop"><b>앱이 알아들은 내용</b><br>범위: ${range} · 역할: ${r.name} · 항목·값: 「${t.replace(/^.*?(효과|색|위치|밝기)/,"$1")}」<br><span class="note">→ 해당 프리셋으로 바꿔 초안 적용(시안에서는 표시만). 「Sweep 2박」은 2.64, 「핑크」는 4.24 로 찾아요 — 이름이 둘 이상 맞으면 고르라고 되물어요.</span></div>`;};
+ if(tab==="ai")document.getElementById("eAiGo").onclick=()=>{const out=document.getElementById("eAiOut");
+  if(rid==="movd")out.innerHTML=`<div class="prop"><b>AI 제안</b> — 바꿀 칸 2 · 새 프리셋 1
+   <ul><li>18~21마디 MOVER-D: 효과 없음 → <b>2.69 LA Pan Wave 2 Rev</b>(새 프리셋 — 2.67 과 같고 위상만 180, 위 무빙과 반대 방향)</li>
+   <li>22~25마디 MOVER-D: 2.68 Tilt Wave 2박 그대로 · 색 4.25 → 4.24 핑크</li></ul>
+   <span class="note">검사: 층 예산(장면 위 리듬 층 둘) 지킴 · 2.69 는 <span class="tag u">미확인</span>(위상 반대) — 콘솔 보내기 전 M1 확인 필요</span>
+   <div class="btns"><button class="btn pri" id="aiOk">적용</button><button class="btn">고쳐서 다시</button><button class="btn">취소</button></div></div>`;
+  else out.innerHTML=`<div class="prop"><b>AI 제안</b> — 새 색 프리셋 1 · 바꿀 칸: 이 큐
+   <ul><li>새 프리셋 <b>4.26 LA Magenta</b> <span class="sw" style="background:rgb(255,0,178)"></span> R100 G0 B70 W0 · 콘솔 이름 'LA Magenta' · 색 풀 4(필터 있음)</li>
+   <li>${r.name} ${range}: 색 ${s.col||"없음"} → 4.26</li>
+   <li>참고: 4.24 핑크를 쓰는 다른 큐는 그대로(4.24 자체를 바꾸려면 「프리셋 고치기」)</li></ul>
+   <div class="btns"><button class="btn pri" id="aiOk">적용</button><button class="btn">고쳐서 다시</button><button class="btn">취소</button></div></div>`;
+  document.getElementById("aiOk").onclick=()=>{if(rid==="movd"){P["2.69"]={t:"효과",pool:"위치",n:"Pan Wave 2박 반대",nm:"LA Pan Wave 2 Rev",v:"Pan ±12(상대값) · 한 바퀴 2박 · 위상 180 · AI가 만든 새 프리셋",k:"P흔들",per:2,st:"u",why:"위상 반대·펼침 미확인"};
+    const a=SEG.movd.find(x=>x[0]===18);a[2].fx="2.69";EDITED.add(a);const c=SEG.movd.find(x=>x[0]===22);c[2].col="4.24";EDITED.add(c);}
+   else{P["4.26"]={t:"색",n:"마젠타",nm:"LA Magenta",rgb:[100,0,70],v:"R100 G0 B70 W0 · AI가 만든 새 프리셋",st:"m"};s.col="4.26";EDITED.add(seg);}
+   renderGrid();renderLib();sel(cur);log.textContent="[AI 제안 적용 → 서버 검사 통과 → 초안 적용] 새 프리셋은 「⇪ 고친 것 콘솔에 반영」 때 승인 카드에 같이 나와요.";};};}
+function newPreset(type){log.textContent=`[＋ 새 ${type} 프리셋] 이름과 값을 정하는 창이 열려요 — 또는 「③ AI에게」에 「○○ 같은 ${type} 프리셋 만들어」라고 요청. 저장 위치: ${type==="위치"?"위치 풀 2":type==="색"?"색 풀 4":type==="밝기"?"디머 풀 1":"종류별 풀(위치 효과 2 · 색 효과 4 · 밝기 효과 1 · 섞인 효과 22)"} · 이름은 영문·숫자만 'LA …'(콘솔은 한글 이름을 못 씀) · 빈 번호를 읽어 배정`;}
+function pick(id){document.querySelectorAll(".c.hl").forEach(e=>e.classList.remove("hl"));document.querySelectorAll(".prow.on,.chip.on").forEach(e=>e.classList.remove("on"));
+ document.querySelectorAll(`.prow[data-p="${id}"],.chip[data-p="${id}"]`).forEach(e=>e.classList.add("on"));
+ const uses=usage()[id]||[];let bars=0;
+ for(const u of uses)for(let b=u.s[0];b<=u.s[1];b++){const c=document.querySelector(`.c[data-r="${u.r.id}"][data-b="${b}"]`);if(c){c.classList.add("hl");bars++;}}
+ const p=P[id],box=document.getElementById("pinfo");box.style.display="block";
+ const pool=p.t==="효과"?(p.pool==="위치"?"위치 풀 2(움직임)":"디머 풀 1(효과)"):p.t==="위치"?"위치 풀 2":p.t==="색"?"색 풀 4":"디머 풀 1";
+ box.innerHTML=`<b>프리셋 ${id} · ${p.nm}</b> <span class="note">(${pool} · 설명: ${p.n})</span> ${p.st==="u"?'<span class="tag u">미확인</span>':'<span class="tag m">잰 것</span>'}
+ <p style="margin:.3em 0">${p.rgb?`<span class="sw" style="background:${hexP(id)}"></span>`:""}값: ${p.v}</p>${p.why?`<p class="note" style="margin:.3em 0">확인 상태: ${p.why}</p>`:""}
+ <p style="margin:.3em 0"><b>쓰는 곳: 큐 ${uses.length}개 · 칸 ${bars}개</b> — ${uses.map(u=>`${u.r.name} ${u.s[0]===u.s[1]?u.s[0]:u.s[0]+"~"+u.s[1]}마디`).join(", ")||"없음"}</p>
+ <p class="note" style="margin:.3em 0">이 프리셋을 고치면 위 <b>${uses.length}개 큐</b>가 한꺼번에 바뀌어요(노란 테두리). <span class="tag u">미확인</span> 참조 큐가 따라 바뀌는지는 M1 에서 잼.</p>
+ <div class="btns"><button class="btn" id="pEdit">✎ 프리셋 고치기</button></div>`;
+ document.getElementById("pEdit").onclick=()=>{log.textContent=`[프리셋 고치기] ${id} ${p.n}: 직접 값 고르기 또는 AI에게 「${p.n} 을 조금 더 ○○하게」 → 쓰는 곳 ${uses.length}개 큐 목록 확인 → 콘솔 반영 때 이 프리셋만 다시 저장(승인 1번)`;};}
+const lib=document.getElementById("lib");
+function renderLib(){lib.innerHTML="";const U=usage();
+ for(const [f,title] of [[k=>P[k].t==="밝기"||P[k].pool==="디머","디머 풀 1 — 밝기·밝기 효과"],[k=>P[k].t==="위치"||P[k].pool==="위치","위치 풀 2 — 위치·움직임 효과"],[k=>P[k].t==="색","색 풀 4 — 색"]]){
+  const col=document.createElement("div");col.className="libcol";col.innerHTML=`<h5>${title}</h5>`;
+  for(const id of Object.keys(P).filter(f)){const u=U[id]||[];let n=0;u.forEach(x=>n+=x.s[1]-x.s[0]+1);
+   const row=document.createElement("div");row.className="prow";row.dataset.p=id;
+   row.innerHTML=`<span>${P[id].rgb?`<span class="sw" style="background:${hexP(id)}"></span>`:""}<code>${id}</code> ${P[id].nm} <span class="note">${P[id].n}</span>${P[id].st==="u"?' <span class="tag u">미확인</span>':""}</span><span class="cnt">큐 ${u.length} · 칸 ${n}</span>`;
+   row.onclick=()=>pick(id);col.appendChild(row);}
+  lib.appendChild(col);}}
+const log=document.getElementById("log");
+function logPrev(b,start){const L=ROLES.map(r=>`Goto Cue ${cueNo(r.id,b)} Sequence ${r.seq}`);
+ if(start)log.textContent=`[승인 카드] 「LOVE ATTACK RHYTHM v1 미리보기 — 재생 명령(Goto·Off)만」 → 승인 1회\n[콘솔로] ${b===0?"앞박":b+"마디"} 켜기:\n  ${L.join("\n  ")}`;
+ else{const ch=ROLES.filter(r=>changed(r.id,b)).map(r=>`Goto Cue ${cueNo(r.id,b)} Sequence ${r.seq}`);log.textContent=`[콘솔로] ${b}마디 — 바뀐 역할만:\n  ${ch.length?ch.join("\n  "):"(바뀐 역할 없음)"}`;}}
+document.getElementById("bPreview").onclick=()=>{prev=true;logPrev(cur,true);};
+document.getElementById("bNext").onclick=()=>{if(cur<25)sel(cur+1);};
+document.getElementById("bOff").onclick=()=>{prev=false;log.textContent="[콘솔로] 끄기:\n  "+ROLES.map(r=>`Off Sequence ${r.seq}`).join("\n  ");};
+document.getElementById("bApply").onclick=()=>{const n=EDITED.size;const newP=Object.keys(P).filter(k=>P[k].v.includes("AI가 만든"));
+ log.textContent=n?`[승인 카드] 고친 것 콘솔에 반영\n  새로 만드는 프리셋 ${newP.length}개: ${newP.join(", ")||"없음"}\n  다시 저장하는 큐 ${n}개(앱이 만든 이 곡 시퀀스만)\n  → 승인 1회 → 송신 → 승인한 줄 = 보낸 줄 대조`:"고친 칸이 없어요.";};
+renderGrid();renderLib();sel(18);editRole="movd";tab="pick";openEditor("movd");
+</script>
+</main>
+</body>
+</html>

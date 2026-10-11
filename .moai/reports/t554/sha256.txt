@@ -1,0 +1,8 @@
+dcd7a8062a458db144ac94cfeca55d27f09c932d9fc0961b4d2090ad11545282  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/reports/ldbeat-runbook-mockup-20261008.html
+cb8ddb1e991afcfd3e3670da5e9e43c4993e924fdffad210be20f98344b0c76d  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/reports/ldbeat-runbook-mockup-20261008.md
+f74c7066511a2c265f5cb914b521fd38cff0e78e4e609df0a603a2c1586d4f46  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/reports/ldbeat-runbook-ui-proposal-20261008.html
+39032b4d5e313a568e36c8c82e89d6d5ff5f67d8c027b7162dc0c5b9c2e6ebe3  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/reports/ldbeat-runbook-ui-proposal-20261008.md
+dcd7a8062a458db144ac94cfeca55d27f09c932d9fc0961b4d2090ad11545282  .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-mockup-20261008.html
+cb8ddb1e991afcfd3e3670da5e9e43c4993e924fdffad210be20f98344b0c76d  .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-mockup-20261008.md
+f74c7066511a2c265f5cb914b521fd38cff0e78e4e609df0a603a2c1586d4f46  .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html
+39032b4d5e313a568e36c8c82e89d6d5ff5f67d8c027b7162dc0c5b9c2e6ebe3  .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.md
