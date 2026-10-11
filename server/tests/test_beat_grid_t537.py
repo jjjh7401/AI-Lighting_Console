@@ -67,6 +67,16 @@ class TestStructuredCueFields:
         }
         # 카드 t543 — FOH bar 7 「FOH 켬」은 §4 출처 행은 있지만 밝기 숫자가 없다.
         foh_on = ("FOH", 7)
+        # 2026-10-11 대체 고지(카드 t555, 감독 결정 「밝기 값이 명확하지 않으면 우선
+        # 100% 진행해」): §4 가 밝기를 정하지 않은 16칸은 이제 100 이다 — 출처는 §4 가
+        # 아니라 감독 결정이므로 source_ref 는 여전히 비어 있다. 「—」(쉼)·BACK 0·3
+        # (§4 SCENE 30%)은 그대로 비어 있다(test_beat_grid_bright_default_t555.py).
+        default_100 = {
+            ("SIDE-ALL", 11),
+            ("SIDE-ALL", 14),
+            *(("MOVER-U", b) for b in (0, 3, 7, 11, 14, 18, 22)),
+            *(("MOVER-D", b) for b in (0, 3, 7, 11, 14, 18, 22)),
+        }
 
         checked = 0
         for track in grid["tracks"]:
@@ -74,7 +84,10 @@ class TestStructuredCueFields:
                 checked += 1
                 if (track["group_name"], cue["bar"]) in known:
                     continue
-                assert cue["brightness"]["value_percent"] is None
+                if (track["group_name"], cue["bar"]) in default_100:
+                    assert cue["brightness"]["value_percent"] == 100
+                else:
+                    assert cue["brightness"]["value_percent"] is None
                 if (track["group_name"], cue["bar"]) == foh_on:
                     assert cue["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
                     continue
