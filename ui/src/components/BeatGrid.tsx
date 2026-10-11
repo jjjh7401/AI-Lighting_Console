@@ -21,7 +21,17 @@
 // 가능해졌다 — mockup "프리셋 서랍"/"AI 제안" 절 그대로(아래 각 함수의
 // 주석이 인용 절을 단다). 그 콜백들이 미제공이면 이 컴포넌트는 기존과
 // 바이트 동일하게 동작한다(additive).
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { BeatGridTopBar } from "./BeatGridTopBar";
+import { SongOverview } from "./SongOverview";
+import {
+  buildSongOverview,
+  overviewVisibleWindow,
+  pxPerBarForZoom,
+  type OverviewZoom,
+  type SongOverviewSectionInput,
+} from "./songOverviewModel";
 
 import type {
   BeatGridAppMovement,
@@ -384,7 +394,19 @@ export interface BeatGridProps {
   /** t537 레이아웃 교정 — 곡 전체 지도의 구간 띠(REQ-LDBEAT-004(a)). 이미
    * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
    * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
-  sections?: readonly BeatGridSectionLite[];
+  sections?: readonly SongOverviewSectionInput[];
+  /** 카드 t559(M9 step 1·8) — 곡 전체 지도·상단 바가 읽는 곡 메타
+   * (`timeline.bpm`·`timeline.bar_count`, 버전 = 초안 상태 라벨). 없으면
+   * 지어내지 않고 "—"/표시 범위로 떨어진다. */
+  bpm?: number | null;
+  barCount?: number | null;
+  versionLabel?: string | null;
+  /** 카드 t559 — 상단 바 콘솔 버튼(이 마디 콘솔에서 보기·끄기·반영). 콘솔
+   * 송신 경로가 아직 없어 생략하면 버튼이 비활성으로 남는다. */
+  onPreviewBar?: (bar: number) => void;
+  onPreviewOff?: () => void;
+  onApply?: () => void;
+  pendingApplyCount?: number | null;
   /**
    * 카드 t551(M3) — 편집 경로 ①(직접 고르기). UI는 서버 페이로드를 직접
    * 구성하지 않는다(AC-LDBEAT-005) — 이 콜백은 사용자가 고른 필드·값을
@@ -881,6 +903,9 @@ function renderPresetOptions({
   );
 }
 
+/** 카드 t559 — 컴포넌트 안의 확대 반영 `barToX`가 가리는 모듈 함수의 별칭. */
+const barToXAt = barToX;
+
 export function BeatGrid({
   grid,
   fixtures = [],
@@ -888,6 +913,13 @@ export function BeatGrid({
   secondsPerBar = null,
   colorPresetHex,
   sections,
+  bpm,
+  barCount,
+  versionLabel = null,
+  onPreviewBar,
+  onPreviewOff,
+  onApply,
+  pendingApplyCount,
   onEditRequest,
   onSentenceEditRequest,
   onSuggestionRequest,
@@ -945,6 +977,30 @@ export function BeatGrid({
   );
   const writeLocked = isWriteLocked(probes);
   const stageBounds = useMemo(() => computeStageBounds(fixtures), [fixtures]);
+  // 카드 t559(M9 step 1·8) — 곡 전체 지도 확대 단계 + 상단 바 마디 이동.
+  // `barCursor`는 ◀▶·지도 클릭으로 고른 마디다 — 그 뒤 칸을 새로 누르면
+  // (`selected`가 바뀌면) 저절로 무효가 되어 칸 선택이 다시 기준이 된다.
+  const [overviewZoom, setOverviewZoom] = useState<OverviewZoom>("bars16");
+  const [barCursor, setBarCursor] = useState<{ bar: number; anchor: typeof selected } | null>(null);
+  const lanesRef = useRef<HTMLDivElement | null>(null);
+  const [laneView, setLaneView] = useState({ scrollLeft: 0, visibleWidth: 0 });
+  const measureLanes = () => {
+    const el = lanesRef.current;
+    if (!el) return;
+    const corner = el.querySelector<HTMLElement>(".beat-grid-ruler-corner");
+    const visibleWidth = Math.max(0, el.clientWidth - (corner?.offsetWidth ?? 0));
+    setLaneView((prev) =>
+      prev.scrollLeft === el.scrollLeft && prev.visibleWidth === visibleWidth
+        ? prev
+        : { scrollLeft: el.scrollLeft, visibleWidth },
+    );
+  };
+  useEffect(() => {
+    measureLanes();
+    if (typeof window === "undefined") return;
+    window.addEventListener("resize", measureLanes);
+    return () => window.removeEventListener("resize", measureLanes);
+  }, [grid]);
 
   if (!grid) {
     return (
@@ -955,6 +1011,17 @@ export function BeatGrid({
   }
 
   const maxBar = grid.bar_range.end;
+  // 카드 t559 — 곡 전체 지도 모델(곡 데이터에서만 읽음)과 확대 단계별 마디 폭.
+  // 아래 `barToX`는 모듈의 같은 이름 함수를 확대 폭으로 감싼 것이다 — 타임라인
+  // 그리기 코드는 손대지 않고 가로 스케일만 바뀐다.
+  const overviewModel = buildSongOverview({
+    sections,
+    barCount,
+    secondsPerBar,
+    fallbackRange: grid.bar_range,
+  });
+  const pxPerBar = pxPerBarForZoom(overviewZoom, laneView.visibleWidth, overviewModel.totalBars, PX_PER_BAR);
+  const barToX = (bar: number) => barToXAt(bar, pxPerBar);
   const isFolderOpen = (role: string) => allOpen || openFolders.has(role);
   const toggleFolder = (role: string) => {
     setOpenFolders((prev) => {
@@ -983,17 +1050,10 @@ export function BeatGrid({
   const selectedTrack = selected ? grid.tracks[selected.trackIndex] : null;
   const selectedCue = selectedTrack && selected ? cueForBar(selectedTrack, selected.bar) : null;
   const firstCue = selected ? isFirstCueOfSong(selected.bar, grid) : false;
-  const viewBar = selected?.bar ?? grid.bar_range.start;
+  const viewBar = barCursor && barCursor.anchor === selected ? barCursor.bar : (selected?.bar ?? grid.bar_range.start);
   // t537 ② plan-audit iteration 3 D1 — 실제로 렌더하는 배지+원문+source_ref
   // 묶음은 `sceneMemoMarkers`가 반환하는 모양 그대로다(DOM 없이 단언 가능).
   const viewBarSceneMemo = sceneMemoMarkers(grid.scene_memos, [viewBar, viewBar])[0] ?? null;
-  // t537 레이아웃 교정 — 곡 전체 지도 구간 띠(데이터 없으면 빈 배열, 호출부가
-  // 숫자 띠로 떨어진다) + SCENE 메모 오버레이의 퍼센트 위치 헬퍼.
-  const sectionBlocks = useMemo(
-    () => deriveSectionBlocks(sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end),
-    [sections, secondsPerBar, grid.bar_range.start, grid.bar_range.end],
-  );
-  const barPercent = (bar: number) => barPercentInRange(bar, grid.bar_range.start, grid.bar_range.end);
   // 카드 t534 — 재생 위치를 마디로 환산(음원 동기가 없으면 null, 지어내지
   // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
@@ -1015,66 +1075,67 @@ export function BeatGrid({
     if (audioRef.current) audioRef.current.currentTime = next;
   };
 
+  // 카드 t559 — ◀▶·←→·지도 클릭 공통: 그 마디를 보고, 타임라인을 그 마디가
+  // 보이도록 옮긴다. 격자 칸 데이터가 있는 범위 밖으로는 가지 않는다.
+  const jumpToBar = (bar: number) => {
+    const target = Math.max(grid.bar_range.start, Math.min(grid.bar_range.end, bar));
+    setBarCursor({ bar: target, anchor: selected });
+    const el = lanesRef.current;
+    if (el && laneView.visibleWidth > 0) {
+      const left = (target - grid.bar_range.start) * pxPerBar;
+      if (left < el.scrollLeft || left + pxPerBar > el.scrollLeft + laneView.visibleWidth) {
+        el.scrollLeft = Math.max(0, left - laneView.visibleWidth / 3);
+        measureLanes();
+      }
+    }
+  };
+  // mockup `#bLib` — 아래 명령창 줄의 「📁 프리셋」 버튼과 같은 동작.
+  const toggleDrawer = () => {
+    const next = !drawerOpen;
+    setDrawerOpen(next);
+    if (next) onDrawerRequest?.();
+  };
+
   return (
     <section className="beat-grid" aria-label="박자 격자">
-      <header className="beat-grid-head">
-        <span className="beat-grid-title">박자 격자</span>
-        <span className="beat-grid-song">{grid.song_title || "(곡 미지정)"}</span>
-        {grid.note && <span className="beat-grid-note">{grid.note}</span>}
-        <span className="beat-grid-range">
-          {grid.bar_range.start}~{grid.bar_range.end}마디
-        </span>
-      </header>
+      {/* 카드 t559(M9 step 8) — 상단 바, REQ-LDBEAT-017. */}
+      <BeatGridTopBar
+        songTitle={grid.song_title}
+        note={grid.note}
+        versionLabel={versionLabel}
+        bpm={bpm}
+        currentBar={viewBar}
+        barRange={grid.bar_range}
+        onBarChange={jumpToBar}
+        onPreviewBar={onPreviewBar}
+        onPreviewOff={onPreviewOff}
+        onApply={onApply}
+        pendingApplyCount={pendingApplyCount}
+        onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
+      />
 
-      {/* ① 곡 전체 지도 — 시안처럼 구간(인트로/벌스/코러스…) 블록 띠(REQ-
-          LDBEAT-004(a)). 구간 레이블은 `timeline.sections`(서버가 이미
-          보내는 값)에서, 블록 경계는 `start_ms`를 그 곡 BPM(`secondsPerBar`)
-          으로 마디 환산해 derive한다(지어내지 않음 — REQ-LDBEAT-005(b)와
-          같은 환산) — 그 데이터가 없으면(secondsPerBar 미확정 등) 기존
-          7칸 숫자 띠로 조용히 떨어진다(추측 대신 "아는 만큼만"). SCENE
-          메모가 걸린 마디는 그 위에 퍼센트 위치로 겹쳐 그린 「미정」
-          배지로 보여준다(t537 ②, 리드 지시). 시안처럼 "전체 곡 중 지금
-          보는 범위를 강조"는 전체 곡 길이(마디 수) 데이터가 아직 없어
-          못 했다 — 지도 자체가 그 표시 범위(0~25마디)다(§Gaps). */}
-      <div className="beat-grid-overview" role="img" aria-label="곡 전체 지도">
-        <div className="beat-grid-overview-track">
-          {sectionBlocks.length > 0
-            ? sectionBlocks.map((block) => (
-                <span
-                  key={`${block.label}-${block.startBar}`}
-                  className={`beat-grid-overview-section${
-                    viewBar >= block.startBar && viewBar < block.endBar ? " is-current" : ""
-                  }`}
-                  style={{ flexGrow: block.endBar - block.startBar, background: block.hex ?? undefined }}
-                  title={`${block.label} · ${block.startBar}~${block.endBar - 1}마디`}
-                >
-                  {block.label}
-                </span>
-              ))
-            : BEAT_GRID_BAR_ROWS.map(([start, end]) => (
-                <span
-                  key={start}
-                  className={`beat-grid-overview-section${barRowIndex(viewBar) === barRowIndex(start) ? " is-current" : ""}`}
-                  style={{ flexGrow: end - start + 1 }}
-                  title={`${start}~${end}마디`}
-                >
-                  {start}
-                </span>
-              ))}
-        </div>
-        <div className="beat-grid-overview-memos">
-          {grid.scene_memos.map((memo) => (
-            <span
-              key={memo.bar}
-              className="beat-grid-overview-memo-marker"
-              style={{ left: `${barPercent(memo.bar)}%` }}
-              title={memo.text}
-            >
-              ⚠ 미정
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
+      <SongOverview
+        model={overviewModel}
+        filledRange={grid.bar_range}
+        visibleWindow={
+          laneView.visibleWidth > 0
+            ? overviewVisibleWindow({
+                scrollLeft: laneView.scrollLeft,
+                visibleWidth: laneView.visibleWidth,
+                pxPerBar,
+                rangeStart: grid.bar_range.start,
+                totalBars: overviewModel.totalBars,
+              })
+            : null
+        }
+        playheadBar={playheadBar}
+        currentBar={viewBar}
+        sceneMemos={grid.scene_memos}
+        zoom={overviewZoom}
+        onZoomChange={setOverviewZoom}
+        onJump={jumpToBar}
+      />
 
       <div className="beat-grid-toolbar">
         <button type="button" className="beat-grid-fold-all" onClick={toggleAll}>
@@ -1114,7 +1175,13 @@ export function BeatGrid({
           `.lanes`+`.sidepane`), 무대·한눈에는 그 아래 별도 띠(아래
           `.beat-grid-insp`)로 뺐다. */}
       <div className="beat-grid-mid">
-        <div className="beat-grid-lanes" role="table" aria-label="콘솔 그룹 트랙 타임라인">
+        <div
+          className="beat-grid-lanes"
+          role="table"
+          aria-label="콘솔 그룹 트랙 타임라인"
+          ref={lanesRef}
+          onScroll={measureLanes}
+        >
           {/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`). */}
           <div className="beat-grid-ruler-row">
             <span className="beat-grid-track-label beat-grid-ruler-corner">마디</span>
@@ -1126,7 +1193,7 @@ export function BeatGrid({
                     className={`beat-grid-ruler-tick${playheadBar === bar ? " is-playhead" : ""}${
                       viewBar === bar ? " is-view" : ""
                     }`}
-                    style={{ left: barToX(bar), width: PX_PER_BAR }}
+                    style={{ left: barToX(bar), width: pxPerBar }}
                   >
                     {bar}
                   </span>
