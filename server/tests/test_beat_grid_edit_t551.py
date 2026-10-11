@@ -52,6 +52,19 @@ def _cue(grid, group_name, bar):
     return None
 
 
+def _policy_with_confirmed(confirmed: bool):
+    """카드 t551 계속 — 실제 `preset_pools.yaml` 번호대는 그대로 두고
+    ``confirmed`` 플래그만 바꾼 정책을 돌려주는 `load_preset_pool_policy`
+    대체 호출자(monkeypatch 대상). 번호대 리터럴을 시험에 새로 베끼지
+    않는다(코디네이터 지시 조건 1 — 번호대는 오직 yaml에서만)."""
+    real_pools = load_preset_pool_policy()["pools"]
+
+    def _loader(path=None):
+        return {"confirmed": confirmed, "pools": real_pools}
+
+    return _loader
+
+
 # -- 변환 없음(기본 거절) ------------------------------------------------------
 
 
@@ -432,7 +445,16 @@ class TestPresetPoolPolicy:
         )
         assert _cue(updated, "BACK", 3)["position_preset_no"] == "2.99"
 
-    def test_effect_preset_outside_pool_band_rejected_via_apply(self) -> None:
+    def test_effect_preset_outside_pool_band_rejected_via_apply(self, monkeypatch) -> None:
+        # 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 3) — 번호대 밖
+        # 거절은 이제 confirmed:true 일 때만 unconditional 하다. 이 시험은
+        # confirmed:true 로 monkeypatch 해 그 경로를 그대로 격리해서 잰다
+        # (실제 preset_pools.yaml 은 confirmed:false 라, 이 monkeypatch 없이는
+        # 이 시험이 "번호대 거절"이 아니라 "근거 승인 누락" 거절을 재는
+        # 것으로 조용히 바뀐다 — 아래 `_policy_with_confirmed` 참조).
+        import server.design.beat_grid_edit as module
+
+        monkeypatch.setattr(module, "load_preset_pool_policy", _policy_with_confirmed(True))
         grid = _grid()
         with pytest.raises(BeatGridEditError) as excinfo:
             apply_beat_grid_edit(
@@ -440,6 +462,107 @@ class TestPresetPoolPolicy:
                 bar=11,
                 target="MOVER-U",
                 changes={"effect_preset_no": "99.99", "effect_kind": "position"},
+            )
+        assert "REQ-LDBEAT-015" in str(excinfo.value)
+
+
+class TestPresetPoolBandWarningWhileUnconfirmed:
+    """카드 t551 계속(코디네이터 지시 2026-10-11, 조건 3) — confirmed:false
+    인 동안 번호대 밖 숫자는 거절이 아니라 경고다(REQ-LDBEAT-010의 "실기
+    미확인 모양" 경고-아닌-거절 관행과 같은 모양). confirmed:true면 거절은
+    그대로 유지한다(회귀 방지). 두 호출 경로(effect_preset_no·
+    brightness.mode=="dimmer_effect") 모두 TDD한다.
+
+    근거 승인(REQ-LDBEAT-015(f)(g))과 섞이지 않도록 모든 양성(수락) 시험은
+    완전한 ``evidence.approval``을 함께 보낸다 — 아니면 번호대가 통과해도
+    근거 승인 누락으로 다시 거절돼 이 시험이 무엇을 재는지 흐려진다."""
+
+    _APPROVAL = {
+        "grade": "name_only",
+        "approval": {"by": "supervisor", "date": "2026-10-11", "source": "t551 band-warning test"},
+    }
+
+    def test_effect_preset_out_of_band_warns_not_rejects_while_unconfirmed(
+        self, monkeypatch
+    ) -> None:
+        import server.design.beat_grid_edit as module
+
+        monkeypatch.setattr(module, "load_preset_pool_policy", _policy_with_confirmed(False))
+        grid = _grid()
+        updated, report = apply_beat_grid_edit(
+            grid,
+            bar=3,
+            target="BACK",
+            changes={
+                "effect_preset_no": "99.99",
+                "effect_kind": "position",
+                "evidence": self._APPROVAL,
+            },
+        )
+        assert _cue(updated, "BACK", 3)["effect_preset_no"] == "99.99"
+        assert any("번호대 미확인" in line for line in report)
+
+    def test_effect_preset_out_of_band_still_rejected_when_confirmed(self, monkeypatch) -> None:
+        import server.design.beat_grid_edit as module
+
+        monkeypatch.setattr(module, "load_preset_pool_policy", _policy_with_confirmed(True))
+        grid = _grid()
+        with pytest.raises(BeatGridEditError) as excinfo:
+            apply_beat_grid_edit(
+                grid,
+                bar=3,
+                target="BACK",
+                changes={
+                    "effect_preset_no": "99.99",
+                    "effect_kind": "position",
+                    "evidence": self._APPROVAL,
+                },
+            )
+        assert "REQ-LDBEAT-015" in str(excinfo.value)
+
+    def test_dimmer_effect_preset_out_of_band_warns_not_rejects_while_unconfirmed(
+        self, monkeypatch
+    ) -> None:
+        import server.design.beat_grid_edit as module
+
+        monkeypatch.setattr(module, "load_preset_pool_policy", _policy_with_confirmed(False))
+        grid = _grid()
+        updated, report = apply_beat_grid_edit(
+            grid,
+            bar=3,
+            target="BACK",
+            changes={
+                "brightness": {
+                    "mode": "dimmer_effect",
+                    "value_percent": None,
+                    "preset_no": "99.99",
+                },
+                "evidence": self._APPROVAL,
+            },
+        )
+        assert _cue(updated, "BACK", 3)["brightness"]["preset_no"] == "99.99"
+        assert any("번호대 미확인" in line for line in report)
+
+    def test_dimmer_effect_preset_out_of_band_still_rejected_when_confirmed(
+        self, monkeypatch
+    ) -> None:
+        import server.design.beat_grid_edit as module
+
+        monkeypatch.setattr(module, "load_preset_pool_policy", _policy_with_confirmed(True))
+        grid = _grid()
+        with pytest.raises(BeatGridEditError) as excinfo:
+            apply_beat_grid_edit(
+                grid,
+                bar=3,
+                target="BACK",
+                changes={
+                    "brightness": {
+                        "mode": "dimmer_effect",
+                        "value_percent": None,
+                        "preset_no": "99.99",
+                    },
+                    "evidence": self._APPROVAL,
+                },
             )
         assert "REQ-LDBEAT-015" in str(excinfo.value)
 

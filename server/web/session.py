@@ -9191,7 +9191,7 @@ class ChatSession:
                 query, pool_root, pool_name, probe_prefix="beat-grid-drawer"
             )
         policy = load_preset_pool_policy()
-        sections = build_preset_drawer(grid, pools=pools, confirmed=bool(policy.get("confirmed")))
+        sections = build_preset_drawer(grid, pools=pools, policy=policy)
         event = beat_grid_drawer_event(sections=sections)
         self._send(event)
         return event

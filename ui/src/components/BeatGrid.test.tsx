@@ -24,8 +24,10 @@ import {
   barRowIndex,
   barToSeconds,
   barToX,
+  buildBrightnessDimmerEffectChanges,
   buildBrightnessPresetChanges,
   buildColorPresetChanges,
+  buildEffectPresetChanges,
   buildPositionPresetChanges,
   buildProbeStatusTable,
   clampSkipSeconds,
@@ -62,6 +64,7 @@ import {
   sceneMemoForBar,
   sceneMemoMarkers,
   secondsToBar,
+  splitDrawerSectionEffectEntries,
   splitDrawerSectionEntries,
   trackCueSegments,
   type BeatGridFixturePoint,
@@ -1128,6 +1131,7 @@ function drawerEntry(overrides: Partial<BeatGridDrawerEntry> = {}): BeatGridDraw
     name: "LA Center",
     usage_count: 0,
     used_by: [],
+    is_effect_band: false,
     ...overrides,
   };
 }
@@ -1215,5 +1219,56 @@ describe("buildPositionPresetChanges/buildColorPresetChanges/buildBrightnessPres
 describe("NEW_PRESET_OPTION_VALUE — 카드 t551 계속, mockup opts() \"__new\" 리터럴", () => {
   it("mockup 과 같은 리터럴 값", () => {
     expect(NEW_PRESET_OPTION_VALUE).toBe("__new");
+  });
+});
+
+/** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
+ * 골랐다") — 효과(움직임)·디머 "효과" 드롭다운은 같은 drawerSections 풀
+ * 안에서 `is_effect_band`(서버가 `preset_pools.yaml` 번호대로 판정)로만
+ * 골라낸다. 번호대 리터럴은 이 시험에도 없다 — fixture가 `is_effect_band`
+ * 를 직접 지정한다(서버가 이미 판정을 끝낸 값을 그대로 받는다는 전제). */
+describe("splitDrawerSectionEffectEntries — 카드 t551 계속, is_effect_band 로 효과만 골라내기", () => {
+  it("섹션이 null 이면 둘 다 빈 배열", () => {
+    expect(splitDrawerSectionEffectEntries(null)).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("POOL_UNREAD 면 둘 다 빈 배열", () => {
+    expect(
+      splitDrawerSectionEffectEntries(
+        drawerSection({ unread: true, entries: [drawerEntry({ is_effect_band: true })] }),
+      ),
+    ).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("is_effect_band=false 인 항목(기본 프리셋)은 제외한다", () => {
+    const base = drawerEntry({ preset_no: "2.41", is_effect_band: false, usage_count: 3 });
+    expect(splitDrawerSectionEffectEntries(drawerSection({ entries: [base] }))).toEqual({
+      thisSong: [],
+      showExisting: [],
+    });
+  });
+
+  it("is_effect_band=true 인 항목만 골라, 그 안에서 다시 이 곡/쇼 기존으로 가른다", () => {
+    const effectUsed = drawerEntry({ preset_no: "2.61", is_effect_band: true, usage_count: 1 });
+    const effectUnused = drawerEntry({ preset_no: "2.62", is_effect_band: true, usage_count: 0 });
+    const base = drawerEntry({ preset_no: "2.41", is_effect_band: false, usage_count: 5 });
+    expect(
+      splitDrawerSectionEffectEntries(drawerSection({ entries: [effectUsed, effectUnused, base] })),
+    ).toEqual({ thisSong: [effectUsed], showExisting: [effectUnused] });
+  });
+});
+
+describe("buildEffectPresetChanges/buildBrightnessDimmerEffectChanges — 카드 t551 계속, apply_beat_grid_edit 와 바이트 동일 모양", () => {
+  it("효과(움직임) changes — 무빙 전용 effect_kind=\"position\"", () => {
+    expect(buildEffectPresetChanges("2.61")).toEqual({
+      effect_preset_no: "2.61",
+      effect_kind: "position",
+    });
+  });
+
+  it("디머 효과 changes — 밝기 단일모드(REQ-LDBEAT-015(c))", () => {
+    expect(buildBrightnessDimmerEffectChanges("1.21")).toEqual({
+      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    });
   });
 });

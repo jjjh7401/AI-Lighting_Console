@@ -468,7 +468,17 @@ def apply_beat_grid_edit(
         if effect_number is not None and "effect_preset_no" in changes:
             pool_reason = validate_preset_pool_assignment(effect_kind, effect_number, policy)
             if pool_reason is not None:
-                raise BeatGridEditError(pool_reason)
+                # 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 3) — REQ-
+                # LDBEAT-015(b)의 shall 절은 "종류별 풀에 나눠 담긴다"는 저장
+                # 분리 원칙만 구속하고, 정확한 번호대 자체는 spec.md REQ-
+                # LDBEAT-015 증거 칸이 "M2/M3 재확인 대상"이라고 명시한
+                # PROVISIONAL 값이다(§5 항목 4). `policy["confirmed"]`가
+                # 그 재확인 여부를 쥔다 — 확정 전에는 거절이 아니라 경고다
+                # (REQ-LDBEAT-010의 "실기 미확인 모양" 경고-아닌-거절과
+                # 같은 관행). 확정 후에는 그대로 거절한다(회귀 없음).
+                if policy.get("confirmed"):
+                    raise BeatGridEditError(pool_reason)
+                warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
             approval_reason = check_evidence_approval(merged)
             if approval_reason is not None:
                 raise BeatGridEditError(approval_reason)
@@ -483,7 +493,10 @@ def apply_beat_grid_edit(
                 "dimmer", brightness.get("preset_no"), policy
             )
             if pool_reason is not None:
-                raise BeatGridEditError(pool_reason)
+                # 위 effect_preset_no 분기와 같은 confirmed-게이트(조건 3).
+                if policy.get("confirmed"):
+                    raise BeatGridEditError(pool_reason)
+                warnings.append(f"⚠ 번호대 미확인 — {pool_reason}")
             approval_reason = check_evidence_approval(merged)
             if approval_reason is not None:
                 raise BeatGridEditError(approval_reason)

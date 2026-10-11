@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from server.design.beat_grid_edit import validate_preset_pool_assignment
 from server.design.console_slots import StateQuery, paged_pool_children, resolve_named_pool_no
 from server.design.preset_names import match_preset_name_across_pools
 
@@ -190,18 +191,32 @@ def build_preset_drawer(
     grid: Mapping[str, object],
     *,
     pools: Mapping[str, tuple[int, Mapping[int, str | None]] | None],
-    confirmed: bool,
+    policy: Mapping[str, object],
 ) -> list[dict[str, object]]:
     """mockup `drawDrawer()`의 세 섹션(디머 1·위치 2·색 4)을 그 모양 그대로
     조립한다 — 판독되지 않은 풀은 빈 목록으로(지어낸 항목 0건),
     사용처(``used_by``)는 ``grid``를 전수 스캔해 실제 참조만 센다(mockup의
     `usage()`와 같은 계산, 데모 ``P`` 객체가 아니라 이 호출의 ``grid``가
-    출처다). ``confirmed``는 `preset_pools.yaml`의 값 그대로 모든 섹션에
-    싣는다 — `False`면 UI가 "번호대 미확인"을 보여야 한다(REQ-LDBEAT-015(b)
-    번호대 확정 여부, 이 카드 지시 2항)."""
+    출처다). ``policy``(`beat_grid_edit.load_preset_pool_policy`가 돌려주는
+    모양)의 ``confirmed``는 그대로 모든 섹션에 싣는다 — `False`면 UI가
+    "번호대 미확인"을 보여야 한다(REQ-LDBEAT-015(b) 번호대 확정 여부,
+    카드 t551 지시 2항).
+
+    카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
+    골랐다": mockup 자신이 같은 풀 안에서 번호대로 기본/효과 프리셋을
+    가른다는 근거). 각 항목에 ``is_effect_band``를 더한다 — 그 항목의
+    번호가 ``policy``(=`preset_pools.yaml`, 코드 상수 0건)가 선언한 그
+    풀의 **효과** 번호대 안에 있는지를, 새 판정 규칙을 짜지 않고
+    `beat_grid_edit.validate_preset_pool_assignment`(이미 `apply_beat_
+    grid_edit`가 쓰는 그 함수)를 그대로 재사용해 판정한다 — 거절 사유가
+    `None`이면 그 효과 풀 번호대 안에 있다는 뜻이다. 번호대가 아직 선언돼
+    있지 않거나(``pools``가 비었거나) 그 풀 종류를 모르면 "효과"로
+    지어내지 않고 `False`(= 기본 쪽에 남긴다)로 떨어진다."""
+    confirmed = bool(policy.get("confirmed"))
     sections: list[dict[str, object]] = []
     for pool_name, title in _DRAWER_SECTIONS:
         entry = pools.get(pool_name)
+        kind = pool_name_to_effect_kind(pool_name)
         if entry is None:
             sections.append(
                 {
@@ -222,12 +237,17 @@ def build_preset_drawer(
                 continue
             preset_no = f"{pool_no}.{slot}"
             used_by = _usage_for_slot(grid, preset_no)
+            is_effect_band = (
+                kind is not None
+                and validate_preset_pool_assignment(kind, preset_no, policy) is None
+            )
             entries.append(
                 {
                     "preset_no": preset_no,
                     "name": name,
                     "usage_count": len(used_by),
                     "used_by": used_by,
+                    "is_effect_band": is_effect_band,
                 }
             )
         sections.append(

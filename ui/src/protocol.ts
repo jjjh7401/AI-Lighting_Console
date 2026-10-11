@@ -524,6 +524,12 @@ export interface BeatGridDrawerEntry {
   name: string;
   usage_count: number;
   used_by: { group_name: string | null; bar: number | null }[];
+  /** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1) — 이 번호가
+   * `preset_pools.yaml`(서버, 코드 상수 0건)이 선언한 그 풀의 **효과**
+   * 번호대 안에 있는지. 번호대가 아직 선언 안 돼 있으면(미확정) 지어내지
+   * 않고 `false`(= 기본 쪽)로 떨어진다(`beat_grid_presets.build_preset_
+   * drawer`가 `validate_preset_pool_assignment`를 재사용해 판정). */
+  is_effect_band: boolean;
 }
 
 /** 카드 t551 후속(지시 1항) — 서랍 섹션 하나(디머 1·위치 2·색 4 중 하나).

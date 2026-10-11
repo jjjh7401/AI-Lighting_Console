@@ -215,7 +215,7 @@ class TestBuildPresetDrawer:
                 "Position": (2, {41: "Center"}),
                 "Color": (4, {21: "LA Pink"}),
             },
-            confirmed=True,
+            policy={"confirmed": True, "pools": {}},
         )
         titles = [section["title"] for section in sections]
         assert titles == [
@@ -232,7 +232,7 @@ class TestBuildPresetDrawer:
                 "Position": (2, {41: "Center"}),
                 "Color": (4, {21: "LA Pink"}),
             },
-            confirmed=True,
+            policy={"confirmed": True, "pools": {}},
         )
         position_section = next(s for s in sections if s["pool_name"] == "Position")
         assert position_section["entries"][0] == {
@@ -240,6 +240,10 @@ class TestBuildPresetDrawer:
             "name": "Center",
             "usage_count": 2,
             "used_by": [{"group_name": "MOVER-U", "bar": 11}, {"group_name": "MOVER-U", "bar": 18}],
+            # 조건1(코디네이터 지시 2026-10-11) — 빈 ``pools`` 정책이라 어느
+            # kind도 선언된 효과 풀이 없다 → 전부 False(효과로 분류하지
+            # 않는다, 모르면 base 쪽에 남긴다).
+            "is_effect_band": False,
         }
         dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
         assert dimmer_section["entries"][0]["usage_count"] == 1
@@ -250,7 +254,7 @@ class TestBuildPresetDrawer:
         sections = build_preset_drawer(
             self._grid(),
             pools={"Dimmer": None, "Position": (2, {41: "Center"}), "Color": (4, {21: "LA Pink"})},
-            confirmed=True,
+            policy={"confirmed": True, "pools": {}},
         )
         dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
         assert dimmer_section["pool_no"] is None
@@ -261,7 +265,7 @@ class TestBuildPresetDrawer:
         sections = build_preset_drawer(
             self._grid(),
             pools={"Dimmer": (1, {}), "Position": (2, {}), "Color": (4, {})},
-            confirmed=False,
+            policy={"confirmed": False, "pools": {}},
         )
         assert all(section["bands_confirmed"] is False for section in sections)
 
@@ -271,7 +275,88 @@ class TestBuildPresetDrawer:
         sections = build_preset_drawer(
             self._grid(),
             pools={"Dimmer": (1, {}), "Position": (2, {}), "Color": (4, {})},
-            confirmed=True,
+            policy={"confirmed": True, "pools": {}},
         )
         position_section = next(s for s in sections if s["pool_name"] == "Position")
         assert position_section["entries"] == []
+
+
+class TestPresetDrawerEffectBand:
+    """카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1·"lead 가 옵션 A를
+    골랐다" — mockup 자신이 같은 풀 안에서 번호대로 기본/효과 프리셋을
+    가른다는 근거, `ldbeat-runbook-mockup-20261008.md` 14-17행·26-29행).
+    번호대는 `server.design.beat_grid_edit.validate_preset_pool_assignment`
+    + 실제 `preset_pools.yaml`을 그대로 재사용한다 — 이 시험도 이 모듈도
+    번호대 리터럴을 새로 만들지 않는다(조건1)."""
+
+    def _grid(self):
+        return {
+            "tracks": [
+                {"group_name": "MOVER-U", "cues": []},
+            ]
+        }
+
+    def test_position_entry_inside_effect_band_is_flagged(self) -> None:
+        from server.design.beat_grid_edit import load_preset_pool_policy
+
+        policy = load_preset_pool_policy()
+        band = policy["pools"]["position_effect"]
+        midpoint_slot = int((float(band["start"]) + float(band["end"])) / 2 * 100) % 100
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={"Dimmer": None, "Position": (2, {midpoint_slot: "LA Pan Wave"}), "Color": None},
+            policy=policy,
+        )
+        position_section = next(s for s in sections if s["pool_name"] == "Position")
+        assert position_section["entries"][0]["is_effect_band"] is True
+
+    def test_position_entry_outside_effect_band_is_not_flagged(self) -> None:
+        from server.design.beat_grid_edit import load_preset_pool_policy
+
+        policy = load_preset_pool_policy()
+        sections = build_preset_drawer(
+            self._grid(),
+            # slot 41 → "2.41", REQ-LDBEAT-015 증거 칸의 기본 위치 풀
+            # 예시대로 position_effect(2.61~2.68) 밖이다.
+            pools={"Dimmer": None, "Position": (2, {41: "Center"}), "Color": None},
+            policy=policy,
+        )
+        position_section = next(s for s in sections if s["pool_name"] == "Position")
+        assert position_section["entries"][0]["is_effect_band"] is False
+
+    def test_dimmer_entry_inside_either_effect_sub_band_is_flagged(self) -> None:
+        from server.design.beat_grid_edit import load_preset_pool_policy
+
+        policy = load_preset_pool_policy()
+        band_b = policy["pools"]["dimmer_effect_b"]
+        midpoint_slot = int((float(band_b["start"]) + float(band_b["end"])) / 2 * 100) % 100
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={"Dimmer": (1, {midpoint_slot: "LA Chase"}), "Position": None, "Color": None},
+            policy=policy,
+        )
+        dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
+        assert dimmer_section["entries"][0]["is_effect_band"] is True
+
+    def test_dimmer_entry_outside_both_effect_sub_bands_is_not_flagged(self) -> None:
+        from server.design.beat_grid_edit import load_preset_pool_policy
+
+        policy = load_preset_pool_policy()
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={"Dimmer": (1, {1: "LA Full"}), "Position": None, "Color": None},
+            policy=policy,
+        )
+        dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
+        assert dimmer_section["entries"][0]["is_effect_band"] is False
+
+    def test_undeclared_pool_policy_defaults_every_entry_to_not_effect_band(self) -> None:
+        # pools 가 비어 있으면(아직 확정 안 됨) "모른다"를 True 로 지어내지
+        # 않고 False(= base 쪽에 남긴다)로 떨어진다.
+        sections = build_preset_drawer(
+            self._grid(),
+            pools={"Dimmer": (1, {1: "LA Full"}), "Position": None, "Color": None},
+            policy={"confirmed": False, "pools": {}},
+        )
+        dimmer_section = next(s for s in sections if s["pool_name"] == "Dimmer")
+        assert dimmer_section["entries"][0]["is_effect_band"] is False
