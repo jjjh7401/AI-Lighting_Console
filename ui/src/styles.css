@@ -4706,6 +4706,44 @@ body {
   cursor: not-allowed;
 }
 
+/* 카드 t551 계속 — 직접 고르기(①) 드롭다운(밝기 모드/위치/색). mockup
+   `.ed select`와 같은 의도(최소 다크 테마 셀렉트) — 새 색 지정 없이
+   기존 CSS 변수만 재사용한다. */
+.beat-grid-cue-field-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.beat-grid-cue-field-edit select,
+.beat-grid-cue-field-edit input {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+}
+
+.beat-grid-cue-field-edit select:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.beat-grid-cue-field-value.is-editable {
+  cursor: pointer;
+}
+
+/* "+ 새 프리셋" 안내·풀 미확인 안내 — mockup `newPreset()`/`POOL_UNREAD`
+   둘 다 사실 그대로 보이는 안내문이라 경고색이 아니라 muted. */
+.beat-grid-cue-field-note {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
 .beat-grid-cmd {
   display: flex;
   gap: 8px;

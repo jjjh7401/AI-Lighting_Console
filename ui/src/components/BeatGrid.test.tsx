@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   BeatGridCue,
+  BeatGridDrawerEntry,
   BeatGridDrawerSection,
   BeatGridPendingSuggestion,
   BeatGridSceneMemo,
@@ -15,6 +16,7 @@ import type {
 } from "../protocol";
 import {
   BEAT_GRID_BAR_ROWS,
+  NEW_PRESET_OPTION_VALUE,
   PX_PER_BAR,
   UNCONFIRMED_PROBE_STATUS,
   UNSET_FIELD_LABEL,
@@ -22,6 +24,9 @@ import {
   barRowIndex,
   barToSeconds,
   barToX,
+  buildBrightnessPresetChanges,
+  buildColorPresetChanges,
+  buildPositionPresetChanges,
   buildProbeStatusTable,
   clampSkipSeconds,
   computeStageBounds,
@@ -31,10 +36,12 @@ import {
   cueIsActive,
   deriveFadeSeconds,
   deriveSectionBlocks,
+  findDrawerSection,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
   formatAppMovementField,
   formatBrightnessField,
+  formatDrawerEntryOptionLabel,
   formatEvidenceField,
   formatFadeBarsField,
   formatPresetField,
@@ -55,6 +62,7 @@ import {
   sceneMemoForBar,
   sceneMemoMarkers,
   secondsToBar,
+  splitDrawerSectionEntries,
   trackCueSegments,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
@@ -1108,5 +1116,104 @@ describe("isPendingSuggestionForTrack — 카드 t551 후속(지시 1항), AI �
 
   it("target 과 그룹 이름이 다르면 false", () => {
     expect(isPendingSuggestionForTrack(suggestion(), "MOVER-U")).toBe(false);
+  });
+});
+
+/** 카드 t551 계속 — 직접 고르기(①) 드롭다운. mockup `ldbeat-runbook-
+ * mockup-20261008.html` `opts()`의 그룹·값 그대로("이 곡 프리셋"/
+ * "쇼에 이미 있는 프리셋"/"+ 새 프리셋"), `drawerSections`가 출처다. */
+function drawerEntry(overrides: Partial<BeatGridDrawerEntry> = {}): BeatGridDrawerEntry {
+  return {
+    preset_no: "2.41",
+    name: "LA Center",
+    usage_count: 0,
+    used_by: [],
+    ...overrides,
+  };
+}
+
+function drawerSection(overrides: Partial<BeatGridDrawerSection> = {}): BeatGridDrawerSection {
+  return {
+    pool_name: "Position",
+    title: "위치 풀 2 — 위치·움직임(상대값)",
+    pool_no: 2,
+    entries: [],
+    unread: false,
+    bands_confirmed: true,
+    ...overrides,
+  };
+}
+
+describe("formatDrawerEntryOptionLabel — 카드 t551 계속, mockup opts() 옵션 표시", () => {
+  it("번호와 이름을 공백으로 잇는다", () => {
+    expect(formatDrawerEntryOptionLabel(drawerEntry({ preset_no: "4.24", name: "LA Pink" }))).toBe(
+      "4.24 LA Pink",
+    );
+  });
+});
+
+describe("splitDrawerSectionEntries — 카드 t551 계속, mockup 두 optgroup(이 곡/쇼 기존)", () => {
+  it("섹션이 null 이면 둘 다 빈 배열(지어내지 않는다)", () => {
+    expect(splitDrawerSectionEntries(null)).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("POOL_UNREAD(section.unread)면 둘 다 빈 배열", () => {
+    expect(
+      splitDrawerSectionEntries(drawerSection({ unread: true, entries: [drawerEntry()] })),
+    ).toEqual({ thisSong: [], showExisting: [] });
+  });
+
+  it("usage_count > 0 은 이 곡 프리셋, 0 은 쇼에 이미 있는 프리셋", () => {
+    const used = drawerEntry({ preset_no: "2.41", usage_count: 2 });
+    const unused = drawerEntry({ preset_no: "2.42", usage_count: 0 });
+    expect(splitDrawerSectionEntries(drawerSection({ entries: [used, unused] }))).toEqual({
+      thisSong: [used],
+      showExisting: [unused],
+    });
+  });
+
+  it("entries 가 비어 있으면 둘 다 빈 배열", () => {
+    expect(splitDrawerSectionEntries(drawerSection({ entries: [] }))).toEqual({
+      thisSong: [],
+      showExisting: [],
+    });
+  });
+});
+
+describe("findDrawerSection — 카드 t551 계속", () => {
+  it("배열이 null 이면 null(아직 서랍을 안 받음)", () => {
+    expect(findDrawerSection(null, "Position")).toBeNull();
+  });
+
+  it("풀 이름이 일치하는 섹션을 찾는다", () => {
+    const position = drawerSection({ pool_name: "Position" });
+    const color = drawerSection({ pool_name: "Color", title: "색 풀 4" });
+    expect(findDrawerSection([position, color], "Color")).toBe(color);
+  });
+
+  it("일치하는 섹션이 없으면 null", () => {
+    expect(findDrawerSection([drawerSection({ pool_name: "Position" })], "Dimmer")).toBeNull();
+  });
+});
+
+describe("buildPositionPresetChanges/buildColorPresetChanges/buildBrightnessPresetChanges — 카드 t551 계속, apply_beat_grid_edit 와 바이트 동일 모양", () => {
+  it("위치 프리셋 changes", () => {
+    expect(buildPositionPresetChanges("2.41")).toEqual({ position_preset_no: "2.41" });
+  });
+
+  it("색 프리셋 changes", () => {
+    expect(buildColorPresetChanges("4.24")).toEqual({ color_preset_no: "4.24" });
+  });
+
+  it("디머 프리셋 changes — 밝기 단일모드(REQ-LDBEAT-015(c))", () => {
+    expect(buildBrightnessPresetChanges("1.1")).toEqual({
+      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
+    });
+  });
+});
+
+describe("NEW_PRESET_OPTION_VALUE — 카드 t551 계속, mockup opts() \"__new\" 리터럴", () => {
+  it("mockup 과 같은 리터럴 값", () => {
+    expect(NEW_PRESET_OPTION_VALUE).toBe("__new");
   });
 });
