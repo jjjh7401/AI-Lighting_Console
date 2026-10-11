@@ -9832,7 +9832,7 @@ class ChatSession:
         report_lines = [
             f"새 위치 프리셋 {preset_no} '{label}' → 목표 "
             f"({aim[0]:g}, {aim[1]:g}, {aim[2]:g}) m 배정 — 승인 대기"
-            "(「⇪ 콘솔에 반영」 승인 때 콘솔에 만듦)"
+            "(「⇪ 콘솔에 반영」 때 콘솔에 만들고, 못 만들면 승인 카드에 보류 사유가 나옴)"
         ]
         report_lines.extend(line for line in report if line.startswith("⚠"))
         event = chat_response_event(
