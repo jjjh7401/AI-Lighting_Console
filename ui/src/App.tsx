@@ -438,6 +438,10 @@ export default function App() {
   // 여기 값은 화면 표시용이다. 첨부 전에는 버튼이 아예 없어야 한다 — 누를 수
   // 있는데 항상 거절당하는 버튼은 운영자에게 무엇을 하라고 알려 주지 않는다.
   const [songAudioName, setSongAudioName] = useState<string | null>(null);
+  // 카드 t570(REQ-LDBEAT-024(c)) — 위 `songAudioName`과 같이 세팅되는
+  // File 자체(기존 업로드 경로가 이미 들고 있던 값을 버리지 않고 쥐는 것
+  // 뿐 — 새 채널 없음). 런북 박자 격자의 음원 자동 연결이 이 값을 읽는다.
+  const [songAudioFile, setSongAudioFile] = useState<File | null>(null);
   const [layoutImage, setLayoutImage] = useState<{ fileName: string; dataUrl: string } | null>(
     null,
   );
@@ -791,6 +795,12 @@ export default function App() {
       }
       setSongAudioUploadError(null);
       setSongAudioName(file.name);
+      // 카드 t570(REQ-LDBEAT-024(c)) — 업로드는 바이트를 읽어 서버로
+      // 보내고 버리지만(위 FileReader), 런북 박자 격자가 "이 세션에서
+      // 이미 첨부된 곡 음원"을 자동 연결하려면 그 File 객체 자체가
+      // 필요하다 — 작은 추가 필드 하나(기존 업로드 경로 재사용, 새
+      // 서버↔UI 채널 0개).
+      setSongAudioFile(file);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -1165,6 +1175,7 @@ export default function App() {
             fixtures={beatGridStageFixtures}
             stageNotes={state.beatGridStage?.unread}
             stageGroups={state.beatGridStage?.groups}
+            attachedSongAudioFile={songAudioFile}
           />
         </div>
       ) : runbookMode ? (
