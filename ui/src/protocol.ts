@@ -1249,7 +1249,11 @@ export function buildBeatGridDrawerRequest(): string {
  * undefined 를 섞지 않는다).
  *
  * 카드 t603 — "effect" 필드만 효과 레시피(``fx``: 효과 틀·주기 박/마디)를 함께
- * 올린다. 서버가 이 필드에 필수로 받는다. 주어졌을 때만 싣는다(aim 과 같은 규칙). */
+ * 올린다. 서버가 이 필드에 필수로 받는다. 주어졌을 때만 싣는다(aim 과 같은 규칙).
+ *
+ * 카드 t594(REQ-LDBEAT-015(i-5)) — "color" 필드만 목표 RGB(``rgb``: r·g·b,
+ * 0~100%)를 함께 올린다. 서버가 이 필드에 필수로 받는다. 주어졌을 때만
+ * 싣는다(aim 과 같은 규칙). */
 export function buildBeatGridNewPreset(
   bar: number,
   target: string,
@@ -1258,6 +1262,7 @@ export function buildBeatGridNewPreset(
   description: string,
   aim?: { x: number; y: number; z: number },
   fx?: BeatGridFxRecipe,
+  rgb?: { r: number; g: number; b: number },
 ): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,
@@ -1269,6 +1274,7 @@ export function buildBeatGridNewPreset(
     description,
     ...(aim !== undefined ? { aim } : {}),
     ...(fx !== undefined ? { fx } : {}),
+    ...(rgb !== undefined ? { rgb } : {}),
   });
 }
 

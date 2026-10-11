@@ -54,6 +54,14 @@ from server.design.beat_grid import (
     preset_pool_no,
     split_empty_preset_holds,
 )
+from server.design.beat_grid_color_presets import (
+    color_preset_outcomes,
+    color_preset_rgb,
+    record_color_preset_rgb,
+)
+from server.design.beat_grid_color_presets import (
+    referencing_tracks as color_referencing_tracks,
+)
 from server.design.beat_grid_edit import (
     BeatGridEditError,
     _assert_ascii_preset_label,
@@ -92,6 +100,7 @@ from server.design.beat_grid_presets import (
     app_preset_label,
     build_preset_drawer,
     effect_kind_to_pool_name,
+    first_free_base_color_number,
     first_free_base_position_number,
     first_free_preset_number,
     pool_name_to_effect_kind,
@@ -3274,6 +3283,18 @@ def _effect_creation_text(
         f"{preset_no} {label} ← {recipe.get('fx_id', '?')} · "
         f"{recipe.get('period_value', '?')}{unit} 주기 · {group}"
     )
+
+
+def _color_creation_text(
+    *, timeline_grid: Mapping[str, object], preset_no: str, lines: Sequence[str]
+) -> str:
+    """카드 t594 — 승인 카드의 「새로 만드는 색 프리셋」 한 항목.
+    ``4.41 'LA Wave' → RGB(50, 0, 0)% Group 7`` 꼴(이름은 Label 줄에서 읽는다)."""
+    label = next((line.split(" ", 3)[3] for line in lines if line.startswith("Label Preset ")), "")
+    rgb = color_preset_rgb(timeline_grid, preset_no)
+    where = f" → RGB({rgb[0]:g}, {rgb[1]:g}, {rgb[2]:g})%" if rgb else ""
+    group = next((line.split(" ;")[0] for line in lines if line.startswith("Group ")), "")
+    return f"{preset_no} {label}{where} {group}"
 
 
 def _preset_release_command(fids: Sequence[int]) -> str:
@@ -9571,12 +9592,13 @@ class ChatSession:
         "effect": "효과 프리셋",
     }
 
-    #: 효과 풀 번호대가 아예 없는 base 풀(REQ-LDBEAT-015(b) — base 색
-    #: 4.21~·디머 프리셋 풀은 preset_pools.yaml 밖이다). base 위치
-    #: 2.41~ 는 카드 t599(REQ-LDBEAT-015(i-3))부터 "위치" 필드가 지원한다
-    #: — 효과 번호대가 없는 것은 같지만, 콘솔이 실제로 쥔 빈 슬롯으로
-    #: 배정한다(`first_free_base_position_number`).
-    _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset", "color"})
+    #: 효과 풀 번호대가 아예 없는 base 풀(REQ-LDBEAT-015(b) — 디머 프리셋
+    #: 풀은 preset_pools.yaml 밖이다). base 위치 2.41~ 는 카드 t599
+    #: (REQ-LDBEAT-015(i-3))부터, base 색 4.21~ 는 카드 t594
+    #: (REQ-LDBEAT-015(i-5))부터 각각 "위치"/"색" 필드가 지원한다 — 효과
+    #: 번호대가 없는 것은 같지만, 콘솔이 실제로 쥔 빈 슬롯으로 배정한다
+    #: (`first_free_base_position_number`/`first_free_base_color_number`).
+    _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset"})
 
     @staticmethod
     def _validate_new_preset_fx(
@@ -9626,6 +9648,31 @@ class ChatSession:
             values.append(float(value))
         return (values[0], values[1], values[2]), None
 
+    @staticmethod
+    def _validate_new_preset_rgb(
+        rgb: object,
+    ) -> tuple[tuple[float, float, float] | None, str | None]:
+        """카드 t594 — "색" 필드가 받는 목표 RGB(0~100%) 검증. 프로토콜
+        파서(`parse_client_message`)가 이미 한 번 같은 모양을 걸렀지만,
+        이 메서드는 파서 없이도 직접 불릴 수 있어(시험 관행, `aim`/`fx`와
+        같은 이유) 여기서 다시 본다 — 2중 방어, 새 규칙이 아니라 같은
+        검증의 재확인이다.
+
+        반환: ``(r·g·b 세 값 또는 None, 거절 사유 또는 None)``."""
+        if not isinstance(rgb, Mapping):
+            return None, "색 프리셋은 목표 RGB(r·g·b, 0~100%)가 필요합니다 — 받지 못했습니다."
+        values: list[float] = []
+        for channel in ("r", "g", "b"):
+            value = rgb.get(channel)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return None, f"색 채널 '{channel}'가 수가 아닙니다."
+            if not math.isfinite(value):
+                return None, f"색 채널 '{channel}'가 유한한 수가 아닙니다."
+            if not (0 <= value <= 100):
+                return None, f"색 채널 '{channel}'가 0~100 범위 밖입니다."
+            values.append(float(value))
+        return (values[0], values[1], values[2]), None
+
     def beat_grid_new_preset(
         self,
         bar: int | None,
@@ -9635,6 +9682,7 @@ class ChatSession:
         description: str | None,
         aim: Mapping[str, object] | None = None,
         fx: Mapping[str, object] | None = None,
+        rgb: Mapping[str, object] | None = None,
     ) -> dict:
         """카드 t589(REQ-LDBEAT-015(h-1)~(h-6) 계속) — 영문 콘솔 이름·한국어
         설명을 받아 `preset_pools.yaml`의 효과 풀 번호대에서(격자 참조·
@@ -9644,11 +9692,12 @@ class ChatSession:
         똑같이 「⇪ 콘솔에 반영」 승인 전까지 승인 대기로 남는다(h-1) —
         이 메서드 자신은 콘솔에 **읽기**(점유 확인) 말고는 닿지 않는다.
 
-        base 색/디머 프리셋 풀(효과 번호대가 아예 없는 풀)은 거절한다 —
+        base 디머 프리셋 풀(효과 번호대가 아예 없는 풀)은 거절한다 —
         preset_pools.yaml 밖에서 번호대를 지어내지 않는다(REQ-LDBEAT-
-        015(b)). "위치"는 카드 t599부터 같은 base 풀이지만 지원한다 —
-        목표 좌표(``aim``)를 함께 받아 ``_beat_grid_new_position_preset``
-        으로 넘긴다."""
+        015(b)). "위치"는 카드 t599부터, "색"은 카드 t594부터 같은
+        base 풀이지만 지원한다 — 각각 목표 좌표(``aim``)/목표 RGB
+        (``rgb``)를 함께 받아 ``_beat_grid_new_position_preset``/
+        ``_beat_grid_new_color_preset``으로 넘긴다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -9699,6 +9748,19 @@ class ChatSession:
                 "효과 프리셋에만 쓰는 입력입니다."
             )
 
+        # 카드 t594(REQ-LDBEAT-015(i-5)) — "색"만 목표 RGB(``rgb``)를 **필수**로
+        # 받는다. 다른 네 필드는 이 입력을 모른다 — aim 과 같은 엄격함.
+        rgb_target: tuple[float, float, float] | None = None
+        if field == "color":
+            rgb_target, rgb_error = self._validate_new_preset_rgb(rgb)
+            if rgb_error is not None:
+                return self._beat_grid_rejection(rgb_error)
+        elif rgb is not None:
+            return self._beat_grid_rejection(
+                f"'{field_label}'은(는) 목표 RGB(rgb)를 받지 않습니다 — "
+                "색 프리셋에만 쓰는 입력입니다."
+            )
+
         if field in self._NEW_PRESET_NO_BAND_FIELDS:
             return self._beat_grid_rejection(
                 f"'{field_label}'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — "
@@ -9720,6 +9782,19 @@ class ChatSession:
                 label=label,
                 description=description,
                 aim=aim_target,
+            )
+
+        if field == "color":
+            assert rgb_target is not None  # rgb_error 가 None 이면 값도 있다.
+            return self._beat_grid_new_color_preset(
+                store,
+                timeline,
+                grid,
+                bar=bar,
+                target=target,
+                label=label,
+                description=description,
+                rgb=rgb_target,
             )
 
         if field == "dimmer_effect":
@@ -9913,6 +9988,88 @@ class ChatSession:
         report_lines = [
             f"새 위치 프리셋 {preset_no} '{label}' → 목표 "
             f"({aim[0]:g}, {aim[1]:g}, {aim[2]:g}) m 배정 — 승인 대기"
+            "(「⇪ 콘솔에 반영」 때 콘솔에 만들고, 못 만들면 승인 카드에 보류 사유가 나옴)"
+        ]
+        report_lines.extend(line for line in report if line.startswith("⚠"))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 새 프리셋",
+            text=(f"{' · '.join(report_lines)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def _beat_grid_new_color_preset(
+        self,
+        store: SongTimelineStore,
+        timeline: Mapping[str, object],
+        grid: Mapping[str, object],
+        *,
+        bar: int,
+        target: str,
+        label: str,
+        description: str,
+        rgb: tuple[float, float, float],
+    ) -> dict:
+        """카드 t594(REQ-LDBEAT-015(i-5)) — "색" 필드의 「＋ 새 프리셋
+        만들기」. `_beat_grid_new_position_preset`(t599)과 같은 길
+        (`apply_beat_grid_edit`, 승인 대기로 남김)이지만, 번호는
+        `first_free_base_color_number`(콘솔이 실제로 쥔 빈 슬롯, REQ-
+        LDBEAT-015(b) base 풀)로 고른다. 목표 RGB(``rgb``)는 칸이 아니라
+        곡별 격자 ``preset_colors``에 남아(카드 t592의
+        ``record_position_preset_target``과 같은 자리 모양,
+        ``record_color_preset_rgb``) 반영 때 `color_preset_outcomes`가
+        그 번호를 선택+값 줄로 환산한다 — 이 메서드 자신은 콘솔에
+        **읽기**(점유 확인) 말고는 닿지 않는다."""
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        result = read_named_pool(query, pool_root, "Color", probe_prefix="beat-grid-new-preset")
+        if result is not None:
+            # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다(위치 분기와 같은 관행).
+            self._beat_grid_pool_slots[result[0]] = dict(result[1])
+
+        policy = load_preset_pool_policy()
+        preset_no, reject_reason = first_free_base_color_number(
+            policy=policy, grid=grid, console_children=result
+        )
+        if reject_reason is not None:
+            return self._beat_grid_rejection(reject_reason)
+        assert preset_no is not None  # reject_reason 이 None 이면 번호도 있다.
+
+        changes: dict[str, object] = {
+            "color_preset_no": preset_no,
+            "new_preset_label": label,
+        }
+        beats_per_bar = beats_per_bar_from_timeline(timeline)
+        try:
+            updated_grid, report = apply_beat_grid_edit(
+                grid, bar=bar, target=target, changes=changes, beats_per_bar=beats_per_bar
+            )
+        except BeatGridEditError as error:
+            return self._beat_grid_rejection(str(error))
+
+        # REQ-LDBEAT-015(h) 이름·설명과 같은 저장 모양 + 카드 t594 목표 RGB.
+        updated_grid = record_app_preset_description(updated_grid, preset_no, description.strip())
+        updated_grid = record_app_preset_label(updated_grid, preset_no, label)
+        updated_grid = record_color_preset_rgb(updated_grid, preset_no, rgb)
+
+        self._draft_history.record(timeline)
+        updated_timeline = dict(timeline)
+        updated_timeline["beat_grid"] = updated_grid
+        updated_timeline = self._draft_badge(
+            updated_timeline, depth=self._draft_history.depth, report=report
+        )
+        store.latest = updated_timeline
+        self._send(
+            song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
+        )
+        # 카드 t563 과 같은 계약 — 편집 하나가 성공할 때마다 대기 수 배지를 다시 보낸다.
+        self._beat_grid_send_status(last_action="edit", ok=True)
+
+        report_lines = [
+            f"새 색 프리셋 {preset_no} '{label}' → RGB "
+            f"({rgb[0]:g}, {rgb[1]:g}, {rgb[2]:g})% 배정 — 승인 대기"
             "(「⇪ 콘솔에 반영」 때 콘솔에 만들고, 못 만들면 승인 카드에 보류 사유가 나옴)"
         ]
         report_lines.extend(line for line in report if line.startswith("⚠"))
@@ -10377,12 +10534,18 @@ class ChatSession:
             position_creations = {
                 number: lines
                 for number, lines in position_plan.creations.items()
-                if position_plan.creation_fields.get(number) != "effect_preset_no"
+                if position_plan.creation_fields.get(number) == "position_preset_no"
             }
             effect_creations = {
                 number: lines
                 for number, lines in position_plan.creations.items()
                 if position_plan.creation_fields.get(number) == "effect_preset_no"
+            }
+            # 카드 t594 — 색도 같은 입구(`plan_cells`)를 재사용한다 — 세 번째 갈래.
+            color_creations = {
+                number: lines
+                for number, lines in position_plan.creations.items()
+                if position_plan.creation_fields.get(number) == "color_preset_no"
             }
             if position_creations:
                 listed = ", ".join(
@@ -10400,6 +10563,15 @@ class ChatSession:
                 )
                 risk_reason += (
                     f" · 새로 만드는 효과 프리셋 {len(effect_creations)}개"
+                    f"(콘솔 풀에서 빈 번호 확인): {listed}"
+                )
+            if color_creations:
+                listed = ", ".join(
+                    _color_creation_text(timeline_grid=grid, preset_no=number, lines=lines)
+                    for number, lines in color_creations.items()
+                )
+                risk_reason += (
+                    f" · 새로 만드는 색 프리셋 {len(color_creations)}개"
                     f"(콘솔 풀에서 빈 번호 확인): {listed}"
                 )
             # 카드 t590(REQ-LDBEAT-015(i-1)) — 콘솔에 아직 없는 번호는 송신 보류.
@@ -11132,10 +11304,12 @@ class ChatSession:
         held: list[dict[str, object]],
         timeline: Mapping[str, object],
     ) -> PositionPresetPlan:
-        """카드 t592·t593 — 보류 칸 중 새 프리셋(위치·효과)으로 만들 수 있는 칸을 가린다.
-        위치 후보가 있을 때만 그룹 소속·장비 좌표를 콘솔에서 **읽는다**(쓰기 없음).
-        효과는 격자 레시피·fx 라이브러리·곡 BPM 만 쓴다(콘솔 판독 0). 칸 판정은
-        ``plan_cells``(순수 함수) 한 곳이 두 종류를 함께 한다."""
+        """카드 t592·t593·t594 — 보류 칸 중 새 프리셋(위치·효과·색)으로 만들 수
+        있는 칸을 가린다. 위치 후보가 있을 때만 그룹 소속·장비 좌표를 콘솔에서
+        **읽는다**(쓰기 없음). 색 후보가 있을 때만 그룹 소속·장비 컬러 채널
+        이름을 콘솔에서 읽는다. 효과는 격자 레시피·fx 라이브러리·곡 BPM 만
+        쓴다(콘솔 판독 0). 칸 판정은 ``plan_cells``(순수 함수) 한 곳이 세
+        종류를 함께 한다."""
 
         def _numbers(field: str) -> list[str]:
             return sorted(
@@ -11152,7 +11326,8 @@ class ChatSession:
             n for n in _numbers("position_preset_no") if preset_pool_no(n) == POSITION_PRESET_POOL
         ]
         effect_numbers = _numbers("effect_preset_no")
-        if not position_numbers and not effect_numbers:
+        color_numbers = _numbers("color_preset_no")
+        if not position_numbers and not effect_numbers and not color_numbers:
             return PositionPresetPlan(held=list(held))
         outcomes: dict[tuple[str, str], tuple[tuple[str, ...] | None, str | None]] = {}
         if position_numbers:
@@ -11182,7 +11357,51 @@ class ChatSession:
                 beats_per_bar=timing.beats_per_bar if timing is not None else None,
             ).items():
                 outcomes[("effect_preset_no", number)] = outcome
+        if color_numbers:
+            # 카드 t594 — 그 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의
+            # 소속과, 그 소속 장비의 컬러 채널 이름을 콘솔에서 읽는다(쓰기 없음).
+            # 색 전용 필드(`color_preset_no`)로 가리킨다 — 위치 전용
+            # `referencing_tracks`(position_preset_no)를 재사용하면 색 번호의
+            # 소속이 늘 빈 목록으로 나온다(t594 실측 결함).
+            group_names = sorted(
+                {
+                    str(track.get("group_name"))
+                    for number in color_numbers
+                    for track in color_referencing_tracks(grid, number)
+                }
+            )
+            members = self._beat_grid_group_members(group_names)
+            fids = sorted({fid for group_fids in members.values() for fid in group_fids})
+            channel_names = self._beat_grid_color_channel_names(fids)
+            for number, outcome in color_preset_outcomes(
+                grid,
+                color_numbers,
+                members=members,
+                channel_names=channel_names,
+            ).items():
+                outcomes[("color_preset_no", number)] = outcome
         return plan_cells(held, outcomes)
+
+    def _beat_grid_color_channel_names(
+        self, fids: Sequence[int]
+    ) -> dict[int, list[str | None] | None]:
+        """카드 t594 — ``fids``의 컬러 DMX 채널 이름(``_fixture_color_channel_
+        names``와 같은 3단계 판독). 패치 (slot, fid) 열거가 실패하거나 그
+        fid가 패치에 없으면 그 fid는 결과에 없다 — 호출자(``color_preset_
+        outcomes``)가 「못 읽음」으로 다룬다(지어내지 않는다)."""
+        if not fids:
+            return {}
+        enumerated = self._color_rig_fixture_pairs()
+        if enumerated is None:
+            return {}
+        pairs, _fid_unread = enumerated
+        wanted = set(fids)
+        filtered = [(slot, fid) for slot, fid in pairs if fid in wanted]
+        if not filtered:
+            return {}
+        return self._fixture_color_channel_names(
+            filtered, probe_id_prefix="beat-grid-new-color-preset"
+        )
 
     def _beat_grid_pointing_frames(self) -> PointingFrames | None:
         """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만

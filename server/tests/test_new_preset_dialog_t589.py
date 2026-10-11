@@ -330,10 +330,13 @@ class TestBeatGridNewPresetHandler:
         assert console.executed == []
 
     # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"은 더는 이 거절에 들지
-    # 않는다(base 위치 풀도 콘솔 빈 슬롯으로 지원한다). 그 새 동작은
-    # `test_new_position_preset_t599.py`가 전수로 잠근다. dimmer_preset·
-    # color 거절은 회귀 없이 그대로다.
-    @pytest.mark.parametrize("field", ["dimmer_preset", "color"])
+    # 않는다(base 위치 풀도 콘솔 빈 슬롯으로 지원한다). 카드 t594
+    # (REQ-LDBEAT-015(i-5)) — "color"도 같은 이유로 더는 이 거절에 들지
+    # 않는다(base 색 풀도 콘솔 빈 슬롯으로 지원한다, `first_free_base_
+    # color_number`). 그 새 동작들은 각각 `test_new_position_preset_t599.py`·
+    # `test_new_color_preset_t594.py`가 전수로 잠근다. dimmer_preset 거절은
+    # 회귀 없이 그대로다.
+    @pytest.mark.parametrize("field", ["dimmer_preset"])
     def test_base_pool_fields_rejected_with_the_no_band_reason(self, tmp_path, field) -> None:
         store = SongTimelineStore()
         store.latest = _timeline()
@@ -588,8 +591,12 @@ class TestParseClientMessageBeatGridNewPreset:
     def test_all_five_fields_are_accepted(self, field) -> None:
         # 카드 t599(REQ-LDBEAT-015(i-3)) — "position"만 목표 좌표(aim)가
         # 필수다(`TestParseClientMessageAim`가 그 모양을 전수로 잠근다).
+        # 카드 t594(REQ-LDBEAT-015(i-5)) — "color"만 목표 RGB(rgb)가 필수다
+        # (이 파일의 `TestParseClientMessageRgb`가 그 모양을 전수로 잠근다).
         overrides: dict[str, object] = {"field": field}
         if field == "position":
             overrides["aim"] = {"x": 0.0, "y": 0.0, "z": 0.0}
+        if field == "color":
+            overrides["rgb"] = {"r": 0.0, "g": 0.0, "b": 0.0}
         parsed = self._parse(self._valid_payload(**overrides))
         assert parsed["field"] == field

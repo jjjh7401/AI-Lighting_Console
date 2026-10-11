@@ -89,6 +89,11 @@ import {
   fxRecipeFromDraft,
   fxTemplatesForKind,
 } from "./beatgrid/newPresetFx";
+import {
+  NewPresetColorFields,
+  type NewPresetColorFieldsProps,
+  isValidColorChannel,
+} from "./beatgrid/newPresetColor";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitRow } from "./beatgrid/LRSplitRow";
@@ -559,6 +564,8 @@ export interface BeatGridProps {
     aim?: { x: number; y: number; z: number };
     /** 카드 t603 — "effect" 필드만 싣는다(효과 틀·주기 박/마디, 서버 필수). */
     fx?: BeatGridFxRecipe;
+    /** 카드 t594(REQ-LDBEAT-015(i-5)) — "color" 필드만 싣는다(R·G·B 0~100%, 서버 필수). */
+    rgb?: { r: number; g: number; b: number };
   }) => void;
   /** 카드 t589 — 서버의 가장 최근 답. 「만들기」 뒤 배정 결과·거절 사유를
    * 그 칸 아래에 보이는 데 쓴다(`newPresetReplyFor`). 생략하면 안 보인다. */
@@ -961,6 +968,9 @@ export interface NewPresetDialogProps {
   /** 카드 t603 — "효과" 필드만 효과 틀·주기 칸을 넘긴다(생략하면 그 칸이 없다).
    * 넘기면 레시피가 다 차야 「만들기」가 켜진다. */
   fx?: NewPresetFxFieldsProps;
+  /** 카드 t594 — "색" 필드만 R·G·B(0~100%) 칸을 넘긴다(생략하면 그 칸이 없다).
+   * 넘기면 셋이 다 차야 「만들기」가 켜진다. */
+  color?: NewPresetColorFieldsProps;
 }
 
 export function NewPresetDialog({
@@ -979,6 +989,7 @@ export function NewPresetDialog({
   onYChange,
   onZChange,
   fx,
+  color,
 }: NewPresetDialogProps) {
   if (!enabled) {
     return (
@@ -994,7 +1005,10 @@ export function NewPresetDialog({
     !fx ||
     (fxTemplatesForKind(fx.templates, fx.kind).some((t) => t.fx_id === fx.fxId) &&
       fxRecipeFromDraft({ fxId: fx.fxId, period: fx.period, unit: fx.unit }) !== null);
-  const canCreate = labelValid && descriptionValid && aimValid && fxValid;
+  const colorValid =
+    !color ||
+    (isValidColorChannel(color.r) && isValidColorChannel(color.g) && isValidColorChannel(color.b));
+  const canCreate = labelValid && descriptionValid && aimValid && fxValid && colorValid;
   return (
     <span className="beat-grid-new-preset-dialog" data-testid="beat-grid-new-preset-dialog">
       <label className="beat-grid-new-preset-field">
@@ -1056,6 +1070,7 @@ export function NewPresetDialog({
         </>
       )}
       {fx && <NewPresetFxFields {...fx} />}
+      {color && <NewPresetColorFields {...color} />}
       <button type="button" disabled={!canCreate} onClick={onCreate}>
         만들기
       </button>
@@ -1506,6 +1521,8 @@ export function BeatGrid({
         // (다른 네 필드는 항상 빈 문자열로 둔다 — `NewPresetDialog`가 그
         // 기본값으로 `showAim`을 끈다).
         // 카드 t603 — "effect" 칸만 fxId·period·unit 을 쓴다(나머지는 기본값 그대로).
+        // 카드 t594(REQ-LDBEAT-015(i-5)) — "color" 칸만 r·g·b 를 쓴다
+        // (다른 네 필드는 항상 빈 문자열로 둔다).
         {
           label: string;
           description: string;
@@ -1515,6 +1532,9 @@ export function BeatGrid({
           fxId?: string;
           period?: string;
           unit?: FxPeriodUnit;
+          r?: string;
+          g?: string;
+          b?: string;
         }
       >
     >
@@ -2578,6 +2598,9 @@ export function BeatGrid({
                           fxId: string;
                           period: string;
                           unit: FxPeriodUnit;
+                          r: string;
+                          g: string;
+                          b: string;
                         }>,
                       ) => setNewPresetDrafts((prev) => ({ ...prev, [field]: { ...draft, ...next } }));
                       const finish = () => {
@@ -2610,6 +2633,22 @@ export function BeatGrid({
                         fxTemplatesForKind(fxProps.templates, fxKind).some((t) => t.fx_id === fxDraft.fxId)
                           ? fxRecipeFromDraft(fxDraft)
                           : null;
+                      // 카드 t594 — "color"만 R·G·B(0~100%)를 받는다(서버 필수).
+                      const colorDraft = { r: draft.r ?? "", g: draft.g ?? "", b: draft.b ?? "" };
+                      const colorProps: NewPresetColorFieldsProps | undefined =
+                        field === "color"
+                          ? {
+                              ...colorDraft,
+                              onRChange: (r) => setDraft({ r }),
+                              onGChange: (g) => setDraft({ g }),
+                              onBChange: (b) => setDraft({ b }),
+                            }
+                          : undefined;
+                      const colorValid =
+                        colorProps !== undefined &&
+                        isValidColorChannel(colorDraft.r) &&
+                        isValidColorChannel(colorDraft.g) &&
+                        isValidColorChannel(colorDraft.b);
                       return (
                         <NewPresetDialog
                           enabled={!!onNewPresetRequest}
@@ -2625,6 +2664,7 @@ export function BeatGrid({
                           onYChange={(y) => setDraft({ y })}
                           onZChange={(z) => setDraft({ z })}
                           fx={fxProps}
+                          color={colorProps}
                           onCreate={() => {
                             const labelValid = isValidConsoleLabel(draft.label);
                             const descriptionValid = draft.description.trim().length > 0;
@@ -2639,6 +2679,7 @@ export function BeatGrid({
                               !descriptionValid ||
                               !aimValid ||
                               (fxProps !== undefined && fxRecipe === null) ||
+                              (colorProps !== undefined && !colorValid) ||
                               !selected ||
                               !selectedTrack
                             ) {
@@ -2660,6 +2701,15 @@ export function BeatGrid({
                                   }
                                 : {}),
                               ...(fxRecipe ? { fx: fxRecipe } : {}),
+                              ...(colorValid
+                                ? {
+                                    rgb: {
+                                      r: Number(colorDraft.r),
+                                      g: Number(colorDraft.g),
+                                      b: Number(colorDraft.b),
+                                    },
+                                  }
+                                : {}),
                             });
                             setNewPresetPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
                             finish();
