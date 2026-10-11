@@ -39,9 +39,28 @@
 - 시험(RED→GREEN): `ui/src/components/BeatGridTopBar.test.tsx` 새 묶음 「상단 바 — 1450px 이상 한 줄 (카드 t587)」 3건 — 고치기 전 `Tests 3 failed | 17 passed (20)`, 고친 뒤 `Tests 20 passed (20)`.
 - UI 전체: `npx vitest run` → `Test Files 53 passed (53)` · `Tests 1178 passed (1178)`. `npm run build`(tsc && vite build) 종료 0.
 
-## 리드 판단 요청 하나
+## 리드 판단 반영 (2차, 같은 날)
 
-카드 t579(REQ-LDBEAT-014)는 「hover title 만으로는 앱이 맞춘 값처럼 읽힌다」며 안내를 **보이게** 붙였다. 이 카드는 1450px 이상에서 그 안내를 다시 title 로만 돌린다(시안 정본 + 카드 지시). 1450px 미만에서는 여전히 보인다. REQ-014 문면(「안내를 표시한다」)은 title 표시로도 충족된다고 읽었지만, t579 의 판단과 방향이 반대라 승인 여부는 리드 몫이다.
+1차는 1450px 이상에서 안내를 title 로만 돌렸다. 리드 판단: 「REQ-014 는 BPM 이 자동 설정처럼 보이면 안 된다 — 시안은 SPEC 이 말이 없을 때만 이긴다. 1450 이상에서도 짧은 안내를 보이게」.
+
+- 1450px 이상: `BPM 112.35 · 콘솔에서 설정`(짧은 꼬리 `.beat-grid-pill-note-short`, `SPEED_MASTER_MANUAL_SHORT_NOTE`). 긴 문장은 알약 title.
+- 1450px 미만: 지금처럼 긴 안내 `· 스피드 마스터 — 콘솔에서 직접 설정`.
+- `nowrap` 제거는 그대로.
+
+재측정 — `after2/topbar_after2.json` (같은 스크립트, 2차 빌드):
+
+```
+1450x900  bar_w 1378 scrollW 1376 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+1450x1000 bar_w 1378 scrollW 1376 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+1450x1200 bar_w 1378 scrollW 1376 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+1700x900  bar_w 1616 scrollW 1614 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+1700x1000 bar_w 1616 scrollW 1614 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+1700x1200 bar_w 1616 scrollW 1614 overflow False clipped [] | BPM 112.35 · 콘솔에서 설정
+```
+
+- 바 높이 여섯 창 모두 58px(한 줄). 1450×900: BPM 알약 251→149px, 마지막 버튼 「▤」 오른쪽 끝 1405px < 바 오른쪽 끝 1414px.
+- 시험: 새 묶음을 짧은 꼬리 기준으로 고쳐 RED(2 실패) → GREEN. UI 전체 `Tests 1178 passed (1178)`, `npm run build` 종료 0. (중간에 CSS 주석 속 `@media` 글자가 `styles.test.ts` 의 미디어 블록 감시에 걸려 주석 문구를 바꿨다.)
+- 캡처: `after2/app_{W}x{H}_topbar.png`.
 
 ## 안 잰 것
 

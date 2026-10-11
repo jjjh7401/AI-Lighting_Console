@@ -55,6 +55,8 @@ export function barNavKeyDelta(event: {
  * 상단 바의 「스피드 마스터 15 — 콘솔에서 직접 설정」에서 리그 전용 번호(15)만
  * 뺐다(어느 스피드 마스터를 쓰는지는 리그마다 다르다). */
 export const SPEED_MASTER_MANUAL_NOTE = "스피드 마스터 — 콘솔에서 직접 설정";
+/** 카드 t587 — 1450px 이상 한 줄용 짧은 꼬리(리드 판단, REQ-LDBEAT-014). */
+export const SPEED_MASTER_MANUAL_SHORT_NOTE = "콘솔에서 설정";
 export const SPEED_MASTER_MANUAL_TITLE =
   "스피드 마스터 BPM 은 앱이 자동으로 싣지 않습니다 — 사람이 콘솔에서 직접 설정합니다(자동 설정 방법 미확인).";
 
@@ -188,10 +190,12 @@ export function BeatGridTopBar({
       <span className="beat-grid-pill beat-grid-song">{songTitle || "(곡 미지정)"}</span>
       {versionLabel && <span className="beat-grid-pill">{versionLabel}</span>}
       <span className="beat-grid-pill" title={SPEED_MASTER_MANUAL_TITLE}>
-        {/* 카드 t587 — 구분점까지 안내 칸에 넣어, 1450px 이상에서 칸을 숨기면
-            시안처럼 「BPM 112.35」만 남는다(안내는 알약 title 로). */}
+        {/* 카드 t587 — 1450px 이상에서는 긴 안내 대신 짧은 안내를 보인다(한 줄
+            유지). 어느 폭에서도 「콘솔에서 설정」이 눈에 보여야 자동 설정처럼
+            읽히지 않는다(REQ-LDBEAT-014) — 긴 문장은 알약 title. */}
         {formatTopBarBpm(bpm)}
         <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
+        <span className="beat-grid-pill-note-short"> · {SPEED_MASTER_MANUAL_SHORT_NOTE}</span>
       </span>
       {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />

@@ -89,14 +89,17 @@ function wideMediaBlock(): string {
 }
 
 describe("상단 바 — 1450px 이상 한 줄 (카드 t587, REQ-LDBEAT-017(b))", () => {
-  it("BPM 알약의 안내 문구(구분점 포함)는 따로 감싸져 있어, 숨기면 「BPM 98.5」만 남는다", () => {
+  it("BPM 알약은 긴 안내와 짧은 안내를 둘 다 갖는다 — 어느 폭에서도 「콘솔에서 설정」이 보인다(REQ-LDBEAT-014)", () => {
     const html = renderTopBar();
-    expect(html).toMatch(/BPM 98\.5<span class="beat-grid-pill-note"> · 스피드 마스터 — 콘솔에서 직접 설정<\/span>/);
+    expect(html).toMatch(
+      /BPM 98\.5<span class="beat-grid-pill-note"> · 스피드 마스터 — 콘솔에서 직접 설정<\/span><span class="beat-grid-pill-note-short"> · 콘솔에서 설정<\/span>/,
+    );
   });
 
-  it("1450px 이상에서는 안내 문구를 숨기고(이름은 마우스를 올리면 — 알약 title) 줄임 문구를 쓴다", () => {
+  it("1450px 이상에서는 긴 안내 대신 짧은 안내를 보이고(긴 문장은 알약 title), 버튼은 줄임 문구를 쓴다", () => {
     const block = wideMediaBlock();
     expect(block).toMatch(/\.beat-grid-pill-note\s*\{\s*display:\s*none;?\s*\}/);
+    expect(block).toMatch(/\.beat-grid-pill-note-short\s*\{\s*display:\s*inline;?\s*\}/);
     expect(block).toMatch(/\.lbl-short\s*\{\s*display:\s*inline;?\s*\}/);
   });
 
