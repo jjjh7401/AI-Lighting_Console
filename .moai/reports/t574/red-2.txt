@@ -1,0 +1,6 @@
+
+ Test Files  2 failed (2)
+      Tests  16 failed | 57 passed (73)
+   Start at  17:35:47
+   Duration  401ms (transform 176ms, setup 0ms, collect 249ms, tests 26ms, environment 0ms, prepare 60ms)
+

@@ -3,14 +3,20 @@
 // 20261008.html `drawClipEd`의 `trViewHTML` — 「전환」을 켜면 밝기·위치·색·
 // 움직임이 있던 **같은 자리**가 이 화면으로 바뀐다(아래에 상자를 새로 만들지
 // 않는다). 「들어올 때(페이드)」는 이 화면에만 있다.
+// 카드 t574(SPEC 0.5.0) — 트리거 박·딜레이·위치만 따로·트래킹·박 페이드가 저장
+// 칸을 얻어 켜진다. 저장은 늘 entry 전체(`entryWith`)로 보낸다 — 서버가 entry 를
+// 통째로 바꾸므로 한 필드만 보내면 나머지가 지워진다.
 import { useState } from "react";
 
 import type { BeatGridCue, BeatGridTrack } from "../protocol";
 import {
-  fadeDraftToBars,
-  formatFadeSecondsFirst,
+  entryWith,
+  fadeDraftToEntry,
+  formatEntryFade,
   transitionMib,
   transitionWarnings,
+  triggerSeconds,
+  type FullBeatGridEntry,
 } from "./beatGridTransition";
 import "./beatGridPanels.css";
 
@@ -36,30 +42,47 @@ export function BeatGridTransitionView({
   sectionStartBars,
   onEditRequest,
 }: BeatGridTransitionViewProps) {
+  const storedBeats = cue.entry.fade_beats ?? null;
   const [fadeDraft, setFadeDraft] = useState<string>(
-    cue.entry.fade_bars === null ? "" : String(cue.entry.fade_bars),
+    storedBeats !== null ? String(storedBeats) : cue.entry.fade_bars === null ? "" : String(cue.entry.fade_bars),
   );
-  const [fadeUnit, setFadeUnit] = useState<"bar" | "beat">("bar");
+  const [fadeUnit, setFadeUnit] = useState<"bar" | "beat">(storedBeats !== null ? "beat" : "bar");
   const [fadeError, setFadeError] = useState<string | null>(null);
   const mib = transitionMib(prevCue, cue);
   const warnings = transitionWarnings(prevCue, cue, sectionStartBars);
-  const triggerSeconds =
-    secondsPerBar === null || secondsPerBar === undefined ? null : (cue.bar * secondsPerBar).toFixed(2);
+  const triggerAt = triggerSeconds(cue, secondsPerBar, beatsPerBar);
+  const editable = !!onEditRequest;
+
+  const save = (patch: Partial<FullBeatGridEntry>) =>
+    onEditRequest?.({ bar: cue.bar, target: track.group_name, changes: { entry: entryWith(cue.entry, patch) } });
 
   const applyFade = () => {
-    const result = fadeDraftToBars(fadeDraft, fadeUnit, beatsPerBar);
-    if (result.error !== undefined || result.fadeBars === undefined) {
+    const result = fadeDraftToEntry(fadeDraft, fadeUnit, beatsPerBar);
+    if (result.error !== undefined || result.fade === undefined) {
       setFadeError(result.error ?? "값을 확인해 주세요.");
       return;
     }
     setFadeError(null);
-    // 서버의 `entry`는 통째로 바뀌므로 MIB 모드도 그대로 함께 보낸다.
-    onEditRequest?.({
-      bar: cue.bar,
-      target: track.group_name,
-      changes: { entry: { fade_bars: result.fadeBars, mib_mode: cue.entry.mib_mode } },
-    });
+    save(result.fade);
   };
+
+  /** 박 수 입력(딜레이) — 비우면 미정, 아니면 0 이상의 정수. */
+  const commitBeats = (field: "delay_beats", raw: string) => {
+    const trimmed = raw.trim();
+    if (trimmed === "") {
+      if ((cue.entry[field] ?? null) !== null) save({ [field]: null });
+      return;
+    }
+    const value = Number(trimmed);
+    if (!Number.isInteger(value) || value < 0) {
+      setFadeError("딜레이는 0 이상의 정수 박으로 넣어 주세요.");
+      return;
+    }
+    setFadeError(null);
+    if (value !== (cue.entry[field] ?? null)) save({ [field]: value });
+  };
+  const beatOptions = beatsPerBar === null ? [] : Array.from({ length: beatsPerBar }, (_, i) => i + 1);
+  const positionLate = cue.entry.position_late_beats ?? null;
 
   return (
     <div className="beat-grid-transition-view" aria-label="전환 화면">
@@ -73,7 +96,7 @@ export function BeatGridTransitionView({
           <small>들어올 때</small>
         </label>
         <div className="beat-grid-dimrow beat-grid-tr-fade">
-          <b className="beat-grid-tr-fade-value">{formatFadeSecondsFirst(cue.entry.fade_bars, secondsPerBar)}</b>
+          <b className="beat-grid-tr-fade-value">{formatEntryFade(cue.entry, secondsPerBar, beatsPerBar)}</b>
           {onEditRequest && (
             <>
               <input
@@ -105,23 +128,52 @@ export function BeatGridTransitionView({
         <label>트리거</label>
         <div>
           {cue.bar}마디{" "}
-          <select disabled aria-label="트리거 박" title="박 위치 저장 칸이 없어 1박(마디 시작)으로 고정">
-            <option>1</option>
+          <select
+            aria-label="트리거 박"
+            disabled={!editable || beatsPerBar === null}
+            title={beatsPerBar === null ? "곡 박자표(마디당 박 수)를 몰라 박을 고를 수 없습니다" : undefined}
+            value={String(cue.entry.trigger_beat ?? 1)}
+            onChange={(event) => save({ trigger_beat: Number(event.target.value) })}
+          >
+            {(beatOptions.length > 0 ? beatOptions : [cue.entry.trigger_beat ?? 1]).map((beat) => (
+              <option key={beat} value={String(beat)}>
+                {beat}
+              </option>
+            ))}
           </select>{" "}
-          박{triggerSeconds !== null ? ` = 곡 ${triggerSeconds}초` : ""}
+          박{triggerAt !== null ? ` = 곡 ${triggerAt.toFixed(2)}초` : ""}
         </div>
 
         <label>딜레이</label>
         <div className="beat-grid-dimrow">
-          <b>—</b>
-          <input type="number" disabled aria-label="딜레이(박)" />
+          <input
+            type="number"
+            min={0}
+            step={1}
+            aria-label="딜레이(박)"
+            disabled={!editable}
+            key={`delay-${cue.entry.delay_beats ?? ""}`}
+            defaultValue={cue.entry.delay_beats ?? ""}
+            onBlur={(event) => commitBeats("delay_beats", event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") commitBeats("delay_beats", event.currentTarget.value);
+            }}
+          />
           <span className="beat-grid-tr-unknown">박 [미확인] — 속성별 늦은 적용은 실기 미확인</span>
         </div>
 
         <label>위치만 따로</label>
-        <select disabled aria-label="위치만 따로">
-          <option>같이(기본)</option>
-          <option>1박 늦게 ⚠미확인</option>
+        <select
+          aria-label="위치만 따로"
+          disabled={!editable}
+          value={positionLate === null ? "" : String(positionLate)}
+          onChange={(event) => save({ position_late_beats: event.target.value === "" ? null : Number(event.target.value) })}
+        >
+          <option value="">같이(기본)</option>
+          <option value="1">1박 늦게 ⚠미확인</option>
+          {positionLate !== null && positionLate > 1 && (
+            <option value={String(positionLate)}>{positionLate}박 늦게 ⚠미확인</option>
+          )}
         </select>
 
         <label>MIB</label>
@@ -133,12 +185,20 @@ export function BeatGridTransitionView({
 
         <label>트래킹</label>
         <div className="beat-grid-dimrow">
-          <select disabled aria-label="트래킹" defaultValue={TRACKING_VOCABULARY[0]}>
+          <select
+            aria-label="트래킹"
+            disabled={!editable}
+            value={cue.entry.tracking ?? ""}
+            onChange={(event) => save({ tracking: event.target.value === "" ? null : event.target.value })}
+          >
+            <option value="">— 미정</option>
             {TRACKING_VOCABULARY.map((word) => (
-              <option key={word}>{word}</option>
+              <option key={word} value={word}>
+                {word}
+              </option>
             ))}
           </select>
-          <span className="beat-grid-tr-unknown">콘솔 송신 없음 · 저장 칸 없음</span>
+          <span className="beat-grid-tr-unknown">콘솔 송신 없음</span>
         </div>
       </div>
       {warnings.length > 0 && (

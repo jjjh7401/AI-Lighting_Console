@@ -412,6 +412,19 @@ export interface BeatGridBrightness {
 export interface BeatGridEntry {
   fade_bars: number | null;
   mib_mode: string | null;
+  /** 카드 t574 — SPEC-LDBEAT-001 0.5.0 REQ-LDBEAT-006(i-4a)~(i-4e). 전부 박
+   * 단위(초 아님). 서버는 늘 채워 보내지만, 예전 페이로드에는 없을 수 있어
+   * 선택 필드다 — 없음과 `null` 은 같은 뜻(미정)이다. `fade_beats` 와
+   * `fade_bars` 는 동시에 숫자일 수 없다. */
+  fade_beats?: number | null;
+  /** 미정 = 1박(마디 시작). 1부터 그 곡 마디당 박 수까지. */
+  trigger_beat?: number | null;
+  /** 저장만 — 속성별 딜레이 송신은 [미확인]. */
+  delay_beats?: number | null;
+  /** 「위치만 따로」 늦춤 박 수. 미정 = 같이(기본). ⚠미확인. */
+  position_late_beats?: number | null;
+  /** Track / Cue Only / Block / Release — 표시·저장 전용, 콘솔 송신 없음. */
+  tracking?: string | null;
 }
 
 /** t548 — REQ-LDBEAT-006(vi-1)~(vi-8). 새 콘솔 프리셋 없이 앱이 커맨드로

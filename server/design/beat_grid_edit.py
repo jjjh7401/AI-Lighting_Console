@@ -42,7 +42,7 @@ from server.design.beat_grid import (
     check_evidence_approval,
     normalize_beat_grid_cue,
 )
-from server.design.cue_sheet_edit import MIB_MODES
+from server.design.cue_sheet_edit import MIB_MODES, TRACKING_VALUES
 from server.spatial.position_fx import POSITION_FX_EFFECTS
 
 __all__ = [
@@ -311,7 +311,40 @@ def _validate_evidence(value: object) -> None:
         )
 
 
-def _validate_entry(value: object) -> None:
+def beats_per_bar_from_timeline(timeline: object) -> int | None:
+    """REQ-LDBEAT-006(i-4f) — 곡의 마디당 박 수를 곡 데이터에서만 읽는다.
+
+    ``timeline["time_signature"]``(``"3/4"`` 같은 문자열, ``song_plan``) 을 먼저,
+    없으면 ``timeline["bar_map"]["time_signature"]``(``[분자, 분모]``,
+    ``beat_grid_send`` 와 같은 출처)를 본다. 못 읽으면 ``None`` — 4를 지어내지
+    않는다(카드 t574)."""
+    if not isinstance(timeline, Mapping):
+        return None
+    signature = timeline.get("time_signature")
+    if isinstance(signature, str):
+        match = re.fullmatch(r"\s*(\d+)\s*/\s*\d+\s*", signature)
+        if match and int(match.group(1)) > 0:
+            return int(match.group(1))
+    bar_map = timeline.get("bar_map")
+    pair = bar_map.get("time_signature") if isinstance(bar_map, Mapping) else None
+    if isinstance(pair, Sequence) and not isinstance(pair, (str, bytes)) and len(pair) == 2:
+        beats = pair[0]
+        if isinstance(beats, int) and not isinstance(beats, bool) and beats > 0:
+            return beats
+    return None
+
+
+def _validate_beat_count(value: object, label: str) -> None:
+    """박 수 필드 하나 — 미정 또는 0 이상의 정수(음악 단위, 초 아님)."""
+    if value is None:
+        return
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise BeatGridEditError(f"{label}(박 수)는 정수여야 합니다 (받은 값: {value!r}).")
+    if value < 0:
+        raise BeatGridEditError(f"{label}(박 수)는 0 이상이어야 합니다 (받은 값: {value}).")
+
+
+def _validate_entry(value: object, beats_per_bar: int | None = None) -> None:
     if not isinstance(value, Mapping):
         raise BeatGridEditError("entry 값은 {fade_bars, mib_mode} 모양이어야 합니다.")
     fade_bars = value.get("fade_bars")
@@ -328,6 +361,35 @@ def _validate_entry(value: object) -> None:
     if mib_mode is not None and mib_mode not in MIB_MODES:
         raise BeatGridEditError(
             f"MIB 모드 '{mib_mode}'는 {', '.join(MIB_MODES)} 중 하나여야 합니다."
+        )
+    # 카드 t574 — SPEC-LDBEAT-001 0.5.0 REQ-LDBEAT-006(i-4a)~(i-4e).
+    _validate_beat_count(value.get("fade_beats"), "들어올 때")
+    if fade_bars is not None and value.get("fade_beats") is not None:
+        raise BeatGridEditError(
+            "들어올 때는 마디(fade_bars)와 박(fade_beats) 중 하나로만 정합니다 "
+            "— REQ-LDBEAT-006(i-4a)."
+        )
+    _validate_beat_count(value.get("delay_beats"), "딜레이")
+    _validate_beat_count(value.get("position_late_beats"), "위치만 따로")
+    trigger_beat = value.get("trigger_beat")
+    if trigger_beat is not None:
+        if not isinstance(trigger_beat, int) or isinstance(trigger_beat, bool):
+            raise BeatGridEditError(f"트리거 박은 정수여야 합니다 (받은 값: {trigger_beat!r}).")
+        if beats_per_bar is None:
+            raise BeatGridEditError(
+                "트리거 박을 정하려면 곡 박자표(마디당 박 수)가 필요합니다 — "
+                "박자표를 몰라 범위를 확인할 수 없어 저장하지 않습니다(REQ-LDBEAT-006(i-4f))."
+            )
+        if not 1 <= trigger_beat <= beats_per_bar:
+            raise BeatGridEditError(
+                f"트리거 박은 1~{beats_per_bar} 사이여야 합니다(이 곡 박자표 기준, "
+                f"받은 값: {trigger_beat}) — REQ-LDBEAT-006(i-4b)."
+            )
+    tracking = value.get("tracking")
+    if tracking is not None and tracking not in TRACKING_VALUES:
+        raise BeatGridEditError(
+            f"트래킹 값은 {', '.join(TRACKING_VALUES)} 중 하나여야 합니다 "
+            f"(받은 값: {tracking!r}) — REQ-LDBEAT-006(i-4e)."
         )
 
 
@@ -385,6 +447,7 @@ def apply_beat_grid_edit(
     bar: int,
     target: str,
     changes: Mapping[str, object],
+    beats_per_bar: int | None = None,
 ) -> tuple[dict[str, object], list[str]]:
     """``grid``(``BeatGridView``)의 사본에 ``changes``를 적용하고
     (새 그리드, 변경 보고)를 돌려준다. 원본은 건드리지 않는다.
@@ -433,7 +496,8 @@ def apply_beat_grid_edit(
     if "brightness" in changes:
         _validate_brightness(changes["brightness"])
     if "entry" in changes:
-        _validate_entry(changes["entry"])
+        # 카드 t574 — 트리거 박 범위는 그 곡 박자표(호출자가 곡 데이터에서 읽어 넘김).
+        _validate_entry(changes["entry"], beats_per_bar)
     if "effect_kind" in changes:
         _validate_effect_kind(changes["effect_kind"])
     if "evidence" in changes:
@@ -549,6 +613,7 @@ def apply_beat_grid_edit_range(
     bar_end: int,
     target: str,
     changes: Mapping[str, object],
+    beats_per_bar: int | None = None,
 ) -> tuple[dict[str, object], list[str]]:
     """``apply_beat_grid_edit``의 마디 **범위** 판이다 — 문장 경로(②)가
     받는 mockup 명령창의 실제 모양("22~25마디 MOVER-D ...")을 그대로
@@ -585,6 +650,8 @@ def apply_beat_grid_edit_range(
     current = grid
     report: list[str] = []
     for bar in sorted(bars_in_range):
-        current, bar_report = apply_beat_grid_edit(current, bar=bar, target=target, changes=changes)
+        current, bar_report = apply_beat_grid_edit(
+            current, bar=bar, target=target, changes=changes, beats_per_bar=beats_per_bar
+        )
         report.extend(bar_report)
     return dict(current), report
