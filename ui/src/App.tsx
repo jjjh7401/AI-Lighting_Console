@@ -677,12 +677,13 @@ export default function App() {
   // assistant 응답 텍스트". state.entries 는 이미 매 chat_response 를
   // {kind:"assistant", text} 로 쌓아 둔다(protocol.ts reduceServerEvent) —
   // 새 채널을 만들지 않고 그 값을 그대로 찾아 쓴다.
+  // 카드 t597 — 요약 줄도 넘긴다(일반 편집 거절을 가르는 열쇠).
   // 카드 t589 — 같은 값에 순번(기록 안 자리)을 붙인다: 박자 격자 「＋ 새 프리셋
   // 만들기」가 누른 뒤에 온 답만 보이려면 같은 글자의 반복도 갈라야 한다.
   const lastAssistantReply = useMemo(() => {
     for (let i = state.entries.length - 1; i >= 0; i -= 1) {
       const entry = state.entries[i];
-      if (entry.kind === "assistant") return { text: entry.text, seq: i };
+      if (entry.kind === "assistant") return { text: entry.text, seq: i, summary: entry.summary };
     }
     return null;
   }, [state.entries]);
