@@ -1218,6 +1218,27 @@ export function buildBeatGridDrawerRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_drawer_request" });
 }
 
+/** 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그. 번호는
+ * 짓지 않는다(서버가 `preset_pools.yaml` 번호대에서 빈 번호를 고른다) —
+ * UI는 영문 이름·한국어 설명·어느 필드인지만 올린다. */
+export function buildBeatGridNewPreset(
+  bar: number,
+  target: string,
+  field: "dimmer_preset" | "dimmer_effect" | "position" | "color" | "effect",
+  label: string,
+  description: string,
+): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_new_preset",
+    bar,
+    target,
+    field,
+    label,
+    description,
+  });
+}
+
 /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
  * 원칙: UI는 콘솔 페이로드를 짓지 않는다). */

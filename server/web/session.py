@@ -53,11 +53,14 @@ from server.design.beat_grid import (
 )
 from server.design.beat_grid_edit import (
     BeatGridEditError,
+    _assert_ascii_preset_label,
+    _find_cue,
     apply_beat_grid_edit,
     apply_beat_grid_edit_range,
     beats_per_bar_from_timeline,
     load_preset_pool_policy,
     movement_vocabulary,
+    resolve_track_scope,
 )
 from server.design.beat_grid_emit import (
     beat_grid_sequence_label,
@@ -65,9 +68,15 @@ from server.design.beat_grid_emit import (
     emit_beat_grid_write_bundle,
 )
 from server.design.beat_grid_presets import (
+    app_preset_description,
+    app_preset_label,
     build_preset_drawer,
+    effect_kind_to_pool_name,
+    first_free_preset_number,
     pool_name_to_effect_kind,
     read_named_pool,
+    record_app_preset_description,
+    record_app_preset_label,
     resolve_effect_preset_name,
     resolve_preset_name,
 )
@@ -9498,6 +9507,176 @@ class ChatSession:
         self._send(event)
         return event
 
+    # -- 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그 ------
+
+    #: 화면 다섯 셀렉트의 ``field`` 값 → 사람이 읽는 이름(거절 문면용).
+    _NEW_PRESET_FIELD_LABELS: dict[str, str] = {
+        "dimmer_preset": "디머 프리셋",
+        "dimmer_effect": "디머 효과 프리셋",
+        "position": "위치 프리셋",
+        "color": "색 프리셋",
+        "effect": "효과 프리셋",
+    }
+
+    #: 효과 풀 번호대가 아예 없는 base 풀(REQ-LDBEAT-015(b) — base 위치
+    #: 2.41~·base 색 4.21~·디머 프리셋 풀은 preset_pools.yaml 밖이다).
+    _NEW_PRESET_NO_BAND_FIELDS: frozenset[str] = frozenset({"dimmer_preset", "position", "color"})
+
+    def beat_grid_new_preset(
+        self,
+        bar: int | None,
+        target: str | None,
+        field: str | None,
+        label: str | None,
+        description: str | None,
+    ) -> dict:
+        """카드 t589(REQ-LDBEAT-015(h-1)~(h-6) 계속) — 영문 콘솔 이름·한국어
+        설명을 받아 `preset_pools.yaml`의 효과 풀 번호대에서(격자 참조·
+        콘솔 점유 모두 비어 있는) 첫 빈 번호를 골라 **일반 편집과 같은
+        길**(`apply_beat_grid_edit`)로 씌운다 — 새 콘솔 쓰기 경로를 만들지
+        않는다(AC-LDBEAT-005). 그래서 배정된 번호는 다른 신규 번호와
+        똑같이 「⇪ 콘솔에 반영」 승인 전까지 승인 대기로 남는다(h-1) —
+        이 메서드 자신은 콘솔에 **읽기**(점유 확인) 말고는 닿지 않는다.
+
+        base 위치/색/디머 프리셋 풀(효과 번호대가 아예 없는 풀)은 거절한다
+        — preset_pools.yaml 밖에서 번호대를 지어내지 않는다(REQ-LDBEAT-
+        015(b))."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection(
+                "수정할 박자 격자가 아직 없습니다. 곡을 먼저 설계하거나 불러오세요."
+            )
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            return self._beat_grid_rejection("어느 마디에 새 프리셋을 만들지 못 읽었습니다.")
+        if not isinstance(target, str) or not target.strip():
+            return self._beat_grid_rejection("어느 트랙에 새 프리셋을 만들지 못 읽었습니다.")
+        field_label = self._NEW_PRESET_FIELD_LABELS.get(field or "")
+        if field_label is None:
+            return self._beat_grid_rejection(
+                f"'{field}'은(는) 새 프리셋을 만들 수 있는 항목이 아닙니다. 항목: "
+                f"{', '.join(self._NEW_PRESET_FIELD_LABELS.values())}."
+            )
+        try:
+            _assert_ascii_preset_label(label)
+        except BeatGridEditError as error:
+            return self._beat_grid_rejection(str(error))
+        if not isinstance(description, str) or not description.strip():
+            return self._beat_grid_rejection(
+                "신규 프리셋 설명이 비어 있습니다 — 무엇에 쓸지 적어 주세요."
+            )
+
+        if field in self._NEW_PRESET_NO_BAND_FIELDS:
+            return self._beat_grid_rejection(
+                f"'{field_label}'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — "
+                "preset_pools.yaml 에 이 종류의 번호대가 없어 빈 번호를 정할 수 "
+                "없습니다 — 번호대를 지어내지 않습니다."
+            )
+
+        grid = self._beat_grid_view(timeline)
+        tracks = list(grid.get("tracks") or [])
+
+        if field == "dimmer_effect":
+            kind = "dimmer"
+        else:  # "effect" — 이 칸의 기존 effect_kind 가 번호대를 정한다.
+            scope = resolve_track_scope(tracks, target)
+            if not scope:
+                known = ", ".join(str(track.get("group_name") or "") for track in tracks)
+                return self._beat_grid_rejection(
+                    f"트랙/역할 '{target}'을 찾을 수 없습니다 — 이 곡의 트랙: {known}."
+                )
+            # 스코프가 여러 트랙이면 그중 첫 트랙의 기존 칸을 본다 — 직접
+            # 고르기 화면은 트랙 하나를 선택한 상태에서 열리므로(정확 일치
+            # 타깃이면 스코프는 늘 1개) 보수적으로 충분하다.
+            existing_cue = _find_cue(tracks[scope[0]], bar)
+            kind = existing_cue.get("effect_kind") if existing_cue else None
+            if not kind:
+                return self._beat_grid_rejection(
+                    "이 칸의 효과 종류를 아직 몰라 번호대를 정할 수 없습니다 — "
+                    "먼저 효과(움직임) 종류를 정해 주세요."
+                )
+
+        # 콘솔 점유 확인 — 드로워가 이미 쓰는 그 읽기(`read_named_pool`)를
+        # 종류 하나에 맞는 풀 하나만 재사용한다(새 콘솔 읽기 규율 없음).
+        console_children: dict[int, str | None] | None = None
+        pool_name = effect_kind_to_pool_name(kind)
+        if pool_name is not None:
+            query = _registry_state_query(self._registry)
+            pool_root = self._beat_grid_preset_pool_root()
+            result = read_named_pool(
+                query, pool_root, pool_name, probe_prefix="beat-grid-new-preset"
+            )
+            if result is not None:
+                console_children = result[1]
+
+        policy = load_preset_pool_policy()
+        preset_no, reject_reason, assign_warning = first_free_preset_number(
+            kind, policy=policy, grid=grid, console_children=console_children
+        )
+        if reject_reason is not None:
+            return self._beat_grid_rejection(reject_reason)
+
+        if field == "dimmer_effect":
+            changes: dict[str, object] = {
+                "brightness": {
+                    "mode": "dimmer_effect",
+                    "value_percent": None,
+                    "preset_no": preset_no,
+                },
+                "new_preset_label": label,
+            }
+        else:
+            changes = {
+                "effect_preset_no": preset_no,
+                "effect_kind": kind,
+                "new_preset_label": label,
+            }
+
+        beats_per_bar = beats_per_bar_from_timeline(timeline)
+        try:
+            updated_grid, report = apply_beat_grid_edit(
+                grid, bar=bar, target=target, changes=changes, beats_per_bar=beats_per_bar
+            )
+        except BeatGridEditError as error:
+            return self._beat_grid_rejection(str(error))
+
+        # REQ-LDBEAT-015(h) — 이름·설명은 칸이 아니라 곡별 격자에 남는다
+        # (`record_app_preset_description`/`record_app_preset_label`, 카드
+        # t569 와 같은 저장 자리 모양).
+        assert preset_no is not None  # reject_reason 이 None 이면 번호도 있다.
+        updated_grid = record_app_preset_description(updated_grid, preset_no, description.strip())
+        updated_grid = record_app_preset_label(updated_grid, preset_no, label)
+
+        self._draft_history.record(timeline)
+        updated_timeline = dict(timeline)
+        updated_timeline["beat_grid"] = updated_grid
+        updated_timeline = self._draft_badge(
+            updated_timeline, depth=self._draft_history.depth, report=report
+        )
+        store.latest = updated_timeline
+        self._send(
+            song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
+        )
+        # 카드 t563 과 같은 계약 — 편집 하나가 성공할 때마다 대기 수 배지를
+        # 다시 보낸다.
+        self._beat_grid_send_status(last_action="edit", ok=True)
+
+        report_lines = [
+            f"새 프리셋 {preset_no} '{label}' 배정 — 승인 대기"
+            "(「⇪ 콘솔에 반영」 승인 카드에서 승인)"
+        ]
+        if assign_warning:
+            report_lines.append(assign_warning)
+        report_lines.extend(line for line in report if line.startswith("⚠"))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 격자 새 프리셋",
+            text=(f"{' · '.join(report_lines)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
+            commands=[],
+        )
+        self._send(event)
+        return event
+
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
     #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
 
@@ -9847,21 +10026,34 @@ class ChatSession:
                     f"{name} {bar}마디({reason})" for name, bar, reason in unsent_entry
                 )
                 risk_reason += f" · 보내지 않은 전환 칸 {len(unsent_entry)}개: {listed}"
+
             # 카드 t577(REQ-LDBEAT-015(h-2)) — 편집 시점에 거절하지 않고
             # 초안에 받아들인 승인 대기 프리셋 번호를 이 승인 카드가 "새로
             # 만드는 프리셋 N개"로 따로 열거한다. 기존 두 문구(막혀서 그대로
             # 둔 칸·보내지 않은 전환 칸)를 대신하지 않고 나란히 둔다.
-            if pending_before:
-                listed = ", ".join(
+            # 카드 t589 — 앱이 「＋ 새 프리셋 만들기」로 만든 번호면 저장된 콘솔
+            # 이름·설명을 그 줄에 덧붙인다(`app_preset_label`이 `None`이면 이
+            # 카드가 만든 번호가 아니다 — "번호 직접 고르기" 승인 대기와 구분).
+            def _pending_entry_text(entry: Mapping[str, object]) -> str:
+                base = (
                     f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
                     f"{entry['value']}"
-                    for entry in pending_before
                 )
+                label = app_preset_label(grid, str(entry["value"]))
+                if label is None:
+                    return base
+                description = app_preset_description(grid, str(entry["value"])) or ""
+                return f"{base} '{label}' — {description}"
+
+            if pending_before:
+                listed = ", ".join(_pending_entry_text(entry) for entry in pending_before)
                 risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
+            # 카드 t590(REQ-LDBEAT-015(i-1)) — 콘솔에 아직 없는 번호는 송신 보류.
+            # 앱이 만든 번호(t589)는 빈 번호에서 골랐으니 여기에 온다 — 리드 판단
+            # (2026-10-11)대로 경고는 이 한 줄로 합치고 이름·설명을 붙인다.
             if held_presets:
                 listed = ", ".join(
-                    f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
-                    f"{entry['value']}({entry['hold_reason']})"
+                    f"{_pending_entry_text(entry)}({entry['hold_reason']})"
                     for entry in held_presets
                 )
                 risk_reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"
