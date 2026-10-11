@@ -514,6 +514,15 @@ export interface BeatGridView {
   probe_results: Record<number, string>;
   source: "love_attack_default" | "empty" | "custom";
   note: string | null;
+  /** 카드 t568 ② (공급: t563) — 마지막 반영(승인=송신) 뒤 바뀐 칸. 반영
+   * 스냅숏이 아직 없으면 `null`. 필드가 없는 옛 서버 응답이면 `undefined`. */
+  unsent_cells?: BeatGridUnsentCell[] | null;
+}
+
+/** 카드 t568 ② — `BeatGridView.unsent_cells` 의 한 칸. */
+export interface BeatGridUnsentCell {
+  group_name: string;
+  bar: number;
 }
 
 /** 카드 t551 후속(지시 1항) — 프리셋 서랍의 항목 하나. mockup `drawDrawer()`

@@ -79,7 +79,7 @@ import { GlanceCell } from "./beatgrid/GlanceCell";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitRow } from "./beatgrid/LRSplitRow";
-import { cueEditKey, deriveCueDisplayState } from "./beatgrid/cueDisplayState";
+import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import {
   brightnessCell,
   changedFieldsLabel,
@@ -1027,6 +1027,12 @@ export function BeatGrid({
     () => ({ fixtures, groups: stageGroups }),
     [fixtures, stageGroups],
   );
+  // 카드 t568 ② — 「고침=초록」: 부모가 넘긴 키가 없으면 서버 `unsent_cells`
+  // (마지막 반영 뒤 바뀐 칸, t563 공급)에서 만든다.
+  const effectiveEditedCueKeys = useMemo(
+    () => editedCueKeys ?? editedCueKeysFromUnsent(grid?.unsent_cells),
+    [editedCueKeys, grid?.unsent_cells],
+  );
   // 카드 t560(REQ-LDBEAT-023(b)) — 「이 마디 한눈에」 줄 이름 ▸ 로 펼친
   // 트랙(콘솔 그룹 이름 키 — 이 표는 트랙당 한 줄뿐이라 마디는 필요 없다).
   const [expandedGlanceRows, setExpandedGlanceRows] = useState<Set<string>>(() => new Set());
@@ -1406,7 +1412,7 @@ export function BeatGrid({
                             // 추가 클래스로 얹는다.
                             const displayState = deriveCueDisplayState({
                               isActive: active,
-                              isEdited: !!editedCueKeys?.has(cueEditKey(track.group_name, segment.cue.bar)),
+                              isEdited: effectiveEditedCueKeys.has(cueEditKey(track.group_name, segment.cue.bar)),
                               hasPendingSuggestion:
                                 isPendingSuggestionForTrack(pendingSuggestion, track.group_name) &&
                                 pendingSuggestion?.bar === segment.cue.bar,
