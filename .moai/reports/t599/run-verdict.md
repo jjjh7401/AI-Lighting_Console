@@ -62,3 +62,4 @@
 ## main(t600) 합친 뒤
 
 - `1c8e4647`(t600 승인된 칸의 빈 번호 보류·생성)을 합쳤다(충돌 0). 합친 트리: `uv run pytest -q -p no:cacheprovider server` → `15471 passed, 33 skipped` · ruff 깨끗 · `npx vitest run` → `1223 passed` · build OK.
+- `97533166`(t593 효과 프리셋 만들기)도 합쳤다(충돌 0). 합친 트리: server `15511 passed, 33 skipped` · ruff 깨끗(`816 files already formatted`) · vitest `1223 passed` · build OK.
