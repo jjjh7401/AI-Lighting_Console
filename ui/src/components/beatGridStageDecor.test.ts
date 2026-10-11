@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BeatGridCue, BeatGridStageView, BeatGridTrack } from "../protocol";
-import { stageDecorations } from "./BeatGridStage";
+import { fixtureIsMover, stageDecorations } from "./BeatGridStage";
 import { stageFixturePoints } from "./beatGridStageModel";
 
 const view: BeatGridStageView = {
@@ -76,5 +76,22 @@ describe("stageDecorations — 시안 drawStage 장식 (카드 t588)", () => {
       washes: [],
       beams: [],
     });
+  });
+});
+
+describe("fixtureIsMover — 시안 무빙 네모 (카드 t591)", () => {
+  const byFid = (fid: number) => points.find((p) => p.fid === fid)!;
+
+  it("층 역할 mover 줄에 소속이 확인된 장비만 무빙이다(그룹 이름 무관)", () => {
+    const tracks = [track("QQQ", "mover", "켜짐"), track("ZZZ", "wash", "켜짐")];
+    expect(fixtureIsMover(byFid(21), tracks)).toBe(true);
+    expect(fixtureIsMover(byFid(22), tracks)).toBe(true);
+    expect(fixtureIsMover(byFid(11), tracks)).toBe(false);
+    expect(fixtureIsMover(byFid(99), tracks)).toBe(false);
+  });
+
+  it("이름이 MOVER 처럼 보여도 소속 확인이 없으면 무빙이 아니다", () => {
+    const loose = { ...byFid(99), name: "MOVER-U 501" };
+    expect(fixtureIsMover(loose, [track("MOVER-U", "mover", "켜짐")])).toBe(false);
   });
 });

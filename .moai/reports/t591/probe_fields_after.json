@@ -1,0 +1,118 @@
+{
+ "1450": {
+  "panel": {
+   "top": 287,
+   "bottom": 727,
+   "height": 440,
+   "scrollHeight": 438,
+   "clientHeight": 438
+  },
+  "viewport_h": 1000,
+  "fields": [
+   {
+    "label": "밝기",
+    "editing": true,
+    "top": 373,
+    "bottom": 425,
+    "state": "full"
+   },
+   {
+    "label": "위치 프리셋",
+    "editing": true,
+    "top": 433,
+    "bottom": 503,
+    "state": "full"
+   },
+   {
+    "label": "효과 프리셋",
+    "editing": true,
+    "top": 511,
+    "bottom": 581,
+    "state": "full"
+   },
+   {
+    "label": "근거",
+    "editing": false,
+    "top": 581,
+    "bottom": 600,
+    "state": "full"
+   },
+   {
+    "label": "움직임",
+    "editing": false,
+    "top": 600,
+    "bottom": 626,
+    "state": "full"
+   },
+   {
+    "label": "설명(원문)",
+    "editing": false,
+    "top": 626,
+    "bottom": 645,
+    "state": "full"
+   }
+  ],
+  "full": 6,
+  "partial": 0,
+  "total": 6,
+  "page_errors": []
+ },
+ "1700": {
+  "panel": {
+   "top": 287,
+   "bottom": 727,
+   "height": 440,
+   "scrollHeight": 438,
+   "clientHeight": 438
+  },
+  "viewport_h": 1000,
+  "fields": [
+   {
+    "label": "밝기",
+    "editing": true,
+    "top": 373,
+    "bottom": 425,
+    "state": "full"
+   },
+   {
+    "label": "위치 프리셋",
+    "editing": true,
+    "top": 433,
+    "bottom": 503,
+    "state": "full"
+   },
+   {
+    "label": "효과 프리셋",
+    "editing": true,
+    "top": 511,
+    "bottom": 581,
+    "state": "full"
+   },
+   {
+    "label": "근거",
+    "editing": false,
+    "top": 581,
+    "bottom": 600,
+    "state": "full"
+   },
+   {
+    "label": "움직임",
+    "editing": false,
+    "top": 600,
+    "bottom": 626,
+    "state": "full"
+   },
+   {
+    "label": "설명(원문)",
+    "editing": false,
+    "top": 626,
+    "bottom": 645,
+    "state": "full"
+   }
+  ],
+  "full": 6,
+  "partial": 0,
+  "total": 6,
+  "page_errors": []
+ }
+}
