@@ -65,6 +65,8 @@ __all__ = [
     "CueEmitResult",
     "SongTiming",
     "TrackEmitResult",
+    "beat_grid_sequence_label",
+    "beat_grid_timecode_label",
     "blocked_m1_items_for_cue",
     "emit_beat_grid_write_bundle",
     "required_m1_items_for_cue",
@@ -108,6 +110,24 @@ def _load_measured_max_timecode_tracks() -> int:
 #: (카드 t549), 카드 t553 실기 되읽기(타임코드 32, 트랙 8)로 8이 됐다 —
 #: 근거는 ``beat_grid_data/measured_console.yaml``.
 MEASURED_MAX_TIMECODE_TRACKS = _load_measured_max_timecode_tracks()
+
+
+def beat_grid_sequence_label(group_name: str, sequence_number: int) -> str:
+    """``emit_beat_grid_write_bundle``이 그 트랙의 시퀀스에 실제로 쓰는
+    ASCII 이름 — 재적용 소유권 비교(카드 t572, REQ-LDBEAT-011~013)가
+    이 이름을 **다시 계산**하는 대신 이 함수를 그대로 불러 쓴다. 한
+    자리에만 식을 두어, 에미터가 콘솔에 실제로 적은 이름과 소유권
+    레코드가 기억하는 이름이 따로 적혀 어긋나는 일이 없게 한다."""
+    return _ascii_label(f"LDBEAT {group_name}", fallback=f"Sequence {sequence_number}")
+
+
+def beat_grid_timecode_label(timecode_number: int) -> str:
+    """``emit_beat_grid_write_bundle``이 타임코드에 실제로 쓰는 ASCII
+    이름 — :func:`beat_grid_sequence_label`과 같은 이유로 소유권 비교가
+    재사용한다."""
+    return _ascii_label(
+        f"LDBEAT Timecode {timecode_number}", fallback=f"Timecode {timecode_number}"
+    )
 
 
 def required_m1_items_for_cue(cue: Mapping[str, object]) -> frozenset[int]:
@@ -401,9 +421,17 @@ def emit_beat_grid_write_bundle(
     timecode_numbers: Mapping[str, int],
     dimmer_attributes: Mapping[str, Sequence[str]],
     probe_results: Mapping[int, str],
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]] | None = None,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
+
+    카드 t572 — ``recorded_cue_numbers``(트랙 이름 -> {마디: 큐 번호})는
+    다시 반영할 때 이 앱이 직전에 쓴 번호표다. 표에 있는 마디는 그 번호를
+    그대로 쓰고, 표에 없는 새 마디는 그 트랙에 기록된 최대 번호 다음
+    정수부터 받는다. 그래서 어떤 칸이 막혀도 뒤 칸들의 번호가 당겨지지
+    않는다(당겨지면 막힌 칸의 옛 큐가 덮어써진다). 생략하면(첫 반영)
+    지금까지처럼 1부터 차례로 매긴다.
 
     ``sequence_numbers``/``timecode_numbers``/``dimmer_attributes``는
     트랙 ``group_name``을 키로 하는, 호출자가 그 곡·그 쇼에서 결정한
@@ -497,7 +525,7 @@ def emit_beat_grid_write_bundle(
             continue
 
         group_no = track.get("group_no")
-        ascii_name = _ascii_label(f"LDBEAT {group_name}", fallback=f"Sequence {sequence_number}")
+        ascii_name = beat_grid_sequence_label(group_name, sequence_number)
         store_sequence_commands = (
             f"Store Sequence {sequence_number}",
             f"Set Sequence {sequence_number} Property 'Name' '{ascii_name}'",
@@ -506,21 +534,25 @@ def emit_beat_grid_write_bundle(
         raw_cues = track.get("cues") or []
         cues_sorted = sorted(raw_cues, key=lambda c: int(c["bar"]))  # type: ignore[index]
         cue_results: list[CueEmitResult] = []
-        next_cue_number = 1
+        recorded = (recorded_cue_numbers or {}).get(group_name) or {}
+        next_cue_number = max(recorded.values(), default=0) + 1
         for cue in cues_sorted:
-            # cue_number 는 "실제로 내용이 있는 칸"에만 1부터 매긴다 —
-            # 거절되거나 공백인 칸은 번호를 쓰지 않는다(아래 조건부 증가).
+            # cue_number 는 "실제로 내용이 있는 칸"에만 매긴다 — 거절되거나
+            # 공백인 칸은 새 번호를 쓰지 않는다(아래 조건부 증가). 기록된
+            # 마디는 기록된 번호를 그대로 쓴다(카드 t572).
+            bar = int(cue["bar"])  # type: ignore[index]
+            recorded_number = recorded.get(bar)
             result = _emit_cue(
                 cue,
                 group_name=group_name,
                 group_no=group_no,  # type: ignore[arg-type]
                 sequence_number=sequence_number,
-                cue_number=next_cue_number,
+                cue_number=recorded_number if recorded_number is not None else next_cue_number,
                 timing=timing,
                 probe_results=probe_results,
                 dimmer_attributes=dimmer_attributes,
             )
-            if result.commands:
+            if result.commands and recorded_number is None:
                 next_cue_number += 1
             cue_results.append(result)
 
@@ -544,9 +576,7 @@ def emit_beat_grid_write_bundle(
 
     timecode_setup_commands: list[str] = []
     for timecode_number in sorted(used_timecode_numbers):
-        name = _ascii_label(
-            f"LDBEAT Timecode {timecode_number}", fallback=f"Timecode {timecode_number}"
-        )
+        name = beat_grid_timecode_label(timecode_number)
         timecode_setup_commands.append(f"Store Timecode {timecode_number}")
         timecode_setup_commands.append(f"Set Timecode {timecode_number} Property 'Name' '{name}'")
 

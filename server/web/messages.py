@@ -822,6 +822,7 @@ def beat_grid_send_status_event(
     reason: str | None = None,
     blocked_cells: list[dict],
     approval_vs_sent: dict | None = None,
+    stale_tracks: list[str] | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -829,7 +830,9 @@ def beat_grid_send_status_event(
     ``blocked_cells``는 ``{group_name, bar, reason}`` 전수 목록(에미터의
     "부분 적용 0건" 판정을 그대로 보여준다) — 거절 1건을 요약 문구로
     뭉개지 않는다. ``approval_vs_sent``는 반영(쓰기) 성공 때만 채워진다
-    (미리보기/편집은 비교 대상인 "승인 파일"이 없다)."""
+    (미리보기/편집은 비교 대상인 "승인 파일"이 없다). ``stale_tracks``
+    (카드 t572) — 소유권 레코드에는 있지만 이번 반영의 격자에는 없는
+    트랙 이름 전수. 지워지지 않고 그대로 남아 있다는 뜻이다."""
     return _event(
         "beat_grid_send_status",
         pending_apply_count=pending_apply_count,
@@ -838,6 +841,7 @@ def beat_grid_send_status_event(
         reason=reason,
         blocked_cells=blocked_cells,
         approval_vs_sent=approval_vs_sent,
+        stale_tracks=list(stale_tracks) if stale_tracks is not None else [],
     )
 
 

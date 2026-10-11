@@ -14,24 +14,33 @@ REQ-LDBEAT-011~013/017).
 section``·``design_rig``·``bar_map``을 호출자가 이미 읽어 넘긴다). 리그·
 곡 전용 숫자(그룹 번호·프리셋 번호·초 단위 상수)는 이 모듈 코드에 전혀
 없다 — 전부 인자로 들어온다(``beat_grid_emit`` 모듈 독스트링과 같은 원칙).
+
+카드 t572(REQ-LDBEAT-011~013) — 재적용(두 번째 이후 「콘솔에 반영」)의
+소유권 확인(:func:`verify_owned_sequences`)과 이미 쓴 번들의 가지치기
+(:func:`apply_beat_grid_ownership_reuse`)도 이 모듈에 둔다 — 둘 다 이미
+읽은 섹션·이미 낸 ``BeatGridEmitResult``의 순수 변환이다(콘솔 접촉 0건).
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 
 from server.design.app_movement import dimmer_attribute_names
-from server.design.beat_grid_emit import SongTiming
+from server.design.beat_grid_emit import BeatGridEmitResult, CueEmitResult, SongTiming
 from server.design.rig_capability_read import DesignRigRead
 from server.looks.songcue import SequenceNumberError, select_sequence_number
 
 __all__ = [
     "BeatGridCellKey",
+    "apply_beat_grid_ownership_reuse",
     "beat_grid_cell_snapshot",
+    "beat_grid_reapply_summary",
     "build_song_timing_from_bar_map",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
     "unsent_beat_grid_cells",
+    "verify_owned_sequences",
 ]
 
 #: (group_name, bar) — ``apply_beat_grid_edit``의 ``target``/``bar``와 같은
@@ -237,3 +246,247 @@ def unsent_beat_grid_cells(
         if current.get((group_name, bar)) != snapshot.get((group_name, bar))
     ]
     return unsent
+
+
+# =============================================================================
+# 재적용 소유권 (카드 t572, REQ-LDBEAT-011~013) — 두 번째 이후 「콘솔에
+# 반영」은 이 앱이 저번에 **자기 손으로 쓴** 번호만 덮어쓴다. 아래 두
+# 함수는 콘솔에 아무것도 쓰지 않는다(읽기 질의 0건, 순수 변환).
+# =============================================================================
+
+
+def _owned_sequence_names(sequences_section: Mapping[str, object]) -> dict[int, str | None]:
+    """``_sequence_numbers``(``server.looks.songcue``)와 같은 열쇠 해석
+    (``objects`` 우선, 없으면 ``children``)이지만, 점유 번호의 **집합**이
+    아니라 번호 -> 콘솔 이름 사전을 돌려준다 — 소유권 확인은 번호가
+    있다는 사실만으로는 부족하고, 그 번호에 달린 이름이 기록과 같은지도
+    봐야 한다."""
+    listed = sequences_section.get("objects")
+    if not isinstance(listed, list):
+        listed = sequences_section.get("children")
+    if not isinstance(listed, list):
+        raise SequenceNumberError("sequence_unavailable")
+    names: dict[int, str | None] = {}
+    for entry in listed:
+        if not isinstance(entry, Mapping):
+            raise SequenceNumberError("sequence_number_unavailable")
+        number = entry.get("no", entry.get("i"))
+        if not isinstance(number, int) or isinstance(number, bool):
+            raise SequenceNumberError("sequence_number_unavailable")
+        name = entry.get("name")
+        names[number] = name if isinstance(name, str) else None
+    return names
+
+
+def verify_owned_sequences(
+    sequences_section: Mapping[str, object],
+    owned: Mapping[str, Mapping[str, object]],
+) -> tuple[dict[str, int], str | None]:
+    """``owned``(소유권 레코드의 ``tracks`` — 그룹 이름 -> {``sequence_
+    number``, ``sequence_name``, ...})가 **지금** 콘솔 시퀀스 풀에
+    그 번호·그 이름 그대로 있는지 확인한다.
+
+    하나라도 못 찾거나 이름이 다르면 **그 묶음 전체**를 그 사유로
+    거절한다(부분 적용 0건 — ``pick_sequence_numbers``와 같은 원칙).
+    풀 자체를 못 읽거나 잘렸으면(truncated) "있다"도 "없다"도 단정하지
+    않고 그 사유로 거절한다.
+
+    ``owned``가 비어 있으면(이 곡으로 반영을 한 번도 하지 않았다) 확인할
+    것이 없으므로 ``({}, None)``이다."""
+    if not owned:
+        return {}, None
+    unavailable = sequences_section.get("reason")
+    if isinstance(unavailable, str) or sequences_section.get("ok") is False:
+        return {}, _SEQUENCE_REASON_MESSAGES["sequence_unavailable"]
+    if sequences_section.get("truncated"):
+        return {}, _SEQUENCE_REASON_MESSAGES["sequence_truncated"]
+    try:
+        console_names = _owned_sequence_names(sequences_section)
+    except SequenceNumberError as error:
+        return {}, _sequence_reason(error)
+
+    owned_sequences: dict[str, int] = {}
+    for group_name, allocation in owned.items():
+        recorded_no = allocation.get("sequence_number")
+        recorded_name = allocation.get("sequence_name")
+        if not isinstance(recorded_no, int) or isinstance(recorded_no, bool):
+            return {}, (
+                f"'{group_name}' 트랙의 소유권 기록에 시퀀스 번호가 없어 재적용을 "
+                "거절합니다(기록 손상)."
+            )
+        if recorded_no not in console_names:
+            return {}, (
+                f"'{group_name}' 트랙이 쓰던 시퀀스 {recorded_no}번을 콘솔에서 찾지 "
+                "못해 재적용을 거절합니다."
+            )
+        console_name = console_names[recorded_no]
+        if console_name != recorded_name:
+            return {}, (
+                f"'{group_name}' 트랙이 쓰던 시퀀스 {recorded_no}번의 콘솔 이름"
+                f"('{console_name}')이 기록된 이름('{recorded_name}')과 달라 재적용을 "
+                "거절합니다."
+            )
+        owned_sequences[group_name] = recorded_no
+    return owned_sequences, None
+
+
+def _overwrite_store_cue(cue: CueEmitResult, *, sequence_number: int) -> CueEmitResult:
+    """이 칸이 실제로 저장한 ``Store Cue <n> Sequence <s>`` 줄 하나(있다면
+    정확히 그 줄, ``_emit_cue``가 쓰는 모양 그대로)에만 ``/Overwrite``를
+    덧붙인다 — 문자열을 더 넓게 훑지 않는다(``cue_number``로 그 줄이
+    정확히 무엇일지 미리 알고, 그 값과만 비교한다).
+
+    # @MX:WARN: [AUTO] ``Store Cue ... /Overwrite``는 이 저장소에서 실기로
+    #   확인된 적이 없다 — 기존 쓰기 경로들(``position_fx.py``·
+    #   ``pointing.py``·``scene/compile.py``)은 전부 ``/Merge``를 고르고
+    #   ``/Overwrite``를 일부러 피한다(각자의 독스트링: "destructive flag
+    #   the safety gate routes to human approval"). 재적용이 바로 그 승인을
+    #   받으려는 쪽이므로 선택은 맞지만, 콘솔이 이 정확한 문법(``Sequence``
+    #   뒤 ``/Overwrite``)을 받는지는 아직 측정되지 않았다.
+    # @MX:REASON: 측정 전까지는 가설 문법이다 — ``31_choreography_
+    #   patterns.md``에 ``Store ... /Overwrite``의 측정 기록이 없다. 다음
+    #   실기 접속에서 먼저 이 한 줄만 쏘아 확인하고, 거절되면 이 함수가
+    #   돌려주는 모양부터 고친다.
+    """
+    if not cue.commands or cue.cue_number is None:
+        return cue
+    target = f"Store Cue {cue.cue_number} Sequence {sequence_number}"
+    overwritten = tuple(f"{line} /Overwrite" if line == target else line for line in cue.commands)
+    return replace(cue, commands=overwritten)
+
+
+def apply_beat_grid_ownership_reuse(
+    result: BeatGridEmitResult,
+    *,
+    owned_sequences: Mapping[str, int],
+    owned_timecode: int | None,
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]],
+) -> BeatGridEmitResult:
+    """재적용 — 소유권 확인을 이미 통과한 (그룹 -> 시퀀스 번호) 묶음과
+    (있다면) 소유한 타임코드 번호를 받아, 방금 에미터가 낸 **전체** 번들
+    에서 "이미 콘솔에 있는 것"을 다시 만드는 줄만 걷어낸다.
+
+    아무 쓰기도 지어내지 않는다 — 이 함수는 ``result``가 이미 낸 명령을
+    가지치기/치환만 한다:
+
+    * 소유한 트랙의 ``Store Sequence <s>`` 줄은 뺀다(``Set ... 'Name'``
+      줄은 남긴다 — 코디네이터 결정, 이름 갱신 자체는 해롭지 않다).
+    * ``owned_timecode``가 있으면(그 타임코드를 재사용한다) 전체 ``Store
+      Timecode``/``Set ... 'Name'`` 설정 줄을 뺀다(한 곡에 타임코드는
+      하나뿐이라 전역이다) — 그리고 소유한 트랙의 ``Assign Sequence ...
+      At Timecode ...`` 줄도 뺀다(이미 배정돼 있다, 다시 배정하면 콘솔이
+      둘째 트랙을 만든다). 새 트랙(``owned_sequences``에 없는 그룹)은
+      ``Assign`` 줄을 그대로 낸다(그 시퀀스는 아직 그 타임코드에
+      배정된 적이 없다).
+    * 소유한 트랙에서 **기록된 마디**의 ``Store Cue`` 줄에만 ``/Overwrite``를
+      붙인다(그 큐는 콘솔에 이미 있다). 새 마디는 새 번호라 그대로 둔다.
+    * 소유한 트랙에서, 기록된 마디 중 **이번 초안에서 정말 비워진** 칸
+      (격자에서 빠졌거나 낼 내용이 없음)의 번호마다 ``Delete Cue <n>
+      Sequence <s>``를 추가한다. **막힌 칸**(``blocked_reason`` 있음)은
+      지우지 않는다 — 막혔다는 건 이번에 그 칸을 확인하지 못했다는 뜻이지
+      비웠다는 뜻이 아니다(카드 t572 리드 결정, 콘솔 내용은 되돌릴 수
+      없다). 레코드에 없던 트랙(새 트랙)에는 삭제를 내지 않는다."""
+    new_timecode_setup = () if owned_timecode is not None else result.timecode_setup_commands
+
+    new_tracks = []
+    for track in result.tracks:
+        owned_number = owned_sequences.get(track.group_name)
+        is_owned = owned_number is not None and owned_number == track.sequence_number
+        # 트랙 전체가 막힌 경우(그룹 번호 미확인 등)에는 에미터가 칸 목록을
+        # 비워 돌려준다 — 그걸 「칸이 다 비워졌다」로 읽으면 그 트랙의 큐를
+        # 전부 지우게 된다. 막힌 트랙은 손대지 않는다(명령 0줄 그대로).
+        if not is_owned or track.blocked_reason is not None:
+            new_tracks.append(track)
+            continue
+
+        store_sequence_commands = tuple(
+            line for line in track.store_sequence_commands if not line.startswith("Store Sequence ")
+        )
+        assign_timecode_commands = (
+            () if owned_timecode is not None else track.assign_timecode_commands
+        )
+        recorded = recorded_cue_numbers.get(track.group_name) or {}
+        cues = tuple(
+            _overwrite_store_cue(cue, sequence_number=track.sequence_number)
+            if cue.bar in recorded
+            else cue
+            for cue in track.cues
+        )
+        emitted_bars = {cue.bar for cue in cues if cue.cue_number is not None}
+        blocked_bars = {cue.bar for cue in cues if cue.blocked_reason is not None}
+        emptied = sorted(
+            (bar, number)
+            for bar, number in recorded.items()
+            if bar not in emitted_bars and bar not in blocked_bars
+        )
+        # @MX:WARN: [AUTO] ``Delete Cue <n> Sequence <s>``도 ``/Overwrite``와
+        #   같은 처지다 — 이 저장소 어디에도 실기로 확인된 선례가 없다
+        #   (grep 결과 0건, 2026-10-11). 게이트가 위험으로 분류해도 괜찮다
+        #   (배차서 지시) — 한 번들 안의 다른 쓰기와 똑같이 승인을 탄다.
+        # @MX:REASON: 가설 문법. 다음 실기 접속에서 먼저 확인하고, 거절되면
+        #   (예: 번호 띄어쓰기·대상 지정 방식) 이 자리만 고친다 — 소유권
+        #   판정·레코드 쪽은 건드릴 필요가 없다(순수하게 명령 문자열 문제).
+        delete_cues = tuple(
+            CueEmitResult(
+                bar=bar,
+                commands=(f"Delete Cue {number} Sequence {track.sequence_number}",),
+                blocked_reason=None,
+                cue_number=None,
+            )
+            for bar, number in emptied
+        )
+        new_tracks.append(
+            replace(
+                track,
+                store_sequence_commands=store_sequence_commands,
+                assign_timecode_commands=assign_timecode_commands,
+                cues=cues + delete_cues,
+            )
+        )
+
+    return replace(result, tracks=tuple(new_tracks), timecode_setup_commands=new_timecode_setup)
+
+
+def beat_grid_reapply_summary(
+    result: BeatGridEmitResult,
+    *,
+    recorded_cue_numbers: Mapping[str, Mapping[int, int]],
+) -> tuple[dict[str, dict[int, int]], list[tuple[str, int, str]], int]:
+    """카드 t572 — 이번 반영이 콘솔에 남길 큐 번호표와, 승인 카드에 적을 두 숫자.
+
+    돌려주는 셋:
+
+    * 다음 소유 기록의 번호표(트랙 이름 -> {마디: 큐 번호}) — 이번에 쓴 칸에
+      **막혀서 그대로 둔 칸**의 기록 번호를 더한 것. 막힌 칸은 콘솔에 옛 큐가
+      남아 있으므로 기록에서도 빼지 않는다(빼면 다음 반영이 그 번호를 모른다).
+      트랙 전체가 막혔으면 그 트랙의 기록을 통째로 그대로 둔다.
+    * 막혀서 그대로 둔 칸 목록 (트랙, 마디, 사유) — 기록에 있던 칸만.
+    * 번호 순서와 시간(마디) 순서가 어긋난 큐의 수 — 콘솔에 남을 큐를 번호
+      순으로 늘어놓았을 때, 앞 번호의 마디보다 이른 마디를 가진 큐의 수. 새
+      마디가 기존 마디 사이에 끼면 최대 번호 다음 정수를 받으므로 생긴다.
+      타임코드 재생은 TrigTime 으로 맞더라도 사람이 Go 로 넘기면 순서가
+      어긋나므로 승인 카드에 알린다(리드 결정)."""
+    next_record: dict[str, dict[int, int]] = {}
+    preserved: list[tuple[str, int, str]] = []
+    out_of_order = 0
+    for track in result.tracks:
+        recorded = dict(recorded_cue_numbers.get(track.group_name) or {})
+        if track.blocked_reason is not None:
+            if recorded:
+                next_record[track.group_name] = recorded
+                preserved.extend(
+                    (track.group_name, bar, track.blocked_reason) for bar in sorted(recorded)
+                )
+            continue
+        numbers = {cue.bar: cue.cue_number for cue in track.cues if cue.cue_number is not None}
+        for cue in track.cues:
+            if cue.blocked_reason is not None and cue.bar in recorded:
+                numbers[cue.bar] = recorded[cue.bar]
+                preserved.append((track.group_name, cue.bar, cue.blocked_reason))
+        next_record[track.group_name] = numbers
+        latest_bar = -1
+        for _number, bar in sorted((number, bar) for bar, number in numbers.items()):
+            if bar < latest_bar:
+                out_of_order += 1
+            latest_bar = max(latest_bar, bar)
+    return next_record, preserved, out_of_order
