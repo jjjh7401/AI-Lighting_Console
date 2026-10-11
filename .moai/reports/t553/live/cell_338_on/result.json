@@ -1,0 +1,46 @@
+{
+  "item": "T553UCell",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/337",
+    "ShowData/DataPools/Default/Sequences/338"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_338": true,
+    "play_338": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Attribute 'Pan' At Relative -12",
+        "Step 2",
+        "Attribute 'Pan' At Relative 12",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Speed 56.001",
+        "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'",
+        "ClearAll",
+        "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 338"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}

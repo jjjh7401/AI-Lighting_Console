@@ -1,0 +1,14 @@
+{
+  "preflight": {
+    "verdict": "responder_ok",
+    "health": "online",
+    "configured_port": 9005
+  },
+  "timecode_32_1": {
+    "error": "path segment not found: '32' (in ShowData/DataPools/Default/Timecodes/32/1)"
+  },
+  "sequence_336": {
+    "exists": false,
+    "error": "path segment not found: '336' (in ShowData/DataPools/Default/Sequences/336)"
+  }
+}

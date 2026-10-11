@@ -1,0 +1,27 @@
+{"step": "off_337", "t": 0.067, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 337", "reasons": ["reference-invoking command"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "off_337", "t": 0.133, "kind": "exec", "command": "Off Sequence 337", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_337", "t": 0.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{
+  "item": "T553UCell",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/337"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_337": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 337",
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)"
+  ]
+}

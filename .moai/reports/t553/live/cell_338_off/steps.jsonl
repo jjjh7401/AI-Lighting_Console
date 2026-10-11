@@ -1,0 +1,3 @@
+{"step": "off_338", "t": 0.066, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 338", "reasons": ["reference-invoking command"]}, {"command": "ClearAll", "reasons": []}]}
+{"step": "off_338", "t": 0.133, "kind": "exec", "command": "Off Sequence 338", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_338", "t": 0.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

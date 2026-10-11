@@ -1,0 +1,74 @@
+{
+  "item": "T553UPan",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/336"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "t0_tilted_lit": false,
+    "t0_clear": false,
+    "store_U_pan": false,
+    "play_U_pan": false,
+    "off_U_pan": false,
+    "final_clear": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'",
+        "ClearAll",
+        "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 336"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 336"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

@@ -152,6 +152,33 @@ class TestBlockedM1ItemsForCue:
         reasons = blocked_m1_items_for_cue(_effect_cue(3, effect_preset_no="21.1"), {})
         assert reasons == frozenset({4})
 
+    def test_measured_movement_override_opens_mover_d_tilt_wave(self) -> None:
+        # 카드 t553 — group_no=12(MOVER-D) + Tilt wave는 측정된 무빙
+        # 허용목록과 일치해 ⑤⑦⑨가 live M1 "움직임 없음/미확인"이어도 열린다.
+        cue = _app_movement_cue(7, axes=("Tilt",))
+        reasons = blocked_m1_items_for_cue(cue, _LIVE_M1, group_no=12)
+        assert reasons == frozenset()
+
+    def test_measured_movement_override_does_not_open_mover_u_pan_wave(self) -> None:
+        # group_no=11(MOVER-U) + Pan은 허용목록에 없다 — 그대로 막힌다.
+        cue = _app_movement_cue(11, axes=("Pan",))
+        reasons = blocked_m1_items_for_cue(cue, _LIVE_M1, group_no=11)
+        assert reasons == frozenset({5, 7, 9})
+
+    def test_measured_movement_override_requires_group_no(self) -> None:
+        # group_no를 안 넘기면(기본값 None) 허용목록을 조회하지 않는다 —
+        # 기존 2-위치-인자 호출부(이 모듈 전체)는 바이트 동일하게 동작한다.
+        cue = _app_movement_cue(7, axes=("Tilt",))
+        reasons = blocked_m1_items_for_cue(cue, _LIVE_M1)
+        assert reasons == frozenset({5, 7, 9})
+
+    def test_measured_movement_override_ignores_non_movement_items(self) -> None:
+        # 허용목록이 열어주는 건 app_movement 항목(5,7,9)뿐이다 — 효과
+        # 프리셋(4) 같은 다른 필요 항목은 그대로 막힌다.
+        cue = _effect_cue(3, effect_preset_no="21.1")
+        reasons = blocked_m1_items_for_cue(cue, _LIVE_M1, group_no=12)
+        assert reasons == frozenset({4})
+
 
 class TestEmitBeatGridWriteBundleRefusals:
     def test_missing_timing_refuses_the_whole_bundle(self) -> None:
@@ -403,12 +430,11 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
         tracks = grid["tracks"]
         probe_results = read_m1_probe_results_from_path(default_progress_md_path())
 
-        # LOVE ATTACK은 트랙(콘솔 그룹) 8개다 — 전부를 타임코드 하나에
-        # 몰면 MEASURED_MAX_TIMECODE_TRACKS(6, ①이 구조로 확인한 실제
-        # 최대)를 넘어 트랙 레벨에서 전부 거절된다(그 자체로 중요한
-        # 발견 — run-verdict에 별도로 기록). 이 시험은 M1 **칸** 게이트를
-        # 재는 것이 목적이라 타임코드를 둘로 쪼개 그 트랙-레벨 상한을
-        # 피한다(시험 입력, 콘솔 번호 아님).
+        # LOVE ATTACK은 트랙(콘솔 그룹) 8개다. 카드 t549 당시 측정 최대는 6이라
+        # 타임코드 하나에 몰면 트랙 레벨에서 전부 거절됐다(2026-10-11 t553 실기로
+        # 8까지 확인 — 상한은 measured_console.yaml). 이 시험은 M1 **칸** 게이트를
+        # 재는 것이 목적이라 타임코드를 둘로 쪼개 트랙-레벨 상한과 무관하게 둔다
+        # (시험 입력, 콘솔 번호 아님).
         sequence_numbers = {t["group_name"]: 300 + i for i, t in enumerate(tracks)}
         timecode_numbers = {t["group_name"]: (30 if i < 4 else 31) for i, t in enumerate(tracks)}
         dimmer_attributes = {t["group_name"]: ("Dimmer",) for t in tracks}
@@ -445,37 +471,48 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
             ("MOVER-U", 14),
             ("MOVER-D", 14),
         }
+        # 2026-10-11 대체(카드 t553, progress.md M1 후속 대체 고지 참조):
+        # MOVER-D(group 12)의 Tilt wave(bar 7·22)는 M1 표의 원래 판정과
+        # 별개로 t548 라이브 프로브(D1·D3)가 직접 확인했다 —
+        # `beat_grid_measured`의 측정된 무빙 허용목록과 일치해 더 이상
+        # 막히지 않는다. MOVER-U(group 11)의 Pan 단독(bar 11·18)은 여전히
+        # 미측정이라 막힌 채다 — "부분 적용 0건" 원칙 그대로.
         expected_app_movement_blocked = {
             ("MOVER-U", 11),
             ("MOVER-U", 18),
-            ("MOVER-D", 7),
-            ("MOVER-D", 22),
         }
         assert expected_effect_blocked <= blocked
         assert expected_app_movement_blocked <= blocked
+        assert ("MOVER-D", 7) not in blocked
+        assert ("MOVER-D", 22) not in blocked
 
         expected_allowed = {
             ("FOH", 7),
             ("WASH-ALL", 7),
             ("WASH-ALL", 14),
             ("MOVER-D", 18),
+            ("MOVER-D", 7),
+            ("MOVER-D", 22),
             ("BLIND", 17),
             ("BLIND", 18),
         }
         assert expected_allowed <= allowed_with_content
 
-    def test_all_eight_love_attack_tracks_on_one_timecode_exceeds_measured_max(self) -> None:
-        # 중요한 발견 — LOVE ATTACK은 콘솔 그룹 트랙 8개(FOH·WASH-ALL·
-        # BACK·SIDE-ALL·MOVER-U·MOVER-D·BLIND·STROBE)다. "한 곡 = 타임코드
-        # 하나"로 전부 몰면 ①이 구조로 확인한 실제 최대(6)를 넘어 **트랙
-        # 레벨**에서 전부 거절된다 — 쪼개거나(둘 이상의 타임코드) M1 ①을
-        # 6개 초과로 재확인해야 전부 한 타임코드에 들어간다.
+    def test_one_track_beyond_the_measured_max_still_refuses_the_whole_timecode(self) -> None:
+        # 2026-10-11 대체 고지(카드 t553): 이 시험은 원래 「LOVE ATTACK 8트랙을
+        # 한 타임코드에 몰면 측정 최대 6을 넘어 전부 거절」을 확인했다. t553
+        # 실기 되읽기(타임코드 32, 트랙 8)로 상한이 8이 되어 8트랙은 이제
+        # 들어간다(test_beat_grid_timecode_cap_t553.py). 같은 경계 — 측정한 수를
+        # 하나라도 넘으면 그 타임코드 트랙 전부 거절 — 를 9번째 가짜 트랙으로 잰다.
         from server.design.beat_grid import LOVE_ATTACK_TITLE
         from server.design.beat_grid_probes import read_m1_probe_results_from_path
 
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
-        tracks = grid["tracks"]
-        assert len(tracks) == 8
+        tracks = list(grid["tracks"])
+        extra = dict(tracks[0], group_name="EXTRA-TRACK", cues=[])
+        tracks = tracks + [extra] * (MEASURED_MAX_TIMECODE_TRACKS + 1 - len(tracks))
+        assert len(tracks) == MEASURED_MAX_TIMECODE_TRACKS + 1
+        tracks = [dict(t, group_name=f"{t['group_name']}-{i}") for i, t in enumerate(tracks)]
         probe_results = read_m1_probe_results_from_path(default_progress_md_path())
         sequence_numbers = {t["group_name"]: 300 + i for i, t in enumerate(tracks)}
         timecode_numbers = {t["group_name"]: 30 for t in tracks}

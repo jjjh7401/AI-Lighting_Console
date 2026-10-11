@@ -1,0 +1,96 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/337", "t": 0.066, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/337", "ok": false, "error": "path segment not found: '337' (in ShowData/DataPools/Default/Sequences/337)"}
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/338", "t": 0.132, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/338", "ok": false, "error": "path segment not found: '338' (in ShowData/DataPools/Default/Sequences/338)"}
+{"step": "store_337", "t": 0.133, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Pan' At Relative -30", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-
+{"step": "play_337", "t": 0.199, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 337", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 337': state query failed for 'Sequence 337': path segment not found: '337' (in DataPool/Sequences/337)"]}]}
+{"step": "off_337", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 337", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 337': state query failed for 'Sequence 337': path segment not found: '337' (in DataPool/Sequences/337)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{"step": "store_338", "t": 0.266, "kind": "screen", "cleared": false, "commands": [{"command": "ChangeDestination Root", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Group 11 ; At Preset 2.1", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"command": "Attribute 'Pan' At Relative -12", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}, {"
+{"step": "play_338", "t": 0.332, "kind": "screen", "cleared": false, "commands": [{"command": "Goto Cue 1 Sequence 338", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 338': state query failed for 'Sequence 338': path segment not found: '338' (in DataPool/Sequences/338)"]}]}
+{"step": "off_338", "t": 0.4, "kind": "screen", "cleared": false, "commands": [{"command": "Off Sequence 338", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 338': state query failed for 'Sequence 338': path segment not found: '338' (in DataPool/Sequences/338)"]}, {"command": "ClearAll", "reasons": ["bundle rejected (all-or-nothing, REQ-MVP-015)"]}]}
+{
+  "item": "T553UCell",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/337",
+    "ShowData/DataPools/Default/Sequences/338"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "store_337": false,
+    "play_337": false,
+    "off_337": false,
+    "store_338": false,
+    "play_338": false,
+    "off_338": false
+  },
+  "verdict": "deny-all: nothing written",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Group 11 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'",
+        "ClearAll",
+        "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 337"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 337",
+        "ClearAll"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Attribute 'Pan' At Relative -12",
+        "Step 2",
+        "Attribute 'Pan' At Relative 12",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Speed 56.001",
+        "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'",
+        "ClearAll",
+        "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 338"
+      ],
+      "approved": false
+    },
+    {
+      "commands": [
+        "Off Sequence 338",
+        "ClearAll"
+      ],
+      "approved": false
+    }
+  ],
+  "skipped_saveshow": []
+}

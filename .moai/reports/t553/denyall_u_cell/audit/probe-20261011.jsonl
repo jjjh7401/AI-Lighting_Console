@@ -1,0 +1,7 @@
+{"ts": "2026-10-11T02:38:24.389124+00:00", "event": "executed", "command": "ping", "kind": "heartbeat", "ok": true, "detail": ""}
+{"ts": "2026-10-11T02:38:24.455718+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/337", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-11T02:38:24.522386+00:00", "event": "executed", "command": "ShowData/DataPools/Default/Sequences/338", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-11T02:38:24.589055+00:00", "event": "executed", "command": "DataPool/Sequences/337", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-11T02:38:24.655809+00:00", "event": "executed", "command": "DataPool/Sequences/337", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-11T02:38:24.721766+00:00", "event": "executed", "command": "DataPool/Sequences/338", "kind": "state_query", "ok": false, "detail": ""}
+{"ts": "2026-10-11T02:38:24.789199+00:00", "event": "executed", "command": "DataPool/Sequences/338", "kind": "state_query", "ok": false, "detail": ""}

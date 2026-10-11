@@ -1,0 +1,5 @@
+{"ts": "2026-10-11T02:34:58.431294+00:00", "event": "approved", "commands": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "Group 11 ; Attribute 'Tilt' At 45"], "held": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "Group 11 ; Attribute 'Tilt' At 45"], "kind": "t531_m1_t553upan"}
+{"ts": "2026-10-11T02:34:58.497354+00:00", "event": "executed", "command": "ChangeDestination Root", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-11T02:34:58.564006+00:00", "event": "executed", "command": "ClearAll", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-11T02:34:58.630492+00:00", "event": "executed", "command": "Group 11 ; Attribute 'Dimmer' At 70", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}
+{"ts": "2026-10-11T02:34:58.697385+00:00", "event": "executed", "command": "Group 11 ; Attribute 'Tilt' At 45", "kind": "command", "ok": true, "detail": "OK", "outcome": "ok"}

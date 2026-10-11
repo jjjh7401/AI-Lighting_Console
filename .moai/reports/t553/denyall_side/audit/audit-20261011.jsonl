@@ -1,0 +1,2 @@
+{"ts": "2026-10-11T02:48:30.399421+00:00", "event": "rejected", "commands": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "Group 11 ; At Preset 2.1"], "held": ["ChangeDestination Root", "ClearAll", "Group 11 ; Attribute 'Dimmer' At 70", "Group 11 ; At Preset 2.1"], "kind": "t531_m1_t553side"}
+{"ts": "2026-10-11T02:48:30.399860+00:00", "event": "rejected", "commands": ["ClearAll"], "held": ["ClearAll"], "kind": "t531_m1_t553side"}

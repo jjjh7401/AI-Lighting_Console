@@ -36,15 +36,27 @@ REQ-LDBEAT-001/003/011~013).
    축 배타성, REQ-006(vi-7))·``check_evidence_approval``(프리셋 번호에는
    완전한 승인 필요, REQ-015(f)(g))을 그대로 호출한다 — 새 검증 로직을
    발명하지 않는다.
+
+카드 t553(REQ-LDBEAT-006(vi)) — M1 게이트(항목 3)가 막아 둔 ⑤⑦⑨
+(``app_movement``)는, ``server.design.beat_grid_measured``가 확인한
+**측정된 무빙 허용목록**과 그 칸의 (그룹, 모양, 축)이 정확히 일치할
+때만 선택적으로 열린다. progress.md M1 표 자체의 판정 문자열은 고치지
+않는다(원래 표는 PRESERVE) — 더 구체적인 실기 증거(카드 t538·t548)를
+별도 데이터 파일 하나로만 반영한다. "부분 적용 0건" 원칙은 유지:
+매칭되지 않는 칸은 여전히 막힌다.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
+
+import yaml
 
 from server.design.app_movement import app_movement_commands, brightness_value_commands
 from server.design.beat_grid import check_app_movement_axis_conflict, check_evidence_approval
+from server.design.beat_grid_measured import is_movement_measured_open
 from server.looks.songcue import _ascii_label, _format_seconds
 
 __all__ = [
@@ -76,12 +88,26 @@ _APP_MOVEMENT_ITEMS: frozenset[int] = frozenset({5, 7, 9})
 #: 이 접두사로 시작하지 않는다.
 _M1_PASS_PREFIX = "통과"
 
-#: ①이 구조로 확인한 실제 최대 트랙 수(`.moai/specs/SPEC-LDBEAT-001/
-#: progress.md` "TC 30 에 시퀀스 트랙 6개(228→233)") — ①이 PASS라도 이
-#: 수를 넘는 묶음은 측정 범위 밖이다(이 모듈이 독자적으로 추가한 보수적
-#: 상한, 배차서 매핑을 "느슨하게 풀지 않는다"는 지시의 반대 방향 — 더
-#: 엄격하게 좁힌다).
-MEASURED_MAX_TIMECODE_TRACKS = 6
+#: 실기에서 잰 측정값 파일 — 타임코드 하나에 붙여 본 최대 트랙 수 등
+#: (카드 t553). 값과 근거는 코드가 아니라 이 데이터 파일에 산다.
+_MEASURED_CONSOLE_PATH = (
+    Path(__file__).resolve().parent / "beat_grid_data" / "measured_console.yaml"
+)
+
+
+def _load_measured_max_timecode_tracks() -> int:
+    with _MEASURED_CONSOLE_PATH.open("r", encoding="utf-8") as handle:
+        value = yaml.safe_load(handle)["max_timecode_tracks"]
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f"max_timecode_tracks 가 양의 정수가 아닙니다: {value!r}")
+    return value
+
+
+#: ①이 구조로 확인한 실제 최대 트랙 수 — ①이 PASS라도 이 수를 넘는 묶음은
+#: 측정 범위 밖이라 그 타임코드의 트랙 전부를 거절한다. 처음엔 t531의 6이었고
+#: (카드 t549), 카드 t553 실기 되읽기(타임코드 32, 트랙 8)로 8이 됐다 —
+#: 근거는 ``beat_grid_data/measured_console.yaml``.
+MEASURED_MAX_TIMECODE_TRACKS = _load_measured_max_timecode_tracks()
 
 
 def required_m1_items_for_cue(cue: Mapping[str, object]) -> frozenset[int]:
@@ -109,12 +135,32 @@ def _is_m1_item_confirmed(item: int, probe_results: Mapping[int, str]) -> bool:
 
 
 def blocked_m1_items_for_cue(
-    cue: Mapping[str, object], probe_results: Mapping[int, str]
+    cue: Mapping[str, object],
+    probe_results: Mapping[int, str],
+    *,
+    group_no: int | None = None,
 ) -> frozenset[int]:
     """``cue``가 기대는 M1 항목 중 ``probe_results``에서 PASS로 확인되지
-    않은 것들 — 빈 집합이면 M1 게이트 통과."""
+    않은 것들 — 빈 집합이면 M1 게이트 통과.
+
+    카드 t553(REQ-LDBEAT-006(vi)) — ``app_movement`` 항목(⑤⑦⑨)이 아직
+    막혀 있어도, ``group_no``가 주어졌고 그 칸의 (그룹, 모양, 축)이
+    ``beat_grid_measured.is_movement_measured_open``이 확인한 실기
+    기록과 정확히 일치하면 그 세 항목만 막힘에서 뺀다 — progress.md의
+    M1 표 판정 문자열 자체는 그대로 둔다(기록을 고치지 않는다). ⑤⑦⑨가
+    애초에 막혀 있지 않았다면(이미 모두 PASS) 이 경로는 아무것도
+    바꾸지 않는다 — "부분 적용 0건" 원칙상 매칭 안 되는 칸은 그대로
+    막힌다."""
     required = required_m1_items_for_cue(cue)
-    return frozenset(item for item in required if not _is_m1_item_confirmed(item, probe_results))
+    blocked = frozenset(item for item in required if not _is_m1_item_confirmed(item, probe_results))
+    if not (blocked & _APP_MOVEMENT_ITEMS):
+        return blocked
+    movement = cue.get("app_movement")
+    if not isinstance(movement, Mapping):
+        return blocked
+    if is_movement_measured_open(group_no, movement.get("shape"), movement.get("axes") or ()):
+        return blocked - _APP_MOVEMENT_ITEMS
+    return blocked
 
 
 @dataclass(frozen=True)
@@ -273,7 +319,7 @@ def _emit_cue(
 ) -> CueEmitResult:
     bar = int(cue["bar"])  # type: ignore[arg-type]
 
-    blocked = blocked_m1_items_for_cue(cue, probe_results)
+    blocked = blocked_m1_items_for_cue(cue, probe_results, group_no=group_no)
     if blocked:
         listed = ", ".join(str(item) for item in sorted(blocked))
         reason = f"미확인 항목 {len(blocked)}개({listed}) — REQ-LDBEAT-001 게이트"
@@ -394,7 +440,8 @@ def emit_beat_grid_write_bundle(
             track_count = len(timecode_groups.get(timecode_number, []))
             reason = (
                 f"타임코드 {timecode_number}에 트랙 {track_count}개 — ①이 구조로 확인한 "
-                f"최대 {MEASURED_MAX_TIMECODE_TRACKS}개(progress.md M1 ①)를 넘습니다"
+                f"최대 {MEASURED_MAX_TIMECODE_TRACKS}개"
+                "(beat_grid_data/measured_console.yaml)를 넘습니다"
             )
             track_results.append(
                 _blocked_track(

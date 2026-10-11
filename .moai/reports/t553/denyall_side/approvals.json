@@ -1,0 +1,17 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; At Preset 2.1"
+    ],
+    "approved": false
+  },
+  {
+    "commands": [
+      "ClearAll"
+    ],
+    "approved": false
+  }
+]

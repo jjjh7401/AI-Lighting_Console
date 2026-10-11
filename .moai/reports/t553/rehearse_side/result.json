@@ -1,0 +1,52 @@
+{
+  "item": "T553Side",
+  "free_slots": [],
+  "occupied_before": [],
+  "planned": {
+    "side_lit": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; At Preset 2.1"
+    ],
+    "side_clear": [
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "approval_t553_cell.txt 20~23·37줄 그대로"
+  ],
+  "bundles": {
+    "side_lit": true,
+    "side_clear": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11 ; Attribute 'Dimmer' At 70",
+    "Group 11 ; At Preset 2.1",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
