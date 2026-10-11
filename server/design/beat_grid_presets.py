@@ -211,7 +211,14 @@ def build_preset_drawer(
     grid_edit`가 쓰는 그 함수)를 그대로 재사용해 판정한다 — 거절 사유가
     `None`이면 그 효과 풀 번호대 안에 있다는 뜻이다. 번호대가 아직 선언돼
     있지 않거나(``pools``가 비었거나) 그 풀 종류를 모르면 "효과"로
-    지어내지 않고 `False`(= 기본 쪽에 남긴다)로 떨어진다."""
+    지어내지 않고 `False`(= 기본 쪽에 남긴다)로 떨어진다.
+
+    카드 t568(REQ-LDBEAT-023(c)) — 각 항목에 ``description``을 명시적
+    `None`으로 더한다. `paged_pool_children`이 돌려받는 콘솔 응답은
+    슬롯 번호·이름뿐이라(PROTOCOL §4.2) 프리셋의 "설명 텍스트"를 읽는
+    경로가 이 저장소에 없다(새 콘솔 프로브 없이 조사 완료) — 그래서 그
+    필드를 지어내지 않고 자리만 명시적으로 비워 둔다(생략과는 다르다 —
+    "비었다"는 사실 자체가 확인된 정보다)."""
     confirmed = bool(policy.get("confirmed"))
     sections: list[dict[str, object]] = []
     for pool_name, title in _DRAWER_SECTIONS:
@@ -248,6 +255,16 @@ def build_preset_drawer(
                     "usage_count": len(used_by),
                     "used_by": used_by,
                     "is_effect_band": is_effect_band,
+                    # 카드 t568(REQ-LDBEAT-023(c)) — 칩 툴팁이 쓰는 "설명
+                    # 텍스트"(시안 원문 예시 「펄스 30↔60 · 4박」 꼴).
+                    # `paged_pool_children`(t480)이 콘솔에서 돌려받는 자식
+                    # 필드는 슬롯 번호(`i`)와 이름(`name`)뿐이고(PROTOCOL
+                    # §4.2), 이 저장소에 설명 텍스트를 읽는 다른 경로도
+                    # 없다(새 프로브 없이 조사 완료 — 이 카드 범위 밖).
+                    # 지어내지 않고 명시적 `None` — 클라이언트
+                    # `presetChipTooltip.formatPresetChipTooltip`은 이미
+                    # `null`을 "설명 없음, 사용 수만 표시"로 처리한다.
+                    "description": None,
                 }
             )
         sections.append(

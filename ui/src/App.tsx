@@ -400,6 +400,9 @@ export default function App() {
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
     sendBeatGridDrawerRequest,
+    sendBeatGridApply,
+    sendBeatGridPreview,
+    sendBeatGridPreviewOff,
     sendBeatGridStageRequest,
     sendDecision,
     sendReviewDecision,
@@ -1155,8 +1158,13 @@ export default function App() {
             onSuggestionReject={sendBeatGridSuggestionReject}
             drawerSections={state.beatGridDrawer}
             onDrawerRequest={sendBeatGridDrawerRequest}
+            onPreviewBar={sendBeatGridPreview}
+            onPreviewOff={sendBeatGridPreviewOff}
+            onApply={sendBeatGridApply}
+            pendingApplyCount={state.songTimeline.timeline?.beat_grid?.unsent_cells?.length}
             fixtures={beatGridStageFixtures}
             stageNotes={state.beatGridStage?.unread}
+            stageGroups={state.beatGridStage?.groups}
           />
         </div>
       ) : runbookMode ? (

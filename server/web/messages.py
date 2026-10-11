@@ -159,6 +159,12 @@ CLIENT_MESSAGE_TYPES = (
     # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기 요청. 페이로드 없음(현재
     # 곡의 격자 사용처 집계는 서버가 안다, dash_catalog_request와 같은 모양).
     "beat_grid_drawer_request",
+    # 카드 t563(SPEC-LDBEAT-001 M4, REQ-LDBEAT-011~013/017) — 상단 바
+    # 콘솔 버튼 셋. `beat_grid_edit` 과 달리 이 셋은 콘솔에 **쓴다**
+    # (run_commands -> 기존 안전 게이트) — 새 무승인 경로를 만들지 않는다.
+    "beat_grid_apply",
+    "beat_grid_preview",
+    "beat_grid_preview_off",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
@@ -411,6 +417,15 @@ def parse_client_message(raw: str) -> dict:
             "target": target,
             "changes": changes,
         }
+
+    if message_type == "beat_grid_preview":
+        # 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. `beat_grid_suggest`
+        # 와 같은 모양(마디 하나)이지만 트랙(target)은 없다 — 가장 최근
+        # 반영이 쓴 모든 트랙을 대상으로 한다(session.beat_grid_preview).
+        bar = message.get("bar")
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            raise ProtocolError("beat_grid_preview.bar must be an integer")
+        return {"v": PROTOCOL_VERSION, "type": "beat_grid_preview", "bar": bar}
 
     if message_type == "beat_grid_suggest":
         bar = message.get("bar")
@@ -743,6 +758,12 @@ def parse_client_message(raw: str) -> dict:
         # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기도 페이로드가 없다
         # (현재 격자 사용처는 서버가 이미 안다).
         "beat_grid_drawer_request",
+        # 카드 t563 — 「콘솔에 반영」·「끄기」도 페이로드가 없다. 반영은
+        # 지금 격자 초안 전체를 쓰고, 끄기는 가장 최근 반영의 모든
+        # 시퀀스를 끈다 — 둘 다 번호를 서버가 쥐고 있어 클라이언트가
+        # 보낼 것이 없다.
+        "beat_grid_apply",
+        "beat_grid_preview_off",
         # 카드 t565 — 무대 판독 요청도 페이로드가 없다.
         "beat_grid_stage_request",
     ):
@@ -791,6 +812,33 @@ def beat_grid_suggestion_consumed_event(*, suggestion_id: str) -> dict:
     보류 목록에서 지우게 한다. id가 애초에 없었어도(거절 경로) 보낸다 —
     UI 쪽 필터는 없는 id를 지우려 해도 안전한 no-op이다."""
     return _event("beat_grid_suggestion_consumed", suggestion_id=suggestion_id)
+
+
+def beat_grid_send_status_event(
+    *,
+    pending_apply_count: int,
+    last_action: str,
+    ok: bool,
+    reason: str | None = None,
+    blocked_cells: list[dict],
+    approval_vs_sent: dict | None = None,
+) -> dict:
+    """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
+    (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
+    대기 수 배지를 갱신시키는 ``beat_grid_edit`` 성공 때마다의 공용 상태.
+    ``blocked_cells``는 ``{group_name, bar, reason}`` 전수 목록(에미터의
+    "부분 적용 0건" 판정을 그대로 보여준다) — 거절 1건을 요약 문구로
+    뭉개지 않는다. ``approval_vs_sent``는 반영(쓰기) 성공 때만 채워진다
+    (미리보기/편집은 비교 대상인 "승인 파일"이 없다)."""
+    return _event(
+        "beat_grid_send_status",
+        pending_apply_count=pending_apply_count,
+        last_action=last_action,
+        ok=ok,
+        reason=reason,
+        blocked_cells=blocked_cells,
+        approval_vs_sent=approval_vs_sent,
+    )
 
 
 def beat_grid_drawer_event(*, sections: list[dict]) -> dict:

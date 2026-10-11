@@ -168,6 +168,21 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "모델의 `run_commands` 도구 정의 — 등재된 핸들러 `dispatch_run_commands` 가 "
         "나갈 명령에서 선언을 읽어 붙인다. kind='model_run_commands'"
     ),
+    # 카드 t563(SPEC-LDBEAT-001 M4, REQ-LDBEAT-011~013/017) — 상단 바 콘솔
+    # 버튼 셋. 둘 다 `run_instruction` 체인 밖의 전용 진입점(panel.py의
+    # fire()와 같은 자리)이라 ambient 세션 키를 직접 묶는다(bind_session_key).
+    ("server/web/session.py", "beat_grid_apply", 0): (
+        "emit_beat_grid_write_bundle 이 낸 Store Sequence/Cue/Timecode 다발 — "
+        "구간 단위 1개 승인(BatchRisk, kind='beat_grid_apply', REQ-LDBEAT-012(a)). "
+        "매 호출마다 승인을 받는다(쓰기, 매번)"
+    ),
+    ("server/web/session.py", "_beat_grid_dispatch_preview", 0): (
+        "Goto Cue … Sequence …/Off Sequence … — 미리보기(쓰기 아님, 재생 전용). "
+        "세션 시작 1회만 BatchRisk(kind='beat_grid_preview')를 선언하고(REQ-"
+        "LDBEAT-012(b)), 그 뒤 호출은 risk=None 으로 같은 run_commands 를 거친다 — "
+        "`Sequence N` 참조라 게이트 자신의 expand-or-hold 검증은 호출마다 독립으로 "
+        "돈다(이 표는 그 축과 무관, 이 모듈이 선언하는 쪽만 다스린다)"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.

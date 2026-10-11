@@ -514,6 +514,15 @@ export interface BeatGridView {
   probe_results: Record<number, string>;
   source: "love_attack_default" | "empty" | "custom";
   note: string | null;
+  /** 카드 t568 ② (공급: t563) — 마지막 반영(승인=송신) 뒤 바뀐 칸. 반영
+   * 스냅숏이 아직 없으면 `null`. 필드가 없는 옛 서버 응답이면 `undefined`. */
+  unsent_cells?: BeatGridUnsentCell[] | null;
+}
+
+/** 카드 t568 ② — `BeatGridView.unsent_cells` 의 한 칸. */
+export interface BeatGridUnsentCell {
+  group_name: string;
+  bar: number;
 }
 
 /** 카드 t551 후속(지시 1항) — 프리셋 서랍의 항목 하나. mockup `drawDrawer()`
@@ -530,6 +539,15 @@ export interface BeatGridDrawerEntry {
    * 않고 `false`(= 기본 쪽)로 떨어진다(`beat_grid_presets.build_preset_
    * drawer`가 `validate_preset_pool_assignment`를 재사용해 판정). */
   is_effect_band: boolean;
+  /** 카드 t560(REQ-LDBEAT-023(c)) — 그 프리셋의 설명 텍스트(시안 원문
+   * 예시 「펄스 30↔60 · 4박」 꼴, `name`과는 다른 자리 — `name`은 콘솔이
+   * 읽은 짧은 이름일 뿐이다). 카드 t568 조사 — 콘솔 풀 자식 판독
+   * (`paged_pool_children`)은 슬롯 번호·이름만 돌려주고, 이 저장소에
+   * 설명 텍스트를 읽는 다른 경로도 없다(새 프로브 없이 조사 완료) —
+   * 그래서 서버는 이 필드를 명시적 `null`로 채운다(생략이 아니다).
+   * 선택 필드로 두고, 비어 있으면(`undefined`/`null`) 칩 툴팁이 사용 큐
+   * 수만 보인다(지어내지 않는다). */
+  description?: string | null;
 }
 
 /** 카드 t551 후속(지시 1항) — 서랍 섹션 하나(디머 1·위치 2·색 4 중 하나).
@@ -582,6 +600,38 @@ export interface BeatGridPendingSuggestion {
   target: string;
   changes: Record<string, unknown>;
   rationale: string;
+}
+
+/** 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋(이 마디 콘솔에서
+ * 보기 · 끄기 · 콘솔에 반영)의 공용 응답. `beat_grid_edit` 성공 때도
+ * 이 타입으로 한 번 더 와서 대기 수(`pendingApplyCount`) 배지를
+ * 갱신시킨다. `blocked_cells`는 에미터의 "부분 적용 0건" 판정 전수
+ * 목록 — 거절 1건으로 뭉개지 않는다. `approval_vs_sent`는 반영(쓰기)
+ * 성공 때만 채워진다(미리보기·편집은 비교 대상인 승인 파일이 없다). */
+export interface BeatGridBlockedCell {
+  group_name: string;
+  bar: number;
+  reason: string;
+}
+
+export interface BeatGridApprovalVsSent {
+  sha256: string;
+  cell_count: number;
+  match: boolean;
+  sent_not_approved: string[];
+  approved_not_sent: string[];
+}
+
+export interface BeatGridSendStatus {
+  /** 코디네이터 계약(t568과 합의) — `BeatGridView.unsent_cells`의 길이와
+   * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
+   * 안 했으면) `null`. */
+  pending_apply_count: number | null;
+  last_action: "apply" | "preview" | "preview_off" | "edit";
+  ok: boolean;
+  reason: string | null;
+  blocked_cells: BeatGridBlockedCell[];
+  approval_vs_sent: BeatGridApprovalVsSent | null;
 }
 
 export interface SongTimelineView {
@@ -857,7 +907,10 @@ export type ServerEvent =
   // 생산 환경에서는 거의 발생하지 않는다(시험용 가짜 소스로 렌더 검증).
   | ({ v: 1; type: "beat_grid_suggestion" } & BeatGridPendingSuggestion)
   // approval_resolved와 같은 짝 — 적용됐든 거절됐든 보류 목록에서 지운다.
-  | { v: 1; type: "beat_grid_suggestion_consumed"; suggestion_id: string };
+  | { v: 1; type: "beat_grid_suggestion_consumed"; suggestion_id: string }
+  // 카드 t563 — 상단 바 콘솔 버튼 셋(반영·미리보기·끄기) + 편집 성공 때의
+  // 대기 수 배지 갱신. 공용 한 타입(아래 BeatGridSendStatus).
+  | ({ v: 1; type: "beat_grid_send_status" } & BeatGridSendStatus);
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -891,6 +944,8 @@ const SERVER_EVENT_TYPES = new Set([
   "beat_grid_stage",
   "beat_grid_suggestion",
   "beat_grid_suggestion_consumed",
+  // 카드 t563 — 상단 바 콘솔 버튼 셋의 공용 응답.
+  "beat_grid_send_status",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -985,6 +1040,24 @@ export function buildBeatGridSuggestionReject(suggestionId: string): string {
  * 없음(현재 격자의 사용처는 서버가 이미 안다). */
 export function buildBeatGridDrawerRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_drawer_request" });
+}
+
+/** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
+ * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
+ * 원칙: UI는 콘솔 페이로드를 짓지 않는다). */
+export function buildBeatGridApply(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_apply" });
+}
+
+/** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
+export function buildBeatGridPreview(bar: number): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_preview", bar });
+}
+
+/** 카드 t563 — 상단 바 「■ 끄기」. 페이로드 없음(가장 최근 반영의 모든
+ * 시퀀스를 끈다 — 서버가 번호를 쥐고 있다). */
+export function buildBeatGridPreviewOff(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_preview_off" });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는
@@ -1408,6 +1481,10 @@ export interface UiState {
   /** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. 소비(적용·
    * 거절)되면 `null`로 돌아간다(`beat_grid_suggestion_consumed`). */
   pendingBeatGridSuggestion: BeatGridPendingSuggestion | null;
+  /** 카드 t563 — 상단 바 콘솔 버튼 셋의 가장 최근 응답. 한 번도 안
+   * 왔으면(반영·미리보기를 아직 안 눌렀고 편집도 없었으면) `null` —
+   * 배지 숫자를 지어내지 않는다. */
+  beatGridSendStatus: BeatGridSendStatus | null;
 }
 
 export const initialState: UiState = {
@@ -1417,6 +1494,7 @@ export const initialState: UiState = {
   beatGridDrawer: null,
   beatGridStage: null,
   pendingBeatGridSuggestion: null,
+  beatGridSendStatus: null,
   pendingApprovals: [],
   pendingReviews: [],
   pendingQuestions: [],
@@ -1664,6 +1742,20 @@ export function reduceServerEvent(
       // 덮였으면) 건드리지 않는다. 없는 id를 지우는 건 안전한 no-op이다.
       if (state.pendingBeatGridSuggestion?.suggestion_id !== event.suggestion_id) return state;
       return { ...state, pendingBeatGridSuggestion: null };
+    case "beat_grid_send_status":
+      // 최신 응답으로 REPLACE(병합 없음) — 이전 reason/blocked_cells가
+      // 새 호출 결과와 섞이면 "지금 왜 막혔는지"를 잘못 말하게 된다.
+      return {
+        ...state,
+        beatGridSendStatus: {
+          pending_apply_count: event.pending_apply_count,
+          last_action: event.last_action,
+          ok: event.ok,
+          reason: event.reason,
+          blocked_cells: event.blocked_cells,
+          approval_vs_sent: event.approval_vs_sent,
+        },
+      };
   }
 }
 

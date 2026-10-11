@@ -4647,7 +4647,11 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  /* 카드 t560(REQ-LDBEAT-023(d)) — 스크롤은 이제 `.beat-grid-glance-scroll`
+     (아래)가 맡는다. 이 pane 자신은 `overflow: hidden`이라 제목(`<h5>`)이
+     스크롤에 떠내려가지 않는다 — sticky가 아니라 "스크롤 영역 밖"으로
+     고정한다(표 머리는 그 안에서 sticky, 두 메커니즘을 혼동하지 않는다). */
+  overflow: hidden;
 }
 
 .beat-grid-stage-pane h5,
@@ -4681,6 +4685,98 @@ body {
 .beat-grid-glance-table td {
   border-top: 1px solid #262b35;
   padding: 2px 4px;
+}
+
+/* 카드 t560(REQ-LDBEAT-023(d)) — 제목(`<h5>`)은 이 스크롤 영역 밖에 있어
+   스크롤과 무관하게 항상 보인다. 표 머리(`<thead>`)는 이 영역 안에서
+   sticky로 고정된다(아래 `.beat-grid-glance-table thead th`). */
+.beat-grid-glance-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.beat-grid-glance-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--panel);
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 2px 4px;
+  border-bottom: 1px solid #262b35;
+}
+
+.beat-grid-glance-row {
+  cursor: pointer;
+}
+
+.beat-grid-glance-row:hover td {
+  background: #20242c;
+}
+
+.beat-grid-glance-expand-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px 0 0;
+  font-size: 10px;
+}
+
+/* 카드 t560(REQ-LDBEAT-023(b)) — 줄 이름 ▸ 펼침의 상세 한 줄. */
+.beat-grid-glance-detail-row td {
+  border-top: none;
+  padding: 0 4px 4px 20px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.beat-grid-glance-detail-field {
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+/* 카드 t560 후속(REQ-LDBEAT-023(c)) — 「이 마디 한눈에」 표 칸의 프리셋
+   칩(밝기·위치·색·움직임). 서랍 "pr" 항목과 같은 자리지만 표 칸 안에서
+   작게 — 툴팁(title)이 설명·사용 수를 보여준다. */
+.beat-grid-glance-chip {
+  display: inline-block;
+  background: #2b3a52;
+  border: 1px solid #3a4a66;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+/* 카드 t560 후속(REQ-LDBEAT-023(d)) — 줄 이름 칸 아래 「바뀐 것」 표시
+   (mockup `changedTxt`). */
+.beat-grid-glance-changed {
+  color: var(--warn);
+  font-size: 9.5px;
+}
+
+/* 카드 t560 후속(REQ-LDBEAT-019(c)) — "이 구간 왼쪽·오른쪽 따로"/"L·R
+   다시 합치기" 토글이 이제 펼침 상세 줄에 있다(mockup `detailRow` :434). */
+.beat-grid-glance-lr-split-toggle {
+  display: block;
+  margin-top: 4px;
+  background: none;
+  border: 1px solid #3a4a66;
+  border-radius: 3px;
+  color: #ffd84d;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+/* 카드 t560 후속 — 「이 마디 한눈에」 표의 자식 줄(└ L/R, 표시 전용). */
+.beat-grid-glance-child-row td {
+  color: var(--muted);
+  font-size: 10.5px;
+  padding-left: 20px;
 }
 
 /* t537 레이아웃 교정 — 시안의 `.sidepane`(310px 고정폭, 타임라인 바로
@@ -4950,6 +5046,59 @@ body {
 /* 프리셋 서랍에서 고른 항목을 쓰는 큐 — "누르면 쓰는 막대가 노랗게". */
 .beat-grid-cue.is-preset-highlighted {
   outline: 2px solid #ffd84d;
+}
+
+/* 카드 t560(REQ-LDBEAT-019(a)) — "고친 막대는 초록"(mockup `.clip.edited`
+   과 같은 색 `#7fc45a`). */
+.beat-grid-cue.is-edited {
+  box-shadow: inset 0 0 0 2px #7fc45a;
+}
+
+/* 카드 t560(REQ-LDBEAT-019(a)) — "AI 제안 막대는 점선"을 실제 칸 자신에도
+   얹는다(기존 `.beat-grid-cue-ghost`는 별도 겹침용 오버레이일 뿐이고, 이
+   클래스는 그 칸이 보류 중인 제안의 대상이라는 것을 그 칸 테두리로도
+   보여준다). */
+.beat-grid-cue.is-ai-suggestion {
+  border-style: dashed;
+  border-color: #ffd84d;
+}
+
+/* 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로"/"다시 합치기" 토글. */
+.beat-grid-lr-split-toggle {
+  margin-left: 6px;
+  background: none;
+  border: 1px solid #3a4a66;
+  border-radius: 3px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9.5px;
+  padding: 1px 4px;
+}
+
+/* 카드 t560(REQ-LDBEAT-019(c)) — 자식 줄(└ 들여쓰기, 표시 전용 — §Gaps). */
+.beat-grid-track-child {
+  opacity: 0.85;
+}
+
+.beat-grid-track-label-child {
+  padding-left: 16px;
+  font-size: 10.5px;
+}
+
+.beat-grid-cue-split-child {
+  position: absolute;
+  top: 0;
+  height: 26px;
+  background: #3a2a55;
+  border: 1px dashed #b388ff;
+  color: #d9c6ff;
+  font-size: 10px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .beat-grid-ai-suggestion {
