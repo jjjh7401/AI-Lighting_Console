@@ -1,0 +1,14 @@
+[
+  {
+    "commands": [
+      "Off Sequence 336"
+    ],
+    "approved": true
+  },
+  {
+    "commands": [
+      "ClearAll"
+    ],
+    "approved": true
+  }
+]

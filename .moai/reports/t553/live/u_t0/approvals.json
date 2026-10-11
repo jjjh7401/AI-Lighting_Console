@@ -1,0 +1,11 @@
+[
+  {
+    "commands": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; Attribute 'Tilt' At 45"
+    ],
+    "approved": true
+  }
+]

@@ -1,0 +1,4 @@
+{"step": "off_U_pan", "t": 0.067, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 336", "reasons": ["reference-invoking command"]}]}
+{"step": "off_U_pan", "t": 0.133, "kind": "exec", "command": "Off Sequence 336", "fired": true, "ok": true, "detail": "OK"}
+{"step": "final_clear", "t": 0.133, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "final_clear", "t": 0.199, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

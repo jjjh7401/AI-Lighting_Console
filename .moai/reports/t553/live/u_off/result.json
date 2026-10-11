@@ -1,0 +1,31 @@
+{
+  "item": "T553UPan",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/336"
+  ],
+  "occupied_before": [],
+  "bundles": {
+    "off_U_pan": true,
+    "final_clear": true
+  },
+  "verdict": "ran live",
+  "preflight": "responder_ok",
+  "approval_requests": [
+    {
+      "commands": [
+        "Off Sequence 336"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (supervisor)",
+    "SaveShow skipped (supervisor)"
+  ]
+}
