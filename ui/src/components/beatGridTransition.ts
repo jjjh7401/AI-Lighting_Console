@@ -153,15 +153,22 @@ export function transitionMib(prev: BeatGridCue | null, cur: BeatGridCue): Trans
 
 /** 시안 `warnOf` — [제안] 경고(규칙서 §2.3 규칙 2). 페이드가 미정이거나
  * 구간 경계를 모르면 그 판정은 하지 않는다(모르는 것을 경고로 만들지 않음).
- * 시안의 강조(★) 마디 예외는 아직 곡 데이터가 없어 적용하지 못한다. */
+ * 카드 t567 — 시안처럼 강조(★) 마디(곡 데이터 `accentBars`)에선 켜진 채 위치
+ * 끊김을 경고하지 않는다(히트는 끊기). ★ 예외는 위치 경고에만 걸린다. */
 export function transitionWarnings(
   prev: BeatGridCue | null,
   cur: BeatGridCue,
   sectionStartBars: readonly number[] | null,
+  accentBars: readonly number[] = [],
 ): string[] {
   if (!prev || !entryFadeIsCut(cur.entry)) return [];
   const warnings: string[] = [];
-  if (cur.position_preset_no !== null && prev.position_preset_no !== cur.position_preset_no && cueIsLit(prev)) {
+  if (
+    cur.position_preset_no !== null &&
+    prev.position_preset_no !== cur.position_preset_no &&
+    cueIsLit(prev) &&
+    !accentBars.includes(cur.bar)
+  ) {
     warnings.push("켜진 채 위치가 끊어 바뀜");
   }
   if (
@@ -189,9 +196,10 @@ export function jointMarker(
   sectionStartBars: readonly number[] | null,
   secondsPerBar: number | null = null,
   beatsPerBar: number | null = null,
+  accentBars: readonly number[] = [],
 ): JointMarker {
   const mib = transitionMib(prev, cur);
-  const warnings = transitionWarnings(prev, cur, sectionStartBars);
+  const warnings = transitionWarnings(prev, cur, sectionStartBars, accentBars);
   const hasFade = entryHasFade(cur.entry);
   const classes: string[] = [];
   if (hasFade) classes.push("is-fade");

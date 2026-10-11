@@ -700,15 +700,6 @@ export function panOnlyVerticalBaseWarning(cue: BeatGridCue): string | null {
   return "⚠ Pan 단독 움직임이 기본 위치(수직) 중심입니다 — 기울인 위치 프리셋 없이는 눈에 보이지 않을 수 있습니다";
 }
 
-/** 카드 t551(M3) — 밝기 "값"(%) 모드만 프리셋 카탈로그 없이 바로 고칠 수
- * 있다(mockup "밝기 값/디머 프리셋/디머 효과" 중 "값"만 평문 숫자). 칸이
- * 없거나(`null`) 디머 프리셋/디머 효과 참조 중이면 편집 불가 — 둘 다
- * "어느 프리셋으로 바꿀까"가 목록 선택을 요구해 이 카드 범위 밖이다. */
-export function isBrightnessValueEditable(cue: BeatGridCue | null): boolean {
-  if (!cue) return false;
-  return cue.brightness.mode !== "dimmer_preset" && cue.brightness.mode !== "dimmer_effect";
-}
-
 /** 서버의 `apply_beat_grid_edit`가 받는 ``changes`` 모양 그대로 — UI는 이
  * 모양을 조립할 뿐 검증하지 않는다(검증은 서버 하나의 진실 지점,
  * REQ-LDBEAT-008). `percent`가 유한하지 않으면(빈 입력 등) `null`. */
@@ -1922,6 +1913,7 @@ export function BeatGrid({
                                     }
                                     prevFill={active ? colorFill.background ?? null : null}
                                     sectionStartBars={sectionStartBars}
+                                    accentBars={overviewModel.accentBars}
                                     secondsPerBar={secondsPerBar}
                                     isOn={
                                       transitionView &&
@@ -2026,6 +2018,7 @@ export function BeatGrid({
               tracks={grid.tracks}
               secondsPerBar={secondsPerBar}
               sectionStartBars={sectionStartBars}
+              accentBars={overviewModel.accentBars}
               onClose={() => setSceneBar(null)}
               onSelectRow={(trackIndex) => selectCue(trackIndex, sceneBar, true)}
               beatsPerBar={beatsPerBar}
@@ -2086,6 +2079,7 @@ export function BeatGrid({
                   secondsPerBar={secondsPerBar}
                   beatsPerBar={beatsPerBar}
                   sectionStartBars={sectionStartBars}
+                  accentBars={overviewModel.accentBars}
                   onEditRequest={onEditRequest}
                 />
               ) : (
@@ -2128,8 +2122,7 @@ export function BeatGrid({
                     // 카드 t551 계속 — 직접 고르기(①) 드롭다운(mockup "구조" 4 +
                     // "막대 → 오른쪽 큐 편집": 위치·색·밝기(디머 프리셋)는
                     // `drawerSections`에서 "이 곡 프리셋"/"쇼에 이미 있는
-                    // 프리셋"/"+ 새 프리셋"으로 고른다). 효과(움직임)·디머
-                    // "효과"는 아직 읽기 전용(아래 Missing Inputs 참조).
+                    // 프리셋"/"+ 새 프리셋"으로 고른다).
                     const positionSection = findDrawerSection(drawerSections, "Position");
                     const colorSection = findDrawerSection(drawerSections, "Color");
                     const dimmerSection = findDrawerSection(drawerSections, "Dimmer");

@@ -29,6 +29,7 @@ export function BeatGridJoint({
   onOpen,
   pxPerBar = PX_PER_BAR,
   beatsPerBar = null,
+  accentBars = [],
 }: {
   prev: BeatGridCue;
   cue: BeatGridCue;
@@ -44,8 +45,10 @@ export function BeatGridJoint({
   pxPerBar?: number;
   /** 카드 t574 — 박 페이드·트리거 박 위치 환산(곡 박자표, 모르면 null). */
   beatsPerBar?: number | null;
+  /** 카드 t567 — 강조(★) 마디(곡 데이터). 위치 끊김 경고의 예외. */
+  accentBars?: readonly number[];
 }) {
-  const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null, beatsPerBar);
+  const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null, beatsPerBar, accentBars);
   const fadeBars = entryHasFade(cue.entry) ? (entryFadeInBars(cue.entry, beatsPerBar) ?? 0) : 0;
   // 시안 `.jt` 위치 = 마디 + (트리거 박 - 1) 칸 — 박자표를 모르면 마디 시작에 둔다.
   const triggerOffset =
@@ -123,6 +126,7 @@ export function BeatGridScenePanel({
   onSelectRow,
   onBulkEntry,
   beatsPerBar = null,
+  accentBars = [],
 }: {
   bar: number;
   tracks: readonly BeatGridTrack[];
@@ -134,6 +138,8 @@ export function BeatGridScenePanel({
    * 를 받는다(카드 t574). 편집 경로가 없으면 두 버튼 모두 비활성. */
   onBulkEntry?: (edits: { target: string; entry: FullBeatGridEntry }[]) => void;
   beatsPerBar?: number | null;
+  /** 카드 t567 — 강조(★) 마디(곡 데이터). */
+  accentBars?: readonly number[];
 }) {
   const rows = sceneChangeRows(tracks, bar);
   return (
@@ -152,7 +158,7 @@ export function BeatGridScenePanel({
         <tbody>
           {rows.map((row) => {
             const mib = transitionMib(row.prev, row.cue);
-            const warnings = transitionWarnings(row.prev, row.cue, sectionStartBars);
+            const warnings = transitionWarnings(row.prev, row.cue, sectionStartBars, accentBars);
             return (
               <tr key={row.track.group_name} onClick={() => onSelectRow(row.trackIndex)}>
                 <td className="rn">{row.track.group_name}</td>
