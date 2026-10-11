@@ -884,18 +884,28 @@ def empty_preset_cells(
     t592 이후 빈 **위치** 번호는 반영 때 만들어질 수 있다 — 칸(승인 여부 무관)이
     가리키고 격자 조건(``position_grid_blocker``: 목표 좌표·영문 이름·그룹 확인)이 다
     있으면 ``kind == "create_on_apply"``(남은 조건은 반영 때 읽는 그룹 소속·장비
-    좌표뿐). 격자 조건이 빠졌으면 그 사유를 ``reason``에 붙인다.
+    좌표뿐). 격자 조건이 빠졌으면 그 사유를 ``reason``에 붙인다. 카드 t593 부터 빈
+    **효과** 번호도 같다 — 격자 조건(``effect_grid_blocker``: 레시피·템플릿·번호대·영문
+    이름·그룹)이 다 있으면 ``create_on_apply``(남은 조건은 곡 BPM·반영당 하나).
 
     칸마다 ``{group_name, bar, state, fields: [{field, field_label, value, kind,
     reason}]}``. ``kind``: ``"empty"``/``"pool_unread"``/``"create_on_apply"``.
     ``state``: ``"create"``(빈 번호가 전부 반영 때 만들어짐) · ``"held"``(반영에서
     송신 보류 — 승인 대기 칸이든 승인된 칸이든, 카드 t600)."""
     # 순환 import 회피(그 모듈이 이 모듈을 import 한다).
+    from server.design.beat_grid_edit import load_preset_pool_policy
+    from server.design.beat_grid_effect_presets import (
+        EFFECT_CREATE_ON_APPLY,
+        default_effect_library,
+        effect_grid_blocker,
+    )
     from server.design.beat_grid_position_presets import (
         POSITION_PRESET_POOL,
         position_grid_blocker,
     )
 
+    # 카드 t593 — 빈 효과 번호도 반영 때 템플릿·주기 레시피로 만들어질 수 있다.
+    effect_policy: Mapping[str, object] | None = None
     cells: list[dict[str, object]] = []
     for track in grid.get("tracks") or []:
         if not isinstance(track, Mapping):
@@ -918,6 +928,17 @@ def empty_preset_cells(
                     if blocker is None:
                         kind = "create_on_apply"
                         reason = POSITION_CREATE_ON_APPLY
+                    else:
+                        reason = f"{reason}({blocker})"
+                elif kind == "empty" and field == "effect_preset_no":
+                    if effect_policy is None:
+                        effect_policy = load_preset_pool_policy()
+                    blocker = effect_grid_blocker(
+                        grid, str(value), library=default_effect_library(), policy=effect_policy
+                    )
+                    if blocker is None:
+                        kind = "create_on_apply"
+                        reason = EFFECT_CREATE_ON_APPLY
                     else:
                         reason = f"{reason}({blocker})"
                 fields.append(
