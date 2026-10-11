@@ -283,11 +283,31 @@ def build_prop_query(request_id: str, path: str, property_name: str) -> str:
     return build_plugin_call(f"prop {request_id} {path} {property_name}")
 
 
-def build_props_query(request_id: str, path: str, property_names: Sequence[str]) -> str:
+def build_props_query(
+    request_id: str, path: str, property_names: Sequence[str], offset: int | None = None
+) -> str:
+    """Bulk property read (``console/lua/PROTOCOL.md`` §4.8).
+
+    ``offset`` (responder 1.6.6, 카드 t565) asks for whole-entry windowing of a
+    TABLE-valued property. Unlike :func:`build_state_query`, ``0`` is NOT the
+    same as ``None`` here: §4.8 windows only when the token is present, so the
+    first page must carry ``offset=0`` explicitly. ``None`` emits the historical
+    bytes unchanged. The token is legal only with exactly one property name —
+    the responder rejects two or more names plus the token at the top level.
+    """
     _validate_request_id(request_id)
     _validate_rest(path, field="object path")
     names = _validate_props_names(property_names)
-    line = build_plugin_call(f"props {request_id} {','.join(names)} {path}")
+    if isinstance(offset, bool) or (offset is not None and not isinstance(offset, int)):
+        raise ProtocolError(f"offset must be an int or None: {offset!r}")
+    if offset is not None and offset < 0:
+        raise ProtocolError(f"offset must be >= 0: {offset!r}")
+    if offset is not None and len(names) != 1:
+        raise ProtocolError("offset paging takes exactly one property name")
+    rest = f"props {request_id} {','.join(names)} {path}"
+    if offset is not None:
+        rest = f"{rest} offset={offset}"
+    line = build_plugin_call(rest)
     _validate_plugin_call_budget(line, field="props request")
     return line
 

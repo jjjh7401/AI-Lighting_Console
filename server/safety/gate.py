@@ -171,7 +171,11 @@ class _GateStatePort:
             return self._gate._enumerate_fields(path, offset=offset)
         return self._gate._enumerate_fields(path)
 
-    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+    def query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
+        if offset is not None:
+            return self._gate._query_properties(path, property_names, offset=offset)
         return self._gate._query_properties(path, property_names)
 
 
@@ -1029,14 +1033,21 @@ class SafetyGate:
         self._audit.log_executed(subject, kind="introspect_query", ok=True)
         return payload
 
-    def _query_properties(self, path: str, property_names: Sequence[str]) -> dict:
+    def _query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
         # Audited on the same 1:1 send↔audit rule as _query_property: a bulk
         # property request is one OSC send, and a timeout still sent it.
         # @MX:ANCHOR: [AUTO] props audit subject is path plus requested names only.
         # @MX:REASON: REQ-INTROSPECT-018 forbids read values from entering audit logs.
         subject = f"{path} {','.join(property_names)}"
         try:
-            payload = self._console.query_properties(path, property_names)
+            # 카드 t565 — offset 은 창을 실을 때만 넘긴다(enumerate_fields 와 같은
+            # 규칙): 페이징을 모르는 콘솔 더블도 기존 호출은 그대로 받는다.
+            if offset is not None:
+                payload = self._console.query_properties(path, property_names, offset=offset)
+            else:
+                payload = self._console.query_properties(path, property_names)
         except Exception:
             self._audit.log_executed(subject, kind="props_query", ok=False)
             raise
