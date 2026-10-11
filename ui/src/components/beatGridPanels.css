@@ -1,0 +1,283 @@
+/* 박자 격자 — 편집 칸·전환 화면·장면 전환·2D 무대 (SPEC-LDBEAT-001 M9
+   step 3·4·5, 카드 t561, REQ-LDBEAT-020·021·022). 값은 정본 시안
+   design/ldbeat-runbook-ui-proposal-20261008.html 의 `.tg`·`.jt`·`.fw`·
+   `.trow`·`.tm`·`.ed`·`.cmdbox` 와 같다. styles.css 와 따로 둔 이유:
+   같은 파일을 다른 레인(t559·t560)이 동시에 고친다. 덮어쓰는 규칙은
+   선택자를 한 단계 더 구체적으로 써서 불러오는 순서와 무관하게 이긴다. */
+
+/* REQ-LDBEAT-020(b) — 「전환」이 켜지면 노란색(시안 `.tg.on`). */
+.beat-grid-cue-panel .beat-grid-transition-toggle.is-on,
+.beat-grid-tg.is-on {
+  background: #ffd84d;
+  color: #111;
+  border-color: #ffd84d;
+  font-weight: 700;
+}
+
+.beat-grid-tg {
+  background: #2b2b33;
+  border: 1px solid #4a4a56;
+  color: #e8e6dc;
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.beat-grid-tg:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.beat-grid-cue-head-meta {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: -2px 0 4px;
+}
+
+/* 초점 행(시안 FOCUS — outline 2px #ffd84d). */
+.beat-grid-cue-view .beat-grid-cue-field.is-focused {
+  outline: 2px solid #ffd84d;
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+/* 전환 화면 — 같은 자리에서 바뀐다(REQ-LDBEAT-020(d)). */
+.beat-grid-tr-title {
+  color: #ffd84d;
+  font-weight: 700;
+  font-size: 12.5px;
+  margin: 2px 0;
+}
+
+.beat-grid-tr-note {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0 0 6px;
+}
+
+.beat-grid-ed {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.beat-grid-ed > label {
+  margin-top: 8px;
+  color: #f0b49c;
+  font-size: 12px;
+  font-weight: 700;
+  border-top: 1px solid #2c2c34;
+  padding-top: 8px;
+}
+
+.beat-grid-ed > label small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.beat-grid-ed select,
+.beat-grid-ed input {
+  font: inherit;
+  font-size: 12px;
+  background: #23232b;
+  color: #e8e6dc;
+  border: 1px solid #3a3a44;
+  border-radius: 6px;
+  padding: 3px 5px;
+}
+
+.beat-grid-dimrow {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.beat-grid-tr-fade input {
+  width: 60px;
+}
+
+.beat-grid-tr-fade-value {
+  min-width: 64px;
+}
+
+.beat-grid-tr-unknown,
+.beat-grid-tr-stored {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.beat-grid-tr-mib {
+  font-size: 12px;
+}
+
+.beat-grid-tr-mib.is-auto {
+  color: #c9a8ff;
+}
+
+.beat-grid-tr-mib.is-lit,
+.beat-grid-tr-warn {
+  color: #ffb38a;
+}
+
+.beat-grid-tr-warn {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* 콘솔 명령 — 편집 칸 맨 아래(REQ-LDBEAT-020(c)). */
+.beat-grid-cmd-section {
+  margin-top: auto;
+  border-top: 1px solid #2c2c34;
+  padding-top: 8px;
+}
+
+.beat-grid-cmdbox {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  background: #0d0d10;
+  border-radius: 6px;
+  padding: 6px;
+  white-space: pre;
+  overflow-x: auto;
+  color: #cfcdc0;
+  margin: 6px 0 0;
+  max-height: 110px;
+}
+
+/* 이음매(시안 `.jt`) — 페이드 ◢ 파랑, MIB M 보라, 경고 ! 주황, 고름 노랑. */
+.beat-grid-joint.is-fade {
+  border-color: #7fb3ff;
+}
+
+.beat-grid-joint.is-mib {
+  border-color: #b98aff;
+  background: #3a2a55;
+}
+
+.beat-grid-joint.is-warn {
+  border-color: #ffb38a;
+  background: #4a2a1a;
+}
+
+.beat-grid-joint.is-on {
+  outline: 2px solid #ffd84d;
+}
+
+/* 페이드 번짐(시안 `.fw`) — 다음 막대 왼쪽으로 앞 막대 색이 번진다. */
+.beat-grid-fade-bleed {
+  position: absolute;
+  top: 0;
+  height: 26px;
+  pointer-events: none;
+  border-radius: 4px 0 0 4px;
+  opacity: 0.7;
+  z-index: 1;
+}
+
+/* 장면 전환 줄(시안 `.trow`·`.tm`) — 자 바로 아래에 고정. */
+.beat-grid-scene-row {
+  display: flex;
+  position: sticky;
+  /* 자(`.beat-grid-ruler`) 높이 20px + 아래 줄 1px 바로 밑. */
+  top: 21px;
+  z-index: 6;
+  height: 22px;
+  background: #1a1a20;
+  border-bottom: 1px solid #000;
+}
+
+.beat-grid-scene-row-label {
+  color: #f0b49c;
+  font-size: 10.5px;
+}
+
+.beat-grid-scene-row-track {
+  position: relative;
+  flex: none;
+}
+
+.beat-grid-scene-pill {
+  position: absolute;
+  top: 2px;
+  height: 18px;
+  transform: translateX(-50%);
+  background: #2e2e38;
+  border: 1px solid #55556a;
+  border-radius: 9px;
+  padding: 0 6px;
+  font-size: 10px;
+  color: #e8e6dc;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.beat-grid-scene-pill:hover,
+.beat-grid-scene-pill.is-on {
+  border-color: #ffd84d;
+}
+
+.beat-grid-scene-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.beat-grid-scene-table {
+  width: 100%;
+  font-size: 11.5px;
+  border-collapse: collapse;
+}
+
+.beat-grid-scene-table td {
+  border-top: 1px solid #262b35;
+  padding: 3px 4px;
+}
+
+.beat-grid-scene-table tr {
+  cursor: pointer;
+}
+
+.beat-grid-scene-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* 2D 무대 — 높이 320px, 폭은 「이 마디 한눈에」의 약 1.2배
+   (REQ-LDBEAT-016(b)·022(c)). */
+.beat-grid .beat-grid-insp {
+  flex: 0 0 auto;
+}
+
+.beat-grid .beat-grid-insp .beat-grid-stage-pane {
+  flex: 1.2 1 0;
+  height: 320px;
+  overflow: hidden;
+}
+
+.beat-grid-stage-box {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.beat-grid-stage-box .beat-grid-stage {
+  width: 100%;
+  height: 100%;
+}
+
+.beat-grid-stage-label {
+  font-size: 10px;
+  fill: #8a889a;
+}
+
+.beat-grid-stage-hit {
+  cursor: pointer;
+}
