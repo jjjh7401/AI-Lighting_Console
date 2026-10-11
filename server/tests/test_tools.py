@@ -222,20 +222,17 @@ class TestRunCommands:
         assert statuses["A"] == "skipped_already_executed"
         assert statuses["B"] == "executed_ok"
 
-    def test_in_bundle_duplicate_command_is_not_re_executed(self):
-        # MEDIUM backlog item (M6c 종합, server/orchestrator/tools.py:145) —
-        # ``context.executed_ok`` is the frozenset from a PRIOR tool call; it
-        # is never updated as commands succeed WITHIN this loop iteration.
-        # A command string repeated TWICE in the SAME ``commands`` list must
-        # still be recognized as already-executed on its second occurrence
-        # (REQ-MVP-033 dedup semantics — never duplicate a console side
-        # effect), not silently re-executed.
+    def test_in_bundle_repeat_runs_each_time_it_appears(self):
+        # 카드 t601 — REQ-MVP-033 의 중복 제거는 **앞선 호출**에서 실행된 줄만 다시
+        # 보내지 않는다(위 시험). 같은 묶음 안의 반복은 승인된 그대로 나간다 — 카드
+        # M6c-6 이 넓혔던 묶음 안 건너뛰기는 효과 ``Step 2``·그룹 선택 체인을 조용히
+        # 빼서 빈 효과·빈 그룹을 저장했다(test_dedupe_legit_repeat_t601.py).
         port = ScriptedPort()
         registry = _registry(port=port)
         execution = registry.dispatch(_call("run_commands", {"commands": ["cmd1", "cmd1"]}))
-        assert port.executed == ["cmd1"]  # execute() called exactly once
+        assert port.executed == ["cmd1", "cmd1"]
         statuses = [o.status for o in execution.command_outcomes]
-        assert statuses == ["executed_ok", "skipped_already_executed"]
+        assert statuses == ["executed_ok", "executed_ok"]
 
     def test_feedback_content_carries_per_command_status(self):
         port = ScriptedPort(failures=frozenset({"B"}))
@@ -355,18 +352,21 @@ class TestProgrammerStateIsExemptFromDedupe:
         )
         assert port.executed == ["ClearAll", "Group 11", "Store Preset 4.1"]
 
-    def test_a_repeated_store_is_still_deduped(self):
-        # The rule the exemption must NOT widen into: a second `Store Preset`
-        # writes a second console object (REQ-MVP-033).
+    def test_a_store_a_prior_call_executed_is_still_deduped(self):
+        # The rule the exemption must NOT widen into: a `Store Preset` a prior
+        # call already wrote is not re-sent by the retry (REQ-MVP-033). Card t601
+        # scoped the dedupe back to prior calls — in-bundle repeats now run.
         port = ScriptedPort()
         registry = _registry(port=port)
+        context = ExecutionContext(executed_ok=frozenset({"Store Preset 4.1"}))
         execution = registry.dispatch(
-            _call("run_commands", {"commands": ["Store Preset 4.1", "Store Preset 4.1"]})
+            _call("run_commands", {"commands": ["Store Preset 4.1", "Store Preset 4.2"]}),
+            context,
         )
-        assert port.executed == ["Store Preset 4.1"]
+        assert port.executed == ["Store Preset 4.2"]
         assert [o.status for o in execution.command_outcomes] == [
-            "executed_ok",
             "skipped_already_executed",
+            "executed_ok",
         ]
 
     def test_the_leading_verb_is_the_discriminator_not_the_object_type(self):
@@ -383,18 +383,21 @@ class TestProgrammerStateIsExemptFromDedupe:
             "Delete Fixture 101 Thru 110",
         ):
             port.executed.clear()
-            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
-            assert port.executed == [command], command
+            context = ExecutionContext(executed_ok=frozenset({command}))
+            registry.dispatch(_call("run_commands", {"commands": [command]}), context)
+            assert port.executed == [], command
 
     def test_a_selection_carrying_a_value_is_still_deduped(self):
         # These select AND set — outside the enumerated exemption, which is
-        # deliberately the bare selection form only.
+        # deliberately the bare selection form only (judged against a prior
+        # call's set since card t601).
         port = ScriptedPort()
         registry = _registry(port=port)
         for command in ("Group 3 Full", "Fixture 1 Thru 10 At 80"):
             port.executed.clear()
-            registry.dispatch(_call("run_commands", {"commands": [command, command]}))
-            assert port.executed == [command], command
+            context = ExecutionContext(executed_ok=frozenset({command}))
+            registry.dispatch(_call("run_commands", {"commands": [command]}), context)
+            assert port.executed == [], command
 
     def test_the_match_is_case_insensitive_like_the_console(self):
         # D14: this project has already shipped one case-sensitive assert that

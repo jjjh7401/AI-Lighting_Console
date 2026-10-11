@@ -1201,16 +1201,47 @@ _T476_GRANTED_TUPLE_LINE = (
 
 def _added_lines(base: str, path: str, old_start: int) -> list[str]:
     """``--unified=0`` diff 에서 옛 시작점이 ``old_start`` 인 헝크의 ``+`` 줄들."""
-    added: list[str] = []
+    return _hunk_lines(base, path, old_start, "+")
+
+
+def _removed_lines(base: str, path: str, old_start: int) -> list[str]:
+    """``--unified=0`` diff 에서 옛 시작점이 ``old_start`` 인 헝크의 ``-`` 줄들."""
+    return _hunk_lines(base, path, old_start, "-")
+
+
+def _hunk_lines(base: str, path: str, old_start: int, sign: str) -> list[str]:
+    lines: list[str] = []
     inside = False
     for line in _git("diff", "--unified=0", f"{base}..HEAD", "--", path).splitlines():
         match = _HUNK_RE.match(line)
         if match is not None:
             inside = int(match.group("old_start")) == old_start
             continue
-        if inside and line.startswith("+"):
-            added.append(line[1:])
-    return added
+        if inside and line.startswith(sign) and not line.startswith(sign * 3):
+            lines.append(line[1:])
+    return lines
+
+
+#: 카드 t601 (2026-10-12, 리드 배차 · 감독 승인 대기 — PR 에 명시) — 보호 구간(537..582,
+#: 중복 제거 실행 고리) 안에 허락된 두 헝크. REQ-MVP-033 의 중복 제거를 앞선 호출 기준으로
+#: 되돌리는 것이 이 카드의 목적이다(묶음 안 건너뛰기가 사고를 네 번 냈다 —
+#: ``.moai/reports/t601/run-verdict.md``). 봉쇄는 그대로 두고 허용분을 글자까지 고정한다:
+#: 옛 주석+대입 9줄 → 새 주석+대입 10줄, 그리고 고리 안 ``add`` 한 줄 삭제(추가 0).
+_T601_LOOP_REMOVED_ADD_LINE = "                    already_executed.add(command)"
+_T601_LOOP_ADDED_LINES = (
+    "        # @MX:WARN: [AUTO] 이 집합에 무엇을 넣느냐가 「조용히 건너뜀」의 범위다.",
+    "        # @MX:REASON: REQ-MVP-033 의 중복 제거는 **앞선 호출**(자가 수정 재전송)에서",
+    "        #   이미 실행된 줄만 다시 보내지 않는 장치다 — ``context.executed_ok`` 그대로.",
+    "        #   카드 M6c-6(82b83abc)이 같은 묶음 안 앞줄까지 넣자, 한 묶음에서 같은 글자가",
+    "        #   다시 나와야 하는 줄(효과 묶음의 ``Step 2``·``ChangeDestination Root``, 같은",
+    "        #   장비 그룹의 선택 체인, 두 큐가 같은 값을 쓰는 값 줄)이 skipped_already_executed",
+    "        #   로 빠졌고 ``Store`` 는 그대로 ok 라 빈 효과·빈 그룹·틀린 값이 저장됐다",
+    "        #   (4dd48e8f·db555da9·카드 t476 실기 107줄 승인/75줄 송신·카드 t593).",
+    "        #   묶음은 승인된 그대로가 송신된다 — 묶음 안 반복은 작성자의 뜻이다(카드 t601).",
+    "        already_executed = context.executed_ok",
+)
+_T601_LOOP_REMOVED_ASSIGN_LINE = "        already_executed = set(context.executed_ok)"
+_T601_GRANTED_OLD_STARTS = (538, 574)
 
 
 class TestPreserveList:
@@ -1799,10 +1830,22 @@ class TestToolsProtectedRegions:
         ]
         # 카드 t476 (2026-09-27, 감독 승인) — 면제 튜플을 넓히는 것이 그 카드의 목적이다.
         # 봉쇄를 풀지 않고 허용분 하나로 좁힌다: 250 뒤 순수 삽입, 글자까지 고정.
-        assert crossings == [(_T476_GRANTED_OLD_START, 0, (247, 251))]
+        # 카드 t601 — 중복 제거 고리 허용분 둘(위 `_T601_*` 주석).
+        loop_start, add_start = _T601_GRANTED_OLD_STARTS
+        assert crossings == [
+            (_T476_GRANTED_OLD_START, 0, (247, 251)),
+            (loop_start, 9, (537, 582)),
+            (add_start, 1, (537, 582)),
+        ]
         assert _added_lines(_PRECHK_BASE, _TOOLS_PATH, _T476_GRANTED_OLD_START) == [
             _T476_GRANTED_TUPLE_LINE
         ]
+        assert _added_lines(_PRECHK_BASE, _TOOLS_PATH, loop_start) == list(_T601_LOOP_ADDED_LINES)
+        removed = _removed_lines(_PRECHK_BASE, _TOOLS_PATH, loop_start)
+        assert len(removed) == 9 and removed[-1] == _T601_LOOP_REMOVED_ASSIGN_LINE
+        assert all(line.lstrip().startswith("#") for line in removed[:-1])
+        assert _added_lines(_PRECHK_BASE, _TOOLS_PATH, add_start) == []
+        assert _removed_lines(_PRECHK_BASE, _TOOLS_PATH, add_start) == [_T601_LOOP_REMOVED_ADD_LINE]
 
     def test_the_t476_grant_would_not_admit_a_different_line(self):
         # Non-vacuity of the grant: the pinned text is the tuple entry itself, not a
