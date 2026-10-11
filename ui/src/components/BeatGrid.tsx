@@ -1036,9 +1036,21 @@ function renderPresetOptions(
     showExisting: BeatGridDrawerEntry[];
   },
   markEffect = false,
+  current = "",
 ) {
+  // 카드 t588 — 고르기가 처음부터 열려 있으므로, 값이 없는 칸이 첫 선택지(「새
+  // 프리셋 만들기」)를 고른 것처럼 보이면 안 된다 → 「— 미정 —」. 지금 값이 아직
+  // 읽은 목록에 없으면(서랍을 안 열었음) 그 값을 그대로 한 줄 보인다(시안은 칸을
+  // 열자마자 지금 값을 보인다).
+  const listed = [...thisSong, ...showExisting].some((entry) => entry.preset_no === current);
   return (
     <>
+      <option value="" disabled>
+        — 미정 —
+      </option>
+      {current !== "" && current !== NEW_PRESET_OPTION_VALUE && !listed && (
+        <option value={current}>{current} (지금 값)</option>
+      )}
       {thisSong.length > 0 && (
         <optgroup label="이 곡 프리셋">
           {thisSong.map((entry) => (
@@ -1138,12 +1150,13 @@ export function BeatGrid({
   // 카드 t551(M3) — 밝기 "값"(%) 인라인 편집(mockup "구조" 4). 선택이
   // 바뀌면(다른 칸을 클릭) 편집 중이던 입력을 닫는다 — 이전 칸의 입력값이
   // 새 칸에 실수로 적용되는 것을 막는다.
-  // 카드 t551 계속 — 직접 고르기(①) 드롭다운(밝기/위치/색). mockup
-  // "같은 자리에서" 그대로 한 번에 한 필드만 연다 — `activeEditField`가
-  // 그 "자리"다.
-  const [activeEditField, setActiveEditField] = useState<
-    "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋" | "움직임" | null
-  >(null);
+  // 카드 t551 계속 — 직접 고르기(①) 드롭다운(밝기/위치/색). 카드 t588 부터
+  // 한 필드씩 여는 대신 전부 처음부터 열려 있다(아래).
+  // 카드 t588 — 시안처럼 편집 칸의 고르기는 **처음부터 열려 있다**(전에는 값을
+  // 누르면 한 칸만 열렸다, `activeEditField`). 칸마다 초안을 따로 두고, 고른 막대가
+  // 바뀔 때 현재 값으로 다시 채운다(아래 `seedEditDrafts` 효과). 움직임 칸은
+  // 자기 초안을 마운트 때 채우므로, 되돌리면 이 번호를 올려 다시 마운트한다.
+  const [movementResetNonce, setMovementResetNonce] = useState(0);
   const [brightnessModeDraft, setBrightnessModeDraft] = useState<
     "value" | "dimmer_preset" | "dimmer_effect"
   >("value");
@@ -1462,6 +1475,35 @@ export function BeatGrid({
     return () => window.removeEventListener("resize", measureLanes);
   }, [grid]);
 
+  // 카드 t588 — 한 칸(또는 전부)의 초안을 그 막대의 현재 값으로 채운다. 전에는
+  // 값을 눌러 칸을 열 때 하던 일이다.
+  const seedEditDrafts = (
+    cue: BeatGridCue | null,
+    field: "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋" | null = null,
+  ) => {
+    if (field === null || field === "밝기") {
+      const mode = cue?.brightness.mode ?? "value";
+      setBrightnessModeDraft(mode === "dimmer_preset" || mode === "dimmer_effect" ? mode : "value");
+      const currentValue = cue?.brightness.value_percent;
+      setBrightnessDraft(currentValue != null ? String(currentValue) : "");
+      setBrightnessPresetDraft(mode === "dimmer_preset" ? (cue?.brightness.preset_no ?? "") : "");
+      setBrightnessEffectDraft(mode === "dimmer_effect" ? (cue?.brightness.preset_no ?? "") : "");
+    }
+    if (field === null || field === "위치 프리셋") setPositionPresetDraft(cue?.position_preset_no ?? "");
+    if (field === null || field === "색 프리셋") setColorPresetDraft(cue?.color_preset_no ?? "");
+    if (field === null || field === "효과 프리셋") setEffectPresetDraft(cue?.effect_preset_no ?? "");
+    setNewPresetNote(null);
+  };
+  // 고른 막대(줄 + 그 칸의 시작 마디)가 바뀔 때만 다시 채운다 — 한 칸을 적용해
+  // 격자가 새로 와도 다른 칸에 고치던 초안은 지우지 않는다.
+  const seedTrack = grid && selected ? (grid.tracks[selected.trackIndex] ?? null) : null;
+  const seedCue = seedTrack && selected ? cueForBar(seedTrack, selected.bar) : null;
+  const seedKey = seedTrack ? `${seedTrack.group_name}:${seedCue?.bar ?? "none"}` : null;
+  useEffect(() => {
+    // seedCue 는 seedKey 가 바뀔 때의 값만 쓴다 — deps 에서 일부러 뺐다.
+    seedEditDrafts(seedCue);
+  }, [seedKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!grid) {
     return (
       <section className="beat-grid" aria-label="박자 격자">
@@ -1564,7 +1606,6 @@ export function BeatGrid({
     setTransitionView(transition);
     setSceneBar(null);
     setFocusField(null);
-    setActiveEditField(null);
     setNewPresetNote(null);
     // 카드 t570(REQ-LDBEAT-024(e)) — 다른 칸·막대를 고르면 부모 그룹
     // 줄로 돌아간다. L·R 자식 줄을 "보는 중"으로 두는 선택은
@@ -2127,7 +2168,6 @@ export function BeatGrid({
                     const colorSection = findDrawerSection(drawerSections, "Color");
                     const dimmerSection = findDrawerSection(drawerSections, "Dimmer");
                     const closeEdit = () => {
-                      setActiveEditField(null);
                       setNewPresetNote(null);
                     };
                     const poolStatusNote = (section: BeatGridDrawerSection | null): string | null => {
@@ -2146,9 +2186,14 @@ export function BeatGrid({
                       const editable =
                         !!onEditRequest &&
                         (isBrightnessRow || isPositionRow || isColorRow || isEffectRow);
-                      const editing = editable && activeEditField === row.field;
+                      // 카드 t588 — 편집할 수 있는 칸은 늘 고르기 칸이다(시안).
+                      const editing = editable;
                       return (
-                        <div className="beat-grid-cue-field" key={row.field} data-field={row.field}>
+                        <div
+                          className={`beat-grid-cue-field${editing ? " is-editing" : ""}`}
+                          key={row.field}
+                          data-field={row.field}
+                        >
                           <span className="beat-grid-cue-field-label">{row.field}</span>
                           {editing && isBrightnessRow ? (
                             // 카드 t551 계속 — 밝기 단일모드(값/디머 프리셋/디머
@@ -2194,7 +2239,7 @@ export function BeatGrid({
                                     );
                                   }}
                                 >
-                                  {renderPresetOptions(splitDrawerSectionEntries(dimmerSection))}
+                                  {renderPresetOptions(splitDrawerSectionEntries(dimmerSection), false, brightnessPresetDraft)}
                                 </select>
                               )}
                               {brightnessModeDraft === "dimmer_effect" && (
@@ -2212,7 +2257,7 @@ export function BeatGrid({
                                     );
                                   }}
                                 >
-                                  {renderPresetOptions(splitDrawerSectionEffectEntries(dimmerSection))}
+                                  {renderPresetOptions(splitDrawerSectionEffectEntries(dimmerSection), false, brightnessEffectDraft)}
                                 </select>
                               )}
                               <button
@@ -2253,8 +2298,16 @@ export function BeatGrid({
                               >
                                 적용
                               </button>
-                              <button type="button" onClick={closeEdit}>
-                                취소
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  seedEditDrafts(
+                                    selectedCue,
+                                    row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
+                                  )
+                                }
+                              >
+                                되돌리기
                               </button>
                               {(brightnessModeDraft === "dimmer_preset" ||
                                 brightnessModeDraft === "dimmer_effect") &&
@@ -2293,7 +2346,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(positionSection), true)}
+                                {renderPresetOptions(splitDrawerSectionEntries(positionSection), true, positionPresetDraft)}
                               </select>
                               <button
                                 type="button"
@@ -2316,8 +2369,16 @@ export function BeatGrid({
                               >
                                 적용
                               </button>
-                              <button type="button" onClick={closeEdit}>
-                                취소
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  seedEditDrafts(
+                                    selectedCue,
+                                    row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
+                                  )
+                                }
+                              >
+                                되돌리기
                               </button>
                               {poolStatusNote(positionSection) && (
                                 <p className="beat-grid-cue-field-note">{poolStatusNote(positionSection)}</p>
@@ -2342,7 +2403,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEntries(colorSection), true)}
+                                {renderPresetOptions(splitDrawerSectionEntries(colorSection), true, colorPresetDraft)}
                               </select>
                               <button
                                 type="button"
@@ -2365,8 +2426,16 @@ export function BeatGrid({
                               >
                                 적용
                               </button>
-                              <button type="button" onClick={closeEdit}>
-                                취소
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  seedEditDrafts(
+                                    selectedCue,
+                                    row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
+                                  )
+                                }
+                              >
+                                되돌리기
                               </button>
                               {poolStatusNote(colorSection) && (
                                 <p className="beat-grid-cue-field-note">{poolStatusNote(colorSection)}</p>
@@ -2393,7 +2462,7 @@ export function BeatGrid({
                                   );
                                 }}
                               >
-                                {renderPresetOptions(splitDrawerSectionEffectEntries(positionSection))}
+                                {renderPresetOptions(splitDrawerSectionEffectEntries(positionSection), false, effectPresetDraft)}
                               </select>
                               <button
                                 type="button"
@@ -2416,8 +2485,16 @@ export function BeatGrid({
                               >
                                 적용
                               </button>
-                              <button type="button" onClick={closeEdit}>
-                                취소
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  seedEditDrafts(
+                                    selectedCue,
+                                    row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
+                                  )
+                                }
+                              >
+                                되돌리기
                               </button>
                               {poolStatusNote(positionSection) && (
                                 <p className="beat-grid-cue-field-note">{poolStatusNote(positionSection)}</p>
@@ -2435,39 +2512,8 @@ export function BeatGrid({
                               className={`beat-grid-cue-field-value${row.value === UNSET_FIELD_LABEL ? " is-unset" : ""}${
                                 editable ? " is-editable" : ""
                               }`}
-                              onClick={
-                                editable
-                                  ? () => {
-                                      if (isBrightnessRow) {
-                                        const mode = selectedCue?.brightness.mode ?? "value";
-                                        setBrightnessModeDraft(
-                                          mode === "dimmer_preset" || mode === "dimmer_effect" ? mode : "value",
-                                        );
-                                        const currentValue = selectedCue?.brightness.value_percent;
-                                        setBrightnessDraft(currentValue != null ? String(currentValue) : "");
-                                        setBrightnessPresetDraft(
-                                          mode === "dimmer_preset" ? selectedCue?.brightness.preset_no ?? "" : "",
-                                        );
-                                        setBrightnessEffectDraft(
-                                          mode === "dimmer_effect" ? selectedCue?.brightness.preset_no ?? "" : "",
-                                        );
-                                      } else if (isPositionRow) {
-                                        setPositionPresetDraft(selectedCue?.position_preset_no ?? "");
-                                      } else if (isColorRow) {
-                                        setColorPresetDraft(selectedCue?.color_preset_no ?? "");
-                                      } else if (isEffectRow) {
-                                        setEffectPresetDraft(selectedCue?.effect_preset_no ?? "");
-                                      }
-                                      setNewPresetNote(null);
-                                      setActiveEditField(
-                                        row.field as "밝기" | "위치 프리셋" | "색 프리셋" | "효과 프리셋",
-                                      );
-                                    }
-                                  : undefined
-                              }
                             >
                               {row.value}
-                              {editable && " ✎"}
                             </span>
                           )}
                         </div>
@@ -2479,6 +2525,9 @@ export function BeatGrid({
                       (REQ-LDBEAT-020(d)). */}
                   {selectedCue && roleFieldHints(selectedTrack.layer_role).includes("움직임") && (
                     <BeatGridMovementRow
+                      // 카드 t588 — 막대가 바뀌거나 되돌리기를 누르면 새로 마운트해
+                      // 고르기 초안을 그 칸의 현재 값으로 다시 채운다.
+                      key={`${selectedTrack.group_name}:${selectedCue.bar}:${movementResetNonce}`}
                       value={
                         selectedCue.app_movement
                           ? formatAppMovementField(selectedCue.app_movement)
@@ -2492,17 +2541,17 @@ export function BeatGrid({
                           ? {
                               current: selectedCue.app_movement,
                               vocabulary: grid.movement_vocabulary,
-                              editing: activeEditField === "움직임",
-                              onOpen: () => setActiveEditField("움직임"),
+                              // 카드 t588 — 늘 열려 있다(시안). 되돌리기는 다시 마운트로.
+                              editing: true,
+                              onOpen: () => undefined,
                               onApply: (movement) => {
                                 onEditRequest({
                                   bar: selected.bar,
                                   target: selectedTrack.group_name,
                                   changes: { app_movement: movement },
                                 });
-                                setActiveEditField(null);
                               },
-                              onCancel: () => setActiveEditField(null),
+                              onCancel: () => setMovementResetNonce((n) => n + 1),
                             }
                           : null
                       }
