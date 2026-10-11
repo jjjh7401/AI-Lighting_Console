@@ -98,8 +98,20 @@ def _song_key() -> tuple[object, object]:
     return (SONG_TITLE, SEQUENCE_NUMBER)
 
 
+#: 카드 t600 — 이 시험들의 칸이 가리키는 프리셋 번호가 콘솔 풀에 **있는** 상태.
+_EXISTING_PRESET_POOLS = {
+    f"DataPool/PresetPools/{pool}": {
+        "children": [{"i": i, "name": f"P{pool}.{i}"} for i in range(1, 6)]
+    }
+    for pool in (1, 2, 3, 4)
+}
+
+
 def _empty_pool_state_tree() -> dict:
     return {
+        # 카드 t600 — 반영은 승인된 칸의 프리셋 번호도 콘솔 풀을 읽어 가른다(빈
+        # 번호·못 읽은 풀은 송신 보류). 이 시험들이 쓰는 번호는 콘솔에 있는 프리셋이다.
+        **_EXISTING_PRESET_POOLS,
         "DataPool/Sequences": {"children": []},
         "DataPool/Timecodes": {"children": [], "node": {"childCount": 0, "enumeration": "ok"}},
     }
@@ -116,6 +128,9 @@ def _owned_state_tree(
     흉내 낸다(``FakeConsole``은 ``execute()``가 상태 나무를 갈아 끼우지
     않으므로, "저번 반영이 이미 만들었다"를 시험이 직접 심어야 한다)."""
     return {
+        # 카드 t600 — 반영은 승인된 칸의 프리셋 번호도 콘솔 풀을 읽어 가른다(빈
+        # 번호·못 읽은 풀은 송신 보류). 이 시험들이 쓰는 번호는 콘솔에 있는 프리셋이다.
+        **_EXISTING_PRESET_POOLS,
         "DataPool/Sequences": {"children": [{"i": sequence_number, "name": sequence_name}]},
         "DataPool/Timecodes": {
             "children": [{"i": timecode_number, "name": timecode_name}],
