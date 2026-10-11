@@ -46,6 +46,7 @@ from server.design.beat_grid import (
     apply_pending_approval,
     attach_beat_grid_default,
     attach_beat_grid_runtime_extras,
+    empty_preset_cells,
     pending_preset_approvals,
     preset_pool_no,
     split_empty_preset_holds,
@@ -4023,6 +4024,14 @@ class ChatSession:
         # id 체계를 짓지 않는다).
         self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
         self._beat_grid_applied: _BeatGridAppliedState | None = None
+        # 카드 t595 — 이 세션이 콘솔에서 마지막으로 완전 판독한 프리셋 풀(풀
+        # 번호 → {slot: 이름}, 못 읽었으면 None). 반영 때 승인 대기 번호의 풀
+        # 판독(t590)과 프리셋 서랍 판독이 채운다 — 격자 「빈 프리셋」 표식의
+        # 유일한 출처다(표식을 위해 따로 콘솔을 읽지 않는다). 콘솔 풀은 곡과
+        # 무관한 전역이라 곡 열쇠로 나누지 않는다. ``_beat_grid_empty_marks``는
+        # 곡마다 마지막으로 내보낸 표식 — 같으면 격자를 다시 보내지 않는다.
+        self._beat_grid_pool_slots: dict[int, dict[int, str | None] | None] = {}
+        self._beat_grid_empty_marks: dict[tuple[object, object], list[dict[str, object]]] = {}
         self._preview_approval = PreviewApprovalSession()
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
         # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
@@ -9344,6 +9353,11 @@ class ChatSession:
         sections = build_preset_drawer(grid, pools=pools, policy=policy)
         event = beat_grid_drawer_event(sections=sections)
         self._send(event)
+        # 카드 t595 — 서랍이 읽은 풀도 빈 프리셋 표식의 출처다. 못 읽은 풀은
+        # 번호를 모르므로(이름으로 찾다가 실패) 기억할 자리가 없다.
+        self._beat_grid_learn_pools(
+            {pool_no: dict(children) for pool_no, children in filter(None, pools.values())}
+        )
         return event
 
     def beat_grid_stage(self) -> dict:
@@ -9613,6 +9627,9 @@ class ChatSession:
             )
             if result is not None:
                 console_children = result[1]
+                # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다. 바로 아래 편집
+                # 이벤트가 표식을 싣고 나가므로 여기서는 기억만 한다.
+                self._beat_grid_pool_slots[result[0]] = dict(result[1])
 
         policy = load_preset_pool_policy()
         preset_no, reject_reason, assign_warning = first_free_preset_number(
@@ -9724,8 +9741,46 @@ class ChatSession:
         # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
         updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
         updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
+        # 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 이미 읽은 풀로만 가른
+        # 빈 프리셋 칸. 편집으로 번호가 바뀐 칸도 같은 자리에서 다시 계산된다.
+        marks = empty_preset_cells(grid, self._beat_grid_pool_slots)
+        self._beat_grid_empty_marks[self._beat_grid_song_key(timeline)] = marks
+        updated_grid["empty_preset_cells"] = marks
         updated["beat_grid"] = updated_grid
         return updated
+
+    def _beat_grid_note_created_presets(self, numbers: Iterable[str]) -> None:
+        """카드 t595 — 승인=송신까지 확인된 반영이 만든 번호(t592)를 기억한 풀에
+        「있음」으로 더한다. 판독이 아니라 송신 성공에서 나온 **추정**이라, 그 풀을
+        다음에 실제로 읽으면 ``_beat_grid_learn_pools``가 풀 전체를 판독값으로
+        갈아 끼운다(추정이 판독을 이기지 않는다). 그 풀을 읽은 적이 없으면 추정을
+        만들지 않는다(빈 슬롯 목록에 하나만 있는 풀처럼 보이면 다른 번호가 「빈
+        프리셋」으로 잘못 찍힌다)."""
+        for number in numbers:
+            pool_no = preset_pool_no(number)
+            slots = self._beat_grid_pool_slots.get(pool_no) if pool_no is not None else None
+            if slots is not None:
+                slots[int(number.partition(".")[2])] = None
+
+    def _beat_grid_learn_pools(
+        self, pool_slots: Mapping[int, dict[int, str | None] | None]
+    ) -> None:
+        """카드 t595 — 방금 콘솔에서 완전 판독한 풀을 기억하고, 그 때문에 지금
+        곡의 빈 프리셋 표식이 달라졌으면 격자를 한 번 다시 보낸다(달라지지
+        않았으면 보내지 않는다 — 서랍을 열 때마다 격자를 흔들지 않는다)."""
+        # 사본으로 기억한다 — ``_beat_grid_note_created_presets``가 제자리에서 더한다.
+        self._beat_grid_pool_slots.update(
+            {no: (dict(slots) if slots is not None else None) for no, slots in pool_slots.items()}
+        )
+        store = self._timeline_store
+        latest = store.latest if store is not None else None
+        if latest is None or not isinstance(latest.get("beat_grid"), Mapping):
+            return
+        marks = empty_preset_cells(latest["beat_grid"], self._beat_grid_pool_slots)
+        # 이 곡으로 아직 보낸 표식이 없으면 UI 는 표식 0개 상태다(필드 없음 = 없음).
+        if marks == self._beat_grid_empty_marks.get(self._beat_grid_song_key(latest), []):
+            return
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest)))
 
     def _beat_grid_send_status(
         self,
@@ -10134,6 +10189,8 @@ class ChatSession:
                 self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
                     beat_grid_cell_snapshot(grid)
                 )
+                # 카드 t595 — 방금 만든 위치 프리셋은 빈 프리셋 표식에서 뺀다(추정).
+                self._beat_grid_note_created_presets(position_plan.creations)
                 store = self._timeline_store
                 latest = store.latest if store is not None else None
                 if latest is not None:
@@ -10819,6 +10876,7 @@ class ChatSession:
             )
             for no in pool_numbers
         }
+        self._beat_grid_learn_pools(pool_slots)
         return split_empty_preset_holds(pending, pool_slots)
 
     def _paged_pool_children(self, path: str, *, probe_id: str) -> dict[int, str | None] | None:

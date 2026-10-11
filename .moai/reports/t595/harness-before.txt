@@ -1,0 +1,4 @@
+apply ok: True | reason: None
+events: ['execution_preview', 'song_timeline', 'beat_grid_send_status']
+song_timeline events: 1
+  [0] empty_preset_cells = "<필드 없음>"

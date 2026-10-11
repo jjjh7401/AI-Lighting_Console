@@ -152,6 +152,25 @@ def referencing_tracks(grid: Mapping[str, object], preset_no: str) -> list[Mappi
     return result
 
 
+def position_grid_blocker(grid: Mapping[str, object], preset_no: str) -> str | None:
+    """콘솔을 읽지 않고 격자만으로 알 수 있는 만들기 걸림돌 — ``_plan_one``과 같은
+    순서·같은 사유(목표 좌표 → 영문 이름 → 그 번호를 가리키는 트랙의 그룹 확인).
+    ``None``이면 남은 조건은 반영 때 읽는 그룹 소속·장비 좌표뿐이다. 격자의
+    「빈 프리셋」 표식(카드 t595)이 반영 전에 「반영 때 만듦」을 가를 때 쓴다."""
+    if position_preset_target(grid, preset_no) is None:
+        return POSITION_TARGET_MISSING
+    label = app_preset_label(grid, preset_no)
+    if label is None:
+        return POSITION_LABEL_MISSING
+    try:
+        _assert_ascii_preset_label(label)
+    except BeatGridEditError:
+        return POSITION_LABEL_INVALID
+    if any(not track.get("group_no_confirmed") for track in referencing_tracks(grid, preset_no)):
+        return POSITION_GROUP_UNCONFIRMED
+    return None
+
+
 def _plan_one(
     grid: Mapping[str, object],
     preset_no: str,
@@ -162,16 +181,12 @@ def _plan_one(
 ) -> tuple[tuple[str, ...] | None, str | None]:
     """번호 하나의 만들기 줄 — 또는 (None, 보류 사유). 빠진 것이 하나라도 있으면
     보류한다(일부 장비만 조준한 프리셋을 만들지 않는다)."""
+    blocker = position_grid_blocker(grid, preset_no)
+    if blocker is not None:
+        return None, blocker
     target = position_preset_target(grid, preset_no)
-    if target is None:
-        return None, POSITION_TARGET_MISSING
     label = app_preset_label(grid, preset_no)
-    if label is None:
-        return None, POSITION_LABEL_MISSING
-    try:
-        _assert_ascii_preset_label(label)
-    except BeatGridEditError:
-        return None, POSITION_LABEL_INVALID
+    assert target is not None and label is not None  # 걸림돌이 없으면 둘 다 있다
     fids: list[int] = []
     for track in tracks:
         if not track.get("group_no_confirmed"):

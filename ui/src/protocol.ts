@@ -548,6 +548,11 @@ export interface BeatGridView {
    * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
    * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
   unverified_cells?: BeatGridUnverifiedCell[] | null;
+  /** 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 콘솔 풀에 slot 이 없거나
+   * 풀을 못 읽은 프리셋 번호를 가리키는 칸. 서버가 이미 읽은 풀(반영 때 판독·
+   * 프리셋 서랍 판독)로만 가른 목록이다 — 화면은 번호를 다시 추측하지 않는다.
+   * 아직 안 읽은 풀의 번호는 목록에 없다. 필드가 없는 옛 서버 응답이면 `undefined`. */
+  empty_preset_cells?: BeatGridEmptyPresetCell[] | null;
   /** 카드 t584 — 편집 칸 「움직임」 고르기 목록의 닫힌 어휘. 서버
    * (`beat_grid_edit.movement_vocabulary`)에서만 온다 — UI에 모양 이름 상수 없음.
    * 필드가 없는 옛 서버 응답이면 `undefined`(고르기 목록을 열지 않는다). */
@@ -569,6 +574,26 @@ export interface BeatGridUnverifiedCell {
   group_name: string;
   bar: number;
   terms: string[];
+}
+
+/** 카드 t595 — `BeatGridView.empty_preset_cells` 의 한 칸. `state`:
+ * `"held"` = 승인 대기 칸이라 「⇪ 콘솔에 반영」에서 송신 보류(t590 가드 D) ·
+ * `"create"` = 빈 위치 번호를 반영 때 목표 좌표로 만들어 보냄(t592, 그룹 소속·장비
+ * 좌표를 다 읽을 때만) · `"approved"` = 이미 승인된 칸이라 반영하면 빈 번호를
+ * 가리킨 큐가 그대로 나감. */
+export interface BeatGridEmptyPresetCell {
+  group_name: string;
+  bar: number;
+  state: "held" | "create" | "approved";
+  fields: {
+    /** 서버 필드 키 — `"position_preset_no"`·`"color_preset_no"`·
+     * `"effect_preset_no"`·`"brightness.preset_no"`. */
+    field: string;
+    field_label: string;
+    value: string;
+    kind: "empty" | "pool_unread" | "create_on_apply";
+    reason: string;
+  }[];
 }
 
 /** 카드 t568 ② — `BeatGridView.unsent_cells` 의 한 칸. */

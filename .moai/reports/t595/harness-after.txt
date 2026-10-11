@@ -1,0 +1,5 @@
+apply ok: True | reason: None
+events: ['song_timeline', 'execution_preview', 'song_timeline', 'beat_grid_send_status']
+song_timeline events: 2
+  [0] empty_preset_cells = [{"group_name": "BACK", "bar": 1, "state": "held", "fields": [{"field": "effect_preset_no", "field_label": "효과 프리셋", "value": "4.99", "kind": "empty", "reason": "빈 프리셋 — 아직 콘솔에 만들 길 없음"}]}, {"group_name": "BACK", "bar": 2, "state": "approved", "fields": [{"field": "color_preset_no", "field_label": "색 프리셋", "value": "4.98", "kind": "empty", "reason": "빈 프리셋 — 아직 콘솔에 만들 길 없음"}]}]
+  [1] empty_preset_cells = [{"group_name": "BACK", "bar": 1, "state": "held", "fields": [{"field": "effect_preset_no", "field_label": "효과 프리셋", "value": "4.99", "kind": "empty", "reason": "빈 프리셋 — 아직 콘솔에 만들 길 없음"}]}, {"group_name": "BACK", "bar": 2, "state": "approved", "fields": [{"field": "color_preset_no", "field_label": "색 프리셋", "value": "4.98", "kind": "empty", "reason": "빈 프리셋 — 아직 콘솔에 만들 길 없음"}]}]

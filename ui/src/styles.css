@@ -4735,6 +4735,14 @@ body {
   font-size: 10px;
 }
 
+/* 카드 t595, REQ-LDBEAT-015(i-1) — "⚠ 빈 프리셋" 배지(격자 칸)와 편집 칸 안내.
+   같은 접두 관례(`.beat-grid-pending-approval-warn`)를 그대로 따른다. */
+.beat-grid-empty-preset-warn {
+  color: var(--warn);
+  margin-left: 4px;
+  font-size: 10px;
+}
+
 /* t537 레이아웃 교정 — 시안의 `.insp`(무대 2D + 이 마디 한눈에, 타임라인
    아래 고정 높이 띠)와 같은 자리. `.beat-grid-mid` 바로 아래, 명령창
    바로 위에 온다. */
