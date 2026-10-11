@@ -1,0 +1,800 @@
+{
+ "1450x900": {
+  "viewport": [
+   1450,
+   900
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1376,
+  "bar_client_width": 1376,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 247,
+    "right": 324,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 330,
+    "right": 368,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 374,
+    "right": 942,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 948,
+    "right": 986,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 992,
+    "right": 1028,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1034,
+    "right": 1098,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1104,
+    "right": 1140,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1146,
+    "right": 1214,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1220,
+    "right": 1287,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1293,
+    "right": 1363,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1369,
+    "right": 1405,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1450x1000": {
+  "viewport": [
+   1450,
+   1000
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1376,
+  "bar_client_width": 1376,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 247,
+    "right": 324,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 330,
+    "right": 368,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 374,
+    "right": 942,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 948,
+    "right": 986,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 992,
+    "right": 1028,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1034,
+    "right": 1098,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1104,
+    "right": 1140,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1146,
+    "right": 1214,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1220,
+    "right": 1287,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1293,
+    "right": 1363,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1369,
+    "right": 1405,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1450x1200": {
+  "viewport": [
+   1450,
+   1200
+  ],
+  "doc_client_width": 1450,
+  "bar": [
+   36,
+   88,
+   1378,
+   58
+  ],
+  "bar_scroll_width": 1376,
+  "bar_client_width": 1376,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 45,
+    "right": 97,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 103,
+    "right": 195,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 201,
+    "right": 241,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 247,
+    "right": 324,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 330,
+    "right": 368,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 374,
+    "right": 942,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 948,
+    "right": 986,
+    "top": 117,
+    "width": 38
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 992,
+    "right": 1028,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1034,
+    "right": 1098,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1104,
+    "right": 1140,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1146,
+    "right": 1214,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1220,
+    "right": 1287,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1293,
+    "right": 1363,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1369,
+    "right": 1405,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x900": {
+  "viewport": [
+   1700,
+   900
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 253,
+    "right": 330,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 336,
+    "right": 493,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 499,
+    "right": 1067,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1073,
+    "right": 1230,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x1000": {
+  "viewport": [
+   1700,
+   1000
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 253,
+    "right": 330,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 336,
+    "right": 493,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 499,
+    "right": 1067,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1073,
+    "right": 1230,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ },
+ "1700x1200": {
+  "viewport": [
+   1700,
+   1200
+  ],
+  "doc_client_width": 1700,
+  "bar": [
+   42,
+   88,
+   1616,
+   58
+  ],
+  "bar_scroll_width": 1614,
+  "bar_client_width": 1614,
+  "overflow": false,
+  "rows": 6,
+  "clipped": [],
+  "bpm_text": "BPM 112.35",
+  "children": [
+   {
+    "cls": "beat-grid-topbar-mode",
+    "text": "런북 모드",
+    "left": 51,
+    "right": 103,
+    "top": 109,
+    "width": 52
+   },
+   {
+    "cls": "beat-grid-pill beat-grid-song",
+    "text": "LOVE ATTACK",
+    "left": 109,
+    "right": 201,
+    "top": 108,
+    "width": 92
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "초안",
+    "left": 207,
+    "right": 247,
+    "top": 108,
+    "width": 40
+   },
+   {
+    "cls": "beat-grid-pill",
+    "text": "BPM 112.35",
+    "left": 253,
+    "right": 330,
+    "top": 108,
+    "width": 77
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 336,
+    "right": 493,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "beat-grid-play-cluster",
+    "text": "플레이\n⏮\n⏪ 10초\n▶ 재생\n10초 ⏩\n0:00.0\n♪ 음원\n콘솔 같이 끔",
+    "left": 499,
+    "right": 1067,
+    "top": 95,
+    "width": 568
+   },
+   {
+    "cls": "beat-grid-topbar-spacer",
+    "text": "",
+    "left": 1073,
+    "right": 1230,
+    "top": 117,
+    "width": 157
+   },
+   {
+    "cls": "tbtn",
+    "text": "◀",
+    "left": 1236,
+    "right": 1272,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "beat-grid-topbar-bar",
+    "text": "0마디",
+    "left": 1278,
+    "right": 1342,
+    "top": 108,
+    "width": 64
+   },
+   {
+    "cls": "tbtn",
+    "text": "▶",
+    "left": 1348,
+    "right": 1384,
+    "top": 103,
+    "width": 36
+   },
+   {
+    "cls": "tbtn pri",
+    "text": "▶ 콘솔",
+    "left": 1390,
+    "right": 1458,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "■ 끄기",
+    "left": 1464,
+    "right": 1531,
+    "top": 103,
+    "width": 68
+   },
+   {
+    "cls": "tbtn",
+    "text": "⇪ 반영",
+    "left": 1537,
+    "right": 1607,
+    "top": 102,
+    "width": 70
+   },
+   {
+    "cls": "tbtn",
+    "text": "▤",
+    "left": 1613,
+    "right": 1649,
+    "top": 103,
+    "width": 36
+   }
+  ]
+ }
+}

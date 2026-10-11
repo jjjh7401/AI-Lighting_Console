@@ -4239,8 +4239,14 @@ body {
 }
 
 /* 카드 t579(REQ-LDBEAT-014) — BPM 알약 안 「스피드 마스터 — 콘솔에서 직접 설정」. */
-.beat-grid-pill-note {
+.beat-grid-pill-note,
+.beat-grid-pill-note-short {
   font-size: 11.5px;
+}
+
+/* 카드 t587 — 짧은 꼬리는 1450px 이상에서만(아래 미디어 규칙). */
+.beat-grid-pill-note-short {
+  display: none;
 }
 
 .beat-grid-song {
@@ -4330,9 +4336,17 @@ body {
   font-size: 11px;
 }
 
+/* 카드 t587 — 줄바꿈 금지(nowrap)는 걸지 않는다: 넘치면 오른쪽 「⇪ 반영」「▤」가
+   잘렸다(1450px 에서 87px 넘침). 시안 `.top{flex-wrap:wrap}` 처럼 한 줄은 줄임
+   문구로 지키고, 그래도 넘치면 잘리지 않고 다음 줄로 내려간다. BPM 알약의
+   긴 안내는 짧은 꼬리 「· 콘솔에서 설정」으로 바꾼다 — 자동 설정처럼 읽히지
+   않게 눈에 보이는 안내는 남긴다(REQ-LDBEAT-014), 긴 문장은 알약 title. */
 @media (min-width: 1450px) {
-  .beat-grid-topbar {
-    flex-wrap: nowrap;
+  .beat-grid-topbar .beat-grid-pill-note {
+    display: none;
+  }
+  .beat-grid-topbar .beat-grid-pill-note-short {
+    display: inline;
   }
   .beat-grid-topbar .lbl-full {
     display: none;
