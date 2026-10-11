@@ -18,7 +18,14 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[3]
-MOCKUP = ROOT / ".moai" / "specs" / "SPEC-LDBEAT-001" / "design" / "ldbeat-runbook-ui-proposal-20261008.html"
+MOCKUP = (
+    ROOT
+    / ".moai"
+    / "specs"
+    / "SPEC-LDBEAT-001"
+    / "design"
+    / "ldbeat-runbook-ui-proposal-20261008.html"
+)
 SIZES = [(w, h) for w in (1450, 1700) for h in (900, 1000, 1200)]
 
 _MEASURE_JS = """
@@ -28,17 +35,21 @@ _MEASURE_JS = """
   const r = bar.getBoundingClientRect();
   const kids = Array.from(bar.children).map(c => {
     const b = c.getBoundingClientRect();
-    return {cls: typeof c.className === 'string' ? c.className : '', text: (c.innerText || '').trim().slice(0, 60),
-            left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), width: Math.round(b.width)};
+    return {cls: typeof c.className === 'string' ? c.className : '',
+            text: (c.innerText || '').trim().slice(0, 60),
+            left: Math.round(b.left), right: Math.round(b.right),
+            top: Math.round(b.top), width: Math.round(b.width)};
   });
   const rows = new Set(kids.map(k => k.top)).size;
   const clipped = kids.filter(k => k.right > Math.round(r.right) + 1).map(k => k.text);
   const bpm = Array.from(bar.querySelectorAll('.beat-grid-pill')).map(p => p.innerText.trim())
     .find(t => t.startsWith('BPM')) || null;
-  return {viewport: [window.innerWidth, window.innerHeight], doc_client_width: document.documentElement.clientWidth,
+  return {viewport: [window.innerWidth, window.innerHeight],
+          doc_client_width: document.documentElement.clientWidth,
           bar: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)],
           bar_scroll_width: bar.scrollWidth, bar_client_width: bar.clientWidth,
-          overflow: bar.scrollWidth > bar.clientWidth + 1, rows, clipped, bpm_text: bpm, children: kids};
+          overflow: bar.scrollWidth > bar.clientWidth + 1, rows, clipped, bpm_text: bpm,
+          children: kids};
 }
 """
 
@@ -65,7 +76,9 @@ def main() -> None:
             page.wait_for_timeout(1200)
             result[key] = page.evaluate(_MEASURE_JS)
             page.screenshot(path=str(out / f"app_{key}_full.png"))
-            page.locator(".beat-grid-topbar").first.screenshot(path=str(out / f"app_{key}_topbar.png"))
+            page.locator(".beat-grid-topbar").first.screenshot(
+                path=str(out / f"app_{key}_topbar.png")
+            )
             page.close()
 
             mp = browser.new_page(viewport={"width": w, "height": h})
@@ -79,8 +92,23 @@ def main() -> None:
         if m is None:
             print(key, "topbar not found")
             continue
-        print(key, "doc_w", m["doc_client_width"], "bar_w", m["bar"][2], "scrollW", m["bar_scroll_width"],
-              "overflow", m["overflow"], "rows", m["rows"], "clipped", m["clipped"], "|", m["bpm_text"])
+        print(
+            key,
+            "doc_w",
+            m["doc_client_width"],
+            "bar_w",
+            m["bar"][2],
+            "scrollW",
+            m["bar_scroll_width"],
+            "overflow",
+            m["overflow"],
+            "rows",
+            m["rows"],
+            "clipped",
+            m["clipped"],
+            "|",
+            m["bpm_text"],
+        )
 
 
 if __name__ == "__main__":
