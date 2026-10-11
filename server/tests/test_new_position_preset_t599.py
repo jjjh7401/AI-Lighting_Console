@@ -295,8 +295,11 @@ class TestBeatGridNewPresetPositionField:
         assert "콘솔" in event["text"]
         assert console.executed == []
 
-    @pytest.mark.parametrize("field", ["dimmer_preset", "color"])
-    def test_dimmer_preset_and_color_are_still_rejected(self, tmp_path, field) -> None:
+    # 카드 t594(REQ-LDBEAT-015(i-5)) — "color"는 더는 이 거절에 들지 않는다
+    # (base 색 풀도 콘솔 빈 슬롯으로 지원한다, `test_new_color_preset_t594.py`
+    # 가 전수로 잠근다). dimmer_preset 거절은 회귀 없이 그대로다.
+    @pytest.mark.parametrize("field", ["dimmer_preset"])
+    def test_dimmer_preset_is_still_rejected(self, tmp_path, field) -> None:
         store = SongTimelineStore()
         store.latest = _timeline()
         session, console, _approval, _audit = _new_session(tmp_path, store=store)

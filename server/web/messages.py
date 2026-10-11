@@ -513,6 +513,24 @@ def parse_client_message(raw: str) -> dict:
                 )
         elif fx is not None:
             raise ProtocolError("beat_grid_new_preset.fx is only valid when field is 'effect'")
+        # 카드 t594 — "color"만 목표 RGB(r·g·b, 0~100%)를 **필수**로 받는다
+        # (t589 `preset_colors` 모양). 다른 필드에 오면 거절한다(aim 과 같은 엄격함).
+        rgb = message.get("rgb")
+        if field == "color":
+            if not isinstance(rgb, dict):
+                raise ProtocolError("beat_grid_new_preset.rgb is required when field is 'color'")
+            for channel in ("r", "g", "b"):
+                value = rgb.get(channel)
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ProtocolError(
+                        f"beat_grid_new_preset.rgb.{channel} must be a finite number"
+                    )
+                if not math.isfinite(value) or not (0 <= value <= 100):
+                    raise ProtocolError(
+                        f"beat_grid_new_preset.rgb.{channel} must be a finite number in 0..100"
+                    )
+        elif rgb is not None:
+            raise ProtocolError("beat_grid_new_preset.rgb is only valid when field is 'color'")
         parsed: dict[str, object] = {
             "v": PROTOCOL_VERSION,
             "type": "beat_grid_new_preset",
@@ -530,6 +548,8 @@ def parse_client_message(raw: str) -> dict:
                 "period_unit": fx["period_unit"],
                 "period_value": fx["period_value"],
             }
+        if rgb is not None:
+            parsed["rgb"] = rgb
         return parsed
 
     if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):

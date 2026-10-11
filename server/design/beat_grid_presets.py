@@ -31,6 +31,7 @@ __all__ = [
     "app_preset_label",
     "build_preset_drawer",
     "effect_kind_to_pool_name",
+    "first_free_base_color_number",
     "first_free_base_position_number",
     "first_free_preset_number",
     "pool_name_to_effect_kind",
@@ -376,31 +377,19 @@ def first_free_preset_number(
     )
 
 
-def first_free_base_position_number(
+def _first_free_base_pool_number(
     *,
     policy: Mapping[str, object],
     grid: Mapping[str, object],
     console_children: tuple[int, Mapping[int, object]] | None,
+    pool_label: str,
 ) -> tuple[str | None, str | None]:
-    """카드 t599(REQ-LDBEAT-015(i-3)) — "+ 새 프리셋 만들기" **위치** 필드가
-    쓰는 base 위치 번호 배정. base 위치 풀(2.41~)은 효과 번호대가 없는
-    풀이라(REQ-LDBEAT-015(b)) `preset_pools.yaml`에서 번호대를 읽지
-    않는다 — 대신 그 풀의 **효과** 번호대(``policy["pools"]`` 중 풀 번호가
-    같은 밴드, 예: ``position_effect`` 2.61~2.68)만 건너뛰어 겹치지 않게
-    하고, 나머지는 콘솔이 실제로 쥔 첫 빈 슬롯이다 — 리그 상수를 짓지
-    않는다(번호대도 풀 번호도 코드에 없다).
-
-    ``console_children``은 `read_named_pool(query, pool_root, "Position",
-    ...)`가 돌려준 그 쌍 ``(풀 번호, {슬롯: 이름|None})`` 그대로다 — 이
-    함수 자신은 콘솔을 읽지 않는다(순수). 그 풀을 콘솔에서 못 읽었으면
-    (``None``) 거절한다 — `first_free_preset_number`(효과 풀)와 달리
-    "경고만 내고 배정"으로 떨어지지 않는다: base 풀은 번호대 보호가 없어
-    틀리게 고르면 기존 쇼 프리셋을 되찾을 길이 없다(손해가 비대칭이다).
-
-    반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
+    """``first_free_base_position_number``(t599)·``first_free_base_color_
+    number``(t594)가 공유하는 몸체 — 거절 문구의 풀 이름만 ``pool_label``로
+    가른다(두 함수의 docstring·반환이 그 호출자별 규칙을 말한다)."""
     if console_children is None:
         return None, (
-            "콘솔에서 Position 풀을 읽지 못해 빈 슬롯을 알 수 없습니다 — "
+            f"콘솔에서 {pool_label} 풀을 읽지 못해 빈 슬롯을 알 수 없습니다 — "
             "번호대 보호가 없는 기본 풀이라 추측해 배정하지 않습니다."
         )
     pool_no, children = console_children
@@ -430,6 +419,57 @@ def first_free_base_position_number(
             if slot not in children and candidate not in referenced:
                 return candidate, None
         slot += 1
+
+
+def first_free_base_position_number(
+    *,
+    policy: Mapping[str, object],
+    grid: Mapping[str, object],
+    console_children: tuple[int, Mapping[int, object]] | None,
+) -> tuple[str | None, str | None]:
+    """카드 t599(REQ-LDBEAT-015(i-3)) — "+ 새 프리셋 만들기" **위치** 필드가
+    쓰는 base 위치 번호 배정. base 위치 풀(2.41~)은 효과 번호대가 없는
+    풀이라(REQ-LDBEAT-015(b)) `preset_pools.yaml`에서 번호대를 읽지
+    않는다 — 대신 그 풀의 **효과** 번호대(``policy["pools"]`` 중 풀 번호가
+    같은 밴드, 예: ``position_effect`` 2.61~2.68)만 건너뛰어 겹치지 않게
+    하고, 나머지는 콘솔이 실제로 쥔 첫 빈 슬롯이다 — 리그 상수를 짓지
+    않는다(번호대도 풀 번호도 코드에 없다).
+
+    ``console_children``은 `read_named_pool(query, pool_root, "Position",
+    ...)`가 돌려준 그 쌍 ``(풀 번호, {슬롯: 이름|None})`` 그대로다 — 이
+    함수 자신은 콘솔을 읽지 않는다(순수). 그 풀을 콘솔에서 못 읽었으면
+    (``None``) 거절한다 — `first_free_preset_number`(효과 풀)와 달리
+    "경고만 내고 배정"으로 떨어지지 않는다: base 풀은 번호대 보호가 없어
+    틀리게 고르면 기존 쇼 프리셋을 되찾을 길이 없다(손해가 비대칭이다).
+
+    반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
+    return _first_free_base_pool_number(
+        policy=policy, grid=grid, console_children=console_children, pool_label="Position"
+    )
+
+
+def first_free_base_color_number(
+    *,
+    policy: Mapping[str, object],
+    grid: Mapping[str, object],
+    console_children: tuple[int, Mapping[int, object]] | None,
+) -> tuple[str | None, str | None]:
+    """카드 t594(REQ-LDBEAT-015(i-5)) — "+ 새 프리셋 만들기" **색** 필드가
+    쓰는 base 색 번호 배정. `first_free_base_position_number`(t599)와
+    같은 몸체·같은 규칙(``_first_free_base_pool_number``) — base 색 풀
+    (4.21~)도 효과 번호대가 없는 풀이라 ``preset_pools.yaml``에서 번호대를
+    읽지 않고, 대신 그 풀의 **효과** 번호대(``color_effect`` 4.41~4.99)만
+    건너뛴다. 나머지는 콘솔이 실제로 쥔 첫 빈 슬롯이다.
+
+    ``console_children``은 `read_named_pool(query, pool_root, "Color",
+    ...)`가 돌려준 그 쌍 그대로다(이 함수 자신은 콘솔을 읽지 않는다).
+    그 풀을 콘솔에서 못 읽었으면 거절한다 — base 풀은 번호대 보호가 없어
+    틀리게 고르면 기존 쇼 프리셋을 되찾을 길이 없다(위치와 같은 비대칭).
+
+    반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
+    return _first_free_base_pool_number(
+        policy=policy, grid=grid, console_children=console_children, pool_label="Color"
+    )
 
 
 def build_preset_drawer(
