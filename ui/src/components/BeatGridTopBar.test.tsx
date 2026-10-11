@@ -99,6 +99,54 @@ describe("상단 바 — 버튼 전부 + 1450px 줄임 (AC-LDBEAT-017(a)(b))", (
   });
 });
 
+describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () => {
+  const playback = {
+    playing: false,
+    positionSeconds: 12.3,
+    onTogglePlay: noop,
+    onRewindToStart: noop,
+    audioButtonLabel: "✓ LOVE ATTACK.mp3",
+    onSelectAudioFile: noop,
+    consoleFollowDisabledReason: "타임코드 재생 송신 경로 없음",
+  };
+
+  it("playback 을 안 넘기면 기존과 바이트 동일(플레이 묶음 없음)", () => {
+    const html = renderTopBar();
+    expect(html).not.toContain("beat-grid-play-cluster");
+    expect(html).not.toContain("⏮");
+  });
+
+  it("⏮·▶/❚❚·시계·♪·콘솔 같이가 모두 렌더된다", () => {
+    const html = renderTopBar({ playback });
+    expect(html).toContain("⏮");
+    expect(html).toContain("▶ 재생");
+    expect(html).toContain("12.3초");
+    expect(html).toContain("✓ LOVE ATTACK.mp3");
+    expect(html).toContain("콘솔 같이");
+  });
+
+  it("재생 중이면 ▶ 대신 ❚❚ 일시정지를 보인다", () => {
+    const html = renderTopBar({ playback: { ...playback, playing: true } });
+    expect(html).toContain("❚❚ 일시정지");
+    expect(html).not.toContain("▶ 재생");
+  });
+
+  it("콘솔 같이 토글은 늘 비활성이고 이유를 title 로 말한다(송신 경로 자체가 없음)", () => {
+    const html = renderTopBar({ playback });
+    expect(html).toMatch(/title="타임코드 재생 송신 경로 없음"[^>]*disabled/);
+  });
+
+  it("연결 실패 이유가 있으면 보인다", () => {
+    const html = renderTopBar({ playback: { ...playback, audioFailureReason: "x.mp3 을 읽지 못했어요" } });
+    expect(html).toContain("x.mp3 을 읽지 못했어요");
+  });
+
+  it("실패 이유가 없으면 그 칸 자체가 없다", () => {
+    const html = renderTopBar({ playback });
+    expect(html).not.toContain("beat-grid-audio-error");
+  });
+});
+
 describe("곡 전체 지도 마크업 (AC-LDBEAT-018)", () => {
   const props = {
     filledRange: { start: 0, end: 9 },

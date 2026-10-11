@@ -517,6 +517,12 @@ export interface BeatGridView {
   /** 카드 t568 ② (공급: t563) — 마지막 반영(승인=송신) 뒤 바뀐 칸. 반영
    * 스냅숏이 아직 없으면 `null`. 필드가 없는 옛 서버 응답이면 `undefined`. */
   unsent_cells?: BeatGridUnsentCell[] | null;
+  /** 카드 t570(REQ-LDBEAT-024(a)) — 「콘솔 같이」 토글이 쓸 음원 지연(초).
+   * `server/design/beat_grid_data/console_audio_offset.yaml`(t520 실측)
+   * 출처 — 코드 상수가 아니다. 출처가 없으면 `null`, 필드가 없는 옛 서버
+   * 응답이면 `undefined`(둘 다 토글 비활성과 무관 — 그 토글은 송신 경로
+   * 자체가 없어 이 카드 범위에서는 늘 비활성이다). */
+  console_audio_offset_seconds?: number | null;
 }
 
 /** 카드 t568 ② — `BeatGridView.unsent_cells` 의 한 칸. */

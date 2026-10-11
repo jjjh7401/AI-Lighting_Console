@@ -16,6 +16,7 @@ import {
   computeLRSplitEligibility,
   declareLRSplit,
   lrChildRowsForTrack,
+  resolveLRSplitViewAfterBarChange,
   type LRSplitDeclarations,
   type LRSplitStage,
 } from "./lrSplit";
@@ -340,5 +341,34 @@ describe("그룹 이름 리터럴 없음(일반화 — feedback-generalize-beyon
       "ZZZ-NOT-A-REAL-SONG-GROUP L",
       "ZZZ-NOT-A-REAL-SONG-GROUP R",
     ]);
+  });
+});
+
+// REQ-LDBEAT-024(e)/AC-LDBEAT-024(e) — 보고 있는 줄이 L·R 자식 줄인데
+// 마디가 그 구간을 벗어나면 편집 칸이 부모 그룹 줄로 넘어간다. 카드
+// t570. 일반 이름("FOOBAR")으로 — 그룹 이름 리터럴 0건.
+describe("resolveLRSplitViewAfterBarChange — 자식 줄 보다가 구간을 벗어나면 부모로(REQ-LDBEAT-024(e))", () => {
+  it("이미 부모를 보고 있으면(null) 그대로 null", () => {
+    const declarations = declareLRSplit(new Map(), "FOOBAR", { startBar: 10, endBar: 14 });
+    expect(resolveLRSplitViewAfterBarChange(null, declarations, 11)).toBeNull();
+  });
+
+  it("자식 줄을 보는 중 + 마디가 구간 안이면 그대로 유지한다", () => {
+    const declarations = declareLRSplit(new Map(), "FOOBAR", { startBar: 10, endBar: 14 });
+    const viewed = { groupName: "FOOBAR", side: "L" as const };
+    expect(resolveLRSplitViewAfterBarChange(viewed, declarations, 10)).toEqual(viewed);
+    expect(resolveLRSplitViewAfterBarChange(viewed, declarations, 13)).toEqual(viewed);
+  });
+
+  it("마디가 구간을 벗어나면(끝은 배타적) 부모로 넘어간다(null)", () => {
+    const declarations = declareLRSplit(new Map(), "FOOBAR", { startBar: 10, endBar: 14 });
+    const viewed = { groupName: "FOOBAR", side: "R" as const };
+    expect(resolveLRSplitViewAfterBarChange(viewed, declarations, 9)).toBeNull();
+    expect(resolveLRSplitViewAfterBarChange(viewed, declarations, 14)).toBeNull();
+  });
+
+  it("선언 자체가 없어졌으면(다시 합치기) 부모로 넘어간다", () => {
+    const viewed = { groupName: "FOOBAR", side: "L" as const };
+    expect(resolveLRSplitViewAfterBarChange(viewed, new Map(), 11)).toBeNull();
   });
 });

@@ -4296,6 +4296,23 @@ body {
   display: none;
 }
 
+/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데). */
+.beat-grid-play-cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.beat-grid-audio-error {
+  color: var(--warn);
+  font-size: 11px;
+}
+
+.beat-grid-playback-error {
+  color: var(--warn);
+  font-size: 11px;
+}
+
 @media (min-width: 1450px) {
   .beat-grid-topbar {
     flex-wrap: nowrap;

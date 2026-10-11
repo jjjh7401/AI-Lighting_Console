@@ -39,6 +39,7 @@ from typing import Literal, TypedDict
 
 import yaml
 
+from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
 from server.design.beat_grid_probes import (
     read_m1_probe_results,
     read_m1_probe_results_from_path,
@@ -251,6 +252,12 @@ class BeatGridView(TypedDict):
     probe_results: dict[int, str]
     source: str
     note: str | None
+    #: 카드 t570(REQ-LDBEAT-024(a)) — 「콘솔 같이」 토글이 쓸 음원 지연(초,
+    #: 콘솔 타임코드 시작 기준). `beat_grid_console_audio_offset.py`의
+    #: 데이터 파일 출처 값 그대로(t520 실측) — 코드 상수가 아니다. 출처가
+    #: 없으면 `None`(지어내지 않음, 토글은 송신 경로 자체가 없어 이 카드
+    #: 범위에서는 늘 비활성이다 — 이 값 유무와 무관).
+    console_audio_offset_seconds: float | None
 
 
 #: REQ-LDBEAT-005(a) — 초기 표시 범위. 정수, 1-base 위상 1 기준, 0 = 못갖춘마디
@@ -504,6 +511,7 @@ def default_beat_grid(song_title: str) -> BeatGridView:
         probe_results=read_m1_probe_results(None),
         source=source,
         note=note,
+        console_audio_offset_seconds=CONSOLE_AUDIO_OFFSET_SECONDS,
     )
 
 
@@ -565,6 +573,11 @@ def attach_beat_grid_runtime_extras(
 
     path = progress_md_path if progress_md_path is not None else default_progress_md_path()
     grid["probe_results"] = read_m1_probe_results_from_path(path)
+    # 카드 t570(REQ-LDBEAT-024(a)) — 이 필드가 생기기 전에 저장된 격자도
+    # 같은 쇼 전역 측정값을 받는다(곡별 데이터가 아니라 콘솔 전역 측정이라
+    # `setdefault` — 이미 있으면(드물게 다른 값으로 저장돼 있으면) 덮어쓰지
+    # 않는다).
+    grid.setdefault("console_audio_offset_seconds", CONSOLE_AUDIO_OFFSET_SECONDS)
     merged["beat_grid"] = grid
     return merged
 
