@@ -209,3 +209,7 @@ $ grep -n "^Store " .moai/reports/t553/approval_t553.txt
 - 단계 (2)에서 리드 범위(23~27줄) 중 27줄 `ClearAll` 은 캡처 전에 빛을 끄므로 (3) 직전으로 미뤘다 — 문면·순서 무변경.
 - 결론: 타임코드 8트랙 확인 → `measured_console.yaml` 상한 8. MOVER-U Pan 단독은 기울인 기준에서만 보이고 2.1(수직) 기준에선 판정 불가 → bar 18 닫힘, `measured_movements.yaml` 에 기록만. 열려면 기울인 위치 프리셋을 칸에 지정(감독 결정 대상).
 - 안 잰 것: 8 초과 트랙, 타임코드 재생 중 큐 TrigTime 진행, 337·338·336 시퀀스와 TC 32 는 콘솔에 남아 있다(쇼 저장 0 이라 쇼를 다시 열면 사라짐, 삭제는 승인 범위 밖).
+
+### 옆 화면 확인 — 「2.1 = 빔 수직」을 잰 사실로 (2026-10-11)
+
+감독이 onPC 3D 를 FRONT + SIDE 로 나눈 뒤 리드 지시로 다시 쟀다. 승인 파일 `approval_t553_cell.txt`(sha256 `ca09ae4b…a39c`) 20~23줄(ChangeDestination Root · ClearAll · Group 11 Dimmer 70 · Group 11 At Preset 2.1, 프로그래머만·Store 0)을 그대로 읽는 `probe_side_check.py` 로 리허설 → 실기 전부-거절 → 승인 줄 바이트 대조 일치 → 전송(4줄 OK). 리드 SIDE 캡처 판정: **8대 빔이 트러스에서 거의 수직으로 떨어지고 바닥 스폿은 장비 줄 바로 아래, 앞쪽으로 아주 조금**. 그 뒤 37줄 ClearAll OK. 캡처 파일은 리드 작업 폴더에 있어 저장소에는 글로만 남긴다. 근거 `live/side_lit/`, `live/side_clear/`, `denyall_side/`.
