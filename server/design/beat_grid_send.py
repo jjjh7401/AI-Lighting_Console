@@ -351,7 +351,14 @@ def _overwrite_store_cue(cue: CueEmitResult, *, sequence_number: int) -> CueEmit
     if not cue.commands or cue.cue_number is None:
         return cue
     target = f"Store Cue {cue.cue_number} Sequence {sequence_number}"
-    overwritten = tuple(f"{line} /Overwrite" if line == target else line for line in cue.commands)
+    # 카드 t576 — 저장 줄 뒤에 ``CueFade <초>``·``/CueOnly``가 붙을 수 있다. 그 줄도
+    # 같은 큐의 저장 줄이므로 맨 끝에 ``/Overwrite``를 덧붙인다(옵션은 실측 순서대로
+    # 키워드 뒤). ``Store Cue 1 Sequence 1`` 이 ``Store Cue 1 Sequence 10`` 과 섞이지
+    # 않게 정확히 같거나 공백으로 이어지는 줄만 고른다.
+    overwritten = tuple(
+        f"{line} /Overwrite" if line == target or line.startswith(f"{target} ") else line
+        for line in cue.commands
+    )
     return replace(cue, commands=overwritten)
 
 

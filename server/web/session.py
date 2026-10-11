@@ -9728,6 +9728,19 @@ class ChatSession:
                 risk_reason += f" · 막혀서 그대로 둔 칸 {len(preserved_cells)}개: {listed}"
             if out_of_order:
                 risk_reason += f" · 번호 순서와 시간 순서가 다른 큐 {out_of_order}개"
+            # 카드 t576 — 칸은 나가지만 그 안의 전환 칸 일부(딜레이·위치만 늦게·MIB)를
+            # 보내지 않았다면, 감독이 승인하기 전에 그 사실과 이유를 본다.
+            unsent_entry = [
+                (track.group_name, cue.bar, reason)
+                for track in result.tracks
+                for cue in track.cues
+                for reason in cue.skipped_fields
+            ]
+            if unsent_entry:
+                listed = ", ".join(
+                    f"{name} {bar}마디({reason})" for name, bar, reason in unsent_entry
+                )
+                risk_reason += f" · 보내지 않은 전환 칸 {len(unsent_entry)}개: {listed}"
             risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(
