@@ -1,0 +1,968 @@
+{
+ "viewport": [
+  1450,
+  1000
+ ],
+ "lanes_chain": [
+  {
+   "tag": "div",
+   "cls": "beat-grid-lanes",
+   "box": [
+    36,
+    287,
+    1058,
+    171
+   ],
+   "scroll": [
+    1683,
+    426,
+    0,
+    0
+   ],
+   "display": "block",
+   "position": "relative",
+   "height": "171px",
+   "min-height": "auto",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "auto",
+   "overflow-x": "auto",
+   "overflow-y": "auto",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "0px",
+   "top": "0px"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-mid",
+   "box": [
+    36,
+    287,
+    1378,
+    171
+   ],
+   "scroll": [
+    1378,
+    171,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "section",
+   "cls": "beat-grid",
+   "box": [
+    24,
+    78,
+    1402,
+    898
+   ],
+   "scroll": [
+    1478,
+    898,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "898px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "hidden",
+   "overflow-x": "hidden",
+   "overflow-y": "hidden",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "runbook-mode-frame beat-grid-fullscreen-frame",
+   "box": [
+    0,
+    54,
+    1450,
+    946
+   ],
+   "scroll": [
+    1450,
+    946,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "946px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "hidden",
+   "overflow-x": "hidden",
+   "overflow-y": "hidden",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "app-frame",
+   "box": [
+    0,
+    0,
+    1450,
+    1000
+   ],
+   "scroll": [
+    1450,
+    1000,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "1000px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "",
+   "box": [
+    0,
+    0,
+    1450,
+    1000
+   ],
+   "scroll": [
+    1450,
+    1000,
+    0,
+    0
+   ],
+   "display": "block",
+   "position": "static",
+   "height": "1000px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "body",
+   "cls": "",
+   "box": [
+    0,
+    0,
+    1450,
+    1000
+   ],
+   "scroll": [
+    1450,
+    1000,
+    0,
+    0
+   ],
+   "display": "block",
+   "position": "static",
+   "height": "1000px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  }
+ ],
+ "mid_children": [
+  {
+   "tag": "div",
+   "cls": "beat-grid-lanes",
+   "text": "마디012345678910111213141516171819202122232425장면 전환 ",
+   "box": [
+    36,
+    287,
+    1058,
+    171
+   ],
+   "position": "relative",
+   "zIndex": "auto",
+   "left": "0px",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "aside",
+   "cls": "beat-grid-cue-panel",
+   "text": "타임라인의 막대(큐)나 무대 그림의 장비를 누르면 여기서 고쳐요밝기 · 위치 · 색 · 움",
+   "box": [
+    1104,
+    287,
+    310,
+    171
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgb(26, 30, 40)",
+   "gridColumn": "auto"
+  }
+ ],
+ "beat_grid_children": [
+  {
+   "tag": "header",
+   "cls": "beat-grid-topbar",
+   "text": "런북 모드LOVE ATTACK초안BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설",
+   "box": [
+    36,
+    88,
+    1378,
+    58
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgb(15, 15, 18)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "song-overview",
+   "text": "곡 전체 — 구간 · 에너지선(구간 D 레벨) · 강조(★) · 흰 테두리 = 아래에 보이",
+   "box": [
+    36,
+    154,
+    1378,
+    99
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgb(32, 32, 38)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-toolbar",
+   "text": "[모두 접기/펴기]⚠ 쓰기 잠김",
+   "box": [
+    36,
+    261,
+    1378,
+    18
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-mid",
+   "text": "마디012345678910111213141516171819202122232425장면 전환 ",
+   "box": [
+    36,
+    287,
+    1378,
+    171
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-insp",
+   "text": "무대 (2D)KEY 101 (fid 101)KEY 102 (fid 102)KEY 103 (",
+   "box": [
+    36,
+    466,
+    1378,
+    320
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-cmd",
+   "text": "바로 적용(문장)AI 제안📁 프리셋",
+   "box": [
+    36,
+    794,
+    1378,
+    28
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-probe-pane",
+   "text": "M1 콘솔 확인 프로브1. 타임코드 트랙 ≥3 — 통과(구조)2. Goto 2번 이후·여러",
+   "box": [
+    36,
+    830,
+    1378,
+    136
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  }
+ ],
+ "stage_pane_children": [
+  {
+   "tag": "h5",
+   "cls": "",
+   "text": "무대 (2D)",
+   "box": [
+    36,
+    466,
+    746,
+    15
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-stage-box",
+   "text": "KEY 101 (fid 101)KEY 102 (fid 102)KEY 103 (fid 103",
+   "box": [
+    36,
+    485,
+    746,
+    285
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "p",
+   "cls": "beat-grid-stage-note",
+   "text": "위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = 0마디 그 칸이 ",
+   "box": [
+    36,
+    774,
+    746,
+    12
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  }
+ ],
+ "stage_box_children": [
+  {
+   "tag": "svg",
+   "cls": "",
+   "text": "KEY 101 (fid 101)KEY 102 (fid 102)KEY 103 (fid 103",
+   "box": [
+    36,
+    485,
+    746,
+    217
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgb(14, 15, 18)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "ul",
+   "cls": "beat-grid-stage-notes",
+   "text": "⚠ (t583 하네스) 'FOH' 소속은 t525 기록에 없음 — 지어내지 않음⚠ (t58",
+   "box": [
+    36,
+    706,
+    746,
+    64
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  }
+ ],
+ "stage_notes_chain": [
+  {
+   "tag": "ul",
+   "cls": "beat-grid-stage-notes",
+   "box": [
+    36,
+    706,
+    746,
+    64
+   ],
+   "scroll": [
+    746,
+    90,
+    0,
+    0
+   ],
+   "display": "block",
+   "position": "static",
+   "height": "64px",
+   "min-height": "auto",
+   "max-height": "64px",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "auto",
+   "overflow-x": "auto",
+   "overflow-y": "auto",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-stage-box",
+   "box": [
+    36,
+    485,
+    746,
+    285
+   ],
+   "scroll": [
+    746,
+    285,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "285px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-stage-pane",
+   "box": [
+    36,
+    466,
+    746,
+    320
+   ],
+   "scroll": [
+    746,
+    320,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "320px",
+   "min-height": "auto",
+   "max-height": "none",
+   "flex": "1.2 1 0px",
+   "flex-basis": "0px",
+   "flex-grow": "1.2",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "hidden",
+   "overflow-x": "hidden",
+   "overflow-y": "hidden",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  }
+ ],
+ "doc_scroll": [
+  1000,
+  1000
+ ],
+ "selected_lanes_chain": [
+  {
+   "tag": "div",
+   "cls": "beat-grid-lanes",
+   "box": [
+    36,
+    287,
+    1058,
+    171
+   ],
+   "scroll": [
+    1683,
+    426,
+    624,
+    0
+   ],
+   "display": "block",
+   "position": "relative",
+   "height": "171px",
+   "min-height": "auto",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "auto",
+   "overflow-x": "auto",
+   "overflow-y": "auto",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "0px",
+   "top": "0px"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-mid",
+   "box": [
+    36,
+    287,
+    1378,
+    171
+   ],
+   "scroll": [
+    1378,
+    171,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  }
+ ],
+ "selected_first_track_children": [
+  {
+   "tag": "span",
+   "cls": "beat-grid-track-label",
+   "text": "FOH",
+   "box": [
+    36,
+    361,
+    90,
+    15
+   ],
+   "position": "sticky",
+   "zIndex": "3",
+   "left": "0px",
+   "background": "rgb(30, 33, 40)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-track-cues",
+   "text": "—FOH 켬",
+   "box": [
+    -476,
+    355,
+    946,
+    26
+   ],
+   "position": "relative",
+   "zIndex": "auto",
+   "left": "0px",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  }
+ ],
+ "selected_mid_children": [
+  {
+   "tag": "div",
+   "cls": "beat-grid-lanes",
+   "text": "마디012345678910111213141516171819202122232425장면 전환 ",
+   "box": [
+    36,
+    287,
+    1058,
+    171
+   ],
+   "position": "relative",
+   "zIndex": "auto",
+   "left": "0px",
+   "background": "rgba(0, 0, 0, 0)",
+   "gridColumn": "auto"
+  },
+  {
+   "tag": "aside",
+   "cls": "beat-grid-cue-panel",
+   "text": "WASH-ALL · 14마디전환✕장비 소속 미확인 · 그룹 10Cue 2 · 14~25마디",
+   "box": [
+    1104,
+    287,
+    310,
+    171
+   ],
+   "position": "static",
+   "zIndex": "auto",
+   "left": "auto",
+   "background": "rgb(26, 30, 40)",
+   "gridColumn": "auto"
+  }
+ ],
+ "cue_panel_chain": [
+  {
+   "tag": "aside",
+   "cls": "beat-grid-cue-panel",
+   "box": [
+    1104,
+    287,
+    310,
+    171
+   ],
+   "scroll": [
+    308,
+    236,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "auto",
+   "max-height": "none",
+   "flex": "0 0 310px",
+   "flex-basis": "310px",
+   "flex-grow": "0",
+   "flex-shrink": "0",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "auto",
+   "overflow-x": "auto",
+   "overflow-y": "auto",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-mid",
+   "box": [
+    36,
+    287,
+    1378,
+    171
+   ],
+   "scroll": [
+    1378,
+    171,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "section",
+   "cls": "beat-grid",
+   "box": [
+    24,
+    78,
+    1402,
+    898
+   ],
+   "scroll": [
+    1478,
+    898,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "898px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "hidden",
+   "overflow-x": "hidden",
+   "overflow-y": "hidden",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  }
+ ],
+ "transition_panel_chain": [
+  {
+   "tag": "aside",
+   "cls": "beat-grid-cue-panel",
+   "box": [
+    1104,
+    287,
+    310,
+    171
+   ],
+   "scroll": [
+    308,
+    553,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "auto",
+   "max-height": "none",
+   "flex": "0 0 310px",
+   "flex-basis": "310px",
+   "flex-grow": "0",
+   "flex-shrink": "0",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "auto",
+   "overflow-x": "auto",
+   "overflow-y": "auto",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "div",
+   "cls": "beat-grid-mid",
+   "box": [
+    36,
+    287,
+    1378,
+    171
+   ],
+   "scroll": [
+    1378,
+    171,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "171px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "1 1 0%",
+   "flex-basis": "0%",
+   "flex-grow": "1",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "visible",
+   "overflow-x": "visible",
+   "overflow-y": "visible",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  },
+  {
+   "tag": "section",
+   "cls": "beat-grid",
+   "box": [
+    24,
+    78,
+    1402,
+    898
+   ],
+   "scroll": [
+    1478,
+    898,
+    0,
+    0
+   ],
+   "display": "flex",
+   "position": "static",
+   "height": "898px",
+   "min-height": "0px",
+   "max-height": "none",
+   "flex": "0 1 auto",
+   "flex-basis": "auto",
+   "flex-grow": "0",
+   "flex-shrink": "1",
+   "grid-template-rows": "none",
+   "grid-template-columns": "none",
+   "grid-row": "auto",
+   "grid-column": "auto",
+   "overflow": "hidden",
+   "overflow-x": "hidden",
+   "overflow-y": "hidden",
+   "align-self": "auto",
+   "z-index": "auto",
+   "left": "auto",
+   "top": "auto"
+  }
+ ]
+}

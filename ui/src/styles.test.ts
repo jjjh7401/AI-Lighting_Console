@@ -212,3 +212,48 @@ describe("런북 모드 수치 정렬 — tabular-nums (REQ-LDDESIGN-099)", () =
     }
   });
 });
+
+// 카드 t585 — t583 시안 대조 🔴 4건. 시안 정본(REQ-LDBEAT-016(b)) 수치를 지키는지
+// 못박는다. 전에는 타임라인이 남은 공간만 받아(`flex:1`) 세로 1000px 창에서 171px,
+// 900px 창에서 71px 로 줄었고, 다른 어떤 검사에도 안 걸렸다(헤드리스 캡처로만 보였다).
+describe("박자 격자 배치 — 시안 고정 높이·왼쪽 고정 칸 (t585, REQ-LDBEAT-016(b))", () => {
+  const panelsCss = readFileSync(
+    fileURLToPath(new URL("./components/beatGridPanels.css", import.meta.url)),
+    "utf-8",
+  );
+  const panelBlocks = parseBlocks(stripComments(panelsCss));
+  const body = (list: CssBlock[], selector: string) => {
+    const block = list.find((b) => b.selector === selector);
+    expect(block, selector).toBeDefined();
+    return block!.body;
+  };
+
+  it("타임라인 줄(.beat-grid-mid)은 440px 고정이고 남은 공간에 따라 줄지 않는다", () => {
+    const mid = body(blocks, ".beat-grid-mid");
+    expect(mid).toMatch(/height:\s*440px/);
+    expect(mid).toMatch(/flex:\s*0 0 auto/);
+  });
+
+  it("칸 높이 합이 창보다 크면 틀째 세로로 스크롤한다 — 잘라 버리지 않는다", () => {
+    expect(body(blocks, ".beat-grid-fullscreen-frame .beat-grid")).toMatch(/overflow-y:\s*auto/);
+  });
+
+  it("줄 이름 칸은 왼쪽에 붙고 줄 높이 전체를 덮는다", () => {
+    const label = body(blocks, ".beat-grid-track-label");
+    expect(label).toMatch(/position:\s*sticky/);
+    expect(label).toMatch(/align-self:\s*stretch/);
+  });
+
+  it("폴더 머리도 왼쪽에 붙고, 폴더는 가로 스크롤 폭 전체로 늘어난다", () => {
+    expect(body(blocks, ".beat-grid-folder-head")).toMatch(/position:\s*sticky/);
+    expect(body(blocks, ".beat-grid-folder")).toMatch(/width:\s*max-content/);
+  });
+
+  it("무대 경고 목록은 줄 높이 × 정수 줄 = 최대 높이라 반 줄이 잘리지 않는다", () => {
+    const notes = body(panelBlocks, ".beat-grid-stage-notes");
+    const line = Number(notes.match(/line-height:\s*(\d+)px/)?.[1]);
+    const max = Number(notes.match(/max-height:\s*(\d+)px/)?.[1]);
+    expect(line).toBeGreaterThan(0);
+    expect(max % line).toBe(0);
+  });
+});

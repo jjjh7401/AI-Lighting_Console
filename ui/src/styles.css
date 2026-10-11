@@ -4448,10 +4448,18 @@ body {
    `.beat-grid-insp`(무대·한눈에)가 고정 높이로 따로 있으므로, 이 줄이
    화면의 "타임라인 영역"을 책임진다(REQ-LDBEAT-004(b), 한 화면 고정 +
    내부 스크롤). */
+/* 카드 t585 — 시안 정본은 타임라인 높이를 440px 로 고정한다(REQ-LDBEAT-016(b),
+   시안 md 「타임라인 영역 높이 고정(440px) — 폴더를 펼쳐 줄이 늘면 그 안에서
+   위아래 스크롤」). 전에는 남은 세로 공간을 받아(`flex:1`) 세로 1000px 창에서
+   171px 로 줄어 8트랙 중 2줄만 보였다. 높이를 고정하고 줄이지 않는다 — 창이
+   더 작으면 아래 `.beat-grid-fullscreen-frame .beat-grid` 가 틀째 스크롤한다.
+   편집 칸(`.beat-grid-cue-panel`)은 이 줄의 둘째 칸이라 같은 440px 를 받는다
+   (시안 「칸 높이 = 타임라인 높이」). */
 .beat-grid-mid {
   display: flex;
   gap: 10px;
-  flex: 1;
+  flex: 0 0 auto;
+  height: 440px;
   min-height: 0;
 }
 
@@ -4507,7 +4515,20 @@ body {
   color: #ffd84d;
 }
 
+/* 카드 t585 — 폴더를 가로 스크롤 폭 전체로 늘려(`max-content`), 그 안의 폴더
+   머리가 줄 이름 칸처럼 왼쪽에 붙어 있게 한다(시안 `.lhead` 의 `.fh` 는 왼쪽
+   고정 칸 안에 있다). 전에는 막대를 골라 타임라인이 가로로 밀리면 폴더 머리가
+   화면 밖으로 사라졌다. */
+.beat-grid-folder {
+  width: max-content;
+  min-width: 100%;
+}
+
 .beat-grid-folder-head {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: fit-content;
   background: none;
   border: none;
   color: var(--text);
@@ -4528,11 +4549,17 @@ body {
 }
 
 /* 왼쪽 줄 이름 칸 — 가로 스크롤 중에도 왼쪽에 고정(시안 `.lhead`, 카드 t534). */
+/* 카드 t585 — 배경이 글자 높이(15px)만 덮어 줄 높이(26px)의 위아래로 막대가
+   비쳐 보였다. 줄 높이 전체로 늘려(`align-self: stretch`) 고정 칸이 막대를
+   완전히 가린다. */
 .beat-grid-track-label {
   min-width: 90px;
   font-size: 12px;
   color: var(--muted);
   flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   position: sticky;
   left: 0;
   z-index: 3;
@@ -5010,6 +5037,11 @@ body {
   width: min(97vw, 1640px);
   max-width: 1640px;
   margin: 0 auto;
+  /* 카드 t585 — 칸 높이는 시안 고정값(타임라인 440·무대 320)이라 합이 창보다
+     클 수 있다. 그때 아래 칸을 잘라 버리지(`overflow: hidden`) 않고 틀째
+     세로로 스크롤한다 — 시안도 고정 높이 칸을 위에서 아래로 쌓은 문서다. */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* 카드 t551 후속(지시 1항) — 프리셋 서랍(mockup `.drawer`/`.pr`/`.c`/`.u`
