@@ -10,7 +10,7 @@ t590 은 빈 프리셋을 반영 승인 카드 문구로만 알렸다. 이 카�
   - `empty_preset_cells(grid, pool_slots)` — 칸마다 `{group_name, bar, held, fields:[{field, field_label, value, kind, reason}]}`. `kind` = `empty`/`pool_unread`.
   - `_preset_number_fields(cue)` — 칸의 프리셋 번호 필드 열거를 `pending_preset_fields` 에서 뽑아 냈다(승인과 무관하게 보려고).
 - 서버 `server/web/session.py`
-  - `_beat_grid_pool_slots` — 이 세션이 마지막으로 완전 판독한 풀. 채우는 곳은 둘뿐: 반영 때 승인 대기 번호의 풀 판독(t590 `_beat_grid_split_empty_presets`)과 프리셋 서랍 판독(`beat_grid_preset_drawer`). **표식을 위해 콘솔을 따로 읽지 않는다.**
+  - `_beat_grid_pool_slots` — 이 세션이 마지막으로 완전 판독한 풀. 채우는 곳은 셋뿐: 반영 때 승인 대기 번호의 풀 판독(t590 `_beat_grid_split_empty_presets`), 프리셋 서랍 판독(`beat_grid_preset_drawer`), 「＋ 새 프리셋 만들기」의 빈 번호 확인 판독(t589 `beat_grid_new_preset`, main 합친 뒤 추가). **표식을 위해 콘솔을 따로 읽지 않는다.**
   - `_beat_grid_refresh_unsent_cells` — 격자가 나갈 때마다(편집·반영·로드) `empty_preset_cells` 를 다시 계산해 싣는다.
   - `_beat_grid_learn_pools` — 풀을 새로 읽어 표식이 달라졌을 때만 격자를 한 번 더 보낸다(서랍을 열 때마다 격자를 흔들지 않는다). 반영에서는 승인 카드보다 **먼저** 나간다.
 - UI `ui/src/protocol.ts`·`ui/src/components/BeatGrid.tsx`·`ui/src/styles.css`
@@ -54,6 +54,12 @@ song_timeline events: 2
 - UI: `tsc --noEmit` → exit 0 · `vitest run` → `55 files, 1198 passed` · 새 시험 `BeatGridEmptyPreset.test.tsx` 7개.
 - 뮤테이션(UI) — 격자 배지 그리기 끄기 → `1 failed, 6 passed`, 되돌린 뒤 `grep -c MUTATION` → 0.
 - `ruff check`(바뀐 파이썬 4파일) → `All checks passed!` · `ruff format` 적용(내 함수 서명 1곳만 바뀜).
+
+## main 합친 뒤 (t589 「＋ 새 프리셋 만들기」 #633)
+- 착수 뒤 main 이 9커밋 앞서 나갔다(`git rev-list --left-right origin/main...HEAD` → `9 0`). 내 커밋 `b2d6f724` 뒤에 `origin/main`(`b297c570`)을 합쳤다 — 글자 충돌 0.
+- 뜻 겹침 확인: t589 의 「⚠ 콘솔 빈칸 미확인」은 대화창 답장 문구라 격자 배지와 중복되지 않는다. t589 도 풀을 읽어 빈 번호를 고르므로 그 판독을 표식 출처에 더했다 — 배정 직후 그 칸에 `held: true` 표식(반영에서 보류될 칸과 일치). 시험 `TestNewPresetDialogMarksItsNumber` 추가, 그 배선을 끊으면 `1 failed, 16 passed`(되돌린 뒤 `grep -c MUTATION` → 0).
+- 서버 전체 시험은 레인에서 끝까지 돌리지 않았다 — load average 74 에서 10분 넘게 16% 까지만 가서 멈췄다(남은 프로세스 0 확인). 전체는 PR CI 에 맡긴다.
+- 합친 트리: `pytest test_empty_preset_mark_t595.py` → `17 passed` · UI `tsc --noEmit` exit 0 · `vitest run` → `1212 passed` · ruff check/format 깨끗.
 
 ## 안 잰 것 / 남은 위험
 - **편집 칸 안내는 화면 시험이 없다.** 편집 칸은 칸을 클릭해야 열리는데 이 프로젝트엔 jsdom 이 없어 `renderToStaticMarkup` 으로 선택 상태를 못 만든다. 안내 문구 함수(`emptyPresetFieldNote`)만 시험했다. 실제 브라우저 스크린샷도 찍지 않았다.

@@ -9608,6 +9608,9 @@ class ChatSession:
             )
             if result is not None:
                 console_children = result[1]
+                # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다. 바로 아래 편집
+                # 이벤트가 표식을 싣고 나가므로 여기서는 기억만 한다.
+                self._beat_grid_pool_slots[result[0]] = dict(result[1])
 
         policy = load_preset_pool_policy()
         preset_no, reject_reason, assign_warning = first_free_preset_number(
