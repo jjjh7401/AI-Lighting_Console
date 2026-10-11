@@ -501,13 +501,13 @@ REQ-LDBEAT-006(vi)(vii)·(iv-2) 재교정, REQ-LDBEAT-015(g) 구현. 콘솔 접�
 
 REQ-LDBEAT-001/003/011~013 구현. cycle_type=tdd. 콘솔 접촉 0건, 콘솔 쓰기 0건. 전체 verdict는 `.moai/reports/t549/run-verdict.md`.
 
-- **승인=송신 승격** — `.moai/reports/t512/approval_vs_sent.py`(리포트 스크립트)의 로직을 `server/design/approval_vs_sent.py`로 바이트 동일 포팅(REQ-LDBEAT-011). `.moai/reports` import 0건(AST 전수 조사로 확인).
+- **승인=송신 승격** — `.moai/reports/t512/approval_vs_sent.py`(리포트 스크립트)의 로직을 `server/design/approval_vs_sent.py`로 로직 그대로 포팅 — 판정 함수 본문 동일, 결과 객체로 감쌈(REQ-LDBEAT-011). `.moai/reports` import 0건(AST 전수 조사로 확인).
 - **새 에미터 `server/design/beat_grid_emit.py`** — `songcue.py`의 `_ascii_label`/`_format_seconds` 재사용(songcue.py diff 0줄), t520이 증명한 `Store Sequence`/`Assign Sequence At Timecode` 모양으로 역할별 시퀀스 × 타임코드 트랙 다대다 배선. 칸 내용은 `app_movement_commands`/`At Preset` 정적 리콜/`brightness_value_commands`로 구성.
 - **REQ-LDBEAT-001 M1 게이트** — progress.md의 실제 M1 판정(①⑧만 PASS)을 읽어, 효과 프리셋 리콜(④)·`app_movement`(⑤⑦⑨) 의존 칸을 전부 거절(부분 적용 0건). LOVE ATTACK 전수 확인: 효과 8칸(BACK 3·7·18·22, SIDE-ALL 11·14, MOVER-U 14, MOVER-D 14) + app_movement 4칸(MOVER-U 11·18, MOVER-D 7·22) = 12칸 거절, 허용 6칸(FOH 7, WASH-ALL 7·14, MOVER-D 18, BLIND 17·18). ⑩⑪은 `beat_grid_probes.DEFAULT_PROBE_IDS`(1~9)·REQ-001 조문 범위 밖이라 게이트에서 뺐다(이 레인의 판단, run-verdict §판단 콜 참조).
 - **추가 발견** — LOVE ATTACK 8트랙을 타임코드 하나에 몰면 M1 ①이 구조로 확인한 실제 최대(6)를 넘어 **트랙 레벨 전부 거절**(`MEASURED_MAX_TIMECODE_TRACKS=6`, 이 레인이 독자적으로 추가한 보수적 상한). 둘 이상 타임코드로 쪼개거나 ①을 6개 초과로 재확인해야 한다 — 감독/리드 판단 사항.
 - **승인 단위 `server/design/send_approval.py`** — `build_write_approval_batch`(쓰기 N≥2칸도 아티팩트 1개, AC-LDBEAT-015)·`PreviewApprovalSession`(미리보기 세션-1회-반복, AC-LDBEAT-002(b), 쓰기 승인과 완전 독립).
 - **검증**: 신규 `test_approval_vs_sent_t549.py`(10)·`test_send_approval_t549.py`(7)·`test_beat_grid_emit_t549.py`(27) + 기존 관련 181개 = 225 passed, 회귀 0. `ruff check`/`format --check` 통과. `git diff af00ffb2 -- server/director/emit.py ui/src/components/CueSheetTimeline.tsx server/looks/songcue.py` → 0줄(AC-LDBEAT-012).
-- **환경 고지**: 이 레인은 배차서가 지정한 `.claude/worktrees/t549`가 아니라 자동 격리된 `.claude/worktrees/agent-a96dd8e7370c1ff59`(브랜치 `worktree-agent-a96dd8e7370c1ff59`)에서 작업했다 — `WT-ldbeat-console-send` 브랜치는 이미 다른 워크트리에 잠겨 있어 재사용 불가. 두 워크트리 HEAD는 `af00ffb2`로 동일(검증됨). 머지는 이 워크트리/브랜치에서 가져가야 한다.
+- **작업 위치**: 구현 서브에이전트가 자동 격리 워크트리(`agent-a96dd8e7…`)에서 커밋했고, 레인이 그 4커밋을 `WT-ldbeat-console-send`(`.claude/worktrees/t549`)로 fast-forward 했다 — 머지 대상은 이 브랜치다.
 - **안 잰 것**: 이 에미터 출력의 콘솔 송신 0건(전부 순수 함수)·`_timecode_commands` 함수 자체 재사용 불가(SongCueBundle 결합 — 문자열 모양만 재현, grep으로 재확인)·AI 제안→적용→전송 전체 UI/서버 배선(카드 범위 밖, Deliverables 5)·`PreviewApprovalSession`의 서버 세션 배선·승인=송신 비교를 이 에미터 송신 뒤 호출하는 배선·8트랙 전체를 한 타임코드에 담는 결정(쪼갤지 ①을 재확인할지)·`Store Cue` 뒤 `ClearAll` 삽입(이 레인의 설계 판단, t538 전례 인용 — 실기 미확인).
 ## §E.3 Run-phase Audit-Ready Signal
 

@@ -198,8 +198,14 @@ measured_max` 로 확인). 샘플 배치는 타임코드를 둘(30/31)로 나눠
   세션이 격리된 워크트리에서 일했고, 오케스트레이터가 머지 전 재확인할
   것으로 본다.
 
-## 아직 커밋하지 않은 상태
+## 커밋·레인 재검증 (레인, 2026-10-11)
 
-이 레인은 HEAD `af00ffb2`에서 신규 파일만 추가했다(PRESERVE diff 0줄,
-`git status --short`로 확인된 미추적 파일 6개 + 이 리포트 디렉터리). 커밋은
-이 verdict 작성 직후 진행한다 — 실제 SHA는 작업 응답 본문에 기록한다.
+구현 커밋 `6b771a6a`·`7475e017`·`b95a691a`·`b764042f`(`af00ffb2` 위)를 레인이
+`WT-ldbeat-console-send`로 fast-forward 했다(위 「환경 불일치 고지」는 그
+이전 상태 — 머지 대상은 이제 `WT-ldbeat-console-send`다). 레인이 그 브랜치에서
+다시 잰 것:
+
+- `uv run --quiet pytest server/tests/test_approval_vs_sent_t549.py server/tests/test_send_approval_t549.py server/tests/test_beat_grid_emit_t549.py server/tests/test_app_movement_t548.py server/tests/test_beat_grid_t548.py server/tests/test_beat_grid_t537.py server/tests/test_beat_grid_t532.py server/tests/test_beat_grid_probes_t537.py server/tests/test_position_fx.py -q` → `219 passed in 1.79s`
+- `uv run --quiet ruff check server/design server/tests/test_*_t549.py` → `All checks passed!`, `ruff format --check`(t549 파일 6개) → `6 files already formatted`
+- `git diff af00ffb2 -- server/director/emit.py ui/src/components/CueSheetTimeline.tsx server/looks/songcue.py | wc -l` → `0`
+- 「바이트 동일 포팅」 주장 정정: 원본과 `diff` 해 보니 판정 함수 본문(canonical_approval·sent_rows·sha·compare)은 같고, CLI 대신 `verify_approval_vs_sent` + `ApprovalVsSentResult`로 감쌌다 — **로직 동일**이지 파일 바이트 동일은 아니다. 모듈 독스트링·progress.md 문구를 그렇게 고쳤다.

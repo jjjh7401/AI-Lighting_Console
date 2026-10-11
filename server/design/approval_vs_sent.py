@@ -4,7 +4,8 @@ REQ-LDBEAT-011).
 이 모듈은 `.moai/reports/t512/approval_vs_sent.py`(AC-LDRHYTHM-012가 쓰는
 리포트 스크립트, t516/t519/t520이 반복 검증한 로직 — 그러나 그 파일 자체는
 `.moai/reports/` 아래의 gitignore 대상 로컬 아티팩트라 앱 코드가 아니다)의
-로직을 **바이트 동일**하게 옮긴 것이다. 새 비교 로직을 발명하지 않는다
+로직을 그대로 옮긴 것이다(판정 함수 본문 동일, 결과는 `ApprovalVsSentResult`로 감쌈).
+새 비교 로직을 발명하지 않는다
 (REQ-LDBEAT-011(b)) — 콘솔에 아무것도 쓰지 않는다(파일 두 개만 읽는다).
 
 무엇을 재나 (AC-LDRHYTHM-012 / REQ-LDBEAT-011(a) Then 세 조건):
