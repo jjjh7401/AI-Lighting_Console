@@ -128,6 +128,14 @@ class BulkPropertyQueryPort(Protocol):
     need one without the other.
     """
 
-    def query_properties(self, path: str, property_names: Sequence[str]) -> dict:
-        """Read named properties of one object; raises on failure/timeout."""
+    def query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
+        """Read named properties of one object; raises on failure/timeout.
+
+        ``offset`` (responder 1.6.6, 카드 t565) windows ONE table-valued
+        property by whole entries (``console/lua/PROTOCOL.md`` §4.8). ``None``
+        is the historical request; a port that cannot page must not silently
+        drop it (that re-reads window 1 forever — the t104 lesson).
+        """
         ...

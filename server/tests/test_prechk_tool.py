@@ -1253,6 +1253,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 무관한 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "beat_grid_drawer_request",
     "beat_grid_edit",
+    # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.
+    # 콘솔 읽기만(좌표 + 그룹 소속). 같은 사유의 정당한 확장이다.
+    "beat_grid_stage_request",
     "beat_grid_suggest",
     "beat_grid_suggestion_apply",
     "beat_grid_suggestion_reject",
@@ -1317,6 +1320,8 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     # 채널의 응답(서랍 판독 결과·보류 중인 AI 제안·제안 소비 통지). 같은 사유의
     # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "beat_grid_drawer",
+    # 카드 t565 — 위 무대 판독 요청의 응답(좌표·그룹 소속·못 읽은 이유).
+    "beat_grid_stage",
     "beat_grid_suggestion",
     "beat_grid_suggestion_consumed",
     "busy",

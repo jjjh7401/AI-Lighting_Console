@@ -35,12 +35,15 @@ export function BeatGridStage({
   viewBar,
   selectedTrackName,
   onSelectTrack,
+  notes,
 }: {
   fixtures: readonly BeatGridFixturePoint[];
   tracks: readonly BeatGridTrack[];
   viewBar: number;
   selectedTrackName: string | null;
   onSelectTrack: (trackIndex: number) => void;
+  /** 카드 t565 — 서버 무대 판독이 못 읽은 이유(그대로 보인다). */
+  notes?: readonly string[];
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const [viewW, setViewW] = useState(STAGE_MIN_W);
@@ -58,7 +61,10 @@ export function BeatGridStage({
   if (!bounds) {
     return (
       <div className="beat-grid-stage-box" ref={boxRef}>
-        <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨.</p>
+        <p className="beat-grid-empty">
+          {notes && notes.length > 0 ? "무대 좌표를 못 읽음" : "무대 좌표 미제공 — 박자 격자를 열면 콘솔 패치에서 읽어 옵니다."}
+        </p>
+        <StageNotes notes={notes} />
       </div>
     );
   }
@@ -127,6 +133,19 @@ export function BeatGridStage({
           </rect>
         ))}
       </svg>
+      <StageNotes notes={notes} />
     </div>
+  );
+}
+
+/** 판독이 못 읽은 것 — 지어내지 않고 이유를 그대로 보인다. */
+function StageNotes({ notes }: { notes?: readonly string[] }) {
+  if (!notes || notes.length === 0) return null;
+  return (
+    <ul className="beat-grid-stage-notes" aria-label="무대 판독 안내">
+      {notes.map((note) => (
+        <li key={note}>⚠ {note}</li>
+      ))}
+    </ul>
   );
 }
