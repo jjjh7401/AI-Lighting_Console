@@ -598,9 +598,15 @@ export interface BeatGridDrawerEntry {
    * 설명 텍스트를 읽는 다른 경로도 없다(새 프로브 없이 조사 완료) —
    * 그래서 서버는 이 필드를 명시적 `null`로 채운다(생략이 아니다).
    * 선택 필드로 두고, 비어 있으면(`undefined`/`null`) 칩 툴팁이 사용 큐
-   * 수만 보인다(지어내지 않는다). */
+   * 수만 보인다(지어내지 않는다). 카드 t569 — 앱이 만든 프리셋이면 앱이
+   * 저장한 설명이 실린다(서버 `grid.preset_descriptions`). */
   description?: string | null;
+  /** 카드 t569 — 설명의 출처. "app" = 앱이 저장한 설명, "show" = 콘솔에서
+   * 읽은 쇼 프리셋(설명 없음, 툴팁은 출처만 붙인다). */
+  description_source?: PresetDescriptionSource | null;
 }
+
+export type PresetDescriptionSource = "app" | "show";
 
 /** 카드 t551 후속(지시 1항) — 서랍 섹션 하나(디머 1·위치 2·색 4 중 하나).
  * ``unread``면 그 풀을 콘솔에서 못 읽었다(항목 0개, 지어내지 않음).

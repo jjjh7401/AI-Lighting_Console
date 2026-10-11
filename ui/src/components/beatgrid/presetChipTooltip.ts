@@ -2,28 +2,30 @@
 // 이 곡에서 쓰는 큐 수를 함께" 보여준다. SPEC-LDBEAT-001 M9 step 6, 카드
 // t560.
 //
-// §Gaps(카드 t560 보고, 카드 t568 재조사로 재확인) — 콘솔이 실제로
-// 돌려주는 프리셋 "설명 텍스트"(시안 원문 예시 「펄스 30↔60 · 4박」 꼴)는
-// 읽는 경로가 이 저장소에 없다 — `entry.name`은 콘솔이 읽은 짧은
-// **이름**일 뿐 효과 설명이 아니고(`server/design/beat_grid_presets.py`
-// `build_preset_drawer`가 콘솔 슬롯 이름을 그대로 옮긴다, 확인됨),
-// `paged_pool_children`(t480)이 돌려받는 자식 필드는 슬롯 번호·이름뿐이다
-// (t568 조사, 새 콘솔 프로브 없이는 못 채움). 그래서 서버는 이 필드를
-// 명시적 `null`로 보내고(카드 t568), 이 함수는 설명 텍스트가 없을 때
-// (`null`/`undefined`/빈 문자열) 사용 큐 수만 보여준다 — 그 예시 문자열을
-// 지어내 채우지 않는다(REQ-LDBEAT-015(f)와 같은 원칙). 설명 데이터가
-// 실제로 생기면(서버가 새 프로브로 그 값을 읽게 되면) 호출부가 그 값을
-// 그대로 넘기면 된다 — 이 함수 자체는 바꿀 필요 없다.
-import type { BeatGridDrawerEntry, BeatGridDrawerSection } from "../../protocol";
+// 카드 t569(리드 결정 B) — 설명의 출처는 서버가 `description_source`로
+// 알려 준다. "app"이면 앱이 그 프리셋을 만들 때 저장한 설명, "show"면
+// 콘솔에서 읽은 쇼 프리셋이다. 칩 위 글자가 이미 콘솔 이름이라 "show"는
+// 이름을 툴팁에 다시 쓰지 않고 출처만 붙인다. 출처도 설명도 없으면 사용
+// 큐 수만 보여준다 — 지어내지 않는다(REQ-LDBEAT-015(f)와 같은 원칙).
+// 콘솔 NOTE 는 읽지 않는다(t569 실측: 칩 서랍 34칸 모두 빈 값).
+import type {
+  BeatGridDrawerEntry,
+  BeatGridDrawerSection,
+  PresetDescriptionSource,
+} from "../../protocol";
+
+const SHOW_PRESET_SOURCE_LABEL = "쇼에 있던 프리셋";
 
 export function formatPresetChipTooltip(
   description: string | null | undefined,
   usageCount: number,
+  source?: PresetDescriptionSource | null,
 ): string {
   const usagePart = `이 곡에서 큐 ${usageCount}곳 사용`;
   const trimmed = description?.trim();
-  if (!trimmed) return usagePart;
-  return `${trimmed} · ${usagePart}`;
+  if (trimmed) return `${trimmed} · ${usagePart}`;
+  if (source === "show") return `${SHOW_PRESET_SOURCE_LABEL} · ${usagePart}`;
+  return usagePart;
 }
 
 // 카드 t560 후속(REQ-LDBEAT-023(c), plan.md M9 step 6) — 「이 마디 한눈에」
