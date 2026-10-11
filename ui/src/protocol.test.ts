@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBeatGridApply,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
+  buildBeatGridPreview,
+  buildBeatGridPreviewOff,
   buildBeatGridSuggest,
   buildChat,
   buildVectorworksExportUpload,
@@ -155,6 +158,61 @@ describe("builders", () => {
       bar: 7,
       target: "BACK",
     });
+  });
+
+  it("builds the top-bar console-send frames — 카드 t563(SPEC-LDBEAT-001 M4)", () => {
+    expect(JSON.parse(buildBeatGridApply())).toEqual({ v: 1, type: "beat_grid_apply" });
+    expect(JSON.parse(buildBeatGridPreview(11))).toEqual({
+      v: 1,
+      type: "beat_grid_preview",
+      bar: 11,
+    });
+    expect(JSON.parse(buildBeatGridPreviewOff())).toEqual({
+      v: 1,
+      type: "beat_grid_preview_off",
+    });
+  });
+});
+
+describe("reduceServerEvent — beat_grid_send_status (카드 t563)", () => {
+  it("replaces the previous status wholesale (no merge)", () => {
+    const first = reduceServerEvent(
+      initialState,
+      event({
+        type: "beat_grid_send_status",
+        pending_apply_count: 2,
+        last_action: "edit",
+        ok: true,
+        reason: null,
+        blocked_cells: [],
+        approval_vs_sent: null,
+      }),
+    );
+    expect(first.beatGridSendStatus).toEqual({
+      pending_apply_count: 2,
+      last_action: "edit",
+      ok: true,
+      reason: null,
+      blocked_cells: [],
+      approval_vs_sent: null,
+    });
+
+    // 코디네이터 계약(t568과 합의) — 스냅샷이 없으면 대기 수는 null이다
+    // (빈 리스트와 다른 사실). 이전 상태의 숫자가 남아서는 안 된다.
+    const second = reduceServerEvent(
+      first,
+      event({
+        type: "beat_grid_send_status",
+        pending_apply_count: null,
+        last_action: "apply",
+        ok: false,
+        reason: "반영할 박자 격자가 아직 없습니다.",
+        blocked_cells: [],
+        approval_vs_sent: null,
+      }),
+    );
+    expect(second.beatGridSendStatus?.pending_apply_count).toBeNull();
+    expect(second.beatGridSendStatus?.last_action).toBe("apply");
   });
 });
 

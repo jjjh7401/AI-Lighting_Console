@@ -602,6 +602,34 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     await asyncio.to_thread(session.beat_grid_preset_drawer)
+                elif message_type in (
+                    "beat_grid_apply",
+                    "beat_grid_preview",
+                    "beat_grid_preview_off",
+                ):
+                    # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
+                    # `beat_grid_edit`과 달리 이 셋은 `run_commands` ->
+                    # 안전 게이트를 거쳐 콘솔에 **쓴다** — 승인 대기가
+                    # 동기적으로 블로킹하는 동안에도 이 연결이 `approval_
+                    # decision` 프레임을 계속 받을 수 있어야 하므로 "chat"
+                    # 과 같은 **백그라운드 task** 패턴을 쓴다(인라인
+                    # await 는 승인 왕복을 교착시킨다 — 위 beat_grid_edit
+                    # 류의 콘솔 무접촉 분기와는 다른 이유).
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    if message_type == "beat_grid_apply":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_apply)
+                        )
+                    elif message_type == "beat_grid_preview":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_preview, message["bar"])
+                        )
+                    else:
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_preview_off)
+                        )
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))

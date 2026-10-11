@@ -76,6 +76,16 @@ class AuditLog:
         self._directory.mkdir(parents=True, exist_ok=True)
         self._compact_legacy(self._clock())
 
+    @property
+    def directory(self) -> Path:
+        """카드 t563(REQ-LDBEAT-011(c)) — 승인=송신 비교 로직
+        (``server.design.approval_vs_sent.verify_approval_vs_sent``)이 「보낸
+        기록」 소스로 받는, 이 로그가 실제로 쓰는 디렉터리. 전까지는 비공개
+        속성(``_directory``)뿐이라 앱 경로(``server/web/session.py``)가 이
+        로그의 감사 파일을 읽을 방법이 없었다 — 읽기 전용 노출일 뿐 동작은
+        바꾸지 않는다."""
+        return self._directory
+
     @staticmethod
     def _is_probe(event: dict) -> bool:
         """Read-only probe traffic — NEVER a deploy sub-send (``deploy_of``),
