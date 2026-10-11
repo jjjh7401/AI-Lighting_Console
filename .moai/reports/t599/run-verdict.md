@@ -58,3 +58,7 @@
 - **실기 콘솔**: 0회. 실제 쇼 파일의 기본 위치 풀 모양(가장 큰 번호 다음 칸이 정말 비어 있어도 되는 자리인지)은 모른다. `preset_pools.yaml`도 아직 `confirmed: false`다.
 - **좌표 범위**: 무대 밖 좌표나 장비 바로 위 좌표도 받는다. 조준할 수 없는지는 반영 때 t592가 「목표를 조준할 수 없는 장비가 있음」으로 가른다. 입력 단계에서는 막지 않는다.
 - **창 안 클릭 흐름**: jsdom이 없어서 순수 부품(`renderToStaticMarkup`) 시험과 위 캡처 한 번으로만 봤다.
+
+## main(t600) 합친 뒤
+
+- `1c8e4647`(t600 승인된 칸의 빈 번호 보류·생성)을 합쳤다(충돌 0). 합친 트리: `uv run pytest -q -p no:cacheprovider server` → `15471 passed, 33 skipped` · ruff 깨끗 · `npx vitest run` → `1223 passed` · build OK.
