@@ -299,6 +299,16 @@ class TestCellScope:
         assert plan.creations == {}
         assert plan.held[0]["hold_reason"] == POOL_UNREAD_HOLD
 
+    def test_plan_cells_own_entrance_refuses_a_non_empty_hold(self) -> None:
+        # 호출자가 만들기 줄을 넘겨도, 「풀은 읽혔고 slot 이 없다」가 아닌 보류는 후보가
+        # 아니다 — 덮어쓰기 0 의 근거가 이 함수 입구 하나에 있다(REQ-LDBEAT-015(i-7)).
+        lines = ("Store Preset 22.1 'LA Wave' /Universal",)
+        outcomes = {("effect_preset_no", "22.1"): (lines, None)}
+        for reason in (POOL_UNREAD_HOLD, CELL_HOLD):
+            plan = plan_cells([_held("22.1", reason=reason)], outcomes)
+            assert plan.creations == {}, reason
+            assert plan.released == [], reason
+
     def test_cell_with_another_empty_kind_stays_held(self) -> None:
         cue = {**_CUE, "color_preset_no": "4.99"}
         held = [_held("22.1"), _held("4.99", field="color_preset_no")]
