@@ -1,0 +1,6 @@
+mp3 bytes 13212 head fffb90c4
+bare: OK (132300, 1)
+id3 no gap: OK (132300, 1)
+id3 + 626 zero gap: ERR Error opening <_io.BytesIO object at 0x10909acf0>: Format not recognised.
+id3 + 1 zero gap: ERR Error opening <_io.BytesIO object at 0x10909acf0>: Format not recognised.
+no id3, 626 zero lead: ERR Error opening <_io.BytesIO object at 0x10909acf0>: Format not recognised.
