@@ -78,7 +78,9 @@ def main() -> None:
             steps["reject_note_count"] = page.locator(".beat-grid-edit-reject").count()
         browser.close()
     (out / "steps.json").write_text(json.dumps(steps, ensure_ascii=False, indent=1))
-    print(json.dumps({k: v for k, v in steps.items() if k != "panel_after_apply"}, ensure_ascii=False))
+    print(
+        json.dumps({k: v for k, v in steps.items() if k != "panel_after_apply"}, ensure_ascii=False)
+    )
 
 
 if __name__ == "__main__":
