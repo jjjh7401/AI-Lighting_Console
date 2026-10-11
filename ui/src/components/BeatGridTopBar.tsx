@@ -9,7 +9,7 @@
 // 없으면 버튼이 비활성으로 남고, 그 사실을 title 로 말한다(지어낸 동작 0).
 import { useEffect } from "react";
 
-import { isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
+import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
 
 export interface TopBarAction {
   id: "preview" | "apply" | "drawer";
@@ -62,6 +62,8 @@ export interface BeatGridTopBarPlaybackProps {
   positionSeconds: number;
   onTogglePlay: () => void;
   onRewindToStart: () => void;
+  /** ⏪10초/10초⏩(REQ-LDBEAT-024(d)) — 초 단위 이동(음수 = 뒤로). */
+  onSeek: (deltaSeconds: number) => void;
   /** `audioAutoConnect.audioButtonLabel`의 결과 그대로("✓ <파일명>" 등). */
   audioButtonLabel: string;
   onSelectAudioFile: (file: File | null) => void;
@@ -180,9 +182,15 @@ export function BeatGridTopBar({
           (카드 t559)과 바이트 동일하다. */}
       {playback && (
         <>
+          {/* 시안 순서 그대로(proposal.html `.play`): 플레이 · ⏮ · ⏪ 10초 ·
+              ▶ 재생 · 10초 ⏩ · 시계 · ♪ 음원 · 콘솔 같이. */}
           <span className="beat-grid-play-cluster">
+            <span className="beat-grid-play-label">플레이</span>
             <button type="button" className="tbtn" title="처음으로" onClick={playback.onRewindToStart}>
               ⏮
+            </button>
+            <button type="button" className="tbtn" title="10초 뒤로" onClick={() => playback.onSeek(-10)}>
+              ⏪ 10초
             </button>
             <button
               type="button"
@@ -192,7 +200,10 @@ export function BeatGridTopBar({
             >
               {playback.playing ? "❚❚ 일시정지" : "▶ 재생"}
             </button>
-            <span className="beat-grid-clock">{playback.positionSeconds.toFixed(1)}초</span>
+            <button type="button" className="tbtn" title="10초 앞으로" onClick={() => playback.onSeek(10)}>
+              10초 ⏩
+            </button>
+            <span className="beat-grid-clock">{formatPlaybackClock(playback.positionSeconds)}</span>
             <label className="tbtn beat-grid-audio-label" title="음원 파일을 불러오면 음악에 맞춰 재생">
               ♪ {playback.audioButtonLabel}
               <input
@@ -203,7 +214,7 @@ export function BeatGridTopBar({
               />
             </label>
             <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
-              콘솔 같이
+              콘솔 같이 끔
             </button>
             {playback.audioFailureReason && (
               <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>

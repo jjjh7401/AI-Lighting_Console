@@ -105,6 +105,7 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
     positionSeconds: 12.3,
     onTogglePlay: noop,
     onRewindToStart: noop,
+    onSeek: noop,
     audioButtonLabel: "✓ LOVE ATTACK.mp3",
     onSelectAudioFile: noop,
     consoleFollowDisabledReason: "타임코드 재생 송신 경로 없음",
@@ -116,13 +117,12 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
     expect(html).not.toContain("⏮");
   });
 
-  it("⏮·▶/❚❚·시계·♪·콘솔 같이가 모두 렌더된다", () => {
+  it("시안 순서대로 플레이·⏮·⏪ 10초·▶ 재생·10초 ⏩·시계·♪·콘솔 같이 끔이 렌더된다", () => {
     const html = renderTopBar({ playback });
-    expect(html).toContain("⏮");
-    expect(html).toContain("▶ 재생");
-    expect(html).toContain("12.3초");
-    expect(html).toContain("✓ LOVE ATTACK.mp3");
-    expect(html).toContain("콘솔 같이");
+    const order = ["플레이", "⏮", "⏪ 10초", "▶ 재생", "10초 ⏩", "0:12.3", "✓ LOVE ATTACK.mp3", "콘솔 같이 끔"];
+    const positions = order.map((label) => html.indexOf(label));
+    expect(positions.every((p) => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
   it("재생 중이면 ▶ 대신 ❚❚ 일시정지를 보인다", () => {

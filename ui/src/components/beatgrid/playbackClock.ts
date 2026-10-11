@@ -25,6 +25,15 @@ export function clampPlaybackSeconds(current: number, delta: number, maxSeconds:
   return Math.max(0, Math.min(maxSeconds, current + delta));
 }
 
+/** 플레이 묶음 시계 — 시안 모양 「분:초.소수1자리」(mockup `fmtT`,
+ * 초기값 「0:00.0」). 반올림으로 60.0초가 되는 경우는 다음 분으로 넘긴다. */
+export function formatPlaybackClock(seconds: number): string {
+  const tenths = Math.round(Math.max(0, seconds) * 10);
+  const minutes = Math.floor(tenths / 600);
+  const rest = (tenths - minutes * 600) / 10;
+  return `${minutes}:${rest.toFixed(1).padStart(4, "0")}`;
+}
+
 /** 재생이 곡 끝에 도달했는가 — `maxSeconds`가 없으면(타임라인에 BPM/박자
  * 미확정) 끝에 도달할 수 없다(지어내지 않음, `null`을 false로 떨어뜨림). */
 export function hasReachedPlaybackEnd(seconds: number, maxSeconds: number | null): boolean {

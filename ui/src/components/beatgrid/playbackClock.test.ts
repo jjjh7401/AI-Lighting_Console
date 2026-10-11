@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  formatPlaybackClock,
   autoScrollTargetForPlayhead,
   clampPlaybackSeconds,
   elapsedPlaybackSeconds,
@@ -112,5 +113,20 @@ describe("runPlaybackFrameUpdate — 화면 오류가 나도 재생이 멈추지
       throw "문자열 오류";
     }, onError);
     expect(onError).toHaveBeenCalledWith("문자열 오류");
+  });
+});
+
+// 카드 t570 — 시안 시계 모양 「분:초.소수1자리」(mockup `fmtT`, 초기값 「0:00.0」).
+describe("formatPlaybackClock", () => {
+  it("0초는 0:00.0", () => {
+    expect(formatPlaybackClock(0)).toBe("0:00.0");
+  });
+
+  it("1분 미만은 초를 두 자리로 채운다", () => {
+    expect(formatPlaybackClock(5.25)).toBe("0:05.3");
+  });
+
+  it("1분을 넘으면 분이 올라간다", () => {
+    expect(formatPlaybackClock(125.04)).toBe("2:05.0");
   });
 });

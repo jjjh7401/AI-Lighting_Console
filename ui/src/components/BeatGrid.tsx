@@ -1494,6 +1494,7 @@ export function BeatGrid({
           positionSeconds: playbackSeconds,
           onTogglePlay: togglePlay,
           onRewindToStart: rewindToStart,
+          onSeek: seek,
           audioButtonLabel: audioButtonLabel(audioStatus, audioName),
           onSelectAudioFile: onSelectAudio,
           audioFailureReason,
@@ -1529,12 +1530,7 @@ export function BeatGrid({
           [모두 접기/펴기]
         </button>
         <span className="beat-grid-transport">
-          <button type="button" onClick={() => seek(-10)}>
-            ⏪ 10초
-          </button>
-          <button type="button" onClick={() => seek(10)}>
-            10초 ⏩
-          </button>
+          {/* 카드 t570 — ⏪ 10초 / 10초 ⏩ 는 시안대로 상단 바 플레이 묶음 안으로 옮겼다. */}
           {/* 카드 t570(REQ-LDBEAT-024(a)) — 시계·♪ 음원·콘솔 같이는
               상단 바 가운데 플레이 묶음으로 옮겼다(위 `<BeatGridTopBar
               playback={...}>`). 이 엘리먼트는 그대로 여기 남는다 — 실제
