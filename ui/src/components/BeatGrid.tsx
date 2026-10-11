@@ -783,6 +783,14 @@ export function emptyPresetCellIndex(
 /** 격자 칸 배지 — `⚠ 빈 프리셋(4.99)`. 풀을 못 읽은 번호는 `?`를 붙여 「비었는지
  * 모름」을 「빈 것 확인」과 가른다. 반영 때 만들어질 칸(`state: "create"`)은
  * `⚠ 새로 만들 프리셋(2.71)`. */
+/** 카드 t598 — 「⇪ 콘솔에 반영」이 실패했을 때 그 사유(서버 `beat_grid_send_status`).
+ * 반영이 아니거나 성공이면 `null`. 승인 창 사이 콘솔에서 번호가 채워져 송신을 통째로
+ * 멈춘 경우처럼, 감독이 「다시 반영」해야 하는지를 격자 화면에서 바로 본다. */
+export function applyFailureNote(status: BeatGridSendStatus | null | undefined): string | null {
+  if (!status || status.last_action !== "apply" || status.ok || !status.reason) return null;
+  return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
+}
+
 export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
   const values = cell.fields.map((f) => (f.kind === "pool_unread" ? `${f.value}?` : f.value));
   const title = cell.state === "create" ? "새로 만들 프리셋" : "빈 프리셋";
@@ -2043,6 +2051,12 @@ export function BeatGrid({
           consoleFollowError,
         }}
       />
+      {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
+      {applyFailureNote(sendStatus) && (
+        <p className="beat-grid-apply-fail" role="status">
+          {applyFailureNote(sendStatus)}
+        </p>
+      )}
 
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
