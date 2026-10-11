@@ -196,6 +196,12 @@ class CueEmitResult:
     bar: int
     commands: tuple[str, ...]
     blocked_reason: str | None
+    #: 카드 t563(REQ-LDBEAT-001/017) — 이 칸이 실제로 저장된 `Store Cue
+    #: <cue_number> Sequence <sequence_number>` 번호. 거절되거나 낼 것이
+    #: 없는 칸(``commands`` 빈 튜플)은 번호를 쓰지 않았으므로 `None`이다
+    #: — 미리보기(`beat_grid_preview`)가 "이 마디를 담은 큐가 몇 번인지"를
+    #: 커맨드 문자열을 되읽지 않고 바로 알 수 있게 한다(값을 지어내지 않음).
+    cue_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -362,7 +368,9 @@ def _emit_cue(
         f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigTime' "
         f"{_format_seconds(trigger_ms)}"
     )
-    return CueEmitResult(bar=bar, commands=tuple(commands), blocked_reason=None)
+    return CueEmitResult(
+        bar=bar, commands=tuple(commands), blocked_reason=None, cue_number=cue_number
+    )
 
 
 def _blocked_track(

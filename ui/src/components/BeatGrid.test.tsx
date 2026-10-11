@@ -108,6 +108,7 @@ const LOVE_ATTACK_GRID: BeatGridView = {
   note: null,
   scene_memos: [],
   probe_results: {},
+  unsent_cells: null,
   tracks: [
     track("BACK", "back", [cue(0, "앞박 1회"), cue(18, "킥 1·2·4박 100%")]),
     track("SIDE-ALL", "side", [cue(0, "—"), cue(11, "SIDE-L/R 2·4박 번갈이")]),

@@ -40,6 +40,7 @@ from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_ba
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
+from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.beat_grid import attach_beat_grid_default, attach_beat_grid_runtime_extras
 from server.design.beat_grid_edit import (
     BeatGridEditError,
@@ -47,12 +48,21 @@ from server.design.beat_grid_edit import (
     apply_beat_grid_edit_range,
     load_preset_pool_policy,
 )
+from server.design.beat_grid_emit import emit_beat_grid_write_bundle
 from server.design.beat_grid_presets import (
     build_preset_drawer,
     pool_name_to_effect_kind,
     read_named_pool,
     resolve_effect_preset_name,
     resolve_preset_name,
+)
+from server.design.beat_grid_send import (
+    BeatGridCellKey,
+    beat_grid_cell_snapshot,
+    build_song_timing_from_bar_map,
+    pick_sequence_numbers,
+    resolve_dimmer_attributes,
+    unsent_beat_grid_cells,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
 from server.design.beat_grid_stage import read_beat_grid_stage
@@ -153,6 +163,7 @@ from server.design.section_palette import _arc_palette as _arc_palette
 from server.design.section_palette import _distinct_from_primary as _distinct_from_primary
 from server.design.section_palette import _hue_key as _hue_key
 from server.design.section_palette import _per_chorus_palette as _per_chorus_palette
+from server.design.send_approval import PreviewApprovalSession, build_write_approval_batch
 from server.design.song_cue_composer import (
     SongCueCompositionResult,
     compose_song_cue_bundle,
@@ -203,11 +214,14 @@ from server.orchestrator.runner import InstructionResult, Orchestrator
 from server.orchestrator.spatial_memory import SpatialMemory
 from server.orchestrator.tools import (
     DEFAULT_RIG_CONTEXT_PATHS,
+    RIG_DRILLDOWN_QUERY_CAP,
     TIMECODE_POOL_PATH,
     CommandOutcome,
     DeployPipelinePort,
     ExecutionContext,
     build_toolset,
+    collect_rig_sections,
+    timecode_slot_verdict,
 )
 from server.orchestrator.write_reason import showfile_write_risk
 from server.prechk.query import read_properties
@@ -269,6 +283,7 @@ from server.web.messages import (
     answer_delta_event,
     approval_request_event,
     beat_grid_drawer_event,
+    beat_grid_send_status_event,
     beat_grid_stage_event,
     beat_grid_suggestion_consumed_event,
     beat_grid_suggestion_event,
@@ -2896,6 +2911,21 @@ def _base64_decoded_size(content_base64: str) -> int:
     return len(content_base64) * 3 // 4 - padding
 
 
+@dataclass(frozen=True)
+class _BeatGridAppliedState:
+    """카드 t563 — 가장 최근 성공한 「콘솔에 반영」이 실제로 쓴 번호들.
+
+    ``beat_grid_preview``/``beat_grid_preview_off``가 Goto Cue/Off Sequence
+    를 낼 때 참조하는 유일한 출처다 — 두 메서드 모두 번호를 지어내지
+    않는다. ``cue_numbers``는 트랙 이름 -> {마디: 큐 번호}이고, 미리보기는
+    요청 마디 이하에서 **가장 큰** 마디의 큐를 그 트랙이 담당하는 큐로
+    본다(그 마디가 새 큐를 열지 않았으면 이전 큐가 계속 켜져 있다는
+    뜻)."""
+
+    sequence_numbers: Mapping[str, int]
+    cue_numbers: Mapping[str, Mapping[int, int]]
+
+
 @dataclass
 class _PendingRepeatingColumns:
     """The still-incomplete MMX/MMX/350 layout for this chat connection."""
@@ -3879,6 +3909,25 @@ class ChatSession:
             if beat_grid_suggestion_source is not None
             else NullSuggestionSource()
         )
+        # 카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋의 세션
+        # 상태. ``_beat_grid_applied``는 가장 최근 반영이 실제로 쓴
+        # 시퀀스·큐 번호(미리보기/끄기가 그 번호로 Goto/Off를 낸다 —
+        # 콘솔에 아직 반영된 적이 없으면 ``None``이라 미리볼 대상이
+        # 없다), ``_preview_approval``은 미리보기(Goto/Off)의
+        # 세션-시작-1회 승인 상태다(REQ-LDBEAT-012(b)) — 쓰기 승인과는
+        # 완전히 독립이다.
+        #
+        # 코디네이터 계약(2026-10-11, t568과 합의) — 대기 수(배지)는 더는
+        # "성공한 편집 횟수" 카운터가 아니라 **곡별 칸 스냅샷과의 차이
+        # (unsent_cells)**다. ``_beat_grid_snapshots``는 (song_title,
+        # sequence_number) -> ``beat_grid_cell_snapshot`` 결과 하나로,
+        # "콘솔에 반영"이 **승인=송신까지 확인된 성공**일 때만 갈아
+        # 끼운다(거절·막힘은 스냅샷을 건드리지 않는다) — 곡을 가르는
+        # 열쇠는 ``_remember_draft_baseline``이 이미 쓰는 것과 같다(새
+        # id 체계를 짓지 않는다).
+        self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
+        self._beat_grid_applied: _BeatGridAppliedState | None = None
+        self._preview_approval = PreviewApprovalSession()
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
         # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
         # 비교하므로, 되돌리기로 원래 값이 된 큐는 반영 대상에서 빠진다.
@@ -7990,7 +8039,7 @@ class ChatSession:
         # WebSocket) is replayed the current timeline instead of a blank pane.
         if self._timeline_store is not None:
             self._timeline_store.latest = payload
-        self._send(song_timeline_event(timeline=payload))
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(payload)))
 
     def _song_merge_requery_answer(
         self, state: _SongDesignState, section_index: int, answer: str
@@ -8484,7 +8533,7 @@ class ChatSession:
         store = self._timeline_store
         if store is not None:
             store.latest = updated
-        self._send(song_timeline_event(timeline=updated))
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
         prefix = "지금 나가는 큐" if live else "감독 타임라인 큐"
         return InstructionResult(
             status="ok",
@@ -8557,7 +8606,7 @@ class ChatSession:
         self._draft_history.record(timeline)
         updated = self._draft_badge(updated, depth=self._draft_history.depth, report=report)
         store.latest = updated
-        self._send(song_timeline_event(timeline=updated))
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
         return self._pointing_refusal(
             f"큐 {cue} 초안 수정 (콘솔 무접촉): {' · '.join(report)}. "
             "이 수정은 아직 초안입니다 — 「저장」을 눌러야 라이브러리에 남고, "
@@ -9012,7 +9061,7 @@ class ChatSession:
             )
         restored = self._draft_badge(restored, depth=self._draft_history.depth, report=())
         store.latest = restored
-        self._send(song_timeline_event(timeline=restored))
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(restored)))
         event = chat_response_event(
             status="ok",
             summary=f"초안 {label}",
@@ -9070,7 +9119,7 @@ class ChatSession:
             updated, depth=self._draft_history.depth, report=("마디 지도 저장",)
         )
         store.latest = updated
-        self._send(song_timeline_event(timeline=updated))
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
         event = chat_response_event(
             status="ok",
             summary="마디 지도 저장",
@@ -9311,7 +9360,18 @@ class ChatSession:
             updated_timeline, depth=self._draft_history.depth, report=report
         )
         store.latest = updated_timeline
-        self._send(song_timeline_event(timeline=updated_timeline))
+        self._send(
+            song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
+        )
+        # 카드 t563 — 편집 하나가 성공할 때마다 공용 상태 이벤트로 대기
+        # 수(「⇪ 콘솔에 반영」 배지)를 다시 보낸다(브리프 지시: "편집
+        # 때도 상태를 보내 배지가 갱신되게"). 코디네이터 계약(t568과
+        # 합의) — 그 수는 더는 편집 횟수 카운터가 아니라 지금 막
+        # 갈아 끼운 ``updated_timeline`` 기준 unsent_cells 길이다
+        # (``_beat_grid_send_status``가 직접 읽는다). 이 메서드의 기존
+        # 반환값(chat_response)은 바이트 그대로 유지한다(t551 기존
+        # 시험 보존).
+        self._beat_grid_send_status(last_action="edit", ok=True)
         event = chat_response_event(
             status="ok",
             summary="박자 격자 수정",
@@ -9320,6 +9380,376 @@ class ChatSession:
         )
         self._send(event)
         return event
+
+    # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
+    #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
+
+    @staticmethod
+    def _beat_grid_song_key(timeline: Mapping[str, object]) -> tuple[object, object]:
+        """두 곡을 가르는 기존 열쇠 — ``_remember_draft_baseline``이 이미
+        쓰는 (song_title, sequence_number) 쌍 그대로다(새 id 체계를
+        짓지 않는다, 코디네이터 계약 1항)."""
+        return (timeline.get("song_title"), timeline.get("sequence_number"))
+
+    def _beat_grid_current_unsent_cells(self) -> list[dict[str, object]] | None:
+        """지금 격자와, 이 곡의 가장 최근 「콘솔에 반영」 스냅샷의 차이
+        (``unsent_beat_grid_cells``) — 타임라인·격자가 없거나 이 곡으로
+        반영을 한 번도 안 했으면 ``None``(빈 리스트와 다른 사실)."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return None
+        grid = timeline.get("beat_grid")
+        if not isinstance(grid, Mapping):
+            return None
+        snapshot = self._beat_grid_snapshots.get(self._beat_grid_song_key(timeline))
+        return unsent_beat_grid_cells(grid, snapshot)
+
+    def _beat_grid_refresh_unsent_cells(self, timeline: dict) -> dict:
+        """``timeline["beat_grid"]``가 있으면 그 자리에 ``unsent_cells``를
+        최신으로 채운 **사본**을 돌려준다 — 없으면 그대로(no-op). 코디
+        네이터 계약 2항: "격자가 나갈 때마다(편집·AI 제안 적용·반영·
+        로드) 다시 계산한다" — 호출자가 이미 만든 얕은 사본(``dict(...)``)
+        을 한 번 더 감싸므로 원본 ``timeline``을 공유 참조로 건드리지
+        않는다(기존 관행과 같다)."""
+        grid = timeline.get("beat_grid")
+        if not isinstance(grid, Mapping):
+            return timeline
+        snapshot = self._beat_grid_snapshots.get(self._beat_grid_song_key(timeline))
+        updated = dict(timeline)
+        updated_grid = dict(grid)
+        updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
+        updated["beat_grid"] = updated_grid
+        return updated
+
+    def _beat_grid_send_status(
+        self,
+        *,
+        last_action: str,
+        ok: bool,
+        reason: str | None = None,
+        blocked_cells: Sequence[tuple[str, int, str]] = (),
+        approval_vs_sent: Mapping[str, object] | None = None,
+    ) -> dict:
+        """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
+        상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
+        출처로 삼는다(코디네이터 계약 5항 — "단일 출처") — 별도 카운터는
+        더 이상 없다."""
+        unsent = self._beat_grid_current_unsent_cells()
+        event = beat_grid_send_status_event(
+            pending_apply_count=len(unsent) if unsent is not None else None,
+            last_action=last_action,
+            ok=ok,
+            reason=reason,
+            blocked_cells=[
+                {"group_name": name, "bar": bar, "reason": why} for name, bar, why in blocked_cells
+            ],
+            approval_vs_sent=dict(approval_vs_sent) if approval_vs_sent is not None else None,
+        )
+        self._send(event)
+        return event
+
+    def _beat_grid_sequences_section(self) -> Mapping[str, object]:
+        """``DataPool/Sequences``(또는 ``rig_paths`` 오버라이드)를 콘솔에서
+        읽어, ``select_sequence_number``가 이미 이해하는 모양(``{"reason":
+        ...}`` 실패 포함)으로 돌려준다 — songcue 의 기존 사용례
+        (``tools.py``의 ``prepare_songcue``)와 같은 판독기
+        (``collect_rig_sections``)를 그대로 쓴다."""
+        rig_sections, _resolved, _failed = collect_rig_sections(
+            self._rig_capability_port,
+            {"sequences": self._rig_paths.get("sequences", DEFAULT_RIG_CONTEXT_PATHS["sequences"])},
+            frozenset(),
+            RIG_DRILLDOWN_QUERY_CAP,
+        )
+        section = rig_sections.get("sequences")
+        return section if isinstance(section, Mapping) else {"reason": "console_unreachable"}
+
+    def _resolve_beat_grid_timecode_number(self, wanted: object) -> tuple[int | None, str | None]:
+        """director 가 격자에 적어 둔 타임코드 번호 하나(``timeline
+        ["timecode_number"]``)의 점유 여부 — ``timecode_slot_verdict``의
+        판정을 그대로 재사용한다(REQ-LDBEAT-013(b), 새 판정을 짓지 않음).
+        없음/점유/불명 셋 다 번호를 지어내지 않고 사유로 거절한다."""
+        if not isinstance(wanted, int) or isinstance(wanted, bool) or wanted < 1:
+            return None, (
+                "곡 타이밍에 타임코드 번호(timeline.timecode_number)가 지정되지 않았습니다."
+            )
+        path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
+        if occupant is not None:
+            return None, f"Timecode {wanted}은 이미 '{occupant}'이(가) 쓰고 있어 반영을 거절합니다."
+        if not axes.timecode_go:
+            return None, (
+                axes.timecode_skip_reason
+                or "타임코드 점유 여부를 확인할 수 없어 반영을 거절합니다."
+            )
+        return wanted, None
+
+    @staticmethod
+    def _beat_grid_apply_cells(result) -> list[tuple[str, ...]]:
+        """``result.commands``(에미터가 실제로 낼 전체 줄)와 **바이트
+        동일한 순서**로 재구성되는 "칸" 목록 — ``build_write_approval_
+        batch``가 이걸 이어 붙이면 ``result.commands``와 정확히 같다.
+        타임코드 풀 셋업 → (트랙마다: 시퀀스 셋업 → 그 트랙의 칸들 →
+        타임코드 배정)의 순서를 ``BeatGridEmitResult``/``TrackEmitResult``
+        의 ``commands`` 프로퍼티 본문 그대로 따른다."""
+        cells: list[tuple[str, ...]] = []
+        if result.timecode_setup_commands:
+            cells.append(result.timecode_setup_commands)
+        for track in result.tracks:
+            if track.store_sequence_commands:
+                cells.append(track.store_sequence_commands)
+            for cue in track.cues:
+                if cue.commands:
+                    cells.append(cue.commands)
+            if track.assign_timecode_commands:
+                cells.append(track.assign_timecode_commands)
+        return cells
+
+    def _beat_grid_verify_approval_vs_sent(self, batch, *, since: str, until: str):
+        """``REQ-LDBEAT-011`` — 승인=송신 바이트 대조. 승인 아티팩트를
+        임시 파일 하나에 쓰고, 이 세션의 감사 로그 디렉터리를 「보낸
+        기록」소스로 넘긴다 — 새 비교 로직을 짓지 않고
+        ``verify_approval_vs_sent``를 그대로 재사용한다(REQ-LDBEAT-011(b))."""
+        approval_text = "".join(f"{line}\n" for line in batch.commands)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as handle:
+            handle.write(approval_text)
+            approval_path = Path(handle.name)
+        try:
+            return verify_approval_vs_sent(
+                approval_path, self._audit.directory, since=since, until=until
+            )
+        finally:
+            with contextlib.suppress(OSError):
+                Path(handle.name).unlink()
+
+    def beat_grid_apply(self) -> dict:
+        """상단 바 「⇪ 콘솔에 반영」 — 격자의 미반영 편집을 **구간 단위
+        1개** 승인으로 콘솔에 쓴다(REQ-LDBEAT-012(a), 칸마다 따로 승인받지
+        않는다). 입력 넷(순서 번호·타임코드 번호·디머 속성·곡 타이밍)을
+        이 메서드가 모아 ``emit_beat_grid_write_bundle``에 넘긴다 — 콘솔
+        번호를 이 메서드가 지어내는 자리는 없다(전부 콘솔 읽기 또는
+        director 입력에서 온다)."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_send_status(
+                last_action="apply", ok=False, reason="반영할 박자 격자가 아직 없습니다."
+            )
+        grid = self._beat_grid_view(timeline)
+        tracks = list(grid.get("tracks") or [])
+        group_names = [str(track.get("group_name")) for track in tracks]
+
+        # 카드 t563 — 이 메서드는 ``run_instruction`` 체인을 거치지 않는
+        # 전용 진입점(``panel.py``의 ``fire()``와 같은 자리)이라, 게이트/
+        # 승인 채널이 읽는 ambient 세션 키를 스스로 묶어야 한다 — 안 묶으면
+        # ``current_session_key()``가 ``DEFAULT_SESSION_KEY``로 떨어져
+        # 이 연결에 바인딩된 ``_notify_approval``을 못 찾고, 승인 요청이
+        # 카드 0장으로 조용히 거절된다(이 카드 실측으로 잡은 결함).
+        token = bind_session_key(self._session_key)
+        try:
+            timing = build_song_timing_from_bar_map(timeline.get("bar_map"))
+
+            sequences_section = self._beat_grid_sequences_section()
+            sequence_numbers, sequence_reason = pick_sequence_numbers(
+                sequences_section, group_names
+            )
+            if sequence_reason is not None:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason=sequence_reason
+                )
+
+            timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
+                timeline.get("timecode_number")
+            )
+            if timecode_reason is not None:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason=timecode_reason
+                )
+            timecode_numbers = {name: timecode_number for name in group_names}
+
+            types_root = str(
+                self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
+            )
+            rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
+            dimmer_attributes = resolve_dimmer_attributes(rig_read, group_names)
+
+            probe_results = grid.get("probe_results") or {}
+            result = emit_beat_grid_write_bundle(
+                tracks,
+                timing=timing,
+                sequence_numbers=sequence_numbers,
+                timecode_numbers=timecode_numbers,
+                dimmer_attributes=dimmer_attributes,
+                probe_results=probe_results,
+            )
+            if result.blocked_reason is not None or not result.commands:
+                return self._beat_grid_send_status(
+                    last_action="apply",
+                    ok=False,
+                    reason=result.blocked_reason or "콘솔에 반영할 내용이 없습니다.",
+                    blocked_cells=result.blocked_cells,
+                )
+
+            cells = self._beat_grid_apply_cells(result)
+            batch = build_write_approval_batch(cells)
+            risk = BatchRisk(
+                reason="박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))",
+                kind="beat_grid_apply",
+            )
+            since = datetime.now(UTC).isoformat()
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id="beat-grid-apply",
+                    name="run_commands",
+                    arguments={"commands": list(batch.commands)},
+                ),
+                risk=risk,
+            )
+            until = datetime.now(UTC).isoformat()
+            if executed.result.is_error:
+                # 승인 거절만이 아니라 게이트 차단·콘솔 무응답도 이 갈래로 온다 —
+                # 원인을 하나로 단정하지 않고 결과 내용을 그대로 붙인다.
+                detail = str(executed.result.content or "").strip()[:300]
+                return self._beat_grid_send_status(
+                    last_action="apply",
+                    ok=False,
+                    reason=(
+                        "콘솔 반영이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답 중 하나)"
+                    )
+                    + (f": {detail}" if detail else "."),
+                )
+
+            verdict = self._beat_grid_verify_approval_vs_sent(batch, since=since, until=until)
+            cue_numbers: dict[str, dict[int, int]] = {}
+            for track in result.tracks:
+                for cue in track.cues:
+                    if cue.cue_number is not None:
+                        cue_numbers.setdefault(track.group_name, {})[cue.bar] = cue.cue_number
+            self._beat_grid_applied = _BeatGridAppliedState(
+                sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
+            )
+            # 코디네이터 계약(t568과 합의) — 스냅샷은 "승인=송신까지
+            # 확인된 성공"일 때만 갈아 끼운다. 바이트가 어긋나면(verdict.
+            # passed 거짓) 이미 콘솔로 나간 것과 승인 사이에 설명 안 되는
+            # 줄이 있다는 뜻이라, "지금 격자 == 콘솔" 전제를 세울 수 없다
+            # — 스냅샷을 그대로 두어 unsent_cells 가 계속 "미반영"으로
+            # 남게 한다(거짓 초록 방지).
+            if verdict.passed:
+                self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
+                    beat_grid_cell_snapshot(grid)
+                )
+                store = self._timeline_store
+                latest = store.latest if store is not None else None
+                if latest is not None:
+                    self._send(
+                        song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest))
+                    )
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=True,
+                blocked_cells=result.blocked_cells,
+                approval_vs_sent={
+                    "sha256": batch.sha256,
+                    "cell_count": batch.cell_count,
+                    "match": verdict.passed,
+                    "sent_not_approved": verdict.sent_not_approved,
+                    "approved_not_sent": verdict.approved_not_sent,
+                },
+            )
+        finally:
+            reset_session_key(token)
+
+    def _beat_grid_preview_commands(self, verb: str, bar: int | None) -> tuple[str, ...] | None:
+        """``verb``가 "goto"면 ``bar``를 담은 최신 큐로, "off"면 전체
+        끄기로 — 둘 다 가장 최근 반영(``_beat_grid_applied``)에서만 번호를
+        가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가 있는
+        트랙이 하나도 없으면) ``None``."""
+        applied = self._beat_grid_applied
+        if applied is None:
+            return None
+        commands: list[str] = []
+        if verb == "off":
+            for sequence_number in applied.sequence_numbers.values():
+                commands.append(f"Off Sequence {sequence_number}")
+            return tuple(commands) if commands else None
+        assert bar is not None
+        for group_name, sequence_number in applied.sequence_numbers.items():
+            bars_with_cues = applied.cue_numbers.get(group_name) or {}
+            covering_bar = max((b for b in bars_with_cues if b <= bar), default=None)
+            if covering_bar is None:
+                continue
+            commands.append(f"Goto Cue {bars_with_cues[covering_bar]} Sequence {sequence_number}")
+        return tuple(commands) if commands else None
+
+    def _beat_grid_dispatch_preview(self, tool_id: str, commands: tuple[str, ...]) -> bool:
+        """미리보기(Goto/Off) 공용 송신 — 세션 시작 1회 승인(결정⑤,
+        REQ-LDBEAT-012(b))만 쓰기 승인과 **독립**으로 거친다. 승인이
+        필요한 호출인데 거절되면 세션 승인 상태를 건드리지 않는다(다음
+        호출이 다시 승인을 묻는다).
+
+        ``beat_grid_apply``와 같은 이유로 ambient 세션 키를 직접 묶는다 —
+        ``run_instruction`` 체인 밖의 호출이라 아무도 대신 묶어 주지
+        않는다."""
+        needs_approval = not self._preview_approval.authorize_preview()
+        risk = (
+            BatchRisk(
+                reason="박자 격자 미리보기 — 세션 시작 1회 승인(REQ-LDBEAT-012(b))",
+                kind="beat_grid_preview",
+            )
+            if needs_approval
+            else None
+        )
+        token = bind_session_key(self._session_key)
+        try:
+            executed = self._dispatch_declared(
+                ToolCall(id=tool_id, name="run_commands", arguments={"commands": list(commands)}),
+                risk=risk,
+            )
+        finally:
+            reset_session_key(token)
+        if executed.result.is_error:
+            return False
+        if needs_approval:
+            self._preview_approval.approve()
+        return True
+
+    def beat_grid_preview(self, bar: int) -> dict:
+        """상단 바 「▶ 이 마디 콘솔에서 보기」 — 가장 최근 반영에서 이
+        마디를 담당하는 큐로 ``Goto Cue … Sequence …``를 낸다. 아직
+        콘솔에 반영된 적이 없으면(``_beat_grid_applied is None``) 번호가
+        없으므로 거절한다(지어내지 않음)."""
+        commands = self._beat_grid_preview_commands("goto", bar)
+        if commands is None:
+            applied = self._beat_grid_applied
+            reason = (
+                "아직 콘솔에 반영된 적이 없어 미리볼 시퀀스가 없습니다."
+                if applied is None
+                else f"{bar}마디를 담은 큐가 있는 트랙이 없습니다."
+            )
+            return self._beat_grid_send_status(last_action="preview", ok=False, reason=reason)
+        if not self._beat_grid_dispatch_preview(f"beat-grid-preview-{bar}", commands):
+            return self._beat_grid_send_status(
+                last_action="preview", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
+            )
+        return self._beat_grid_send_status(last_action="preview", ok=True)
+
+    def beat_grid_preview_off(self) -> dict:
+        """상단 바 「■ 끄기」 — 가장 최근 반영의 모든 시퀀스를
+        ``Off Sequence``로 끈다."""
+        commands = self._beat_grid_preview_commands("off", None)
+        if commands is None:
+            return self._beat_grid_send_status(
+                last_action="preview_off",
+                ok=False,
+                reason="아직 콘솔에 반영된 적이 없어 끌 시퀀스가 없습니다.",
+            )
+        if not self._beat_grid_dispatch_preview("beat-grid-preview-off", commands):
+            return self._beat_grid_send_status(
+                last_action="preview_off", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
+            )
+        return self._beat_grid_send_status(last_action="preview_off", ok=True)
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.
