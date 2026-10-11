@@ -1,0 +1,188 @@
+{
+  "item": "T553UCell",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/337",
+    "ShowData/DataPools/Default/Sequences/338"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "store_337": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; At Preset 2.1",
+      "Group 11 ; Attribute 'Pan' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Phase 0 Thru 360",
+      "Attribute 'Pan' At Speed 56",
+      "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'",
+      "ClearAll",
+      "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'"
+    ],
+    "play_337": [
+      "Goto Cue 1 Sequence 337"
+    ],
+    "off_337": [
+      "Off Sequence 337",
+      "ClearAll"
+    ],
+    "store_338": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; At Preset 2.1",
+      "Attribute 'Pan' At Relative -12",
+      "Step 2",
+      "Attribute 'Pan' At Relative 12",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Speed 56.001",
+      "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'",
+      "ClearAll",
+      "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'"
+    ],
+    "play_338": [
+      "Goto Cue 1 Sequence 338"
+    ],
+    "off_338": [
+      "Off Sequence 338",
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "선택 Group 11 · 기준 At Preset 2.1(bar 18 position_preset_no) · BPM 112.002 → Speed 56",
+    "337 = 336 과 같은 물결, 기준만 칸 프리셋 · 338 = app_movement_commands 출력 그대로"
+  ],
+  "bundles": {
+    "store_337": true,
+    "play_337": true,
+    "off_337": true,
+    "store_338": true,
+    "play_338": true,
+    "off_338": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11 ; Attribute 'Dimmer' At 70",
+    "Group 11 ; At Preset 2.1",
+    "Group 11 ; Attribute 'Pan' At Relative -30",
+    "Step 2",
+    "Attribute 'Pan' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Pan' At Phase 0 Thru 360",
+    "Attribute 'Pan' At Speed 56",
+    "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'",
+    "ClearAll",
+    "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'",
+    "Goto Cue 1 Sequence 337",
+    "Off Sequence 337",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11 ; Attribute 'Dimmer' At 70",
+    "Group 11 ; At Preset 2.1",
+    "Attribute 'Pan' At Relative -12",
+    "Step 2",
+    "Attribute 'Pan' At Relative 12",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Pan' At Speed 56.001",
+    "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'",
+    "ClearAll",
+    "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'",
+    "Goto Cue 1 Sequence 338",
+    "Off Sequence 338",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Group 11 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 337 Cue 1 'T553 - MOVERU pan wave bar18 base literal'",
+        "ClearAll",
+        "Set Sequence 337 Property 'Name' 'T553 - MOVERU pan wave bar18 base literal'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 337"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 337",
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; At Preset 2.1",
+        "Attribute 'Pan' At Relative -12",
+        "Step 2",
+        "Attribute 'Pan' At Relative 12",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Speed 56.001",
+        "Store Sequence 338 Cue 1 'T553 - MOVERU pan wave bar18 app output'",
+        "ClearAll",
+        "Set Sequence 338 Property 'Name' 'T553 - MOVERU pan wave bar18 app output'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 338"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 338",
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
