@@ -30,13 +30,14 @@ def id3_info(b: bytes) -> str:
     end = 10 + size + (10 if b[5] & 0x10 else 0)
     return (
         f"ID3v2.{b[3]}.{b[4]} flags=0x{b[5]:02x} tag_size={size} audio_starts_at={end} "
-        f"bytes_at_end={b[end:end + 4].hex()}"
+        f"bytes_at_end={b[end : end + 4].hex()}"
     )
 
 
 with tempfile.TemporaryDirectory() as tmp:
     for path in sys.argv[1:]:
-        raw = open(path, "rb").read()
+        with open(path, "rb") as handle:
+            raw = handle.read()
         print("==", os.path.basename(path), "size", len(raw))
         print("  ", id3_info(raw))
         noext = os.path.join(tmp, "copy_noext")
