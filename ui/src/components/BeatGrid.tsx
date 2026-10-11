@@ -21,7 +21,7 @@
 // 가능해졌다 — mockup "프리셋 서랍"/"AI 제안" 절 그대로(아래 각 함수의
 // 주석이 인용 절을 단다). 그 콜백들이 미제공이면 이 컴포넌트는 기존과
 // 바이트 동일하게 동작한다(additive).
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 
 import type {
   BeatGridAppMovement,
@@ -35,6 +35,25 @@ import type {
   BeatGridTrack,
   BeatGridView,
 } from "../protocol";
+
+// 카드 t560(SPEC-LDBEAT-001 M9 step 2·4(나)·6) — 타임라인 4종 상태·L·R
+// 자식 줄·표→편집 연동·「이 마디 한눈에」 펼침/칩 툴팁/sticky. 로직은
+// 전부 `beatgrid/` 하위 순수 모듈·표시 전용 컴포넌트에 있다 — 이 파일은
+// 마운트·prop 전달만 한다(세 레인이 이 파일을 동시에 고치는 중이라 diff를
+// 최소로 둔다).
+import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
+import { LRSplitRow } from "./beatgrid/LRSplitRow";
+import { cueEditKey, deriveCueDisplayState } from "./beatgrid/cueDisplayState";
+import { buildGlanceRowDetail } from "./beatgrid/glanceRowDetail";
+import {
+  canDeclareLRSplit,
+  clearLRSplit,
+  declareLRSplit,
+  lrChildRowsForTrack,
+  type LRSplitDeclarations,
+} from "./beatgrid/lrSplit";
+import { formatPresetChipTooltip } from "./beatgrid/presetChipTooltip";
+import { buildGlanceFocusTarget, type GlanceFocusTarget } from "./beatgrid/tableFocus";
 
 /** REQ-LDBEAT-005(a) — 초기 표시 범위를 4마디 단위 행 7개로 나눈다. 배치
  * 규칙서 §4의 표 그대로(첫 행은 못갖춘마디 포함 3마디, 넷째 행도 3마디 —
@@ -441,6 +460,18 @@ export interface BeatGridProps {
   drawerSections?: BeatGridDrawerSection[] | null;
   /** 카드 t551 후속 — mockup `#bLib`(서랍 열기, 매번 최신 판독 요청). */
   onDrawerRequest?: () => void;
+  /** 카드 t560(REQ-LDBEAT-019(a)) — 이번 세션에 고친 칸의 키 집합
+   * (`cueEditKey(groupName, bar)` 꼴). 이 컴포넌트는 이 Set을 만들지
+   * 않는다 — 실제 편집 적용 지점(`onEditRequest` 호출부, 편집 칸 소관)이
+   * 채워 넘겨야 "고친 막대는 초록"이 켜진다. 생략하면 그 상태는 늘
+   * 꺼져 있다(기존과 바이트 동일, additive). */
+  editedCueKeys?: ReadonlySet<string>;
+  /** 카드 t560(REQ-LDBEAT-021(a), plan.md M9 step 4(나)) — 「이 마디
+   * 한눈에」 표 칸·줄을 클릭했을 때 그 자리에서 값을 바꾸지 않고(서버
+   * 요청 0건) 초점 식별자만 올려 보내는 얇은 콜백. 내부적으로는 이미
+   * 같은 클릭이 `selected`를 설정해 오른쪽 칸을 그 항목에 초점을 두고
+   * 연다 — 이 콜백은 그 사실을 부모에게도 알리는 추가 통지일 뿐이다. */
+  onGlanceFocusRequest?: (target: GlanceFocusTarget) => void;
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -896,11 +927,20 @@ export function BeatGrid({
   onSuggestionReject,
   drawerSections = null,
   onDrawerRequest,
+  editedCueKeys,
+  onGlanceFocusRequest,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
   const [transitionView, setTransitionView] = useState(false);
+  // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
+  // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
+  // 뿐이다(§Gaps — lrSplit.ts 모듈 주석).
+  const [lrSplits, setLrSplits] = useState<LRSplitDeclarations>(() => new Map());
+  // 카드 t560(REQ-LDBEAT-023(b)) — 「이 마디 한눈에」 줄 이름 ▸ 로 펼친
+  // 트랙(콘솔 그룹 이름 키 — 이 표는 트랙당 한 줄뿐이라 마디는 필요 없다).
+  const [expandedGlanceRows, setExpandedGlanceRows] = useState<Set<string>>(() => new Set());
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
   const [audioName, setAudioName] = useState<string | null>(null);
   const [commandText, setCommandText] = useState("");
@@ -1151,14 +1191,46 @@ export function BeatGrid({
                     const trackIndex = grid.tracks.indexOf(track);
                     const segments = trackCueSegments(track, maxBar);
                     const leadGapEnd = segments[0]?.startBar ?? maxBar + 1;
+                    // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로"는
+                    // 지금 보고 있는 마디(viewBar)가 걸친 칸 하나를 기준으로
+                    // 선언한다(mockup `segOf("side",cur)`와 같은 기준).
+                    const viewBarSegment = segments.find(
+                      (segment) => viewBar >= segment.startBar && viewBar < segment.endBar,
+                    );
+                    const hasLrSplit = lrSplits.has(track.group_name);
+                    const childRows = lrChildRowsForTrack(track, lrSplits);
                     return (
-                      <div className="beat-grid-track" role="row" key={`${track.group_name}-${trackIndex}`}>
+                      <Fragment key={`${track.group_name}-${trackIndex}`}>
+                      <div className="beat-grid-track" role="row">
                         <span className="beat-grid-track-label">
                           {track.group_name}
                           {!track.group_no_confirmed && (
                             <span className="beat-grid-unconfirmed-badge" title="콘솔 그룹 번호 미확인">
                               ⚠
                             </span>
+                          )}
+                          {canDeclareLRSplit(track) && viewBarSegment && (
+                            <button
+                              type="button"
+                              className="beat-grid-lr-split-toggle"
+                              title={
+                                hasLrSplit
+                                  ? "자식 줄을 없애고 다시 한 줄로 합칩니다"
+                                  : `${viewBarSegment.startBar}~${viewBarSegment.endBar - 1}마디만 L·R 두 줄로 나눕니다(표시 전용)`
+                              }
+                              onClick={() =>
+                                setLrSplits((prev) =>
+                                  hasLrSplit
+                                    ? clearLRSplit(prev, track.group_name)
+                                    : declareLRSplit(prev, track.group_name, {
+                                        startBar: viewBarSegment.startBar,
+                                        endBar: viewBarSegment.endBar,
+                                      }),
+                                )
+                              }
+                            >
+                              {hasLrSplit ? "L·R 다시 합치기" : "이 구간 L·R 따로"}
+                            </button>
                           )}
                         </span>
                         <div className="beat-grid-track-cues" style={{ width: laneContentWidth }}>
@@ -1189,13 +1261,29 @@ export function BeatGrid({
                             const isHighlighted =
                               highlightedPresetNo !== null &&
                               cueReferencesPreset(segment.cue, highlightedPresetNo);
+                            // 카드 t560(REQ-LDBEAT-019(a)) — 네 상태(고침=초록·
+                            // 같은프리셋=노랑·AI제안=점선·기본) 판정은 순수 함수
+                            // (beatgrid/cueDisplayState.ts)가 하고, 여기서는 그 결과를
+                            // 클래스로만 옮긴다. `isHighlighted`(기존 `is-preset-
+                            // highlighted`)는 그대로 두고(회귀 방지), 새 두 상태만
+                            // 추가 클래스로 얹는다.
+                            const displayState = deriveCueDisplayState({
+                              isActive: active,
+                              isEdited: !!editedCueKeys?.has(cueEditKey(track.group_name, segment.cue.bar)),
+                              hasPendingSuggestion:
+                                isPendingSuggestionForTrack(pendingSuggestion, track.group_name) &&
+                                pendingSuggestion?.bar === segment.cue.bar,
+                              referencesHighlightedPreset: isHighlighted,
+                            });
                             return (
                               <span key={segment.cue.bar} className="beat-grid-cue-slot">
                                 <button
                                   type="button"
                                   className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}${
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
-                                  }${isHighlighted ? " is-preset-highlighted" : ""}`}
+                                  }${isHighlighted ? " is-preset-highlighted" : ""}${
+                                    displayState === "edited" ? " is-edited" : ""
+                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -1261,6 +1349,18 @@ export function BeatGrid({
                           )}
                         </div>
                       </div>
+                      {/* 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언이
+                          만든 자식 줄. 선언 전에는 `childRows`가 늘 빈 배열이라
+                          아무것도 안 그려진다(AC-LDBEAT-019(c) "0개"). */}
+                      {childRows.map((child) => (
+                        <LRSplitRow
+                          key={child.side}
+                          child={child}
+                          left={barToX(child.startBar)}
+                          width={barToX(child.endBar) - barToX(child.startBar) - 2}
+                        />
+                      ))}
+                      </Fragment>
                     );
                   })}
               </div>
@@ -1799,6 +1899,9 @@ export function BeatGrid({
         </div>
 
         <div className="beat-grid-glance-pane">
+          {/* 카드 t560(REQ-LDBEAT-023(d)) — 제목 줄은 스크롤 영역(아래
+              `.beat-grid-glance-scroll`) 밖에 둔다 — 그래야 표 본문이
+              아무리 길어져도 이 제목이 스크롤에 밀려 사라지지 않는다. */}
           <h5>이 마디 한눈에 — {viewBar}마디</h5>
           {/* t537 ② — 이 행에 걸린 SCENE 메모(§4 역할·효과 혼성 값, 트랙에
               못 옮긴 자리)를 표 위에 그대로 보여준다 — 추측해 채우지 않고
@@ -1809,19 +1912,82 @@ export function BeatGrid({
               <span className="beat-grid-scene-memo-source"> ({viewBarSceneMemo.sourceRef})</span>
             </p>
           )}
-          <table className="beat-grid-glance-table">
-            <tbody>
-              {grid.tracks.map((track) => {
-                const cue = cueForBar(track, viewBar);
-                return (
-                  <tr key={track.group_name}>
-                    <td>{track.group_name}</td>
-                    <td>{cue ? cue.label : "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="beat-grid-glance-scroll">
+            <table className="beat-grid-glance-table">
+              {/* 카드 t560(REQ-LDBEAT-023(d)) — 표 머리도 스크롤 중에 고정된다
+                  (`styles.css`의 `position:sticky`). 지금 이 표는 "줄"·"큐"
+                  두 칸뿐이다 — 시안의 6역할(밝기·위치·색·움직임·전환) 칼럼
+                  구조는 REQ-LDBEAT-023(a) 범위(이 카드 밖, §Gaps)다. */}
+              <thead>
+                <tr>
+                  <th>줄</th>
+                  <th>큐</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grid.tracks.map((track) => {
+                  const trackIndex = grid.tracks.indexOf(track);
+                  const cue = cueForBar(track, viewBar);
+                  const isExpanded = expandedGlanceRows.has(track.group_name);
+                  // 카드 t560(REQ-LDBEAT-023(b)) — 펼침 상세는 지금 보고 있는
+                  // 마디(viewBar)가 걸친 칸 하나를 기준으로 계산한다.
+                  const viewSegment = trackCueSegments(track, maxBar).find(
+                    (segment) => viewBar >= segment.startBar && viewBar < segment.endBar,
+                  );
+                  const detail = viewSegment
+                    ? buildGlanceRowDetail({
+                        track,
+                        startBar: viewSegment.startBar,
+                        endBar: viewSegment.endBar,
+                        secondsPerBar,
+                        fixtures,
+                      })
+                    : null;
+                  return (
+                    <Fragment key={track.group_name}>
+                      {/* 카드 t560(REQ-LDBEAT-021(a), plan.md M9 step 4(나)) —
+                          줄을 누르면 그 자리에서 값을 바꾸지 않고(서버 요청
+                          0건) 기존 `selected`를 그대로 설정해 오른쪽 편집
+                          칸이 그 항목에 초점을 두고 연다 — 타임라인 막대를
+                          눌렀을 때와 같은 메커니즘이다. */}
+                      <tr
+                        className="beat-grid-glance-row"
+                        onClick={() => {
+                          setSelected({ trackIndex, bar: viewBar });
+                          setTransitionView(false);
+                          setActiveEditField(null);
+                          setNewPresetNote(null);
+                          onGlanceFocusRequest?.(buildGlanceFocusTarget(track.group_name, viewBar));
+                        }}
+                      >
+                        <td>
+                          <button
+                            type="button"
+                            className="beat-grid-glance-expand-toggle"
+                            title={isExpanded ? "상세 접기" : "상세 펼치기"}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setExpandedGlanceRows((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(track.group_name)) next.delete(track.group_name);
+                                else next.add(track.group_name);
+                                return next;
+                              });
+                            }}
+                          >
+                            {isExpanded ? "▾" : "▸"}
+                          </button>
+                          {track.group_name}
+                        </td>
+                        <td>{cue ? cue.label : "—"}</td>
+                      </tr>
+                      {isExpanded && detail && <GlanceRowDetailCells detail={detail} colSpan={2} />}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -1921,11 +2087,16 @@ export function BeatGrid({
                         current === entry.preset_no ? null : entry.preset_no,
                       )
                     }
+                    // 카드 t560(REQ-LDBEAT-023(c)) — 「설명 텍스트 · 이 곡에서 큐
+                    // N곳 사용」 꼴을 앞에 두고(필수 모양), 기존 사용처 목록(카드
+                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). `entry.description`은
+                    // 서버가 아직 안 채우는 선택 필드라(§Gaps, presetChipTooltip.ts
+                    // 모듈 주석) 지금은 사용 수만 보인다 — 지어내지 않는다.
                     title={
-                      entry.used_by.length
-                        ? `쓰는 곳: 큐 ${entry.usage_count}개 — ` +
-                          entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
-                        : "쓰는 곳: 큐 0개"
+                      formatPresetChipTooltip(entry.description, entry.usage_count) +
+                      (entry.used_by.length
+                        ? " — " + entry.used_by.map((u) => `${u.group_name ?? "?"} ${u.bar ?? "?"}마디`).join(", ")
+                        : "")
                     }
                   >
                     <span>

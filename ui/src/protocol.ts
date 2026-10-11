@@ -530,6 +530,12 @@ export interface BeatGridDrawerEntry {
    * 않고 `false`(= 기본 쪽)로 떨어진다(`beat_grid_presets.build_preset_
    * drawer`가 `validate_preset_pool_assignment`를 재사용해 판정). */
   is_effect_band: boolean;
+  /** 카드 t560(REQ-LDBEAT-023(c)) — 그 프리셋의 설명 텍스트(시안 원문
+   * 예시 「펄스 30↔60 · 4박」 꼴, `name`과는 다른 자리 — `name`은 콘솔이
+   * 읽은 짧은 이름일 뿐이다). 서버가 아직 이 필드를 채우지 않는다(§Gaps,
+   * `.moai/reports/t560/` 참조) — 선택 필드로 두고, 없으면(`undefined`/
+   * `null`) 칩 툴팁이 사용 큐 수만 보인다(지어내지 않는다). */
+  description?: string | null;
 }
 
 /** 카드 t551 후속(지시 1항) — 서랍 섹션 하나(디머 1·위치 2·색 4 중 하나).
