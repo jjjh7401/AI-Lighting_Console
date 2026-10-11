@@ -494,6 +494,25 @@ def parse_client_message(raw: str) -> dict:
                     raise ProtocolError(f"beat_grid_new_preset.aim.{axis} must be a finite number")
         elif aim is not None:
             raise ProtocolError("beat_grid_new_preset.aim is only valid when field is 'position'")
+        # 카드 t603 — "effect"만 효과 레시피(fx_id·주기 박/마디)를 **필수**로 받는다
+        # (t593 `preset_fx_recipes` 모양). 다른 필드에 오면 거절한다(aim 과 같은 엄격함).
+        fx = message.get("fx")
+        if field == "effect":
+            if not isinstance(fx, dict):
+                raise ProtocolError("beat_grid_new_preset.fx is required when field is 'effect'")
+            fx_id = fx.get("fx_id")
+            unit = fx.get("period_unit")
+            value = fx.get("period_value")
+            if not isinstance(fx_id, str) or not fx_id.strip():
+                raise ProtocolError("beat_grid_new_preset.fx.fx_id must be a non-empty string")
+            if unit not in ("beat", "bar"):
+                raise ProtocolError("beat_grid_new_preset.fx.period_unit must be 'beat' or 'bar'")
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ProtocolError(
+                    "beat_grid_new_preset.fx.period_value must be a positive integer"
+                )
+        elif fx is not None:
+            raise ProtocolError("beat_grid_new_preset.fx is only valid when field is 'effect'")
         parsed: dict[str, object] = {
             "v": PROTOCOL_VERSION,
             "type": "beat_grid_new_preset",
@@ -505,6 +524,12 @@ def parse_client_message(raw: str) -> dict:
         }
         if aim is not None:
             parsed["aim"] = aim
+        if fx is not None:
+            parsed["fx"] = {
+                "fx_id": fx["fx_id"].strip(),
+                "period_unit": fx["period_unit"],
+                "period_value": fx["period_value"],
+            }
         return parsed
 
     if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):

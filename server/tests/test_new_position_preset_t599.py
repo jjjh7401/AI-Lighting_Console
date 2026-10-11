@@ -200,6 +200,8 @@ class TestParseClientMessageAim:
     def test_non_position_fields_without_aim_still_parse(self) -> None:
         payload = self._valid_payload(field="effect")
         del payload["aim"]
+        # 카드 t603 — "effect"는 효과 레시피가 필수다(이 시험은 aim 이 없어도 되는지만 본다).
+        payload["fx"] = {"fx_id": "sweep-soft-wide", "period_unit": "beat", "period_value": 2}
         parsed = self._parse(payload)
         assert parsed["field"] == "effect"
         assert "aim" not in parsed

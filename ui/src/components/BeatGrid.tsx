@@ -41,6 +41,7 @@ import type {
   BeatGridDrawerSection,
   BeatGridEmptyPresetCell,
   BeatGridEvidence,
+  BeatGridFxRecipe,
   BeatGridPendingSuggestion,
   BeatGridSceneMemo,
   BeatGridStageGroup,
@@ -81,6 +82,13 @@ import {
 // 마운트·prop 전달만 한다(세 레인이 이 파일을 동시에 고치는 중이라 diff를
 // 최소로 둔다).
 import { GlanceCell } from "./beatgrid/GlanceCell";
+import {
+  type FxPeriodUnit,
+  NewPresetFxFields,
+  type NewPresetFxFieldsProps,
+  fxRecipeFromDraft,
+  fxTemplatesForKind,
+} from "./beatgrid/newPresetFx";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitRow } from "./beatgrid/LRSplitRow";
@@ -549,6 +557,8 @@ export interface BeatGridProps {
     description: string;
     /** 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 필드만 싣는다. */
     aim?: { x: number; y: number; z: number };
+    /** 카드 t603 — "effect" 필드만 싣는다(효과 틀·주기 박/마디, 서버 필수). */
+    fx?: BeatGridFxRecipe;
   }) => void;
   /** 카드 t589 — 서버의 가장 최근 답. 「만들기」 뒤 배정 결과·거절 사유를
    * 그 칸 아래에 보이는 데 쓴다(`newPresetReplyFor`). 생략하면 안 보인다. */
@@ -948,6 +958,9 @@ export interface NewPresetDialogProps {
   onXChange?: (value: string) => void;
   onYChange?: (value: string) => void;
   onZChange?: (value: string) => void;
+  /** 카드 t603 — "효과" 필드만 효과 틀·주기 칸을 넘긴다(생략하면 그 칸이 없다).
+   * 넘기면 레시피가 다 차야 「만들기」가 켜진다. */
+  fx?: NewPresetFxFieldsProps;
 }
 
 export function NewPresetDialog({
@@ -965,6 +978,7 @@ export function NewPresetDialog({
   onXChange,
   onYChange,
   onZChange,
+  fx,
 }: NewPresetDialogProps) {
   if (!enabled) {
     return (
@@ -976,7 +990,11 @@ export function NewPresetDialog({
   const labelValid = isValidConsoleLabel(label);
   const descriptionValid = description.trim().length > 0;
   const aimValid = !showAim || (isValidAimCoordinate(x) && isValidAimCoordinate(y) && isValidAimCoordinate(z));
-  const canCreate = labelValid && descriptionValid && aimValid;
+  const fxValid =
+    !fx ||
+    (fxTemplatesForKind(fx.templates, fx.kind).some((t) => t.fx_id === fx.fxId) &&
+      fxRecipeFromDraft({ fxId: fx.fxId, period: fx.period, unit: fx.unit }) !== null);
+  const canCreate = labelValid && descriptionValid && aimValid && fxValid;
   return (
     <span className="beat-grid-new-preset-dialog" data-testid="beat-grid-new-preset-dialog">
       <label className="beat-grid-new-preset-field">
@@ -1037,6 +1055,7 @@ export function NewPresetDialog({
           </label>
         </>
       )}
+      {fx && <NewPresetFxFields {...fx} />}
       <button type="button" disabled={!canCreate} onClick={onCreate}>
         만들기
       </button>
@@ -1486,7 +1505,17 @@ export function BeatGrid({
         // 카드 t599(REQ-LDBEAT-015(i-3)) — "position" 칸만 x·y·z 를 쓴다
         // (다른 네 필드는 항상 빈 문자열로 둔다 — `NewPresetDialog`가 그
         // 기본값으로 `showAim`을 끈다).
-        { label: string; description: string; x: string; y: string; z: string }
+        // 카드 t603 — "effect" 칸만 fxId·period·unit 을 쓴다(나머지는 기본값 그대로).
+        {
+          label: string;
+          description: string;
+          x: string;
+          y: string;
+          z: string;
+          fxId?: string;
+          period?: string;
+          unit?: FxPeriodUnit;
+        }
       >
     >
   >({});
@@ -2546,6 +2575,9 @@ export function BeatGrid({
                           x: string;
                           y: string;
                           z: string;
+                          fxId: string;
+                          period: string;
+                          unit: FxPeriodUnit;
                         }>,
                       ) => setNewPresetDrafts((prev) => ({ ...prev, [field]: { ...draft, ...next } }));
                       const finish = () => {
@@ -2554,6 +2586,30 @@ export function BeatGrid({
                       };
                       // 카드 t599 — "position"만 목표 좌표를 받는다.
                       const showAim = field === "position";
+                      // 카드 t603 — "effect"만 효과 틀·주기를 받는다(서버 필수). 고를 수 있는
+                      // 틀은 그 칸의 효과 종류에 맞는 것뿐이다(서버 `kinds`).
+                      const fxDraft = {
+                        fxId: draft.fxId ?? "",
+                        period: draft.period ?? "",
+                        unit: draft.unit ?? ("beat" as FxPeriodUnit),
+                      };
+                      const fxKind = selectedCue?.effect_kind ?? null;
+                      const fxProps: NewPresetFxFieldsProps | undefined =
+                        field === "effect"
+                          ? {
+                              templates: grid?.fx_templates,
+                              kind: fxKind,
+                              ...fxDraft,
+                              onFxIdChange: (fxId) => setDraft({ fxId }),
+                              onPeriodChange: (period) => setDraft({ period }),
+                              onUnitChange: (unit) => setDraft({ unit }),
+                            }
+                          : undefined;
+                      const fxRecipe =
+                        fxProps &&
+                        fxTemplatesForKind(fxProps.templates, fxKind).some((t) => t.fx_id === fxDraft.fxId)
+                          ? fxRecipeFromDraft(fxDraft)
+                          : null;
                       return (
                         <NewPresetDialog
                           enabled={!!onNewPresetRequest}
@@ -2568,6 +2624,7 @@ export function BeatGrid({
                           onXChange={(x) => setDraft({ x })}
                           onYChange={(y) => setDraft({ y })}
                           onZChange={(z) => setDraft({ z })}
+                          fx={fxProps}
                           onCreate={() => {
                             const labelValid = isValidConsoleLabel(draft.label);
                             const descriptionValid = draft.description.trim().length > 0;
@@ -2581,6 +2638,7 @@ export function BeatGrid({
                               !labelValid ||
                               !descriptionValid ||
                               !aimValid ||
+                              (fxProps !== undefined && fxRecipe === null) ||
                               !selected ||
                               !selectedTrack
                             ) {
@@ -2601,6 +2659,7 @@ export function BeatGrid({
                                     },
                                   }
                                 : {}),
+                              ...(fxRecipe ? { fx: fxRecipe } : {}),
                             });
                             setNewPresetPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
                             finish();

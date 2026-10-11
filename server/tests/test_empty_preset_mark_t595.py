@@ -210,9 +210,10 @@ class TestDrawerReadSendsMarks:
 
 class TestNewPresetDialogMarksItsNumber:
     """t589 「＋ 새 프리셋 만들기」도 풀을 읽어 빈 번호를 고른다 — 그 판독으로
-    배정 직후 그 칸에 표식이 붙는다(반영에서 보류될 칸)."""
+    배정 직후 그 칸에 표식이 붙는다. 카드 t603 부터 창이 효과 레시피(틀·주기)도 남기므로
+    그 표식은 「반영 때 만듦」(``create``)이다 — 전에는 레시피가 없어 송신 보류(``held``)였다."""
 
-    def test_assigned_empty_number_is_marked_held(self, tmp_path) -> None:
+    def test_assigned_empty_number_is_marked_create(self, tmp_path) -> None:
         from . import test_new_preset_dialog_t589 as t589
 
         store = SongTimelineStore()
@@ -227,10 +228,12 @@ class TestNewPresetDialogMarksItsNumber:
         session, console, _approval, _audit = t589._new_session(
             tmp_path, store=store, state_tree=state_tree, sent=sent
         )
-        session.beat_grid_new_preset(1, "BACK", "effect", "LA Wave", "따뜻한 흰색")
+        session.beat_grid_new_preset(
+            1, "BACK", "effect", "LA Wave", "따뜻한 흰색", fx=t589._FX_RECIPE
+        )
         assert console.executed == []
         (cell,) = _grids(sent)[-1]["empty_preset_cells"]
-        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "held", "2.61")
+        assert (cell["bar"], cell["state"], cell["fields"][0]["value"]) == (1, "create", "2.61")
 
 
 class TestEditRecomputesMarks:

@@ -622,6 +622,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         message.get("label"),
                         message.get("description"),
                         message.get("aim"),
+                        message.get("fx"),
                     )
                 elif message_type in (
                     "beat_grid_apply",

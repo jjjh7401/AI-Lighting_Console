@@ -1,0 +1,41 @@
+{
+ "cue_index": 21,
+ "dialog_visible": 1,
+ "dialog_text": "콘솔 이름(영문·숫자)\n설명(한국어)\n효과 틀\n— 고르기 —\n따뜻함에서 차가움으로 (ColorRGB_R·ColorRGB_G·ColorRGB_B)\n삼색 체이스 (ColorRGB_R·ColorRGB_G·ColorRGB_B)\n무지개 웨이브 (ColorRGB_R·ColorRGB_G·ColorRGB_B)\n박자 펄스 (Dimmer)\n숨쉬는 딤머 (Dimmer)\n사인 브리딩 (Dimmer)\n스냅 펄스 (Dimmer)\n마스터 동기 펄스 (Dimmer)\n부드러운 좌우 스윕 (Pan)\n클럽 좌우 웨이브 (Pan)\n부드러운 상하 웨이브 (Tilt)\n내려오는 웨이브 (Tilt)\n느린 발리후 (Pan·Tilt)\n미러 서클 (Pan·Tilt)\n부드러운 대각선 (Pan·Tilt)\n교차 대각선 (Pan·Tilt)\n제자리 스윕 (Pan)\n제자리 서클 (Pan·Tilt)\n이지 스윕 (Pan)\n수평 체이스 (Pan)\n바운스 런 체이스 (Pan)\nV자 팬 스윙 (Pan)\n한 바퀴\n박\n마디\n만들기\n취소",
+ "template_select": 1,
+ "template_options": [
+  "— 고르기 —",
+  "따뜻함에서 차가움으로 (ColorRGB_R·ColorRGB_G·ColorRGB_B)",
+  "삼색 체이스 (ColorRGB_R·ColorRGB_G·ColorRGB_B)",
+  "무지개 웨이브 (ColorRGB_R·ColorRGB_G·ColorRGB_B)",
+  "박자 펄스 (Dimmer)",
+  "숨쉬는 딤머 (Dimmer)",
+  "사인 브리딩 (Dimmer)",
+  "스냅 펄스 (Dimmer)",
+  "마스터 동기 펄스 (Dimmer)",
+  "부드러운 좌우 스윕 (Pan)",
+  "클럽 좌우 웨이브 (Pan)",
+  "부드러운 상하 웨이브 (Tilt)",
+  "내려오는 웨이브 (Tilt)",
+  "느린 발리후 (Pan·Tilt)",
+  "미러 서클 (Pan·Tilt)",
+  "부드러운 대각선 (Pan·Tilt)",
+  "교차 대각선 (Pan·Tilt)",
+  "제자리 스윕 (Pan)",
+  "제자리 서클 (Pan·Tilt)",
+  "이지 스윕 (Pan)",
+  "수평 체이스 (Pan)",
+  "바운스 런 체이스 (Pan)",
+  "V자 팬 스윙 (Pan)"
+ ],
+ "template_chosen": "sweep-soft-wide",
+ "create_enabled": true,
+ "reply_lines": [
+  "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)⚠ 빈 프리셋(2.1)",
+  "위로 연 자리, 정지⚠ 빈 프리셋(2.1)",
+  "17마디 3·4박 전부 비움(예고)⚠ 빈 프리셋(1.6)",
+  "새 프리셋 22.0 'LA Sweep 2' 배정 — 승인 대기(「⇪ 콘솔에 반영」 승인 카드에서 승인) · ⚠ 승인 대기 — MOVER-U 14마디 효과 프리셋: 「⇪ 콘솔에 반영」 승인 카드에서 승인해야 콘솔로 나갑니다 (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다.",
+  "⚠ 22.0 — 빈 효과 프리셋 — 반영 때 템플릿·주기로 만듦(반영당 하나, BPM 없으면 보류) · 「⇪ 콘솔에 반영」 승인 때 콘솔에 만들어 함께 보냅니다"
+ ],
+ "select_value_after": "22.0"
+}

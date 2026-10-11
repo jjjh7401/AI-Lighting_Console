@@ -5115,6 +5115,21 @@ body {
   color: var(--muted);
 }
 
+/* 카드 t603 — 효과 틀 고르기 상자도 입력칸과 같은 모양. 편집 칸 규칙
+   `.beat-grid-cue-field.is-editing .beat-grid-cue-field-edit select { flex: 1 1 120px }`
+   이 세로로 쌓인 칸(.beat-grid-new-preset-field) 안에서는 높이 120px 가 된다(첫 캡처에서
+   상자가 세로로 늘어났다) — 그 규칙보다 구체적인 선택자로 크기를 고정한다. */
+.beat-grid-cue-field.is-editing .beat-grid-cue-field-edit .beat-grid-new-preset-dialog select {
+  flex: none;
+  height: auto;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+}
+
 .beat-grid-new-preset-field input {
   background: var(--panel);
   color: var(--text);
