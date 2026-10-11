@@ -14,10 +14,8 @@
 
 from __future__ import annotations
 
-import pytest
-
-from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
-from server.design.beat_grid_edit import BeatGridEditError, apply_beat_grid_edit
+from server.design.beat_grid import LOVE_ATTACK_TITLE, check_evidence_approval, default_beat_grid
+from server.design.beat_grid_edit import apply_beat_grid_edit
 
 FILLED = {
     ("SIDE-ALL", 11),
@@ -94,12 +92,21 @@ def test_no_other_brightness_changed() -> None:
     assert changed == {("BACK", 18), ("BACK", 22), ("BLIND", 18)}
 
 
-# -- 밝기 승인이 새 프리셋 번호를 통과시키지 않는다 (REQ-LDBEAT-015(f)(g)) ------
+# -- 밝기 승인이 새 프리셋 번호를 통과시키지 않는다 (REQ-LDBEAT-015(f)(g)(h)) ---
 # 합친 CI 빨강(run 38112994889) 재현 — t555 가 MOVER-U·MOVER-D 칸에 붙인
 # 밝기 승인이, 같은 칸에 새 효과/디머 프리셋 번호를 넣을 때 재사용됐다.
 # 감독 선택 2026-10-11: 새 번호는 이번 changes 에 함께 온 evidence.approval 만
 # 인정한다. MOVER-U 3·MOVER-D 3 은 app_movement 가 없어 축 겹침(vi-7)과 섞이지
 # 않는다.
+#
+# 카드 t577(REQ-LDBEAT-015(h-1)~(h-6)) 재현 시험 갱신 — 거절이 발화하는
+# **시점**이 편집에서 「⇪ 콘솔에 반영」 승인 카드로 옮겨졌다(행동이 아니라
+# 시점만 바뀐다, plan.md M10). `apply_beat_grid_edit`는 더는 이 경우를
+# 거절하지 않는다 — 그 변경을 초안에 그대로 받아들이고, 그 칸·필드는
+# "승인 대기" 상태로 남는다(관찰 가능한 상태: non-null 프리셋 번호 +
+# `check_evidence_approval`이 불완전으로 보는 evidence). 저장된 밝기
+# 승인이 그 새 번호의 근거로 재사용되지 않는다는 것(h-5)은 그대로다 — 재사용
+# 됐다면 `check_evidence_approval`이 `None`(통과)을 돌려줄 것이다.
 
 _FRESH_APPROVAL = {
     "grade": "name_only",
@@ -117,33 +124,43 @@ def _cue_of(grid, group_name: str, bar: int) -> dict:
 
 
 def test_cell_brightness_approval_does_not_admit_new_effect_number() -> None:
+    # 카드 t577 갱신 — 반영 시점 거절(apply_pending_approval/beat_grid_apply
+    # 경로)로 바뀌었다; server/tests/test_apply_time_approval_t577.py 가 그
+    # 반영 시점 거절을 세션 레벨로 재현한다. 여기서는 편집 시점에 거절되지
+    # 않고 "승인 대기"로 받아들여지는지, 그리고 저장된 밝기 승인이 그 새
+    # 번호를 통과시키지 않는지(h-5)를 확인한다.
     assert _cells()[("MOVER-U", 3)]["evidence"]["approval"] is not None
-    with pytest.raises(BeatGridEditError) as excinfo:
-        apply_beat_grid_edit(
-            default_beat_grid(LOVE_ATTACK_TITLE),
-            bar=3,
-            target="MOVER-U",
-            changes={"effect_preset_no": "2.65", "effect_kind": "position"},
-        )
-    assert "REQ-LDBEAT-015" in str(excinfo.value)
+    updated, report = apply_beat_grid_edit(
+        default_beat_grid(LOVE_ATTACK_TITLE),
+        bar=3,
+        target="MOVER-U",
+        changes={"effect_preset_no": "2.65", "effect_kind": "position"},
+    )
+    cue = _cue_of(updated, "MOVER-U", 3)
+    assert cue["effect_preset_no"] == "2.65"
+    assert check_evidence_approval(cue) is not None, "저장된 밝기 승인이 새 번호를 통과시켰다"
+    assert any("승인 대기" in line for line in report)
 
 
 def test_cell_brightness_approval_does_not_admit_new_dimmer_number() -> None:
+    # 카드 t577 갱신 — 위 시험과 같은 사유(편집 시점 거절 → 반영 시점 거절).
     assert _cells()[("MOVER-D", 3)]["evidence"]["approval"] is not None
-    with pytest.raises(BeatGridEditError) as excinfo:
-        apply_beat_grid_edit(
-            default_beat_grid(LOVE_ATTACK_TITLE),
-            bar=3,
-            target="MOVER-D",
-            changes={
-                "brightness": {
-                    "mode": "dimmer_effect",
-                    "value_percent": None,
-                    "preset_no": "1.22",
-                }
-            },
-        )
-    assert "REQ-LDBEAT-015" in str(excinfo.value)
+    updated, report = apply_beat_grid_edit(
+        default_beat_grid(LOVE_ATTACK_TITLE),
+        bar=3,
+        target="MOVER-D",
+        changes={
+            "brightness": {
+                "mode": "dimmer_effect",
+                "value_percent": None,
+                "preset_no": "1.22",
+            }
+        },
+    )
+    cue = _cue_of(updated, "MOVER-D", 3)
+    assert cue["brightness"]["preset_no"] == "1.22"
+    assert check_evidence_approval(cue) is not None, "저장된 밝기 승인이 새 번호를 통과시켰다"
+    assert any("승인 대기" in line for line in report)
 
 
 def test_approval_sent_with_the_change_admits_new_effect_number() -> None:

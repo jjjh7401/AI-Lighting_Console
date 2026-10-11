@@ -484,6 +484,14 @@ export interface BeatGridCue {
   app_movement: BeatGridAppMovement | null;
   /** 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `null`. */
   evidence: BeatGridEvidence | null;
+  /** 카드 t577, REQ-LDBEAT-015(h-1) — 뷰 전용 파생 필드(서버
+   * `attach_beat_grid_runtime_extras`가 매 서빙마다 다시 계산해 붙인다,
+   * 저장되는 값이 아니다). 완전한 `evidence.approval` 없이 넣어진
+   * non-null 프리셋 번호 필드들의 사람이 읽는 이름 — 비어 있으면 이 칸은
+   * 승인 대기가 아니다. UI는 이 값으로만 "승인 대기" 배지를 그린다
+   * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
+   * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
+  pending_preset_fields?: string[];
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
@@ -540,6 +548,19 @@ export interface BeatGridView {
    * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
    * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
   unverified_cells?: BeatGridUnverifiedCell[] | null;
+  /** 카드 t584 — 편집 칸 「움직임」 고르기 목록의 닫힌 어휘. 서버
+   * (`beat_grid_edit.movement_vocabulary`)에서만 온다 — UI에 모양 이름 상수 없음.
+   * 필드가 없는 옛 서버 응답이면 `undefined`(고르기 목록을 열지 않는다). */
+  movement_vocabulary?: BeatGridMovementVocabulary | null;
+}
+
+/** 카드 t584 — `unverified`는 M1 표만으로 본 「⚠」(고르기 전 목록 표시). 고른 뒤
+ * 칸 배지는 그룹·축까지 보는 `unverified_cells`가 정한다. */
+export interface BeatGridMovementVocabulary {
+  shapes: { name: NonNullable<BeatGridAppMovement["shape"]>; unverified: boolean }[];
+  axes: BeatGridAppMovement["axes"];
+  period_units: NonNullable<BeatGridAppMovement["period_unit"]>[];
+  phase_spread_unverified: boolean;
 }
 
 /** 카드 t579 — `terms`는 그 칸이 쓰는 미확인 어휘(`"circle"`·`"ballyhoo"`·
