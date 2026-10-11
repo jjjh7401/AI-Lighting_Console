@@ -173,6 +173,10 @@ CLIENT_MESSAGE_TYPES = (
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
+    # 카드 t571(REQ-LDBEAT-024(c) 후속) — 런북 화면이 열릴 때(세션에 첨부가
+    # 없을 때) 이 곡에 저장된 오디오 링크를 요청한다. 페이로드 없음 — 지금
+    # 곡이 무엇인지는 서버의 ``song_timeline_store`` 가 이미 안다.
+    "song_audio_link_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
     *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
@@ -774,6 +778,9 @@ def parse_client_message(raw: str) -> dict:
         "beat_grid_console_stop",
         # 카드 t565 — 무대 판독 요청도 페이로드가 없다.
         "beat_grid_stage_request",
+        # 카드 t571 — 곡 오디오 링크 요청도 페이로드가 없다(지금 곡은
+        # 서버가 이미 안다).
+        "song_audio_link_request",
     ):
         # Payload-free by design. The pin seed is the server's own
         # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the
@@ -867,6 +874,68 @@ def beat_grid_stage_event(*, fixtures: list[dict], groups: list[dict], unread: l
     소속({group_no,group_name,member_fids,complete}), ``unread`` 는 못 읽은 이유
     그대로다(`server.design.beat_grid_stage.read_beat_grid_stage`, 콘솔 읽기만)."""
     return _event("beat_grid_stage", fixtures=fixtures, groups=groups, unread=unread)
+
+
+def song_audio_link_event(
+    *,
+    status: str,
+    file_name: str | None = None,
+    mime_type: str | None = None,
+    content_base64: str | None = None,
+    sha256: str | None = None,
+    byte_length: int | None = None,
+) -> dict:
+    """카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오 링크
+    (단일 프레임에 들어가는 경우) **또는** 그 상태만.
+
+    ``status`` 는 ``"none"``(지금 곡을 모름, 또는 이 곡엔 저장된 링크가
+    아예 없음) · ``"missing"``(링크는 있는데 파일이 없거나 해시가 안 맞음)
+    · ``"found"``(있고 맞음) 셋 중 하나다. ``found`` 인데 base64 가 한
+    프레임에 못 들어갈 만큼 크면 이 이벤트 대신 아래 분할 트리오
+    (``song_audio_link_begin``/``_chunk``/``_end``)가 나간다 — REQ-
+    MUSICSYNC-027 의 업로드 분할과 같은 이유를 반대 방향에 적용한 것이다.
+    """
+    return _event(
+        "song_audio_link",
+        status=status,
+        file_name=file_name,
+        mime_type=mime_type,
+        content_base64=content_base64,
+        sha256=sha256,
+        byte_length=byte_length,
+    )
+
+
+def song_audio_link_begin_event(
+    *,
+    file_name: str,
+    mime_type: str,
+    sha256: str,
+    byte_length: int,
+    chunk_count: int,
+) -> dict:
+    """카드 t571 — 분할 전송 시작. ``status`` 는 항상 ``"found"`` — missing/
+    none 은 내용이 없으므로 분할할 것도 없다(``song_audio_link_event`` 하나로
+    족하다)."""
+    return _event(
+        "song_audio_link_begin",
+        status="found",
+        file_name=file_name,
+        mime_type=mime_type,
+        sha256=sha256,
+        byte_length=byte_length,
+        chunk_count=chunk_count,
+    )
+
+
+def song_audio_link_chunk_event(*, index: int, content_base64: str) -> dict:
+    """카드 t571 — 분할 전송 조각 하나. ``song_audio_upload_chunk`` 와 같은 모양."""
+    return _event("song_audio_link_chunk", index=index, content_base64=content_base64)
+
+
+def song_audio_link_end_event() -> dict:
+    """카드 t571 — 분할 전송 종료. 조립은 클라이언트 쪽(``protocol.ts``)이 한다."""
+    return _event("song_audio_link_end")
 
 
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:

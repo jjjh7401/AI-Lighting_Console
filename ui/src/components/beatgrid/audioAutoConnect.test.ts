@@ -13,6 +13,7 @@ import {
   resolvePlayIntentOnReady,
   shouldAutoConnectAudio,
   shouldDeferPlayPress,
+  shouldMarkAudioLinkMissing,
 } from "./audioAutoConnect";
 
 describe("audioSourceId — 파일 하나를 구분하는 안정적 식별자", () => {
@@ -49,6 +50,12 @@ describe("shouldAutoConnectAudio — 런북 뷰를 열 때 자동 연결할지(A
   it("불러오는 중이면 겹쳐 연결하지 않는다", () => {
     expect(shouldAutoConnectAudio({ status: "loading", connectedSourceId: null }, "a.mp3:10")).toBe(false);
   });
+
+  it("카드 t571 — missing 상태에서도 실제 파일이 나타나면 연결한다", () => {
+    expect(shouldAutoConnectAudio({ status: "missing", connectedSourceId: null }, "a.mp3:10")).toBe(
+      true,
+    );
+  });
 });
 
 describe("audioButtonLabel — ♪ 버튼 문구(AC-LDBEAT-024(a))", () => {
@@ -63,6 +70,23 @@ describe("audioButtonLabel — ♪ 버튼 문구(AC-LDBEAT-024(a))", () => {
   it("idle·failed 는 기본 안내", () => {
     expect(audioButtonLabel("idle", null)).toBe("음원");
     expect(audioButtonLabel("failed", "x.mp3")).toBe("음원");
+  });
+
+  it("카드 t571 — missing 이면 '음원 없음'", () => {
+    expect(audioButtonLabel("missing", null)).toBe("음원 없음");
+  });
+});
+
+describe("shouldMarkAudioLinkMissing — 카드 t571(REQ-LDBEAT-024(c) 후속)", () => {
+  it("idle 일 때만 missing 으로 넘어간다", () => {
+    expect(shouldMarkAudioLinkMissing("idle")).toBe(true);
+  });
+
+  it("이미 다른 전이 중이면 덮어쓰지 않는다", () => {
+    expect(shouldMarkAudioLinkMissing("loading")).toBe(false);
+    expect(shouldMarkAudioLinkMissing("connected")).toBe(false);
+    expect(shouldMarkAudioLinkMissing("failed")).toBe(false);
+    expect(shouldMarkAudioLinkMissing("missing")).toBe(false);
   });
 });
 

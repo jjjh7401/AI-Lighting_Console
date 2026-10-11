@@ -87,6 +87,7 @@ import {
   resolvePlayIntentOnReady,
   shouldAutoConnectAudio,
   shouldDeferPlayPress,
+  shouldMarkAudioLinkMissing,
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
@@ -579,6 +580,14 @@ export interface BeatGridProps {
    * 연결한다. 없으면(`null`/생략) 자동 연결하지 않고 ♪ 버튼으로 직접
    * 고르는 기존 경로만 남는다(기존과 바이트 동일). */
   attachedSongAudioFile?: File | null;
+  /** 카드 t571(REQ-LDBEAT-024(c) 후속) — 서버에 저장된 이 곡의 오디오
+   * 링크(`App.tsx`가 `song_audio_link_request` 응답을 `File`로 되돌린
+   * 것). `attachedSongAudioFile`이 있으면 **그것이 항상 이긴다** — 이
+   * 값은 세션 첨부가 없을 때만 쓰인다. */
+  linkedSongAudioFile?: File | null;
+  /** 카드 t571 — 서버에 이 곡의 저장된 링크가 없다고 확인됐다(세션
+   * 첨부도 서버 링크도 없을 때만 "음원 없음"으로 보일 신호). */
+  songAudioLinkMissing?: boolean;
 }
 
 /** t537 — 구조화 필드가 미정(`null`)일 때 공통으로 쓰는 표시 문구. "0"이나
@@ -1078,6 +1087,8 @@ export function BeatGrid({
   onGlanceFocusRequest,
   timeSignature,
   attachedSongAudioFile = null,
+  linkedSongAudioFile = null,
+  songAudioLinkMissing = false,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -1271,18 +1282,32 @@ export function BeatGrid({
 
   // 카드 t570(REQ-LDBEAT-024(c)) — 런북 전체화면 뷰를 열 때(이 컴포넌트가
   // 처음 그려질 때) 이미 첨부된 곡 음원을 자동으로 연결한다. 첨부된 음원이
-  // 없으면(`null`) 아무것도 하지 않는다 — ♪ 버튼으로 직접 고르는 기존
-  // 경로만 남는다. `shouldAutoConnectAudio`가 "같은 음원에 이미 연결됨"
+  // 없으면 서버에 저장된 링크로 대신 연결한다(카드 t571, `App.tsx`가
+  // `song_audio_link_request` 응답을 `File`로 되돌려 넘긴 값) — 세션
+  // 첨부가 늘 이긴다(`??`가 그 우선순위다). 둘 다 없으면, 서버가 "이 곡엔
+  // 링크도 없다"고 이미 답했다면(`songAudioLinkMissing`) "음원 없음"으로
+  // 솔직하게 보인다. `shouldAutoConnectAudio`가 "같은 음원에 이미 연결됨"
   // 반복을 막는다(무한 재연결 루프 방지).
   useEffect(() => {
     if (!grid) return;
-    const sourceId = audioSourceId(attachedSongAudioFile);
+    const effectiveFile = attachedSongAudioFile ?? linkedSongAudioFile;
+    const sourceId = audioSourceId(effectiveFile);
     if (!shouldAutoConnectAudio({ status: audioStatus, connectedSourceId: connectedAudioSourceId }, sourceId)) {
+      if (!effectiveFile && songAudioLinkMissing && shouldMarkAudioLinkMissing(audioStatus)) {
+        setAudioStatus("missing");
+      }
       return;
     }
-    if (attachedSongAudioFile) connectAudioFile(attachedSongAudioFile);
+    if (effectiveFile) connectAudioFile(effectiveFile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grid, attachedSongAudioFile, audioStatus, connectedAudioSourceId]);
+  }, [
+    grid,
+    attachedSongAudioFile,
+    linkedSongAudioFile,
+    songAudioLinkMissing,
+    audioStatus,
+    connectedAudioSourceId,
+  ]);
 
   // 카드 t570(REQ-LDBEAT-024(b)) — 큐잉된 재생(불러오는 중에 ▶ 를 눌렀던
   // 의도)이 연결 상태가 바뀔 때마다 풀리는지 확인한다. `connected`가

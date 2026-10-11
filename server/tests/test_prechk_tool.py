@@ -1299,6 +1299,11 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # BPM 확정(REQ-MUSICSYNC-015)을 부르는 채널이 따로 필요하다. 위와 같은 사유의
     # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "song_audio_analyse",
+    # 카드 t571 (2026-10-11, SPEC-LDBEAT-001 REQ-LDBEAT-024(c) 후속) — 런북
+    # 화면이 세션에 첨부가 없을 때 이 곡에 저장된 오디오 링크를 요청하는
+    # 채널. 콘솔 무접촉(디스크 읽기만)이고 PRECHK/OVERLAP 축과 무관한 정당한
+    # 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "song_audio_link_request",
     # SPEC-COPILOT-MUSICSYNC-001 M2 (2026-09-05) — 곡 오디오가 세션에 머물게
     # 하는 업로드 채널. layout_image_upload 와 같은 형태이고 PRECHK/OVERLAP 축과
     # 무관한 정당한 확장이다. 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
@@ -1360,6 +1365,14 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "question_resolved",
     "review_request",
     "review_resolved",
+    # 카드 t571 — 위 client 쪽 오디오 링크 요청의 응답. 작은 파일/missing/none
+    # 은 `song_audio_link` 하나로, 큰 파일은 REQ-MUSICSYNC-027 과 같은 이유의
+    # 역방향 분할 트리오(`_begin`/`_chunk`/`_end`)로 나간다. 같은 사유의
+    # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "song_audio_link",
+    "song_audio_link_begin",
+    "song_audio_link_chunk",
+    "song_audio_link_end",
     "song_timeline",
     "status",
 )

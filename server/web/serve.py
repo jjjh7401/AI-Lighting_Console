@@ -69,6 +69,7 @@ from server.web.question import QuestionChannel
 from server.web.reply_discovery import make_reply_port_diagnostic
 from server.web.session import SongTimelineStore
 from server.web.settings_api import SettingsDeps
+from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_library import SongTimelineLibrary
 
 
@@ -450,6 +451,11 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
             pin_store_path("song_timeline_library.json"),
             seed=(sugar_library_entry(),),
         ),
+        # 카드 t571(REQ-LDBEAT-024(c) 후속) — 곡별 영구 오디오 링크. 색인은
+        # panel_pins.json 옆에, 바이트는 그 색인 옆 song_audio_files/ 디렉터리에
+        # 쌓인다(둘 다 사용자 데이터 디렉터리 안 — 저장소 밖, .gitignore 대상도
+        # 아니다: 아예 추적 범위 밖이다).
+        song_audio_link_store=SongAudioLinkStore(pin_store_path("song_audio_index.json")),
     )
     # REQ-DEPLOY-018/026 follow-up: a grandMA3 OSC entry has ONE port for BOTH
     # directions, so the port the console replies THROUGH and the port the app

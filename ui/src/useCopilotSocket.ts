@@ -34,6 +34,7 @@ import {
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
   buildSongAudioAnalyse,
+  buildSongAudioLinkRequest,
   buildSongAudioUploadBegin,
   buildSongAudioUploadChunk,
   buildSongAudioUploadEnd,
@@ -226,6 +227,9 @@ export interface CopilotSocket {
   sendBeatGridConsoleStop: () => void;
   /** 카드 t565 — 2D 무대 판독 요청(콘솔 읽기만). */
   sendBeatGridStageRequest: () => void;
+  /** 카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오 링크
+   * 요청(디스크 읽기만). */
+  sendSongAudioLinkRequest: () => void;
   sendDecision: (requestId: string, approved: boolean) => void;
   sendReviewDecision: (requestId: string, approved: boolean) => void;
   sendQuestionAnswer: (requestId: string, answer: string) => void;
@@ -411,6 +415,11 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   );
   // 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속).
   const sendBeatGridStageRequest = useCallback(() => send(buildBeatGridStageRequest()), [send]);
+  // 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크 조회.
+  const sendSongAudioLinkRequest = useCallback(
+    () => send(buildSongAudioLinkRequest()),
+    [send],
+  );
   // 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍 열기).
   const sendBeatGridDrawerRequest = useCallback(
     () => send(buildBeatGridDrawerRequest()),
@@ -527,6 +536,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendBeatGridConsolePlay,
     sendBeatGridConsoleStop,
     sendBeatGridStageRequest,
+    sendSongAudioLinkRequest,
     sendVectorworksExportUpload,
     sendLayoutImageUpload,
     sendSongAudioUpload,

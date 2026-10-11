@@ -288,6 +288,7 @@ from server.web.measure import RoundTripRecorder
 from server.web.messages import (
     CONSOLE_INPUT_LISTENING,
     CONSOLE_INPUT_UNDETERMINED,
+    MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH,
     answer_delta_event,
     approval_request_event,
     beat_grid_drawer_event,
@@ -303,6 +304,10 @@ from server.web.messages import (
     proposal_event,
     question_request_event,
     review_request_event,
+    song_audio_link_begin_event,
+    song_audio_link_chunk_event,
+    song_audio_link_end_event,
+    song_audio_link_event,
     song_timeline_event,
     status_event,
 )
@@ -322,6 +327,7 @@ from server.web.question import (
     section_label,
 )
 from server.web.reply_discovery import ReplyPortMismatch
+from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_draft import TimelineDraftHistory
 from server.web.timeline_library import SongTimelineLibrary
 
@@ -3904,6 +3910,7 @@ class ChatSession:
         pending_plan_store: PendingSongPlanStore | None = None,
         spatial_memory: SpatialMemory | None = None,
         beat_grid_suggestion_source: SuggestionSource | None = None,
+        song_audio_link_store: SongAudioLinkStore | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -3940,6 +3947,11 @@ class ChatSession:
         # Priority 3 (handoff 2026-08-15): approved console stores auto-save a
         # library version ("이름 (자동 vN)"). None (tests, bare deps) = no-op.
         self._timeline_library = timeline_library
+        # 카드 t571(REQ-LDBEAT-024(c) 후속) — 곡별 영구 오디오 링크. ``None``
+        # (시험, bare deps)이면 ``upload_song_audio``는 세션 보관만 하고
+        # 영구 링크는 쓰지 않으며 ``request_song_audio_link``는 늘 "none"을
+        # 답한다 — 오늘의 행동과 바이트 동일.
+        self._song_audio_link_store = song_audio_link_store
         # t281 — 큐시트 초안 편집. `_draft_history` 는 편집 **직전** 상태만 쌓는
         # 되돌리기 스택이고, `_selected_cue` 는 화면에서 감독이 고른 큐 번호다
         # (chat 프레임이 실어 온다). 둘 다 콘솔과 무관하다.
@@ -12418,6 +12430,20 @@ class ChatSession:
             byte_length=len(data),
         )
         audio = self._song_audio
+        # 카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡을 알면(서버의
+        # ``song_timeline_store``가 타임라인을 들고 있으면) 이 바이트를
+        # 재시작 사이에도 남긴다. 곡을 모르면(타임라인이 아직 없으면)
+        # 이 업로드는 세션 보관으로만 끝난다 — 조용한 실패다, 거절이
+        # 아니다: 세션 첨부·분석·확정 경로는 오늘과 바이트 동일하게
+        # 계속 동작한다. 쓰기가 실패해도(디스크 가득 등) 세션 첨부가
+        # 이미 끝난 뒤이므로 운영자가 방금 올린 파일을 잃지 않는다 —
+        # 영구 링크만 조용히 비게 둔다.
+        song_key = self._current_song_audio_key()
+        if song_key is not None and self._song_audio_link_store is not None:
+            with contextlib.suppress(OSError):
+                self._song_audio_link_store.link(
+                    song_key, file_name=file_name, mime_type=mime_type, data=data
+                )
         text = f"'{file_name}' 첨부됨 — 오디오 · sha256 {audio.sha256} · {audio.byte_length}바이트"
         if replaced:
             text = text + " (이전에 첨부한 오디오를 교체했습니다)"
@@ -12425,6 +12451,80 @@ class ChatSession:
         if invalidated:
             text = text + " 이전 분석 확정은 무효가 됐습니다 — 이 곡은 다시 분석해 주세요."
         return self._notify(text)
+
+    def _current_song_audio_key(self) -> tuple[object, object] | None:
+        """지금 곡의 열쇠 — 타임라인이 없으면(곡을 모르면) ``None``.
+
+        새 id 체계를 짓지 않는다 — ``_beat_grid_song_key`` 가 이미 두 곡을
+        가르는 데 쓰는 ``(song_title, sequence_number)`` 쌍 그대로다
+        (코디네이터 계약 1항).
+        """
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return None
+        return self._beat_grid_song_key(timeline)
+
+    def request_song_audio_link(self) -> dict:
+        """카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오
+        링크를 돌려준다(런북 화면이 세션에 첨부가 없을 때 부른다).
+
+        이 메서드는 ``self._song_audio``(이 세션의 첨부)를 보지 않는다 —
+        "첨부가 있으면 안 물어본다"는 UI 쪽 결정이다
+        (``audioAutoConnect.ts``/``App.tsx``). 여기서는 그저 지금 곡에 대해
+        서버가 기억하는 영구 링크를 솔직하게 답한다: 곡을 모르거나
+        저장소가 없으면 ``"none"``, 저장소에 링크가 있는데 파일이 없거나
+        해시가 안 맞으면 ``"missing"``, 둘 다 맞으면 ``"found"``.
+
+        ``found`` 인데 base64 가 한 프레임에 못 들어갈 만큼 크면
+        (``MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH`` 초과) 업로드가 쓰는 분할
+        트리오를 반대 방향으로 내보낸다(REQ-MUSICSYNC-027 과 같은 이유).
+        """
+        song_key = self._current_song_audio_key()
+        store = self._song_audio_link_store
+        if song_key is None or store is None:
+            self._send(song_audio_link_event(status="none"))
+            return {"status": "none"}
+        result = store.resolve(song_key)
+        if result.status != "found":
+            self._send(song_audio_link_event(status=result.status))
+            return {"status": result.status}
+        record = result.record or {}
+        data = result.data or b""
+        content_base64 = base64.b64encode(data).decode("ascii")
+        file_name = str(record.get("file_name", ""))
+        mime_type = str(record.get("mime_type", ""))
+        sha256 = str(record.get("sha256", ""))
+        byte_length = int(record.get("byte_length", len(data)))
+        if len(content_base64) <= MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH:
+            self._send(
+                song_audio_link_event(
+                    status="found",
+                    file_name=file_name,
+                    mime_type=mime_type,
+                    content_base64=content_base64,
+                    sha256=sha256,
+                    byte_length=byte_length,
+                )
+            )
+            return {"status": "found", "chunked": False}
+        chunk_size = MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH
+        chunks = [
+            content_base64[i : i + chunk_size] for i in range(0, len(content_base64), chunk_size)
+        ]
+        self._send(
+            song_audio_link_begin_event(
+                file_name=file_name,
+                mime_type=mime_type,
+                sha256=sha256,
+                byte_length=byte_length,
+                chunk_count=len(chunks),
+            )
+        )
+        for index, chunk in enumerate(chunks):
+            self._send(song_audio_link_chunk_event(index=index, content_base64=chunk))
+        self._send(song_audio_link_end_event())
+        return {"status": "found", "chunked": True}
 
     def analyse_song_audio(
         self,

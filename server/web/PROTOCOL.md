@@ -35,6 +35,7 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 | `panel_catalog_request` | — | (SHOWUI M1) Ask for a `panel_catalog` event (sent on connect and on manual refresh). |
 | `dash_catalog_request` | — | (DASHUI M1, additive) Ask for a `dash_catalog` event. Payload-free; sent on connect and on manual refresh only — never on a timer (REQ-DASHUI-021). |
 | `cue_monitor_request` | — | (T-C, wave 2 — ad-hoc contract, no SPEC on file) Ask for a `cue_monitor` event. Payload-free; sent on connect, on manual refresh, AND on a client-side poll (`CUE_MONITOR_POLL_INTERVAL_MS`, unlike `dash_catalog_request` — see below). A tick arriving while the previous one is still building is **dropped**, and the executor resolution it needs is TTL-cached — see "Poll cost" below. |
+| `song_audio_link_request` | — | (REQ-LDBEAT-024(c) follow-up, card t571, additive) Ask for the current song's PERSISTED audio link (survives server restarts, unlike the session-only `song_audio_upload` attachment). Payload-free — the current song is whatever `song_timeline_store` holds. The UI sends this only when no session-attached file exists; a session attachment always wins over the persisted link. |
 
 Malformed frames (bad JSON, wrong `v`, unknown `type`, missing fields) yield an
 `error` event with `kind: "protocol"` and are otherwise ignored.
@@ -79,6 +80,10 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `dash_catalog` | `sections: DashSection[]` | (DASHUI M1) The console-info dashboard's read-only pool catalog. A refresh REPLACES the list; it does not merge (REQ-DASHUI-006). Info-only by shape — see DashSection / DashItem below. |
 | `cue_monitor` | `executors: CueExecutorEntry[]`, `history: CueHistoryEntry[]` | (T-C, wave 2) The live cue-progress monitor's snapshot — see "Live cue-progress monitor" below. A refresh REPLACES both lists; it does not merge. |
 | `song_timeline` | `timeline: SongTimelineView` | 감독이 검토하는 전곡 조명 타임라인. 구간별 D·팔레트·포지션·질감·FX·MIB·Cue·타이밍과 Q1~Q5 확정 상태, lint/disabled/unresolved notes, 승인·readback 상태를 담는다. 명령 문자열이나 실행 제어 필드는 없다. |
+| `song_audio_link` | `status: "none"\|"missing"\|"found"`, `file_name?`, `mime_type?`, `content_base64?`, `sha256?`, `byte_length?` | (REQ-LDBEAT-024(c) follow-up, card t571, additive) The reply to `song_audio_link_request`. `"none"` = no persisted link for this song (or the current song is unknown); `"missing"` = a link exists but the file is gone or its sha256 no longer matches; `"found"` = the bytes are intact — `content_base64` carries them UNLESS the payload needs the chunked trio below (same frame-size ceiling as `song_audio_upload`), in which case this event carries `status: "found"` with no content and the trio follows. |
+| `song_audio_link_begin` | `status: "found"`, `file_name`, `mime_type`, `sha256`, `byte_length`, `chunk_count: int ≥ 1` | (card t571, additive) Start of a chunked link reply — the download-direction mirror of `song_audio_upload_begin` (REQ-MUSICSYNC-027), used only when the base64 exceeds one frame. |
+| `song_audio_link_chunk` | `index: int ≥ 0`, `content_base64: string` | (card t571) One piece, in order from 0. The client concatenates in index order; a gap or reorder is a client-side defect (the server always sends in order). |
+| `song_audio_link_end` | — | (card t571) Finish — the client has now received every chunk declared by `chunk_count` and reassembles the full `content_base64`. |
 
 ### 질문 카드 — `question_request` / `question_answer`
 

@@ -613,6 +613,80 @@ export interface BeatGridStageView {
   unread: string[];
 }
 
+/** 카드 t571(REQ-LDBEAT-024(c) 후속) — `song_audio_link` 이벤트의 와이어
+ * 본문(서버 ``song_audio_link_event`` 와 같은 모양). */
+export interface SongAudioLinkWireView {
+  status: "none" | "missing" | "found";
+  file_name: string | null;
+  mime_type: string | null;
+  content_base64: string | null;
+  sha256: string | null;
+  byte_length: number | null;
+}
+
+/** 카드 t571 — 지금 곡에 저장된 오디오 링크의 마지막 응답(UI 상태).
+ * `status` 가 `"found"` 이고 아직 분할 조립 중이 아니면 `content_base64` 가
+ * 채워진다 — 분할 중이면(큰 파일) 이 값은 트리오가 끝날 때까지 `null` 이다
+ * (`beginSongAudioLinkAssembly`/`addSongAudioLinkChunk` 가 `songAudioLink.ts`
+ * 에서 조립 상태를 따로 들고 있다가, `song_audio_link_end` 에서 한 번에 이
+ * 상태로 접힌다). ``SongAudioLinkWireView`` 와 다른 한 가지: 아직 한 번도
+ * 요청/응답이 없었으면 ``status`` 가 ``null`` 이다(와이어에는 그런 프레임이
+ * 없다 — 이것은 UI 쪽 "아직 모름" 초기값일 뿐이다). */
+export interface SongAudioLinkState {
+  status: "none" | "missing" | "found" | null;
+  file_name: string | null;
+  mime_type: string | null;
+  content_base64: string | null;
+  sha256: string | null;
+  byte_length: number | null;
+}
+
+/** 카드 t571 — 분할 전송(`song_audio_link_begin`/`_chunk`) 조립 상태. 서버
+ * `SongAudioAssembly`(업로드 방향)의 클라이언트 쪽 짝 — 조각을 순서대로
+ * 모으기만 하는 순수 상태(DOM 무관, `File`/`Blob` 생성은 `songAudioLink.ts`
+ * 가 한다). */
+export interface SongAudioLinkAssemblyState {
+  header: {
+    file_name: string;
+    mime_type: string;
+    sha256: string;
+    byte_length: number;
+    chunk_count: number;
+  } | null;
+  chunks: string[];
+}
+
+export const EMPTY_SONG_AUDIO_LINK_ASSEMBLY: SongAudioLinkAssemblyState = {
+  header: null,
+  chunks: [],
+};
+
+export function beginSongAudioLinkAssembly(
+  header: SongAudioLinkAssemblyState["header"],
+): SongAudioLinkAssemblyState {
+  return { header, chunks: [] };
+}
+
+export function addSongAudioLinkChunk(
+  state: SongAudioLinkAssemblyState,
+  index: number,
+  contentBase64: string,
+): SongAudioLinkAssemblyState {
+  // 시작 신호 없이 온 조각, 또는 순서가 어긋난 조각 — 서버는 항상 순서대로
+  // 보내므로(앞서 세운 begin/chunk 가 그 보증이다) 방어적으로 버린다.
+  if (state.header === null || index !== state.chunks.length) return state;
+  return { header: state.header, chunks: [...state.chunks, contentBase64] };
+}
+
+export function isSongAudioLinkAssemblyComplete(state: SongAudioLinkAssemblyState): boolean {
+  return state.header !== null && state.chunks.length === state.header.chunk_count;
+}
+
+/** 조립된 조각을 순서대로 이어 붙인다 — 완료 여부는 호출부가 먼저 확인한다. */
+export function joinSongAudioLinkChunks(state: SongAudioLinkAssemblyState): string {
+  return state.chunks.join("");
+}
+
 export interface BeatGridPendingSuggestion {
   suggestion_id: string;
   bar: number;
@@ -922,6 +996,21 @@ export type ServerEvent =
   | { v: 1; type: "beat_grid_drawer"; sections: BeatGridDrawerSection[] }
   // 카드 t565 — 2D 무대(장비 좌표 + 그룹 소속, 콘솔 읽기만).
   | ({ v: 1; type: "beat_grid_stage" } & BeatGridStageView)
+  // 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크의 상태 하나짜리
+  // 응답(작거나 missing/none). 큰 파일은 아래 분할 트리오로 대신 온다.
+  | ({ v: 1; type: "song_audio_link" } & SongAudioLinkWireView)
+  | {
+      v: 1;
+      type: "song_audio_link_begin";
+      status: "found";
+      file_name: string;
+      mime_type: string;
+      sha256: string;
+      byte_length: number;
+      chunk_count: number;
+    }
+  | { v: 1; type: "song_audio_link_chunk"; index: number; content_base64: string }
+  | { v: 1; type: "song_audio_link_end" }
   // AI 제안(경로 ③) 보류 카드 생성 — `NullSuggestionSource`가 기본값이라
   // 생산 환경에서는 거의 발생하지 않는다(시험용 가짜 소스로 렌더 검증).
   | ({ v: 1; type: "beat_grid_suggestion" } & BeatGridPendingSuggestion)
@@ -965,6 +1054,12 @@ const SERVER_EVENT_TYPES = new Set([
   "beat_grid_suggestion_consumed",
   // 카드 t563 — 상단 바 콘솔 버튼 셋의 공용 응답.
   "beat_grid_send_status",
+  // 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크(단일 프레임 또는
+  // 분할 트리오).
+  "song_audio_link",
+  "song_audio_link_begin",
+  "song_audio_link_chunk",
+  "song_audio_link_end",
 ]);
 
 /** Parse one server frame; unknown/foreign frames return null (ignored). */
@@ -1094,6 +1189,13 @@ export function buildBeatGridConsoleStop(): string {
  * 서버가 안다). */
 export function buildBeatGridStageRequest(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_stage_request" });
+}
+
+/** 카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오 링크 요청.
+ * 페이로드 없음(지금 곡은 서버의 `song_timeline_store`가 이미 안다). 세션에
+ * 첨부가 있을 때는 보내지 않는다 — 그 결정은 호출부(`App.tsx`)의 몫이다. */
+export function buildSongAudioLinkRequest(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "song_audio_link_request" });
 }
 
 export function buildVectorworksExportUpload(fileName: string, contentBase64: string): string {
@@ -1515,6 +1617,13 @@ export interface UiState {
    * 왔으면(반영·미리보기를 아직 안 눌렀고 편집도 없었으면) `null` —
    * 배지 숫자를 지어내지 않는다. */
   beatGridSendStatus: BeatGridSendStatus | null;
+  /** 카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오 링크의
+   * 마지막 응답. `status: null` = 아직 요청한 적이 없음. */
+  songAudioLink: SongAudioLinkState;
+  /** 카드 t571 — 분할 전송(`song_audio_link_begin`/`_chunk`) 조립 중인
+   * 상태. 완료되면(`song_audio_link_end`) `songAudioLink`로 접히고 이
+   * 값은 비운다. */
+  songAudioLinkAssembly: SongAudioLinkAssemblyState;
 }
 
 export const initialState: UiState = {
@@ -1525,6 +1634,15 @@ export const initialState: UiState = {
   beatGridStage: null,
   pendingBeatGridSuggestion: null,
   beatGridSendStatus: null,
+  songAudioLink: {
+    status: null,
+    file_name: null,
+    mime_type: null,
+    content_base64: null,
+    sha256: null,
+    byte_length: null,
+  },
+  songAudioLinkAssembly: EMPTY_SONG_AUDIO_LINK_ASSEMBLY,
   pendingApprovals: [],
   pendingReviews: [],
   pendingQuestions: [],
@@ -1786,6 +1904,65 @@ export function reduceServerEvent(
           approval_vs_sent: event.approval_vs_sent,
         },
       };
+    case "song_audio_link":
+      // 단일 프레임 응답(작은 파일, 또는 missing/none) — 최신 응답으로
+      // REPLACE. 진행 중이던 분할 조립이 있었다면(있을 수 없는 경합이지만)
+      // 같이 버린다 — 둘이 동시에 유효한 상태는 없다.
+      return {
+        ...state,
+        songAudioLink: {
+          status: event.status,
+          file_name: event.file_name,
+          mime_type: event.mime_type,
+          content_base64: event.content_base64,
+          sha256: event.sha256,
+          byte_length: event.byte_length,
+        },
+        songAudioLinkAssembly: EMPTY_SONG_AUDIO_LINK_ASSEMBLY,
+      };
+    case "song_audio_link_begin":
+      // 큰 파일의 분할 시작 — 조립이 끝나기 전까지 `songAudioLink`는 아직
+      // 이전 값(또는 초기값)을 유지한다. 반쪽짜리 상태를 "found"로 보이면
+      // 아직 안 받은 바이트를 받은 것처럼 되돌릴 위험이 있다.
+      return {
+        ...state,
+        songAudioLinkAssembly: beginSongAudioLinkAssembly({
+          file_name: event.file_name,
+          mime_type: event.mime_type,
+          sha256: event.sha256,
+          byte_length: event.byte_length,
+          chunk_count: event.chunk_count,
+        }),
+      };
+    case "song_audio_link_chunk":
+      return {
+        ...state,
+        songAudioLinkAssembly: addSongAudioLinkChunk(
+          state.songAudioLinkAssembly,
+          event.index,
+          event.content_base64,
+        ),
+      };
+    case "song_audio_link_end": {
+      const assembly = state.songAudioLinkAssembly;
+      if (!isSongAudioLinkAssemblyComplete(assembly) || assembly.header === null) {
+        // 불완전한 조립 — 되돌릴 바이트가 없다. 서버가 begin/chunk/end 순서를
+        // 보증하므로 생산 환경에서는 거의 일어나지 않는다; 조용히 비운다.
+        return { ...state, songAudioLinkAssembly: EMPTY_SONG_AUDIO_LINK_ASSEMBLY };
+      }
+      return {
+        ...state,
+        songAudioLink: {
+          status: "found",
+          file_name: assembly.header.file_name,
+          mime_type: assembly.header.mime_type,
+          content_base64: joinSongAudioLinkChunks(assembly),
+          sha256: assembly.header.sha256,
+          byte_length: assembly.header.byte_length,
+        },
+        songAudioLinkAssembly: EMPTY_SONG_AUDIO_LINK_ASSEMBLY,
+      };
+    }
   }
 }
 
