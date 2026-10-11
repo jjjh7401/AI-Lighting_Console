@@ -86,10 +86,17 @@ export function BeatGridTransitionView({
 
   return (
     <div className="beat-grid-transition-view" aria-label="전환 화면">
+      {/* 카드 t586 — 시안 `drawJx` 머리: 「전환 · FOH · Cue 1 → Cue 2」 한 줄 +
+          「'FOH Off' → 'Face 60' · 값은 들어오는 큐(Cue 2)에 저장돼요」 한 줄. Cue 번호는
+          그 줄 안 순서(편집 칸 머리 `BeatGridCueHeadMeta`와 같은 셈). */}
       <div className="beat-grid-tr-title">
-        전환 — {prevCue ? `'${prevCue.label}' (${prevCue.bar}마디)` : "곡 첫 큐"} → '{cue.label}' ({cue.bar}마디)
+        전환 · {track.group_name} · {prevCue ? `Cue ${track.cues.indexOf(prevCue) + 1}` : "곡 첫 큐"} → Cue{" "}
+        {track.cues.indexOf(cue) + 1}
       </div>
-      <div className="beat-grid-tr-note">값은 들어오는 큐({cue.bar}마디)에 저장돼요(MA3 방식)</div>
+      <div className="beat-grid-tr-note">
+        {prevCue ? `'${prevCue.label}' (${prevCue.bar}마디) → ` : ""}'{cue.label}' ({cue.bar}마디) · 값은 들어오는
+        큐(Cue {track.cues.indexOf(cue) + 1})에 저장돼요(MA3 방식)
+      </div>
       <div className="beat-grid-ed">
         <label>
           페이드

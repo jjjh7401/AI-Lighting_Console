@@ -45,10 +45,11 @@
 }
 
 /* 전환 화면 — 같은 자리에서 바뀐다(REQ-LDBEAT-020(d)). */
+/* 카드 t586 — 시안 `.sidepane h5{font-size:13px;color:#fff}` (전에는 노란 굵은 긴 글자). */
 .beat-grid-tr-title {
-  color: #ffd84d;
+  color: #fff;
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 13px;
   margin: 2px 0;
 }
 
@@ -182,8 +183,9 @@
 .beat-grid-scene-row {
   display: flex;
   position: sticky;
-  /* 자(`.beat-grid-ruler`) 높이 20px + 아래 줄 1px 바로 밑. */
-  top: 21px;
+  /* 자(`.beat-grid-ruler`) 높이 38px + 아래 줄 1px 바로 밑(카드 t586 — 시안
+     `.ruler` 높이로 맞추며 20px → 38px). */
+  top: 39px;
   z-index: 6;
   height: 22px;
   background: #1a1a20;
