@@ -22,6 +22,7 @@ import {
 
 import { ApprovalCard } from "./components/ApprovalCard";
 import { BeatGrid } from "./components/BeatGrid";
+import { LIFECYCLE_LABEL as SONG_TIMELINE_LIFECYCLE_LABEL } from "./components/SongTimeline";
 import { ChatView } from "./components/ChatView";
 import {
   fetchPresetPool,
@@ -1132,6 +1133,11 @@ export default function App() {
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
+            bpm={state.songTimeline.timeline?.bpm}
+            barCount={state.songTimeline.timeline?.bar_count}
+            versionLabel={
+              state.songTimeline.timeline ? SONG_TIMELINE_LIFECYCLE_LABEL[state.songTimeline.timeline.lifecycle] : null
+            }
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
             onSentenceEditRequest={sendBeatGridEditSentence}
             onSuggestionRequest={sendBeatGridSuggest}

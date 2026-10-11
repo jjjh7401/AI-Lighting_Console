@@ -13,7 +13,7 @@ import { cueLabel } from "./CueSheetTimeline";
 import { PlanCueRequestGenerator } from "./PlanCueRequestGenerator";
 import { sectionPosition } from "./runbookM7";
 
-const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
+export const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
   draft: "초안",
   requires_requery: "재질의 필요",
   pending_approval: "감독 검토 대기",

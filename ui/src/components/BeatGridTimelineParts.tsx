@@ -23,6 +23,7 @@ export function BeatGridJoint({
   secondsPerBar,
   isOn,
   onOpen,
+  pxPerBar = PX_PER_BAR,
 }: {
   prev: BeatGridCue;
   cue: BeatGridCue;
@@ -34,10 +35,12 @@ export function BeatGridJoint({
   secondsPerBar: number | null | undefined;
   isOn: boolean;
   onOpen: () => void;
+  /** 곡 전체 지도 확대 단계별 마디 폭(카드 t559). */
+  pxPerBar?: number;
 }) {
   const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null);
   const fadeBars = cue.entry.fade_bars ?? 0;
-  const left = barToX(cue.bar);
+  const left = barToX(cue.bar, pxPerBar);
   const bleedFrom = prevFill ?? (prev.label.trim() === "—" ? "#25252c" : "#d8d8d8");
   return (
     <>
@@ -47,7 +50,7 @@ export function BeatGridJoint({
           aria-hidden="true"
           style={{
             left,
-            width: Math.min(nextSegmentWidth, fadeBars * PX_PER_BAR),
+            width: Math.min(nextSegmentWidth, fadeBars * pxPerBar),
             background: `linear-gradient(90deg, ${bleedFrom}, transparent)`,
           }}
         />
@@ -71,11 +74,13 @@ export function BeatGridSceneRow({
   activeBar,
   width,
   onSelect,
+  pxPerBar = PX_PER_BAR,
 }: {
   bars: readonly { bar: number; count: number }[];
   activeBar: number | null;
   width: number;
   onSelect: (bar: number) => void;
+  pxPerBar?: number;
 }) {
   return (
     <div className="beat-grid-scene-row">
@@ -86,7 +91,7 @@ export function BeatGridSceneRow({
             type="button"
             key={bar}
             className={`beat-grid-scene-pill${activeBar === bar ? " is-on" : ""}`}
-            style={{ left: barToX(bar) }}
+            style={{ left: barToX(bar, pxPerBar) }}
             title={`${bar}마디에서 ${count}줄이 함께 바뀜 — 누르면 그 순간 전체`}
             onClick={() => onSelect(bar)}
           >

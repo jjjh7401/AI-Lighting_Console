@@ -75,6 +75,15 @@
 5. **경고의 강조(★) 마디 예외 미적용.** 시안 `warnOf` 는 ★ 마디의 끊김을 경고에서 뺀다 — 곡 데이터에 강조 마디가 아직 없다(M9 step 1 소관). 그 전까지 ★ 마디의 켜진 채 위치 끊김도 [제안] 경고로 보인다.
 6. **곡 시각은 곡 0초 기준.** 시안은 타임코드 리드(앞박) 3초를 더해 보여 준다 — 그 값의 데이터 출처가 UI 에 없어 더하지 않았다(지어내지 않음). 표시 문구는 "곡 N.NN초".
 
+## 4-1. origin/main(1d1aa813, t559 곡 지도·상단 바) 병합
+
+- 충돌 1곳(`BeatGrid.tsx`, 훅 선언부): t559 의 확대 상태·`lanesRef`·`measureLanes` 를 그대로 두고, 이 카드가 지운 `stageBounds` 한 줄만 뺐다(무대 부품이 직접 계산).
+- 충돌은 아니지만 깨진 곳 2개를 고쳤다:
+  - t559 가 `sectionBlocks` 를 없애고 `overviewModel` 로 바꿨다 → 구간 경계를 `overviewModel.sections[].startBar` 에서 읽는다(`tsc` 가 잡음).
+  - 눈금 폭이 확대 단계별 `pxPerBar` 로 바뀌었다 → `BeatGridJoint`·`BeatGridSceneRow` 에 `pxPerBar` prop 을 열고 BeatGrid 가 확대된 폭을 넘긴다(안 넘기면 확대 때 이음매·알약이 막대와 어긋난다).
+- 병합 트리 증거: `npx tsc --noEmit` exit 0(`merge-tsc.txt`), `npx vitest run` → `Test Files 39 passed (39)` · `Tests 964 passed (964)`(`merge-vitest.txt`), `vite build` exit 0(`merge-vite-build.txt`).
+- §4-5 갱신: t559 가 `overviewModel.accentBars`(★ 마디)를 들여왔다 — 이제 ★ 예외를 적용할 데이터가 있다. 이 카드에서는 적용하지 않았다(세 부품에 인자를 더 넘겨야 해 범위가 넓어짐) — 리드가 원하면 후속으로.
+
 ## 5. 남긴 것
 
 - `ui/src/styles.css` 의 `.beat-grid-cue-field-entry-btn` 규칙이 이제 쓰이지 않는다. 다른 레인이 같은 파일을 고치는 중이라 지우지 않았다.
