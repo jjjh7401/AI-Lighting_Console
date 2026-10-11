@@ -1256,7 +1256,12 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # **쓴다**(기존 `run_commands` -> 안전 게이트 경로 재사용) — PRECHK/
     # OVERLAP 축과 무관한 정당한 확장이고, 손으로 올려야 통과한다는 것이
     # 이 게이트의 전부다.
+    # 카드 t578 (2026-10-11, SPEC-LDBEAT-001 REQ-024(a)) — 「콘솔 같이」 타임코드
+    # 재생·정지. t563 미리보기와 같은 게이트 경로(세션 1회 승인) — 같은 사유의
+    # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "beat_grid_apply",
+    "beat_grid_console_play",
+    "beat_grid_console_stop",
     "beat_grid_drawer_request",
     "beat_grid_edit",
     "beat_grid_preview",

@@ -611,6 +611,8 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_apply",
                     "beat_grid_preview",
                     "beat_grid_preview_off",
+                    "beat_grid_console_play",
+                    "beat_grid_console_stop",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
                     # `beat_grid_edit`과 달리 이 셋은 `run_commands` ->
@@ -631,9 +633,19 @@ def create_app(deps: WebDeps) -> FastAPI:
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_preview, message["bar"])
                         )
-                    else:
+                    elif message_type == "beat_grid_preview_off":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_preview_off)
+                        )
+                    # 카드 t578 — 「콘솔 같이」 재생·정지. 같은 승인 왕복이라 같은
+                    # 백그라운드 task 패턴이다.
+                    elif message_type == "beat_grid_console_play":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_console_play)
+                        )
+                    else:
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_console_stop)
                         )
                 elif message_type == "beat_grid_stage_request":
                     # 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속). 장비 수만큼

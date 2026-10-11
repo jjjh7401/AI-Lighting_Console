@@ -720,7 +720,7 @@ export interface BeatGridSendStatus {
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
    * 안 했으면) `null`. */
   pending_apply_count: number | null;
-  last_action: "apply" | "preview" | "preview_off" | "edit";
+  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop";
   ok: boolean;
   reason: string | null;
   blocked_cells: BeatGridBlockedCell[];
@@ -1172,6 +1172,17 @@ export function buildBeatGridPreview(bar: number): string {
  * 시퀀스를 끈다 — 서버가 번호를 쥐고 있다). */
 export function buildBeatGridPreviewOff(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_preview_off" });
+}
+
+/** 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 켬 + ▶ . 페이로드 없음(타임코드
+ * 번호는 서버의 소유 기록에 있다). 서버가 `Top Timecode` → `Go Timecode`를 보낸다. */
+export function buildBeatGridConsolePlay(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_play" });
+}
+
+/** 카드 t578 — 「콘솔 같이」 켬 + ❚❚ . 서버가 `Off Timecode`를 보낸다. */
+export function buildBeatGridConsoleStop(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_stop" });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는

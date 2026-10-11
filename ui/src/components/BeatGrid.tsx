@@ -45,6 +45,7 @@ import type {
   BeatGridStageGroup,
   BeatGridTrack,
   BeatGridView,
+  BeatGridSendStatus,
 } from "../protocol";
 // 카드 t561(M9 step 3·4·5) — 편집 칸·전환 화면·장면 전환·2D 무대는 새
 // 부품 파일에 있다. 이 파일은 마운트만 한다(BeatGrid.tsx 를 여러 레인이
@@ -90,7 +91,7 @@ import {
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
-import { CONSOLE_FOLLOW_DISABLED_REASON } from "./beatgrid/consoleSyncAudio";
+import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
   brightnessCell,
   changedFieldsLabel,
@@ -495,6 +496,12 @@ export interface BeatGridProps {
   onPreviewOff?: () => void;
   onApply?: () => void;
   pendingApplyCount?: number | null;
+  /** 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 타임코드 재생·정지 송신과 그
+   * 응답(`beat_grid_send_status`). 둘 다 넘겨야 토글이 켜진다 — 생략하면 기존처럼
+   * 늘 비활성이다. */
+  onConsolePlay?: () => void;
+  onConsoleStop?: () => void;
+  sendStatus?: BeatGridSendStatus | null;
   /**
    * 카드 t551(M3) — 편집 경로 ①(직접 고르기). UI는 서버 페이로드를 직접
    * 구성하지 않는다(AC-LDBEAT-005) — 이 콜백은 사용자가 고른 필드·값을
@@ -1065,6 +1072,9 @@ export function BeatGrid({
   onPreviewOff,
   onApply,
   pendingApplyCount,
+  onConsolePlay,
+  onConsoleStop,
+  sendStatus = null,
   onEditRequest,
   onSentenceEditRequest,
   onSuggestionRequest,
@@ -1158,6 +1168,16 @@ export function BeatGrid({
   const [connectedAudioSourceId, setConnectedAudioSourceId] = useState<string | null>(null);
   const [pendingPlayIntent, setPendingPlayIntent] = useState(false);
   const [lastPlaybackError, setLastPlaybackError] = useState<string | null>(null);
+  // 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」. 켜져 있으면 ▶ 가 먼저 서버에
+  // 타임코드 재생을 요청하고, 성공 응답이 오면 실측 지연 뒤 음원을 0초부터 튼다.
+  // `awaitingConsolePlayRef`는 effect 의존성이 아니라 ref다 — 이전 재생 응답이
+  // 상태에 남아 있어도 ▶ 를 누르는 순간 그것을 새 응답으로 오인하지 않게,
+  // 「새 응답이 도착했을 때」만 판단한다.
+  const [consoleFollow, setConsoleFollow] = useState(false);
+  const [consoleFollowError, setConsoleFollowError] = useState<string | null>(null);
+  const awaitingConsolePlayRef = useRef(false);
+  const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consoleFollowAvailable = !!onConsolePlay && !!onConsoleStop;
   // 카드 t570(REQ-LDBEAT-024(e)) — 편집 칸이 보고 있는 L·R 자식 줄(없으면
   // 부모 그룹 줄). `resolveLRSplitViewAfterBarChange`가 마디 변화에 따라
   // 매 렌더 다시 계산한다 — 별도 clear 코드 없이 구간을 벗어나면 저절로
@@ -1195,6 +1215,22 @@ export function BeatGrid({
   // 큐잉을 풀어 즉시 시작한다. 일시정지는 `playbackSeconds`를 그대로 둔다
   // (멈춘 자리부터 이어 재생 — AC-LDBEAT-024(d)).
   const togglePlay = () => {
+    // 카드 t578 — 「콘솔 같이」 켬: ❚❚ 는 음원을 멈추고 콘솔 타임코드도 끈다.
+    // ▶ 는 여기서 음원을 틀지 않는다 — 서버 응답(아래 effect)이 지연 뒤 튼다.
+    if (consoleFollow && consoleFollowAvailable) {
+      if (playing) {
+        setPlaying(false);
+        audioRef.current?.pause();
+        if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+        onConsoleStop?.();
+        return;
+      }
+      if (awaitingConsolePlayRef.current) return;
+      setConsoleFollowError(null);
+      awaitingConsolePlayRef.current = true;
+      onConsolePlay?.();
+      return;
+    }
     if (playing) {
       setPlaying(false);
       audioRef.current?.pause();
@@ -1282,6 +1318,52 @@ export function BeatGrid({
     if (shouldStart) togglePlay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioStatus]);
+
+  // 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 재생 응답. 성공이면 콘솔이 Top
+  // 으로 처음에 되감겼으므로 시계를 0초에 두고, 실측 지연
+  // (`console_audio_offset_seconds`) 뒤에 음원과 시계를 0초부터 시작한다. 거절이면
+  // 그 이유를 보이고 음원만 따로 틀지 않는다(`resolveConsolePlayResponse`).
+  useEffect(() => {
+    const decision = resolveConsolePlayResponse(
+      awaitingConsolePlayRef.current,
+      sendStatus,
+      grid?.console_audio_offset_seconds,
+    );
+    if (decision.kind === "none") return;
+    awaitingConsolePlayRef.current = false;
+    if (decision.kind === "fail") {
+      setConsoleFollowError(decision.reason);
+      return;
+    }
+    setPlaybackSeconds(0);
+    if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+    consoleAudioTimerRef.current = setTimeout(() => {
+      consoleAudioTimerRef.current = null;
+      playbackAnchorRef.current = { anchorSeconds: 0, anchorPerfMs: performance.now() };
+      setPlaying(true);
+      const audio = audioRef.current;
+      if (audioStatus === "connected" && audio) {
+        try {
+          audio.currentTime = 0;
+        } catch {
+          // togglePlay 와 같은 경계(메타데이터 전이면 던진다).
+        }
+        void audio.play().catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          setLastPlaybackError(`[음원 재생 실패] ${message}`);
+        });
+      }
+    }, decision.delaySeconds * 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendStatus]);
+
+  // 화면을 떠날 때 걸려 있는 음원 시작 타이머를 지운다.
+  useEffect(
+    () => () => {
+      if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+    },
+    [],
+  );
 
   // 카드 t570(REQ-LDBEAT-024(b)(d)(f)(h)) — 재생 시계 자체. `playing`일
   // 때만 돈다. 매 프레임: 화면 쪽 갱신(갱신 "이번 마디로 바뀌었는지"
@@ -1559,6 +1641,11 @@ export function BeatGrid({
           onSelectAudioFile: onSelectAudio,
           audioFailureReason,
           consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,
+          consoleFollowOn: consoleFollow,
+          onToggleConsoleFollow: consoleFollowAvailable
+            ? () => setConsoleFollow((on) => !on)
+            : undefined,
+          consoleFollowError,
         }}
       />
 

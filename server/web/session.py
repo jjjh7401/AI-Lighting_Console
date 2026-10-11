@@ -9945,6 +9945,57 @@ class ChatSession:
             )
         return self._beat_grid_send_status(last_action="preview_off", ok=True)
 
+    def _beat_grid_owned_timecode(self) -> tuple[int | None, str | None]:
+        """카드 t578 — 「콘솔 같이」가 재생할 타임코드 번호. t572 소유 기록에서만
+        온다(번호를 지어내지 않음). 기록이 없으면 「아직 반영 안 함」, 콘솔의 그
+        타임코드 이름이 기록과 다르면 남의 객체로 보고 거절한다 — 판정은
+        ``_resolve_beat_grid_timecode_number``(``timecode_slot_verdict``)를 그대로 쓴다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        record = (
+            store.beat_grid_allocation(self._beat_grid_song_key(timeline))
+            if store is not None and timeline is not None
+            else None
+        )
+        if not record:
+            return None, (
+                "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
+                "먼저 「⇪ 콘솔에 반영」을 해 주세요."
+            )
+        return self._resolve_beat_grid_timecode_number(
+            record.get("timecode_number"), recorded_name=record.get("timecode_name")
+        )
+
+    def _beat_grid_console_transport(self, action: str, verbs: tuple[str, ...]) -> dict:
+        """「콘솔 같이」 공용 송신 — t563 미리보기 길(세션 시작 1회 승인)을 그대로
+        탄다. 새 생쓰기 경로는 없다(``run_commands`` → 게이트)."""
+        timecode_number, reason = self._beat_grid_owned_timecode()
+        if reason is not None or timecode_number is None:
+            return self._beat_grid_send_status(last_action=action, ok=False, reason=reason)
+        # 문면은 t520 실측 선례(`.moai/reports/t520/verdict.md`): `Top Timecode N` 은
+        # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
+        # 늘 Top 다음 Go 다.
+        commands = tuple(f"{verb} Timecode {timecode_number}" for verb in verbs)
+        if not self._beat_grid_dispatch_preview(f"beat-grid-{action}", commands):
+            return self._beat_grid_send_status(
+                last_action=action,
+                ok=False,
+                reason=(
+                    "콘솔 타임코드 명령이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답)."
+                ),
+            )
+        return self._beat_grid_send_status(last_action=action, ok=True)
+
+    def beat_grid_console_play(self) -> dict:
+        """카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 켬 + ▶ : 그 곡의 타임코드를
+        처음으로 되감고 재생한다. 음원은 UI 가 성공 응답을 받은 뒤
+        ``console_audio_offset_seconds``(실측 데이터 파일) 만큼 기다렸다 시작한다."""
+        return self._beat_grid_console_transport("console_play", ("Top", "Go"))
+
+    def beat_grid_console_stop(self) -> dict:
+        """카드 t578 — 「콘솔 같이」 켬 + ❚❚ : 그 곡의 타임코드를 끈다."""
+        return self._beat_grid_console_transport("console_stop", ("Off",))
+
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.
         격자·콘솔 어느 쪽도 바뀌지 않는다(결정④, 상태 diff 0) — 제안

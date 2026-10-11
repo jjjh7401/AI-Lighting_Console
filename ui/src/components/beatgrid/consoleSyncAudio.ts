@@ -34,3 +34,33 @@ export function consoleSyncAudioStartOffsetSeconds(
   }
   return delaySeconds;
 }
+
+/** 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 켬 + ▶ 를 누른 뒤 서버 응답
+ * (`beat_grid_send_status`)이 오면 무엇을 할지.
+ *
+ * - 기다리는 중이 아니거나 콘솔 재생 응답이 아니면 `none`.
+ * - 서버가 거절했으면(반영 기록 없음·남의 타임코드·승인 거절) `fail` + 그 이유 —
+ *   음원만 따로 틀지 않는다(콘솔과 어긋난 재생을 만들지 않음).
+ * - 성공했는데 지연 측정값이 없으면 `fail` — 지연을 지어내지 않는다.
+ * - 성공 + 측정값이 있으면 `start` — 그만큼 기다렸다 음원을 0초부터 시작한다
+ *   (`Top Timecode`가 콘솔을 처음으로 되감았으므로 음원도 처음부터). */
+export type ConsolePlayDecision =
+  | { kind: "none" }
+  | { kind: "start"; delaySeconds: number }
+  | { kind: "fail"; reason: string };
+
+export function resolveConsolePlayResponse(
+  awaiting: boolean,
+  status: { last_action: string; ok: boolean; reason: string | null } | null,
+  delaySeconds: number | null | undefined,
+): ConsolePlayDecision {
+  if (!awaiting || !status || status.last_action !== "console_play") return { kind: "none" };
+  if (!status.ok) {
+    return { kind: "fail", reason: status.reason ?? "콘솔 타임코드 재생이 거절됐습니다." };
+  }
+  const delay = consoleSyncAudioStartOffsetSeconds(delaySeconds);
+  if (delay === null) {
+    return { kind: "fail", reason: "콘솔→음원 지연 측정값이 없어 음원을 맞춰 시작할 수 없습니다." };
+  }
+  return { kind: "start", delaySeconds: delay };
+}

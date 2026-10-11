@@ -131,9 +131,27 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
     expect(html).not.toContain("▶ 재생");
   });
 
-  it("콘솔 같이 토글은 늘 비활성이고 이유를 title 로 말한다(송신 경로 자체가 없음)", () => {
+  it("콘솔 같이 토글은 송신 경로를 안 넘기면 비활성이고 이유를 title 로 말한다", () => {
     const html = renderTopBar({ playback });
     expect(html).toMatch(/title="타임코드 재생 송신 경로 없음"[^>]*disabled/);
+  });
+
+  it("카드 t578 — 송신 경로를 넘기면 토글이 켜지고, 켬/끔과 거절 이유를 보인다", () => {
+    const off = renderTopBar({ playback: { ...playback, onToggleConsoleFollow: noop, consoleFollowOn: false } });
+    const toggleTag = off.match(/<button[^>]*>콘솔 같이 끔</)?.[0] ?? "";
+    expect(toggleTag).toContain('aria-pressed="false"');
+    expect(toggleTag).not.toContain("disabled");
+    expect(off).not.toContain("타임코드 재생 송신 경로 없음");
+    const on = renderTopBar({
+      playback: {
+        ...playback,
+        onToggleConsoleFollow: noop,
+        consoleFollowOn: true,
+        consoleFollowError: "이 곡을 콘솔에 반영한 기록이 없어",
+      },
+    });
+    expect(on).toMatch(/aria-pressed="true">콘솔 같이 켬</);
+    expect(on).toContain("이 곡을 콘솔에 반영한 기록이 없어");
   });
 
   it("연결 실패 이유가 있으면 보인다", () => {
