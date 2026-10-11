@@ -35,6 +35,28 @@ import type {
   BeatGridTrack,
   BeatGridView,
 } from "../protocol";
+// 카드 t561(M9 step 3·4·5) — 편집 칸·전환 화면·장면 전환·2D 무대는 새
+// 부품 파일에 있다. 이 파일은 마운트만 한다(BeatGrid.tsx 를 여러 레인이
+// 동시에 고치므로 새 영역을 여기 키우지 않는다).
+import {
+  BeatGridConsoleCommand,
+  BeatGridCueFocus,
+  BeatGridCueHeadMeta,
+  BeatGridMovementRow,
+  BeatGridSideRow,
+  type BeatGridFocusField,
+} from "./BeatGridCuePanelParts";
+import { BeatGridStage } from "./BeatGridStage";
+import { BeatGridJoint, BeatGridScenePanel, BeatGridSceneRow } from "./BeatGridTimelineParts";
+import { BeatGridTransitionView } from "./BeatGridTransitionView";
+import {
+  cueConsoleCommandLines,
+  parseBeatsPerBar,
+  previousCue,
+  sceneChangeBars,
+  transitionConsoleCommandLines,
+  transitionMib,
+} from "./beatGridTransition";
 
 /** REQ-LDBEAT-005(a) — 초기 표시 범위를 4마디 단위 행 7개로 나눈다. 배치
  * 규칙서 §4의 표 그대로(첫 행은 못갖춘마디 포함 3마디, 넷째 행도 3마디 —
@@ -441,6 +463,10 @@ export interface BeatGridProps {
   drawerSections?: BeatGridDrawerSection[] | null;
   /** 카드 t551 후속 — mockup `#bLib`(서랍 열기, 매번 최신 판독 요청). */
   onDrawerRequest?: () => void;
+  /** 카드 t561 — 곡 박자표(`"4/4"`). 전환 화면의 박 입력을 정수 마디로
+   * 바꿀 때만 쓴다 — 없으면 박 입력이 비활성이다(한 마디 박 수를 지어내지
+   * 않음). */
+  timeSignature?: string;
 }
 
 /** 역할별 조건부 노출(REQ-LDBEAT-004(c)) — 무빙만 "움직임", KEY류는 "색"
@@ -896,6 +922,7 @@ export function BeatGrid({
   onSuggestionReject,
   drawerSections = null,
   onDrawerRequest,
+  timeSignature,
 }: BeatGridProps) {
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
@@ -932,6 +959,12 @@ export function BeatGrid({
   // `hlP`). 강조는 서랍을 닫아도 유지하지 않는다 — 다시 열면 깨끗한 상태.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [highlightedPresetNo, setHighlightedPresetNo] = useState<string | null>(null);
+  // 카드 t561 — 「장면 전환」 알약으로 연 마디(편집 칸이 그 순간 전체 표로
+  // 바뀐다, REQ-LDBEAT-020(a)). 막대·이음매를 누르면 닫힌다.
+  const [sceneBar, setSceneBar] = useState<number | null>(null);
+  // 카드 t561 — 편집 칸이 초점을 둘 항목(REQ-LDBEAT-021(a)). 「이 마디
+  // 한눈에」 표 클릭(카드 t560)이 이 값을 정한다 — 막대를 누르면 지운다.
+  const [focusField, setFocusField] = useState<BeatGridFocusField | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
@@ -944,7 +977,6 @@ export function BeatGrid({
     [probeResults, grid],
   );
   const writeLocked = isWriteLocked(probes);
-  const stageBounds = useMemo(() => computeStageBounds(fixtures), [fixtures]);
 
   if (!grid) {
     return (
@@ -999,6 +1031,30 @@ export function BeatGrid({
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
   const playheadBar = secondsToBar(playbackSeconds, secondsPerBar, maxBar);
   const laneContentWidth = barToX(maxBar + 1);
+  // 카드 t561 — 전환·장면 전환·편집 칸 머리에 쓰는 값. 구간 경계는 곡 전체
+  // 지도와 같은 `sectionBlocks`에서 온다(없으면 `null` — 색 경고를 판정하지
+  // 않는다).
+  const beatsPerBar = parseBeatsPerBar(timeSignature);
+  const sectionStartBars = sectionBlocks.length > 0 ? sectionBlocks.map((block) => block.startBar) : null;
+  const sceneBars = sceneChangeBars(grid.tracks, grid.bar_range.start);
+  const selectedPrevCue = selectedTrack && selectedCue ? previousCue(selectedTrack, selectedCue.bar) : null;
+  const selectedSegmentEnd =
+    selectedTrack && selectedCue
+      ? (trackCueSegments(selectedTrack, maxBar).find((s) => s.cue === selectedCue)?.endBar ?? maxBar + 1)
+      : maxBar + 1;
+  const selectedConfirmedFixtures = selectedTrack
+    ? fixtures.filter(
+        (f) => f.confirmedGroupName && f.confirmedGroupName.toUpperCase() === selectedTrack.group_name.toUpperCase(),
+      ).length
+    : 0;
+  const selectCue = (trackIndex: number, bar: number, transition: boolean) => {
+    setSelected({ trackIndex, bar });
+    setTransitionView(transition);
+    setSceneBar(null);
+    setFocusField(null);
+    setActiveEditField(null);
+    setNewPresetNote(null);
+  };
 
   const onSelectAudio = (file: File | null) => {
     if (!file) return;
@@ -1134,6 +1190,15 @@ export function BeatGrid({
               )}
             </div>
           </div>
+          <BeatGridSceneRow
+            bars={sceneBars}
+            activeBar={sceneBar}
+            width={laneContentWidth}
+            onSelect={(bar) => {
+              setSceneBar(bar);
+              setFocusField(null);
+            }}
+          />
 
           {folders.map((folder) => {
             const open = isFolderOpen(folder.role);
@@ -1204,12 +1269,7 @@ export function BeatGrid({
                                   title={`${segment.startBar}~${segment.endBar - 1}마디${
                                     colorFill.isColorUnset && active ? " · 색 미정" : ""
                                   }`}
-                                  onClick={() => {
-                                    setSelected({ trackIndex, bar: segment.cue.bar });
-                                    setTransitionView(false);
-                                    setActiveEditField(null);
-                                    setNewPresetNote(null);
-                                  }}
+                                  onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
                                   {segment.cue.label}
                                   {isUnconfirmedShapeCue(segment.cue.label) && (
@@ -1219,21 +1279,23 @@ export function BeatGrid({
                                   )}
                                 </button>
                                 {hasNext && (
-                                  <button
-                                    type="button"
-                                    className="beat-grid-joint"
-                                    style={{ left: barToX(segment.endBar) }}
-                                    title={`${segment.endBar}마디 이음매 — 전환 편집 열기`}
-                                    onClick={() => {
-                                      const nextCue = segments[segIndex + 1].cue;
-                                      setSelected({ trackIndex, bar: nextCue.bar });
-                                      setTransitionView(true);
-                                      setActiveEditField(null);
-                                      setNewPresetNote(null);
-                                    }}
-                                  >
-                                    ◆
-                                  </button>
+                                  // 카드 t561 — 이음매 표시(M·!·◢)와 페이드 번짐(REQ-LDBEAT-020(a)).
+                                  <BeatGridJoint
+                                    prev={segment.cue}
+                                    cue={segments[segIndex + 1].cue}
+                                    nextSegmentWidth={
+                                      barToX(segments[segIndex + 1].endBar) - barToX(segments[segIndex + 1].startBar) - 2
+                                    }
+                                    prevFill={active ? colorFill.background ?? null : null}
+                                    sectionStartBars={sectionStartBars}
+                                    secondsPerBar={secondsPerBar}
+                                    isOn={
+                                      transitionView &&
+                                      selected?.trackIndex === trackIndex &&
+                                      selected.bar === segments[segIndex + 1].cue.bar
+                                    }
+                                    onOpen={() => selectCue(trackIndex, segments[segIndex + 1].cue.bar, true)}
+                                  />
                                 )}
                               </span>
                             );
@@ -1308,6 +1370,24 @@ export function BeatGrid({
                 </button>
               </div>
             </div>
+          ) : sceneBar !== null ? (
+            // 카드 t561 — 「장면 전환」 알약 → 그 순간 전체 표(REQ-LDBEAT-020(a)).
+            <BeatGridScenePanel
+              bar={sceneBar}
+              tracks={grid.tracks}
+              secondsPerBar={secondsPerBar}
+              sectionStartBars={sectionStartBars}
+              onClose={() => setSceneBar(null)}
+              onSelectRow={(trackIndex) => selectCue(trackIndex, sceneBar, true)}
+              onCutAll={
+                onEditRequest
+                  ? (rows) =>
+                      rows.forEach(({ target, mibMode }) =>
+                        onEditRequest({ bar: sceneBar, target, changes: { entry: { fade_bars: 0, mib_mode: mibMode } } }),
+                      )
+                  : undefined
+              }
+            />
           ) : selected && selectedTrack ? (
             <>
               <header>
@@ -1318,8 +1398,8 @@ export function BeatGrid({
                   <button
                     type="button"
                     className={`beat-grid-transition-toggle${transitionView ? " is-on" : ""}`}
-                    disabled={firstCue}
-                    title={firstCue ? "곡 첫 큐 — 들어오는 전환 없음" : undefined}
+                    disabled={firstCue || !selectedPrevCue}
+                    title={firstCue || !selectedPrevCue ? "곡 첫 큐 — 들어오는 전환 없음" : undefined}
                     onClick={() => setTransitionView((v) => !v)}
                   >
                     전환
@@ -1329,12 +1409,29 @@ export function BeatGrid({
                   </button>
                 </span>
               </header>
-              {transitionView ? (
-                <div className="beat-grid-transition-view">
-                  <p>들어오는 전환 — 페이드 · 트리거 박 · 딜레이 · 트래킹(M3 배선 전까지 읽기 전용)</p>
-                </div>
+              {selectedCue && (
+                <BeatGridCueHeadMeta
+                  track={selectedTrack}
+                  cue={selectedCue}
+                  endBar={selectedSegmentEnd}
+                  secondsPerBar={secondsPerBar}
+                  confirmedFixtureCount={selectedConfirmedFixtures}
+                />
+              )}
+              {transitionView && selectedCue && selectedPrevCue ? (
+                // 카드 t561 — 같은 자리에서 전환 화면으로 바뀐다(REQ-LDBEAT-020(d)).
+                <BeatGridTransitionView
+                  key={`${selectedTrack.group_name}-${selectedCue.bar}`}
+                  track={selectedTrack}
+                  cue={selectedCue}
+                  prevCue={selectedPrevCue}
+                  secondsPerBar={secondsPerBar}
+                  beatsPerBar={beatsPerBar}
+                  sectionStartBars={sectionStartBars}
+                  onEditRequest={onEditRequest}
+                />
               ) : (
-                <div className="beat-grid-cue-view">
+                <BeatGridCueFocus focusField={focusField} focusKey={`${selected.trackIndex}-${selected.bar}`}>
                   {/* t537 — 속성별 값을 각각 독립된 자리에(REQ-LDBEAT-004(c),
                       감독 결정 「전체 화면 + 속성별 값」). 같은 문장을 네 번
                       반복하던 M2후속 임시 동작을 걷어냈다 — `label`은 아래
@@ -1357,11 +1454,9 @@ export function BeatGrid({
                           value: selectedCue.effect_kind ? `${effectValue} (${selectedCue.effect_kind})` : effectValue,
                         });
                       }
-                      // t548 — 앱 2단계 무빙(REQ-LDBEAT-006(vi))과 근거 등급(vii)은
-                      // 값이 있는 칸에서만 보인다. 경고 둘은 거절이 아니라 표시다.
-                      if (selectedCue.app_movement) {
-                        rows.push({ field: "앱 무빙", value: formatAppMovementField(selectedCue.app_movement) });
-                      }
+                      // t548 — 근거 등급(REQ-LDBEAT-006(vii))은 값이 있는 칸에서만
+                      // 보인다. 경고 둘은 거절이 아니라 표시다. 앱 2단계 무빙(vi)은
+                      // 카드 t561부터 아래 「움직임」 전용 행이 보인다(REQ-LDBEAT-021(b)).
                       if (selectedCue.evidence) {
                         rows.push({ field: "근거", value: formatEvidenceField(selectedCue.evidence) });
                       }
@@ -1399,7 +1494,7 @@ export function BeatGrid({
                         (isBrightnessRow || isPositionRow || isColorRow || isEffectRow);
                       const editing = editable && activeEditField === row.field;
                       return (
-                        <div className="beat-grid-cue-field" key={row.field}>
+                        <div className="beat-grid-cue-field" key={row.field} data-field={row.field}>
                           <span className="beat-grid-cue-field-label">{row.field}</span>
                           {editing && isBrightnessRow ? (
                             // 카드 t551 계속 — 밝기 단일모드(값/디머 프리셋/디머
@@ -1722,27 +1817,20 @@ export function BeatGrid({
                       );
                     });
                   })()}
-                  <div className="beat-grid-cue-field beat-grid-cue-field-entry">
-                    <span className="beat-grid-cue-field-label">들어올 때</span>
-                    <span className="beat-grid-cue-field-value">
-                      {selectedCue ? formatFadeBarsField(selectedCue.entry.fade_bars) : UNSET_FIELD_LABEL}
-                      {selectedCue &&
-                        (() => {
-                          const derivedSeconds = deriveFadeSeconds(selectedCue.entry.fade_bars, secondsPerBar);
-                          return derivedSeconds !== null ? (
-                            <span className="beat-grid-cue-field-derived"> (≈{derivedSeconds.toFixed(1)}초, derived)</span>
-                          ) : null;
-                        })()}
-                    </span>
-                    <button
-                      type="button"
-                      className="beat-grid-cue-field-entry-btn"
-                      disabled={firstCue}
-                      onClick={() => setTransitionView(true)}
-                    >
-                      {firstCue ? "곡 첫 큐 — 전환 없음" : "전환 보기 열기 ›"}
-                    </button>
-                  </div>
+                  {/* 카드 t561 — 시안 순서: 밝기 → 위치 → 색 → 움직임 → 옆빛 L·R
+                      (REQ-LDBEAT-021(b)). 「들어올 때」는 전환 화면으로 옮겼다
+                      (REQ-LDBEAT-020(d)). */}
+                  {selectedCue && roleFieldHints(selectedTrack.layer_role).includes("움직임") && (
+                    <BeatGridMovementRow
+                      value={
+                        selectedCue.app_movement
+                          ? formatAppMovementField(selectedCue.app_movement)
+                          : UNSET_FIELD_LABEL
+                      }
+                      isUnset={!selectedCue.app_movement}
+                    />
+                  )}
+                  {selectedTrack.layer_role === "side" && <BeatGridSideRow />}
                   {selectedCue?.source_ref && (
                     <div className="beat-grid-cue-field beat-grid-cue-field-source">
                       <span className="beat-grid-cue-field-label">출처</span>
@@ -1755,12 +1843,33 @@ export function BeatGrid({
                     <span className="beat-grid-cue-field-label">설명(원문)</span>
                     <span className="beat-grid-cue-field-value">{selectedCue?.label ?? "—"}</span>
                   </div>
-                </div>
+                </BeatGridCueFocus>
+              )}
+              {selectedCue && (
+                // 카드 t561 — 편집 칸 맨 아래, 지금 보는 화면에 맞는 명령(REQ-LDBEAT-020(c)).
+                <BeatGridConsoleCommand
+                  lines={
+                    transitionView && selectedPrevCue
+                      ? transitionConsoleCommandLines(
+                          selectedCue,
+                          secondsPerBar,
+                          transitionMib(selectedPrevCue, selectedCue),
+                        )
+                      : cueConsoleCommandLines(selectedTrack, selectedCue)
+                  }
+                />
               )}
             </>
           ) : (
+            // 시안 `drawEd` 의 빈 안내문 그대로.
             <p className="beat-grid-empty beat-grid-cue-panel-empty">
-              막대(큐)를 누르면 밝기·위치·색·들어올 때를 여기서 확인합니다.
+              타임라인의 막대(큐)나 무대 그림의 장비를 누르면 여기서 고쳐요
+              <br />
+              <br />
+              밝기 · 위치 · 색 · 움직임 · 들어올 때
+              <br />
+              <br />
+              이음매 ◆ 를 누르면 전환, 「장면 전환」 알약을 누르면 그 순간 전체
             </p>
           )}
         </aside>
@@ -1771,27 +1880,17 @@ export function BeatGrid({
       <div className="beat-grid-insp">
         <div className="beat-grid-stage-pane">
           <h5>무대 (2D)</h5>
-          {stageBounds ? (
-            <svg viewBox={`0 0 ${STAGE_VIEW_W} ${STAGE_VIEW_H}`} className="beat-grid-stage">
-              {fixtures.map((fixture) => {
-                const { cx, cy } = projectFixture(fixture, stageBounds);
-                return (
-                  <circle
-                    key={fixture.fid}
-                    cx={cx}
-                    cy={cy}
-                    r={3}
-                    fill={fixtureDisplayColor(fixture, grid.tracks)}
-                    opacity={fixtureDisplayOpacity(fixture, grid.tracks, viewBar)}
-                  >
-                    <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
-                  </circle>
-                );
-              })}
-            </svg>
-          ) : (
-            <p className="beat-grid-empty">무대 좌표 미제공 — 콘솔 패치 읽기 경로가 아직 안 배선됨(M2).</p>
-          )}
+          {/* 카드 t561 — 선택 테두리·그룹 이름표·장비 영역 클릭(REQ-LDBEAT-022). */}
+          <BeatGridStage
+            fixtures={fixtures}
+            tracks={grid.tracks}
+            viewBar={viewBar}
+            selectedTrackName={selectedTrack?.group_name ?? null}
+            onSelectTrack={(trackIndex) => {
+              const cue = cueForBar(grid.tracks[trackIndex], viewBar);
+              if (cue) selectCue(trackIndex, cue.bar, false);
+            }}
+          />
           <p className="beat-grid-stage-note">
             위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
             (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)

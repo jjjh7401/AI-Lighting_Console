@@ -1130,6 +1130,7 @@ export default function App() {
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
+            timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
             onSentenceEditRequest={sendBeatGridEditSentence}
