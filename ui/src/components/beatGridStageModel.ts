@@ -45,3 +45,39 @@ export function stageFixturePoints(view: BeatGridStageView | null | undefined): 
       .map((group) => group.group_name),
   }));
 }
+
+/** 카드 t586 — 타임라인 줄 이름 아래 둘째 줄(시안 `.lhead small`, 예:
+ * 「G3 · 111~118 · 8대」). 그룹 번호는 트랙 값, 장비 번호 범위와 대수는 무대
+ * 판독이 그 그룹 소속으로 **확인한** 장비에서만 센다. 확인된 장비가 없으면
+ * 범위·대수를 빼고(지어내지 않음), 그룹 번호도 없으면 `null`. */
+/** 카드 t586 — 그 그룹 소속으로 확인된 장비 번호 범위(「201~202」, 한 대면
+ * 「201」). 확인된 장비가 없으면 `null`. */
+export function confirmedFixtureRange(
+  groupName: string,
+  fixtures: readonly BeatGridFixturePoint[],
+): string | null {
+  const fids = fixtures
+    .filter((fixture) => fixtureBelongsTo(fixture, groupName))
+    .map((fixture) => fixture.fid)
+    .sort((a, b) => a - b);
+  if (fids.length === 0) return null;
+  const first = fids[0];
+  const last = fids[fids.length - 1];
+  return first === last ? `${first}` : `${first}~${last}`;
+}
+
+export function trackFixtureSummary(
+  groupNo: number | null,
+  groupName: string,
+  fixtures: readonly BeatGridFixturePoint[],
+): string | null {
+  const count = fixtures.filter((fixture) => fixtureBelongsTo(fixture, groupName)).length;
+  const range = confirmedFixtureRange(groupName, fixtures);
+  const parts: string[] = [];
+  if (groupNo !== null) parts.push(`G${groupNo}`);
+  if (range !== null) {
+    parts.push(range);
+    parts.push(`${count}대`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
