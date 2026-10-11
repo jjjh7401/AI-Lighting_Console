@@ -122,16 +122,22 @@ tracks:
       - {bar: 3, label: "—"}
       - {bar: 7, label: "—"}
       # 효과 21.3 — [이름] 「DIM-CHASE」 · 감독 승인 2026-10-10(t543 proposal-table.md #14)
+      # 카드 t555 — 밝기 100%: §4 가 밝기를 정하지 않은 칸, 감독 결정 2026-10-11
+      # 「밝기 값이 명확하지 않으면 우선 100% 진행해」. 이 칸은 2026-10-10 프리셋 승인을
+      # 이미 갖고 있어 그대로 두고, 밝기 근거는 이 주석에만 남는다(기계 필드 없음).
       - bar: 11
         label: "SIDE-L/R 2·4박 번갈이"
+        brightness: {mode: value, value_percent: 100}
         effect_preset_no: "21.3"
         effect_kind: mixed
         evidence:
           grade: name_only
           approval: {by: supervisor, date: "2026-10-10", source: ".moai/reports/t543/proposal-table.md#14"}
       # 효과 21.3 — [이름] 같은 체이스, 가속은 속도로 따로 · 감독 승인 2026-10-10(t543 proposal-table.md #15)
+      # 카드 t555 — 밝기 100%(감독 결정 2026-10-11). 2026-10-10 승인 유지, 근거는 주석만.
       - bar: 14
         label: "가속(마디마다 두 배)"
+        brightness: {mode: value, value_percent: 100}
         effect_preset_no: "21.3"
         effect_kind: mixed
         evidence:
@@ -143,9 +149,27 @@ tracks:
     group_no: 11
     group_no_confirmed: true
     cues:
-      - {bar: 0, label: "바닥 쪽 좁은 빔, 정지"}
-      - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
-      - {bar: 7, label: "정지"}
+      # 카드 t555 — 밝기 100%: §4 가 밝기를 정하지 않은 칸(이 트랙 전부), 감독 결정
+      # 2026-10-11 「밝기 값이 명확하지 않으면 우선 100% 진행해」. 승인이 없던 칸은
+      # evidence.approval 로, 2026-10-10 승인이 있던 14·18 은 승인 유지 + 이 주석으로 근거.
+      - bar: 0
+        label: "바닥 쪽 좁은 빔, 정지"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
+      - bar: 3
+        label: "5마디 1박 위치 한 칸 올림"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
+      - bar: 7
+        label: "정지"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
       # 카드 t548(REQ-LDBEAT-006(vi), 감독 결정 2026-10-11 ①②) — 「느린 팬
       # 흔들기」를 app_movement(wave + axes=Pan)로 구조화한다. 주기는 이
       # 레이블이 말하지 않아 미정(지어내지 않음, REQ-LDBEAT-015(f)와 같은
@@ -154,6 +178,10 @@ tracks:
       # 있다는 경고 대상이다(pan_only_vertical_base_warning).
       - bar: 11
         label: "기울인 자리에서 느린 팬 흔들기"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
         app_movement:
           shape: wave
           axes: [Pan]
@@ -164,6 +192,7 @@ tracks:
       # t538 A6b 319) · 감독 승인 2026-10-10(t543 proposal-table.md #22)
       - bar: 14
         label: "가속 스윕 4박→2박→1박→반 박"
+        brightness: {mode: value, value_percent: 100}
         effect_preset_no: "21.5"
         effect_kind: mixed
         evidence:
@@ -175,6 +204,7 @@ tracks:
       # position_preset_no "2.1"(REQ-LDBEAT-006(vi-8), 감독 결정 2026-10-11 ②).
       - bar: 18
         label: "18마디 위로 열고 19마디부터 팬 웨이브(한 바퀴 2박)"
+        brightness: {mode: value, value_percent: 100}
         position_preset_no: "2.1"
         evidence:
           grade: measured
@@ -185,13 +215,32 @@ tracks:
           period_unit: beat
           period_value: 2
           phase_spread: null
-      - {bar: 22, label: "22마디 1박에 멈춰 섬"}
+      - bar: 22
+        label: "22마디 1박에 멈춰 섬"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
   - group_name: MOVER-D
     group_no: 12
     group_no_confirmed: true
     cues:
-      - {bar: 0, label: "바닥 쪽, 정지"}
-      - {bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+      # 카드 t555 — 밝기 100%: §4 가 밝기를 정하지 않은 칸(이 트랙 전부), 감독 결정
+      # 2026-10-11 「밝기 값이 명확하지 않으면 우선 100% 진행해」. t553 발견: 이 트랙은
+      # brightness 가 0칸이라 열린 7·22 무빙이 디머를 내지 않았다. 승인이 없던 칸은
+      # evidence.approval 로, 2026-10-10 승인이 있던 14·18 은 승인 유지 + 이 주석으로 근거.
+      - bar: 0
+        label: "바닥 쪽, 정지"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
+      - bar: 3
+        label: "5마디 1박 위치 한 칸 올림"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
       # 카드 t548 — 「틸트 웨이브, 한 바퀴 2마디, 위상 펼침」. MOVER-D(Spiider,
       # Group 12)는 실기 라이브 프로브(`.moai/reports/t548/probe-moverd.md`,
       # `reports/t548-moverd-probe-20261011.md`, 2026-10-11)가 PASS로 확인한
@@ -199,17 +248,27 @@ tracks:
       # 움직인다"(위상 펼침은 "위상 펼침" 레이블 그대로 true).
       - bar: 7
         label: "틸트 웨이브, 한 바퀴 2마디, 위상 펼침"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
         app_movement:
           shape: wave
           axes: [Tilt]
           period_unit: bar
           period_value: 2
           phase_spread: true
-      - {bar: 11, label: "11마디 1박 새 자리, 정지"}
+      - bar: 11
+        label: "11마디 1박 새 자리, 정지"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
       # 효과 21.5 — [실측·다른 그룹] Group 11 에서만 잼, Group 12 미측정
       # · 감독 승인 2026-10-10(t543 proposal-table.md #29)
       - bar: 14
         label: "U 와 같은 스윕"
+        brightness: {mode: value, value_percent: 100}
         effect_preset_no: "21.5"
         effect_kind: mixed
         evidence:
@@ -222,6 +281,7 @@ tracks:
       # 상태 기술이라 app_movement 없음).
       - bar: 18
         label: "위로 연 자리, 정지"
+        brightness: {mode: value, value_percent: 100}
         position_preset_no: "2.1"
         evidence:
           grade: measured_other_group
@@ -234,6 +294,10 @@ tracks:
       # Tilt라 감독 결정④의 Pan 단독 경고 대상은 아니다.
       - bar: 22
         label: "22마디부터 틸트 웨이브(한 바퀴 2박)"
+        brightness: {mode: value, value_percent: 100}
+        evidence:
+          grade: null
+          approval: {by: supervisor, date: "2026-10-11", source: "카드 t555 — 감독 결정 2026-10-11 밝기 불명확 칸 기본 100%"}
         app_movement:
           shape: wave
           axes: [Tilt]
