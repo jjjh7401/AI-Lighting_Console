@@ -79,6 +79,7 @@ from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
 from server.web.session import ChatSession, PendingSongPlanStore, SongTimelineStore
 from server.web.settings_api import SettingsDeps, build_settings_router
+from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
 from server.web.timeline_library import SongTimelineLibrary
 
@@ -228,6 +229,9 @@ class WebDeps:
     # Timeline library (save/load named versions of the director timeline).
     # Memory-only by default; serve.py wires the persistent JSON path.
     timeline_library: SongTimelineLibrary = field(default_factory=SongTimelineLibrary)
+    # 카드 t571(REQ-LDBEAT-024(c) 후속) — 곡별 영구 오디오 링크. 다른 저장소들과
+    # 같은 관례: 메모리 전용 기본값(시험), serve.py 가 영속 JSON 경로를 심는다.
+    song_audio_link_store: SongAudioLinkStore = field(default_factory=SongAudioLinkStore)
     # Stale-while-revalidate cache for the two many-round-trip snapshots.
     snapshots: SnapshotCache = field(default_factory=SnapshotCache)
     # #2 (2026-08-16): the ONE pending (unapproved) song design, process-wide
@@ -410,6 +414,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             timeline_library=deps.timeline_library,
             pending_plan_store=deps.pending_plan_store,
             spatial_memory=deps.spatial_memory,
+            song_audio_link_store=deps.song_audio_link_store,
         )
 
         def push_status() -> None:
@@ -637,6 +642,17 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     await asyncio.to_thread(session.beat_grid_stage)
+                elif message_type == "song_audio_link_request":
+                    # 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크
+                    # 조회는 디스크 읽기만(콘솔 무접촉)이라 콘솔 왕복인 위
+                    # 분기들과 사정은 다르지만, 같은 busy-guard 아래 같은
+                    # 스레드 패턴을 쓴다 — 큰 파일은 여러 프레임(분할
+                    # 트리오)으로 나가므로 이벤트 루프를 막지 않는 것이
+                    # 똑같이 맞다.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.request_song_audio_link)
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))

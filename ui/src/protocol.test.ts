@@ -13,6 +13,7 @@ import {
   buildVectorworksExportUpload,
   buildLayoutImageUpload,
   buildSongAudioAnalyse,
+  buildSongAudioLinkRequest,
   buildSongAudioUpload,
   buildSongAudioUploadBegin,
   buildSongAudioUploadChunk,
@@ -131,6 +132,12 @@ describe("builders", () => {
       approved: true,
     });
     expect(JSON.parse(buildLock(true))).toEqual({ v: 1, type: "lock", active: true });
+    // 카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오 링크 요청.
+    // beat_grid_stage_request 와 같은 모양(페이로드 없음).
+    expect(JSON.parse(buildSongAudioLinkRequest())).toEqual({
+      v: 1,
+      type: "song_audio_link_request",
+    });
   });
 
   it("builds beat grid edit frames — 카드 t551(SPEC-LDBEAT-001 M3)", () => {
@@ -213,6 +220,119 @@ describe("reduceServerEvent — beat_grid_send_status (카드 t563)", () => {
     );
     expect(second.beatGridSendStatus?.pending_apply_count).toBeNull();
     expect(second.beatGridSendStatus?.last_action).toBe("apply");
+  });
+});
+
+describe("reduceServerEvent — song_audio_link (카드 t571, REQ-LDBEAT-024(c) 후속)", () => {
+  it("replaces the previous link wholesale on a single-frame response", () => {
+    const found = reduceServerEvent(
+      initialState,
+      event({
+        type: "song_audio_link",
+        status: "found",
+        file_name: "track.wav",
+        mime_type: "audio/wav",
+        content_base64: "Zm9v",
+        sha256: "deadbeef",
+        byte_length: 3,
+      }),
+    );
+    expect(found.songAudioLink).toEqual({
+      status: "found",
+      file_name: "track.wav",
+      mime_type: "audio/wav",
+      content_base64: "Zm9v",
+      sha256: "deadbeef",
+      byte_length: 3,
+    });
+
+    const missing = reduceServerEvent(
+      found,
+      event({
+        type: "song_audio_link",
+        status: "missing",
+        file_name: null,
+        mime_type: null,
+        content_base64: null,
+        sha256: null,
+        byte_length: null,
+      }),
+    );
+    // 이전 found 가 남아 있으면 안 된다 — 다른 곡으로 바뀌었는데 이전 곡의
+    // 바이트가 그대로 보이는 것이 이 교체 규약이 막는 사고다.
+    expect(missing.songAudioLink.status).toBe("missing");
+    expect(missing.songAudioLink.content_base64).toBeNull();
+  });
+
+  it("assembles the chunked trio into one found link (REQ-MUSICSYNC-027의 반대 방향)", () => {
+    let state = reduceServerEvent(
+      initialState,
+      event({
+        type: "song_audio_link_begin",
+        status: "found",
+        file_name: "big.wav",
+        mime_type: "audio/wav",
+        sha256: "cafef00d",
+        byte_length: 6,
+        chunk_count: 2,
+      }),
+    );
+    // 조립이 끝나기 전엔 songAudioLink 가 아직 "found"로 뒤집히지 않는다 —
+    // 반쪽짜리 상태가 완성본처럼 보이면 안 된다.
+    expect(state.songAudioLink.status).toBeNull();
+
+    state = reduceServerEvent(
+      state,
+      event({ type: "song_audio_link_chunk", index: 0, content_base64: "Zm9v" }),
+    );
+    state = reduceServerEvent(
+      state,
+      event({ type: "song_audio_link_chunk", index: 1, content_base64: "YmFy" }),
+    );
+    expect(state.songAudioLink.status).toBeNull(); // 아직 end 전이다
+
+    state = reduceServerEvent(state, event({ type: "song_audio_link_end" }));
+    expect(state.songAudioLink).toEqual({
+      status: "found",
+      file_name: "big.wav",
+      mime_type: "audio/wav",
+      content_base64: "Zm9vYmFy",
+      sha256: "cafef00d",
+      byte_length: 6,
+    });
+    // 조립 상태는 다음 응답을 위해 비워진다.
+    expect(state.songAudioLinkAssembly).toEqual({ header: null, chunks: [] });
+  });
+
+  it("drops an out-of-order chunk rather than corrupting the assembly", () => {
+    let state = reduceServerEvent(
+      initialState,
+      event({
+        type: "song_audio_link_begin",
+        status: "found",
+        file_name: "big.wav",
+        mime_type: "audio/wav",
+        sha256: "cafef00d",
+        byte_length: 6,
+        chunk_count: 2,
+      }),
+    );
+    // index 1 이 0보다 먼저 온다 — 버려야 한다(서버는 항상 순서대로
+    // 보내지만, 클라이언트 쪽 상태 전이는 방어적이어야 한다).
+    state = reduceServerEvent(
+      state,
+      event({ type: "song_audio_link_chunk", index: 1, content_base64: "YmFy" }),
+    );
+    expect(state.songAudioLinkAssembly.chunks).toEqual([]);
+  });
+
+  it("an end with an incomplete assembly clears the buffer without fabricating a link", () => {
+    const state = reduceServerEvent(
+      initialState,
+      event({ type: "song_audio_link_end" }), // begin 없이 온 end
+    );
+    expect(state.songAudioLink.status).toBeNull();
+    expect(state.songAudioLinkAssembly).toEqual({ header: null, chunks: [] });
   });
 });
 

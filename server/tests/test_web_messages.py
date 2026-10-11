@@ -15,8 +15,10 @@ import pytest
 
 from server.safety.approval import ApprovalItem, ApprovalRequest
 from server.web.messages import (
+    CLIENT_MESSAGE_TYPES,
     CUE_MONITOR_CLIENT_MESSAGE_TYPES,
     DASH_CLIENT_MESSAGE_TYPES,
+    MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH,
     PANEL_CLIENT_MESSAGE_TYPES,
     PANEL_ITEM_KINDS,
     PANEL_TARGET_KINDS,
@@ -43,6 +45,10 @@ from server.web.messages import (
     panel_section,
     parse_client_message,
     proposal_event,
+    song_audio_link_begin_event,
+    song_audio_link_chunk_event,
+    song_audio_link_end_event,
+    song_audio_link_event,
     status_event,
 )
 
@@ -967,3 +973,99 @@ class TestCueMonitorEvent:
         event = cue_monitor_event(executors=[], history=[])
         assert event["executors"] == []
         assert event["history"] == []
+
+
+# -- 카드 t571(REQ-LDBEAT-024(c) 후속) — 곡별 영구 오디오 링크 프로토콜 ----------
+#
+# 업로드(``song_audio_upload``)의 반대 방향. ``song_audio_link_request`` 는
+# 페이로드 없는 클라이언트 요청이고(다른 *_request 타입들과 같은 모양), 응답은
+# 상태 하나짜리 단일 프레임이거나(작은 파일, 또는 missing/none) REQ-MUSICSYNC-027
+# 과 같은 이유의 분할 트리오다(큰 파일).
+
+
+class TestSongAudioLinkRequestIsOnTheClientAllowlist:
+    def test_the_request_type_is_registered(self):
+        assert "song_audio_link_request" in CLIENT_MESSAGE_TYPES
+
+    def test_it_parses_payload_free(self):
+        message = parse_client_message(_raw(type="song_audio_link_request"))
+        assert message == {"v": PROTOCOL_VERSION, "type": "song_audio_link_request"}
+
+    def test_a_typo_is_still_an_unknown_type(self):
+        # 허용 목록을 넓히는 것이 접두사 매치로 바뀌면 안 된다 — 다른 *_request
+        # 타입들이 세운 관례.
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="song_audio_link_request_all"))
+
+    def test_the_server_event_type_is_not_a_client_message(self):
+        # song_audio_link 는 서버 -> 클라이언트로만 흐른다.
+        with pytest.raises(ProtocolError):
+            parse_client_message(_raw(type="song_audio_link"))
+
+
+class TestSongAudioLinkEventBuilder:
+    def test_a_found_event_carries_every_field(self):
+        event = song_audio_link_event(
+            status="found",
+            file_name="track.wav",
+            mime_type="audio/wav",
+            content_base64="Zm9v",
+            sha256="deadbeef",
+            byte_length=3,
+        )
+        assert event == {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_link",
+            "status": "found",
+            "file_name": "track.wav",
+            "mime_type": "audio/wav",
+            "content_base64": "Zm9v",
+            "sha256": "deadbeef",
+            "byte_length": 3,
+        }
+        json.dumps(event, ensure_ascii=False)
+
+    def test_a_missing_event_carries_no_content(self):
+        event = song_audio_link_event(status="missing")
+        assert event["status"] == "missing"
+        assert event["content_base64"] is None
+        assert event["file_name"] is None
+
+    def test_a_none_event_carries_no_content(self):
+        event = song_audio_link_event(status="none")
+        assert event["status"] == "none"
+        assert event["content_base64"] is None
+
+
+class TestSongAudioLinkChunkedTrioBuilders:
+    """역방향 분할 — ``song_audio_upload_begin``/``_chunk``/``_end`` 의 짝."""
+
+    def test_the_begin_event_status_is_always_found(self):
+        event = song_audio_link_begin_event(
+            file_name="big.wav",
+            mime_type="audio/wav",
+            sha256="cafef00d",
+            byte_length=100,
+            chunk_count=3,
+        )
+        assert event["type"] == "song_audio_link_begin"
+        assert event["status"] == "found"
+        assert event["chunk_count"] == 3
+
+    def test_the_chunk_event_carries_index_and_content(self):
+        event = song_audio_link_chunk_event(index=1, content_base64="YmFy")
+        assert event == {
+            "v": PROTOCOL_VERSION,
+            "type": "song_audio_link_chunk",
+            "index": 1,
+            "content_base64": "YmFy",
+        }
+
+    def test_the_end_event_carries_no_payload(self):
+        event = song_audio_link_end_event()
+        assert event == {"v": PROTOCOL_VERSION, "type": "song_audio_link_end"}
+
+    def test_the_chunk_size_knob_matches_the_upload_direction(self):
+        # 한 지식 — 업로드 조각 상한을 다운로드 분할 문턱으로 재사용한다.
+        # 두 상한이 몰래 갈라지면 한쪽만 고쳐지는 사고가 난다.
+        assert MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH == 4 * 1024 * 1024

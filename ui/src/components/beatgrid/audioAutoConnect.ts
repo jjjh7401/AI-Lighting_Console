@@ -8,7 +8,11 @@
 // 전이·버튼 문구·재생 큐잉 판정만 순수 함수로 둔다. DOM 쪽(objectURL
 // 생성·`<audio>` 이벤트 리스너)은 `BeatGrid.tsx`가 그대로 건다.
 
-export type AudioConnectStatus = "idle" | "loading" | "connected" | "failed";
+// 카드 t571(REQ-LDBEAT-024(c) 후속) — `"missing"`을 추가한다: 세션 첨부도
+// 없고, 서버에 물어본 결과("song_audio_link_request") 이 곡엔 저장된 링크도
+// 없다고 확인된 상태다. `"idle"`(아직 아무것도 시도하지 않음)과는 다르다 —
+// 이미 "확인해 봤다"는 사실을 운영자에게 솔직하게 보여준다(♪ 버튼 "음원 없음").
+export type AudioConnectStatus = "idle" | "loading" | "connected" | "failed" | "missing";
 
 export interface AudioConnectState {
   status: AudioConnectStatus;
@@ -40,12 +44,23 @@ export function shouldAutoConnectAudio(
 }
 
 /** ♪ 버튼 문구(mockup `audLbl`) — 연결되면 체크(✓)+파일명, 불러오는
- * 중이면 그 사실, 그 밖(idle·failed)은 기본 안내. 지어낸 파일명을
- * 보이지 않는다 — `audioName`이 없으면 기본 안내로 떨어진다. */
+ * 중이면 그 사실, 서버에 저장된 링크가 없다고 확인됐으면(카드 t571)
+ * "음원 없음", 그 밖(idle·failed)은 기본 안내. 지어낸 파일명을 보이지
+ * 않는다 — `audioName`이 없으면 기본 안내로 떨어진다. */
 export function audioButtonLabel(status: AudioConnectStatus, audioName: string | null): string {
   if (status === "connected" && audioName) return `✓ ${audioName}`;
   if (status === "loading") return "불러오는 중…";
+  if (status === "missing") return "음원 없음";
   return "음원";
+}
+
+/** 카드 t571 — 서버가 "이 곡엔 저장된 링크가 없다"고 답했을 때
+ * (`songAudioLinkMissing`) `"missing"` 상태로 넘어가야 하는가. `"idle"`일
+ * 때만 — 이미 다른 전이(연결 시도/연결/실패) 중이면 덮어쓰지 않는다. 이
+ * 상태에서 나가는 길은 `shouldAutoConnectAudio`가 쥔다(첨부든 링크든 실제
+ * 파일이 나타나면 그 쪽이 이긴다). */
+export function shouldMarkAudioLinkMissing(status: AudioConnectStatus): boolean {
+  return status === "idle";
 }
 
 /** 연결 실패 이유(AC-LDBEAT-024(c)) — 화면에 그대로 보일 문자열. */

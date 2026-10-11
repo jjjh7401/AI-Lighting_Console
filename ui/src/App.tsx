@@ -23,6 +23,7 @@ import {
 import { ApprovalCard } from "./components/ApprovalCard";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
+import { buildFileFromSongAudioLink } from "./components/beatgrid/songAudioLink";
 import { LIFECYCLE_LABEL as SONG_TIMELINE_LIFECYCLE_LABEL } from "./components/SongTimeline";
 import { ChatView } from "./components/ChatView";
 import {
@@ -404,6 +405,7 @@ export default function App() {
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridStageRequest,
+    sendSongAudioLinkRequest,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,
@@ -482,6 +484,37 @@ export default function App() {
     if (beatGridFullscreen && connected) sendBeatGridStageRequest();
   }, [beatGridFullscreen, connected, beatGridSongTitle, sendBeatGridStageRequest]);
   const beatGridStageFixtures = useMemo(() => stageFixturePoints(state.beatGridStage), [state.beatGridStage]);
+  // 카드 t571(REQ-LDBEAT-024(c) 후속) — 전체화면을 열 때(그리고 곡이
+  // 바뀔 때) 이 곡에 저장된 오디오 링크를 요청한다. `songAudioFile`이
+  // 있으면(이번 세션에서 이미 직접 올렸으면) 요청하지 않는다 — 세션
+  // 첨부가 항상 이긴다(`BeatGrid`의 `??` 우선순위와 같은 결정).
+  useEffect(() => {
+    if (beatGridFullscreen && connected && !songAudioFile) sendSongAudioLinkRequest();
+  }, [beatGridFullscreen, connected, songAudioFile, beatGridSongTitle, sendSongAudioLinkRequest]);
+  // 서버 응답을 `File`로 되돌려 `BeatGrid`의 기존 자동 연결 경로에 먹인다
+  // (`buildFileFromSongAudioLink` — base64/`File` 생성은 여기, 분할
+  // 조립은 `protocol.ts`가 이미 끝냈다).
+  const [linkedSongAudioFile, setLinkedSongAudioFile] = useState<File | null>(null);
+  const [songAudioLinkMissing, setSongAudioLinkMissing] = useState(false);
+  useEffect(() => {
+    const link = state.songAudioLink;
+    if (link.status === "found" && link.content_base64 !== null && link.file_name !== null) {
+      setLinkedSongAudioFile(
+        buildFileFromSongAudioLink({
+          fileName: link.file_name,
+          mimeType: link.mime_type ?? "application/octet-stream",
+          contentBase64: link.content_base64,
+        }),
+      );
+      setSongAudioLinkMissing(false);
+    } else if (link.status === "missing") {
+      setLinkedSongAudioFile(null);
+      setSongAudioLinkMissing(true);
+    } else if (link.status === "none") {
+      setLinkedSongAudioFile(null);
+      setSongAudioLinkMissing(false);
+    }
+  }, [state.songAudioLink]);
   // Bumped when the settings panel closes so the onboarding banner re-checks
   // whether a key was just added (and hides itself if so).
   const [settingsRefresh, setSettingsRefresh] = useState(0);
@@ -1176,6 +1209,8 @@ export default function App() {
             stageNotes={state.beatGridStage?.unread}
             stageGroups={state.beatGridStage?.groups}
             attachedSongAudioFile={songAudioFile}
+            linkedSongAudioFile={linkedSongAudioFile}
+            songAudioLinkMissing={songAudioLinkMissing}
           />
         </div>
       ) : runbookMode ? (
