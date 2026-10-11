@@ -560,12 +560,32 @@ REQ-LDBEAT-007~009·015 구현. 콘솔 접촉 0건, 콘솔 쓰기 0건, OSC/응�
 
 | 항목 | mockup 근거 | 막힌 이유 | 필요한 입력 |
 |---|---|---|---|
-| 문장 "효과" 항목 | `#bRule` 정규식의 네 번째 선택지("밝기\|위치\|색\|효과"), 플레이스홀더 "효과를 Sweep 2박으로" | "효과"는 `effect_preset_no`+`effect_kind`(콘솔 프리셋 참조)로 가는데, 그 프리셋 **이름**→번호 역검색이 카탈로그 없이 불가능하다 | 프리셋 카탈로그 읽기 경로(이름↔번호, 종류) |
-| 위치·색 값을 **프리셋 이름**으로 받기 | 같은 정규식, 값 그룹이 "프리셋 이름"(`id=Object.keys(P).find(k=>P[k].nm...)`) | 같은 카탈로그 부재 — 지금은 번호를 그대로 받는다(deviation, 모듈 docstring에 명시) | 〃 |
-| 직접 고르기의 위치·색·효과·디머 프리셋 **목록 선택**(mockup "이 곡 + 쇼 기존 + 새 프리셋") | "구조" 4 + "막대 → 오른쪽 큐 편집" | 목록을 채울 데이터가 없다 — 밝기 "값"만 카탈로그 불필요라 그것만 켰다 | 〃 + 사용처 집계(칩 툴팁 "쓰는 큐 수") |
-| AI 제안의 **점선 막대** 타임라인 렌더 + 수락/거절 | "구조" 5, "조작 방법", `#bAi` 핸들러(`GHOST=[...]`) | `NullSuggestionSource`에서는 이 이벤트가 구조적으로 발생하지 않는다(항상 "제안 없음") — 발생할 사건이 없는데 렌더 경로를 먼저 만들면 한 번도 안 타는 코드다. 실제 소스가 생기면 `ServerEvent` 유니온에 `beat_grid_suggestion`/`beat_grid_suggestion_consumed`를 추가하고 이 렌더를 함께 만든다 | 실제 제안 소스(AI 백엔드 또는 규칙 기반 대안) |
-| 프리셋 **서랍**(오른쪽, 풀별 목록·사용처·고치기) | "구조" 6, 비교표 "프리셋 목록" 행 | mockup 자신의 `#drawer`도 하드코딩된 데모 데이터(`P` 객체)로 채워져 있다 — 실제 카탈로그 없이 지어내면 거짓 목록이 된다 | 〃 |
 | 모든 편집 경로의 **콘솔 반영**("⇪ 콘솔에 반영", 승인 1회) | "구조" 1, 결정 필요 표 | M4(카드 t549, lane-2 진행 중)의 범위 — 이 카드는 콘솔 접촉 0건 | (M4가 담당, 이 카드의 Missing Input 아님 — 참고용 명시) |
+| 직접 고르기 패널의 위치·색·효과·디머 프리셋 **드롭다운**(mockup "이 곡 + 쇼 기존 + 새 프리셋") | "구조" 4 + "막대 → 오른쪽 큐 편집" | 아래 M3 후속 2차 절에서 카탈로그 경로를 복구했지만, 이번 라운드(지시 1~3항)는 드로워·배지·AI 점선 막대에 집중했다 — 이 드롭다운은 아직 안 만들었다(밝기 "값"만 인라인 편집 가능, 위치/색/효과는 여전히 명령창 문장으로만 쓴다). 드로워 데이터(`drawerSections`)가 이미 있으니 다음 카드가 그대로 재사용할 수 있다 | (카탈로그는 이미 있음 — UI 작업만 남음) |
+
+### M3 후속 2차 — 근본 원인 정정: 프리셋 카탈로그 읽기 경로 복구 (카드 t551 계속, 리드 지시 2026-10-11 "이미 있는 길을 써라")
+
+**근본 원인 정정**: 위 "## Missing Inputs" 표가 (이전 판에서) "프리셋 카탈로그를 읽는 경로가 이 앱에 없다"고 적은 네 항목은 **틀렸다** — `server/design/console_slots.py`(`paged_pool_children:32`·`resolve_named_pool_no:104`, 카드 t480)와 `server/design/preset_names.py`(`match_preset_name_across_pools`, `NAME_ABSENT`/`NAME_AMBIGUOUS`/`POOL_UNREAD`, 카드 t477)가 이미 그 경로였고, `server/web/session.py`의 `_resolve_draft_preset_names:8726`이 이미 그 경로로 초안을 채우고 있었다. 콘솔 **쓰기** 0 규칙은 **읽기**를 막지 않는다 — 이 틀린 결론이 왜 나왔는지는 재확인하지 않았다(카드 종료 전 재발 방지용으로만 기록).
+
+- **신규 `server/design/beat_grid_presets.py`** — 새 판독 규율 0개, 기존 두 모듈을 그대로 재사용. `resolve_preset_name`(위치/색/밝기, 항목별 풀 하나)·`resolve_effect_preset_name`(효과, 네 풀 `Position`/`Color`/`Dimmer`/`All 1` 전부 검색 + 매칭된 풀 이름 반환 → `effect_kind` 역추적)·`build_preset_drawer`(mockup 서랍과 같은 세 섹션, 사용처는 `grid` 전수 스캔). 콘솔 접촉 0건 — 전부 가짜 `query`로 시험(`test_preset_label_lookup_t232.py`의 `_FakeRegistry` 관행과 같다).
+- **`beat_grid_sentence.py` 교정** — 값이 "N.NN" 번호 꼴이 아니면 이름으로 보고 `name_lookup({"field","name"})`을 돌려준다(`changes`와 상호배타). "효과" 항목 추가(항상 `name_lookup`).
+- **`session.py` `beat_grid_edit` 확장** — `name_lookup`을 받으면 `_resolve_beat_grid_name_lookup`이 콘솔 카탈로그로 번호를 해석한 뒤(읽기만) 기존 `apply_beat_grid_edit`로 넘긴다. 못 찾으면(이름 부재/모호/`POOL_UNREAD`) 번호를 지어내지 않고 단일-원인 거절 — `POOL_UNREAD`는 "번호대를 확인할 수 없습니다"로 이름 부재와 또렷이 구별한다(지시 2항의 "번호대를 사실로 내보이지 않는다"와 같은 원칙을 거절 사유에도 적용).
+- **프리셋 서랍 백엔드** — `ChatSession.beat_grid_preset_drawer`, `beat_grid_drawer_request`/`beat_grid_drawer` 메시지 쌍. `preset_pools.yaml`의 `confirmed` 값을 모든 섹션에 실어 UI가 "번호대 미확인"을 보여줄 수 있게 한다.
+- **AI 제안 거절** — `beat_grid_suggestion_reject`(mockup `aNo` 핸들러), 적용과 짝이지만 편집을 부르지 않는다(`beat_grid_suggestion_apply`와 같은 `beat_grid_suggestion_consumed_event` 짝 전송).
+- **검증**: RED(`ModuleNotFoundError: beat_grid_presets`) → GREEN. 세션 레벨은 `FakeConsole.state_tree`로 **실제 세션 코드 경로**(`registry → query_state 도구 → gate.state_port → console`)를 그대로 태워 검증했다 — 별도 대역이 아니다. 회귀(레인 로컬) `test_web_*.py`+`test_session*.py`+`test_beat_grid*.py`+`test_cue_sheet_edit.py`+`test_preset_label_lookup_t232.py` → `1768 passed`. `ruff check server/` → All checks passed.
+
+### M3 후속 3차 — 프리셋 서랍 UI·번호대 미확인 배지·AI 제안 점선 막대 (카드 t551 계속, 리드 지시 1~3항)
+
+UI 변경 전 확인(지시 4항, 2차 라운드 시작 시점): `ui/` 어떤 파일도 바뀌지 않은 상태였다(`git diff --stat HEAD -- ui/` 0줄).
+
+- **프리셋 서랍(지시 1항)** — mockup `drawDrawer()`를 그대로: 안내 문구 "누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시" 그대로, 세 섹션 제목("디머 풀 1 — 밝기·밝기 효과"/"위치 풀 2 — 위치·움직임(상대값)"/"색 풀 4") 그대로. 사용처는 데모 `P` 객체가 아니라 `beat_grid_preset_drawer`의 실제 콘솔 판독에서 온다. 클릭하면 하이라이트(`.pr.on`, `highlightedPresetNo` 상태) + 그 프리셋을 쓰는 타임라인 막대에 `is-preset-highlighted`(새 순수 함수 `cueReferencesPreset`). 사용 큐 수는 행에 보이고(mockup과 같음) + `title` 호버로 "쓰는 곳: 큐 N개 — ..." 도 보인다(지시 1항의 "chip tooltip" 요구 — mockup 자체는 행 안에 바로 적지만, 이 구현은 행 텍스트 + hover title 둘 다로 중복 안내한다).
+- **"번호대 미확인" 배지(지시 2항)** — 새 순수 함수 `presetPoolBandBadge`. **mockup 자신에는 "번호대 자체가 미확인"이라는 상태 표시 자리가 없다** — 그 데모는 번호대가 이미 확정돼 있다는 전제로 만들어졌다(재확인: mockup HTML 전수 재독, `confirmed` 류 플래그나 번호대 경고 문구 0건). 그래서 이 카드는 가장 가까운 기존 관례 — "⚠ 실기 미확인"(모양 선택지 배지, `isUnconfirmedShapeCue`와 같은 글자와 `.u` CSS 클래스)의 폭을 넓혀 섹션 제목 옆에 달았다. 둘은 "지어낸 상태를 사실로 내보이지 않는다"는 같은 원칙(REQ-LDBEAT-010/015(f))을 공유하므로 같은 시각 언어가 맞다고 판단했다 — `preset_pools.yaml`의 `confirmed: false`(§B 위험 11 미해소)인 동안 모든 섹션에 뜬다.
+- **AI 제안 점선 막대 + 수락/거절(지시 1항)** — mockup "AI 제안은 타임라인에 점선 막대로 미리 보임"(구조 5) + `#bAi`→`aOk`/`aNo`. 렌더 경로는 **시험용 가짜 제안 소스**로 검증했다(`BeatGrid.test.tsx`에 리터럴 `BeatGridPendingSuggestion` prop을 직접 넘긴다) — 서버의 `NullSuggestionSource`는 그대로 생산 기본값이다(지시 원문 "NullSuggestionSource stays the production default"). 「적용」·「거절」 전까지 격자·콘솔 diff 0(결정④) — 서버 쪽은 `beat_grid_suggestion_reject`(2차 라운드에서 추가)가 거절 경로를 보장하고, UI 쪽은 새 순수 함수 `isPendingSuggestionForTrack`가 어느 트랙 줄에 점선 막대가 뜰지를 가린다.
+- **protocol.ts/useCopilotSocket.ts** — `ServerEvent` 3종(`beat_grid_drawer`/`beat_grid_suggestion`/`beat_grid_suggestion_consumed`, 순수 추가 — 이전 라운드에서 "실제 소스가 생기면 함께 추가"로 미뤘던 바로 그 작업, 이번에 했다) + 빌더 3개(`buildBeatGridSuggestionApply`/`buildBeatGridSuggestionReject`/`buildBeatGridDrawerRequest`) + `UiState` 필드 2개(`beatGridDrawer`/`pendingBeatGridSuggestion`) + 리듀서 케이스 3개(기존 케이스 0줄 변경).
+- **styles.css** — `.drawer`/`.pr`/`.beat-grid-cue-ghost`/`.beat-grid-ai-suggestion` 등 최소 스타일(순수 추가, mockup의 CSS 클래스 이름을 그대로 재사용해 의도를 맞췄다).
+- **검증**: `npx tsc --noEmit` 깨끗. `npx vite build --mode=development` 성공(CSS·JS 문법 확인, dist/ 는 gitignore). `npx vitest run` → `864 passed`(원래 852 + 신규 12: `cueReferencesPreset` 7개·`presetPoolBandBadge` 2개·`isPendingSuggestionForTrack` 3개). `beat_grid.py` diff **0줄**(lane-2/t549 경계 유지, `git diff --stat HEAD -- server/design/beat_grid.py` 출력 없음). `protocol.ts` diff — 이전 라운드 종료 커밋(`a313c0ed`) 대비 **99줄 추가, 0줄 변경**(해시 `@@ -516,6 +516,41` · `@@ -780,7 +815,14` · `@@ -809,6 +851,10` · `@@ -881,6 +927,30` · `@@ -1287,12 +1357,21` · `@@ -1517,6 +1596,24`, 전부 순수 추가 — 기존 줄 삭제 0건).
+- **안 한 것(지시 1~3항에는 없었지만, 이전 (b) 요청과의 간극 — 정직하게 기록)**: 직접 고르기 패널의 위치·색·효과·디머 프리셋 **드롭다운**("이 곡 + 쇼 기존 + 새 프리셋")은 만들지 않았다 — 밝기 "값"만 인라인 편집이고, 나머지는 여전히 명령창 문장(이름 또는 번호)으로만 고친다. 드로워 데이터(`drawerSections`)가 이미 있으니 다음 카드가 그대로 드롭다운 옵션으로 재사용할 수 있다.
+- **잔여 위험**: (1) 사용처 계산(`_usage_for_slot`)이 `build_preset_drawer` 안에서 항목마다 중복 호출되지 않도록(이전 턴에서 1회로 캐싱) 고쳤지만, 전체 그리드를 매 항목마다 스캔하는 O(풀 항목 수 × 큐 수) 구조는 그대로다 — 큰 격자에서는 드로워 열기가 느려질 수 있다(이번 LOVE ATTACK 규모에서는 측정상 체감 없음, 별도 프로파일링은 안 함). (2) `.pr`/`.u` 같은 짧은 CSS 클래스 이름은 mockup과 맞추려 그대로 썼는데, 다른 전역 스타일과 충돌할 가능성이 있다(이 세션에서는 `npx vite build` 성공만 확인했고, 실제 화면에서의 시각적 충돌은 안 쟀다).
 
 ## §E.3 Run-phase Audit-Ready Signal
 
