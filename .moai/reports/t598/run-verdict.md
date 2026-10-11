@@ -42,4 +42,10 @@ E       TypeError: BatchRisk.__init__() got an unexpected keyword argument 'rech
 - 대상은 이 묶음이 **만드는** 번호뿐이다. 이미 있다고 판정해 그대로 부르는 번호가 승인 창 사이 지워지는 경우는 덮어쓰기 위험이 아니라서 다루지 않았다.
 - 재판독은 게이트 안(프로그래머 중재자를 쥔 채)에서 콘솔 읽기를 한다. 가짜 콘솔에서는 문제없었지만, 실기에서 읽기 지연이 길면 중재자를 그만큼 오래 쥔다 — 재지 않았다.
 - 반영 실패 줄은 「마지막 반영 상태」만 보인다. 미리보기 등 다른 동작이 오면 그 상태로 바뀌어 사라진다(서버 상태 REPLACE 규칙 그대로).
-- t593(효과)·t594(색)가 같은 반영 묶음에 만들기 줄을 붙이면 `position_plan.creations` 만 보는 이 recheck 를 그 종류까지 넓혀야 한다 — lane-2 t593 이 칸 판정을 공용 함수로 빼는 중이라 늦게 합치는 쪽이 맞춘다.
+- t594(색)가 같은 반영 묶음에 만들기 줄을 붙이면, 그 번호도 `position_plan.creations` 에 담겨야 이 재판독에 걸린다(t593 효과는 담긴다 — 아래). 다른 dict 에 담으면 재판독 밖이다.
+
+## main 합친 뒤 (t593 「효과 프리셋 만들기」 #639)
+- PR 직전 재니 main 이 6커밋 앞섰다(`git rev-list --count --left-right origin/main...HEAD` → `6 2`). `origin/main` `97533166` 을 합쳤다 — 글자 충돌 0.
+- 뜻 겹침: t593 이후 반영 묶음에 **효과** 프리셋 만들기 줄(`Store Preset 22.n … /Universal`)도 붙는다. 합친 코드에서 `position_plan.creations` 는 위치·효과 번호를 함께 담는다(`session.py` 「새로 만드는 위치/효과 프리셋」 두 줄이 같은 dict 를 풀 번호로 가른다). 재판독은 만들 번호 전부를 풀별로 다시 읽으므로 효과 풀(22)도 같이 걸린다 — 말로 두지 않고 시험 `TestEffectSlotFilledDuringApproval` 로 쟀다(승인 창 사이 22.1 을 채우면 0줄 + 사유).
+- **합친 뒤 서버 전체에서 2건 빨강**: `test_overlap_preserve.py::TestSafetyChokepointFileSet` — 안전 장치 파일(`server/safety/`)에서 기준 이후 **지워진 줄을 글자까지 고정**한 시험이다. 내가 `from dataclasses import dataclass` 를 `…, field` 로 바꾼 것이 「삭제 1줄」로 잡혔다. 커밋 전 전체 실행이 초록이었던 건 이 시험이 `기준..HEAD` 커밋만 비교하기 때문이다(작업 트리 변경은 안 본다). `field()` 가 꼭 필요하지 않아 import 를 되돌리고 `recheck` 기본값을 그냥 `None` 으로 했다 — 이제 `git diff origin/main -- server/safety/gate.py` 의 삭제 줄 0, 더하기만 한다.
+- 합친 트리 검증: `test_overlap_preserve.py`+`test_presend_reread_t598.py`+`test_safety_gate.py` → `141 passed` · 서버 전체 `15484 passed, 35 skipped`(`full-server.txt`) · UI `tsc --noEmit` exit 0 · `vitest run` → `1222 passed`.
