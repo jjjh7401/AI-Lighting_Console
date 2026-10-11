@@ -57,6 +57,8 @@ import yaml
 from server.design.app_movement import app_movement_commands, brightness_value_commands
 from server.design.beat_grid import check_app_movement_axis_conflict, check_evidence_approval
 from server.design.beat_grid_measured import is_movement_measured_open
+from server.design.cue_fade import store_with_fade
+from server.design.cue_sheet_apply import _tracking_command as _tracking_line
 from server.looks.songcue import _ascii_label, _format_seconds
 
 __all__ = [
@@ -222,6 +224,9 @@ class CueEmitResult:
     #: — 미리보기(`beat_grid_preview`)가 "이 마디를 담은 큐가 몇 번인지"를
     #: 커맨드 문자열을 되읽지 않고 바로 알 수 있게 한다(값을 지어내지 않음).
     cue_number: int | None = None
+    #: 카드 t576 — 이 칸의 ``entry`` 중 보내지 않은 칸과 그 이유(실기 미확인·콘솔
+    #: 값이 아님). 칸 자체는 나가고, 이 필드들만 빠진다.
+    skipped_fields: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -332,6 +337,109 @@ def _cue_attribute_commands(
     return tuple(commands), None
 
 
+@dataclass(frozen=True)
+class _EntryPlan:
+    fade_seconds: float | None = None
+    trigger_offset_seconds: float = 0.0
+    store_options: tuple[str, ...] = ()
+    after_ops: tuple[str, ...] = ()
+    skipped_fields: tuple[str, ...] = ()
+    blocked_reason: str | None = None
+
+
+#: 카드 t576 — 보내지 않는 ``entry`` 칸과 그 이유. 둘은 콘솔 문법이 저장소에 실기로
+#: 확인된 선례가 없고(t580 실기 확인 목록), MIB 는 콘솔 값이 아니다 — 큐시트 반영
+#: (``cue_sheet_apply.UNSOURCED_FIELD_REASONS["mib_mode"]``)이 같은 이유로 안 보낸다.
+_UNSENT_ENTRY_REASONS: Mapping[str, str] = {
+    "delay_beats": (
+        "delay_beats(속성별 늦은 적용)는 콘솔 문법을 실기로 확인한 적이 없어 보내지 "
+        "않습니다(t580 실기 확인 뒤)"
+    ),
+    "position_late_beats": (
+        "position_late_beats(위치만 따로 늦게)는 콘솔 문법을 실기로 확인한 적이 없어 "
+        "보내지 않습니다(t580 실기 확인 뒤)"
+    ),
+    "mib_mode": (
+        "mib_mode 는 콘솔 큐 값이 아닙니다 — 이 저장소의 MIB 는 앱이 어둠 속 사전이동 "
+        "큐를 직접 넣는 방식이라(cue_sheet_apply 와 같은 판단) 큐 속성으로 보내지 않습니다"
+    ),
+}
+
+
+def _entry_plan(entry: object, timing: SongTiming) -> _EntryPlan:
+    """카드 t576 — 칸의 전환 ``entry``(음악 단위)를 이번 송신의 콘솔 큐 속성으로.
+
+    초는 **여기서만**, 그 곡 BPM 으로 계산한다 — ``entry``에는 초가 저장되지 않는다
+    (REQ-LDBEAT-006(i-4)). 문면은 저장소 실기 선례만 쓴다:
+
+    * 페이드 ``fade_bars``/``fade_beats`` → ``Store … CueFade <초>``
+      (:func:`server.design.cue_fade.store_with_fade`). 둘이 동시에 숫자면 막는다.
+    * 트리거 ``trigger_beat``(1~마디당 박) → ``TrigTime`` 을 마디 안에서 그만큼 미룬다.
+    * 트래킹 ``tracking`` → Release·Block 은 저장 뒤 명령, Cue Only 는 저장 옵션
+      (``cue_sheet_apply._tracking_command``·``/CueOnly``, 카드 t469). Track 은 기본값이라
+      아무것도 보내지 않는다.
+    * ``delay_beats``·``position_late_beats``·``mib_mode`` → 보내지 않고 이유를 단다.
+
+    ``entry``가 없거나 전부 미정이면 :class:`_EntryPlan` 기본값 — 그때 칸의 명령은
+    이 함수가 생기기 전과 바이트 동일하다."""
+    if not isinstance(entry, Mapping):
+        return _EntryPlan()
+    seconds_per_beat = 60.0 / timing.bpm
+
+    fade_bars = entry.get("fade_bars")
+    fade_beats = entry.get("fade_beats")
+    if fade_bars is not None and fade_beats is not None:
+        return _EntryPlan(
+            blocked_reason=(
+                "fade_bars 와 fade_beats 가 둘 다 숫자입니다 — 어느 쪽인지 짐작해서 보내지 않습니다"
+            )
+        )
+    fade_seconds: float | None = None
+    if fade_bars is not None:
+        fade_seconds = float(fade_bars) * timing.beats_per_bar * seconds_per_beat
+    elif fade_beats is not None:
+        fade_seconds = float(fade_beats) * seconds_per_beat
+
+    trigger_beat = entry.get("trigger_beat")
+    trigger_offset = 0.0
+    if trigger_beat is not None:
+        if (
+            isinstance(trigger_beat, bool)
+            or not isinstance(trigger_beat, int)
+            or not 1 <= trigger_beat <= timing.beats_per_bar
+        ):
+            return _EntryPlan(
+                blocked_reason=(
+                    f"trigger_beat {trigger_beat!r} 는 1~{timing.beats_per_bar} 박이어야 "
+                    "합니다(지어내지 않음)"
+                )
+            )
+        trigger_offset = (trigger_beat - 1) * seconds_per_beat
+
+    tracking = entry.get("tracking")
+    store_options: tuple[str, ...] = ()
+    after_ops: tuple[str, ...] = ()
+    if tracking == "Release":
+        after_ops = ("release_on",)
+    elif tracking == "Block":
+        after_ops = ("block",)
+    elif tracking == "Cue Only":
+        store_options = ("/CueOnly",)
+
+    skipped = tuple(
+        reason
+        for name, reason in _UNSENT_ENTRY_REASONS.items()
+        if entry.get(name) is not None and not (name == "mib_mode" and entry.get(name) == "none")
+    )
+    return _EntryPlan(
+        fade_seconds=fade_seconds,
+        trigger_offset_seconds=trigger_offset,
+        store_options=store_options,
+        after_ops=after_ops,
+        skipped_fields=skipped,
+    )
+
+
 def _emit_cue(
     cue: Mapping[str, object],
     *,
@@ -379,17 +487,35 @@ def _emit_cue(
             blocked_reason="이 마디의 트리거 시각을 계산할 수 없습니다(0마디 pickup_beats 없음)",
         )
 
+    entry_plan = _entry_plan(cue.get("entry"), timing)
+    if entry_plan.blocked_reason is not None:
+        return CueEmitResult(bar=bar, commands=(), blocked_reason=entry_plan.blocked_reason)
+
     commands = list(attribute_commands)
-    commands.append(f"Store Cue {cue_number} Sequence {sequence_number}")
+    # @MX:WARN: [AUTO] 카드 t576 — ``CueFade``·``/CueOnly``는 실기 선례가 있지만 그 문면은
+    #   ``Store Sequence S Cue N CueFade x /Merge``(cue_sheet_apply) 어순이다. 이
+    #   에미터의 ``Store Cue N Sequence S CueFade x`` 어순과 붙여 쓴 선례는 저장소에 없다.
+    # @MX:REASON: 측정 전까지 가설 문법 — t580 실기 확인 목록에 올렸다. 거절되면 이 줄의
+    #   어순만 고치면 된다(초 환산·트리거·트래킹 판정은 그대로).
+    store = store_with_fade(
+        f"Store Cue {cue_number} Sequence {sequence_number}", entry_plan.fade_seconds
+    )
+    commands.append(store + "".join(f" {option}" for option in entry_plan.store_options))
     commands.append("ClearAll")
     commands.append(f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigType' 'Time'")
-    trigger_ms = round(bar_seconds * 1000)
+    trigger_ms = round((bar_seconds + entry_plan.trigger_offset_seconds) * 1000)
     commands.append(
         f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigTime' "
         f"{_format_seconds(trigger_ms)}"
     )
+    # 트래킹 표시는 큐가 저장된 **뒤에** 건다(cue_sheet_apply 실측 순서, 카드 t469).
+    commands.extend(_tracking_line(op, sequence_number, cue_number) for op in entry_plan.after_ops)
     return CueEmitResult(
-        bar=bar, commands=tuple(commands), blocked_reason=None, cue_number=cue_number
+        bar=bar,
+        commands=tuple(commands),
+        blocked_reason=None,
+        cue_number=cue_number,
+        skipped_fields=entry_plan.skipped_fields,
     )
 
 
