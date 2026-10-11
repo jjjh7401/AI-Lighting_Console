@@ -84,4 +84,4 @@
 
 ## 6. 전체 pytest
 
-로컬 전체 실행은 커밋 시점에 25%까지 실패 0건으로 진행 중이었다(완료 안 봄) — 레인 규칙대로 관련 시험(388건)만 로컬에서 끝까지 돌리고, 전체는 CI 결과를 정본으로 한다. CI 초록 head 는 리드 회신에 적는다.
+첫 PR 푸시 뒤 로컬 전체 실행이 끝났다: `uv run pytest -q` → `1 failed, 15091 passed, 35 skipped` (`pytest-full.txt`). 실패 1건은 이 카드가 만든 것이다 — `test_responder_roundtrip.py::test_the_constant_is_the_only_server_side_occurrence` 는 응답기 버전 문자열이 `server/safety/` 에서 `responder_version.py` 한 곳에만 있기를 요구하는데, `console.py` 설명문에 버전 숫자를 적었다. 숫자를 「PROTOCOL.md §4.8」로 바꿔 고쳤다: `grep -rln '1\.6\.6' server/safety` → `responder_version.py` 하나, 해당 시험 포함 `56 passed`. 고친 뒤 전체를 다시 끝까지 돌리지는 않았다 — CI 결과를 정본으로 한다.

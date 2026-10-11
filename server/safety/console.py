@@ -801,7 +801,7 @@ class ConsoleLink:
         address (``console/lua/PROTOCOL.md`` §4.8), which :meth:`deliver`
         already accepts, so no new reply channel appears.
 
-        ``offset`` (responder 1.6.6, 카드 t565) windows a table-valued property
+        ``offset`` (PROTOCOL.md §4.8 표 값 나눠 읽기, 카드 t565) windows a table-valued property
         by whole entries — see :func:`build_props_query`.
         """
         request_id = self._new_id()
