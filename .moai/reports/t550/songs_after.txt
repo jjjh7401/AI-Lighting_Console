@@ -1,0 +1,11 @@
+song                    raw_bpm  adopted      outcome   amb     p_mid    n
+LOVE ATTACK.mp3         112.002  112.002         keep False  2.34e-38  325
+Club Diver.mp3          140.026  140.026         keep False  7.00e-10  330
+Cut and Run.mp3         107.666  107.666         keep False  2.07e-10  363
+Ice cream.mp3           100.446  100.446         keep False  9.37e-04  121
+Let's Dance.mp3         120.030  120.030         keep False  6.52e-18  155
+LoveMe.mp3             FAILURE 오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x101a32160>: Format not recognised.
+Morning.mp3             117.454  117.454         keep False  6.31e-57  284
+Rain.mp3                 76.013   76.013         keep False  3.21e-27  250
+Too Cool.mp3            160.003  160.003         keep False  3.10e-85  471
+scott-buckley-neon.mp3  120.185  120.185         keep False  7.96e-05  497
