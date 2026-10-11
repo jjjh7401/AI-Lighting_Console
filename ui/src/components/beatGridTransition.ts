@@ -9,6 +9,7 @@
 // "미정/[미확인]"으로 남는다.
 import type { BeatGridCue, BeatGridTrack } from "../protocol";
 import type { BeatGridFixturePoint } from "./BeatGrid";
+import { fixtureBelongsTo } from "./beatGridStageModel";
 
 /** REQ-LDBEAT-020(a) 문면 「3줄 이상이 같은 마디에서 동시에 바뀌는 동안」. */
 export const SCENE_CHANGE_MIN_ROWS = 3;
@@ -245,7 +246,7 @@ export interface StageGroupZone {
 }
 
 /** REQ-LDBEAT-022(b) — 그룹 이름표·선택 테두리·클릭 영역. 콘솔에서 **확인된**
- * 소속(`confirmedGroupName`)이 트랙 이름과 정확히 같은 장비만 묶는다 —
+ * 소속(`fixtureBelongsTo` — 카드 t565부터 여러 그룹 소속)이 트랙 이름과 정확히 같은 장비만 묶는다 —
  * 이름이 비슷하다는 추론은 쓰지 않는다(`fixtureDisplayColor`와 같은 원칙). */
 export function stageGroupZones(
   fixtures: readonly BeatGridFixturePoint[],
@@ -257,7 +258,7 @@ export function stageGroupZones(
   tracks.forEach((track, trackIndex) => {
     const key = track.group_name.toUpperCase();
     const points = fixtures
-      .filter((f) => f.confirmedGroupName && f.confirmedGroupName.toUpperCase() === key)
+      .filter((f) => fixtureBelongsTo(f, key))
       .map((f) => project(f));
     if (points.length === 0) return;
     const xs = points.map((p) => p.cx);
