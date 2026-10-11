@@ -1157,6 +1157,7 @@ export default function App() {
             onDrawerRequest={sendBeatGridDrawerRequest}
             fixtures={beatGridStageFixtures}
             stageNotes={state.beatGridStage?.unread}
+            stageGroups={state.beatGridStage?.groups}
           />
         </div>
       ) : runbookMode ? (

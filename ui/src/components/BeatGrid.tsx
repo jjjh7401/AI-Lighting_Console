@@ -42,6 +42,7 @@ import type {
   BeatGridEvidence,
   BeatGridPendingSuggestion,
   BeatGridSceneMemo,
+  BeatGridStageGroup,
   BeatGridTrack,
   BeatGridView,
 } from "../protocol";
@@ -94,6 +95,7 @@ import {
   declareLRSplit,
   lrChildRowsForTrack,
   type LRSplitDeclarations,
+  type LRSplitStage,
 } from "./beatgrid/lrSplit";
 import { formatPresetChipTooltip } from "./beatgrid/presetChipTooltip";
 import { roleFieldHints } from "./beatgrid/roleFields";
@@ -442,6 +444,14 @@ export interface BeatGridProps {
   /** 카드 t565 — 무대 판독이 못 읽은 이유(`beat_grid_stage.unread`) 그대로.
    * 무대 칸 아래에 보인다 — 비어 있는 무대를 「장비 없음」으로 읽지 않게. */
   stageNotes?: readonly string[];
+  /** 카드 t568(REQ-LDBEAT-019(c)) — `beat_grid_stage` 응답의 콘솔 그룹
+   * 목록(그룹별 `member_fids`+`complete`, 카드 t565) 그대로. L·R 자식 줄
+   * 분리 가능 판정(`lrSplit.ts`)이 이 값과 `fixtures`를 함께 쓴다 —
+   * 트랙 이름과 정확히 같은 그룹을 여기서 찾아 그 멤버를 무대 x로 좌우로
+   * 나눈다(부모 그룹도 자기 member_fids를 직접 들고 있어 더 이상 장비
+   * 하나당 확인된 소속 이름의 정확 일치에 기대지 않는다). 없으면(`[]`)
+   * 모든 트랙이 분리 불가다. */
+  stageGroups?: readonly BeatGridStageGroup[];
   probeResults?: Readonly<Record<number, ProbeStatus>>;
   secondsPerBar?: number | null;
   /** t537 (3) — 색 프리셋 번호 → 실제 콘솔 색(hex). 이 카드는 콘솔 접촉
@@ -974,6 +984,7 @@ export function BeatGrid({
   grid,
   fixtures = [],
   stageNotes,
+  stageGroups = [],
   probeResults,
   secondsPerBar = null,
   colorPresetHex,
@@ -1005,6 +1016,17 @@ export function BeatGrid({
   // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
   // 뿐이다(§Gaps — lrSplit.ts 모듈 주석).
   const [lrSplits, setLrSplits] = useState<LRSplitDeclarations>(() => new Map());
+  // 카드 t568(REQ-LDBEAT-019(c)) — `lrSplit.ts`가 쓰는 무대 판독 묶음.
+  // `fixtures`(장비 점, fid·x 포함)와 `stageGroups`(그룹별 member_fids·
+  // complete, 카드 t565 `beat_grid_stage` 응답)를 한 객체로 묶는다 —
+  // 부모 그룹(SIDE-ALL 등) 소속은 그 그룹 자체의 member_fids로 판정하고,
+  // 더 이상 장비 하나당 확인된 소속 이름(`confirmedGroupName`) 정확
+  // 일치에 기대지 않는다(t560 §Gaps — 부모 그룹은 그 필드가 영원히 못
+  // 맞았다, lrSplit.ts 모듈 주석).
+  const lrStage = useMemo<LRSplitStage>(
+    () => ({ fixtures, groups: stageGroups }),
+    [fixtures, stageGroups],
+  );
   // 카드 t560(REQ-LDBEAT-023(b)) — 「이 마디 한눈에」 줄 이름 ▸ 로 펼친
   // 트랙(콘솔 그룹 이름 키 — 이 표는 트랙당 한 줄뿐이라 마디는 필요 없다).
   const [expandedGlanceRows, setExpandedGlanceRows] = useState<Set<string>>(() => new Set());
@@ -1336,7 +1358,7 @@ export function BeatGrid({
                     // 줄 이름 칸)에서 그리지 않는다 — 아래 「이 마디 한눈에」
                     // 펼침 상세 줄로 옮겼다. 자식 줄(└ L/R) 자체는 선언된
                     // 구간 전체에 걸쳐 그대로 타임라인에 보인다.
-                    const childRows = lrChildRowsForTrack(track, lrSplits, fixtures);
+                    const childRows = lrChildRowsForTrack(track, lrSplits, lrStage);
                     return (
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
@@ -2114,7 +2136,7 @@ export function BeatGrid({
                   // 트랙이면 `lrSplitControl`이 `null`이라 링크 자체가 없다.
                   const hasLrSplit = lrSplits.has(track.group_name);
                   const lrSplitControl =
-                    canDeclareLRSplit(track, fixtures) && viewSegment
+                    canDeclareLRSplit(track, lrStage) && viewSegment
                       ? {
                           isSplit: hasLrSplit,
                           onToggle: () =>
@@ -2131,7 +2153,7 @@ export function BeatGrid({
                   // 카드 t560 후속 — 자식 줄(└ L/R)은 분리 선언이 있고 지금
                   // 보는 마디가 그 선언 구간 안일 때만(mockup `drawBar`의
                   // `b>=SPLIT.a&&b<=SPLIT.b` 분기와 같은 판정).
-                  const glanceChildRows = lrChildRowsForTrack(track, lrSplits, fixtures).filter(
+                  const glanceChildRows = lrChildRowsForTrack(track, lrSplits, lrStage).filter(
                     (row) => viewBar >= row.startBar && viewBar < row.endBar,
                   );
                   const focus = (field: GlanceFocusTarget["field"]) => {
@@ -2302,9 +2324,11 @@ export function BeatGrid({
                     }
                     // 카드 t560(REQ-LDBEAT-023(c)) — 「설명 텍스트 · 이 곡에서 큐
                     // N곳 사용」 꼴을 앞에 두고(필수 모양), 기존 사용처 목록(카드
-                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). `entry.description`은
-                    // 서버가 아직 안 채우는 선택 필드라(§Gaps, presetChipTooltip.ts
-                    // 모듈 주석) 지금은 사용 수만 보인다 — 지어내지 않는다.
+                    // t551)은 뒤에 보조로 남긴다(정보 손실 없음). 카드 t568 조사 —
+                    // 콘솔 풀 자식 판독(`paged_pool_children`)은 슬롯 번호·이름만
+                    // 돌려줘서 `entry.description`은 서버가 명시적 `null`로 채운다
+                    // (새 프로브 없이는 채울 수 없는 자리, presetChipTooltip.ts
+                    // 모듈 주석) — 지금은 사용 수만 보인다. 지어내지 않는다.
                     title={
                       formatPresetChipTooltip(entry.description, entry.usage_count) +
                       (entry.used_by.length

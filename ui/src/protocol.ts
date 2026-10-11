@@ -532,9 +532,12 @@ export interface BeatGridDrawerEntry {
   is_effect_band: boolean;
   /** 카드 t560(REQ-LDBEAT-023(c)) — 그 프리셋의 설명 텍스트(시안 원문
    * 예시 「펄스 30↔60 · 4박」 꼴, `name`과는 다른 자리 — `name`은 콘솔이
-   * 읽은 짧은 이름일 뿐이다). 서버가 아직 이 필드를 채우지 않는다(§Gaps,
-   * `.moai/reports/t560/` 참조) — 선택 필드로 두고, 없으면(`undefined`/
-   * `null`) 칩 툴팁이 사용 큐 수만 보인다(지어내지 않는다). */
+   * 읽은 짧은 이름일 뿐이다). 카드 t568 조사 — 콘솔 풀 자식 판독
+   * (`paged_pool_children`)은 슬롯 번호·이름만 돌려주고, 이 저장소에
+   * 설명 텍스트를 읽는 다른 경로도 없다(새 프로브 없이 조사 완료) —
+   * 그래서 서버는 이 필드를 명시적 `null`로 채운다(생략이 아니다).
+   * 선택 필드로 두고, 비어 있으면(`undefined`/`null`) 칩 툴팁이 사용 큐
+   * 수만 보인다(지어내지 않는다). */
   description?: string | null;
 }
 
