@@ -62,7 +62,6 @@ import {
   layerFolderLabel,
   buildBrightnessValueChanges,
   cueReferencesPreset,
-  isBrightnessValueEditable,
   isPendingSuggestionForTrack,
   pendingApprovalBadge,
   presetPoolBandBadge,
@@ -988,40 +987,6 @@ describe("panOnlyVerticalBaseWarning — t548 감독 결정④", () => {
 
   it("app_movement 없으면 경고 없음", () => {
     expect(panOnlyVerticalBaseWarning(cueWith({}))).toBeNull();
-  });
-});
-
-describe("isBrightnessValueEditable — 카드 t551(M3), mockup 밝기 값 전용 편집", () => {
-  it("칸이 없으면(선택 안 됨) 편집 불가", () => {
-    expect(isBrightnessValueEditable(null)).toBe(false);
-  });
-
-  it("brightness.mode 가 null(미정)이면 편집 가능 — 처음 값을 넣는 경우", () => {
-    const cue = structuredCue(7, {
-      brightness: { mode: null, value_percent: null, preset_no: null },
-    });
-    expect(isBrightnessValueEditable(cue)).toBe(true);
-  });
-
-  it("brightness.mode 가 value 면 편집 가능", () => {
-    const cue = structuredCue(7, {
-      brightness: { mode: "value", value_percent: 40, preset_no: null },
-    });
-    expect(isBrightnessValueEditable(cue)).toBe(true);
-  });
-
-  it("brightness.mode 가 dimmer_preset 이면 편집 불가(목록 선택 필요 — 카탈로그 없음)", () => {
-    const cue = structuredCue(7, {
-      brightness: { mode: "dimmer_preset", value_percent: null, preset_no: "1.1" },
-    });
-    expect(isBrightnessValueEditable(cue)).toBe(false);
-  });
-
-  it("brightness.mode 가 dimmer_effect 면 편집 불가(목록 선택 필요 — 카탈로그 없음)", () => {
-    const cue = structuredCue(7, {
-      brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
-    });
-    expect(isBrightnessValueEditable(cue)).toBe(false);
   });
 });
 

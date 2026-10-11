@@ -10,10 +10,13 @@ import { useEffect, useRef, useState } from "react";
 import type { BeatGridTrack } from "../protocol";
 import {
   computeStageBounds,
+  cueForBar,
+  cueIsActive,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
+import { fixtureBelongsTo } from "./beatGridStageModel";
 import { stageGroupZones } from "./beatGridTransition";
 import "./beatGridPanels.css";
 
@@ -22,6 +25,93 @@ const STAGE_H = 300;
 const STAGE_MIN_W = 420;
 const STAGE_MARGIN = 24;
 const ZONE_PADDING = 8;
+
+/** 카드 t588 — 시안 `drawStage` 장식의 그림 비율. 리그·곡 값이 아니라 그림
+ * 모양 값이다: 빔 반폭 9(시안 `x-9`·`x+9`), 빔 불투명도 100/260(시안 `h/260`, 켜짐
+ * 최대), 워시 면 불투명도 40/160(시안 `sh/160` — 앱은 디머 수치를 지어내지 않아
+ * 켜짐 한 단계뿐이라 시안 표본 값 40%로 고정). 빔 길이는 장비에서 무대 앞
+ * 가장자리까지의 거리 비율이다(시안은 틸트로 정하지만 앱은 틸트를 읽지 않는다). */
+const BEAM_HALF_WIDTH = 9;
+const BEAM_OPACITY = 100 / 260;
+const BEAM_REACH = 0.5;
+const WASH_OPACITY = 40 / 160;
+
+export interface StageDecorations {
+  /** 시안 `#1b1b22` 무대 바닥 — 읽힌 장비 전체를 감싸는 면. */
+  floor: { x: number; y: number; width: number; height: number } | null;
+  /** 시안 워시 면 — 층 역할이 wash 인 줄의 소속 장비 영역, 그 칸이 켜졌을 때만. */
+  washes: { key: string; x: number; y: number; width: number; height: number; fill: string }[];
+  /** 시안 무빙 빔 — 층 역할이 mover 인 줄의 소속 장비마다 무대 앞쪽으로, 켜졌을 때만. */
+  beams: { key: string; points: string; fill: string }[];
+}
+
+/** 카드 t588 — 시안 `drawStage` 의 바닥·워시·빔 장식을 **장비 좌표에서** 만든다.
+ * 어느 줄이 워시/무빙인지는 줄의 층 역할(`layer_role`, 앱 어휘)에서만 읽고,
+ * 위치는 그 줄에 소속이 확인된 장비 좌표에서만 잡는다 — 그룹 이름·번호 상수 0.
+ * 켜짐은 무대 점과 같은 판정(`cueIsActive`)이다. */
+export function stageDecorations(
+  fixtures: readonly BeatGridFixturePoint[],
+  tracks: readonly BeatGridTrack[],
+  project: (point: { x: number; y: number }) => { cx: number; cy: number },
+  viewBar: number,
+  frontY: number,
+  padding: number,
+): StageDecorations {
+  if (fixtures.length === 0) return { floor: null, washes: [], beams: [] };
+  const all = fixtures.map((f) => project(f));
+  const minX = Math.min(...all.map((p) => p.cx)) - padding;
+  const minY = Math.min(...all.map((p) => p.cy)) - padding;
+  const floor = {
+    x: minX,
+    y: minY,
+    width: Math.max(...all.map((p) => p.cx)) + padding - minX,
+    height: Math.max(...all.map((p) => p.cy)) + padding - minY,
+  };
+  const lit = (track: BeatGridTrack) => {
+    const cue = cueForBar(track, viewBar);
+    return cue !== null && cueIsActive(cue.label);
+  };
+  const washes: StageDecorations["washes"] = [];
+  const beams: StageDecorations["beams"] = [];
+  const zones = stageGroupZones(fixtures, tracks, project, padding);
+  for (const zone of zones) {
+    const track = tracks[zone.trackIndex];
+    if (track.layer_role !== "wash" || !lit(track)) continue;
+    const member = fixtures.find((f) => fixtureBelongsTo(f, track.group_name));
+    washes.push({
+      key: `wash-${zone.trackIndex}`,
+      x: zone.x,
+      y: zone.y,
+      width: zone.width,
+      height: zone.height,
+      fill: member ? fixtureDisplayColor(member, tracks) : "#888",
+    });
+  }
+  tracks.forEach((track, trackIndex) => {
+    if (track.layer_role !== "mover" || !lit(track)) return;
+    for (const fixture of fixtures) {
+      if (!fixtureBelongsTo(fixture, track.group_name)) continue;
+      const { cx, cy } = project(fixture);
+      const len = Math.max(0, (frontY - cy) * BEAM_REACH);
+      if (len <= 0) continue;
+      beams.push({
+        key: `beam-${trackIndex}-${fixture.fid}`,
+        points: `${cx},${cy} ${cx - BEAM_HALF_WIDTH},${cy + len} ${cx + BEAM_HALF_WIDTH},${cy + len}`,
+        fill: fixtureDisplayColor(fixture, tracks),
+      });
+    }
+  });
+  return { floor, washes, beams };
+}
+
+/** 카드 t591 — 시안 `drawStage` 는 무빙 장비를 10×10 네모(`rect x-5 y-5`)로,
+ * 나머지를 동그라미로 그린다. 무빙인지는 층 역할이 mover 인 줄에 **소속이
+ * 확인된**(무대 판독 `member_fids`) 장비인가로만 정한다 — 그룹 이름 규칙 0. */
+export function fixtureIsMover(fixture: BeatGridFixturePoint, tracks: readonly BeatGridTrack[]): boolean {
+  return tracks.some((track) => track.layer_role === "mover" && fixtureBelongsTo(fixture, track.group_name));
+}
+
+const MOVER_HALF = 5;
 
 /** 칸 비율에 맞춘 그림 폭 — 시안 `Math.max(420, round(H * clientW/clientH))`. */
 export function stageViewWidth(clientWidth: number, clientHeight: number): number {
@@ -76,22 +166,65 @@ export function BeatGridStage({
   });
   const zones = stageGroupZones(fixtures, tracks, project, ZONE_PADDING);
   const selectedKey = selectedTrackName?.toUpperCase() ?? null;
+  // 카드 t588 — 시안 장식은 점 아래에 깐다(바닥 → 워시 면 → 빔 → 장비 점).
+  const decor = stageDecorations(fixtures, tracks, project, viewBar, STAGE_H - STAGE_MARGIN, ZONE_PADDING);
 
   return (
     <div className="beat-grid-stage-box" ref={boxRef}>
       <svg viewBox={`0 0 ${viewW} ${STAGE_H}`} className="beat-grid-stage">
+        {decor.floor && (
+          <rect
+            className="beat-grid-stage-floor"
+            x={decor.floor.x}
+            y={decor.floor.y}
+            width={decor.floor.width}
+            height={decor.floor.height}
+            fill="#1b1b22"
+            stroke="#333"
+          />
+        )}
+        {decor.washes.map((wash) => (
+          <rect
+            key={wash.key}
+            className="beat-grid-stage-wash"
+            x={wash.x}
+            y={wash.y}
+            width={wash.width}
+            height={wash.height}
+            fill={wash.fill}
+            opacity={WASH_OPACITY}
+          />
+        ))}
+        {decor.beams.map((beam) => (
+          <polygon
+            key={beam.key}
+            className="beat-grid-stage-beam"
+            points={beam.points}
+            fill={beam.fill}
+            opacity={BEAM_OPACITY}
+          />
+        ))}
         {fixtures.map((fixture) => {
           const { cx, cy } = project(fixture);
-          return (
-            <circle
+          const fill = fixtureDisplayColor(fixture, tracks);
+          const opacity = fixtureDisplayOpacity(fixture, tracks, viewBar);
+          const title = <title>{`${fixture.name} (fid ${fixture.fid})`}</title>;
+          return fixtureIsMover(fixture, tracks) ? (
+            <rect
               key={fixture.fid}
-              cx={cx}
-              cy={cy}
-              r={5}
-              fill={fixtureDisplayColor(fixture, tracks)}
-              opacity={fixtureDisplayOpacity(fixture, tracks, viewBar)}
+              className="beat-grid-stage-mover"
+              x={cx - MOVER_HALF}
+              y={cy - MOVER_HALF}
+              width={MOVER_HALF * 2}
+              height={MOVER_HALF * 2}
+              fill={fill}
+              opacity={opacity}
             >
-              <title>{`${fixture.name} (fid ${fixture.fid})`}</title>
+              {title}
+            </rect>
+          ) : (
+            <circle key={fixture.fid} cx={cx} cy={cy} r={5} fill={fill} opacity={opacity}>
+              {title}
             </circle>
           );
         })}
