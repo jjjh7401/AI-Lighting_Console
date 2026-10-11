@@ -202,3 +202,15 @@ ui/src/styles.css                                     | +8 (.beat-grid-pending-a
   origin/main이 이 워크트리 HEAD의 조상임을 확인했을 뿐, 이 lane 작업 동안
   다른 lane이 `server/design/beat_grid*.py`·`server/web/session.py`를 건드렸는지
   는 재확인하지 않았다(오케스트레이터가 머지 시점에 재확인 권고).
+
+## 7. 리드 세션 검수에서 잡은 결함 1건과 수정 (카드 t577, 오케스트레이터 직접)
+
+- **재현(수정 전 RED)**: `uv run python -m pytest server/tests/test_apply_time_approval_t577.py -k EditDuringApprovalWait` → `2 failed`.
+  - `test_number_changed_after_the_card_is_not_approved`: `AssertionError: assert '4.21' == '4.29'` — 승인 창이 떠 있는 동안 4.29 로 바꾼 번호가 승인 뒤 4.21 로 되돌아갔다.
+  - `test_other_edits_made_during_the_wait_are_kept`: `StopIteration` — 그 사이 연 BACK 2마디 칸이 사라졌다.
+- **원인**: `beat_grid_apply` 가 승인 뒤 카드 구성 시점의 `grid` 스냅샷에 승인을 적어 `store.latest` 로 통째로 되돌려 썼고, `apply_pending_approval` 은 칸을 (트랙, 마디)로만 찾고 값은 대조하지 않았다 — 카드에 없던 번호가 승인될 수 있었다(h-4 위반) + 대기 중 편집 소실.
+- **수정**: `server/web/session.py` — 승인 뒤 **지금** 저장된 격자를 다시 읽어 그 위에 적는다. `server/design/beat_grid.py` `apply_pending_approval` — 칸의 현재 승인 대기 (필드, 값) 집합이 카드가 보여준 집합과 정확히 같을 때만 승인을 적고, 다르면 승인 대기로 남긴다.
+- **수정 뒤**: 같은 파일 `9 passed`. 뮤테이션 — 값 대조 줄을 `if False:` 로 바꾸면 `1 failed, 8 passed`(바로 그 시험), 되돌리면 통과.
+- **합친 트리 검증**(origin/main `a2cc872d` 병합 커밋 `66fa9f54` 위): `uv run python -m pytest server/tests/ -k "beat_grid or t577 or t573 or t579"` → `477 passed, 14869 deselected`; `ruff check` 변경 파일 → `All checks passed!`; `npx tsc --noEmit` exit 0; `npx vitest run src/components/BeatGrid.test.tsx src/components/BeatGridTopBar.test.tsx` → `168 passed`.
+- **병합 충돌 1건**: `ui/src/components/BeatGrid.tsx` 배지 자리 — main(t579)의 새 「실기 미확인」 판정(`unverifiedCells`)을 쓰고, 그 옆에 「승인 대기」 배지를 유지.
+- **여전히 안 잰 것**: 실기 콘솔, 브라우저에서 승인 창 문구 눈 확인.

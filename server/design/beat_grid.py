@@ -794,7 +794,15 @@ def apply_pending_approval(
     updated = copy.deepcopy(dict(grid))
     if not pending:
         return updated
-    targets = {(entry.get("group_name"), entry.get("bar")) for entry in pending}
+    # 칸마다 카드가 보여준 (필드, 값) 집합 — 칸의 **지금** 승인 대기 필드가
+    # 이 집합과 정확히 같을 때만 승인을 적는다. 승인 창이 떠 있는 동안 그
+    # 칸 번호가 바뀌었거나 새 번호가 더해졌다면, 감독은 그 번호를 본 적이
+    # 없으므로 승인 대기로 남긴다(h-4).
+    card_fields: dict[tuple[object, object], set[tuple[str, object]]] = {}
+    for entry in pending:
+        key = (entry.get("group_name"), entry.get("bar"))
+        card_fields.setdefault(key, set()).add((str(entry.get("field")), entry.get("value")))
+    targets = set(card_fields)
     tracks = list(updated.get("tracks") or [])
     for track_index, track in enumerate(tracks):
         if not isinstance(track, Mapping):
@@ -805,13 +813,14 @@ def apply_pending_approval(
         for cue_index, cue in enumerate(cues):
             if not isinstance(cue, Mapping):
                 continue
-            if (group_name, cue.get("bar")) not in targets:
+            key = (group_name, cue.get("bar"))
+            if key not in targets:
+                continue
+            if set(pending_preset_fields(cue)) != card_fields[key]:
                 continue
             existing_evidence = cue.get("evidence")
             grade = (
-                existing_evidence.get("grade")
-                if isinstance(existing_evidence, Mapping)
-                else None
+                existing_evidence.get("grade") if isinstance(existing_evidence, Mapping) else None
             )
             cues[cue_index] = {
                 **cue,

@@ -9843,9 +9843,15 @@ class ChatSession:
             # ``grid`` 스냅샷으로 고정) 자연히 이번 기록 대상 밖이다 —
             # `emit_beat_grid_write_bundle`이 애초에 같은 스냅샷으로
             # 커맨드를 만들었으므로 송신 집합도 이미 그 밖이다(0 송신).
+            # 승인 창이 떠 있는 동안 들어온 편집을 지우지 않도록, 카드 구성
+            # 시점의 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다 — 그
+            # 사이 번호가 바뀐 칸은 `apply_pending_approval`이 값 대조로 건너뛴다.
             if pending_before:
+                current = store.latest if store is not None else None
+                if current is not None:
+                    timeline = current
                 approved_grid = apply_pending_approval(
-                    grid,
+                    self._beat_grid_view(timeline),
                     pending_before,
                     by="supervisor",
                     date=until,

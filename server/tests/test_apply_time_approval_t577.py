@@ -318,6 +318,63 @@ class TestNumbersAddedAfterCardConstructionStayPending:
         assert check_evidence_approval(side_cue) is not None
 
 
+class EditDuringApproval(ScriptedApproval):
+    """승인 창이 떠 있는 동안(=``request_approval`` 안) 감독이 격자를 또
+    고친 상황을 흉내 낸다 — 카드에 BACK 1마디 4.21 이 실린 뒤, 같은 칸을
+    4.29 로 바꾸고 BACK 2마디에 새 칸을 연다."""
+
+    def __init__(self, store: SongTimelineStore):
+        super().__init__(decisions=(True,))
+        self.store = store
+
+    def request_approval(self, request) -> bool:
+        grid = self.store.latest["beat_grid"]
+        edited, _ = apply_beat_grid_edit(
+            grid, bar=1, target="BACK", changes={"effect_preset_no": "4.29"}
+        )
+        edited, _ = apply_beat_grid_edit(
+            edited,
+            bar=2,
+            target="BACK",
+            changes={"brightness": {"mode": "value", "value_percent": 50}},
+        )
+        self.store.latest = {**self.store.latest, "beat_grid": edited}
+        return super().request_approval(request)
+
+
+class TestEditDuringApprovalWait:
+    """(v-4) 세션 수준 — 카드 구성 뒤, 승인 응답 전에 들어온 편집."""
+
+    def _run(self, tmp_path):
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        console = FakeConsole(state_tree=_state_tree())
+        audit = AuditLog(tmp_path / "audit")
+        approval = EditDuringApproval(store)
+        gate = SafetyGate(console=console, audit=audit, approval_port=approval)
+        session = ChatSession(
+            gate=gate,
+            provider=RefusingProvider(),
+            system_prefix="PREFIX",
+            audit=audit,
+            send_event=lambda event: None,
+            approval_channel=ApprovalChannel(timeout_seconds=1.0),
+            timeline_store=store,
+            timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+        )
+        session.beat_grid_apply()
+        return store.latest["beat_grid"]
+
+    def test_number_changed_after_the_card_is_not_approved(self, tmp_path) -> None:
+        cue = _cue_of(self._run(tmp_path), "BACK", 1)
+        assert cue["effect_preset_no"] == "4.29"
+        assert check_evidence_approval(cue) is not None, "카드에 없던 4.29 가 승인됐다"
+
+    def test_other_edits_made_during_the_wait_are_kept(self, tmp_path) -> None:
+        cue = _cue_of(self._run(tmp_path), "BACK", 2)
+        assert cue["brightness"]["value_percent"] == 50
+
+
 # -- (v-5) 승인=송신 비교(REQ-LDBEAT-011)는 이 변경 전후로 동일하게 성립한다
 #    (REQ-LDBEAT-015(h-6)) ------------------------------------------------------
 
