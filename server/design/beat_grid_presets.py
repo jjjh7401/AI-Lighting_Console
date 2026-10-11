@@ -20,16 +20,22 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from server.design.beat_grid_edit import validate_preset_pool_assignment
+from server.design.beat_grid_edit import _KIND_TO_POOL_KEYS, validate_preset_pool_assignment
 from server.design.console_slots import StateQuery, paged_pool_children, resolve_named_pool_no
 from server.design.preset_names import match_preset_name_across_pools
 
 __all__ = [
     "EFFECT_SEARCH_POOL_NAMES",
     "POOL_NAME_BY_FIELD",
+    "app_preset_description",
+    "app_preset_label",
     "build_preset_drawer",
+    "effect_kind_to_pool_name",
+    "first_free_preset_number",
     "pool_name_to_effect_kind",
     "read_named_pool",
+    "record_app_preset_description",
+    "record_app_preset_label",
     "resolve_effect_preset_name",
     "resolve_preset_name",
 ]
@@ -57,6 +63,14 @@ _POOL_NAME_TO_EFFECT_KIND: dict[str, str] = {
     "All 1": "mixed",
 }
 
+#: 카드 t589 — 위 표의 역방향(``effect_kind`` → 콘솔 풀 이름). "+ 새
+#: 프리셋" 다이얼로그가 빈 번호를 고르기 전에 콘솔 점유를 확인할 풀
+#: 하나를 찾는 자리 — 드로워가 이미 읽는 그 이름 그대로 재사용한다(새
+#: 풀 이름을 지어내지 않는다).
+_EFFECT_KIND_TO_POOL_NAME: dict[str, str] = {
+    kind: name for name, kind in _POOL_NAME_TO_EFFECT_KIND.items()
+}
+
 #: 드로워 섹션 제목 — mockup `drawDrawer()`의 세 ``<h6>`` 제목 그대로
 #: (`ldbeat-runbook-ui-proposal-20261008.html` "---------- drawer ----------").
 _DRAWER_SECTIONS: tuple[tuple[str, str], ...] = (
@@ -79,6 +93,12 @@ def pool_name_to_effect_kind(pool_name: str) -> str | None:
     """콘솔 풀 **이름** → `effect_kind`(REQ-LDBEAT-006(i-3)). 모르는 이름은
     `None`(지어내지 않는다) — `EFFECT_SEARCH_POOL_NAMES` 네 개만 안다."""
     return _POOL_NAME_TO_EFFECT_KIND.get(pool_name)
+
+
+def effect_kind_to_pool_name(kind: str) -> str | None:
+    """카드 t589 — `pool_name_to_effect_kind`의 역방향. 모르는 종류는
+    `None`(지어내지 않는다)."""
+    return _EFFECT_KIND_TO_POOL_NAME.get(kind)
 
 
 def read_named_pool(
@@ -216,6 +236,141 @@ def record_app_preset_description(
     descriptions[preset_no] = description.strip()
     updated["preset_descriptions"] = descriptions
     return updated
+
+
+def app_preset_label(grid: Mapping[str, object], preset_no: str) -> str | None:
+    """카드 t589 — 앱이 만든 프리셋의 콘솔 이름(영문·숫자, 곡별 ``grid
+    ["preset_labels"]`` ``{"pool.slot": 이름}``). ``app_preset_description``
+    과 같은 저장 모양·같은 "지어내지 않는다" 규칙 — 없거나 빈 글자면
+    ``None``."""
+    labels = grid.get("preset_labels")
+    if not isinstance(labels, Mapping):
+        return None
+    value = labels.get(preset_no)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value.strip()
+
+
+def record_app_preset_label(
+    grid: Mapping[str, object], preset_no: str, label: str
+) -> dict[str, object]:
+    """카드 t589 — `record_app_preset_description`과 짝인 저장 자리. 콘솔
+    이름(영문·숫자, REQ-LDBEAT-015(d))을 곡별 격자에 남긴다. ``grid``의
+    사본을 돌려준다(원본은 그대로). 빈 이름은 거절한다 — 비어 있으면
+    저장하지 않는 것이 "이름 없음"이다."""
+    if not isinstance(label, str) or not label.strip():
+        raise ValueError("프리셋 이름이 비어 있습니다.")
+    updated = dict(grid)
+    existing = grid.get("preset_labels")
+    labels = dict(existing) if isinstance(existing, Mapping) else {}
+    labels[preset_no] = label.strip()
+    updated["preset_labels"] = labels
+    return updated
+
+
+def _referenced_preset_numbers(grid: Mapping[str, object]) -> set[str]:
+    """``grid`` 전수가 쓰는 프리셋 번호 집합 — `_usage_for_slot`과 같은
+    네 자리(위치·색·효과·디머 프리셋/디머 효과)를 보되, 번호 하나를
+    묻는 게 아니라 전부를 모은다(새 프리셋이 고를 수 없는 "이미 쓰는
+    번호" 전체)."""
+    referenced: set[str] = set()
+    for track in grid.get("tracks") or []:
+        if not isinstance(track, Mapping):
+            continue
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping):
+                continue
+            brightness = cue.get("brightness")
+            if isinstance(brightness, Mapping) and brightness.get("mode") in (
+                "dimmer_preset",
+                "dimmer_effect",
+            ):
+                value = brightness.get("preset_no")
+                if value is not None:
+                    referenced.add(str(value))
+            for field in _PRESET_NUMBER_FIELDS:
+                value = cue.get(field)
+                if value is not None:
+                    referenced.add(str(value))
+    return referenced
+
+
+def _parse_band_bounds(band: Mapping[str, object]) -> tuple[int, int, int] | None:
+    """``{"start": "2.61", "end": "2.68"}`` 모양 → ``(풀 번호, 시작 슬롯,
+    끝 슬롯)``. 둘 다 "pool.slot" 꼴이고 같은 풀 번호를 가리켜야 한다 —
+    못 읽거나 풀 번호가 다르면 ``None``(지어내지 않는다)."""
+    try:
+        pool_start, slot_start = str(band["start"]).split(".", 1)
+        pool_end, slot_end = str(band["end"]).split(".", 1)
+        pool = int(pool_start)
+        if int(pool_end) != pool:
+            return None
+        return pool, int(slot_start), int(slot_end)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def first_free_preset_number(
+    kind: str,
+    *,
+    policy: Mapping[str, object],
+    grid: Mapping[str, object],
+    console_children: Mapping[int, object] | None,
+) -> tuple[str | None, str | None, str | None]:
+    """카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그가 쓰는
+    번호 배정. ``kind``(``effect_kind``)가 `preset_pools.yaml`에서 쓰는
+    효과 풀 번호대(들, 디머는 서브 밴드 a→b 순서) 안에서, 격자가 이미
+    참조하지 않고(``_referenced_preset_numbers``) **콘솔에서도 비어
+    있는**(``console_children``, 드로워가 이미 읽는 그 풀) 첫 슬롯을
+    돌려준다. 코드 상수로 번호대를 짜지 않는다 — 전부 ``policy``
+    (`load_preset_pool_policy`가 읽은 그 데이터)에서만 읽는다.
+
+    ``console_children``이 ``None``이면(그 풀을 콘솔에서 못 읽었다)
+    배정은 그대로 하되 경고를 돌려준다 — 거절하지 않는다(격자 참조만
+    보고 고른 상태를 감독에게 알릴 뿐).
+
+    반환: ``(번호 또는 None, 거절 사유 또는 None, 경고 또는 None)``.
+    번호대가 그 종류에 아예 없거나(base 풀) 번호대가 전부 찼으면 번호는
+    ``None``이고 거절 사유가 채워진다."""
+    no_band_reason = (
+        f"효과 종류 '{kind}'에는 선언된 풀이 없습니다 — preset_pools.yaml 에 이 종류의 "
+        "번호대가 없어 빈 번호를 정할 수 없습니다 — 번호대를 지어내지 않습니다."
+    )
+    pool_keys = _KIND_TO_POOL_KEYS.get(kind)
+    if not pool_keys:
+        return None, no_band_reason, None
+    pools = policy.get("pools") if isinstance(policy, Mapping) else None
+    pools = pools if isinstance(pools, Mapping) else {}
+    referenced = _referenced_preset_numbers(grid)
+    found_band = False
+    for key in pool_keys:
+        band = pools.get(key)
+        bounds = _parse_band_bounds(band) if isinstance(band, Mapping) else None
+        if bounds is None:
+            continue
+        found_band = True
+        pool_no, slot_start, slot_end = bounds
+        for slot in range(slot_start, slot_end + 1):
+            candidate = f"{pool_no}.{slot}"
+            if candidate in referenced:
+                continue
+            if console_children is not None and console_children.get(slot) is not None:
+                continue
+            warning = (
+                None
+                if console_children is not None
+                else "⚠ 콘솔 빈칸 미확인 — 풀을 읽지 못해 격자 참조만 보고 골랐습니다"
+            )
+            return candidate, None, warning
+    if not found_band:
+        return None, no_band_reason, None
+    return (
+        None,
+        f"'{kind}' 효과 풀 번호대가 모두 찼습니다(preset_pools.yaml) — 번호대를 넓히지 않고는 "
+        "새 프리셋을 더 만들 수 없습니다.",
+        None,
+    )
 
 
 def build_preset_drawer(

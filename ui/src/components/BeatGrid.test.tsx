@@ -5,6 +5,7 @@
 // 부른다.
 import { readFileSync } from "node:fs";
 
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -54,6 +55,8 @@ import {
   formatSourceRefLabel,
   groupTracksByLayerFolder,
   isFirstCueOfSong,
+  isValidConsoleLabel,
+  NewPresetDialog,
   unverifiedCellIndex,
   isWriteLocked,
   layerFolderLabel,
@@ -1258,6 +1261,107 @@ describe("buildPositionPresetChanges/buildColorPresetChanges/buildBrightnessPres
 describe("NEW_PRESET_OPTION_VALUE — 카드 t551 계속, mockup opts() \"__new\" 리터럴", () => {
   it("mockup 과 같은 리터럴 값", () => {
     expect(NEW_PRESET_OPTION_VALUE).toBe("__new");
+  });
+});
+
+// 카드 t589 — 「＋ 새 프리셋 만들기」 창. 콘솔 이름 검증 helper + 순수
+// 표시 부품(`NewPresetDialog`)을 renderToStaticMarkup으로 본다(jsdom
+// 없음 — 클릭 이벤트는 시뮬레이션하지 않는다, 위 파일 바운드 그대로).
+describe("isValidConsoleLabel — 카드 t589, 서버 영문 규칙의 화면 쪽 즉시 확인", () => {
+  it("영문·숫자·공백은 통과", () => {
+    expect(isValidConsoleLabel("LA Wave 2")).toBe(true);
+  });
+
+  it("빈 문자열/공백만은 거절", () => {
+    expect(isValidConsoleLabel("")).toBe(false);
+    expect(isValidConsoleLabel("   ")).toBe(false);
+  });
+
+  it("한글이 섞이면 거절", () => {
+    expect(isValidConsoleLabel("라이트 Wave")).toBe(false);
+  });
+});
+
+describe("NewPresetDialog — 카드 t589, 「＋ 새 프리셋 만들기」 순수 표시", () => {
+  it("onNewPresetRequest 가 없으면(enabled=false) 안내문만 뜨고 입력·버튼이 없다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled={false}
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("아직 배선되지 않았습니다");
+    expect(html).not.toContain("beat-grid-new-preset-dialog");
+  });
+
+  it("enabled=true 면 두 입력과 만들기/취소 버튼이 뜬다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("beat-grid-new-preset-dialog");
+    expect(html).toContain("콘솔 이름(영문·숫자)");
+    expect(html).toContain("설명(한국어)");
+    expect(html).toContain("만들기");
+    expect(html).toContain("취소");
+  });
+
+  it("라벨·설명이 둘 다 유효하지 않으면 만들기가 disabled", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("라벨·설명이 둘 다 유효하면 만들기가 활성", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Wave"
+        description="따뜻한 흰색"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("비-ASCII 라벨이면 즉시 경고 문구가 뜨고 만들기는 여전히 disabled", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="라이트"
+        description="설명"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("한글/비-ASCII 문자는 받지 않습니다");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
   });
 });
 

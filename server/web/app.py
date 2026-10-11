@@ -607,6 +607,21 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     await asyncio.to_thread(session.beat_grid_preset_drawer)
+                elif message_type == "beat_grid_new_preset":
+                    # 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기".
+                    # 번호를 고르기 전에 콘솔 풀 하나를 읽으므로(드로워와
+                    # 같은 왕복) 위 beat_grid_drawer_request와 같은 패턴.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_new_preset,
+                        message.get("bar"),
+                        message.get("target"),
+                        message.get("field"),
+                        message.get("label"),
+                        message.get("description"),
+                    )
                 elif message_type in (
                     "beat_grid_apply",
                     "beat_grid_preview",

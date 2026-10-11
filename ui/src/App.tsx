@@ -401,6 +401,7 @@ export default function App() {
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
     sendBeatGridDrawerRequest,
+    sendBeatGridNewPreset,
     sendBeatGridApply,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
@@ -1196,6 +1197,9 @@ export default function App() {
               state.songTimeline.timeline ? SONG_TIMELINE_LIFECYCLE_LABEL[state.songTimeline.timeline.lifecycle] : null
             }
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
+            onNewPresetRequest={({ bar, target, field, label, description }) =>
+              sendBeatGridNewPreset(bar, target, field, label, description)
+            }
             onSentenceEditRequest={sendBeatGridEditSentence}
             onSuggestionRequest={sendBeatGridSuggest}
             pendingSuggestion={state.pendingBeatGridSuggestion}
