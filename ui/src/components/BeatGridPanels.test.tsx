@@ -1,0 +1,279 @@
+// 박자 격자 편집 칸·전환 화면·장면 전환·2D 무대 렌더 시험
+// (SPEC-LDBEAT-001 M9 step 3·4·5, 카드 t561 — AC-LDBEAT-020·021(b)·022).
+//
+// 이 프로젝트는 jsdom 이 없다 — `renderToStaticMarkup`으로 부품 하나씩의
+// 첫 화면을 HTML 문자열로 그려 확인하고, BeatGrid.tsx 안의 배치(같은 자리
+// 교체·필드 순서)는 소스 구조로 확인한다.
+import { readFileSync } from "node:fs";
+
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+
+import type { BeatGridCue, BeatGridTrack } from "../protocol";
+import {
+  BeatGridConsoleCommand,
+  BeatGridMovementRow,
+  BeatGridSideRow,
+  focusFieldRowNames,
+} from "./BeatGridCuePanelParts";
+import { BeatGridStage, stageViewWidth } from "./BeatGridStage";
+import { BeatGridJoint, BeatGridScenePanel, BeatGridSceneRow } from "./BeatGridTimelineParts";
+import { BeatGridTransitionView } from "./BeatGridTransitionView";
+
+const SOURCE = readFileSync(new URL("./BeatGrid.tsx", import.meta.url), "utf-8");
+const PANEL_CSS = readFileSync(new URL("./beatGridPanels.css", import.meta.url), "utf-8");
+
+function cue(bar: number, overrides: Partial<BeatGridCue> = {}): BeatGridCue {
+  return {
+    bar,
+    label: "켜짐",
+    brightness: { mode: null, value_percent: null, preset_no: null },
+    position_preset_no: null,
+    color_preset_no: null,
+    effect_preset_no: null,
+    effect_kind: null,
+    entry: { fade_bars: null, mib_mode: null },
+    source_ref: null,
+    app_movement: null,
+    evidence: null,
+    ...overrides,
+  };
+}
+
+function track(name: string, cues: BeatGridCue[], overrides: Partial<BeatGridTrack> = {}): BeatGridTrack {
+  return { group_no: null, group_no_confirmed: false, group_name: name, layer_role: null, cues, ...overrides };
+}
+
+describe("AC-LDBEAT-020(d)(e) — 전환 화면", () => {
+  const prev = cue(0, { position_preset_no: "2.1" });
+  const cur = cue(4, { position_preset_no: "2.2", entry: { fade_bars: 1, mib_mode: "dark" } });
+  const html = renderToStaticMarkup(
+    <BeatGridTransitionView
+      track={track("MOVER", [prev, cur])}
+      cue={cur}
+      prevCue={prev}
+      secondsPerBar={2.14}
+      beatsPerBar={4}
+      sectionStartBars={null}
+      onEditRequest={() => undefined}
+    />,
+  );
+
+  it("페이드·트리거·딜레이·위치만 따로·MIB·트래킹 순서로 보인다", () => {
+    const order = ["페이드", "트리거", "딜레이", "위치만 따로", "MIB", "트래킹"].map((label) =>
+      html.indexOf(`<label>${label}`),
+    );
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it("「들어올 때(페이드)」는 이 화면에 있다", () => {
+    expect(html).toContain("들어올 때");
+  });
+
+  it("시간은 초 먼저, 마디는 괄호", () => {
+    expect(html).toMatch(/\d+\.\d{2}초 \(1마디\)/);
+  });
+
+  it("딜레이는 [미확인] 표기를 유지하고 저장 칸 없는 컨트롤은 비활성", () => {
+    expect(html).toContain("[미확인]");
+    expect(html).toMatch(/<select disabled=""[^>]*aria-label="트래킹"/);
+    expect(html).toMatch(/<select disabled=""[^>]*aria-label="위치만 따로"/);
+  });
+
+  it("저장된 MIB 모드를 그대로 보여 준다", () => {
+    expect(html).toContain("저장값 dark");
+  });
+
+  it("편집 경로가 없으면 페이드 입력이 없다(읽기 전용)", () => {
+    const readOnly = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [prev, cur])}
+        cue={cur}
+        prevCue={prev}
+        secondsPerBar={2.14}
+        beatsPerBar={4}
+        sectionStartBars={null}
+      />,
+    );
+    expect(readOnly).not.toContain('aria-label="페이드 길이"');
+  });
+
+  it("경고 판정은 [제안] 표기", () => {
+    const lit = cue(0, { position_preset_no: "2.1" });
+    const snap = cue(4, { position_preset_no: "2.2", entry: { fade_bars: 0, mib_mode: null } });
+    const warned = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [lit, snap])}
+        cue={snap}
+        prevCue={lit}
+        secondsPerBar={2.14}
+        beatsPerBar={4}
+        sectionStartBars={null}
+      />,
+    );
+    expect(warned).toContain("⚠ [제안] 켜진 채 위치가 끊어 바뀜");
+  });
+});
+
+describe("AC-LDBEAT-020(d) — 같은 자리에서 바뀐다(별도 상자 0건)", () => {
+  it("전환 화면과 큐 편집 화면은 한 삼항의 두 갈래다", () => {
+    expect(SOURCE).toMatch(
+      /transitionView && selectedCue && selectedPrevCue \? \([\s\S]*?<BeatGridTransitionView[\s\S]*?\) : \(\s*<BeatGridCueFocus/,
+    );
+  });
+  it("예전 자리표시자 상자는 남아 있지 않다", () => {
+    expect(SOURCE).not.toContain("M3 배선 전까지 읽기 전용");
+  });
+});
+
+describe("AC-LDBEAT-020(b) — 전환 토글", () => {
+  it("켜지면 노란색", () => {
+    expect(PANEL_CSS).toMatch(
+      /\.beat-grid-cue-panel \.beat-grid-transition-toggle\.is-on,[\s\S]*?\{[^}]*background: #ffd84d/,
+    );
+  });
+  it("곡 첫 큐(들어오는 전환 없음)에서는 비활성", () => {
+    expect(SOURCE).toContain("disabled={firstCue || !selectedPrevCue}");
+  });
+});
+
+describe("AC-LDBEAT-020(c) — 콘솔 명령 버튼", () => {
+  it("편집 칸 맨 아래 버튼, 처음엔 닫혀 있다", () => {
+    const html = renderToStaticMarkup(<BeatGridConsoleCommand lines={["Group 1 ; At Preset 2.1"]} />);
+    expect(html).toContain('class="beat-grid-tg"');
+    expect(html).toContain("콘솔 명령");
+    expect(html).not.toContain("beat-grid-cmdbox");
+  });
+  it("지금 보는 화면에 맞는 줄을 고른다(전환이면 전환 줄)", () => {
+    expect(SOURCE).toMatch(
+      /transitionView && selectedPrevCue\s*\?\s*transitionConsoleCommandLines\([\s\S]*?:\s*cueConsoleCommandLines\(/,
+    );
+  });
+  it("켜지면 노란색(.beat-grid-tg.is-on)", () => {
+    expect(PANEL_CSS).toMatch(/\.beat-grid-tg\.is-on \{[^}]*background: #ffd84d/);
+  });
+});
+
+describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
+  it("페이드가 있는 이음매는 ◢ 와 번짐", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridJoint
+        prev={cue(0)}
+        cue={cue(4, { entry: { fade_bars: 1, mib_mode: null } })}
+        nextSegmentWidth={100}
+        prevFill={null}
+        sectionStartBars={null}
+        secondsPerBar={2.14}
+        isOn={false}
+        onOpen={() => undefined}
+      />,
+    );
+    expect(html).toContain("beat-grid-fade-bleed");
+    expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
+  });
+  it("3줄 이상 바뀌는 마디에 알약", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridSceneRow bars={[{ bar: 8, count: 3 }]} activeBar={null} width={500} onSelect={() => undefined} />,
+    );
+    expect(html).toContain("장면 전환 ▼");
+    expect(html).toContain("8마디 3줄");
+  });
+  it("알약 → 그 순간 전체 표 + 「모두 끊기/모두 1박 페이드」", () => {
+    const tracks = ["A", "B", "C"].map((name) => track(name, [cue(0), cue(8)]));
+    const html = renderToStaticMarkup(
+      <BeatGridScenePanel
+        bar={8}
+        tracks={tracks}
+        secondsPerBar={2.14}
+        sectionStartBars={null}
+        onClose={() => undefined}
+        onSelectRow={() => undefined}
+        onCutAll={() => undefined}
+      />,
+    );
+    expect(html).toContain("이 순간 3줄이 함께 바뀜");
+    expect(html).toContain("모두 끊기");
+    expect(html).toContain("모두 1박 페이드");
+    expect((html.match(/<tr>/g) ?? []).length).toBe(3);
+  });
+});
+
+describe("AC-LDBEAT-021(b) — 편집 칸 필드 순서", () => {
+  it("밝기 → 위치 → 색 → 움직임 → 옆빛 L·R → 콘솔 명령", () => {
+    const order = [
+      'field: "밝기"',
+      'field: "위치 프리셋"',
+      'field: "색 프리셋"',
+      "<BeatGridMovementRow",
+      "<BeatGridSideRow",
+      "<BeatGridConsoleCommand",
+    ].map((needle) => SOURCE.indexOf(needle));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+  it("「들어올 때」 필드는 큐 편집 화면에 없다", () => {
+    expect(SOURCE).not.toContain("beat-grid-cue-field-entry");
+    expect(SOURCE).not.toContain('rows.push({ field: "들어올 때"');
+  });
+  it("움직임·옆빛 행이 보인다", () => {
+    expect(renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset />)).toContain('data-field="움직임"');
+    expect(renderToStaticMarkup(<BeatGridSideRow />)).toContain('data-field="옆빛 L·R"');
+  });
+  it("초점 항목은 편집 칸 행 이름과 짝지어진다(카드 t560 연동용)", () => {
+    expect(focusFieldRowNames("색")).toEqual(["색 프리셋"]);
+    expect(focusFieldRowNames("옆빛")).toEqual(["옆빛 L·R"]);
+  });
+});
+
+describe("AC-LDBEAT-022 — 2D 무대", () => {
+  const tracks = [track("WASH", [cue(0)]), track("BACK", [cue(0)])];
+  const fixtures = [
+    { fid: 1, name: "w1", x: 0, y: 0, z: 0, rotx: 0, roty: 0, rotz: 0, confirmedGroupName: "WASH" },
+    { fid: 2, name: "w2", x: 10, y: 0, z: 0, rotx: 0, roty: 0, rotz: 0, confirmedGroupName: "WASH" },
+    { fid: 3, name: "b1", x: 5, y: 10, z: 0, rotx: 0, roty: 0, rotz: 0, confirmedGroupName: "BACK" },
+  ];
+
+  it("(a) 상태판·3D 캡처·평면도 전환 UI가 없다", () => {
+    for (const word of ["상태판", "3D 캡처", "평면도"]) {
+      expect(SOURCE).not.toContain(word);
+    }
+  });
+
+  it("(b) 고른 줄의 장비에 노란 점선, 그룹 이름표, 클릭 영역", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridStage
+        fixtures={fixtures}
+        tracks={tracks}
+        viewBar={0}
+        selectedTrackName="WASH"
+        onSelectTrack={() => undefined}
+      />,
+    );
+    expect(html).toMatch(/class="beat-grid-stage-selected"[^>]*stroke="#ffd84d"[^>]*stroke-dasharray="5 3"/);
+    expect((html.match(/beat-grid-stage-selected/g) ?? []).length).toBe(1);
+    expect(html).toContain(">WASH</text>");
+    expect(html).toContain(">BACK</text>");
+    expect(html).toContain('data-track="WASH"');
+    expect(html).toContain('data-track="BACK"');
+  });
+
+  it("(c) 높이 320px, 폭 비율 1.2", () => {
+    expect(PANEL_CSS).toMatch(
+      /\.beat-grid \.beat-grid-insp \.beat-grid-stage-pane \{[^}]*flex: 1\.2 1 0;[^}]*height: 320px;/,
+    );
+  });
+
+  it("(c) 칸 비율에 맞춰 가로를 채운다(창 크기에 따라 다시 계산)", () => {
+    expect(stageViewWidth(1200, 300)).toBe(1200);
+    expect(stageViewWidth(600, 300)).toBe(600);
+    expect(stageViewWidth(100, 300)).toBe(420);
+  });
+
+  it("좌표가 없으면 지어내지 않고 안내", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridStage fixtures={[]} tracks={tracks} viewBar={0} selectedTrackName={null} onSelectTrack={() => undefined} />,
+    );
+    expect(html).toContain("무대 좌표 미제공");
+  });
+});

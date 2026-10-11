@@ -1131,6 +1131,7 @@ export default function App() {
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
+            timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
             bpm={state.songTimeline.timeline?.bpm}
             barCount={state.songTimeline.timeline?.bar_count}
