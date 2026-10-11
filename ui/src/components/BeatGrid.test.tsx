@@ -60,6 +60,7 @@ import {
   cueReferencesPreset,
   isBrightnessValueEditable,
   isPendingSuggestionForTrack,
+  pendingApprovalBadge,
   presetPoolBandBadge,
   panOnlyVerticalBaseWarning,
   probeStatusClass,
@@ -1097,6 +1098,32 @@ describe("presetPoolBandBadge — 카드 t551 후속(지시 2항), 번호대 미
 
   it("bands_confirmed 가 true 면 배지 없음", () => {
     expect(presetPoolBandBadge(section({ bands_confirmed: true }))).toBeNull();
+  });
+});
+
+describe("pendingApprovalBadge — 카드 t577, REQ-LDBEAT-015(h-1), 승인 대기", () => {
+  it("pending_preset_fields 가 비어 있으면 배지 없음", () => {
+    expect(pendingApprovalBadge(structuredCue(3, { pending_preset_fields: [] }))).toBeNull();
+  });
+
+  it("pending_preset_fields 가 없는(옛 격자) 칸도 배지 없음", () => {
+    expect(pendingApprovalBadge(structuredCue(3))).toBeNull();
+  });
+
+  it("pending_preset_fields 가 있으면 그 필드 이름을 담아 배지를 단다", () => {
+    const badge = pendingApprovalBadge(
+      structuredCue(3, { pending_preset_fields: ["효과 프리셋"] }),
+    );
+    expect(badge).toContain("승인 대기");
+    expect(badge).toContain("효과 프리셋");
+  });
+
+  it("여러 필드가 승인 대기면 전부 담는다", () => {
+    const badge = pendingApprovalBadge(
+      structuredCue(3, { pending_preset_fields: ["효과 프리셋", "위치 프리셋"] }),
+    );
+    expect(badge).toContain("효과 프리셋");
+    expect(badge).toContain("위치 프리셋");
   });
 });
 

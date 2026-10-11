@@ -585,13 +585,19 @@ def apply_beat_grid_edit(
         # 여기서 같은 모양으로 메운다. 둘 다 풀 번호대 자체가 없으므로
         # `validate_preset_pool_assignment` 호출은 없다(위치/색 프리셋은
         # 그 검사의 대상이 아니다).
-        if merged.get("position_preset_no") is not None and "position_preset_no" in changes:
-            if check_evidence_approval(fresh_approval_cue) is not None:
-                pending_fields.append(EDITABLE_CUE_FIELD_LABELS["position_preset_no"])
+        if (
+            merged.get("position_preset_no") is not None
+            and "position_preset_no" in changes
+            and check_evidence_approval(fresh_approval_cue) is not None
+        ):
+            pending_fields.append(EDITABLE_CUE_FIELD_LABELS["position_preset_no"])
 
-        if merged.get("color_preset_no") is not None and "color_preset_no" in changes:
-            if check_evidence_approval(fresh_approval_cue) is not None:
-                pending_fields.append(EDITABLE_CUE_FIELD_LABELS["color_preset_no"])
+        if (
+            merged.get("color_preset_no") is not None
+            and "color_preset_no" in changes
+            and check_evidence_approval(fresh_approval_cue) is not None
+        ):
+            pending_fields.append(EDITABLE_CUE_FIELD_LABELS["color_preset_no"])
 
         if pending_fields:
             group_name = track.get("group_name")

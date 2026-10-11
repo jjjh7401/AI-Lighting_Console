@@ -4655,6 +4655,14 @@ body {
   font-size: 10px;
 }
 
+/* 카드 t577, REQ-LDBEAT-015(h-1) — "⚠ 승인 대기" 배지. 같은 접두
+   관례(`.beat-grid-shape-warn`)의 폭을 넓힌 자리다. */
+.beat-grid-pending-approval-warn {
+  color: var(--warn);
+  margin-left: 4px;
+  font-size: 10px;
+}
+
 /* t537 레이아웃 교정 — 시안의 `.insp`(무대 2D + 이 마디 한눈에, 타임라인
    아래 고정 높이 띠)와 같은 자리. `.beat-grid-mid` 바로 아래, 명령창
    바로 위에 온다. */
