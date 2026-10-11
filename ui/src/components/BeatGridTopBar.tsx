@@ -48,6 +48,16 @@ export function barNavKeyDelta(event: {
   return 0;
 }
 
+/** REQ-LDBEAT-014(plan.md M6) — 곡 재생 중 스피드 마스터 BPM 을 자동으로 싣는
+ * 방법(G9)이 미확인인 동안, BPM 알약이 자동 설정처럼 읽히지 않게 「사람이 콘솔
+ * 에서 직접 설정」을 **눈에 보이게** 붙인다(hover 전용 title 만으로는 알약이
+ * 앱이 맞춘 값처럼 보인다). 글자는 시안 `ldbeat-runbook-mockup-20261008.html`
+ * 상단 바의 「스피드 마스터 15 — 콘솔에서 직접 설정」에서 리그 전용 번호(15)만
+ * 뺐다(어느 스피드 마스터를 쓰는지는 리그마다 다르다). */
+export const SPEED_MASTER_MANUAL_NOTE = "스피드 마스터 — 콘솔에서 직접 설정";
+export const SPEED_MASTER_MANUAL_TITLE =
+  "스피드 마스터 BPM 은 앱이 자동으로 싣지 않습니다 — 사람이 콘솔에서 직접 설정합니다(자동 설정 방법 미확인).";
+
 export function formatTopBarBpm(bpm: number | null | undefined): string {
   if (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm <= 0) return "BPM —";
   return `BPM ${Number(bpm.toFixed(2))}`;
@@ -177,8 +187,8 @@ export function BeatGridTopBar({
       <b className="beat-grid-topbar-mode">런북 모드</b>
       <span className="beat-grid-pill beat-grid-song">{songTitle || "(곡 미지정)"}</span>
       {versionLabel && <span className="beat-grid-pill">{versionLabel}</span>}
-      <span className="beat-grid-pill" title="스피드 마스터 BPM 은 콘솔에서 직접 설정">
-        {formatTopBarBpm(bpm)}
+      <span className="beat-grid-pill" title={SPEED_MASTER_MANUAL_TITLE}>
+        {formatTopBarBpm(bpm)} · <span className="beat-grid-pill-note">{SPEED_MASTER_MANUAL_NOTE}</span>
       </span>
       {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />

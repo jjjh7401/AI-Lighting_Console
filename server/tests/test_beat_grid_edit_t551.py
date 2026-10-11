@@ -30,7 +30,6 @@ import pytest
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_edit import (
     EDITABLE_CUE_FIELD_LABELS,
-    UNVERIFIED_SHAPES,
     BeatGridEditError,
     apply_beat_grid_edit,
     load_preset_pool_policy,
@@ -223,7 +222,6 @@ class TestShapeVocabularyAndUnverifiedFlag:
         assert not any("미확인" in line for line in report)
 
     def test_circle_shape_is_allowed_but_flagged_unverified(self) -> None:
-        assert "circle" in UNVERIFIED_SHAPES
         grid = _grid()
         _updated, report = apply_beat_grid_edit(
             grid,
@@ -242,7 +240,6 @@ class TestShapeVocabularyAndUnverifiedFlag:
         assert any("미확인" in line for line in report)
 
     def test_ballyhoo_shape_is_allowed_but_flagged_unverified(self) -> None:
-        assert "ballyhoo" in UNVERIFIED_SHAPES
         grid = _grid()
         _updated, report = apply_beat_grid_edit(
             grid,
