@@ -6,6 +6,7 @@ import {
   buildBeatGridApply,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
+  buildBeatGridNewPreset,
   buildBeatGridPreview,
   buildBeatGridPreviewOff,
   buildBeatGridSuggest,
@@ -158,6 +159,18 @@ describe("builders", () => {
       v: 1,
       type: "beat_grid_edit",
       sentence: "11마디 MOVER-U 밝기를 70%로",
+    });
+    // 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
+    expect(
+      JSON.parse(buildBeatGridNewPreset(11, "MOVER-U", "effect", "LA Wave", "따뜻한 흰색")),
+    ).toEqual({
+      v: 1,
+      type: "beat_grid_new_preset",
+      bar: 11,
+      target: "MOVER-U",
+      field: "effect",
+      label: "LA Wave",
+      description: "따뜻한 흰색",
     });
     expect(JSON.parse(buildBeatGridSuggest(7, "BACK"))).toEqual({
       v: 1,

@@ -5,6 +5,7 @@
 // 부른다.
 import { readFileSync } from "node:fs";
 
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -54,6 +55,10 @@ import {
   formatSourceRefLabel,
   groupTracksByLayerFolder,
   isFirstCueOfSong,
+  isValidConsoleLabel,
+  NewPresetDialog,
+  newPresetReplyFor,
+  newPresetFieldValue,
   unverifiedCellIndex,
   isWriteLocked,
   layerFolderLabel,
@@ -1226,6 +1231,107 @@ describe("NEW_PRESET_OPTION_VALUE — 카드 t551 계속, mockup opts() \"__new\
   });
 });
 
+// 카드 t589 — 「＋ 새 프리셋 만들기」 창. 콘솔 이름 검증 helper + 순수
+// 표시 부품(`NewPresetDialog`)을 renderToStaticMarkup으로 본다(jsdom
+// 없음 — 클릭 이벤트는 시뮬레이션하지 않는다, 위 파일 바운드 그대로).
+describe("isValidConsoleLabel — 카드 t589, 서버 영문 규칙의 화면 쪽 즉시 확인", () => {
+  it("영문·숫자·공백은 통과", () => {
+    expect(isValidConsoleLabel("LA Wave 2")).toBe(true);
+  });
+
+  it("빈 문자열/공백만은 거절", () => {
+    expect(isValidConsoleLabel("")).toBe(false);
+    expect(isValidConsoleLabel("   ")).toBe(false);
+  });
+
+  it("한글이 섞이면 거절", () => {
+    expect(isValidConsoleLabel("라이트 Wave")).toBe(false);
+  });
+});
+
+describe("NewPresetDialog — 카드 t589, 「＋ 새 프리셋 만들기」 순수 표시", () => {
+  it("onNewPresetRequest 가 없으면(enabled=false) 안내문만 뜨고 입력·버튼이 없다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled={false}
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("아직 배선되지 않았습니다");
+    expect(html).not.toContain("beat-grid-new-preset-dialog");
+  });
+
+  it("enabled=true 면 두 입력과 만들기/취소 버튼이 뜬다", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("beat-grid-new-preset-dialog");
+    expect(html).toContain("콘솔 이름(영문·숫자)");
+    expect(html).toContain("설명(한국어)");
+    expect(html).toContain("만들기");
+    expect(html).toContain("취소");
+  });
+
+  it("라벨·설명이 둘 다 유효하지 않으면 만들기가 disabled", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label=""
+        description=""
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("라벨·설명이 둘 다 유효하면 만들기가 활성", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="LA Wave"
+        description="따뜻한 흰색"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).not.toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+
+  it("비-ASCII 라벨이면 즉시 경고 문구가 뜨고 만들기는 여전히 disabled", () => {
+    const html = renderToStaticMarkup(
+      <NewPresetDialog
+        enabled
+        label="라이트"
+        description="설명"
+        onLabelChange={() => {}}
+        onDescriptionChange={() => {}}
+        onCreate={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(html).toContain("한글/비-ASCII 문자는 받지 않습니다");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>\s*만들기/);
+  });
+});
+
 /** 카드 t551 계속(코디네이터 지시 2026-10-11, 조건 1 — "lead 가 옵션 A를
  * 골랐다") — 효과(움직임)·디머 "효과" 드롭다운은 같은 drawerSections 풀
  * 안에서 `is_effect_band`(서버가 `preset_pools.yaml` 번호대로 판정)로만
@@ -1326,5 +1432,44 @@ describe("presetPickChanges — 고른 항목의 풀·효과 번호대로 저장
     expect(source).not.toMatch(/changes: buildPositionPresetChanges\(/);
     expect(source).not.toMatch(/changes: buildEffectPresetChanges\(effectPresetDraft\)/);
     expect((source.match(/changes: presetPickChanges\(/g) ?? []).length).toBe(3);
+  });
+});
+
+describe("newPresetReplyFor — 카드 t589, 「만들기」 뒤 서버 답(배정·거절 사유)을 그 칸에 보인다", () => {
+  const pending = { field: "position" as const, sinceSeq: 4 };
+  it("만들기를 누른 칸에, 누른 뒤에 온 답만 보인다", () => {
+    expect(
+      newPresetReplyFor("position", pending, { text: "번호대가 없어 빈 번호를 정할 수 없습니다", seq: 5 }),
+    ).toBe("번호대가 없어 빈 번호를 정할 수 없습니다");
+  });
+  it("누르기 전의 답(같은 순번)은 보이지 않는다 — 같은 글자가 다시 와도 순번으로 가른다", () => {
+    expect(newPresetReplyFor("position", pending, { text: "옛 답", seq: 4 })).toBeNull();
+  });
+  it("다른 칸에는 보이지 않는다", () => {
+    expect(newPresetReplyFor("effect", pending, { text: "답", seq: 5 })).toBeNull();
+  });
+  it("기다리는 요청이나 답이 없으면 아무것도 없다", () => {
+    expect(newPresetReplyFor("position", null, { text: "답", seq: 5 })).toBeNull();
+    expect(newPresetReplyFor("position", pending, null)).toBeNull();
+  });
+});
+
+describe("newPresetFieldValue — 카드 t589, 서버가 번호를 씌우면 그 드롭다운을 새 값으로 다시 채운다", () => {
+  const cue = {
+    bar: 14,
+    brightness: { mode: "dimmer_effect", value_percent: null, preset_no: "1.21" },
+    position_preset_no: "2.41",
+    color_preset_no: "4.21",
+    effect_preset_no: "22.0",
+  } as unknown as Parameters<typeof newPresetFieldValue>[0];
+  it("다섯 칸이 각자 자기 값을 본다", () => {
+    expect(newPresetFieldValue(cue, "effect")).toBe("22.0");
+    expect(newPresetFieldValue(cue, "position")).toBe("2.41");
+    expect(newPresetFieldValue(cue, "color")).toBe("4.21");
+    expect(newPresetFieldValue(cue, "dimmer_effect")).toBe("dimmer_effect:1.21");
+    expect(newPresetFieldValue(cue, "dimmer_preset")).toBe("dimmer_effect:1.21");
+  });
+  it("칸이 없으면 null", () => {
+    expect(newPresetFieldValue(null, "effect")).toBeNull();
   });
 });

@@ -159,6 +159,10 @@ CLIENT_MESSAGE_TYPES = (
     # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기 요청. 페이로드 없음(현재
     # 곡의 격자 사용처 집계는 서버가 안다, dash_catalog_request와 같은 모양).
     "beat_grid_drawer_request",
+    # 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그. 이름·
+    # 설명을 받아 서버가 번호를 배정한다(`beat_grid_edit`과 같은 길로,
+    # 새 콘솔 쓰기 경로는 만들지 않는다) — AC-LDBEAT-005.
+    "beat_grid_new_preset",
     # 카드 t563(SPEC-LDBEAT-001 M4, REQ-LDBEAT-011~013/017) — 상단 바
     # 콘솔 버튼 셋. `beat_grid_edit` 과 달리 이 셋은 콘솔에 **쓴다**
     # (run_commands -> 기존 안전 게이트) — 새 무승인 경로를 만들지 않는다.
@@ -210,6 +214,13 @@ PANEL_TARGET_KINDS = ("executor", "sequence", "macro")
 # Where a tile came from: a chat-created look the user pinned (REQ-SHOWUI-004)
 # or an object enumerated from the rig (REQ-SHOWUI-001).
 PANEL_ITEM_SOURCES = ("pin", "auto")
+
+# 카드 t589 — "beat_grid_new_preset.field"가 가리킬 수 있는 다섯 편집
+# 다이얼로그(`ui/src/components/BeatGrid.tsx`의 다섯 셀렉트와 1:1). 이
+# 문자열 자체는 `apply_beat_grid_edit`가 쓰는 칸 필드 이름(예:
+# "position_preset_no")과는 다른 이름 공간이다 — 서버의
+# `ChatSession.beat_grid_new_preset`이 이 값을 보고 칸 필드로 번역한다.
+BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "color", "effect")
 
 # Why a catalog section is incomplete. These mirror the rig-context reasons
 # (``server/orchestrator/tools.py``) and stay DISTINCT on the wire: "this path
@@ -444,6 +455,37 @@ def parse_client_message(raw: str) -> dict:
         if not isinstance(target, str) or not target.strip():
             raise ProtocolError("beat_grid_suggest.target must be a non-empty string")
         return {"v": PROTOCOL_VERSION, "type": "beat_grid_suggest", "bar": bar, "target": target}
+
+    if message_type == "beat_grid_new_preset":
+        # 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
+        # 번호는 여기서 짓지 않는다(서버의 `beat_grid_new_preset`이
+        # `preset_pools.yaml`로 고른다) — 이 자리는 입력 모양만 본다.
+        bar = message.get("bar")
+        target = message.get("target")
+        field = message.get("field")
+        label = message.get("label")
+        description = message.get("description")
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            raise ProtocolError("beat_grid_new_preset.bar must be an integer")
+        if not isinstance(target, str) or not target.strip():
+            raise ProtocolError("beat_grid_new_preset.target must be a non-empty string")
+        if field not in BEAT_GRID_NEW_PRESET_FIELDS:
+            raise ProtocolError(
+                f"beat_grid_new_preset.field must be one of {BEAT_GRID_NEW_PRESET_FIELDS}"
+            )
+        if not isinstance(label, str) or not label.strip():
+            raise ProtocolError("beat_grid_new_preset.label must be a non-empty string")
+        if not isinstance(description, str) or not description.strip():
+            raise ProtocolError("beat_grid_new_preset.description must be a non-empty string")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_new_preset",
+            "bar": bar,
+            "target": target,
+            "field": field,
+            "label": label,
+            "description": description,
+        }
 
     if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):
         suggestion_id = message.get("suggestion_id")

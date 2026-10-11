@@ -10,6 +10,7 @@ import {
   buildBeatGridStageRequest,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
+  buildBeatGridNewPreset,
   buildBeatGridPreview,
   buildBeatGridPreviewOff,
   buildBeatGridConsolePlay,
@@ -216,6 +217,14 @@ export interface CopilotSocket {
   sendBeatGridSuggestionReject: (suggestionId: string) => void;
   /** 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍). */
   sendBeatGridDrawerRequest: () => void;
+  /** 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그. */
+  sendBeatGridNewPreset: (
+    bar: number,
+    target: string,
+    field: "dimmer_preset" | "dimmer_effect" | "position" | "color" | "effect",
+    label: string,
+    description: string,
+  ) => void;
   /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
   sendBeatGridApply: () => void;
   /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
@@ -425,6 +434,17 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     () => send(buildBeatGridDrawerRequest()),
     [send],
   );
+  // 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
+  const sendBeatGridNewPreset = useCallback(
+    (
+      bar: number,
+      target: string,
+      field: "dimmer_preset" | "dimmer_effect" | "position" | "color" | "effect",
+      label: string,
+      description: string,
+    ) => send(buildBeatGridNewPreset(bar, target, field, label, description)),
+    [send],
+  );
   // 카드 t563 — 상단 바 콘솔 버튼 셋. 콘솔에 **쓰는** 경로라
   // `beat_grid_edit` 류(콘솔 무접촉)와는 분리된 메시지 타입이다.
   const sendBeatGridApply = useCallback(() => send(buildBeatGridApply()), [send]);
@@ -530,6 +550,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
     sendBeatGridDrawerRequest,
+    sendBeatGridNewPreset,
     sendBeatGridApply,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,

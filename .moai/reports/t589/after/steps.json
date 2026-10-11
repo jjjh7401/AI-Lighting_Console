@@ -1,0 +1,20 @@
+{
+ "effect_cue_index": 17,
+ "effect_dialog_visible": 1,
+ "effect_panel_after_select": "MOVER-U · 0마디\n전환\n✕\n장비 소속 미확인 · 그룹 11\nCue 1 · 0~2마디 · 3마디 ≈ 6.4초 · 곡 0.00초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n효과 프리셋\n— 미정 —\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n⚠ 번호대 미확인\n\n콘솔 이름(영문·숫자)\n설명(한국어)\n만들기\n취소\n근거\n미정\n움직임\n— 없음 —\nsweep\nflyout\ncircle ⚠\nballyhoo ⚠\nwave\n적용\n되돌리기\n설명(원문)\n바닥 쪽 좁은 빔, 정지\n콘솔 명령",
+ "effect_panel_after_create": "MOVER-U · 0마디\n전환\n✕\n장비 소속 미확인 · 그룹 11\nCue 1 · 0~2마디 · 3마디 ≈ 6.4초 · 곡 0.00초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n효과 프리셋\n— 미정 —\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n⚠ 번호대 미확인\n\n박자 격자를 수정하지 않았습니다 — 이 칸의 효과 종류를 아직 몰라 번호대를 정할 수 없습니다 — 먼저 효과(움직임) 종류를 정해 주세요. 콘솔에는 아무것도 쓰지 않았습니다.\n\n근거\n미정\n움직임\n— 없음 —\nsweep\nflyout\ncircle ⚠\nballyhoo ⚠\nwave\n적용\n되돌리기\n설명(원문)\n바닥 쪽 좁은 빔, 정지\n콘솔 명령",
+ "effect_page_mentions": [
+  "새 프리셋"
+ ],
+ "position_cue_index": 1,
+ "position_dialog_visible": 1,
+ "position_panel_after_select": "WASH-ALL · 7마디\n전환\n✕\n장비 소속 미확인 · 그룹 10\nCue 1 · 7~13마디 · 7마디 ≈ 15.0초 · 곡 14.95초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n콘솔 이름(영문·숫자)\n설명(한국어)\n만들기\n취소\n색 프리셋\n— 미정 —\n4.21 LA White\n4.41 LA Color Chase · 효과\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n출처\nreports/effect-arrangement-rules-20261007.md:106\n설명(원문)\n라벤더 워시 40%(2마디 번짐)\n콘솔 명령",
+ "position_panel_after_create": "WASH-ALL · 7마디\n전환\n✕\n장비 소속 미확인 · 그룹 10\nCue 1 · 7~13마디 · 7마디 ≈ 15.0초 · 곡 14.95초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n박자 격자를 수정하지 않았습니다 — '위치 프리셋'은(는) 효과 풀 번호대가 없는 기본 풀입니다 — preset_pools.yaml 에 이 종류의 번호대가 없어 빈 번호를 정할 수 없습니다 — 번호대를 지어내지 않습니다. 콘솔에는 아무것도 쓰지 않았습니다.\n\n색 프리셋\n— 미정 —\n4.21 LA White\n4.41 LA Color Chase · 효과\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n출처\nreports/effect-arrangement-rules-20261007.md:106\n설명(원문)\n라벤더 워시 40%(2마디 번짐)\n콘솔 명령",
+ "position_page_mentions": [
+  "번호대가 없어",
+  "새 프리셋"
+ ],
+ "effect_ok_cue_index": 21,
+ "effect_ok_tries": 5,
+ "effect_ok_reply": "새 프리셋 22.1 'LA Test Wave' 배정 — 승인 대기(「⇪ 콘솔에 반영」 승인 카드에서 승인) · ⚠ 콘솔 빈칸 미확인 — 풀을 읽지 못해 격자 참조만 보고 골랐습니다 · ⚠ 승인 대기 — MOVER-U 14마디 효과 프리셋: 「⇪ 콘솔에 반영」 승인 카드에서 승인해야 콘솔로 나갑니다 (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."
+}

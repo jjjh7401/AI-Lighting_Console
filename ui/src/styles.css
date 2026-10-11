@@ -5081,6 +5081,34 @@ body {
   color: var(--muted);
 }
 
+/* 카드 t589 — 「＋ 새 프리셋 만들기」 인라인 창. 기존 `.beat-grid-cue-
+   field-edit`의 작은 다크 테마 입력과 같은 톤을 쓴다(새 색 지정 없음). */
+.beat-grid-new-preset-dialog {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.beat-grid-new-preset-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.beat-grid-new-preset-field input {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+}
+
 .beat-grid-cmd {
   display: flex;
   gap: 8px;
