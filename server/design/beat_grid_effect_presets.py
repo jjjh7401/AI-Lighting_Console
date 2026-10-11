@@ -1,0 +1,321 @@
+"""카드 t593 — 박자 격자의 새 효과 프리셋을 콘솔에 만드는 레시피
+(SPEC-LDBEAT-001 REQ-LDBEAT-015(i-4)(i-7)(i-8), plan M13).
+
+값의 출처는 곡 격자 ``preset_fx_recipes["22.n"]``(효과 템플릿 ``fx_id`` + 음악 단위
+주기 ``period_unit``·``period_value``)다. 반영 시점에 그 템플릿(``server/fx/library``)을
+꺼내 속도를 곡 BPM ÷ 한 주기 박 수로 바꾸고(``server/design/app_movement.py`` 선례),
+``build_fx_preset_bundle``(``Store Preset <pool>.<n> '<이름>' /Universal`` → ``Label`` →
+``ClearAll``, 실기 선례)로 만든다. 콘솔 이름은 t589 와 같은 ``preset_labels["22.n"]``.
+
+이 모듈은 콘솔에 아무것도 쓰지 않는다 — 순수 함수뿐이다. 후보를 「풀은 읽혔고 slot 이
+없다」로 보류된 번호로 좁히는 일(덮어쓰기 0)은 공용 칸 판정
+``beat_grid_position_presets.plan_cells``가 한다.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import math
+from collections.abc import Mapping, Sequence
+from functools import lru_cache
+
+from server.design.beat_grid import preset_pool_no
+from server.design.beat_grid_edit import (
+    _KIND_TO_POOL_KEYS,
+    BeatGridEditError,
+    _assert_ascii_preset_label,
+)
+from server.design.beat_grid_position_presets import POSITION_GROUP_UNCONFIRMED
+from server.design.beat_grid_presets import app_preset_label
+from server.fx.instantiate import (
+    FxInstantiationError,
+    build_fx_preset_bundle,
+    is_programmer_state,
+)
+from server.fx.loader import FxSchemaError, load_library_from_dir
+from server.fx.schema import Fx, FxLibrary
+
+__all__ = [
+    "EFFECT_BAND_UNKNOWN",
+    "EFFECT_BATCH_COLLISION",
+    "EFFECT_BUILD_REFUSED",
+    "EFFECT_CREATE_ON_APPLY",
+    "EFFECT_DIMMER_OUT_OF_SCOPE",
+    "EFFECT_GROUP_UNCONFIRMED",
+    "EFFECT_LABEL_INVALID",
+    "EFFECT_LABEL_MISSING",
+    "EFFECT_MULTI_GROUP",
+    "EFFECT_RECIPE_MISSING",
+    "EFFECT_TEMPLATE_KIND_MISMATCH",
+    "EFFECT_TEMPLATE_UNKNOWN",
+    "EFFECT_TEMPO_MISSING",
+    "default_effect_library",
+    "effect_grid_blocker",
+    "effect_preset_outcomes",
+    "effect_preset_recipe",
+    "record_effect_preset_recipe",
+]
+
+#: 보류 사유 — 승인 카드·빈 프리셋 표식·시험이 같은 값을 읽는다(t592 문구와 나란히).
+EFFECT_RECIPE_MISSING = "효과 프리셋 레시피(템플릿·주기)가 없음"
+EFFECT_TEMPLATE_UNKNOWN = "효과 템플릿을 라이브러리에서 찾지 못함"
+EFFECT_BAND_UNKNOWN = "효과 번호대(preset_pools.yaml) 밖의 번호"
+EFFECT_DIMMER_OUT_OF_SCOPE = "디머 효과 프리셋은 만들기 범위 밖(REQ-LDBEAT-015(i-6))"
+EFFECT_TEMPLATE_KIND_MISMATCH = "효과 템플릿 속성이 이 번호대 종류와 맞지 않음"
+EFFECT_LABEL_MISSING = "효과 프리셋 콘솔 이름(영문)이 없음"
+EFFECT_LABEL_INVALID = "효과 프리셋 콘솔 이름이 영문·숫자 규칙에 맞지 않음"
+EFFECT_GROUP_UNCONFIRMED = POSITION_GROUP_UNCONFIRMED
+EFFECT_MULTI_GROUP = (
+    "여러 그룹이 같은 효과 번호를 씀 — 여러 그룹 선택으로 만드는 꼴은 실기 선례 없음"
+)
+EFFECT_TEMPO_MISSING = "곡 BPM·박자가 없어 주기를 속도로 바꿀 수 없음"
+EFFECT_BUILD_REFUSED = "효과 묶음을 만들 수 없음"
+EFFECT_BATCH_COLLISION = (
+    "같은 반영 묶음의 다른 효과와 줄이 겹침 — 다음 반영에서 만듦(송신 중복 제거, 카드 t601)"
+)
+#: 카드 t595 넓힘 — 반영 때 만들어질 빈 효과 번호의 표식 문구.
+EFFECT_CREATE_ON_APPLY = "빈 효과 프리셋 — 반영 때 템플릿·주기로 만듦(반영당 하나, BPM 없으면 보류)"
+
+_EFFECT_FIELD = "effect_preset_no"
+_PERIOD_UNITS = ("beat", "bar")
+
+
+# -- 저장 자리 -----------------------------------------------------------------
+
+
+def _is_pool_slot(preset_no: object) -> bool:
+    return preset_pool_no(preset_no) is not None
+
+
+def _positive_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def effect_preset_recipe(grid: Mapping[str, object], preset_no: str) -> dict[str, object] | None:
+    """곡 격자 ``preset_fx_recipes[preset_no]``. 없거나 모양이 틀리면 ``None``
+    (지어내지 않는다)."""
+    recipes = grid.get("preset_fx_recipes")
+    raw = recipes.get(preset_no) if isinstance(recipes, Mapping) else None
+    if not isinstance(raw, Mapping):
+        return None
+    fx_id = raw.get("fx_id")
+    unit = raw.get("period_unit")
+    value = raw.get("period_value")
+    if not isinstance(fx_id, str) or not fx_id.strip():
+        return None
+    if unit not in _PERIOD_UNITS or not _positive_int(value):
+        return None
+    return {"fx_id": fx_id, "period_unit": unit, "period_value": value}
+
+
+def record_effect_preset_recipe(
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    fx_id: str,
+    period_unit: str,
+    period_value: int,
+) -> dict[str, object]:
+    """새 효과 프리셋의 레시피를 곡 격자에 남기는 단일 저장 자리. ``grid``의 사본을
+    돌려준다(원본은 그대로). 주기는 음악 단위(박·마디)만 받는다 — 초는 받지 않는다."""
+    if not _is_pool_slot(preset_no):
+        raise ValueError(f"'{preset_no}'은(는) pool.slot 꼴의 프리셋 번호가 아닙니다.")
+    if not isinstance(fx_id, str) or not fx_id.strip():
+        raise ValueError("효과 템플릿 fx_id 가 비어 있습니다.")
+    if period_unit not in _PERIOD_UNITS:
+        raise ValueError(f"주기 단위 {period_unit!r}는 'beat' 또는 'bar' 여야 합니다.")
+    if not _positive_int(period_value):
+        raise ValueError(f"주기 값 {period_value!r}는 양의 정수여야 합니다.")
+    updated = dict(grid)
+    existing = grid.get("preset_fx_recipes")
+    recipes = dict(existing) if isinstance(existing, Mapping) else {}
+    recipes[preset_no] = {
+        "fx_id": fx_id.strip(),
+        "period_unit": period_unit,
+        "period_value": period_value,
+    }
+    updated["preset_fx_recipes"] = recipes
+    return updated
+
+
+# -- 판정 ----------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def default_effect_library() -> FxLibrary | None:
+    """출하 fx 라이브러리. 못 읽으면 ``None`` — 그 경우 모든 번호가
+    「템플릿을 찾지 못함」으로 보류된다(지어낸 템플릿 0)."""
+    try:
+        return load_library_from_dir()
+    except FxSchemaError:
+        return None
+
+
+def _band_kind(preset_no: str, policy: Mapping[str, object]) -> str | None:
+    """번호가 속한 효과 번호대의 종류(``position``/``color``/``dimmer``/``mixed``)."""
+    pools = policy.get("pools") if isinstance(policy, Mapping) else None
+    if not isinstance(pools, Mapping):
+        return None
+    pool_no = preset_pool_no(preset_no)
+    if pool_no is None:
+        return None
+    slot = int(preset_no.partition(".")[2])
+    for kind, keys in _KIND_TO_POOL_KEYS.items():
+        for key in keys:
+            band = pools.get(key)
+            if not isinstance(band, Mapping):
+                continue
+            start, end = str(band.get("start")), str(band.get("end"))
+            if preset_pool_no(start) != pool_no or preset_pool_no(end) != pool_no:
+                continue
+            if int(start.partition(".")[2]) <= slot <= int(end.partition(".")[2]):
+                return kind
+    return None
+
+
+def _template_fits(kind: str, fx: Fx) -> bool:
+    """번호대 종류와 템플릿 속성이 맞는가 — 위치 효과 풀엔 Pan/Tilt 만, 색 효과 풀엔
+    Color 속성만, 이 곡 전용 All 풀(mixed)엔 무엇이든."""
+    if kind == "mixed":
+        return True
+    if kind == "position":
+        return set(fx.attributes) <= {"Pan", "Tilt"}
+    if kind == "color":
+        return all(name.startswith("Color") for name in fx.attributes)
+    return False
+
+
+def _referencing_tracks(grid: Mapping[str, object], preset_no: str) -> list[Mapping[str, object]]:
+    """``preset_no``를 효과 번호로 가리키는 칸이 하나라도 있는 트랙 **전부**(이미
+    승인된 칸 포함 — t592 리드 지적과 같은 이유)."""
+    return [
+        track
+        for track in grid.get("tracks") or []
+        if isinstance(track, Mapping)
+        and any(
+            isinstance(cue, Mapping) and cue.get(_EFFECT_FIELD) == preset_no
+            for cue in track.get("cues") or []
+        )
+    ]
+
+
+def _find_fx(library: FxLibrary | None, fx_id: str) -> Fx | None:
+    if library is None:
+        return None
+    return next((fx for fx in library.fx if fx.fx_id == fx_id), None)
+
+
+def _blocker_and_parts(
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    library: FxLibrary | None,
+    policy: Mapping[str, object],
+) -> tuple[str | None, tuple[Fx, dict[str, object], str, int] | None]:
+    recipe = effect_preset_recipe(grid, preset_no)
+    if recipe is None:
+        return EFFECT_RECIPE_MISSING, None
+    fx = _find_fx(library, str(recipe["fx_id"]))
+    if fx is None:
+        return EFFECT_TEMPLATE_UNKNOWN, None
+    kind = _band_kind(preset_no, policy)
+    if kind is None:
+        return EFFECT_BAND_UNKNOWN, None
+    if kind == "dimmer":
+        return EFFECT_DIMMER_OUT_OF_SCOPE, None
+    if not _template_fits(kind, fx):
+        return EFFECT_TEMPLATE_KIND_MISMATCH, None
+    label = app_preset_label(grid, preset_no)
+    if label is None:
+        return EFFECT_LABEL_MISSING, None
+    try:
+        _assert_ascii_preset_label(label)
+    except BeatGridEditError:
+        return EFFECT_LABEL_INVALID, None
+    tracks = _referencing_tracks(grid, preset_no)
+    if any(not track.get("group_no_confirmed") for track in tracks):
+        return EFFECT_GROUP_UNCONFIRMED, None
+    groups = {track.get("group_no") for track in tracks}
+    if len(groups) != 1:
+        return EFFECT_MULTI_GROUP, None
+    (group,) = groups
+    if not _positive_int(group):
+        return EFFECT_GROUP_UNCONFIRMED, None
+    return None, (fx, recipe, label, int(group))  # type: ignore[arg-type]
+
+
+def effect_grid_blocker(
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    library: FxLibrary | None,
+    policy: Mapping[str, object],
+) -> str | None:
+    """콘솔을 읽지 않고 격자만으로 알 수 있는 만들기 걸림돌(레시피·템플릿·번호대·이름·
+    그룹). ``None``이면 남은 조건은 반영 때 아는 곡 BPM·박자와 같은 묶음의 다른 효과뿐이다.
+    격자의 「빈 프리셋」 표식(카드 t595)이 「반영 때 만듦」을 가를 때 쓴다."""
+    blocker, _parts = _blocker_and_parts(grid, preset_no, library=library, policy=policy)
+    return blocker
+
+
+def _one(
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    library: FxLibrary | None,
+    policy: Mapping[str, object],
+    bpm: float | None,
+    beats_per_bar: int | None,
+) -> tuple[tuple[str, ...] | None, str | None]:
+    blocker, parts = _blocker_and_parts(grid, preset_no, library=library, policy=policy)
+    if blocker is not None or parts is None:
+        return None, blocker
+    fx, recipe, label, group = parts
+    if bpm is None or not math.isfinite(bpm) or bpm <= 0:
+        return None, EFFECT_TEMPO_MISSING
+    beats_per_cycle = int(recipe["period_value"])  # type: ignore[call-overload]
+    if recipe["period_unit"] == "bar":
+        if beats_per_bar is None or beats_per_bar <= 0:
+            return None, EFFECT_TEMPO_MISSING
+        beats_per_cycle *= beats_per_bar
+    timed = dataclasses.replace(fx, speed=bpm / beats_per_cycle, speed_master=None)
+    pool, _sep, slot = preset_no.partition(".")
+    try:
+        bundle = build_fx_preset_bundle(
+            timed, group=group, preset_pool=int(pool), preset=int(slot), label=label
+        )
+    except FxInstantiationError as error:
+        return None, f"{EFFECT_BUILD_REFUSED}({error.reason})"
+    return bundle.commands, None
+
+
+def effect_preset_outcomes(
+    grid: Mapping[str, object],
+    numbers: Sequence[str],
+    *,
+    library: FxLibrary | None,
+    policy: Mapping[str, object],
+    bpm: float | None,
+    beats_per_bar: int | None,
+) -> dict[str, tuple[tuple[str, ...] | None, str | None]]:
+    """번호마다 만들기 줄 또는 (None, 보류 사유).
+
+    한 반영 묶음에 줄이 겹치는 효과 둘을 싣지 않는다: 모든 효과 묶음이 같은 스텝 전환
+    줄(``Step 2``)을 내므로(``server/fx/library/movement.yaml`` 머리 주석), 둘이면
+    송신 중복 제거가 두 번째 묶음의 그 줄을 건너뛰고 빈 효과가 저장된다. 번호 순서로
+    앞선 것부터 받고, 앞서 받은 묶음과 면제 안 되는 줄이 겹치는 번호는
+    ``EFFECT_BATCH_COLLISION``으로 다음 반영에 넘긴다(결함 자체는 카드 t601)."""
+    outcomes: dict[str, tuple[tuple[str, ...] | None, str | None]] = {}
+    taken: set[str] = set()
+    for number in sorted(numbers):
+        commands, reason = _one(
+            grid, number, library=library, policy=policy, bpm=bpm, beats_per_bar=beats_per_bar
+        )
+        if commands is not None:
+            lines = {c for c in commands if not is_programmer_state(c)}
+            if lines & taken:
+                outcomes[number] = (None, EFFECT_BATCH_COLLISION)
+                continue
+            taken |= lines
+        outcomes[number] = (commands, reason)
+    return outcomes

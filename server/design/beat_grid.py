@@ -861,20 +861,30 @@ def empty_preset_cells(
     반영에서 송신 보류) · ``"approved"``(이미 승인 — 반영하면 빈 번호를 가리킨 큐가
     그대로 나감)."""
     # 순환 import 회피(그 모듈이 이 모듈을 import 한다).
+    from server.design.beat_grid_edit import load_preset_pool_policy
+    from server.design.beat_grid_effect_presets import (
+        EFFECT_CREATE_ON_APPLY,
+        default_effect_library,
+        effect_grid_blocker,
+    )
     from server.design.beat_grid_position_presets import (
         POSITION_PRESET_POOL,
         position_grid_blocker,
     )
 
-    pending_position_numbers = {
-        str(value)
-        for track in grid.get("tracks") or []
-        if isinstance(track, Mapping)
-        for cue in track.get("cues") or []
-        if isinstance(cue, Mapping)
-        for field, value in pending_preset_fields(cue)
-        if field == "position_preset_no"
-    }
+    pending_numbers: dict[str, set[str]] = {"position_preset_no": set(), "effect_preset_no": set()}
+    for track in grid.get("tracks") or []:
+        if not isinstance(track, Mapping):
+            continue
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping):
+                continue
+            for field, value in pending_preset_fields(cue):
+                if field in pending_numbers:
+                    pending_numbers[field].add(str(value))
+    pending_position_numbers = pending_numbers["position_preset_no"]
+    # 카드 t593 — 빈 효과 번호도 반영 때 템플릿·주기 레시피로 만들어질 수 있다.
+    effect_policy: Mapping[str, object] | None = None
     cells: list[dict[str, object]] = []
     for track in grid.get("tracks") or []:
         if not isinstance(track, Mapping):
@@ -898,6 +908,21 @@ def empty_preset_cells(
                     if blocker is None:
                         kind = "create_on_apply"
                         reason = POSITION_CREATE_ON_APPLY
+                    else:
+                        reason = f"{reason}({blocker})"
+                elif (
+                    kind == "empty"
+                    and field == "effect_preset_no"
+                    and str(value) in pending_numbers["effect_preset_no"]
+                ):
+                    if effect_policy is None:
+                        effect_policy = load_preset_pool_policy()
+                    blocker = effect_grid_blocker(
+                        grid, str(value), library=default_effect_library(), policy=effect_policy
+                    )
+                    if blocker is None:
+                        kind = "create_on_apply"
+                        reason = EFFECT_CREATE_ON_APPLY
                     else:
                         reason = f"{reason}({blocker})"
                 fields.append(

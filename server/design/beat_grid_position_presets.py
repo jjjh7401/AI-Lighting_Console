@@ -41,7 +41,10 @@ __all__ = [
     "POSITION_UNAIMABLE",
     "PointingFrames",
     "PositionPresetPlan",
+    "PresetCreationPlan",
+    "plan_cells",
     "plan_position_preset_creation",
+    "position_preset_outcomes",
     "position_preset_target",
     "record_position_preset_target",
     "referencing_tracks",
@@ -80,6 +83,13 @@ class PositionPresetPlan:
     released: list[dict[str, object]] = field(default_factory=list)
     creations: dict[str, tuple[str, ...]] = field(default_factory=dict)
     held: list[dict[str, object]] = field(default_factory=list)
+    #: 카드 t593 — 만든 번호 → 그 번호를 가리킨 필드(``position_preset_no`` /
+    #: ``effect_preset_no``). 승인 카드가 종류별로 문구를 가를 때 읽는다.
+    creation_fields: dict[str, str] = field(default_factory=dict)
+
+
+#: 카드 t593 — 위치(t592)·효과(t593)가 같은 칸 판정을 함께 쓴다.
+PresetCreationPlan = PositionPresetPlan
 
 
 def _position_slot(preset_no: object) -> int | None:
@@ -222,11 +232,83 @@ def _plan_one(
     return commands, None
 
 
-# @MX:ANCHOR: [AUTO] 박자 격자 반영이 콘솔에 위치 프리셋을 만드는 유일한 결정 지점.
+Outcome = tuple[tuple[str, ...] | None, str | None]
+
+
+def position_preset_outcomes(
+    grid: Mapping[str, object],
+    numbers: Sequence[str],
+    *,
+    members: Mapping[str, Sequence[int]],
+    frames: PointingFrames | None,
+) -> dict[str, Outcome]:
+    """번호마다 한 번 — 만들기 줄 또는 (None, 보류 사유). 그 번호를 가리키는
+    칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 한 프리셋에 담는다."""
+    return {
+        number: _plan_one(
+            grid, number, referencing_tracks(grid, number), members=members, frames=frames
+        )
+        for number in numbers
+    }
+
+
+# @MX:ANCHOR: [AUTO] 박자 격자 반영이 콘솔에 새 프리셋(위치·효과)을 만드는 칸 판정의 유일한 자리.
 # @MX:REASON: ``Store Preset``은 기존 슬롯을 경고 없이 덮어쓴다 — 후보를
-#   ``EMPTY_PRESET_HOLD``(풀이 읽혔고 slot 이 없음)로 보류된 위치 번호로만 좁히는
-#   이 함수의 입구가 덮어쓰기 0 의 근거다(REQ-LDBEAT-015(i-7)). 다른 종류(효과·색,
-#   t593·t594)는 같은 입구 규칙을 재사용해야 한다.
+#   ``EMPTY_PRESET_HOLD``(풀이 읽혔고 slot 이 없음)로 보류된 번호로만 좁히는
+#   이 함수의 입구가 덮어쓰기 0 의 근거다(REQ-LDBEAT-015(i-7)). 위치(t592)·효과(t593)가
+#   함께 쓰고, 색(t594)도 같은 입구를 재사용해야 한다.
+def plan_cells(
+    held: Sequence[Mapping[str, object]],
+    outcomes: Mapping[tuple[str, str], Outcome],
+) -> PositionPresetPlan:
+    """보류 항목을 칸 단위로 판정한다(t590 과 같다). ``outcomes``는 (필드, 번호) →
+    만들기 줄 또는 보류 사유이고, 후보는 「풀은 읽혔고 slot 이 없다」로 보류된 항목 중
+    ``outcomes``에 있는 것뿐이다.
+
+    칸의 보류 항목이 전부 「만들 수 있는 후보」 또는 「같은 칸이라 함께 보류」(slot 이
+    있는 번호)일 때만 그 칸 전체가 승인 기록 대상으로 돌아간다. 풀을 못 읽은 항목·
+    만들 수 없는 빈 번호가 하나라도 있으면 칸 전체가 보류로 남고, 그 칸의 번호는
+    만들지 않는다."""
+    plan = PositionPresetPlan()
+    if not held:
+        return plan
+    cells: dict[tuple[object, object], list[Mapping[str, object]]] = {}
+    for entry in held:
+        cells.setdefault((entry.get("group_name"), entry.get("bar")), []).append(entry)
+
+    def _key(entry: Mapping[str, object]) -> tuple[str, str]:
+        return (str(entry.get("field")), str(entry.get("value")))
+
+    def _candidate(entry: Mapping[str, object]) -> bool:
+        return entry.get("hold_reason") == EMPTY_PRESET_HOLD and _key(entry) in outcomes
+
+    for entries in cells.values():
+        blockers = [e for e in entries if e.get("hold_reason") != CELL_HOLD and not _candidate(e)]
+        failed = {
+            _key(e): outcomes[_key(e)][1]
+            for e in entries
+            if _candidate(e) and outcomes[_key(e)][1] is not None
+        }
+        has_candidate = any(map(_candidate, entries))
+        if has_candidate and not blockers and not failed:
+            for entry in entries:
+                released = {k: v for k, v in entry.items() if k != "hold_reason"}
+                plan.released.append(released)
+                if _candidate(entry):
+                    field_name, number = _key(entry)
+                    commands = outcomes[_key(entry)][0]
+                    assert commands is not None
+                    plan.creations.setdefault(number, commands)
+                    plan.creation_fields.setdefault(number, field_name)
+            continue
+        for entry in entries:
+            reason = entry.get("hold_reason")
+            if _candidate(entry):
+                reason = failed.get(_key(entry)) or CELL_HOLD
+            plan.held.append({**entry, "hold_reason": reason})
+    return plan
+
+
 def plan_position_preset_creation(
     grid: Mapping[str, object],
     held: Sequence[Mapping[str, object]],
@@ -235,65 +317,19 @@ def plan_position_preset_creation(
     frames: PointingFrames | None,
 ) -> PositionPresetPlan:
     """``split_empty_preset_holds``가 보류한 항목 중 새 위치 프리셋으로 만들 수
-    있는 칸을 가려낸다.
-
-    칸 단위다(t590 과 같다): 칸의 보류 항목이 전부 「만들 수 있는 위치 번호」
-    또는 「같은 칸이라 함께 보류」(slot 이 있는 번호)일 때만 그 칸 전체가
-    승인 기록 대상으로 돌아간다. 풀을 못 읽은 항목·다른 종류의 빈 번호가 하나라도
-    있으면 칸 전체가 보류로 남고, 그 칸의 위치 번호는 만들지 않는다.
-    같은 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을 한 프리셋에 담는다 —
-    그중 하나라도 빠지면(그룹 미확인 등) 그 번호를 가리키는 칸 전부가 보류다."""
-    plan = PositionPresetPlan()
-    if not held:
-        return plan
-    cells: dict[tuple[object, object], list[Mapping[str, object]]] = {}
-    for entry in held:
-        cells.setdefault((entry.get("group_name"), entry.get("bar")), []).append(entry)
-
-    def _candidate(entry: Mapping[str, object]) -> bool:
-        return (
-            entry.get("field") == _POSITION_FIELD
-            and entry.get("hold_reason") == EMPTY_PRESET_HOLD
-            and _position_slot(entry.get("value")) is not None
-        )
-
-    # 1) 번호마다 한 번 계획한다 — 후보 항목이 있는 칸 전부의 트랙을 모아서.
+    있는 칸을 가려낸다 — 위치 번호만 후보로 본 ``plan_cells``(다른 종류의 빈 번호는
+    걸림돌이다). 같은 번호를 가리키는 칸의 트랙 전부(이미 승인된 칸 포함)의 소속을
+    한 프리셋에 담는다 — 그중 하나라도 빠지면 그 번호를 가리키는 칸 전부가 보류다."""
     numbers = sorted(
-        {str(e.get("value")) for entries in cells.values() for e in entries if _candidate(e)}
-    )
-    outcomes: dict[str, tuple[tuple[str, ...] | None, str | None]] = {
-        number: _plan_one(
-            grid,
-            number,
-            referencing_tracks(grid, number),
-            members=members,
-            frames=frames,
-        )
-        for number in numbers
-    }
-
-    # 2) 칸 단위로 판정한다.
-    for entries in cells.values():
-        blockers = [e for e in entries if e.get("hold_reason") != CELL_HOLD and not _candidate(e)]
-        failed = {
-            str(e.get("value")): outcomes[str(e.get("value"))][1]
-            for e in entries
-            if _candidate(e) and outcomes[str(e.get("value"))][1] is not None
+        {
+            str(e.get("value"))
+            for e in held
+            if e.get("field") == _POSITION_FIELD
+            and e.get("hold_reason") == EMPTY_PRESET_HOLD
+            and _position_slot(e.get("value")) is not None
         }
-        has_candidate = any(map(_candidate, entries))
-        if has_candidate and not blockers and not failed:
-            for entry in entries:
-                released = {k: v for k, v in entry.items() if k != "hold_reason"}
-                plan.released.append(released)
-                if _candidate(entry):
-                    number = str(entry.get("value"))
-                    commands = outcomes[number][0]
-                    assert commands is not None
-                    plan.creations.setdefault(number, commands)
-            continue
-        for entry in entries:
-            reason = entry.get("hold_reason")
-            if _candidate(entry):
-                reason = failed.get(str(entry.get("value"))) or CELL_HOLD
-            plan.held.append({**entry, "hold_reason": reason})
-    return plan
+    )
+    outcomes = position_preset_outcomes(grid, numbers, members=members, frames=frames)
+    return plan_cells(
+        held, {(_POSITION_FIELD, number): outcome for number, outcome in outcomes.items()}
+    )
