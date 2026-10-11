@@ -558,6 +558,50 @@ def create_app(deps: WebDeps) -> FastAPI:
                         if message_type == "timeline_draft_redo"
                         else session.undo_timeline_draft
                     )
+                elif message_type == "beat_grid_edit":
+                    # 카드 t551(SPEC-LDBEAT-001 M3) — 박자 격자 편집 세 길의
+                    # 전용 채널. 채팅(`"chat"`) 분기와는 별도다 — 모델도
+                    # 콘솔도 거치지 않는 순수 초안 편집이라 위 되돌리기/
+                    # 다시하기와 같은 인라인 패턴을 쓴다.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_edit,
+                        message.get("bar"),
+                        message.get("target"),
+                        message.get("changes"),
+                        message.get("sentence"),
+                    )
+                elif message_type == "beat_grid_suggest":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_suggest, message["bar"], message["target"]
+                    )
+                elif message_type == "beat_grid_suggestion_apply":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_suggestion_apply, message["suggestion_id"]
+                    )
+                elif message_type == "beat_grid_suggestion_reject":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(
+                        session.beat_grid_suggestion_reject, message["suggestion_id"]
+                    )
+                elif message_type == "beat_grid_drawer_request":
+                    # 카드 t551 후속(지시 1항) — 프리셋 서랍. 콘솔 풀을 여러
+                    # 번 왕복해 읽으므로(최대 세 풀 × 페이지) busy-guard
+                    # 아래 스레드로 돌린다(다른 beat_grid_* 분기와 같은 패턴).
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_preset_drawer)
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))

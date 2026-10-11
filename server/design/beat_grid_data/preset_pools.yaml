@@ -1,0 +1,31 @@
+# 박자 격자 편집 연산(apply_beat_grid_edit, 카드 t551)이 참조하는 "앱
+# 전용 효과 프리셋 풀" 번호대 — REQ-LDBEAT-015(a)(b). 이 파일은 코드가
+# 아니라 데이터다: 번호대를 바꾸려면 이 파일만 고치면 되고
+# server/design/beat_grid_edit.py 는 손대지 않는다(카드 t551 지시 —
+# "read it from data/config, do not hardcode").
+#
+# confirmed: false — 아직 실제 쇼 파일의 기존 프리셋 번호와 대조한 적
+# 없다(plan.md §B 위험 11, progress.md:214 "M2/M3 착수 시 쇼 파일 조회로
+# 확정" — 콘솔 접촉 0건인 이 카드의 범위에서는 그 대조를 할 수 없다).
+# 아래 값은 `reports/ldbeat-feasibility-roadmap-20261010.md` §4 결정③이
+# 적은 예시 번호대를 그대로 둔 PROVISIONAL(잠정) 값이다 — 이 예시를
+# LOVE ATTACK 기본값의 실제 큐 프리셋 번호로 쓰지 않는다(REQ-LDBEAT-015(f),
+# §F 안티패턴과는 다른 자리 — 그쪽은 "칸 값"을 금지하고, 이 파일은 "앱이
+# 새 효과 프리셋을 만들 때 어느 번호대를 써도 되는가"라는 검증 경계일
+# 뿐이다). 실제 쇼 파일과 대조가 끝나면 `confirmed: true`로 바꾸고 아래
+# start/end 를 실측값으로 교체한다 — 그 전까지는 이 경계를 기본 위치·
+# 기본 색 풀(앱이 만들지 않은, 쇼에 원래 있는 프리셋)에는 적용하지 않는다
+# (REQ-LDBEAT-015(b) — base 풀 vs effect 풀 분리, base 풀 참조는
+# 번호대 검사 대상이 아니다).
+confirmed: false
+pools:
+  # 위치 효과 풀(기본 위치 풀 2.41~ 과 분리) — effect_kind == "position".
+  position_effect: {start: "2.61", end: "2.68"}
+  # 색 효과 풀(기본 색 풀 4.21~ 과 분리) — effect_kind == "color".
+  color_effect: {start: "4.41", end: "4.99"}
+  # 디머 효과 풀, 두 서브 밴드 — effect_kind == "dimmer"
+  # (brightness.mode == "dimmer_effect" 도 이 풀을 쓴다).
+  dimmer_effect_a: {start: "1.21", end: "1.26"}
+  dimmer_effect_b: {start: "1.31", end: "1.33"}
+  # 이 곡 전용 혼합 All 풀 — effect_kind == "mixed".
+  mixed_all: {start: "22.0", end: "22.99"}

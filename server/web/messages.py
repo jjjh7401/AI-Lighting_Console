@@ -146,6 +146,19 @@ CLIENT_MESSAGE_TYPES = (
     "status_request",
     # 새로고침 생존: 복원된 화면 기록을 새 세션에 재주입(위 상수 참조).
     "history_restore",
+    # 카드 t551(SPEC-LDBEAT-001 M3) — 박자 격자 편집 세 길의 전용 채널.
+    # 채팅(`"chat"`) 디스패치 체인과 분리된 별도 메시지 타입이다 —
+    # `session.beat_grid_edit`/`beat_grid_suggest`/`beat_grid_suggestion_apply`
+    # 가 직접 받는다(AC-LDBEAT-005).
+    "beat_grid_edit",
+    "beat_grid_suggest",
+    "beat_grid_suggestion_apply",
+    # 카드 t551 후속(지시 1항, mockup `aNo` 핸들러) — 제안 거절. 적용과
+    # 같은 모양(suggestion_id 하나)이지만 편집을 부르지 않는다.
+    "beat_grid_suggestion_reject",
+    # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기 요청. 페이로드 없음(현재
+    # 곡의 격자 사용처 집계는 서버가 안다, dash_catalog_request와 같은 모양).
+    "beat_grid_drawer_request",
     *PANEL_CLIENT_MESSAGE_TYPES,
     *DASH_CLIENT_MESSAGE_TYPES,
     *CUE_MONITOR_CLIENT_MESSAGE_TYPES,
@@ -363,6 +376,56 @@ def parse_client_message(raw: str) -> dict:
             "type": "chat",
             "text": text,
             "selected_cue": selected,
+        }
+
+    if message_type == "beat_grid_edit":
+        # 카드 t551 — 편집 경로 ①(changes)과 ②(sentence)는 정확히 하나만
+        # 싣는다. 어느 쪽이든 bar/target 은 "changes" 경로에만 필수다
+        # — "sentence" 경로는 문장 자체가 마디·트랙을 정한다(세션 쪽
+        # 파서가 그 책임을 진다).
+        has_changes = "changes" in message
+        has_sentence = "sentence" in message
+        if has_changes == has_sentence:
+            raise ProtocolError("beat_grid_edit must carry exactly one of changes/sentence")
+        if has_sentence:
+            sentence = message.get("sentence")
+            if not isinstance(sentence, str) or not sentence.strip():
+                raise ProtocolError("beat_grid_edit.sentence must be a non-empty string")
+            return {"v": PROTOCOL_VERSION, "type": "beat_grid_edit", "sentence": sentence}
+        bar = message.get("bar")
+        target = message.get("target")
+        changes = message.get("changes")
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            raise ProtocolError("beat_grid_edit.bar must be an integer")
+        if not isinstance(target, str) or not target.strip():
+            raise ProtocolError("beat_grid_edit.target must be a non-empty string")
+        if not isinstance(changes, dict) or not changes:
+            raise ProtocolError("beat_grid_edit.changes must be a non-empty object")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_edit",
+            "bar": bar,
+            "target": target,
+            "changes": changes,
+        }
+
+    if message_type == "beat_grid_suggest":
+        bar = message.get("bar")
+        target = message.get("target")
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            raise ProtocolError("beat_grid_suggest.bar must be an integer")
+        if not isinstance(target, str) or not target.strip():
+            raise ProtocolError("beat_grid_suggest.target must be a non-empty string")
+        return {"v": PROTOCOL_VERSION, "type": "beat_grid_suggest", "bar": bar, "target": target}
+
+    if message_type in ("beat_grid_suggestion_apply", "beat_grid_suggestion_reject"):
+        suggestion_id = message.get("suggestion_id")
+        if not isinstance(suggestion_id, str) or not suggestion_id.strip():
+            raise ProtocolError(f"{message_type}.suggestion_id must be a non-empty string")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": message_type,
+            "suggestion_id": suggestion_id,
         }
 
     if message_type == "vectorworks_export_upload":
@@ -674,6 +737,9 @@ def parse_client_message(raw: str) -> dict:
         # 아래 마지막 줄이 이들을 통째로 ``status_request`` 로 바꿔치기한다.
         "timeline_draft_undo",
         "timeline_draft_redo",
+        # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기도 페이로드가 없다
+        # (현재 격자 사용처는 서버가 이미 안다).
+        "beat_grid_drawer_request",
     ):
         # Payload-free by design. The pin seed is the server's own
         # ``_last_created`` cross-turn memory (REQ-SHOWUI-004), and the
@@ -695,6 +761,39 @@ def _event(event_type: str, **fields) -> dict:
 def chat_response_event(*, status: str, summary: str, text: str, commands: list[dict]) -> dict:
     """One instruction's final report (REQ-MVP-022 — Korean result reporting)."""
     return _event("chat_response", status=status, summary=summary, text=text, commands=commands)
+
+
+def beat_grid_suggestion_event(
+    *, suggestion_id: str, bar: int, target: str, changes: dict, rationale: str
+) -> dict:
+    """SPEC-LDBEAT-001 M3(카드 t551) — 박자 격자 편집 경로 ③(AI 제안)의
+    보류 카드. ``changes``는 「적용」클릭이 그대로 ``beat_grid_suggestion_
+    apply``에 되돌려 보낼 그 편집 요청이다(생성~적용 사이 상태 diff 0,
+    결정④)."""
+    return _event(
+        "beat_grid_suggestion",
+        suggestion_id=suggestion_id,
+        bar=bar,
+        target=target,
+        changes=changes,
+        rationale=rationale,
+    )
+
+
+def beat_grid_suggestion_consumed_event(*, suggestion_id: str) -> dict:
+    """카드 t551 — ``approval_resolved``와 같은 짝 이벤트. 보류 카드가
+    소비됐다(적용됐든, 모르는/만료된 id로 거절됐든)는 것을 UI에 알려
+    보류 목록에서 지우게 한다. id가 애초에 없었어도(거절 경로) 보낸다 —
+    UI 쪽 필터는 없는 id를 지우려 해도 안전한 no-op이다."""
+    return _event("beat_grid_suggestion_consumed", suggestion_id=suggestion_id)
+
+
+def beat_grid_drawer_event(*, sections: list[dict]) -> dict:
+    """카드 t551 후속(지시 1항) — mockup 프리셋 서랍(디머 1·위치 2·색 4)과
+    같은 세 섹션. 내용은 `server.design.beat_grid_presets.
+    build_preset_drawer`의 실제 콘솔 판독 결과다 — 데모 데이터 0건,
+    못 읽은 풀은 ``unread: true``로 솔직하게 비어 있다."""
+    return _event("beat_grid_drawer", sections=sections)
 
 
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:

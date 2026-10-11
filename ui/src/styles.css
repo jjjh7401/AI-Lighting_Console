@@ -4706,6 +4706,44 @@ body {
   cursor: not-allowed;
 }
 
+/* 카드 t551 계속 — 직접 고르기(①) 드롭다운(밝기 모드/위치/색). mockup
+   `.ed select`와 같은 의도(최소 다크 테마 셀렉트) — 새 색 지정 없이
+   기존 CSS 변수만 재사용한다. */
+.beat-grid-cue-field-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.beat-grid-cue-field-edit select,
+.beat-grid-cue-field-edit input {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11.5px;
+}
+
+.beat-grid-cue-field-edit select:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.beat-grid-cue-field-value.is-editable {
+  cursor: pointer;
+}
+
+/* "+ 새 프리셋" 안내·풀 미확인 안내 — mockup `newPreset()`/`POOL_UNREAD`
+   둘 다 사실 그대로 보이는 안내문이라 경고색이 아니라 muted. */
+.beat-grid-cue-field-note {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
 .beat-grid-cmd {
   display: flex;
   gap: 8px;
@@ -4772,4 +4810,94 @@ body {
 
 .beat-grid-fullscreen-frame .beat-grid {
   flex: 1;
+}
+
+/* 카드 t551 후속(지시 1항) — 프리셋 서랍(mockup `.drawer`/`.pr`/`.c`/`.u`
+   클래스 이름을 그대로 재사용해 CSS 의도를 맞췄다). */
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  background: #101014;
+  border-left: 1px solid #000;
+  overflow: auto;
+  padding: 10px;
+  z-index: 10;
+}
+
+.beat-grid-drawer-section h6 {
+  margin: 10px 0 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.beat-grid-drawer-band-badge,
+.u {
+  color: var(--bad);
+}
+
+.beat-grid-drawer-unread,
+.beat-grid-drawer-loading {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pr {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.pr.on {
+  background: #3a3310;
+  color: #ffd84d;
+}
+
+.pr .c {
+  color: var(--muted);
+}
+
+/* mockup "AI 제안은 타임라인에 점선 막대로 미리 보임" — 점선 테두리만,
+   채우기 색은 없다(지어낸 상태가 아니라 보류 상태를 그린다). */
+.beat-grid-cue-ghost {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border: 1px dashed #ffd84d;
+  border-radius: 3px;
+  background: transparent;
+  color: #ffd84d;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* 프리셋 서랍에서 고른 항목을 쓰는 큐 — "누르면 쓰는 막대가 노랗게". */
+.beat-grid-cue.is-preset-highlighted {
+  outline: 2px solid #ffd84d;
+}
+
+.beat-grid-ai-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.beat-grid-ai-suggestion header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.beat-grid-ai-suggestion-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
 }
