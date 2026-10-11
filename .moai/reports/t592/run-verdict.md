@@ -40,10 +40,10 @@
 - 선례가 없는 것: **박자 격자 반영 묶음 안에서 큐 줄과 섞어 보내기**. 리드가 t582 에 항목으로 넣기로 했다(2026-10-11 회신 ①).
 - 한 묶음 안 같은 글자 건너뛰기(dedupe): 조준 줄·`ClearAll` 은 프로그래머 상태 줄로 면제(`server/fx/instantiate.py` `_PROGRAMMER_STATE_COMMANDS`), `Store`·`Label` 은 번호마다 글자가 달라 프리셋 여러 개가 한 묶음에 있어도 겹치지 않는다(코드 판독, 실측 아님).
 
-## 합칠 때 정리할 자리 (리드 회신 ②)
+## 합칠 때 정리한 자리 (리드 회신 ②)
 
-- 이름 읽기 함수가 둘이다: 이 카드의 `beat_grid_position_presets._preset_label` 과 t589 의 `beat_grid_presets.app_preset_label`(같은 `preset_labels` 키·모양). 늦게 합치는 쪽이 하나로 합친다 — 자리에 `TODO(t589 머지 뒤)` 주석을 달아 두었다.
-- t589 브랜치를 main(t590 포함)과 합쳐 보니 `session.py` 승인 카드 문구 한 곳이 충돌하고, t589 시험 2개(`TestApprovalCardShowsLabelAndDescription`)가 t590 보류 규칙 때문에 떨어졌다 — t589 레인이 main 을 합칠 때 풀 몫이라 이 브랜치는 t589 를 합치지 않았다.
+- t589(#633, `b297c570`)가 먼저 머지돼, 늦게 합친 이 브랜치가 이름 읽기를 하나로 합쳤다 — `beat_grid_position_presets` 는 이제 t589 의 `beat_grid_presets.app_preset_label` 을 그대로 쓴다(자체 `_preset_label` 삭제).
+- main 합치기 충돌: `session.py` 승인 카드 문구 한 곳 — 「새로 만드는 위치 프리셋」 블록과 t589/t590 주석을 둘 다 남김. 합친 트리: 관련 묶음(t592·t590·t589·t577) `93 passed`, 서버 전체 `15405 passed, 35 skipped`.
 
 ## 안 잰 것 / 남은 위험
 

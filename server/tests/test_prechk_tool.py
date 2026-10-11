@@ -1264,6 +1264,11 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_stop",
     "beat_grid_drawer_request",
     "beat_grid_edit",
+    # 카드 t589 (2026-10-11, SPEC-LDBEAT-001 REQ-LDBEAT-015(h)) — 「＋ 새
+    # 프리셋 만들기」 다이얼로그. `beat_grid_edit`과 같은 길(새 콘솔 쓰기
+    # 경로 없음)로 수렴한다 — PRECHK/OVERLAP 축과 무관한 정당한 확장이고,
+    # 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_new_preset",
     "beat_grid_preview",
     "beat_grid_preview_off",
     # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.

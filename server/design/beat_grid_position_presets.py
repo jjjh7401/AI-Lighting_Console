@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 
 from server.design.beat_grid import CELL_HOLD, EMPTY_PRESET_HOLD, preset_pool_no
 from server.design.beat_grid_edit import BeatGridEditError, _assert_ascii_preset_label
+from server.design.beat_grid_presets import app_preset_label
 from server.spatial.pointing import (
     POSITION_PRESET_POOL,
     SpatialPointingError,
@@ -135,18 +136,6 @@ def record_position_preset_target(
     return updated
 
 
-def _preset_label(grid: Mapping[str, object], preset_no: str) -> str | None:
-    # TODO(t589 머지 뒤): t589 의 ``beat_grid_presets.app_preset_label``과 같은
-    # 키·모양을 읽는 두 번째 읽기 함수다 — 늦게 합치는 쪽이 하나로 합친다(리드).
-    labels = grid.get("preset_labels")
-    if not isinstance(labels, Mapping):
-        return None
-    value = labels.get(preset_no)
-    if not isinstance(value, str) or not value.strip():
-        return None
-    return value.strip()
-
-
 def referencing_tracks(grid: Mapping[str, object], preset_no: str) -> list[Mapping[str, object]]:
     """``preset_no``를 위치 번호로 가리키는 칸이 하나라도 있는 트랙 **전부** —
     이번 승인 대기 칸만이 아니다. 이미 승인된 칸의 트랙 장비도 같은 프리셋을
@@ -176,7 +165,7 @@ def _plan_one(
     target = position_preset_target(grid, preset_no)
     if target is None:
         return None, POSITION_TARGET_MISSING
-    label = _preset_label(grid, preset_no)
+    label = app_preset_label(grid, preset_no)
     if label is None:
         return None, POSITION_LABEL_MISSING
     try:

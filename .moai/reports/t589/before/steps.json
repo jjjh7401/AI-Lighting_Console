@@ -1,0 +1,8 @@
+{
+ "effect_cue_index": 17,
+ "effect_dialog_visible": 0,
+ "effect_panel_after_select": "MOVER-U · 0마디\n전환\n✕\n장비 소속 미확인 · 그룹 11\nCue 1 · 0~2마디 · 3마디 ≈ 6.4초 · 곡 0.00초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n효과 프리셋\n— 미정 —\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n⚠ 번호대 미확인\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n근거\n미정\n움직임\n— 없음 —\nsweep\nflyout\ncircle ⚠\nballyhoo ⚠\nwave\n적용\n되돌리기\n설명(원문)\n바닥 쪽 좁은 빔, 정지\n콘솔 명령",
+ "position_cue_index": 1,
+ "position_dialog_visible": 0,
+ "position_panel_after_select": "WASH-ALL · 7마디\n전환\n✕\n장비 소속 미확인 · 그룹 10\nCue 1 · 7~13마디 · 7마디 ≈ 15.0초 · 곡 14.95초\n밝기\n값\n디머 프리셋\n디머 효과\n적용\n되돌리기\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n위치 프리셋\n— 미정 —\n2.41 LA Center\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n색 프리셋\n— 미정 —\n4.21 LA White\n4.41 LA Color Chase · 효과\n＋ 새 프리셋 만들기…\n적용\n되돌리기\n\n＋ 새 프리셋 만들기 — 이름·값을 정하는 창은 아직 배선되지 않았습니다(M4/별도 카드).\n\n출처\nreports/effect-arrangement-rules-20261007.md:106\n설명(원문)\n라벤더 워시 40%(2마디 번짐)\n콘솔 명령"
+}
