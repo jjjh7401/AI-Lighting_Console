@@ -1,0 +1,31 @@
+{"step": "pre_free:ShowData/DataPools/Default/Sequences/336", "t": 0.001, "kind": "state", "path": "ShowData/DataPools/Default/Sequences/336", "ok": false, "error": "path segment not found (in ShowData/DataPools/Default/Sequences/336)"}
+{"step": "t0_tilted_lit", "t": 0.001, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": []}]}
+{"step": "t0_tilted_lit", "t": 0.001, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.001, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.001, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_tilted_lit", "t": 0.001, "kind": "exec", "command": "Group 11 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "t0_clear", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "t0_clear", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "screen", "cleared": true, "commands": [{"command": "ChangeDestination Root", "reasons": []}, {"command": "ClearAll", "reasons": []}, {"command": "Group 11 ; Attribute 'Dimmer' At 70", "reasons": []}, {"command": "Group 11 ; Attribute 'Tilt' At 45", "reasons": []}, {"command": "Group 11 ; Attribute 'Pan' At Relative -30", "reasons": []}, {"command": "Step 2", "reasons": []}, {"command": "Attribute 'Pan' At Relative 30", "reasons": []}, {"command": "Step 1 At Accel -100", "reasons": []}, {"command": "Step 1 At Decel -100", "reasons": []}, {"command": "Step 2 At Accel -100", "reasons": []}, {"command": "Step 2 At Decel -100", "reasons": []}, {"command": "Attribute 'Pan' At Phase 0 Thru 360", "reasons": []}, {"command": "Attribute 'Pan' At Speed 56", "reasons": []}, {"command": "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'", "reasons": ["blacklisted command (matches closed-set entry 'Store Sequence')"]}, {"command": "ClearAll", "reasons": []}, {"command": "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'", "reasons": []}]}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "ChangeDestination Root", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Group 11 ; Attribute 'Dimmer' At 70", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Group 11 ; Attribute 'Tilt' At 45", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Group 11 ; Attribute 'Pan' At Relative -30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Step 2", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Attribute 'Pan' At Relative 30", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Step 1 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.002, "kind": "exec", "command": "Step 1 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Step 2 At Accel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Step 2 At Decel -100", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Attribute 'Pan' At Phase 0 Thru 360", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Attribute 'Pan' At Speed 56", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}
+{"step": "store_U_pan", "t": 0.003, "kind": "exec", "command": "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'", "fired": true, "ok": true, "detail": "OK"}
+{"step": "play_U_pan", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Goto Cue 1 Sequence 336", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 336': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "play_U_pan", "t": 0.003, "kind": "exec", "command": "Goto Cue 1 Sequence 336", "fired": true, "ok": true, "detail": "OK"}
+{"step": "off_U_pan", "t": 0.003, "kind": "screen", "cleared": true, "commands": [{"command": "Off Sequence 336", "reasons": ["reference-invoking command", "unverifiable reference 'Sequence 336': no body fetcher configured — reference bodies unverifiable"]}]}
+{"step": "off_U_pan", "t": 0.004, "kind": "exec", "command": "Off Sequence 336", "fired": true, "ok": true, "detail": "OK"}
+{"step": "final_clear", "t": 0.004, "kind": "screen", "cleared": true, "commands": [{"command": "ClearAll", "reasons": []}]}
+{"step": "final_clear", "t": 0.004, "kind": "exec", "command": "ClearAll", "fired": true, "ok": true, "detail": "OK"}

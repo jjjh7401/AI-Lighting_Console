@@ -1,0 +1,125 @@
+{
+  "item": "T553P1b",
+  "free_slots": [
+    "ShowData/DataPools/Default/Timecodes/32"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "tc_setup": [
+      "Store Timecode 32",
+      "Set Timecode 32 Property 'Name' 'LDBEAT T553 - P1b eight tracks'",
+      "Set Timecode 32 Property 'Duration' 10 'AutoStop' 0",
+      "Store Timecode 32.1"
+    ],
+    "assign_tracks": [
+      "Assign Sequence 226 At Timecode 32.1.1",
+      "Assign Sequence 227 At Timecode 32.1.2",
+      "Assign Sequence 228 At Timecode 32.1.3",
+      "Assign Sequence 229 At Timecode 32.1.4",
+      "Assign Sequence 230 At Timecode 32.1.5",
+      "Assign Sequence 231 At Timecode 32.1.6",
+      "Assign Sequence 232 At Timecode 32.1.7",
+      "Assign Sequence 233 At Timecode 32.1.8"
+    ],
+    "play": [
+      "Go Timecode 32"
+    ],
+    "release": [
+      "Off Timecode 32",
+      "Off Sequence 226",
+      "Off Sequence 227",
+      "Off Sequence 228",
+      "Off Sequence 229",
+      "Off Sequence 230",
+      "Off Sequence 231",
+      "Off Sequence 232",
+      "Off Sequence 233"
+    ]
+  },
+  "notes": [
+    "참조하는 시퀀스 226~233 은 기존 객체(RHYTHM PROBE v2/v3) — Store/수정하지 않는다.",
+    "읽기 판정: Timecode 32/1 자식 9개(Marker+Track8), TARGET 순서 226..233.",
+    "목적: MEASURED_MAX_TIMECODE_TRACKS=6(t549 보수적 상한, 실제 최대는 ①이 6개만 쟀다) 재확인 — LOVE ATTACK 실제 트랙 8개가 구조로 도는지."
+  ],
+  "bundles": {
+    "tc_setup": true,
+    "assign_tracks": true,
+    "play": true,
+    "release": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "Store Timecode 32",
+    "Set Timecode 32 Property 'Name' 'LDBEAT T553 - P1b eight tracks'",
+    "Set Timecode 32 Property 'Duration' 10 'AutoStop' 0",
+    "Store Timecode 32.1",
+    "Assign Sequence 226 At Timecode 32.1.1",
+    "Assign Sequence 227 At Timecode 32.1.2",
+    "Assign Sequence 228 At Timecode 32.1.3",
+    "Assign Sequence 229 At Timecode 32.1.4",
+    "Assign Sequence 230 At Timecode 32.1.5",
+    "Assign Sequence 231 At Timecode 32.1.6",
+    "Assign Sequence 232 At Timecode 32.1.7",
+    "Assign Sequence 233 At Timecode 32.1.8",
+    "Go Timecode 32",
+    "Off Timecode 32",
+    "Off Sequence 226",
+    "Off Sequence 227",
+    "Off Sequence 228",
+    "Off Sequence 229",
+    "Off Sequence 230",
+    "Off Sequence 231",
+    "Off Sequence 232",
+    "Off Sequence 233"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "Store Timecode 32",
+        "Set Timecode 32 Property 'Name' 'LDBEAT T553 - P1b eight tracks'",
+        "Set Timecode 32 Property 'Duration' 10 'AutoStop' 0",
+        "Store Timecode 32.1"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Assign Sequence 226 At Timecode 32.1.1",
+        "Assign Sequence 227 At Timecode 32.1.2",
+        "Assign Sequence 228 At Timecode 32.1.3",
+        "Assign Sequence 229 At Timecode 32.1.4",
+        "Assign Sequence 230 At Timecode 32.1.5",
+        "Assign Sequence 231 At Timecode 32.1.6",
+        "Assign Sequence 232 At Timecode 32.1.7",
+        "Assign Sequence 233 At Timecode 32.1.8"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Go Timecode 32"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Timecode 32",
+        "Off Sequence 226",
+        "Off Sequence 227",
+        "Off Sequence 228",
+        "Off Sequence 229",
+        "Off Sequence 230",
+        "Off Sequence 231",
+        "Off Sequence 232",
+        "Off Sequence 233"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}

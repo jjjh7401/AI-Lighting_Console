@@ -1,0 +1,149 @@
+{
+  "item": "T553UPan",
+  "free_slots": [
+    "ShowData/DataPools/Default/Sequences/336"
+  ],
+  "occupied_before": [],
+  "planned": {
+    "t0_tilted_lit": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; Attribute 'Tilt' At 45"
+    ],
+    "t0_clear": [
+      "ClearAll"
+    ],
+    "store_U_pan": [
+      "ChangeDestination Root",
+      "ClearAll",
+      "Group 11 ; Attribute 'Dimmer' At 70",
+      "Group 11 ; Attribute 'Tilt' At 45",
+      "Group 11 ; Attribute 'Pan' At Relative -30",
+      "Step 2",
+      "Attribute 'Pan' At Relative 30",
+      "Step 1 At Accel -100",
+      "Step 1 At Decel -100",
+      "Step 2 At Accel -100",
+      "Step 2 At Decel -100",
+      "Attribute 'Pan' At Phase 0 Thru 360",
+      "Attribute 'Pan' At Speed 56",
+      "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'",
+      "ClearAll",
+      "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'"
+    ],
+    "play_U_pan": [
+      "Goto Cue 1 Sequence 336"
+    ],
+    "off_U_pan": [
+      "Off Sequence 336"
+    ],
+    "final_clear": [
+      "ClearAll"
+    ]
+  },
+  "notes": [
+    "선택 Group 11 · 기준 Attribute 'Tilt' At 45(t538 A0′, mover_probe_v2.py) · BPM 112.002(박 시각 회귀) → Speed 56",
+    "t0 는 프로그래머만(Store 0) — 기울었는지 리드 캡처로 확인 뒤 본 묶음 전송",
+    "이 프로브는 측정만 한다 — PASS여도 measured_movements.yaml 반영(게이트 오픈)은 별도 카드(리드 지시, bar 18 을 지금 열지 않는다)"
+  ],
+  "bundles": {
+    "t0_tilted_lit": true,
+    "t0_clear": true,
+    "store_U_pan": true,
+    "play_U_pan": true,
+    "off_U_pan": true,
+    "final_clear": true
+  },
+  "verdict": "rehearsal ok — all bundles cleared+executed",
+  "fake_sent": [
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11 ; Attribute 'Dimmer' At 70",
+    "Group 11 ; Attribute 'Tilt' At 45",
+    "ClearAll",
+    "ChangeDestination Root",
+    "ClearAll",
+    "Group 11 ; Attribute 'Dimmer' At 70",
+    "Group 11 ; Attribute 'Tilt' At 45",
+    "Group 11 ; Attribute 'Pan' At Relative -30",
+    "Step 2",
+    "Attribute 'Pan' At Relative 30",
+    "Step 1 At Accel -100",
+    "Step 1 At Decel -100",
+    "Step 2 At Accel -100",
+    "Step 2 At Decel -100",
+    "Attribute 'Pan' At Phase 0 Thru 360",
+    "Attribute 'Pan' At Speed 56",
+    "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'",
+    "ClearAll",
+    "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'",
+    "Goto Cue 1 Sequence 336",
+    "Off Sequence 336",
+    "ClearAll"
+  ],
+  "approval_requests": [
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ChangeDestination Root",
+        "ClearAll",
+        "Group 11 ; Attribute 'Dimmer' At 70",
+        "Group 11 ; Attribute 'Tilt' At 45",
+        "Group 11 ; Attribute 'Pan' At Relative -30",
+        "Step 2",
+        "Attribute 'Pan' At Relative 30",
+        "Step 1 At Accel -100",
+        "Step 1 At Decel -100",
+        "Step 2 At Accel -100",
+        "Step 2 At Decel -100",
+        "Attribute 'Pan' At Phase 0 Thru 360",
+        "Attribute 'Pan' At Speed 56",
+        "Store Sequence 336 Cue 1 'T553 - MOVERU pan wave 2 beats tilted base'",
+        "ClearAll",
+        "Set Sequence 336 Property 'Name' 'T553 - MOVERU pan wave 2 beats tilted base'"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Goto Cue 1 Sequence 336"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "Off Sequence 336"
+      ],
+      "approved": true
+    },
+    {
+      "commands": [
+        "ClearAll"
+      ],
+      "approved": true
+    }
+  ],
+  "skipped_saveshow": [
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)",
+    "SaveShow skipped (rehearsal)"
+  ]
+}
