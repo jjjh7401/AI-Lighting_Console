@@ -2510,15 +2510,16 @@ def build_toolset(
                 )
         outcomes: list[CommandOutcome] = []
         failed = False
-        # MEDIUM backlog item (M6c 종합, tools.py:145): ``context.executed_ok``
-        # is a frozenset seeded from a PRIOR tool call — it is never updated
-        # as commands succeed WITHIN this loop. A local, mutable copy (seeded
-        # from the same starting set) tracks successes as they happen in THIS
-        # call, so an in-bundle duplicate command (the same string appearing
-        # twice in one ``commands`` list) is correctly recognized as
-        # already-executed on its second occurrence instead of being
-        # re-executed and duplicating its console side effect.
-        already_executed = set(context.executed_ok)
+        # @MX:WARN: [AUTO] 이 집합에 무엇을 넣느냐가 「조용히 건너뜀」의 범위다.
+        # @MX:REASON: REQ-MVP-033 의 중복 제거는 **앞선 호출**(자가 수정 재전송)에서
+        #   이미 실행된 줄만 다시 보내지 않는 장치다 — ``context.executed_ok`` 그대로.
+        #   카드 M6c-6(82b83abc)이 같은 묶음 안 앞줄까지 넣자, 한 묶음에서 같은 글자가
+        #   다시 나와야 하는 줄(효과 묶음의 ``Step 2``·``ChangeDestination Root``, 같은
+        #   장비 그룹의 선택 체인, 두 큐가 같은 값을 쓰는 값 줄)이 skipped_already_executed
+        #   로 빠졌고 ``Store`` 는 그대로 ok 라 빈 효과·빈 그룹·틀린 값이 저장됐다
+        #   (4dd48e8f·db555da9·카드 t476 실기 107줄 승인/75줄 송신·카드 t593).
+        #   묶음은 승인된 그대로가 송신된다 — 묶음 안 반복은 작성자의 뜻이다(카드 t601).
+        already_executed = context.executed_ok
         for command in commands:
             if failed:
                 # Stop-on-first-failure: remaining commands are never executed.
@@ -2546,7 +2547,6 @@ def build_toolset(
             else:
                 result = execution_port.execute(command)
                 if result.ok:
-                    already_executed.add(command)
                     outcomes.append(
                         CommandOutcome(command=command, status="executed_ok", detail=result.detail)
                     )

@@ -27,7 +27,12 @@ from server.design.sugar_timeline import build_sugar_timeline
 from server.fx.instantiate import is_programmer_state as fx_is_programmer_state
 from server.groupgen.write import is_programmer_state as groupgen_is_programmer_state
 from server.orchestrator.ports import ExecutionResult
-from server.orchestrator.tools import ToolCall, _is_programmer_state, build_toolset
+from server.orchestrator.tools import (
+    ExecutionContext,
+    ToolCall,
+    _is_programmer_state,
+    build_toolset,
+)
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
 from server.spatial.pointing import BASIC_POSITION_SEQUENCE
@@ -114,9 +119,15 @@ def test_every_exemption_definition_agrees_on_the_value_line(line):
     ],
 )
 def test_artifact_lines_are_still_deduped(command):
-    executed, statuses = _run([command, command])
-    assert executed == [command]
-    assert statuses == ["executed_ok", "skipped_already_executed"]
+    # 카드 t601 — 중복 제거는 앞선 호출(자가 수정 재전송)에서 실행된 줄만 건너뛴다.
+    # 같은 묶음 안의 반복은 승인된 그대로 나간다(test_dedupe_legit_repeat_t601.py).
+    port = _RecordingPort()
+    execution = build_toolset(execution_port=port, state_port=_StatePort()).dispatch(
+        ToolCall(id="t476", name="run_commands", arguments={"commands": [command]}),
+        ExecutionContext(executed_ok=frozenset({command})),
+    )
+    assert port.executed == []
+    assert [o.status for o in execution.command_outcomes] == ["skipped_already_executed"]
     assert _is_programmer_state(command) is False
     assert fx_is_programmer_state(command) is False
     assert groupgen_is_programmer_state(command) is False
