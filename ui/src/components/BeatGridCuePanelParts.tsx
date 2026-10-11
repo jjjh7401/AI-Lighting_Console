@@ -77,19 +77,26 @@ export function BeatGridCueHeadMeta({
   endBar,
   secondsPerBar,
   confirmedFixtureCount,
+  confirmedFixtureRange = null,
 }: {
   track: BeatGridTrack;
   cue: BeatGridCue;
   endBar: number;
   secondsPerBar: number | null | undefined;
   confirmedFixtureCount: number;
+  /** 카드 t586 — 소속이 확인된 장비 번호 범위(예: 「201~202」, 시안 머리
+   * `Group 10 'WASH-ALL' · 401~410…`). 모르면 `null` — 범위를 빼고 쓴다. */
+  confirmedFixtureRange?: string | null;
 }) {
   const cueNo = track.cues.indexOf(cue) + 1;
   const lengthBars = endBar - cue.bar;
   const hasTiming = secondsPerBar !== null && secondsPerBar !== undefined;
   return (
     <div className="beat-grid-cue-head-meta">
-      {confirmedFixtureCount > 0 ? `장비 ${confirmedFixtureCount}대(소속 확인)` : "장비 소속 미확인"} ·{" "}
+      {confirmedFixtureCount > 0
+        ? `장비 ${confirmedFixtureRange ? `${confirmedFixtureRange} · ` : ""}${confirmedFixtureCount}대(소속 확인)`
+        : "장비 소속 미확인"}{" "}
+      ·{" "}
       {track.group_no_confirmed && track.group_no !== null ? `그룹 ${track.group_no}` : "그룹 번호 미확인"}
       <br />
       Cue {cueNo} · {cue.bar}~{endBar - 1}마디 · {lengthBars}마디

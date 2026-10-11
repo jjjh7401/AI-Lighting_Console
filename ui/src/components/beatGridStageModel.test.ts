@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import type { BeatGridStageView, BeatGridTrack } from "../protocol";
 import { fixtureDisplayColor } from "./BeatGrid";
 import { stageGroupZones } from "./beatGridTransition";
-import { fixtureBelongsTo, fixtureConfirmedGroupNames, stageFixturePoints } from "./beatGridStageModel";
+import {
+  fixtureBelongsTo,
+  fixtureConfirmedGroupNames,
+  stageFixturePoints,
+  trackFixtureSummary,
+} from "./beatGridStageModel";
 
 const view: BeatGridStageView = {
   fixtures: [
@@ -65,5 +70,25 @@ describe("fixtureBelongsTo — 여러 그룹 소속(부모·자식)", () => {
       ["SIDE-L", 1],
       ["SIDE-ALL", 2],
     ]);
+  });
+});
+
+describe("trackFixtureSummary — 줄 이름 둘째 줄 (카드 t586, 시안 .lhead small)", () => {
+  const points = stageFixturePoints(view);
+
+  it("그룹 번호 · 확인된 장비 번호 범위 · 대수", () => {
+    expect(trackFixtureSummary(6, "SIDE-ALL", points)).toBe("G6 · 301~311 · 2대");
+  });
+
+  it("장비가 한 대면 범위 대신 번호 하나", () => {
+    expect(trackFixtureSummary(5, "SIDE-L", points)).toBe("G5 · 301 · 1대");
+  });
+
+  it("소속이 확인된 장비가 없으면 범위·대수를 지어내지 않는다", () => {
+    expect(trackFixtureSummary(9, "BLIND", points)).toBe("G9");
+  });
+
+  it("그룹 번호도 장비도 모르면 둘째 줄이 없다", () => {
+    expect(trackFixtureSummary(null, "BLIND", points)).toBeNull();
   });
 });
