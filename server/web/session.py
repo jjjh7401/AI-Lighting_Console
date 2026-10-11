@@ -408,6 +408,8 @@ _DECISION_SUMMARY: dict[str, str] = {
         "콘솔 응답기가 알 수 없는 버전을 보고했습니다 — 어떤 응답기가 로드돼 있는지 확인해 주세요."
     ),
     "blocked_backup_failed": "쇼파일 백업 실패로 실행이 차단되었습니다 (안전 장치).",
+    # 카드 t598 — 승인 뒤 송신 직전 호출자의 전제 확인이 실패(예: 승인 창 사이 콘솔 변경).
+    "blocked_precondition": "승인 뒤 송신 직전 확인에 실패해 번들 전체가 실행되지 않았습니다.",
     "locked": "라이브 잠금 활성 — 콘솔로 전송하지 않고 제안 카드만 생성했습니다.",
     "rejected": "승인 거부로 번들 전체가 실행되지 않았습니다.",
     "blocked_grammar": "문법 검증에 실패한 명령이 있었습니다.",
@@ -10138,7 +10140,22 @@ class ChatSession:
                     for entry in held_presets
                 )
                 risk_reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"
-            risk = BatchRisk(reason=risk_reason, kind="beat_grid_apply")
+            # 카드 t598 — 위치 풀은 반영 버튼 때 읽었고 ``Store Preset``은 승인 **뒤** 나간다.
+            # 승인 창이 떠 있는 사이 콘솔에서 그 번호가 채워지면 경고 없이 덮어쓰므로,
+            # 게이트가 승인 직후·실행 직전에 같은 풀을 다시 읽게 한다(못 읽어도 중단).
+            presend_reasons: list[str] = []
+
+            def _presend_recheck() -> str | None:
+                reason = self._beat_grid_recheck_new_presets(position_plan.creations)
+                if reason is not None:
+                    presend_reasons.append(reason)
+                return reason
+
+            risk = BatchRisk(
+                reason=risk_reason,
+                kind="beat_grid_apply",
+                recheck=_presend_recheck if position_plan.creations else None,
+            )
             since = datetime.now(UTC).isoformat()
             executed = self._dispatch_declared(
                 ToolCall(
@@ -10149,6 +10166,10 @@ class ChatSession:
                 risk=risk,
             )
             until = datetime.now(UTC).isoformat()
+            if executed.result.is_error and presend_reasons:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason=presend_reasons[0]
+                )
             if executed.result.is_error:
                 # 승인 거절만이 아니라 게이트 차단·콘솔 무응답도 이 갈래로 온다 —
                 # 원인을 하나로 단정하지 않고 결과 내용을 그대로 붙인다.
@@ -10875,6 +10896,41 @@ class ChatSession:
             rotz=dict(rotz_by_fid),
             rotation_skipped=tuple(rotation_skipped),
         )
+
+    def _beat_grid_recheck_new_presets(self, creations: Mapping[str, object]) -> str | None:
+        """카드 t598 — 이번 묶음이 ``Store Preset``으로 만들 번호의 풀을 송신 직전에
+        다시 완전 판독한다. 하나라도 이제 slot 이 있거나 풀을 다시 못 읽으면 사유를
+        돌려준다(묶음 전체 중단). 콘솔 **읽기**만. 새로 읽은 풀은 표식 출처로 남긴다."""
+        pool_root = self._beat_grid_preset_pool_root()
+        by_pool: dict[int, list[str]] = {}
+        for number in creations:
+            pool_no = preset_pool_no(number)
+            if pool_no is not None:
+                by_pool.setdefault(pool_no, []).append(str(number))
+        unread: list[str] = []
+        filled: list[str] = []
+        fresh: dict[int, dict[int, str | None] | None] = {}
+        for pool_no, numbers in sorted(by_pool.items()):
+            children = self._paged_pool_children(
+                f"{pool_root}/{pool_no}", probe_id=f"beat-grid-apply-presend-pool-{pool_no}"
+            )
+            fresh[pool_no] = children
+            if children is None:
+                unread.extend(numbers)
+                continue
+            filled.extend(n for n in numbers if int(n.partition(".")[2]) in children)
+        self._beat_grid_learn_pools(fresh)
+        if filled:
+            return (
+                f"승인 창이 떠 있는 사이 콘솔에서 {', '.join(filled)}이(가) 채워져, 덮어쓰지 "
+                "않으려고 아무것도 보내지 않았습니다 — 다시 반영하세요"
+            )
+        if unread:
+            return (
+                f"송신 직전 프리셋 풀을 다시 읽지 못해 {', '.join(unread)}을(를) 만들지 않고 "
+                "아무것도 보내지 않았습니다 — 다시 반영하세요"
+            )
+        return None
 
     def _beat_grid_split_empty_presets(
         self, pending: list[dict[str, object]]
