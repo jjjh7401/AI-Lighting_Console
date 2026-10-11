@@ -30,11 +30,11 @@ sec_proposal = section("## §3.", "## §7.")
 
 def covered_lines(blob):
     covered = set()
-    for m in re.finditer(r':(\d+)(?:-(\d+))?', blob):
+    for m in re.finditer(r":(\d+)(?:-(\d+))?", blob):
         s = int(m.group(1))
         e = int(m.group(2)) if m.group(2) else s
         covered.update(range(s, e + 1))
-    for m in re.finditer(r'\((\d+)(?:-(\d+))?\)', blob):
+    for m in re.finditer(r"\((\d+)(?:-(\d+))?\)", blob):
         s = int(m.group(1))
         e = int(m.group(2)) if m.group(2) else s
         covered.update(range(s, e + 1))
@@ -44,7 +44,7 @@ def covered_lines(blob):
 def headings_with_span(path):
     with open(path, encoding="utf-8") as fh:
         lines = fh.readlines()
-    hs = [(i + 1, l.strip()[3:]) for i, l in enumerate(lines) if l.startswith("## ")]
+    hs = [(i + 1, line.strip()[3:]) for i, line in enumerate(lines) if line.startswith("## ")]
     total = len(lines)
     spans = []
     for idx, (ln, name) in enumerate(hs):
@@ -57,7 +57,7 @@ def check(path, covered):
     spans = headings_with_span(path)
     missing = []
     for start, end, name in spans:
-        if not any(l in covered for l in range(start, end + 1)):
+        if not any(n in covered for n in range(start, end + 1)):
             missing.append((start, name))
     return spans, missing
 
@@ -65,7 +65,8 @@ def check(path, covered):
 spans_m, miss_m = check(MOCKUP_MD, covered_lines(sec_mockup))
 spans_p, miss_p = check(PROPOSAL_MD, covered_lines(sec_proposal))
 
-print(f"TOTAL_HEADINGS={len(spans_m) + len(spans_p)} (mockup={len(spans_m)}, proposal={len(spans_p)})")
+total_headings = len(spans_m) + len(spans_p)
+print(f"TOTAL_HEADINGS={total_headings} (mockup={len(spans_m)}, proposal={len(spans_p)})")
 print(f"MISSING={len(miss_m) + len(miss_p)}")
 for i, name in miss_m:
     print(f"  MISS mockup.md:{i} {name}")
