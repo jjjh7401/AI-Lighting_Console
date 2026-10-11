@@ -238,13 +238,6 @@ def record_app_preset_description(
     return updated
 
 
-#: 카드 t589(리드 판단) — 반영 승인 카드에 앱이 만든 새 프리셋이 있을 때
-#: 붙이는 경고. 반영은 큐만 저장하고 콘솔 프리셋은 만들지 않는다(카드 t590).
-APP_PRESET_NOT_ON_CONSOLE_WARNING = (
-    "⚠ 콘솔에는 아직 만들어지지 않음 — 이 번호를 가리키는 큐는 빈 프리셋을 부름"
-)
-
-
 def app_preset_label(grid: Mapping[str, object], preset_no: str) -> str | None:
     """카드 t589 — 앱이 만든 프리셋의 콘솔 이름(영문·숫자, 곡별 ``grid
     ["preset_labels"]`` ``{"pool.slot": 이름}``). ``app_preset_description``

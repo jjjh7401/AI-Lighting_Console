@@ -444,7 +444,10 @@ class TestBeatGridNewPresetHandler:
         assert console.executed == []
 
 
-# == 승인 카드: 이름·설명 노출 + "콘솔 프리셋 생성" 안내 =====================
+# == 승인 카드: 이름·설명 노출 + 「송신 보류」 한 줄 =============================
+# 카드 t590(REQ-LDBEAT-015(i-1)) 이후 콘솔에 없는 번호는 송신 보류다. 앱이 만든
+# 번호는 빈 번호라 늘 보류 줄에 온다 — 리드 판단(2026-10-11)대로 경고는 t590
+# 보류 문구 한 줄로 합치고, 그 줄에 이름·설명을 그대로 보인다(이 잠금은 유지).
 
 
 class TestApprovalCardShowsLabelAndDescription:
@@ -472,17 +475,19 @@ class TestApprovalCardShowsLabelAndDescription:
         assert len(approval.requests) == 1
         risk_reasons = approval.requests[0].items[0].risk_reasons
         joined = " ".join(risk_reasons)
-        assert "새로 만드는 프리셋 1개" in joined
-        assert "2.61" in joined
-        assert "'LA Wave' — 따뜻한 흰색" in joined
-        # 리드 판단 문구 그대로(상수를 거치지 않고 글자로 단언한다).
-        assert (
-            "⚠ 콘솔에는 아직 만들어지지 않음 — 이 번호를 가리키는 큐는 빈 프리셋을 부름" in joined
-        )
+        # 빈 번호라 「새로 만드는 프리셋」(승인 기록 대상)이 아니라 보류 줄에 온다.
+        assert "새로 만드는 프리셋" not in joined
+        assert "빈 프리셋 — 아직 콘솔에 만들 길 없음(송신 보류) 1개" in joined
+        # 이름·설명은 그 보류 줄에 그대로 보인다(t589 잠금).
+        assert "2.61 'LA Wave' — 따뜻한 흰색(빈 프리셋 — 아직 콘솔에 만들 길 없음)" in joined
+        # 경고는 한 줄 — t589 의 옛 별도 문장은 없다.
+        assert "콘솔에는 아직 만들어지지 않음" not in joined
+        assert joined.count("(송신 보류)") == 1
 
     def test_a_directly_picked_new_number_without_a_label_is_not_mislabeled(self, tmp_path) -> None:
         # t577 류의 "번호를 직접 고르는" 승인 대기 — `app_preset_label`이
-        # `None`이라 이름·설명 덧붙임도 note 도 없어야 한다(회귀 방지).
+        # `None`이라 이름·설명이 붙지 않아야 한다(회귀 방지). 풀을 못 읽은
+        # 번호라 t590 규칙대로 보류 줄에 온다.
         store = SongTimelineStore()
         store.latest = _timeline_for_apply()
         session, _console, approval, _audit = _new_session(
@@ -496,9 +501,9 @@ class TestApprovalCardShowsLabelAndDescription:
         assert apply_event["ok"] is True
         risk_reasons = approval.requests[0].items[0].risk_reasons
         joined = " ".join(risk_reasons)
-        assert "새로 만드는 프리셋 1개" in joined
-        assert "2.65" in joined
-        assert "콘솔에는 아직 만들어지지 않음" not in joined
+        assert "빈 프리셋 — 아직 콘솔에 만들 길 없음(송신 보류) 1개" in joined
+        assert "2.65(풀을 못 읽어 빈 프리셋인지 확인 못 함)" in joined
+        assert "2.65 '" not in joined  # 이름이 붙지 않았다
 
 
 # == ③ 프로토콜 파서 =========================================================
