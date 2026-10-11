@@ -11,7 +11,7 @@ grep -n "SIDE-L\|SIDE-R\|split\|옆빛\|L·R\|L/R" ui/src/components/BeatGrid.ts
 grep -n "beat-grid-cue-panel\b\|beat-grid-lanes\b\|beat-grid-stage-pane\b\|max-width\|310px\|440px\|320px\|1640px\|1450px\|97%" ui/src/styles.css
 ```
 
-출력은 이 plan-phase가 Bash로 직접 실행해 확인했다(카드 t554 메인 세션). `wc -l`: `BeatGrid.tsx` 1162행, `RunbookMode.tsx` 281행(2026-10-11 기준, `App.tsx`에 `BeatGrid` 렌더 분기가 이미 있어 `RunbookMode.tsx`는 `<BeatGrid>`를 더 이상 직접 품지 않는다 — M7이 `App.tsx`의 `runbookMode && beatGridFullscreen` 분기로 승격했다, `App.tsx:1116-1129`).
+출력은 이 plan-phase가 Bash로 직접 실행해 확인했다(카드 t554 메인 세션). `wc -l`: `BeatGrid.tsx` 1162행, `RunbookMode.tsx` 280행(plan-audit iteration 1 D5 교정 — 이전 문면의 "281행"은 오기, 2026-10-11 기준, `App.tsx`에 `BeatGrid` 렌더 분기가 이미 있어 `RunbookMode.tsx`는 `<BeatGrid>`를 더 이상 직접 품지 않는다 — M7이 `App.tsx`의 `runbookMode && beatGridFullscreen` 분기로 승격했다, `App.tsx:1116-1129`).
 
 ## §1. 상단 바 (REQ-LDBEAT-017)
 
@@ -116,11 +116,19 @@ grep -n "beat-grid-cue-panel\b\|beat-grid-lanes\b\|beat-grid-stage-pane\b\|max-w
 
 ## §10. 요약 집계
 
-| 분류 | 건수(§1~§9 행 합계) |
+**집계 명령(plan-audit iteration 1 D3 대응, 재측정)**:
+
+```
+awk '/^## §1\./,/^## §10\./' research.md | grep "^| " | grep -v 분류 | grep -v '^|---' | wc -l
+```
+
+→ `54`(이전 문면의 "9+16+24+0=49"는 틀렸다 — 5행을 놓쳤다). 전수 54행을 분류별로 다시 센 결과(각 분류 라벨 뒤에 붙는 설명 괄호까지 포함해 집계 — 예: "구현(쉬운 PASS)"·"미구현(단, 유사 기능 존재)"도 각각 구현·미구현으로 집계):
+
+| 분류 | 건수(§1~§9 행 전수 재측정) |
 |---|---|
-| 구현 | 9 |
-| 부분 | 16 |
-| 미구현 | 24 |
+| 구현 | 10 |
+| 부분 | 15 |
+| 미구현 | 29 |
 | 상충 | 0 |
 
 **상충 0건** — 현재 구현이 시안과 반대로 동작하는 자리는 없다(모두 "아직 안 만듦" 또는 "일부만 만듦"이다). 이는 M2/M2후속/M7이 이미 시안을 참조해 지었기 때문으로 보이며(progress.md가 매 마일스톤마다 시안 줄 번호를 인용했다), 카드 t554가 발견한 간극은 대부분 "M3+ 구현 대상"으로 이미 알려져 있던 것들의 공식화다.
