@@ -1,0 +1,6 @@
+hunks: 93 -> 93
+new starts: []
+gone starts: []
+hunks with count: []
+protected-range names in bundle: ['_TOOLS_PROTECTED_OLD_RANGES', 'test_preserve_gate_uses_run_phase_base_to_head_range']
+protected-range names in overlap: ['TestToolsProtectedRegions', '_TOOLS_PROTECTED_OLD_RANGES']

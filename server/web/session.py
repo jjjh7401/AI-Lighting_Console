@@ -246,7 +246,7 @@ from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김 
     reviewed_song_commands,
     reviewed_song_timing_commands,
 )
-from server.design.song_look_memory import SongLooks, choose_look_offset, song_looks
+from server.design.song_look_memory import SongLooks, compose_avoiding_previous, song_looks
 from server.design.song_plan import (
     MANUAL_GO,
     ApprovalState,
@@ -3906,6 +3906,22 @@ class _SongAnalysisView:
         return self._session._song_analysis
 
 
+class _SongLookMemoryView:
+    """``ChatSession._song_look_history`` 를 ``SongLookMemoryPort`` 에 맞춘다 (카드 t609).
+
+    ``history`` 는 세션이 쥔 목록 **그 자체**를 돌려준다 — 업로드 길
+    (``prepare_songcue``)이 덧붙인 곡을 대화 길(``_song_compose``)이 읽고, 그 반대도
+    된다. 한 쇼(세션)의 기억은 하나다.
+    """
+
+    def __init__(self, session: ChatSession) -> None:
+        self._session = session
+
+    @property
+    def history(self) -> list[SongLooks]:
+        return self._session._song_look_history
+
+
 class _SongInterviewRecordsView:
     """``ChatSession._song_interview_records`` 를 ``InterviewRecordsPort`` 에
     맞춘다 (카드 t441, SPEC-LDDESIGN-001 REQ-003).
@@ -4241,6 +4257,8 @@ class ChatSession:
             # (가장 최근에 완료된) 연출 인터뷰 기록을 읽는 통로 — 위
             # song_analysis 와 같은 읽기 투과 형태다.
             interview_records=_SongInterviewRecordsView(self),
+            # 카드 t609 — 곡 사이 룩 기억(t491)을 업로드 길에도. 대화 길과 같은 목록.
+            song_look_memory=_SongLookMemoryView(self),
             # SPEC-COPILOT-PRESHOW-001 T-G2: reuse the gate's own audited
             # heartbeat as the pre-show OSC checks' liveness probe — no
             # second console link, no new socket. Gated on preshow_receive_port
@@ -8169,25 +8187,15 @@ class ChatSession:
         한 바퀴 돌았다) 멈춘다. 고르기는 ``choose_look_offset`` — 바닥나면 가장
         오래전에 쓴 룩으로, 멈추지 않는다. 기억이 없거나 감독이 이 곡에서 끄면
         오프셋 0(감독 답 그대로)이다. 저장 전 기억은 바뀌지 않으므로 같은 계획을
-        다시 조립해도(편집·재질의) 같은 오프셋이 나온다."""
-        history = self._song_look_history
-        if not state.avoid_previous_looks or not history:
-            state.look_offset = 0
-            return self._song_compose_at(state, 0)
-        candidates: list[tuple[UnifiedSongLightingPlan, SongCueCompositionResult]] = []
-        seen: set[SongLooks] = set()
-        offset = 0
-        while True:
-            built, composition = self._song_compose_at(state, offset)
-            looks = song_looks(composition)
-            if looks in seen:
-                break
-            seen.add(looks)
-            candidates.append((built, composition))
-            offset += 1
-        chosen = choose_look_offset([song_looks(c) for _, c in candidates], history)
-        state.look_offset = chosen
-        return candidates[chosen]
+        다시 조립해도(편집·재질의) 같은 오프셋이 나온다. 반복문은
+        ``compose_avoiding_previous`` — 업로드 길(``prepare_songcue``, 카드 t609)과
+        같은 함수다."""
+        built, composition, state.look_offset = compose_avoiding_previous(
+            lambda offset: self._song_compose_at(state, offset),
+            self._song_look_history,
+            enabled=state.avoid_previous_looks,
+        )
+        return built, composition
 
     def _song_compose_at(
         self, state: _SongDesignState, look_offset: int

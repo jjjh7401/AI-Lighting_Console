@@ -1,0 +1,12 @@
+== none distinct 23
+  adjacent  {'pairs': 7, 'opening_same': 7, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 67, 'pairs_with_any_shared_look': 7}
+  all pairs {'pairs': 28, 'opening_same': 28, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 253, 'pairs_with_any_shared_look': 28}
+== shared distinct 38
+  adjacent  {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 13, 'pairs_with_any_shared_look': 3}
+  all pairs {'pairs': 28, 'opening_same': 5, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 104, 'pairs_with_any_shared_look': 17}
+== fresh distinct 23
+  adjacent  {'pairs': 7, 'opening_same': 7, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 67, 'pairs_with_any_shared_look': 7}
+  all pairs {'pairs': 28, 'opening_same': 28, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 253, 'pairs_with_any_shared_look': 28}
+-- none [('Club Diver', True, 0, None, 13, ('Ring In', ('블루', 'cyan'))), ('Cut and Run', True, 0, None, 17, ('Ring In', ('블루', 'cyan'))), ('Ice cream', True, 0, None, 7, ('Ring In', ('블루', 'cyan'))), ('Morning', True, 0, None, 13, ('Ring In', ('블루', 'cyan'))), ('Rain', True, 0, None, 12, ('Ring In', ('블루', 'cyan'))), ('Too Cool', True, 0, None, 23, ('Ring In', ('블루', 'cyan'))), ('scott-buckley-neon', True, 0, None, 17, ('Ring In', ('블루', 'cyan'))), ('걸그룹DinoDino_C_max최고품질', True, 0, None, 10, ('Ring In', ('블루', 'cyan')))]
+-- shared [('Club Diver', True, 0, 1, 13, ('Ring In', ('블루', 'cyan'))), ('Cut and Run', True, 1, 2, 17, ('Home', ('cyan', '블루'))), ('Ice cream', True, 2, 3, 7, ('Vocal DSC', ('블루', 'cyan'))), ('Morning', True, 6, 4, 13, ('Fan Out', ('블루', 'cyan'))), ('Rain', True, 8, 5, 12, ('Ring In', ('블루', 'cyan'))), ('Too Cool', True, 1, 6, 23, ('Home', ('cyan', '블루'))), ('scott-buckley-neon', True, 2, 7, 17, ('Vocal DSC', ('블루', 'cyan'))), ('걸그룹DinoDino_C_max최고품질', True, 16, 8, 10, ('Ring In', ('블루', 'cyan')))]
+-- fresh [('Club Diver', True, 0, 1, 13, ('Ring In', ('블루', 'cyan'))), ('Cut and Run', True, 0, 1, 17, ('Ring In', ('블루', 'cyan'))), ('Ice cream', True, 0, 1, 7, ('Ring In', ('블루', 'cyan'))), ('Morning', True, 0, 1, 13, ('Ring In', ('블루', 'cyan'))), ('Rain', True, 0, 1, 12, ('Ring In', ('블루', 'cyan'))), ('Too Cool', True, 0, 1, 23, ('Ring In', ('블루', 'cyan'))), ('scott-buckley-neon', True, 0, 1, 17, ('Ring In', ('블루', 'cyan'))), ('걸그룹DinoDino_C_max최고품질', True, 0, 1, 10, ('Ring In', ('블루', 'cyan')))]

@@ -177,12 +177,16 @@ def build_upload_song_plan(
     blinder_group_no: int | None = None,
     song_end_ms: int | None = None,
     sequence_name: str | None = None,
+    look_offset: int = 0,
 ) -> tuple[UnifiedSongLightingPlan, tuple[str, ...], PaletteSource]:
     """업로드 입력으로 대화 길과 같은 계획을 짓는다 — ``(plan, density_notes, palette)``.
 
     마디 분할도 대화 길과 같은 함수(``_split_sections_for_density`` — 팔레트 색 수
     기준)로 한다. 업로드 길이 따로 쓰던 룩 후보 수 기준 분할은 조립기로 합치면서
     쓰지 않는다(룩 라이브러리를 거치지 않으므로).
+
+    ``look_offset`` — 카드 t609. 대화 길과 같은 곡 단위 오프셋(t491). 0 이면 오늘과
+    같다. ``prepare_songcue`` 가 세션 기억으로 고른다.
     """
     profile, palette_source = upload_profile(bpm=bpm, genre=genre, records=records)
     color_usage = _record_value(records, Q2B_COLOR_USAGE, "modulate")
@@ -204,6 +208,7 @@ def build_upload_song_plan(
         section_origin=origin or None,
         position_disabled_reason=position_disabled_reason,
         blinder_group_no=blinder_group_no,
+        look_offset=look_offset,
     )
     # 시퀀스 이름은 업로드 길이 콘솔 라벨·타임코드 이름에 쓰던 값을 받는다(없으면 계획
     # 조립의 기본값 ``Sequence <n>``).

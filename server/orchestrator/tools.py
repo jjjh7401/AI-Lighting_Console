@@ -58,6 +58,7 @@ from server.design.song_cue_render import (
     reviewed_song_commands,
     reviewed_song_timing,
 )
+from server.design.song_look_memory import compose_avoiding_previous, song_looks
 from server.design.song_plan import TimingPlan
 from server.design.upload_song_plan import build_upload_song_plan, upload_plan_sections
 from server.design.upload_song_report import build_upload_song_report, stored_cues
@@ -660,6 +661,18 @@ class SongAnalysisPort(Protocol):
     """
 
     current: ConfirmedSongAnalysisPort | None
+
+
+class SongLookMemoryPort(Protocol):
+    """세션(한 쇼)의 곡 사이 룩 기억에 닿는 창 (카드 t609, t491 의 업로드 길 짝).
+
+    ``history`` 는 세션이 쥔 **그 목록 자체**다(복사본이 아니다) — 대화 길과 업로드
+    길이 같은 쇼의 기억을 함께 읽고 쓴다. ``prepare_songcue`` 가 고를 때 읽고, 콘솔
+    저장이 끝나면 그 곡의 룩을 덧붙인다. t486 이 지운 ``SongLookMemory`` 와 달리
+    이 창은 ``prepare_songcue`` 본문이 직접 쓴다.
+    """
+
+    history: list[tuple[tuple[str | None, tuple[str, ...]], ...]]
 
 
 class InterviewRecordsPort(Protocol):
@@ -2359,6 +2372,7 @@ def build_toolset(
     spatial_memory: SpatialMemory | None = None,
     song_analysis: SongAnalysisPort | None = None,
     interview_records: InterviewRecordsPort | None = None,
+    song_look_memory: SongLookMemoryPort | None = None,
 ) -> ToolRegistry:
     """Build the tool registry wired to the given ports (REQ-MVP-005).
 
@@ -3084,6 +3098,10 @@ def build_toolset(
             isinstance(preset_start, bool) or not isinstance(preset_start, int) or preset_start < 1
         ):
             return _error_result(call, "'preset_start' must be a positive integer")
+        # 카드 t609 — 앞 곡과 다른 룩으로 열기(기본 켬). 운영자가 이 곡만 끌 때 false.
+        avoid_previous_looks = call.arguments.get("avoid_previous_looks", True)
+        if not isinstance(avoid_previous_looks, bool):
+            return _error_result(call, "'avoid_previous_looks' must be true or false")
         raw_sections = call.arguments.get("sections")
         # SPEC-COPILOT-SONGCONFIRM-001 (REQ-SONGCONFIRM-009/010/011) — 세션이 확정
         # 기록을 들고 있고 모델이 'sections' 를 **주지 않았으면** 채택 구간이
@@ -3355,20 +3373,31 @@ def build_toolset(
             explicit_dynamics=explicit_dynamics,
             confirmed_default=confirmed_default,
         )
-        plan, density_notes, palette_source = build_upload_song_plan(
-            song_title=song_title,
-            sections=planned_sections,
-            bpm=density_bpm,
-            genre=genre,
-            records=records,
-            rig=rig,
-            sequence_no=sequence_number,
-            timing=timing_request,
-            position_disabled_reason=position_disabled_reason,
-            blinder_group_no=blinder_group_no,
-            song_end_ms=density_end_ms,
-            # 옛 업로드 길과 같은 시퀀스 이름 — 콘솔 라벨과 타임코드 이름이 이 값을 쓴다.
-            sequence_name=_ascii_label(song_title, fallback=f"Song {sequence_number}"),
+
+        def build_at(offset: int):
+            built = build_upload_song_plan(
+                song_title=song_title,
+                sections=planned_sections,
+                bpm=density_bpm,
+                genre=genre,
+                records=records,
+                rig=rig,
+                sequence_no=sequence_number,
+                timing=timing_request,
+                position_disabled_reason=position_disabled_reason,
+                blinder_group_no=blinder_group_no,
+                song_end_ms=density_end_ms,
+                # 옛 업로드 길과 같은 시퀀스 이름 — 콘솔 라벨과 타임코드 이름이 이 값을 쓴다.
+                sequence_name=_ascii_label(song_title, fallback=f"Song {sequence_number}"),
+                look_offset=offset,
+            )
+            return built, compose_song_cue_bundle(built[0])
+
+        # 카드 t609 — 대화 길(t491)과 같은 고르기. 세션 기억이 없으면(창 미배선·첫 곡)
+        # 오프셋 0 — 오늘과 같다.
+        look_history = song_look_memory.history if song_look_memory is not None else []
+        (plan, density_notes, palette_source), _, look_offset = compose_avoiding_previous(
+            build_at, look_history, enabled=avoid_previous_looks
         )
         songconfirm_fields["cue_density"] = {
             "cue_count": len(plan.sections),
@@ -3607,6 +3636,27 @@ def build_toolset(
             )
             payload["console_commands_sent"] = 0
             payload["summary_ko"] = songcue_refusal
+        # 카드 t609 — 고른 오프셋을 회신에 싣고, 콘솔 저장이 끝난 곡만 세션 기억에
+        # 넣는다(대화 길 t491 과 같은 규칙). 거절·오류·실패한 저장은 쇼에 나간 적이
+        # 없으므로 넣지 않는다.
+        payload["look_offset"] = look_offset
+        if look_offset:
+            payload["look_note_ko"] = (
+                f"앞 곡과 겹치지 않게 고른 위치·색 순서를 {look_offset}칸 돌렸습니다 "
+                "(새 위치·새 색 없음). 감독 답 그대로 쓰려면 '앞 곡 룩 허용'이라고 "
+                "말해 주세요."
+            )
+        # 명령 하나라도 콘솔이 거부하면 ``run_commands`` 가 결과를 오류로 돌려준다
+        # (`.moai/reports/t609/probe_store_fail.py` 실측) — 그래서 오류 여부가 곧
+        # 「저장 성공」 판정이다. 감독 거절은 따로 본다.
+        if (
+            song_look_memory is not None
+            and not execution.result.is_error
+            and payload.get("gate_status") != "rejected"
+        ):
+            stored_looks = song_looks(composition)
+            if stored_looks:
+                song_look_memory.history.append(stored_looks)
         # 슬롯이 준비됐으면 녹화는 **운영자의 몫**이다 — 그 명령은 콘솔을 녹화
         # 무장 상태로 만들고 해제 경로가 실측 1회뿐이라, 앱은 발화하지 않고
         # 넘긴다(REQ-MUSICSYNC-020). 이 자리는 `run_commands` 로 간 번들
@@ -10970,6 +11020,17 @@ def build_toolset(
                             "it; the tool then finds each position by its label near that "
                             "slot. Omit it and the cues carry no position moves — the reply "
                             "says so. Never guess this number."
+                        ),
+                    },
+                    "avoid_previous_looks": {
+                        "type": "boolean",
+                        "description": (
+                            "Default true: when earlier songs were already stored in this "
+                            "session, the tool opens this song with a different look by "
+                            "rotating the operator's own position and palette order (no new "
+                            "positions or colors). Pass false only when the operator asks to "
+                            "keep the previous song's look for THIS song (e.g. '앞 곡 룩 "
+                            "허용'). The reply reports look_offset."
                         ),
                     },
                 },
