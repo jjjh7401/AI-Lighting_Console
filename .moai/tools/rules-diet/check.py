@@ -1,8 +1,9 @@
 """상시 적재 instruction 파일 합계 점검. 한도(150,000자)를 넘으면 종료 코드 1.
 
 저장소 루트에서: python3 .moai/tools/rules-diet/check.py
-계산식은 .moai/reports/t613/measure.py 와 같다 (frontmatter·HTML 주석 제외 글자 수).
+계산식은 t613 제안서(레인-2 의 measure.py)와 같다 (frontmatter·HTML 주석 제외 글자 수).
 """
+
 import re
 import sys
 
@@ -35,11 +36,13 @@ def counted(text):
 def main():
     total = 0
     for f in FILES:
-        n = len(counted(open(f, encoding="utf-8").read()))
+        with open(f, encoding="utf-8") as fh:
+            n = len(counted(fh.read()))
         total += n
         print(f"{n:>8}  {f}")
     ok = total <= LIMIT
-    print(f"{total:>8}  TOTAL (limit {LIMIT}) -> {'OK, margin %d' % (LIMIT - total) if ok else 'FAIL, over by %d' % (total - LIMIT)}")
+    verdict = f"OK, margin {LIMIT - total}" if ok else f"FAIL, over by {total - LIMIT}"
+    print(f"{total:>8}  TOTAL (limit {LIMIT}) -> {verdict}")
     sys.exit(0 if ok else 1)
 
 

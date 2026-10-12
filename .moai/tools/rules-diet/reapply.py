@@ -5,6 +5,7 @@
   python3 .moai/tools/rules-diet/reapply.py --dry-run # 어느 파일이 다른지만 출력 (아무것도 쓰지 않음)
 점검이 실패하면 종료 코드 1 이다. 이 스크립트는 moai update 를 실행하지 않는다.
 """
+
 import filecmp
 import os
 import shutil
