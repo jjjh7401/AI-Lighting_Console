@@ -686,7 +686,13 @@ def emit_beat_grid_write_bundle(
         cues_sorted = sorted(raw_cues, key=lambda c: int(c["bar"]))  # type: ignore[index]
         cue_results: list[CueEmitResult] = []
         recorded = (recorded_cue_numbers or {}).get(group_name) or {}
-        next_cue_number = max(recorded.values(), default=0) + 1
+        # 카드 t616 — 소유 기록에 이름은 있는데 큐가 0개인 트랙은 콘솔에 시퀀스(와 빈 자동
+        # Cue 1)가 이미 있다. 거기에 옵션 없는 Cue 1 저장을 보내면 콘솔이 User Canceled Command
+        # 로 거절하므로(t608 v3 S4), 자동 Cue 1 은 두고 Cue 2 부터 저장한다(감독 결정 A안).
+        owned_without_cues = recorded_cue_numbers is not None and (
+            group_name in recorded_cue_numbers and not recorded
+        )
+        next_cue_number = max(recorded.values(), default=1 if owned_without_cues else 0) + 1
         # 카드 t612 — 첫 큐 저장이 시퀀스를 만들고, 이름은 그 저장 바로 뒤에 붙는다.
         name_pending = True
         for cue in cues_sorted:
