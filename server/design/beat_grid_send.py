@@ -485,9 +485,6 @@ def apply_beat_grid_ownership_reuse(
             new_tracks.append(track)
             continue
 
-        store_sequence_commands = tuple(
-            line for line in track.store_sequence_commands if not line.startswith("Store Sequence ")
-        )
         assign_timecode_commands = (
             () if owned_timecode is not None else track.assign_timecode_commands
         )
@@ -524,7 +521,6 @@ def apply_beat_grid_ownership_reuse(
         new_tracks.append(
             replace(
                 track,
-                store_sequence_commands=store_sequence_commands,
                 assign_timecode_commands=assign_timecode_commands,
                 cues=cues + delete_cues,
             )

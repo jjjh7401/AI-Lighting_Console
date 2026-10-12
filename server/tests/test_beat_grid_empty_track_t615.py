@@ -58,8 +58,11 @@ class TestATrackWithoutAStoredCueEmitsNothing:
 
     def test_the_bare_store_sequence_line_is_not_emitted(self) -> None:
         # 카드 t615 — 맨 Store Sequence 는 빈 Cue 1 을 만든다. 시퀀스 줄도 이름 줄도 없어야 한다.
+        # 카드 t617 — 항상 비던 store_sequence_commands 필드는 없앴다. 맨 줄이 없다는 것은
+        # 트랙 줄 전체가 비어 있다는 것으로 확인한다.
         (track,) = _bundle([_foh([])]).tracks
-        assert track.store_sequence_commands == ()
+        assert not hasattr(track, "store_sequence_commands")
+        assert not any(line.startswith("Store Sequence") for line in track.commands)
 
     def test_a_cue_held_by_the_pool_check_leaves_the_track_empty(self) -> None:
         # 저장되는 큐가 보류로 전부 막히면 저장 큐 0개와 같다. 칸별 사유는 그대로 남는다.

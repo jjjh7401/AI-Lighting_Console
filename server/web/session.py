@@ -10318,15 +10318,13 @@ class ChatSession:
         """``result.commands``(에미터가 실제로 낼 전체 줄)와 **바이트
         동일한 순서**로 재구성되는 "칸" 목록 — ``build_write_approval_
         batch``가 이걸 이어 붙이면 ``result.commands``와 정확히 같다.
-        타임코드 풀 셋업 → (트랙마다: 시퀀스 셋업 → 그 트랙의 칸들 →
+        타임코드 풀 셋업 → (트랙마다: 그 트랙의 칸들 →
         타임코드 배정)의 순서를 ``BeatGridEmitResult``/``TrackEmitResult``
         의 ``commands`` 프로퍼티 본문 그대로 따른다."""
         cells: list[tuple[str, ...]] = []
         if result.timecode_setup_commands:
             cells.append(result.timecode_setup_commands)
         for track in result.tracks:
-            if track.store_sequence_commands:
-                cells.append(track.store_sequence_commands)
             for cue in track.cues:
                 if cue.commands:
                     cells.append(cue.commands)
