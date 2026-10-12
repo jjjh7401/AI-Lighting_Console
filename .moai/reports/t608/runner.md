@@ -297,5 +297,7 @@ refused: sha256 mismatch: file=9ca962e47fab66e8e95dc7ce447c2fcec013a4f8e1161d711
 
 ## 10. PR·CI
 
-- PR: 생성 후 기록
-- CI: 생성 후 기록
+- PR: #654 (https://github.com/jjjh7401/AI-Lighting_Console/pull/654), 브랜치 `WT-beatgrid-runner`
+- CI: 실행 `38228337534` (`test`), 헤드 `2ca3abe9f5a84161de01e464481f5676faeb3242`, 결과 success
+- 병합: merge commit `7e5903d01492b3e2f6872c8f895deff954064867` (2026-10-12 09:20:51Z), `gh pr merge 654 --merge`. 브랜치는 유지했다
+- 이 기록 커밋은 병합 뒤 `WT-beatgrid-runner` 브랜치에 올렸다. main 은 보호되어 직접 푸시하지 않았다
