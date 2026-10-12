@@ -450,6 +450,13 @@ EDM 경계 검출 연구가 가장 강한 단서 셋을 지목한다: **에너�
 > `server/tests/test_song_look_memory_t491.py`. 곡 **안에서** 앞 큐와 가장 대비되는 룩을
 > 고르는 축은 여전히 열려 있다.
 
+> **덧붙임(2026-10-12, 카드 t609).** 위 갱신은 대화 길만 다뤘다. 업로드 길(`prepare_songcue`
+> → `server/design/upload_song_plan.py`)도 이제 같은 기억과 같은 고르기를 쓴다 — 세션이 대화
+> 길과 **같은 목록**을 넘기므로 한 쇼의 기억은 하나다. 업로드 길의 곡별 끔은 도구 인자
+> `avoid_previous_looks`(기본 켬)다. 실측(`.moai/reports/t609/run-verdict.md`, 같은 8곡 · 같은
+> 답): 이웃 쌍 첫 큐 같음 7/7 → 0/7, 재사용 67/99 → 13/99. 시험은
+> `server/tests/test_upload_look_memory_t609.py`.
+
 ## 13. 미확보 — 숫자로 메우지 않은 것
 
 이 문서가 다루지 못한 것을 명시한다. 나중에 여기를 채우는 것이 후속 조사의 범위다.

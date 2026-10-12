@@ -1,0 +1,4450 @@
+{
+ "songs": [
+  "Club Diver",
+  "Cut and Run",
+  "Ice cream",
+  "Morning",
+  "Rain",
+  "Too Cool",
+  "scott-buckley-neon",
+  "걸그룹DinoDino_C_max최고품질"
+ ],
+ "runs": {
+  "none": [
+   {
+    "song": "Club Diver",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 6",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 8",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 9",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Cut and Run",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 5",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 8",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Verse 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 9",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 10",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Ice cream",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Bridge 2",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 2",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Morning",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 2",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 3",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Rain",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Verse 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 4",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 5",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 4",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 6",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Too Cool",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 4",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 5",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 6",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 3",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 9",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 10",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Verse 4",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 11",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Chorus 12",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 18.0,
+      "name": "Chorus 13",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 19.0,
+      "name": "Bridge 1",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 20.0,
+      "name": "Bridge 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 21.0,
+      "name": "Verse 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 22.0,
+      "name": "Verse 6",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 23.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "scott-buckley-neon",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Bridge 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 2",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 3",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Verse 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 4",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 6",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "걸그룹DinoDino_C_max최고품질",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": null,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Bridge 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2 (1/2)",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 2 (2/2)",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Bridge 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   }
+  ],
+  "shared": [
+   {
+    "song": "Club Diver",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 6",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 8",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 9",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Cut and Run",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 1,
+    "memory_len": 2,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Home",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 1",
+      "position": "Center",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 2",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 3",
+      "position": "Cross",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 6",
+      "position": "Cross",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Verse 4",
+      "position": "Fan Out",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 8",
+      "position": "Fan Out",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Verse 5",
+      "position": "Audience",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 9",
+      "position": "Audience",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 10",
+      "position": "Center",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Ring In",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Ice cream",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 2,
+    "memory_len": 3,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Bridge 2",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 2",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Finale",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Morning",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 6,
+    "memory_len": 4,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 6",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 7",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Rain",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 8,
+    "memory_len": 5,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Verse 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 4",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 5",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 4",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Too Cool",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 1,
+    "memory_len": 6,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Home",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 4",
+      "position": "Vocal DSC",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 5",
+      "position": "Center",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 6",
+      "position": "Center",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Center",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 2",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Wall",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Cross",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 9",
+      "position": "Cross",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 10",
+      "position": "Cross",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 11",
+      "position": "Fan Out",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Chorus 12",
+      "position": "Fan Out",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 18.0,
+      "name": "Chorus 13",
+      "position": "Center",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 19.0,
+      "name": "Bridge 1",
+      "position": "Audience",
+      "palette": [
+       "lavender",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 20.0,
+      "name": "Bridge 2",
+      "position": "Audience",
+      "palette": [
+       "lavender",
+       "블루"
+      ],
+      "fx": []
+     },
+     {
+      "no": 21.0,
+      "name": "Verse 5",
+      "position": "Audience",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 22.0,
+      "name": "Verse 6",
+      "position": "Ring In",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 23.0,
+      "name": "Finale",
+      "position": "Ring In",
+      "palette": [
+       "warm white",
+       "블루"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "scott-buckley-neon",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 2,
+    "memory_len": 7,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Bridge 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Verse 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 1",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 6",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 3",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Verse 7",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 4",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 5",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "걸그룹DinoDino_C_max최고품질",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 16,
+    "memory_len": 8,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Bridge 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2 (1/2)",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 2 (2/2)",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Bridge 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   }
+  ],
+  "fresh": [
+   {
+    "song": "Club Diver",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 6",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 8",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 9",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Cut and Run",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 5",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 8",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Verse 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 9",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 10",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Ice cream",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Bridge 2",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 2",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Morning",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 2",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 3",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Rain",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Verse 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 4",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 5",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 4",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 6",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "Too Cool",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Chorus 3",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Chorus 4",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Chorus 5",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Chorus 6",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 1",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 9.0,
+      "name": "Verse 2",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 3",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Chorus 7",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 8",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Chorus 9",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 10",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Verse 4",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 11",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Chorus 12",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 18.0,
+      "name": "Chorus 13",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 19.0,
+      "name": "Bridge 1",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 20.0,
+      "name": "Bridge 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 21.0,
+      "name": "Verse 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 22.0,
+      "name": "Verse 6",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 23.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "scott-buckley-neon",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Bridge 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 3.0,
+      "name": "Bridge 2",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 4.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 3",
+      "position": "Vocal DSC",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 4",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Chorus 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Chorus 2",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 10.0,
+      "name": "Verse 5",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 11.0,
+      "name": "Verse 6",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 12.0,
+      "name": "Chorus 3",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "bounce chase"
+      ]
+     },
+     {
+      "no": 13.0,
+      "name": "Verse 7",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 14.0,
+      "name": "Chorus 4",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "cross diagonal"
+      ]
+     },
+     {
+      "no": 15.0,
+      "name": "Chorus 5",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 16.0,
+      "name": "Chorus 6",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "horizontal chase"
+      ]
+     },
+     {
+      "no": 17.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   },
+   {
+    "song": "걸그룹DinoDino_C_max최고품질",
+    "executed": true,
+    "is_error": false,
+    "look_offset": 0,
+    "memory_len": 1,
+    "cues": [
+     {
+      "no": 1.0,
+      "name": "Intro",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": []
+     },
+     {
+      "no": 2.0,
+      "name": "Verse 1",
+      "position": "Home",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 3.0,
+      "name": "Chorus 1",
+      "position": "Ring In",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     },
+     {
+      "no": 4.0,
+      "name": "Bridge 1",
+      "position": "Center",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 5.0,
+      "name": "Verse 2 (1/2)",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 6.0,
+      "name": "Verse 2 (2/2)",
+      "position": "Wall",
+      "palette": [
+       "cyan",
+       "블루"
+      ],
+      "fx": [
+       "slow tilt"
+      ]
+     },
+     {
+      "no": 7.0,
+      "name": "Verse 3",
+      "position": "Wall",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "soft wave"
+      ]
+     },
+     {
+      "no": 8.0,
+      "name": "Verse 4",
+      "position": "Cross",
+      "palette": [
+       "블루",
+       "cyan"
+      ],
+      "fx": [
+       "slow pan"
+      ]
+     },
+     {
+      "no": 9.0,
+      "name": "Bridge 2",
+      "position": "Fan Out",
+      "palette": [
+       "블루",
+       "lavender"
+      ],
+      "fx": []
+     },
+     {
+      "no": 10.0,
+      "name": "Finale",
+      "position": "Audience",
+      "palette": [
+       "블루",
+       "warm white"
+      ],
+      "fx": [
+       "dimmer chase"
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "analysis": {
+  "none": {
+   "adjacent": {
+    "summary": {
+     "pairs": 7,
+     "opening_same": 7,
+     "identical_look_set": 0,
+     "b_cues_total": 99,
+     "b_cues_reusing_a_look": 67,
+     "pairs_with_any_shared_look": 7
+    },
+    "pairs": [
+     {
+      "a": "Club Diver",
+      "b": "Cut and Run",
+      "opening_same": true,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 13,
+      "b_reuse_ratio": 0.765,
+      "distinct_a": 11,
+      "distinct_b": 14,
+      "shared_distinct": 10,
+      "jaccard": 0.667,
+      "identical_look_set": false
+     },
+     {
+      "a": "Cut and Run",
+      "b": "Ice cream",
+      "opening_same": true,
+      "b_cues": 7,
+      "b_cues_reusing_a_look": 4,
+      "b_reuse_ratio": 0.571,
+      "distinct_a": 14,
+      "distinct_b": 7,
+      "shared_distinct": 4,
+      "jaccard": 0.235,
+      "identical_look_set": false
+     },
+     {
+      "a": "Ice cream",
+      "b": "Morning",
+      "opening_same": true,
+      "b_cues": 13,
+      "b_cues_reusing_a_look": 6,
+      "b_reuse_ratio": 0.462,
+      "distinct_a": 7,
+      "distinct_b": 11,
+      "shared_distinct": 5,
+      "jaccard": 0.385,
+      "identical_look_set": false
+     },
+     {
+      "a": "Morning",
+      "b": "Rain",
+      "opening_same": true,
+      "b_cues": 12,
+      "b_cues_reusing_a_look": 11,
+      "b_reuse_ratio": 0.917,
+      "distinct_a": 11,
+      "distinct_b": 10,
+      "shared_distinct": 9,
+      "jaccard": 0.75,
+      "identical_look_set": false
+     },
+     {
+      "a": "Rain",
+      "b": "Too Cool",
+      "opening_same": true,
+      "b_cues": 23,
+      "b_cues_reusing_a_look": 15,
+      "b_reuse_ratio": 0.652,
+      "distinct_a": 10,
+      "distinct_b": 14,
+      "shared_distinct": 9,
+      "jaccard": 0.6,
+      "identical_look_set": false
+     },
+     {
+      "a": "Too Cool",
+      "b": "scott-buckley-neon",
+      "opening_same": true,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 11,
+      "b_reuse_ratio": 0.647,
+      "distinct_a": 14,
+      "distinct_b": 14,
+      "shared_distinct": 9,
+      "jaccard": 0.474,
+      "identical_look_set": false
+     },
+     {
+      "a": "scott-buckley-neon",
+      "b": "걸그룹DinoDino_C_max최고품질",
+      "opening_same": true,
+      "b_cues": 10,
+      "b_cues_reusing_a_look": 7,
+      "b_reuse_ratio": 0.7,
+      "distinct_a": 14,
+      "distinct_b": 9,
+      "shared_distinct": 6,
+      "jaccard": 0.353,
+      "identical_look_set": false
+     }
+    ]
+   },
+   "all_pairs": {
+    "summary": {
+     "pairs": 28,
+     "opening_same": 28,
+     "identical_look_set": 0,
+     "b_cues_total": 405,
+     "b_cues_reusing_a_look": 253,
+     "pairs_with_any_shared_look": 28
+    }
+   },
+   "distinct_looks": 23
+  },
+  "shared": {
+   "adjacent": {
+    "summary": {
+     "pairs": 7,
+     "opening_same": 0,
+     "identical_look_set": 0,
+     "b_cues_total": 99,
+     "b_cues_reusing_a_look": 13,
+     "pairs_with_any_shared_look": 3
+    },
+    "pairs": [
+     {
+      "a": "Club Diver",
+      "b": "Cut and Run",
+      "opening_same": false,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 0,
+      "b_reuse_ratio": 0.0,
+      "distinct_a": 11,
+      "distinct_b": 14,
+      "shared_distinct": 0,
+      "jaccard": 0.0,
+      "identical_look_set": false
+     },
+     {
+      "a": "Cut and Run",
+      "b": "Ice cream",
+      "opening_same": false,
+      "b_cues": 7,
+      "b_cues_reusing_a_look": 0,
+      "b_reuse_ratio": 0.0,
+      "distinct_a": 14,
+      "distinct_b": 7,
+      "shared_distinct": 0,
+      "jaccard": 0.0,
+      "identical_look_set": false
+     },
+     {
+      "a": "Ice cream",
+      "b": "Morning",
+      "opening_same": false,
+      "b_cues": 13,
+      "b_cues_reusing_a_look": 2,
+      "b_reuse_ratio": 0.154,
+      "distinct_a": 7,
+      "distinct_b": 10,
+      "shared_distinct": 2,
+      "jaccard": 0.133,
+      "identical_look_set": false
+     },
+     {
+      "a": "Morning",
+      "b": "Rain",
+      "opening_same": false,
+      "b_cues": 12,
+      "b_cues_reusing_a_look": 6,
+      "b_reuse_ratio": 0.5,
+      "distinct_a": 10,
+      "distinct_b": 9,
+      "shared_distinct": 6,
+      "jaccard": 0.462,
+      "identical_look_set": false
+     },
+     {
+      "a": "Rain",
+      "b": "Too Cool",
+      "opening_same": false,
+      "b_cues": 23,
+      "b_cues_reusing_a_look": 0,
+      "b_reuse_ratio": 0.0,
+      "distinct_a": 9,
+      "distinct_b": 14,
+      "shared_distinct": 0,
+      "jaccard": 0.0,
+      "identical_look_set": false
+     },
+     {
+      "a": "Too Cool",
+      "b": "scott-buckley-neon",
+      "opening_same": false,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 0,
+      "b_reuse_ratio": 0.0,
+      "distinct_a": 14,
+      "distinct_b": 14,
+      "shared_distinct": 0,
+      "jaccard": 0.0,
+      "identical_look_set": false
+     },
+     {
+      "a": "scott-buckley-neon",
+      "b": "걸그룹DinoDino_C_max최고품질",
+      "opening_same": false,
+      "b_cues": 10,
+      "b_cues_reusing_a_look": 5,
+      "b_reuse_ratio": 0.5,
+      "distinct_a": 14,
+      "distinct_b": 9,
+      "shared_distinct": 4,
+      "jaccard": 0.211,
+      "identical_look_set": false
+     }
+    ]
+   },
+   "all_pairs": {
+    "summary": {
+     "pairs": 28,
+     "opening_same": 5,
+     "identical_look_set": 0,
+     "b_cues_total": 405,
+     "b_cues_reusing_a_look": 104,
+     "pairs_with_any_shared_look": 17
+    }
+   },
+   "distinct_looks": 38
+  },
+  "fresh": {
+   "adjacent": {
+    "summary": {
+     "pairs": 7,
+     "opening_same": 7,
+     "identical_look_set": 0,
+     "b_cues_total": 99,
+     "b_cues_reusing_a_look": 67,
+     "pairs_with_any_shared_look": 7
+    },
+    "pairs": [
+     {
+      "a": "Club Diver",
+      "b": "Cut and Run",
+      "opening_same": true,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 13,
+      "b_reuse_ratio": 0.765,
+      "distinct_a": 11,
+      "distinct_b": 14,
+      "shared_distinct": 10,
+      "jaccard": 0.667,
+      "identical_look_set": false
+     },
+     {
+      "a": "Cut and Run",
+      "b": "Ice cream",
+      "opening_same": true,
+      "b_cues": 7,
+      "b_cues_reusing_a_look": 4,
+      "b_reuse_ratio": 0.571,
+      "distinct_a": 14,
+      "distinct_b": 7,
+      "shared_distinct": 4,
+      "jaccard": 0.235,
+      "identical_look_set": false
+     },
+     {
+      "a": "Ice cream",
+      "b": "Morning",
+      "opening_same": true,
+      "b_cues": 13,
+      "b_cues_reusing_a_look": 6,
+      "b_reuse_ratio": 0.462,
+      "distinct_a": 7,
+      "distinct_b": 11,
+      "shared_distinct": 5,
+      "jaccard": 0.385,
+      "identical_look_set": false
+     },
+     {
+      "a": "Morning",
+      "b": "Rain",
+      "opening_same": true,
+      "b_cues": 12,
+      "b_cues_reusing_a_look": 11,
+      "b_reuse_ratio": 0.917,
+      "distinct_a": 11,
+      "distinct_b": 10,
+      "shared_distinct": 9,
+      "jaccard": 0.75,
+      "identical_look_set": false
+     },
+     {
+      "a": "Rain",
+      "b": "Too Cool",
+      "opening_same": true,
+      "b_cues": 23,
+      "b_cues_reusing_a_look": 15,
+      "b_reuse_ratio": 0.652,
+      "distinct_a": 10,
+      "distinct_b": 14,
+      "shared_distinct": 9,
+      "jaccard": 0.6,
+      "identical_look_set": false
+     },
+     {
+      "a": "Too Cool",
+      "b": "scott-buckley-neon",
+      "opening_same": true,
+      "b_cues": 17,
+      "b_cues_reusing_a_look": 11,
+      "b_reuse_ratio": 0.647,
+      "distinct_a": 14,
+      "distinct_b": 14,
+      "shared_distinct": 9,
+      "jaccard": 0.474,
+      "identical_look_set": false
+     },
+     {
+      "a": "scott-buckley-neon",
+      "b": "걸그룹DinoDino_C_max최고품질",
+      "opening_same": true,
+      "b_cues": 10,
+      "b_cues_reusing_a_look": 7,
+      "b_reuse_ratio": 0.7,
+      "distinct_a": 14,
+      "distinct_b": 9,
+      "shared_distinct": 6,
+      "jaccard": 0.353,
+      "identical_look_set": false
+     }
+    ]
+   },
+   "all_pairs": {
+    "summary": {
+     "pairs": 28,
+     "opening_same": 28,
+     "identical_look_set": 0,
+     "b_cues_total": 405,
+     "b_cues_reusing_a_look": 253,
+     "pairs_with_any_shared_look": 28
+    }
+   },
+   "distinct_looks": 23
+  }
+ }
+}
