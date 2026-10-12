@@ -410,12 +410,12 @@ def verify_owned_sequences(
 
 
 def _overwrite_store_cue(cue: CueEmitResult, *, sequence_number: int) -> CueEmitResult:
-    """이 칸이 실제로 저장한 ``Store Cue <n> Sequence <s>`` 줄 하나(있다면
+    """이 칸이 실제로 저장한 ``Store Sequence <s> Cue <n>`` 줄 하나(있다면
     정확히 그 줄, ``_emit_cue``가 쓰는 모양 그대로)에만 ``/Overwrite``를
     덧붙인다 — 문자열을 더 넓게 훑지 않는다(``cue_number``로 그 줄이
     정확히 무엇일지 미리 알고, 그 값과만 비교한다).
 
-    # @MX:WARN: [AUTO] ``Store Cue ... /Overwrite``는 이 저장소에서 실기로
+    # @MX:WARN: [AUTO] ``Store Sequence S Cue N ... /Overwrite``는 이 저장소에서 실기로
     #   확인된 적이 없다 — 기존 쓰기 경로들(``position_fx.py``·
     #   ``pointing.py``·``scene/compile.py``)은 전부 ``/Merge``를 고르고
     #   ``/Overwrite``를 일부러 피한다(각자의 독스트링: "destructive flag
@@ -429,10 +429,10 @@ def _overwrite_store_cue(cue: CueEmitResult, *, sequence_number: int) -> CueEmit
     """
     if not cue.commands or cue.cue_number is None:
         return cue
-    target = f"Store Cue {cue.cue_number} Sequence {sequence_number}"
+    target = f"Store Sequence {sequence_number} Cue {cue.cue_number}"
     # 카드 t576 — 저장 줄 뒤에 ``CueFade <초>``·``/CueOnly``가 붙을 수 있다. 그 줄도
     # 같은 큐의 저장 줄이므로 맨 끝에 ``/Overwrite``를 덧붙인다(옵션은 실측 순서대로
-    # 키워드 뒤). ``Store Cue 1 Sequence 1`` 이 ``Store Cue 1 Sequence 10`` 과 섞이지
+    # 키워드 뒤). ``Store Sequence 1 Cue 1`` 이 ``Store Sequence 1 Cue 10`` 과 섞이지
     # 않게 정확히 같거나 공백으로 이어지는 줄만 고른다.
     overwritten = tuple(
         f"{line} /Overwrite" if line == target or line.startswith(f"{target} ") else line
@@ -464,7 +464,7 @@ def apply_beat_grid_ownership_reuse(
       둘째 트랙을 만든다). 새 트랙(``owned_sequences``에 없는 그룹)은
       ``Assign`` 줄을 그대로 낸다(그 시퀀스는 아직 그 타임코드에
       배정된 적이 없다).
-    * 소유한 트랙에서 **기록된 마디**의 ``Store Cue`` 줄에만 ``/Overwrite``를
+    * 소유한 트랙에서 **기록된 마디**의 ``Store Sequence S Cue N`` 줄에만 ``/Overwrite``를
       붙인다(그 큐는 콘솔에 이미 있다). 새 마디는 새 번호라 그대로 둔다.
     * 소유한 트랙에서, 기록된 마디 중 **이번 초안에서 정말 비워진** 칸
       (격자에서 빠졌거나 낼 내용이 없음)의 번호마다 ``Delete Cue <n>

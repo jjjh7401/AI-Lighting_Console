@@ -215,7 +215,8 @@ class TestReapplyFlows:
         assert len(approval.requests) == 2
 
         executed = _non_cue_store_lines(console.executed)
-        assert not any(c.startswith("Store Sequence ") for c in executed)
+        # 맨 Store Sequence 줄(큐 없는 것)만 금지 — 큐 저장 줄 ``Store Sequence N Cue M`` 은 남는다.
+        assert not any(c.startswith("Store Sequence ") and " Cue " not in c for c in executed)
         assert not any(c.startswith("Store Timecode ") for c in executed)
         assert not any(c.startswith("Assign Sequence ") for c in executed)
         assert any("/Overwrite" in c for c in executed)
@@ -566,9 +567,9 @@ class TestBlockedCellsArePreserved:
         seq = FIRST_SEQUENCE_NUMBER
         # 막힌 칸(큐 2)은 지우지도, 다른 칸 내용으로 덮어쓰지도 않는다.
         assert not any(c.startswith(f"Delete Cue 2 Sequence {seq}") for c in console.executed)
-        assert not any(c.startswith(f"Store Cue 2 Sequence {seq}") for c in console.executed)
+        assert not any(c.startswith(f"Store Sequence {seq} Cue 2") for c in console.executed)
         # 3마디는 당겨지지 않고 원래 번호 3에 덮어쓴다.
-        assert f"Store Cue 3 Sequence {seq} /Overwrite" in console.executed
+        assert f"Store Sequence {seq} Cue 3 /Overwrite" in console.executed
         # 기록에도 막힌 칸의 번호가 그대로 남는다.
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
@@ -594,7 +595,7 @@ class TestBlockedCellsArePreserved:
         assert second["ok"] is True
         seq = FIRST_SEQUENCE_NUMBER
         assert f"Delete Cue 2 Sequence {seq}" in console.executed
-        assert f"Store Cue 3 Sequence {seq} /Overwrite" in console.executed
+        assert f"Store Sequence {seq} Cue 3 /Overwrite" in console.executed
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
             "3": 3,
@@ -648,9 +649,14 @@ class TestNewBarBetweenRecordedBars:
         seq = FIRST_SEQUENCE_NUMBER
         # 새 마디(2)는 최대 번호(2) 다음 정수 3을 받는다 — 소수점 번호 없음.
         # 3마디는 기록된 번호 2를 그대로 쓴다.
-        assert f"Store Cue 3 Sequence {seq}" in console.executed
-        assert f"Store Cue 2 Sequence {seq} /Overwrite" in console.executed
-        assert not any("." in c.split()[2] for c in console.executed if c.startswith("Store Cue"))
+        assert f"Store Sequence {seq} Cue 3" in console.executed
+        assert f"Store Sequence {seq} Cue 2 /Overwrite" in console.executed
+        # 큐 번호(``Store Sequence <s> Cue <n>`` 의 다섯째 토큰)는 소수점이 없어야 한다.
+        assert not any(
+            "." in c.split()[4]
+            for c in console.executed
+            if c.startswith("Store Sequence ") and " Cue " in c
+        )
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
             "2": 3,
@@ -670,7 +676,7 @@ class TestApprovalSentMismatch:
 
         class _Mismatch:
             passed = False
-            sent_not_approved = ("Store Cue 9 Sequence 1",)
+            sent_not_approved = ("Store Sequence 1 Cue 9",)
             approved_not_sent = ()
 
         monkeypatch.setattr(

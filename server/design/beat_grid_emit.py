@@ -218,8 +218,8 @@ class CueEmitResult:
     bar: int
     commands: tuple[str, ...]
     blocked_reason: str | None
-    #: 카드 t563(REQ-LDBEAT-001/017) — 이 칸이 실제로 저장된 `Store Cue
-    #: <cue_number> Sequence <sequence_number>` 번호. 거절되거나 낼 것이
+    #: 카드 t563(REQ-LDBEAT-001/017) — 이 칸이 실제로 저장된 `Store Sequence
+    #: <sequence_number> Cue <cue_number>` 번호. 거절되거나 낼 것이
     #: 없는 칸(``commands`` 빈 튜플)은 번호를 쓰지 않았으므로 `None`이다
     #: — 미리보기(`beat_grid_preview`)가 "이 마디를 담은 큐가 몇 번인지"를
     #: 커맨드 문자열을 되읽지 않고 바로 알 수 있게 한다(값을 지어내지 않음).
@@ -235,6 +235,8 @@ class TrackEmitResult:
     group_no: int | None
     sequence_number: int | None
     timecode_number: int | None
+    #: 카드 t612 — 저장되는 큐가 하나라도 있으면 비어 있다(첫 큐 저장이 시퀀스를 만들고
+    #: 이름은 그 뒤에 붙는다). 저장되는 큐가 없을 때만 맨 Store Sequence 줄 + 이름이 온다.
     store_sequence_commands: tuple[str, ...]
     cues: tuple[CueEmitResult, ...]
     assign_timecode_commands: tuple[str, ...]
@@ -456,6 +458,7 @@ def _emit_cue(
     probe_results: Mapping[int, str],
     dimmer_attributes: Mapping[str, Sequence[str]],
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
+    sequence_name_command: str | None = None,
 ) -> CueEmitResult:
     bar = int(cue["bar"])  # type: ignore[arg-type]
 
@@ -499,15 +502,21 @@ def _emit_cue(
         return CueEmitResult(bar=bar, commands=(), blocked_reason=entry_plan.blocked_reason)
 
     commands = list(attribute_commands)
-    # @MX:WARN: [AUTO] 카드 t576 — ``CueFade``·``/CueOnly``는 실기 선례가 있지만 그 문면은
-    #   ``Store Sequence S Cue N CueFade x /Merge``(cue_sheet_apply) 어순이다. 이
-    #   에미터의 ``Store Cue N Sequence S CueFade x`` 어순과 붙여 쓴 선례는 저장소에 없다.
-    # @MX:REASON: 측정 전까지 가설 문법 — t580 실기 확인 목록에 올렸다. 거절되면 이 줄의
-    #   어순만 고치면 된다(초 환산·트리거·트래킹 판정은 그대로).
+    # 카드 t612 — 어순을 실기 선례대로 ``Store Sequence S Cue N``으로 고쳤다. 옛 어순
+    #   ``Store Cue N Sequence S``는 t608 실행(run-1012 index 33)에서 콘솔이
+    #   ``User Canceled Command``로 거절했다. ``CueFade``·``/CueOnly``는 cue_sheet_apply의
+    #   실측 순서(``Store Sequence S Cue N CueFade x /Merge``)를 따른다.
+    # @MX:WARN: [AUTO] 이 어순은 선례(t531 · cue_sheet_apply)와 같지만, 이 에미터가 낸
+    #   줄을 실기에서 받았다는 확인은 아직 없다 — 첫 큐 저장이 시퀀스를 만드는 것도 이 줄이다.
+    # @MX:REASON: 다음 실기 접속에서 run 의 첫 큐 줄(시퀀스 생성)을 먼저 확인한다. 거절되면
+    #   이 줄의 어순만 다시 고친다(초 환산·트리거·트래킹 판정은 그대로).
     store = store_with_fade(
-        f"Store Cue {cue_number} Sequence {sequence_number}", entry_plan.fade_seconds
+        f"Store Sequence {sequence_number} Cue {cue_number}", entry_plan.fade_seconds
     )
     commands.append(store + "".join(f" {option}" for option in entry_plan.store_options))
+    if sequence_name_command is not None:
+        # 카드 t612 — 실기 선례(t531)대로 이름은 큐 저장 바로 뒤에 건다.
+        commands.append(sequence_name_command)
     commands.append("ClearAll")
     commands.append(f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigType' 'Time'")
     trigger_ms = round((bar_seconds + entry_plan.trigger_offset_seconds) * 1000)
@@ -665,16 +674,15 @@ def emit_beat_grid_write_bundle(
 
         group_no = track.get("group_no")
         ascii_name = beat_grid_sequence_label(group_name, sequence_number)
-        store_sequence_commands = (
-            f"Store Sequence {sequence_number}",
-            f"Set Sequence {sequence_number} Property 'Name' '{ascii_name}'",
-        )
+        name_command = f"Set Sequence {sequence_number} Property 'Name' '{ascii_name}'"
 
         raw_cues = track.get("cues") or []
         cues_sorted = sorted(raw_cues, key=lambda c: int(c["bar"]))  # type: ignore[index]
         cue_results: list[CueEmitResult] = []
         recorded = (recorded_cue_numbers or {}).get(group_name) or {}
         next_cue_number = max(recorded.values(), default=0) + 1
+        # 카드 t612 — 첫 큐 저장이 시퀀스를 만들고, 이름은 그 저장 바로 뒤에 붙는다.
+        name_pending = True
         for cue in cues_sorted:
             # cue_number 는 "실제로 내용이 있는 칸"에만 매긴다 — 거절되거나
             # 공백인 칸은 새 번호를 쓰지 않는다(아래 조건부 증가). 기록된
@@ -695,11 +703,19 @@ def emit_beat_grid_write_bundle(
                 probe_results=probe_results,
                 dimmer_attributes=dimmer_attributes,
                 dimmer_attribute_reasons=dimmer_attribute_reasons,
+                sequence_name_command=name_command if name_pending else None,
             )
+            if result.commands:
+                name_pending = False
             if result.commands and recorded_number is None:
                 next_cue_number += 1
             cue_results.append(result)
 
+        # 카드 t612 — 저장되는 큐가 하나도 없을 때만 맨 Store Sequence 줄로 시퀀스를 만든다
+        # (배정 줄이 가리킬 시퀀스가 있어야 한다). 저장되는 큐가 있으면 그 큐가 만든다.
+        store_sequence_commands: tuple[str, ...] = (
+            (f"Store Sequence {sequence_number}", name_command) if name_pending else ()
+        )
         used_timecode_numbers.add(timecode_number)
         assign_timecode_commands = (
             f"Assign Sequence {sequence_number} At Timecode {timecode_number}",
