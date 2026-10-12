@@ -1,0 +1,37 @@
+F.......                                                                 [100%]
+=================================== FAILURES ===================================
+_________________ test_fixture_structure_matches_server_output _________________
+
+    def test_fixture_structure_matches_server_output() -> None:
+        fixture = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+        diff = structure_diff(build_payload(), fixture)
+>       assert not diff, mismatch_message(diff)
+E       AssertionError: runbookServerPayload.json 가 서버 실출력과 구조가 다르다(34건).
+E           - 사본에 없는 키: $.beat_grid
+E           - 사본에 없는 키: $.beat_grid.bar_range
+E           - 사본에 없는 키: $.beat_grid.bar_range.end
+E           - 사본에 없는 키: $.beat_grid.bar_range.start
+E           - 사본에 없는 키: $.beat_grid.console_audio_offset_seconds
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.axes
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.period_units
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.phase_spread_unverified
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.shapes
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.shapes[].name
+E           - 사본에 없는 키: $.beat_grid.movement_vocabulary.shapes[].unverified
+E           - 사본에 없는 키: $.beat_grid.note
+E           - 사본에 없는 키: $.beat_grid.probe_results
+E           - 사본에 없는 키: $.beat_grid.probe_results.1
+E           - 사본에 없는 키: $.beat_grid.probe_results.2
+E           - 사본에 없는 키: $.beat_grid.probe_results.3
+E           - 사본에 없는 키: $.beat_grid.probe_results.4
+E           - 사본에 없는 키: $.beat_grid.probe_results.5
+E           - 사본에 없는 키: $.beat_grid.probe_results.6
+E           … 외 14건
+E         다시 뜨기: uv run python -m server.tests.runbook_payload_fixture
+E       assert not ['사본에 없는 키: $.beat_grid', '사본에 없는 키: $.beat_grid.bar_range', '사본에 없는 키: $.beat_grid.bar_range.end', '사본에 없는 키: $.beat_...r_range.start', '사본에 없는 키: $.beat_grid.console_audio_offset_seconds', '사본에 없는 키: $.beat_grid.movement_vocabulary', ...]
+
+server/tests/test_runbook_payload_fixture_t496.py:71: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_runbook_payload_fixture_t496.py::test_fixture_structure_matches_server_output
+1 failed, 7 passed in 0.46s
