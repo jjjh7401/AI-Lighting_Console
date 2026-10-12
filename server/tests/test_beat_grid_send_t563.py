@@ -375,7 +375,7 @@ class TestBeatGridApply:
         assert "Store Sequence" in executed_writes[0] or any(
             "Store Sequence" in c for c in executed_writes
         )
-        assert any("Store Cue" in c for c in executed_writes)
+        assert any("Store Sequence" in c and " Cue " in c for c in executed_writes)
 
     def test_declined_approval_sends_nothing(self, tmp_path):
         store = SongTimelineStore()

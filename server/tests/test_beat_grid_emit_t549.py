@@ -324,7 +324,7 @@ class TestEmitBeatGridWriteBundleHappyPath:
         cue_result = result.tracks[0].cues[0]
         assert cue_result.blocked_reason is None
         assert any("Group 10" in line and "40" in line for line in cue_result.commands)
-        assert any(line.startswith("Store Cue") for line in cue_result.commands)
+        assert any(line.startswith("Store Sequence 300 Cue 1") for line in cue_result.commands)
 
     def test_dimmer_preset_cue_emits_at_preset_form_not_attribute_prefixed(self) -> None:
         cue = _empty_cue(7)

@@ -49,7 +49,7 @@ def _emit(cue: dict):
 
 
 def _store_line(emitted) -> str:
-    (line,) = [c for c in emitted.commands if c.startswith("Store Cue ")]
+    (line,) = [c for c in emitted.commands if c.startswith("Store Sequence ")]
     return line
 
 
@@ -58,12 +58,14 @@ def _trig_time(emitted) -> str:
     return line
 
 
-class TestNoEntryIsByteIdentical:
-    def test_an_empty_entry_emits_exactly_the_t549_lines(self) -> None:
+class TestNoEntryKeepsTheCueBaseline:
+    def test_an_empty_entry_emits_the_sequence_first_cue_lines(self) -> None:
+        # 카드 t612 — 첫 큐 저장이 시퀀스를 만들고, 이름 줄은 그 바로 뒤에 온다.
         emitted = _emit(_cue(2))
         assert emitted.commands == (
             "Group 7 ; At Preset 2.1",
-            f"Store Cue 1 Sequence {_SEQ}",
+            f"Store Sequence {_SEQ} Cue 1",
+            f"Set Sequence {_SEQ} Property 'Name' 'LDBEAT BACK'",
             "ClearAll",
             f"Set Cue 1 Sequence {_SEQ} Property 'TrigType' 'Time'",
             f"Set Cue 1 Sequence {_SEQ} Property 'TrigTime' 3",
@@ -74,16 +76,16 @@ class TestNoEntryIsByteIdentical:
 class TestFade:
     def test_fade_bars_become_seconds_at_send_time(self) -> None:
         # 2마디 × 4박 × 0.5초 = 4초
-        assert _store_line(_emit(_cue(2, fade_bars=2))) == f"Store Cue 1 Sequence {_SEQ} CueFade 4"
+        assert _store_line(_emit(_cue(2, fade_bars=2))) == f"Store Sequence {_SEQ} Cue 1 CueFade 4"
 
     def test_fade_beats_become_seconds_at_send_time(self) -> None:
         # 1박 × 0.5초 = 0.5초
         assert (
-            _store_line(_emit(_cue(2, fade_beats=1))) == f"Store Cue 1 Sequence {_SEQ} CueFade 0.5"
+            _store_line(_emit(_cue(2, fade_beats=1))) == f"Store Sequence {_SEQ} Cue 1 CueFade 0.5"
         )
 
     def test_zero_fade_is_sent_as_a_snap(self) -> None:
-        assert _store_line(_emit(_cue(2, fade_bars=0))) == f"Store Cue 1 Sequence {_SEQ} CueFade 0"
+        assert _store_line(_emit(_cue(2, fade_bars=0))) == f"Store Sequence {_SEQ} Cue 1 CueFade 0"
 
     def test_both_fade_units_at_once_blocks_the_cell(self) -> None:
         emitted = _emit(_cue(2, fade_bars=1, fade_beats=2))
@@ -117,7 +119,7 @@ class TestTracking:
         commands = _emit(_cue(2, tracking="Release")).commands
         line = f"Set Cue 1 Sequence {_SEQ} Property 'Release' 1"
         assert line in commands
-        assert commands.index(line) > commands.index(f"Store Cue 1 Sequence {_SEQ}")
+        assert commands.index(line) > commands.index(f"Store Sequence {_SEQ} Cue 1")
 
     def test_block_is_a_keyword_command_after_the_store(self) -> None:
         commands = _emit(_cue(2, tracking="Block")).commands
@@ -126,7 +128,7 @@ class TestTracking:
     def test_cue_only_is_a_store_option(self) -> None:
         assert (
             _store_line(_emit(_cue(2, tracking="Cue Only")))
-            == f"Store Cue 1 Sequence {_SEQ} /CueOnly"
+            == f"Store Sequence {_SEQ} Cue 1 /CueOnly"
         )
 
     def test_track_sends_nothing_extra(self) -> None:
@@ -136,7 +138,7 @@ class TestTracking:
         # 실측 순서(cue_sheet_apply): Store … CueFade <초> 뒤에 저장 옵션.
         assert (
             _store_line(_emit(_cue(2, fade_beats=2, tracking="Cue Only")))
-            == f"Store Cue 1 Sequence {_SEQ} CueFade 1 /CueOnly"
+            == f"Store Sequence {_SEQ} Cue 1 CueFade 1 /CueOnly"
         )
 
 
@@ -184,7 +186,7 @@ class TestReapplyOverwriteStillLands:
             owned_timecode=20,
             recorded_cue_numbers={"BACK": {2: 1}},
         )
-        assert f"Store Cue 1 Sequence {_SEQ} CueFade 4 /CueOnly /Overwrite" in reused.commands
+        assert f"Store Sequence {_SEQ} Cue 1 CueFade 4 /CueOnly /Overwrite" in reused.commands
 
 
 # =============================================================================
@@ -215,7 +217,7 @@ class TestSessionApplyCarriesEntry:
         assert len(approval.requests) == 1
         approved = approval.requests[0].commands
         # 페이드(1마디)와 트래킹(Block) 줄이 승인 묶음 안에 있고, 그대로 나갔다.
-        store_lines = [c for c in approved if c.startswith("Store Cue 1 Sequence ")]
+        store_lines = [c for c in approved if c.startswith("Store Sequence ") and " Cue 1 " in c]
         assert len(store_lines) == 1 and " CueFade " in store_lines[0]
         assert any(c.startswith("Block Sequence ") for c in approved)
         assert all(c in console.executed for c in approved)
