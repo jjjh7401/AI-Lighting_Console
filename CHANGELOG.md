@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-LDBEAT-001**(`completed`, 실기 콘솔 확인은 t608 대기) — 런북 모드에 **박자 격자**(콘솔 그룹 트랙 × 마디)를 독립 전체화면 뷰로 추가했다. 감독이 한 화면에서 전곡의 조명 배치를 마디 단위로 보고 고친다. M1~M14 14개 마일스톤, Tier L(REQ 25개·AC 25개).
+  - 콘솔 확인 프로브(M1, 9항목) + 응답기 긴 값 나눠 읽기 확장 — 콘솔이 실제로 지원하는 것만 믿고 쓴다.
+  - 전체화면 박자 격자(M2·M7) — 콘솔 그룹 트랙, 속성별 구조화된 칸(밝기/위치/색/효과 프리셋, 들어올 때), 앱 2단계 무빙 칸(M8).
+  - 칸 편집 세 길(M3) — 직접 고르기 / 자연어 문장 / AI 제안→적용, 전부 새 서버측 편집 연산(`apply_beat_grid_edit`)을 통과한다.
+  - 승인=송신 송신 경로(M4·M10) — 「⇪ 콘솔에 반영」 승인 1회가 곧 송신이다(승인/송신 분리 없음). 새 박자 전용 에미터(기존 재생 계약 변경 없음, diff 0).
+  - 프리셋 서랍 + 새 프리셋 만들기(M11~M14) — 위치/효과/색 세 종류 전부 "서랍에서 고르기" 또는 "+새 프리셋 만들기"(목표 좌표/효과 틀·주기/RGB)로 값 출처를 명시한다. 빈 프리셋 번호를 가리키는 칸은 송신 보류(가드 D) — 이미 승인된 칸도 같은 규칙으로 묶인다.
+  - 런북 UI 시안 화면 영역 전수 반영(M9) — 상단 바·곡 전체 지도·타임라인·이음매/전환·편집 칸·2D 무대·이 마디 한눈에·재생/음원·명령창/AI/프리셋 서랍 9개 영역.
+  - **검증** — 25/25 AC 자동 시험 PASS(가짜 콘솔). `uv run pytest server/tests -k "beat_grid or approval_vs_sent or send_approval or empty_preset or preset"` → `1746 passed, 2 skipped`. `npx vitest run src/components/BeatGrid` → `479 passed`(23 files). `test_beat_grid_t537.py` 단독 재확인 `32 passed`.
+  - **실기 미확인(카드 t608 대기)** — 송신 경로(새 에미터·새 프리셋 세 종류 만들기·다시 반영·타임코드 재생)의 실제 콘솔 쓰기 확인은 13항목(⓪~⑫) 전부 미수행이다. `completed`는 코드·자동 시험 기준이며, t608 실행 결과 결함이 나오면 `in-progress`로 되돌아온다.
+
 - **SPEC-LDRENDER-001**(`implemented`, AC-016 미달 — 아래 검증 참조) — 송신 함수(`reviewed_song_commands`)가 설계 층의 역할·색·효과를 콘솔로 보내는 중 접던 구조를 복원했다. 계기는 t498 Rain 실기 파일럿에서 감독이 매긴 **0/5점**(「색상도 조명연출도 거의 없는데」) — t499 8곡 오프라인 판독이 송신 층 단일 지점(`song_cue_render.py`)의 접힘을 확인했다. 카드 t501, M1~M7 일곱 마일스톤.
   - **M2 역할 어휘 확장(REQ-LDRENDER-002)** — `docs/proposals/song-lighting-design-standard.md` §2c 역할표에 `side`/`wash`/`mover` 세 역할을 추가하고 문서 버전을 올렸다. `server/design/rig.py:44` `RIG_LAYER_ROLES`(기존 닫힌 어휘)를 세 역할로 확장하고, `_LAYER_GROUP_ALIASES` 가 하이픈 앞 접두 토큰(`SIDE-L/R/ALL`→`side` 등)만으로 그룹 이름을 해석하도록 배선했다. 기존 잔여 테스트(`server/tests/test_layer_mapping_effect_role.py:119`)의 "SIDE/WASH/MOVER 는 미매칭으로 남는다" 단언을 명시적으로 뒤집었다.
   - **M3 다중 역할 렌더링(REQ-LDRENDER-001/003)** — `CueDimmerData`(`song_cue_composer.py`)를 key/back 2축에서 전 역할(side/wash/mover 포함)로 확장하고, `_back_layer_value_lines`(`role=="back"` 단일 분기)를 매핑된 모든 역할을 순회하는 일반화 함수로 대체했다(`song_cue_render.py`). 디머>0(LIT)인 역할만 "층"으로 세는 집계 규칙(감독 결정 2, 과반/대다수 기준 삭제)을 적용했다. 단일 레이어 리그는 이 분기를 건너뛰어 바이트 동일 송신을 유지한다(REQ-003).

@@ -2,7 +2,7 @@
 id: SPEC-LDBEAT-001
 title: "런북 모드 박자 배치 — 콘솔 그룹 트랙 × 마디 격자"
 version: "0.5.6"
-status: in-progress
+status: completed
 created: 2026-10-07
 updated: 2026-10-12
 author: jaihyun
