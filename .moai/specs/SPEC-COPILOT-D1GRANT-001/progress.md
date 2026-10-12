@@ -247,7 +247,7 @@ m1_to_mN_commit_strategy: "M1 라이브러리 · M2 승인 등록 · M3 핀 갱�
 
 ```yaml
 sync_complete_at: 2026-10-13
-sync_commit_sha: pending-backfill-sync
+sync_commit_sha: a09d61d
 sync_status: synced
 completion_decision: "supervisor decision 2026-10-12 (사실상 완료 → completed), spec.md status: completed"
 implementation_pr: "#347 (merged 2026-09-06)"
