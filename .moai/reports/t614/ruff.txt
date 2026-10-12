@@ -1,0 +1,7 @@
+$ ruff check server/design/beat_grid_emit.py server/tests/test_beat_grid_timecode_track_t614.py server/tests/test_beat_grid_emit_t549.py server/tests/test_beat_grid_store_order_t612.py
+All checks passed!
+exit=0 (ruff check)
+
+$ ruff format --check server/design/beat_grid_emit.py server/tests/test_beat_grid_timecode_track_t614.py server/tests/test_beat_grid_emit_t549.py server/tests/test_beat_grid_store_order_t612.py
+4 files already formatted
+exit=0 (ruff format --check)

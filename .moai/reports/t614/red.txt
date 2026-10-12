@@ -1,0 +1,195 @@
+FFFFFFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_ TestAssignLineIsATrackAddress.test_two_tracks_on_one_timecode_get_consecutive_track_indexes _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestAssignLineIsATrackAddress object at 0x10bf1ac50>
+
+    def test_two_tracks_on_one_timecode_get_consecutive_track_indexes(self) -> None:
+        # 실기: 같은 타임코드의 둘째 트랙 맨 꼴 배정이 Illegal object 로 거절됐다.
+        first, second = _two_tracks_on_one_timecode().tracks
+>       assert first.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
+E       AssertionError: assert ('Assign Sequ...Timecode 30',) == ('Assign Sequ...code 30.1.1',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30' != 'Assign Sequence 300 At Timecode 30.1.1'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:60: AssertionError
+_ TestAssignLineIsATrackAddress.test_a_single_track_alone_on_its_timecode_gets_index_one _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestAssignLineIsATrackAddress object at 0x10bf19d90>
+
+    def test_a_single_track_alone_on_its_timecode_gets_index_one(self) -> None:
+        result = _emit(
+            [_track("FOH", 3, [])],
+            sequence_numbers={"FOH": 300},
+            timecode_numbers={"FOH": 30},
+        )
+        (track,) = result.tracks
+>       assert track.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
+E       AssertionError: assert ('Assign Sequ...Timecode 30',) == ('Assign Sequ...code 30.1.1',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30' != 'Assign Sequence 300 At Timecode 30.1.1'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:70: AssertionError
+____ TestAssignLineIsATrackAddress.test_no_assign_line_is_in_the_bare_form _____
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestAssignLineIsATrackAddress object at 0x10bf1a990>
+
+    def test_no_assign_line_is_in_the_bare_form(self) -> None:
+        # 칸이 있는 트랙과 칸이 없는 트랙 둘 다 — 어느 경로로도 맨 꼴이 나가면 안 된다.
+        tracks = [
+            _track("FOH", 3, [_position_cue(18, position_preset_no="2.1")]),
+            _track("BLIND", 14, []),
+        ]
+        result = _emit(
+            tracks,
+            sequence_numbers={"FOH": 300, "BLIND": 301},
+            timecode_numbers={"FOH": 30, "BLIND": 30},
+        )
+        assigns = [line for line in result.commands if line.startswith("Assign Sequence ")]
+        assert len(assigns) == 2
+>       assert not [line for line in result.commands if _BARE_ASSIGN.search(line)]
+E       AssertionError: assert not ['Assign Sequence 300 At Timecode 30', 'Assign Sequence 301 At Timecode 30']
+
+server/tests/test_beat_grid_timecode_track_t614.py:85: AssertionError
+_ TestBlockedTrackDoesNotConsumeAnIndex.test_next_assigned_track_takes_the_next_index[unconfirmed-group] _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestBlockedTrackDoesNotConsumeAnIndex object at 0x10bf1b790>
+middle = {'group_name': 'MYSTERY', 'group_no': None, 'group_no_confirmed': False, 'layer_role': None, ...}
+middle_sequence = 301
+
+    @pytest.mark.parametrize(
+        ("middle", "middle_sequence"),
+        [
+            pytest.param(_track("MYSTERY", None, [], confirmed=False), 301, id="unconfirmed-group"),
+            pytest.param(_track("MYSTERY", 7, []), None, id="no-sequence-number"),
+        ],
+    )
+    def test_next_assigned_track_takes_the_next_index(
+        self, middle: dict, middle_sequence: int | None
+    ) -> None:
+        # 가운데 트랙이 막혀 배정 줄 구성에 닿지 못하면 순번을 쓰지 않는다 — 뒤 트랙이 .1.2 다.
+        sequence_numbers = {"FOH": 300, "BLIND": 302}
+        if middle_sequence is not None:
+            sequence_numbers["MYSTERY"] = middle_sequence
+        result = _emit(
+            [_track("FOH", 3, []), middle, _track("BLIND", 14, [])],
+            sequence_numbers=sequence_numbers,
+            timecode_numbers={"FOH": 30, "MYSTERY": 30, "BLIND": 30},
+        )
+        foh, mystery, blind = result.tracks
+        assert mystery.blocked_reason is not None
+        assert mystery.assign_timecode_commands == ()
+>       assert foh.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
+E       AssertionError: assert ('Assign Sequ...Timecode 30',) == ('Assign Sequ...code 30.1.1',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30' != 'Assign Sequence 300 At Timecode 30.1.1'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:112: AssertionError
+_ TestBlockedTrackDoesNotConsumeAnIndex.test_next_assigned_track_takes_the_next_index[no-sequence-number] _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestBlockedTrackDoesNotConsumeAnIndex object at 0x10bf1b5d0>
+middle = {'group_name': 'MYSTERY', 'group_no': 7, 'group_no_confirmed': True, 'layer_role': None, ...}
+middle_sequence = None
+
+    @pytest.mark.parametrize(
+        ("middle", "middle_sequence"),
+        [
+            pytest.param(_track("MYSTERY", None, [], confirmed=False), 301, id="unconfirmed-group"),
+            pytest.param(_track("MYSTERY", 7, []), None, id="no-sequence-number"),
+        ],
+    )
+    def test_next_assigned_track_takes_the_next_index(
+        self, middle: dict, middle_sequence: int | None
+    ) -> None:
+        # 가운데 트랙이 막혀 배정 줄 구성에 닿지 못하면 순번을 쓰지 않는다 — 뒤 트랙이 .1.2 다.
+        sequence_numbers = {"FOH": 300, "BLIND": 302}
+        if middle_sequence is not None:
+            sequence_numbers["MYSTERY"] = middle_sequence
+        result = _emit(
+            [_track("FOH", 3, []), middle, _track("BLIND", 14, [])],
+            sequence_numbers=sequence_numbers,
+            timecode_numbers={"FOH": 30, "MYSTERY": 30, "BLIND": 30},
+        )
+        foh, mystery, blind = result.tracks
+        assert mystery.blocked_reason is not None
+        assert mystery.assign_timecode_commands == ()
+>       assert foh.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
+E       AssertionError: assert ('Assign Sequ...Timecode 30',) == ('Assign Sequ...code 30.1.1',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30' != 'Assign Sequence 300 At Timecode 30.1.1'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:112: AssertionError
+_ TestBlockedTrackDoesNotConsumeAnIndex.test_a_held_cell_blocks_the_cell_not_the_track_so_the_track_keeps_its_index _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestBlockedTrackDoesNotConsumeAnIndex object at 0x10bf187d0>
+
+    def test_a_held_cell_blocks_the_cell_not_the_track_so_the_track_keeps_its_index(self) -> None:
+        # 보류 칸은 그 칸의 명령만 막는다 — 트랙은 여전히 배정되므로 순번을 쓴다.
+        tracks = [
+            _track("FOH", 3, [_position_cue(18, position_preset_no="2.1")]),
+            _track("BLIND", 14, []),
+        ]
+        result = _emit(
+            tracks,
+            sequence_numbers={"FOH": 300, "BLIND": 301},
+            timecode_numbers={"FOH": 30, "BLIND": 30},
+            held_cells={("FOH", 18): "빈 프리셋 — 송신 보류"},
+        )
+        foh, blind = result.tracks
+        assert foh.cues[0].commands == ()
+        assert foh.cues[0].blocked_reason is not None
+>       assert foh.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
+E       AssertionError: assert ('Assign Sequ...Timecode 30',) == ('Assign Sequ...code 30.1.1',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30' != 'Assign Sequence 300 At Timecode 30.1.1'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:130: AssertionError
+_ TestTimecodeSetupStoresTheTrackGroup.test_store_timecode_dot_one_comes_once_after_the_name_line _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestTimecodeSetupStoresTheTrackGroup object at 0x10bf18110>
+
+    def test_store_timecode_dot_one_comes_once_after_the_name_line(self) -> None:
+        result = _two_tracks_on_one_timecode()
+        setup = result.timecode_setup_commands
+>       assert setup.count("Store Timecode 30.1") == 1
+E       assert 0 == 1
+E        +  where 0 = <built-in method count of tuple object at 0x10bf3a4c0>('Store Timecode 30.1')
+E        +    where <built-in method count of tuple object at 0x10bf3a4c0> = ('Store Timecode 30', "Set Timecode 30 Property 'Name' 'LDBEAT Timecode 30'").count
+
+server/tests/test_beat_grid_timecode_track_t614.py:138: AssertionError
+_ TestTimecodeSetupStoresTheTrackGroup.test_track_index_counts_per_timecode_and_each_used_timecode_stores_its_group _
+
+self = <server.tests.test_beat_grid_timecode_track_t614.TestTimecodeSetupStoresTheTrackGroup object at 0x10bf190d0>
+
+    def test_track_index_counts_per_timecode_and_each_used_timecode_stores_its_group(self) -> None:
+        result = _emit(
+            [_track("FOH", 3, []), _track("BLIND", 14, []), _track("BACK", 4, [])],
+            sequence_numbers={"FOH": 300, "BLIND": 301, "BACK": 302},
+            timecode_numbers={"FOH": 30, "BLIND": 31, "BACK": 30},
+        )
+>       assert [track.assign_timecode_commands for track in result.tracks] == [
+            ("Assign Sequence 300 At Timecode 30.1.1",),
+            ("Assign Sequence 301 At Timecode 31.1.1",),
+            ("Assign Sequence 302 At Timecode 30.1.2",),
+        ]
+E       AssertionError: assert [('Assign Seq...imecode 30',)] == [('Assign Seq...ode 30.1.2',)]
+E         
+E         At index 0 diff: ('Assign Sequence 300 At Timecode 30',) != ('Assign Sequence 300 At Timecode 30.1.1',)
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_timecode_track_t614.py:159: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestAssignLineIsATrackAddress::test_two_tracks_on_one_timecode_get_consecutive_track_indexes
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestAssignLineIsATrackAddress::test_a_single_track_alone_on_its_timecode_gets_index_one
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestAssignLineIsATrackAddress::test_no_assign_line_is_in_the_bare_form
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestBlockedTrackDoesNotConsumeAnIndex::test_next_assigned_track_takes_the_next_index[unconfirmed-group]
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestBlockedTrackDoesNotConsumeAnIndex::test_next_assigned_track_takes_the_next_index[no-sequence-number]
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestBlockedTrackDoesNotConsumeAnIndex::test_a_held_cell_blocks_the_cell_not_the_track_so_the_track_keeps_its_index
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestTimecodeSetupStoresTheTrackGroup::test_store_timecode_dot_one_comes_once_after_the_name_line
+FAILED server/tests/test_beat_grid_timecode_track_t614.py::TestTimecodeSetupStoresTheTrackGroup::test_track_index_counts_per_timecode_and_each_used_timecode_stores_its_group
+8 failed in 0.36s

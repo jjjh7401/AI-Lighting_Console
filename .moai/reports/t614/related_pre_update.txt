@@ -1,0 +1,57 @@
+....................................................................F... [ 27%]
+........................................................................ [ 54%]
+.F...................................................................... [ 82%]
+...............................................                          [100%]
+=================================== FAILURES ===================================
+_ TestEmitBeatGridWriteBundleHappyPath.test_many_to_many_timecode_assignment_one_line_per_track _
+
+self = <server.tests.test_beat_grid_emit_t549.TestEmitBeatGridWriteBundleHappyPath object at 0x10d1d21d0>
+
+    def test_many_to_many_timecode_assignment_one_line_per_track(self) -> None:
+        tracks = [
+            _track("FOH", 3, []),
+            _track("BLIND", 14, []),
+        ]
+        result = emit_beat_grid_write_bundle(
+            tracks,
+            timing=_TIMING,
+            sequence_numbers={"FOH": 300, "BLIND": 301},
+            timecode_numbers={"FOH": 30, "BLIND": 30},
+            dimmer_attributes={},
+            probe_results=_ALL_M1_PASS,
+        )
+>       assert result.tracks[0].assign_timecode_commands == ("Assign Sequence 300 At Timecode 30",)
+E       AssertionError: assert ('Assign Sequ...code 30.1.1',) == ('Assign Sequ...Timecode 30',)
+E         
+E         At index 0 diff: 'Assign Sequence 300 At Timecode 30.1.1' != 'Assign Sequence 300 At Timecode 30'
+E         Use -v to get more diff
+
+server/tests/test_beat_grid_emit_t549.py:386: AssertionError
+_ TestTrackWithoutAStoredCueStillCreatesItsSequence.test_the_assign_never_points_at_a_sequence_that_was_not_created _
+
+self = <server.tests.test_beat_grid_store_order_t612.TestTrackWithoutAStoredCueStillCreatesItsSequence object at 0x10c79cb10>
+
+    def test_the_assign_never_points_at_a_sequence_that_was_not_created(self) -> None:
+        # 저장되는 큐가 하나도 없으면 첫 큐 저장이 시퀀스를 만들 수 없다 — 그러니
+        # 배정 줄이 가리키는 시퀀스를 이 트랙이 직접 만들어야 한다(옛 순서 그대로).
+        track = _track([])
+        assert track.commands[0] == f"Store Sequence {_SEQ}"
+        assert track.commands[1].startswith(_NAME_PREFIX)
+>       assert track.commands[-1] == f"Assign Sequence {_SEQ} At Timecode {_TC}"
+E       AssertionError: assert 'Assign Seque...mecode 70.1.1' == 'Assign Seque...t Timecode 70'
+E         
+E         - Assign Sequence 700 At Timecode 70
+E         + Assign Sequence 700 At Timecode 70.1.1
+E         ?                                   ++++
+
+server/tests/test_beat_grid_store_order_t612.py:78: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t614/.venv/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED server/tests/test_beat_grid_emit_t549.py::TestEmitBeatGridWriteBundleHappyPath::test_many_to_many_timecode_assignment_one_line_per_track
+FAILED server/tests/test_beat_grid_store_order_t612.py::TestTrackWithoutAStoredCueStillCreatesItsSequence::test_the_assign_never_points_at_a_sequence_that_was_not_created
+2 failed, 261 passed, 1 warning in 4.03s

@@ -13,9 +13,12 @@ REQ-LDBEAT-001/003/011~013).
    초를 미리 계산해 두지 않는다. 1마디 다운비트(박 1)를 기준으로 호출
    시점에만 환산한다(REQ-LDBEAT-006(i-4)와 같은 "초 저장 금지" 원칙).
 2. **트랙·칸 명령 생성** — ``songcue.py``가 이미 증명한 커맨드 모양
-   (``Store Sequence``/``Store Timecode``/``Set … Property 'Name'``/
-   ``Assign Sequence … At Timecode``, ``_ascii_label``로 영문화)과 t520이
-   증명한 모양(``Store Sequence``/``Go Timecode``/``Off``)을 재사용해,
+   (``Store Sequence``/``Store Timecode``/``Set … Property 'Name'``,
+   ``_ascii_label``로 영문화)과 t520이 증명한 모양(``Store Sequence``/
+   ``Go Timecode``/``Off``, 트랙 주소 배정
+   ``Assign Sequence … At Timecode <tc>.1.<k>`` — ``k`` 는 그 타임코드의
+   1부터 센 트랙 순번이고 ``Store Timecode <tc>.1`` 이 먼저 온다. 맨 꼴
+   둘째 배정은 실기에서 거절됐다, 카드 t614)을 재사용해,
    역할별 시퀀스 여러 개 × 타임코드 트랙 여러 개의 다대다 배선을 짠다
    (REQ-LDBEAT-013(c)). 칸 내용은 ``app_movement``(앱 2단계 무빙,
    ``server.design.app_movement``)·정적 프리셋 리콜(``At Preset <no>``
@@ -615,6 +618,8 @@ def emit_beat_grid_write_bundle(
 
     track_results: list[TrackEmitResult] = []
     used_timecode_numbers: set[int] = set()
+    # 카드 t614 — 타임코드별로 지금까지 실제 배정된 트랙 수(배정 줄의 트랙 순번 k).
+    assigned_track_counts: dict[int, int] = {}
 
     for track in tracks:
         group_name = str(track["group_name"])
@@ -717,8 +722,14 @@ def emit_beat_grid_write_bundle(
             (f"Store Sequence {sequence_number}", name_command) if name_pending else ()
         )
         used_timecode_numbers.add(timecode_number)
+        # 카드 t614 — 맨 꼴 ``At Timecode N`` 은 같은 타임코드의 둘째 트랙부터 콘솔이
+        #   ``Illegal object`` 로 거절했다(t608 v2 S1b). 실기 선례(t520 · t506 · t553)대로
+        #   트랙 주소 ``N.1.k`` 로 배정한다 — 1 은 트랙 그룹, k 는 이 타임코드에서 실제로
+        #   배정된 트랙의 1부터 센 순번이다. 막혀서 여기 닿지 못한 트랙은 순번을 쓰지 않는다.
+        track_index = assigned_track_counts.get(timecode_number, 0) + 1
+        assigned_track_counts[timecode_number] = track_index
         assign_timecode_commands = (
-            f"Assign Sequence {sequence_number} At Timecode {timecode_number}",
+            f"Assign Sequence {sequence_number} At Timecode {timecode_number}.1.{track_index}",
         )
 
         track_results.append(
@@ -739,6 +750,9 @@ def emit_beat_grid_write_bundle(
         name = beat_grid_timecode_label(timecode_number)
         timecode_setup_commands.append(f"Store Timecode {timecode_number}")
         timecode_setup_commands.append(f"Set Timecode {timecode_number} Property 'Name' '{name}'")
+        # 카드 t614 — 트랙 주소 ``N.1.k`` 의 트랙 그룹 1 을 배정 줄보다 먼저 만든다
+        #   (실기 선례 t520: ``Store Timecode 24.1`` → ``Assign … 24.1.1`` / ``24.1.2``).
+        timecode_setup_commands.append(f"Store Timecode {timecode_number}.1")
 
     return BeatGridEmitResult(
         tracks=tuple(track_results),
