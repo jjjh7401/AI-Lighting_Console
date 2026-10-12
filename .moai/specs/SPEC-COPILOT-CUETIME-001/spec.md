@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-CUETIME-001
 title: "포지션 큐 시간축 (트랜지션·MIB·곡 시트)"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-08-14
 updated: 2026-10-13
 author: StudioX

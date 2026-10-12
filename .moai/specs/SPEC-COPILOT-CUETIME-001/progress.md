@@ -93,3 +93,12 @@
   **운영자 플로우 — Go 12번(구간당 1번)으로 14큐 완주**: 암전 Go 후
   선이동 자동 발화(다크 53px), 다음 Go 첫 프레임부터 리빌 점등
   (moved_away 0px×2). 콘솔: Seq 113 삭제, 110·114 잔존.
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+- `sync_status: audit-ready`
+- `sync_complete_at: 2026-10-13`
+- `sync_commit_sha: PLACEHOLDER` (sync 커밋은 자기 SHA 를 적을 수 없어 placeholder 로 두고, 같은 PR 의 후속 커밋에서 백필한다)
+- 상태 전환: `in-progress → completed`. spec.md frontmatter `status` 만 바꿨고 본문은 건드리지 않았다. plan.md·acceptance.md·progress.md 는 frontmatter 가 없어 전환 대상이 아니다.
+
+이 sync 는 기존 진행 기록(M1~M3, 최종 E2E, 피드백 2건)을 그대로 두고 상태만 닫는다. §E.1~§E.3 은 이 파일에 없으며 새로 만들지 않았다.
