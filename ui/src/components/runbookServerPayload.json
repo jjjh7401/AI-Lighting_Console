@@ -798,5 +798,62 @@
  "time_signature": "4/4",
  "seconds_per_bar": 2.0,
  "tc_method": "DERIVED",
- "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오."
+ "tc_method_warning": "이 타임라인의 타임코드는 연출 인터뷰가 받아 적은 구간 시각에서 계산한 값입니다. 음원 청취로 검증하지 않았습니다 — 픽업·하프바 삽입이 있으면 전 구간이 어긋납니다. 리허설에서 대조하십시오.",
+ "beat_grid": {
+  "song_title": "Timeline Wiring Test",
+  "bar_range": {
+   "start": 0,
+   "end": 25
+  },
+  "tracks": [],
+  "scene_memos": [],
+  "probe_results": {
+   "1": "통과(구조)",
+   "2": "미확인",
+   "3": "부분",
+   "4": "미확인",
+   "5": "움직임 없음",
+   "6": "미확인 — 문법 불명",
+   "7": "부분(결과 기록)",
+   "8": "통과",
+   "9": "wave 움직임 없음 · circle·발리후 미확인"
+  },
+  "source": "empty",
+  "note": "이 곡의 기본값 없음",
+  "console_audio_offset_seconds": 3.002,
+  "unverified_cells": [],
+  "movement_vocabulary": {
+   "shapes": [
+    {
+     "name": "sweep",
+     "unverified": false
+    },
+    {
+     "name": "flyout",
+     "unverified": false
+    },
+    {
+     "name": "circle",
+     "unverified": true
+    },
+    {
+     "name": "ballyhoo",
+     "unverified": true
+    },
+    {
+     "name": "wave",
+     "unverified": false
+    }
+   ],
+   "axes": [
+    "Pan",
+    "Tilt"
+   ],
+   "period_units": [
+    "bar",
+    "beat"
+   ],
+   "phase_spread_unverified": true
+  }
+ }
 }

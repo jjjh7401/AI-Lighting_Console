@@ -2,6 +2,8 @@
 // t454 가 「데이터 없음」으로 둔 칸을 채운다. 데이터는 서버 실출력 사본
 // (`runbookServerPayload.json` — `.moai/reports/t458/measure_payload.py`,
 // t493 이 t489 수정 뒤 같은 스크립트로 재생성: `.moai/reports/t493/measure_payload.py`).
+// t496 부터 재생성은 `uv run python -m server.tests.runbook_payload_fixture` 이고, 서버 실출력과
+// 구조가 어긋나면 `server/tests/test_runbook_payload_fixture_t496.py` 가 실패한다.
 // 원칙: 짝짓기가 안 되면(row_pairing.available=false) t454 표기로 돌아간다.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

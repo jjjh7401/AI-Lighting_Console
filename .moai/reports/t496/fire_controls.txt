@@ -1,0 +1,19 @@
+OK  C0 지금 사본: 차이 0건 (기대 0)
+OK  C1 t458 시점 사본(b9c28959): 차이 53건 (기대 >0)
+      사본에 없는 키: $.beat_grid
+      사본에 없는 키: $.beat_grid.bar_range
+      사본에 없는 키: $.beat_grid.bar_range.end
+      사본에 없는 키: $.beat_grid.bar_range.start
+OK  C2 착수 시 사본(25d912a1): 차이 34건 (기대 >0)
+      사본에 없는 키: $.beat_grid
+      사본에 없는 키: $.beat_grid.bar_range
+      사본에 없는 키: $.beat_grid.bar_range.end
+      사본에 없는 키: $.beat_grid.bar_range.start
+OK  M1 rows 한 줄 뺌: 차이 1건 (기대 >0)
+      목록 길이 $.concept_report.rows: 서버 21 · 사본 20
+OK  M2 rows[0] 키 추가: 차이 1건 (기대 >0)
+      서버에 없는 키(사본에만): $.concept_report.rows[].extra
+OK  M3 intensity 한 칸 뺌: 차이 1건 (기대 >0)
+      목록 길이 $.sections[0].intensity: 서버 2 · 사본 1
+OK  M4 값만 바꿈: 차이 0건 (기대 0)
+7/7 기대대로
