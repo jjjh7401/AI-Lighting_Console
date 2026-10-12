@@ -1,0 +1,19 @@
+사본에 없는 키: $.concept_bullet
+사본에 없는 키: $.concept_bullet.available
+사본에 없는 키: $.concept_bullet.reason
+사본에 없는 키: $.concept_report.glance
+사본에 없는 키: $.concept_report.glance.available
+사본에 없는 키: $.concept_report.glance.reason
+사본에 없는 키: $.concept_report.glance.rule
+사본에 없는 키: $.concept_report.glance.stages
+사본에 없는 키: $.concept_report.reserve
+사본에 없는 키: $.concept_report.reserve[].kind
+사본에 없는 키: $.concept_report.reserve[].name
+사본에 없는 키: $.concept_report.reserve[].released_q
+사본에 없는 키: $.concept_report.reserve[].screen_position
+사본에 없는 키: $.concept_report.rows[].description
+사본에 없는 키: $.concept_report.rows[].unused_groups
+목록 길이 $.concept_report.glance.stages: 서버 0 · 사본 None
+목록 길이 $.concept_report.mib: 서버 21 · 사본 20
+목록 길이 $.concept_report.reserve: 서버 2 · 사본 None
+목록 길이 $.concept_report.rows: 서버 21 · 사본 20
