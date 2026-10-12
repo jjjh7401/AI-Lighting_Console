@@ -1,0 +1,4 @@
+records 66 dirs 72
+missing ['SPEC-COPILOT-CUETIME-001', 'SPEC-COPILOT-IMGLAYOUT-001', 'SPEC-COPILOT-RESTORE-001', 'SPEC-COPILOT-SONGSTD-001', 'SPEC-LDBEAT-001', 'SPEC-LDDESIGN-001']
+audit {'spec_id': 'SPEC-LDBEAT-001', 'era': 'V3R6', 'finding_type': 'EraAutoDetected', 'severity': 'INFO'}
+audit {'spec_id': 'SPEC-LDDESIGN-001', 'era': 'V3R6', 'finding_type': 'EraAutoDetected', 'severity': 'INFO'}

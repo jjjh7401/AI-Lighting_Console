@@ -158,6 +158,24 @@
 그리고 **프로브 출력이 이미 보고서에 인용돼 있으면 출력을 바꾸지 마라** —
 줄만 감싸서 통과시켜라. 인용된 증거와 도구가 어긋나면 그 인용이 검산 불가가 된다.
 
+🔴 **`moai spec drift` 는 SPEC 을 조용히 빠뜨린다 — 존재·era 확인은 `moai spec audit` 로.**
+설치본 `moai spec drift` 는 git 기록을 작업 브랜치가 아니라 **로컬 `main`** 에서 읽는다.
+이 저장소의 로컬 `main` 은 주 체크아웃이 쥔 채 2026-09-22 `b661da2d` 에 멈춰 있다.
+그래서 V3R6 으로 판정되는 SPEC(`progress.md` 에 `§E.2`·`§E.4` 제목 + 줄 맨 앞
+`sync_commit_sha:`)인데 로컬 `main` 에 기록이 0줄이면 **drift 출력에서 사라진다** —
+오류도 경고도 없고 stderr 0바이트다. 실측(t494·t610, 2026-10-12): SPEC-LDDESIGN-001 에 이어
+SPEC-LDBEAT-001 도 `sync_commit_sha` 를 표준 꼴로 백필하자 기록 67→66 으로 빠졌다.
+
+- **SPEC 이 있는지·몇 era 인지**: `moai spec audit --json --include-grandfathered` —
+  로컬 `main` 과 무관하게 두 SPEC 을 V3R6 으로 정상 보고한다.
+- **drift 결과를 믿기 전에**: 기록 수를 `.moai/specs/SPEC-*` 디렉터리 수와 대조해라
+  (`.moai/reports/t610/count.py`). 빠진 이름이 바로 나온다. 이 중 프런트매터 없는
+  COPILOT 넷은 처음부터 파서 밖이라 이 결함과 별개다.
+- **`sync_commit_sha` 를 굵은 글머리 꼴로 남겨 drift 에 붙들어 두지 마라.** 그 꼴은
+  era 판정기가 못 읽어 V3R5 로 오판한다 — 결함을 다른 결함으로 가리는 것이다.
+- 🔴 **원인 제거(로컬 `main` fast-forward)는 레인이 하지 않는다.** 주 체크아웃의
+  브랜치 상태를 바꾸는 일이라 **감독 판단 항목**이다. 근거 `.moai/reports/t494/run-verdict.md`.
+
 ## 3. 검증
 
 > **이 절은 길다. 그대로 둔다 — 절 번호가 인용의 주소이기 때문이다.**

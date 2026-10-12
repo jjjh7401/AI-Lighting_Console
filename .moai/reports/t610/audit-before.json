@@ -1,0 +1,1046 @@
+{
+  "audited_at": "2026-10-12T02:21:19.185288Z",
+  "total_specs": 71,
+  "grandfathered": 42,
+  "modern_era_clean": 28,
+  "drift_findings": [
+    {
+      "spec_id": "SPEC-COPILOT-AUTOPATCH-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-AUTOPATCH-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-AXISCORE-001",
+      "era": "V3R2-R4",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-2 (progress.md without §E.* markers)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-AXISCORE-001",
+      "era": "V3R2-R4",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BLOCKED16-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BLOCKED16-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BULKGATE-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BULKGATE-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BUSKWIZ-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-BUSKWIZ-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-CLASSIFYGAP-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-COLORMODE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-COLORPRESET-001",
+      "era": "V3R2-R4",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-2 (progress.md without §E.* markers)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-COLORPRESET-001",
+      "era": "V3R2-R4",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-CUETIME-001",
+      "era": "V3R2-R4",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-2 (progress.md without §E.* markers)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-CUETIME-001",
+      "era": "V3R2-R4",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-D1GRANT-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-D1GRANT-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-DASHUI-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-DEPLOY-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-DEPLOY-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-EVAL-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-EXECBODY-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-EXECREF-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-FILEARG-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-FILEARG-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-FXGEN-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-FXGEN-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-FXLIB-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-GROUPGEN-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-GROUPGEN-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-IMGLAYOUT-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-IMGLAYOUT-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-INTENT-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-INTENT-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-INTROSPECT-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-INTROSPECT-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LDGUIDE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LOOKLIB-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-001",
+      "era": "V3R6",
+      "finding_type": "SyncStatusDrift",
+      "severity": "MUST-FIX",
+      "remediation": "moai spec close SPEC-COPILOT-LXSEQ-001 --backfill-only",
+      "details": {
+        "reason": "§E.2 + §E.4 + sync_commit_sha present (sync complete) but status != completed",
+        "spec_md_status": "implemented",
+        "sync_commit_sha": "2b328c6       # 1차 sync 아티팩트를 운반한 커밋. 감사 후속 수정은 그 다음 커밋이며"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-002",
+      "era": "V3R2-R4",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-2 (progress.md without §E.* markers)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-002",
+      "era": "V3R2-R4",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-003",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-003",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-004",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-LXSEQ-004",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-MCP-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-MCP-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-MUSICSYNC-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-MVP-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-MVP-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-OVERLAP-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-OVERLAP-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PARITY-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-POOLEMPTY-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRECHK-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRECHK-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRESETGUARD-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRESETGUARD-002",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRESETGUARD-002",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRESETIDEM-001",
+      "era": "V3R2-R4",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-2 (progress.md without §E.* markers)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-PRESETIDEM-001",
+      "era": "V3R2-R4",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-READBACK-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-READBACK-002",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-RECVOBS-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-RESTORE-001",
+      "era": "",
+      "finding_type": "AuditError",
+      "severity": "INFO",
+      "details": {
+        "error": "load era signals: read spec.md: open .moai/specs/SPEC-COPILOT-RESTORE-001/spec.md: no such file or directory"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SCENE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SHEETPIPE-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SHEETPIPE-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SHOWUI-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SHOWUI-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SONGCONFIRM-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SONGCUE-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SONGCUE-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SONGSTD-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SONGSTD-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SPATIAL-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SPATIAL-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SPATIALMEM-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-SPATIALMEM-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-TREEID-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-TREEID-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-TRUNCATE-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-TRUNCATE-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-UNREQ-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-UNREQ-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-VWX-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-VWX-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-WRITEGATE-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-COPILOT-WRITEGATE-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDACCENT-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDARRANGE-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDARRANGE-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDBARMAP-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDBARMAP-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDBEAT-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDBEAT-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDCLIMAX-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDCOMPILE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDDESIGN-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDEMBED-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDEMBED-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDPLUGIN-001",
+      "era": "V2.x",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-1 (progress.md absent)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDPLUGIN-001",
+      "era": "V2.x",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRECV-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRELEASE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRENDER-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRENDER-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRETURN-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRHYTHM-001",
+      "era": "V3R5",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-3 (§E.2 present, sync_commit_sha missing)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDRHYTHM-001",
+      "era": "V3R5",
+      "finding_type": "Grandfathered",
+      "severity": "INFO",
+      "details": {
+        "reason": "pre-V3R6 era — grandfather clause active"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDSEND-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDSTORE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    },
+    {
+      "spec_id": "SPEC-LDWIRE-001",
+      "era": "V3R6",
+      "finding_type": "EraAutoDetected",
+      "severity": "INFO",
+      "details": {
+        "heuristic_matched": "H-4 (§E.2 + §E.4 + sync_commit_sha)"
+      }
+    }
+  ]
+}
