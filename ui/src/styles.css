@@ -4081,6 +4081,13 @@ body {
 .concept-bullets { margin: 0 0 10px; }
 .concept-bullets-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 4px; }
 .concept-bullets-head .concept-explain-source { display: inline; margin-top: 0; }
+/* t492 — 탭 2 「이 곡의 재료」·탭 3 본문. 4칸 설명(.concept-explain)과 같은 결. */
+.concept-materials { display: grid; gap: 8px; margin: 0; }
+.concept-materials dt { color: #7d8898; font-size: 11px; }
+.concept-materials dd { margin: 2px 0 0; color: #d6dbe3; }
+.concept-reserve { margin: 0; padding-left: 16px; }
+.concept-reserve small { color: #7d8898; }
+.concept-grammar-note { margin-top: 6px; }
 .concept-verbatim-badge {
   padding: 1px 6px;
   border: 1px solid #5b6b80;

@@ -1,0 +1,11 @@
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t492/ui
+
+ ✓ src/components/conceptGlance.test.ts (10 tests) 2ms
+ ✓ src/components/conceptTabs.test.ts (16 tests) 3ms
+
+ Test Files  2 passed (2)
+      Tests  26 passed (26)
+   Start at  08:58:00
+   Duration  230ms (transform 61ms, setup 0ms, collect 113ms, tests 5ms, environment 0ms, prepare 69ms)
+

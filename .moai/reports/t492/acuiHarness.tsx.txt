@@ -1,0 +1,33 @@
+/**
+ * t492 브라우저 확인 하니스(임시, 커밋 안 함 — 사본은 .moai/reports/t492/ 에 둔다).
+ * t485 하니스와 같은 모양. `?causal` 이면 인터뷰부터 돌린 실제 세션 곡(컨셉 리포트
+ * 없음 — BPM 미선언), 기본은 서버 실경로 `_song_timeline_payload` 10구간 곡.
+ * t485 의 fade_seconds null 우회는 뺐다 — CueSheetTimeline 이 이제 `== null` 로 막는다.
+ */
+import ReactDOM from "react-dom/client";
+
+import type { SongTimelineView } from "./protocol";
+import { RunbookMode } from "./components/RunbookMode";
+import causal from "./acuiPayloadCausal.json";
+import roles from "./acuiPayloadRoles.json";
+import "./styles.css";
+
+const timeline = (new URLSearchParams(location.search).has("causal") ? causal : roles) as unknown as SongTimelineView;
+const noop = () => undefined;
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <div style={{ background: "var(--bg)", minHeight: "100vh", padding: 20 }}>
+    <RunbookMode
+      cueMonitor={{ executors: [], history: [], lastSyncAt: null, stale: false }}
+      timeline={timeline}
+      onSelectCue={noop}
+      onUndoDraft={noop}
+      onRedoDraft={noop}
+      onSaveDraft={noop}
+      onApplyDraft={noop}
+      onGeneratorSend={noop}
+      generatorResponding={false}
+      generatorLastAssistantText={null}
+    />
+  </div>,
+);

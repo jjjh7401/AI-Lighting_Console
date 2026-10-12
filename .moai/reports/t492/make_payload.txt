@@ -1,0 +1,7 @@
+Using CPython 3.11.15
+Creating virtual environment at: .venv
+   Building ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t492
+      Built ma3-copilot-server @ file:///Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t492
+Installed 97 packages in 164ms
+payload_causal.json {"available": true, "text": "이 곡은 이별 노래다 → 그래서 주조색은 차가운 파랑\n→ 후렴에서만 흰색을 터뜨린다", "origin": "free_text", "origin_label": "인터뷰 Q1 — 직접 입력"}
+payload_blank.json {"available": false, "reason": "Q1 컨셉에 감독 답이 없다 — 빈 답이라 첫 제안이 자동 초안으로 들어갔다(원문 아님)"}

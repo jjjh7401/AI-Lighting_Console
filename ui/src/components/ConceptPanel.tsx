@@ -10,14 +10,19 @@
 //   있다(서버 큐 설명 `rows[].description`). 나머지 셋은 사유와 함께 데이터 없음.
 // - 인과 불릿(t485) — 서버 `concept_bullet`(인터뷰 Q1 원문)을 "원문 그대로" 배지와
 //   출처와 함께 싣는다(`conceptBullet.ts`). 원문이 없으면 서버 사유를 보인다.
-// - 「그래서 보이는 것」·탭 2·3 본문 — 서버가 내지 않는다 → 데이터 없음. 문장을
-//   지어 넣지 않는다(「그래서 보이는 것」 판단: .moai/reports/t485/verdict.md).
+// - 「그래서 보이는 것」 — 구간별 원천이 없다(인터뷰가 곡 단위) → 칸은 데이터 없음,
+//   사유는 표 아래 한 번만(t485 §4, t492 §1).
+// - t492 — 4칸 「바꾸려면」은 실제 편집 위치(PLAN CUE 수정요청 생성기)를 가리킨다.
+//   탭 2 는 곡 단위 집계(`materialSummary`), 탭 3 은 리저브(`grammarView`)를 싣는다.
+//   지킴/금지 분류·감정·무슨 뜻·왜는 원천이 없어 사유와 함께 비운다(conceptTabs.ts).
 import { useState } from "react";
 
 import type { SongTimelineSection, SongTimelineView } from "../protocol";
 import { conceptBulletView } from "./conceptBullet";
+import { KEEP_FORBID_NO_SOURCE, OUTCOME_NO_SOURCE, changeGuideText, grammarView, materialSummary } from "./conceptTabs";
 import { explanationCells, glanceView } from "./conceptGlance";
 import { NO_DATA, grammarRows } from "./runbookM7";
+import { sectionPlanStatus } from "./SongTimeline";
 
 /** REQ-098 고정 라벨. 영어는 보조 표기로만 쓴다. */
 const TABS = [
@@ -46,6 +51,9 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
     : ({ status: "none", reason: "단계 배정 원천이 서버에 없다" } as const);
   const report = timeline?.concept_report;
   const bullet = conceptBulletView(timeline?.concept_bullet);
+  const materials = materialSummary(sections);
+  const grammar = grammarView(report, sections);
+  const lifecycle = timeline?.lifecycle;
 
   return (
     <details className="concept-panel">
@@ -168,7 +176,13 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
                       <tr key={`${row.key}-explain`} className="concept-explain-row">
                         <td colSpan={GRAMMAR_HEADERS.length}>
                           <dl className="concept-explain">
-                            {explanationCells(report, position).map((cell) => (
+                            {explanationCells(
+                              report,
+                              position,
+                              sections[position] && lifecycle
+                                ? changeGuideText(sections[position], sectionPlanStatus(sections[position], lifecycle))
+                                : undefined,
+                            ).map((cell) => (
                               <div key={cell.title}>
                                 <dt>{cell.title}</dt>
                                 <dd>
@@ -185,10 +199,49 @@ export function ConceptPanel({ sections, timeline }: ConceptPanelProps) {
                 </tbody>
               </table>
             </div>
+            <p className="concept-nodata concept-grammar-note">
+              그래서 보이는 것 · {NO_DATA} — {OUTCOME_NO_SOURCE}
+            </p>
+          </div>
+        ) : tab === "micro" ? (
+          <div className="concept-tab-body" role="tabpanel">
+            <dl className="concept-materials" aria-label="이 곡의 재료">
+              {materials.map((item) => (
+                <div key={item.title}>
+                  <dt>{item.title}</dt>
+                  <dd className={item.nodata ? "concept-nodata" : undefined}>{item.text}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         ) : (
           <div className="concept-tab-body" role="tabpanel">
-            <p className="concept-nodata">{NO_DATA}</p>
+            <dl className="concept-materials" aria-label="지키는 것·하지 않는 것·아껴 두는 것">
+              <div>
+                <dt>지키는 것·하지 않는 것</dt>
+                <dd className="concept-nodata">
+                  {NO_DATA} — {KEEP_FORBID_NO_SOURCE}
+                </dd>
+              </div>
+              <div>
+                <dt>아껴 두는 것</dt>
+                {grammar.status === "none" ? (
+                  <dd className="concept-nodata">
+                    {NO_DATA} — {grammar.reason}
+                  </dd>
+                ) : (
+                  <dd>
+                    <ul className="concept-reserve">
+                      {grammar.reserve.map((line) => (
+                        <li key={`${line.kind}-${line.name}`}>
+                          <strong>{line.name}</strong> <small>{line.kind}</small> — {line.release}
+                        </li>
+                      ))}
+                    </ul>
+                  </dd>
+                )}
+              </div>
+            </dl>
           </div>
         )}
       </div>
