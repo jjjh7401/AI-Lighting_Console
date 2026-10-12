@@ -153,6 +153,15 @@ base `origin/main` = `b1a630e` · branch `spec/writepath-001` · worktree `write
 - **남은 미지는 정확히 하나**: 카드가 **화면에 렌더되는가**. 단위 테스트가 증명하는 것은 `request_approval`이 채워진 요청으로 **호출된다**는 것까지다 — 이 구분을 SPATIAL 검증 천장 표에도 반영했다(리뷰 P1).
 - **재개 조건**: 사용자 입회 + 쇼파일 백업 확인. 관측 (a) 카드 표시 (b) 거부 시 송신 0건 (c) 승인 후 재조회 값 일치 — `ok` 단독은 증거로 쓰지 않는다.
 
+## §E.4 Sync-phase Audit-Ready Signal
+
+- `sync_status: audit-ready`
+- `sync_complete_at: 2026-10-13`
+- `sync_commit_sha: e6647fff01c3d3dff62b8298e6cb6e42a4114c64` (sync 커밋 자신. 앞 커밋이 자기 SHA 를 적을 수 없어 placeholder 로 두었다가 같은 PR 의 후속 커밋에서 백필했다)
+- 상태 전환: `in-progress → completed`. frontmatter `status`·`updated` 만 바꿨고 spec.md 본문은 건드리지 않았다.
+
+**M2 실기 미실행 (sync 에서 명시 기록).** §E.2 의 `SKIP: CONDITION_NOT_MET` 은 이 sync 이후에도 그대로다. 라이브 1턴(승인 카드 렌더)은 실행하지 않았다. 구조 기준 AC-001~011 은 §E.2 기록대로 M2 없이 충족됐다(REQ-WRITEGATE-014). 따라서 이 SPEC 의 `completed` 는 **구조 기준의 완료**이고, 라이브 증거의 완료가 아니다. 남은 관측 1건(카드 렌더)은 사용자 입회 세션에서만 닫을 수 있으며, §E.2 의 재개 조건을 그대로 따른다.
+
 ## F. 후속 SPEC이 물려받는 것
 
 폐쇄집합 개정 절차의 **첫 실행 사례**가 생겼다. 후속(`Store Group` 축)은 절차를 재발명하지 않고 두 가지만 다루면 된다:
