@@ -1,10 +1,25 @@
+---
+id: SPEC-COPILOT-CUETIME-001
+title: "포지션 큐 시간축 (트랜지션·MIB·곡 시트)"
+version: "0.1.0"
+status: in-progress
+created: 2026-08-14
+updated: 2026-10-13
+author: StudioX
+priority: P1
+phase: "Phase 2 연출 계층 — 시간 축 (포지션 큐 트랜지션·MIB·곡 시트)"
+module: "server/spatial/ (pointing.py, mib.py, position_cuesheet.py), server/web/session.py"
+lifecycle: spec-anchored
+tags: "position-cue, cuefade, mib, songcue, position-preset"
+---
+
 # SPEC-COPILOT-CUETIME-001 — 포지션 큐 시간축 (트랜지션·MIB·곡 시트)
 
 - 브랜치: `feature/position-cue-timeline` (main `614eab9`에서 분기)
 - 근거 문서: `docs/handoff/2026-08-14-position-cue-timeline-kickoff.md`,
   `docs/proposals/pan-tilt-position-preset-strategy.md`,
   `.claude/skills/ma3-spatial-pointing/SKILL.md`
-- 상태: T1 진행 중
+- 상태: T1·T2·T3 구현 완료 (M1–M3 완료 2026-08-14, PR #41 머지 2026-08-15). 상태의 정본은 frontmatter `status` 필드다.
 
 ## 배경
 
