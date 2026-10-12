@@ -28,4 +28,5 @@ pools:
   dimmer_effect_a: {start: "1.21", end: "1.26"}
   dimmer_effect_b: {start: "1.31", end: "1.33"}
   # 이 곡 전용 혼합 All 풀 — effect_kind == "mixed".
-  mixed_all: {start: "22.0", end: "22.99"}
+  # 슬롯 0은 콘솔 프리셋 자리가 아니다(Store Preset 22.0 이 다음 빈 자리에 저장됨, 카드 t619).
+  mixed_all: {start: "22.1", end: "22.99"}

@@ -418,7 +418,8 @@ def first_free_preset_number(
         # 빌려 쓰지 않는다(카드 t607). 지도에 그 풀 번호가 없으면(못
         # 읽음·시도 안 함 둘 다 `.get()` 으로 같은 None) "미확인"이다.
         pool_children = console_children.get(pool_no) if console_children is not None else None
-        for slot in range(slot_start, slot_end + 1):
+        # 콘솔에는 슬롯 0이 없다 — 정책이 "22.0"을 선언해도 1부터 돈다(카드 t619).
+        for slot in range(max(slot_start, 1), slot_end + 1):
             candidate = f"{pool_no}.{slot}"
             if candidate in referenced:
                 continue

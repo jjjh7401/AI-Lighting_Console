@@ -155,14 +155,14 @@ class TestReadEffectPoolsByNumber:
 class TestFirstFreePresetNumberNeverBorrowsAnotherPool:
     def test_pool_21_occupancy_never_blocks_a_pool_22_candidate(self) -> None:
         # 실측 그대로: 풀 21(이름 "All 1") 슬롯 0 점유, 풀 22(번호대가 실제로
-        # 가리키는 풀) 슬롯 0은 비어 있다. 다른 풀의 점유를 빌려 쓰면 "22.0"
-        # 을 거절(점유로 오판)하고, 번호로만 보면 "22.0"을 내준다.
+        # 가리키는 풀)은 비어 있다. 다른 풀의 점유를 빌려 쓰지 않고 번호로만
+        # 보면 풀 22의 첫 슬롯 "22.1"을 내준다(슬롯 0은 콘솔에 없다, 카드 t619).
         console_children = {21: {0: "Unrelated Pool 21 Preset"}, 22: {}}
         preset_no, reason, warning = first_free_preset_number(
             "mixed", policy=_MIXED_POLICY, grid={"tracks": []}, console_children=console_children
         )
         assert reason is None
-        assert preset_no == "22.0"
+        assert preset_no == "22.1"
         assert warning is None  # 풀 22는 실제로 읽혔다(빈 딕셔너리라도 읽음).
 
     def test_a_slot_free_in_21_but_occupied_in_22_is_correctly_skipped(self) -> None:
@@ -250,7 +250,7 @@ class TestMixedDialogReadsThePoolByNumber:
         )
         assert event.get("summary") == _CREATED, event
         number = _cue_of(store.latest["beat_grid"], "BACK", 1)["effect_preset_no"]
-        assert number == "22.0"  # 격자 참조만 보고 골랐다 — 풀 21로 대신 보지 않는다.
+        assert number == "22.1"  # 격자 참조만 보고 골랐다 — 풀 21로 대신 보지 않는다.
         assert "⚠ 콘솔 빈칸 미확인" in event["text"]
         assert console.executed == []
 
