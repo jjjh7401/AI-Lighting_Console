@@ -1,0 +1,4 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/step-S2s.txt", "sha256": "7b0f4fb3506c09af9a52eb8b5c54d8914ad28cc12376fc881a63fbba33280887", "lines": 1, "started_at": "2026-10-12T11:57:47.370+00:00"}
+{"event": "screen", "at": "2026-10-12T11:57:47.436+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 1, "by_status": {"cleared": 1}}
+{"index": 1, "line": "Off Timecode 70", "sent_at": "2026-10-12T11:57:47.436+00:00", "responded_at": "2026-10-12T11:57:47.503+00:00", "status": "ok", "detail": "OK"}
+{"event": "end", "sent": 1, "stopped_at": null, "status": "ok", "ended_at": "2026-10-12T11:57:47.503+00:00"}

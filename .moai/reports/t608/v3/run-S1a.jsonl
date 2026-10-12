@@ -1,0 +1,33 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/step-S1a.txt", "sha256": "3276806f74a5711dd2807138874edfbf30bd5e496258e2406bcf07919fa62d02", "lines": 30, "started_at": "2026-10-12T11:56:32.808+00:00"}
+{"event": "screen", "at": "2026-10-12T11:56:32.872+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 30, "by_status": {"cleared": 30}}
+{"index": 1, "line": "Fixture 521 ; Attribute 'Pan' At -65.6 ; Attribute 'Tilt' At 41.6", "sent_at": "2026-10-12T11:56:32.872+00:00", "responded_at": "2026-10-12T11:56:32.938+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Fixture 522 ; Attribute 'Pan' At -57.5 ; Attribute 'Tilt' At 34.4", "sent_at": "2026-10-12T11:56:32.938+00:00", "responded_at": "2026-10-12T11:56:33.006+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Fixture 523 ; Attribute 'Pan' At -43.3 ; Attribute 'Tilt' At 26.8", "sent_at": "2026-10-12T11:56:33.006+00:00", "responded_at": "2026-10-12T11:56:33.072+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Fixture 524 ; Attribute 'Pan' At -17.5 ; Attribute 'Tilt' At 21.1", "sent_at": "2026-10-12T11:56:33.072+00:00", "responded_at": "2026-10-12T11:56:33.139+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Fixture 525 ; Attribute 'Pan' At 17.5 ; Attribute 'Tilt' At 21.1", "sent_at": "2026-10-12T11:56:33.139+00:00", "responded_at": "2026-10-12T11:56:33.205+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Fixture 526 ; Attribute 'Pan' At 43.3 ; Attribute 'Tilt' At 26.8", "sent_at": "2026-10-12T11:56:33.205+00:00", "responded_at": "2026-10-12T11:56:33.272+00:00", "status": "ok", "detail": "OK"}
+{"index": 7, "line": "Fixture 527 ; Attribute 'Pan' At 57.5 ; Attribute 'Tilt' At 34.4", "sent_at": "2026-10-12T11:56:33.272+00:00", "responded_at": "2026-10-12T11:56:33.339+00:00", "status": "ok", "detail": "OK"}
+{"index": 8, "line": "Fixture 528 ; Attribute 'Pan' At 65.6 ; Attribute 'Tilt' At 41.6", "sent_at": "2026-10-12T11:56:33.339+00:00", "responded_at": "2026-10-12T11:56:33.406+00:00", "status": "ok", "detail": "OK"}
+{"index": 9, "line": "Store Preset 2.351", "sent_at": "2026-10-12T11:56:33.406+00:00", "responded_at": "2026-10-12T11:56:33.472+00:00", "status": "ok", "detail": "OK"}
+{"index": 10, "line": "Label Preset 2.351 'SCR POS'", "sent_at": "2026-10-12T11:56:33.472+00:00", "responded_at": "2026-10-12T11:56:33.539+00:00", "status": "ok", "detail": "OK"}
+{"index": 11, "line": "ClearAll", "sent_at": "2026-10-12T11:56:33.539+00:00", "responded_at": "2026-10-12T11:56:33.606+00:00", "status": "ok", "detail": "OK"}
+{"index": 12, "line": "ClearAll", "sent_at": "2026-10-12T11:56:33.606+00:00", "responded_at": "2026-10-12T11:56:33.673+00:00", "status": "ok", "detail": "OK"}
+{"index": 13, "line": "Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 50", "sent_at": "2026-10-12T11:56:33.673+00:00", "responded_at": "2026-10-12T11:56:33.739+00:00", "status": "ok", "detail": "OK"}
+{"index": 14, "line": "Store Preset 4.351", "sent_at": "2026-10-12T11:56:33.739+00:00", "responded_at": "2026-10-12T11:56:33.806+00:00", "status": "ok", "detail": "OK"}
+{"index": 15, "line": "Label Preset 4.351 'SCR COLOR'", "sent_at": "2026-10-12T11:56:33.806+00:00", "responded_at": "2026-10-12T11:56:33.872+00:00", "status": "ok", "detail": "OK"}
+{"index": 16, "line": "ClearAll", "sent_at": "2026-10-12T11:56:33.872+00:00", "responded_at": "2026-10-12T11:56:33.939+00:00", "status": "ok", "detail": "OK"}
+{"index": 17, "line": "ChangeDestination Root", "sent_at": "2026-10-12T11:56:33.939+00:00", "responded_at": "2026-10-12T11:56:34.006+00:00", "status": "ok", "detail": "OK"}
+{"index": 18, "line": "ClearAll", "sent_at": "2026-10-12T11:56:34.006+00:00", "responded_at": "2026-10-12T11:56:34.072+00:00", "status": "ok", "detail": "OK"}
+{"index": 19, "line": "Group 4", "sent_at": "2026-10-12T11:56:34.072+00:00", "responded_at": "2026-10-12T11:56:34.139+00:00", "status": "ok", "detail": "OK"}
+{"index": 20, "line": "Attribute 'Dimmer' At 100", "sent_at": "2026-10-12T11:56:34.139+00:00", "responded_at": "2026-10-12T11:56:34.205+00:00", "status": "ok", "detail": "OK"}
+{"index": 21, "line": "Step 2", "sent_at": "2026-10-12T11:56:34.205+00:00", "responded_at": "2026-10-12T11:56:34.272+00:00", "status": "ok", "detail": "OK"}
+{"index": 22, "line": "Attribute 'Dimmer' At 0", "sent_at": "2026-10-12T11:56:34.272+00:00", "responded_at": "2026-10-12T11:56:34.339+00:00", "status": "ok", "detail": "OK"}
+{"index": 23, "line": "Attribute 'Dimmer' At Phase 0 Thru 360", "sent_at": "2026-10-12T11:56:34.339+00:00", "responded_at": "2026-10-12T11:56:34.405+00:00", "status": "ok", "detail": "OK"}
+{"index": 24, "line": "Attribute 'Dimmer' At Speed 60", "sent_at": "2026-10-12T11:56:34.405+00:00", "responded_at": "2026-10-12T11:56:34.472+00:00", "status": "ok", "detail": "OK"}
+{"index": 25, "line": "Store Preset 22.98 'SCR FX' /Universal", "sent_at": "2026-10-12T11:56:34.472+00:00", "responded_at": "2026-10-12T11:56:34.539+00:00", "status": "ok", "detail": "OK"}
+{"index": 26, "line": "Label Preset 22.98 'SCR FX'", "sent_at": "2026-10-12T11:56:34.539+00:00", "responded_at": "2026-10-12T11:56:34.606+00:00", "status": "ok", "detail": "OK"}
+{"index": 27, "line": "ClearAll", "sent_at": "2026-10-12T11:56:34.606+00:00", "responded_at": "2026-10-12T11:56:34.672+00:00", "status": "ok", "detail": "OK"}
+{"index": 28, "line": "Store Timecode 70", "sent_at": "2026-10-12T11:56:34.672+00:00", "responded_at": "2026-10-12T11:56:34.739+00:00", "status": "ok", "detail": "OK"}
+{"index": 29, "line": "Set Timecode 70 Property 'Name' 'LDBEAT Timecode 70'", "sent_at": "2026-10-12T11:56:34.739+00:00", "responded_at": "2026-10-12T11:56:34.805+00:00", "status": "ok", "detail": "OK"}
+{"index": 30, "line": "Store Timecode 70.1", "sent_at": "2026-10-12T11:56:34.805+00:00", "responded_at": "2026-10-12T11:56:34.872+00:00", "status": "ok", "detail": "OK"}
+{"event": "end", "sent": 30, "stopped_at": null, "status": "ok", "ended_at": "2026-10-12T11:56:34.872+00:00"}

@@ -1,0 +1,4 @@
+ClearAll
+Fixture 111 ; Attribute 'Dimmer' At 1
+Store Preset 22.0
+ClearAll

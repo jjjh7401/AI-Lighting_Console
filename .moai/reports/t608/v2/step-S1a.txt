@@ -1,0 +1,29 @@
+Fixture 521 ; Attribute 'Pan' At -65.6 ; Attribute 'Tilt' At 41.6
+Fixture 522 ; Attribute 'Pan' At -57.5 ; Attribute 'Tilt' At 34.4
+Fixture 523 ; Attribute 'Pan' At -43.3 ; Attribute 'Tilt' At 26.8
+Fixture 524 ; Attribute 'Pan' At -17.5 ; Attribute 'Tilt' At 21.1
+Fixture 525 ; Attribute 'Pan' At 17.5 ; Attribute 'Tilt' At 21.1
+Fixture 526 ; Attribute 'Pan' At 43.3 ; Attribute 'Tilt' At 26.8
+Fixture 527 ; Attribute 'Pan' At 57.5 ; Attribute 'Tilt' At 34.4
+Fixture 528 ; Attribute 'Pan' At 65.6 ; Attribute 'Tilt' At 41.6
+Store Preset 2.351
+Label Preset 2.351 'SCR POS'
+ClearAll
+ClearAll
+Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 50
+Store Preset 4.351
+Label Preset 4.351 'SCR COLOR'
+ClearAll
+ChangeDestination Root
+ClearAll
+Group 4
+Attribute 'Dimmer' At 100
+Step 2
+Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0 Thru 360
+Attribute 'Dimmer' At Speed 60
+Store Preset 22.98 'SCR FX' /Universal
+Label Preset 22.98 'SCR FX'
+ClearAll
+Store Timecode 70
+Set Timecode 70 Property 'Name' 'LDBEAT Timecode 70'

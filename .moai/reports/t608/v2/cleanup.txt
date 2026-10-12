@@ -1,0 +1,12 @@
+ClearAll
+Delete Preset 2.351 /NoConfirm
+Delete Preset 4.351 /NoConfirm
+Delete Preset 22.98 /NoConfirm
+Delete Timecode 70 /NoConfirm
+Delete Sequence 702 /NoConfirm
+Delete Sequence 703 /NoConfirm
+Delete Sequence 701 /NoConfirm
+Delete Sequence 700 /NoConfirm
+Delete Preset 22.97 /NoConfirm
+Delete Preset 4.352 /NoConfirm
+ClearAll

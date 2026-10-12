@@ -1,0 +1,9 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v2/step-S1b.txt", "sha256": "06ff373ad1f900a7faa97faf1f0fee54466ee78696d5d54f8221f397cfec908b", "lines": 46, "started_at": "2026-10-12T10:55:47.585+00:00"}
+{"event": "screen", "at": "2026-10-12T10:55:47.652+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 46, "by_status": {"cleared": 46}}
+{"index": 1, "line": "Store Sequence 702", "sent_at": "2026-10-12T10:55:47.652+00:00", "responded_at": "2026-10-12T10:55:47.718+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Set Sequence 702 Property 'Name' 'LDBEAT MOVER-D'", "sent_at": "2026-10-12T10:55:47.718+00:00", "responded_at": "2026-10-12T10:55:47.785+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Assign Sequence 702 At Timecode 70", "sent_at": "2026-10-12T10:55:47.785+00:00", "responded_at": "2026-10-12T10:55:47.852+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Store Sequence 703", "sent_at": "2026-10-12T10:55:47.852+00:00", "responded_at": "2026-10-12T10:55:47.918+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Set Sequence 703 Property 'Name' 'LDBEAT WASH-ALL'", "sent_at": "2026-10-12T10:55:47.918+00:00", "responded_at": "2026-10-12T10:55:47.984+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Assign Sequence 703 At Timecode 70", "sent_at": "2026-10-12T10:55:47.984+00:00", "responded_at": "2026-10-12T10:55:48.052+00:00", "status": "failed", "detail": "Illegal object"}
+{"event": "end", "sent": 6, "stopped_at": 6, "status": "stopped", "ended_at": "2026-10-12T10:55:48.052+00:00"}

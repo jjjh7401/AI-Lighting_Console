@@ -1,0 +1,5 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/step-S4.txt", "sha256": "8946e1e126ffe7418f6acee4ab8311d8643beaf3f85b4caf27c4a6cfef8e27e3", "lines": 50, "started_at": "2026-10-12T11:57:50.169+00:00"}
+{"event": "screen", "at": "2026-10-12T11:57:50.236+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 50, "by_status": {"cleared": 50}}
+{"index": 1, "line": "Group 12 ; At Preset 2.351", "sent_at": "2026-10-12T11:57:50.236+00:00", "responded_at": "2026-10-12T11:57:50.303+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Store Sequence 702 Cue 1", "sent_at": "2026-10-12T11:57:50.303+00:00", "responded_at": "2026-10-12T11:57:50.369+00:00", "status": "failed", "detail": "User Canceled Command"}
+{"event": "end", "sent": 2, "stopped_at": 2, "status": "stopped", "ended_at": "2026-10-12T11:57:50.369+00:00"}

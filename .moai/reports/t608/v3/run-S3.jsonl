@@ -1,0 +1,11 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/step-S3.txt", "sha256": "c1045c43ea43acb5a7c935f93a7c826df66fd9bc7ee8e4b700891efc4ee86d53", "lines": 8, "started_at": "2026-10-12T11:57:48.270+00:00"}
+{"event": "screen", "at": "2026-10-12T11:57:48.870+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 8, "by_status": {"cleared": 8}}
+{"index": 1, "line": "Goto Cue 1 Sequence 701", "sent_at": "2026-10-12T11:57:48.870+00:00", "responded_at": "2026-10-12T11:57:48.937+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Goto Cue 2 Sequence 700", "sent_at": "2026-10-12T11:57:48.937+00:00", "responded_at": "2026-10-12T11:57:49.003+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Goto Cue 2 Sequence 701", "sent_at": "2026-10-12T11:57:49.003+00:00", "responded_at": "2026-10-12T11:57:49.070+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Goto Cue 4 Sequence 700", "sent_at": "2026-10-12T11:57:49.070+00:00", "responded_at": "2026-10-12T11:57:49.137+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Off Sequence 702", "sent_at": "2026-10-12T11:57:49.137+00:00", "responded_at": "2026-10-12T11:57:49.202+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Off Sequence 703", "sent_at": "2026-10-12T11:57:49.202+00:00", "responded_at": "2026-10-12T11:57:49.270+00:00", "status": "ok", "detail": "OK"}
+{"index": 7, "line": "Off Sequence 701", "sent_at": "2026-10-12T11:57:49.270+00:00", "responded_at": "2026-10-12T11:57:49.337+00:00", "status": "ok", "detail": "OK"}
+{"index": 8, "line": "Off Sequence 700", "sent_at": "2026-10-12T11:57:49.337+00:00", "responded_at": "2026-10-12T11:57:49.403+00:00", "status": "ok", "detail": "OK"}
+{"event": "end", "sent": 8, "stopped_at": null, "status": "ok", "ended_at": "2026-10-12T11:57:49.403+00:00"}

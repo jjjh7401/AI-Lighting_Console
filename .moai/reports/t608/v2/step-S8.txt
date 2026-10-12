@@ -1,0 +1,10 @@
+ClearAll
+Group 10 ; Attribute 'ColorRGB_R' At 100 ; Attribute 'ColorRGB_G' At 0 ; Attribute 'ColorRGB_B' At 50
+Store Preset 4.352
+Label Preset 4.352 'SCR DUP'
+ClearAll
+ClearAll
+Group 10 ; Attribute 'ColorRGB_R' At 0 ; Attribute 'ColorRGB_G' At 100 ; Attribute 'ColorRGB_B' At 50
+Store Preset 4.352
+Label Preset 4.352 'SCR DUP'
+ClearAll

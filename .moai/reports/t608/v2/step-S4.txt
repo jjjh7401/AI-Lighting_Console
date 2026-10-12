@@ -1,0 +1,50 @@
+Group 12 ; At Preset 2.351
+Store Sequence 702 Cue 1
+Set Sequence 702 Property 'Name' 'LDBEAT MOVER-D'
+ClearAll
+Set Cue 1 Sequence 702 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 702 Property 'TrigTime' 2
+Group 10 ; At Preset 4.351
+Store Sequence 703 Cue 1
+Set Sequence 703 Property 'Name' 'LDBEAT WASH-ALL'
+ClearAll
+Set Cue 1 Sequence 703 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 703 Property 'TrigTime' 2
+Group 4 ; Attribute 'Dimmer' At 30
+Store Sequence 701 Cue 1 /Overwrite
+Set Sequence 701 Property 'Name' 'LDBEAT BACK'
+ClearAll
+Set Cue 1 Sequence 701 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 701 Property 'TrigTime' 2
+Group 4 ; Attribute 'Dimmer' At 40
+Store Sequence 701 Cue 3
+ClearAll
+Set Cue 3 Sequence 701 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 701 Property 'TrigTime' 4
+Group 4 ; Attribute 'Dimmer' At 50
+Store Sequence 701 Cue 2 /Overwrite
+ClearAll
+Set Cue 2 Sequence 701 Property 'TrigType' 'Time'
+Set Cue 2 Sequence 701 Property 'TrigTime' 6
+Group 3 ; Attribute 'Dimmer' At 20
+Store Sequence 700 Cue 1 /Overwrite
+Set Sequence 700 Property 'Name' 'LDBEAT FOH'
+ClearAll
+Set Cue 1 Sequence 700 Property 'TrigType' 'Time'
+Set Cue 1 Sequence 700 Property 'TrigTime' 2
+Group 3 ; Attribute 'Dimmer' At 65
+Store Sequence 700 Cue 3 /Overwrite
+ClearAll
+Set Cue 3 Sequence 700 Property 'TrigType' 'Time'
+Set Cue 3 Sequence 700 Property 'TrigTime' 7
+Group 3 ; Attribute 'Dimmer' At 80
+Store Sequence 700 Cue 4 /Overwrite
+ClearAll
+Set Cue 4 Sequence 700 Property 'TrigType' 'Time'
+Set Cue 4 Sequence 700 Property 'TrigTime' 8
+Group 3 ; Attribute 'Dimmer' At 100
+Store Sequence 700 Cue 5 CueFade 2 /CueOnly /Overwrite
+ClearAll
+Set Cue 5 Sequence 700 Property 'TrigType' 'Time'
+Set Cue 5 Sequence 700 Property 'TrigTime' 10
+Delete Cue 2 Sequence 700

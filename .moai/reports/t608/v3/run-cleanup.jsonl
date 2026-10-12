@@ -1,0 +1,13 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/cleanup-after-S1b.txt", "sha256": "e0e3c2fdcaa1ca07bafc38e5247cd114e623f944e9efc7a38f1013b3ba207ec5", "lines": 10, "started_at": "2026-10-12T11:58:11.701+00:00"}
+{"event": "screen", "at": "2026-10-12T11:58:11.768+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 10, "by_status": {"cleared": 10}}
+{"index": 1, "line": "ClearAll", "sent_at": "2026-10-12T11:58:11.768+00:00", "responded_at": "2026-10-12T11:58:11.835+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Delete Timecode 70 /NoConfirm", "sent_at": "2026-10-12T11:58:11.835+00:00", "responded_at": "2026-10-12T11:58:11.902+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Delete Sequence 702 /NoConfirm", "sent_at": "2026-10-12T11:58:11.902+00:00", "responded_at": "2026-10-12T11:58:11.968+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Delete Sequence 703 /NoConfirm", "sent_at": "2026-10-12T11:58:11.968+00:00", "responded_at": "2026-10-12T11:58:12.035+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Delete Sequence 701 /NoConfirm", "sent_at": "2026-10-12T11:58:12.035+00:00", "responded_at": "2026-10-12T11:58:12.102+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Delete Sequence 700 /NoConfirm", "sent_at": "2026-10-12T11:58:12.102+00:00", "responded_at": "2026-10-12T11:58:12.169+00:00", "status": "ok", "detail": "OK"}
+{"index": 7, "line": "Delete Preset 2.351 /NoConfirm", "sent_at": "2026-10-12T11:58:12.169+00:00", "responded_at": "2026-10-12T11:58:12.236+00:00", "status": "ok", "detail": "OK"}
+{"index": 8, "line": "Delete Preset 4.351 /NoConfirm", "sent_at": "2026-10-12T11:58:12.236+00:00", "responded_at": "2026-10-12T11:58:12.302+00:00", "status": "ok", "detail": "OK"}
+{"index": 9, "line": "Delete Preset 22.98 /NoConfirm", "sent_at": "2026-10-12T11:58:12.302+00:00", "responded_at": "2026-10-12T11:58:12.368+00:00", "status": "ok", "detail": "OK"}
+{"index": 10, "line": "ClearAll", "sent_at": "2026-10-12T11:58:12.368+00:00", "responded_at": "2026-10-12T11:58:12.435+00:00", "status": "ok", "detail": "OK"}
+{"event": "end", "sent": 10, "stopped_at": null, "status": "ok", "ended_at": "2026-10-12T11:58:12.435+00:00"}
