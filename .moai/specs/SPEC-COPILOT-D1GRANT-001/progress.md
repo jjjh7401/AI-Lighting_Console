@@ -245,4 +245,16 @@ m1_to_mN_commit_strategy: "M1 라이브러리 · M2 승인 등록 · M3 핀 갱�
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+```yaml
+sync_complete_at: 2026-10-13
+sync_commit_sha: pending-backfill-sync
+sync_status: synced
+completion_decision: "supervisor decision 2026-10-12 (사실상 완료 → completed), spec.md status: completed"
+implementation_pr: "#347 (merged 2026-09-06)"
+ac_pass_count: 13
+ac_pass_with_debt_count: 1   # AC-013
+ac_fail_count: 0
+ac_013_debt: "grep -rn 'Nine looks' server/ 의 실측은 2행(기준은 0행). 두 행은 server/tests/test_overlap_preserve.py 에 있으며 REQ-007/009 가 요구하는 핀이라 지우지 않는다 — 부채로 기록, 숨기지 않음"
+code_files_changed_in_sync: 0
+spec_plan_acceptance_body_modified: false   # spec.md 는 frontmatter status/updated 만 갱신, plan.md·acceptance.md 는 손대지 않음
+```
