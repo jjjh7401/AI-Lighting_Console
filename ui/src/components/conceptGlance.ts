@@ -123,9 +123,13 @@ export const DESCRIPTION_SOURCE = "컨셉 파이프라인 계산 — 밝기 수�
 /** REQ-079 항목 클릭 4칸 설명. 「무대에서」만 원천이 있다 — 그 구간 section
  * 행의 서버 큐 설명(`description`, REQ-070). 나머지 셋은 원천이 없어 사유와 함께
  * 데이터 없음이다(지어내지 않는다). `position` 은 `sectionPosition()` 값이다. */
+/** `changeGuide` — t492: 「바꾸려면」 칸 문장(`conceptTabs.changeGuideText`). 안 주면
+ * 데이터 없음. 무슨 뜻·왜 이렇게 제안했나는 원천이 없어 그대로 비운다(리드 결정
+ * 2026-10-12 — 뜻풀이 표 신설 안 함, 등급 토큰은 CUE SHEET 근거 칸 반복). */
 export function explanationCells(
   report: SongTimelineConceptReport | undefined,
   position: number,
+  changeGuide?: string,
 ): ExplanationCell[] {
   const row = report?.rows?.find((entry) => entry.kind === "section" && entry.screen_position === position);
   return [
@@ -134,6 +138,6 @@ export function explanationCells(
       ? { title: "무대에서", text: row.description, source: DESCRIPTION_SOURCE }
       : { title: "무대에서", text: `${NO_DATA} — 이 구간과 짝지어진 컨셉 행 설명이 없다` },
     { title: "왜 이렇게 제안했나", text: `${NO_DATA} — 제안 사유 문장 원천이 서버에 없다` },
-    { title: "바꾸려면", text: `${NO_DATA} — 변경 안내 원천이 서버에 없다` },
+    { title: "바꾸려면", text: changeGuide ?? `${NO_DATA} — 변경 안내 원천이 서버에 없다` },
   ];
 }
