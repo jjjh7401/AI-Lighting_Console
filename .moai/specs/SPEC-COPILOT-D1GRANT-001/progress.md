@@ -255,6 +255,7 @@ ac_pass_count: 13
 ac_pass_with_debt_count: 1   # AC-013
 ac_fail_count: 0
 ac_013_debt: "grep -rn 'Nine looks' server/ 의 실측은 2행(기준은 0행). 두 행은 server/tests/test_overlap_preserve.py 에 있으며 REQ-007/009 가 요구하는 핀이라 지우지 않는다 — 부채로 기록, 숨기지 않음"
+dod_text_mismatch: "acceptance.md §D.5 (완료 정의) 문면 'AC-001..014 전부 PASS' 은 AC-013 PASS-WITH-DEBT 와 문자 그대로 어긋난다. 본문은 manager-spec 소관이라 이 sync 에서 고치지 않았다. 본문 정정은 후속 카드로 분리."
 code_files_changed_in_sync: 0
 spec_plan_acceptance_body_modified: false   # spec.md 는 frontmatter status/updated 만 갱신, plan.md·acceptance.md 는 손대지 않음
 ```
