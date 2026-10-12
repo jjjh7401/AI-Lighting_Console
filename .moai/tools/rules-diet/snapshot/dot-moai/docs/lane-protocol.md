@@ -1,0 +1,645 @@
+# 레인 규약 — `/clear` 를 넘어 사는 것
+
+칸반 레인이 카드를 받아 닫기까지 지키는 규약. **배차서가 이 파일을 가리키고, 레인이
+직접 읽는다.**
+
+## 이 파일이 왜 저장소 안에 있나
+
+2026-08-30 회차에서 리드가 같은 규약 여덟 개를 배차서마다 다시 적었다. 레인이
+`/clear` 될 때마다 규약이 문맥과 함께 사라졌고, 리드가 기억해서 다시 실어야 했다.
+**기억에 의존하는 전달은 한 번 빠뜨리면 조용히 사라진다** — 그날 실제로 대조군을
+「두 팔」이 아니라 한 팔만 시킨 배차서가 나갔고, 레인이 두 팔로 쏴서 그 누락을 찾았다.
+
+그래서 규약을 **디스크로 옮겼다.** 배차서는 이 경로 한 줄만 싣는다.
+
+> 배차서 문구: `규약: .moai/docs/lane-protocol.md — 착수 전에 읽어라`
+
+---
+
+## 1. 착수
+
+- **새 카드는 새 워크트리다.** 이전 카드 트리에 앉아 있으면 `ExitWorktree` 로 먼저
+  나와라. 안 나오면 새 카드 작업이 이전 카드 브랜치에 얹힌다.
+- 🔴 **진입 직후 `uv sync --group dev` 를 돌려라 — 있는지 묻지 말고.** 주 체크아웃의
+  `.venv` 를 빌리면 **무관한 가드가 가짜로 빨개진다**: 인터프리터가 딴 트리 것이라
+  `test_tree_identity` 가 **주 체크아웃의 파일 부재를 이 트리의 결함으로** 보고한다.
+  t95 · t102 · t186 으로 **세 번 재발**했고, 주 체크아웃이 `origin/main` 뒤에 앉아
+  있는 한 **상시 열린 함정**이다.
+  실측(t186, 같은 트리·같은 커밋, **인터프리터만** 교체):
+  빌린 venv `1 failed` / 자체 venv `4 passed`.
+
+  🔴 **그리고 `.venv` 는 없다가 도중에 생긴다.** 린트 검사(`test_overlap_preserve.py`)가
+  `uv run ruff` 를 부르면 uv 가 워크트리에 **자동 생성**한다. 그래서 회차 초반의
+  `ls -d .venv` → 「없음」이 **몇 분 뒤 거짓이 된다.**
+
+  이건 §4.0 의 「없음」 함정들과 **종이 다르다.** 거기 있는 것들은 계기가 잘못 세거나
+  (덤프 절단) 대조군이 없어서 0 이 나온 경우 — **잰 순간부터 틀린** 값이다.
+  이쪽은 **잰 순간엔 맞았고 나중에 틀려진다.** 부재가 시간에 따라 변하므로
+  「확인했다」가 **유효기간을 갖는다.** 그래서 처방이 「확인해라」가 아니라
+  **「묻지 말고 돌려라」**다 — 묻는 행위 자체가 노화한다.
+
+  ⚠️ 빌린 venv 로 잰 값은 **전부 폐기**다. t186 은 회귀 회계 세 값을 자체 venv 로
+  다시 쟀다(셋 다 재현됐지만, 재기 전에는 그걸 알 수 없다).
+- **base 는 착수 시점의 `origin/main` 을 다시 읽어라.** 배차서의 값은 발신 시점 것이고,
+  이 저장소는 하루에 열 번 넘게 움직인다.
+- **브랜치 이름은 `WT-<slug>`** — 카드 id 를 넣지 마라. 이 저장소는 스쿼시 머지라
+  **머지된 브랜치가 안 지워지고 이름이 남는다** — 그리고 **지우지 마라.** 스쿼시라
+  개별 커밋 이력이 그 브랜치에만 산다. 리드가 배차 전에 충돌을 재지만,
+  네가 바꿔야 하면 바꾸고 **한 줄 알려라**(6절).
+- 🔴 **꼬리 카드는 `origin/main` 에서 새로 떼라 — 앞 카드 브랜치에 잇지 마라.**
+  스쿼시 머지라 머지된 브랜치의 개별 커밋은 `origin/main` 의 **조상이 아니다.**
+  그 브랜치에 후속 작업을 얹으면 PR 이 **이미 머지된 것을 다시 싣는다.**
+  실측(2026-08-31, t206 꼬리): 그렇게 잡힌 범위가 **139줄**, `origin/main` 에서
+  새 브랜치를 떼어 cherry-pick 하니 **3줄**이었다.
+  옛 브랜치는 그대로 둔다 — 위 항목대로 개별 이력이 거기에만 산다. `reset` 하지 마라.
+- **카드 본문은 배차서 요약이 아니라 큐에서 직접 읽어라** — 요약은 그것이 요약한
+  대상의 증거가 아니다. 🔴 다만 **`moai todo` 통째 덤프로 세지 마라: 잘린다.**
+  실측(2026-08-31): 덤프로 센 값 **40장**(queued 14) 대 정본 **152장**
+  (queued 88 · picked 60 · dropped 4) — **112장이 안 보였고 queued 는 6배 틀렸다.**
+  ⚠️ **큐는 자란다** — 같은 날 몇 시간 뒤 다시 세니 153장이었다(t208 카드가 늘었다).
+  이 값은 **하한으로만 읽고** 세야 할 때는 다시 세라. 하중을 지는 것은 절대값이
+  아니라 **덤프와 정본의 격차**다. (§4.0 의 `moai todo` 바이트 수와 같은 성질이다)
+
+  정본과 세는 법:
+
+      <primary>/.moai/state/kanban/backlog.json      ← 절대경로로 열어라
+      jq -r ".items[].state" <정본> | sort | uniq -c
+
+  필드명은 `status` 가 아니라 **`state`**, 카드 배열은 `.items[]`.
+  ⚠️ **이 파일은 primary 체크아웃에만 있다** — 큐는 저장소에 하나다. 워크트리 안에서
+  상대경로로 열면 `No such file` 이 나오고, 그것이 **「큐가 비었다」로 오독된다.**
+- 🔴 **`moai session list` 를 돌리지 마라 — 읽기 전용이 아니다.** 이름은 조회인데
+  머지된 PR 뒷정리가 딸려 돌아 **잠기지 않은 워크트리를 지운다.** 실측(2026-08-31):
+  한 번의 실행이 워크트리 **15개**를 지웠다(t70 t90 t98 t174 t182 t188 t191 t192
+  t194 t196 t197 t199 t200 t201 t203). 리드가 재현 확인했다.
+  살아남은 것은 `locked` 인 넷뿐이다 — **세션 잠금이 유일하게 작동한 방어였다.**
+  커밋된 작업은 브랜치 ref 로 살아남지만(워크트리는 사본이지 브랜치가 아니다),
+  **미커밋 작업은 있었는지조차 잴 수단이 사라진다** — 그쪽이 진짜 손실 후보다.
+  세션을 알아야 하면 `ListAgents` 를 써라 — **파괴적이지 않은 데다 더 잘 답한다.**
+  같은 회차 실측: 금지 대상은 `[]` 를 답했고 `ListAgents` 는 세션 **22개**를 답했다.
+  즉 이건 「위험하지만 유용한 도구」가 아니라 **위험한데 쓸모도 없는 도구**다.
+- **카드 본문의 전제는 노화한다.** 콘솔 전제를 든 카드면 **착수 시점에 쇼 지문부터
+  재라**(`PresetPools/1`·`Groups` 개수). 다르면 그것부터 보고.
+- 🔴 **「없다」를 쓰기 전에 여섯을 순서대로 훑는다.** 「없다 / 안 된다 / 새로 만들자 /
+  감독께 여쭐 것」을 **결론으로도 질문의 전제로도** 쓰기 전에 이 순서로 찾는다:
+
+  0. **내 메모리** — `MEMORY.md` + `index-overflow-craft-and-tooling.md` +
+     `index-console-grandma3.md`. 앞 회차들이 이미 답해 둔 자리다.
+  1. **입력 포맷 정본** — `src/Lighting_Designer/01_스펙/LX-SEQ-SPEC-v2.1.md` ·
+     `00_README.md` · `05_문서인덱스/`. 시트 열 규격·허용값·HARD 작성 규칙이 여기 있다.
+  2. **기존 SPEC** — `.moai/specs/`, 특히 `status: completed`
+  3. **등재 도구** — `server/orchestrator/tools.py` 의 도구 목록
+  4. **코드** — `server/`
+  5. **앞 회차 보고서** — `.moai/reports/`
+
+  **여섯을 다 훑기 전에는 「없다」를 결론으로도 전제로도 쓰지 않는다.**
+  🔴 **0 번이 나중에 붙었다** — 이 항목을 쓴 그 회차에 여섯 번째 사례가 났고, 답이 있던 자리가
+  **자기 메모리**였다(`LED-W`). 규칙이 자기 첫 항목을 빠뜨리고 태어났다는 기록이다.
+
+  이건 §4.0 과 **다른 축**이다 — §4.0 은 **돌린** 검색의 0 을 의심하고(계기가 눈멀었나),
+  이 항목은 **안 돌린** 검색을 막는다(아예 안 봤다). 그리고 「참고」절의
+  **「저장소가 이미 갖고 있다」**가 세운 규범을 **어디를 · 어떤 순서로** 로 구체화한 것이다.
+  규범은 이미 있었는데 **기전이 없어서** 다섯 번 반복됐다.
+
+  📏 **2026-08-31 실측 — 하루에 다섯 번 났다:**
+
+  | # | 「없다」 | 실제 | 어디 있었나 |
+  |---|---|---|---|
+  | 1 | 픽스처 타입 54종 없다 | 8종 전부 있었다 | 응답기가 못 읽은 것 |
+  | 2 | 앱 능력이 안 열렸다 | 3단계까지 실기 도달 | 앞 회차 보고서 |
+  | 3 | 큐 확인 수단이 없다 | `cue_monitor._cue_items`, 2026-08-02 LIVE-VERIFIED | 코드 |
+  | 4 | FX 기능이 없다 / 범위 밖 | `FXGEN`·`FXLIB` completed, 도구 3종 등재 | 기존 SPEC · 도구 목록 |
+  | 5 | 시트 의미는 감독께 여쭐 것 | `LX-SEQ-SPEC-v2.1.md` §2.2·§10·§11 에 전부 | **입력 포맷 정본** |
+
+  🔴 **5번이 가장 나쁘다.** 앞의 넷은 코드에 있는 걸 못 찾은 것이고, 5번은
+  **파이프라인이 읽는 입력 포맷의 정본 명세서를 한 번도 안 연 것**이다.
+  그 파일은 감독 문서 폴더 **맨 앞**(`01_스펙/`)에 있고, SPEC 작성자도 감사자도 리드도
+  아무도 안 열었다. 그 결과 `POS`·`BM` 을 「감독 확인 대기」로 남겼는데 §11.1 이
+  둘 다 **정의된 프리셋 참조**로 규정하고 있었고, `FX` 를 범위에서 뺐는데 §11.1 이
+  `OFF` 까지 규정하고 있었다.
+
+  🔴 **다짐으로는 안 고쳐졌다.** 4번 직후에 「앞으로 찾겠다」고 적고 **같은 턴에 5번을 했다.**
+  그래서 이건 다짐이 아니라 **착수 절차**로 여기 있다.
+
+  감독 문장 그대로: **「어렵게 구현하고 실전테스트까지 한 것을 다시 만들면 검증된 것이
+  미검증으로 퇴행한다.」** 중복 구현은 낭비가 아니라 **품질 손실**이다.
+
+## 2. 도구가 막힐 때
+
+`ExitWorktree` 뒤에는 세션이 launch dir 로 돌아가고, `EnterWorktree` 뒤에도
+`Write`/`Edit` 가 **path traversal 로 거절**될 수 있다. 쓰기 가드 경계는 세션의
+**시작 디렉터리**이고 `EnterWorktree` 로 안 바뀐다.
+
+> **도구가 막힌 것이지 레인이 막힌 게 아니다.** 같은 경로에 `Bash`(heredoc·`sed`)는
+> 통과한다. 보고는 하되 멈추지 마라.
+
+실측(2026-08-30, 레인 보고): 「거절될 수 있다」보다 나쁘다 — **`Write` 가 완전히 막히는
+세션이 있다.** 워크트리 경로엔 path traversal 로, 시작 디렉터리 경로엔 워크트리 가드가
+「워크트리 사본을 고쳐라」로 거절한다. **두 가드가 서로 반대를 가리키고, 탈출로는
+`Bash` 하나뿐이다.** 그러니 `Write` 가 한 번 거절되면 대안을 찾지 말고 바로 `Bash` 로 가라.
+
+🔴 **그리고 `Bash` 히어독의 방아쇠는 중괄호다.** 탐침 넷으로 좁힌 결과 백틱·표·인용문은
+전부 통과했고, 본문에 든 정규식 `[0-9]{3}` 하나로 거절됐다. 코드 리터럴을 문서·카드
+본문에 넣을 때 **중괄호를 피하거나 파일을 나눠 append 해라** — 리드도 카드 본문의
+브레이스 리터럴로 두 번 막혔다.
+
+부수: `.moai/reports/` 는 `.gitignore` 에 있다. **강제 추가가 관행이다** — main 에
+리포트 133개가 추적 중인 것으로 확인된다. 증거 파일은 `git add -f` 로 넣어라.
+
+🔴 **그리고 린트가 `.moai/reports/` 아래 `.py` 까지 잡는다.** 프로브를 커밋하는 레인은
+**전부** 걸린다 — `pyproject.toml` 에 그 디렉터리 제외가 **없다.**
+검산: `grep -c 'moai/reports' pyproject.toml` → **0**. `[tool.ruff.format]` 의
+`exclude` 는 파일 단위 나열뿐이고(바이트 동일성 핀 파일들) 디렉터리 항목이 없다.
+실측(t186): 프로브 한 줄의 `E501` 로 `TestTouchedFilesPassLint` 두 검사가 빨개졌다.
+자기 소스는 멀쩡한데 **증거 파일이 게이트를 막는다.**
+
+⚠️ **설정을 고치지 마라** — 설정에 「디렉터리 글롭 쓰지 마라」가 [HARD] 로 박혀 있어
+제외 추가는 간단한 일이 아니다. 프로브 쪽을 규격에 맞춰라.
+그리고 **프로브 출력이 이미 보고서에 인용돼 있으면 출력을 바꾸지 마라** —
+줄만 감싸서 통과시켜라. 인용된 증거와 도구가 어긋나면 그 인용이 검산 불가가 된다.
+
+🔴 **`moai spec drift` 는 SPEC 을 조용히 빠뜨린다 — 존재·era 확인은 `moai spec audit` 로.**
+설치본 `moai spec drift` 는 git 기록을 작업 브랜치가 아니라 **로컬 `main`** 에서 읽는다.
+이 저장소의 로컬 `main` 은 주 체크아웃이 쥔 채 2026-09-22 `b661da2d` 에 멈춰 있다.
+그래서 V3R6 으로 판정되는 SPEC(`progress.md` 에 `§E.2`·`§E.4` 제목 + 줄 맨 앞
+`sync_commit_sha:`)인데 로컬 `main` 에 기록이 0줄이면 **drift 출력에서 사라진다** —
+오류도 경고도 없고 stderr 0바이트다. 실측(t494·t610, 2026-10-12): SPEC-LDDESIGN-001 에 이어
+SPEC-LDBEAT-001 도 `sync_commit_sha` 를 표준 꼴로 백필하자 기록 67→66 으로 빠졌다.
+
+- **SPEC 이 있는지·몇 era 인지**: `moai spec audit --json --include-grandfathered` —
+  로컬 `main` 과 무관하게 두 SPEC 을 V3R6 으로 정상 보고한다.
+- **drift 결과를 믿기 전에**: 기록 수를 `.moai/specs/SPEC-*` 디렉터리 수와 대조해라
+  (`.moai/reports/t610/count.py`). 빠진 이름이 바로 나온다. 이 중 프런트매터 없는
+  COPILOT 넷은 처음부터 파서 밖이라 이 결함과 별개다.
+- **`sync_commit_sha` 를 굵은 글머리 꼴로 남겨 drift 에 붙들어 두지 마라.** 그 꼴은
+  era 판정기가 못 읽어 V3R5 로 오판한다 — 결함을 다른 결함으로 가리는 것이다.
+- 🔴 **원인 제거(로컬 `main` fast-forward)는 레인이 하지 않는다.** 주 체크아웃의
+  브랜치 상태를 바꾸는 일이라 **감독 판단 항목**이다. 근거 `.moai/reports/t494/run-verdict.md`.
+
+## 3. 검증
+
+> **이 절은 길다. 그대로 둔다 — 절 번호가 인용의 주소이기 때문이다.**
+> 2026-08-31 리드 실측(main 11f9d13): 저장소에서 `규약 §3` 이 **19번** 불리고
+> 그중 **8번이 `server/tests/` 의 살아 있는 검사 안**에 있다. 쪼개서 뒤 절을 밀면
+> `§4.0`·`§4.1`·`§5`·`§6`·`§7` 인용 8개까지 함께 어긋나 **29개 중 27개**가 흔들린다.
+> 낡은 `§N` 을 잡아 주는 기계는 없다 — 주석과 산문이라 **조용히 썩는다.**
+> 그래서 번호는 안 건드리고 안을 3.1~3.6 으로 갈랐다. 기존 `§3` 인용은 그대로 맞고,
+> 새 인용은 더 좁게 찍을 수 있다.
+>
+> **3.1** 순서 · **3.2** 단언 · **3.3** 뮤테이션 · **3.4** 생존을 읽는 여섯 갈래 ·
+> **3.5** 검사가 자기 일을 하는지 · **3.6** 대조군·회귀·귀속
+
+### 3.1 순서
+
+- **커밋 → 스위트 → 보고 순서.** PRESERVE 게이트와 헝크 트립와이어는
+  `<BASE>..HEAD` 를 보므로 **커밋 경계에서만 발동한다.** 편집한 채 돌리면 거짓 초록이
+  나오고, 그걸 **모르는 채** 통과한다.
+
+### 3.2 단언
+
+- **단언은 「무엇이 통과하면 안 되는지」까지 들고 있어야 한다.** 거절 갈래가 둘이면
+  「거절됐다」가 아니라 **어느 사유로** 거절됐는지를 문자열로 단언해라. 거짓 사유로
+  먼저 거절되면 참 사유가 안 보인다.
+- **문구를 지키는 검사는 그 문구가 무엇을 막는지까지 들고 있어야 한다.** 문구 단언과
+  성질 단언은 **다른 행**이고 서로를 대신 못 한다.
+- 🔴 **`try/except` 가 있다는 것은 그 실패 형태를 잡는다는 뜻이 아니다 — 예외 *종류*를
+  읽어라.** 방어가 거기 있다는 사실은 눈에 보이고, 무엇을 **안** 잡는지는 안 보인다.
+  자매 형태가 **다른 종류로** 오면 방어는 한쪽만 덮는다: 같은 실패가 어떤 자리에서는
+  `ok=False` 로 돌아오고 어떤 자리에서는 예외로 터지면 `except` 한 줄은 후자만 막는다
+  (2026-08-31 t181 실측: `read_inventory` 팔 셋이 그랬다). **판별은 잡히는 종류를
+  적어 놓고 자매 형태가 그 목록에 드는지 대조하는 것.**
+
+### 3.3 뮤테이션
+
+- **뮤테이션은 네가 새로 만든 단언에 걸어라.** 경계를 실제로 옮겨 빨강을 확인.
+  살아남으면 여섯 갈래로 읽어라(3.4).
+  그리고 **등가 뮤턴트인지 먼저 재라**(코퍼스 전량 대조).
+- **자극은 재려는 축 하나만 건드려야 한다.** 두 축을 걸치면 3.6 의 두 팔 대조가
+  **성립 자체를 안 한다** — 빨개진 검사가 어느 축에 답한 것인지 갈리지 않는다.
+  2026-08-30 실측: 「childCount 부재」와 「단면 미판독」이 코드에서 같은 갈래로 흘러
+  한 뮤테이션이 둘을 동시에 건드렸고, 기존 검사가 같이 빨개져 「이 축은 지켜지고
+  있다」로 읽힐 뻔했다. 축을 갈라 다시 재니 한쪽만 지켜지고 다른 쪽은 **아무도
+  안 지키고** 있었다. 인접한 두 상태가 코드에서 안 갈리면 겉보기로는 둘 다
+  지켜지는 것처럼 보인다.
+  🔴 **이건 뮤테이션만의 규칙이 아니라 자극 일반의 규칙이다.** 프로브·가짜·주입도
+  같다. 2026-08-31 t182 실측: 레인이 한 상태를 `root_unreadable=True` 로 흉내 냈는데
+  그건 **다른 축의 상태**라 재려던 축을 가렸고 결론을 뒤집을 뻔했다. **흉내 낸 상태가
+  재려는 축의 상태인지** 먼저 물어라.
+- ⚠️ **뮤턴트 형태가 축을 오염시킬 수 있다.** `if False and …` 처럼 **그 형태 자체가
+  린트 위반**인 치환은 린트 검사까지 빨갛게 만든다 — 그 빨강은 이 축을 지키는 검사가
+  아니라 **형태에 대한 반응**이다(2026-08-31 t179 실측). 분기를 **통째로 지우는**
+  형태로 다시 재라.
+- **「적용 안 됨」은 눈이 아니라 단언으로 잰다.** 회차마다 `assert mutated != original` 을
+  들고 가라. 치환 문자열이 안 맞으면 파일이 원본 그대로 돌아가고 **그 통과가 생존으로
+  기록된다.** 새 갈래가 아니라 「적용 안 됨」 갈래의 **기계화**다.
+
+### 3.4 생존을 읽는 여섯 갈래
+
+결함 · 레버 · 관측불가 · 경합 · **적용 안 됨** · **원인이 코드 밖**.
+
+- **여섯째 갈래 — 생존의 원인이 대상 코드 안에 없다.** 두 형태이고 **판별 검사가 다르다.**
+  - **계기 오염**: 검사가 디스크의 소스가 아니라 **낡은 바이트코드**를 돌았다. 치환이
+    **바이트 수를 보존**하고 두 실행이 **같은 초**에 들어가면 pyc 무효화(mtime + size)가
+    안 걸린다 — 2026-08-30 t176 실측이고 **논리곱이라 하나만 깨도 안 난다**(크기가 다르거나,
+    1.2초를 띄우거나, 캐시를 지우면 재현되지 않는다). 판별은 **pyc mtime 이 안 움직였는지**.
+    처방은 배치를 `PYTHONDONTWRITEBYTECODE=1` 로 돌리는 것 — 경로를 손으로 적는 삭제는
+    **틀리면 조용히 아무것도 안 지운다.**
+    🔴 **오염은 배치보다 오래 산다.** 배치가 끝나고 파일을 복원한 뒤에도 낡은 pyc 가 남아
+    **그 다음의 무관한 실행**을 틀리게 만든다(t176 실측: 정본 소스가 `2 failed`, 캐시만
+    지우니 `73 passed`, 소스는 한 바이트도 안 건드렸다). 배치 **끝난 뒤에도** 지워라.
+  - **공허 단언**: 소스는 맞는데 **단언의 우주가 그 단언 자신을 포함**했다. 파일 전체를
+    우주로 잡고 그 안의 리터럴을 찾으면 무엇을 지워도 통과한다(t162 실측). 판별은
+    **우주를 좁혀 보는 것** — 좁혀서 죽으면 공허했던 것이다.
+
+  🔴 **이 갈래는 거짓 생존만이 아니라 거짓 사망도 낸다.** 그쪽이 더 위험하다 — 생존은
+  사람이 들여다보지만 사망은 「잡혔다」로 읽혀 아무도 안 본다.
+
+### 3.5 검사가 자기 일을 하는지
+
+- 🔴 **초록은 「지켜진다」가 아니라 「이 실행에서 빨강이 안 났다」일 뿐이다.**
+  2026-08-30 에 세 형태가 하루에 다 나왔다.
+  - **우연히 덮고 있을 수 있다.** 어떤 선언이 지워졌을 때 빨개지길래 보호받는 줄 알았는데,
+    잡은 것이 그 선언의 검사가 아니라 **옆 대조군이 우연히 그 줄을 읽고 있었을** 뿐이었다
+    (t177 실측: 네 행 중 하나가 그랬다). **그 대조군을 손보면 보호가 조용히 사라진다.**
+    판별은 행별로 하나씩 지우고 돌려 **무엇이 빨개지는지** 보는 것 — 「전체를 지우니
+    빨개진다」는 개별 보호의 증거가 아니다.
+  - **대조군이 술어를 복사하면 대조군이 아니다.** 구현이 `A and B` 인데 대조군이 자기 안에
+    `A and B` 를 **다시 적으면**, 구현만 무르는 뮤테이션에 대조군이 반응하지 않는다
+    (t177 실측: M4 가 그래서 살았다). **둘이 같은 함수를 부르게** 해라.
+  - **불변식 팔의 값어치는 팔 2 가 아니라 뮤테이션에서 드러난다.** 「기존 상태에서도
+    초록」인 팔은 쓸모없어 보이지만, 가장 솔깃한 오설계를 가르는 **유일한** 팔일 수 있다
+    (t167 실측: 축 분리 팔이 그랬다). **팔 2 를 「이 검사가 필요했나」의 유일한 잣대로
+    쓰면 그런 팔을 지운다.**
+- 🔴 **검사의 자기 선언은 그 검사가 실제로 지키는 것의 근거가 아니다.** 검사가 주석에
+  「이건 실측 기록이지 계약이 아니다」라고 **스스로 적어 두어도** 그 말은 무엇이 지켜지는지에
+  대해 아무것도 안 말한다. 2026-08-31 t182 실측: 정확히 그렇게 적혀 있던 검사가
+  `except Exception` 으로 넓히는 뮤턴트에서 **죽었다** — 즉 결과적으로 「넓히지 마라」를
+  독립적으로 지키고 있었다. 위의 「불변식 팔」과 같은 축이다: **지키는 것은 뮤테이션이
+  말하지 주석이 말하지 않는다.** 자기 선언을 믿고 지우면 지켜지던 것이 사라진다.
+  **지우기 전에 그 검사에 뮤테이션을 걸어라.**
+
+### 3.6 대조군 · 회귀 · 귀속
+
+- **대조군은 두 팔이다.**
+  - 1) 새 검사가 **잡는가**
+  - 2) 기존 상태에서는 **못 잡는가**
+
+  1)만으로는 「이 검사가 필요했다」가 증명 안 된다. 2)가 그것을 증명한다.
+- 🔴 **「재현 안 됨」도 대조군 없이는 증거가 아니다.** 「대조군 없으면 ok 는 증거가 아니다」의
+  거울상이다. 2026-08-30 t176 에서 레인이 전제를 재려고 **합성 프로브**를 짰는데 다섯 칸
+  전부 「재현 안 됨」을 냈고, **참인 발견을 철회할 뻔했다**. 정본 파일에 직접 걸어 보니
+  즉시 재현됐다 — 프로브에 **양성 대조군이 없어** 「현상이 없다」와 「이 계기가 현상을 못
+  본다」가 구별되지 않았다. **계기를 의심하는 작업에서 새 계기를 만들면 그 계기부터 검증해라.**
+- 🔴 **「근거가 실행인가 추론인가」로는 부족하다 — 「그 실행의 명령줄은 무엇인가」까지 물어라.**
+  2026-08-31 실측: 레인이 저장된 덤프가 잘렸다며 바이트 수와 md5 를 들고 왔다. 근거는
+  분명히 **실행**이었고 그 술어는 통과했다. 그런데 그 덤프를 만든 것은 레인 자신의
+  `| head -80` 이었다 — 계기가 아니라 **자기 명령줄**이 자른 것이다. 리드가 그것을
+  「독립 확인」이라 적어 승격시켰고, 거짓 결론이 **배차 요청 · 리드 승인 · 새 카드**까지
+  갔다. 리드가 잰 것은 자기 파일 크기뿐이었고 그 값은 **두 가설 모두와 양립**했다 —
+  대조군이 아니었다.
+  그러니 **산출물을 근거로 실을 때는 그것을 만든 명령줄을 같이 실어라.** 받는 쪽은
+  숫자가 아니라 **명령줄**을 먼저 읽어라. 그리고 🔴 **「잰 것」이라는 이름은 붙이는 순간
+  다음 사람의 재측정을 면제시킨다** — 이름을 잘못 붙이는 것은 안 재는 것보다 나쁘다.
+  **자매 사고 — 같은 오귀속의 반대 방향**(2026-08-30): 레인이 **안 잰 추론**을 근거로
+  보냈고 리드가 그것에 「잰 것」이라는 **이름을 붙여** 되돌려줬다. 나중에 레인이 재서
+  반증했다. 한쪽은 추론에 이름을 잘못 붙였고 다른 쪽은 **엉뚱한 실행**에 붙였다 —
+  **주장에도 대조군이 필요하다.**
+- 🔴 **가장 싼 처방이 방금 살린 구별을 죽인다.** 싼 처방일수록 **공유 지점**에 있고,
+  공유 지점일수록 남의 수리가 이미 거기 있다. **판별은 그 지점의 사용처를 세는 것.**
+  그리고 판정 기준은 하나다: **서로 다른 원인이 여전히 서로 다른 사유를 내는가.**
+  두 팔을 각각 죽여 사유 문자열이 **바이트 동일**이면 그 처방은 구별을 접은 것이다
+  (2026-08-31 t188 실측: 루트 사망 팔과 슬롯 사망 팔이 그렇게 됐다 — 한 층 위의
+  `catch` 가 호출 전체를 감싸 세 자리를 한 사유로 접었고, **직전 카드가 없앤 거짓 귀속이
+  다른 모양으로 재현됐다**).
+- **회귀 없음을 exit code 로 말하지 마라.** 직전 상태에서도 돌려 **통과 수의 차이**를
+  적어라 — 추가한 검사 수와 일치해야 한다.
+  ⚠️ **검사를 교체하면 안 맞는다.** 셋을 지우고 넷을 넣으면 차이는 1 이고 그게 맞다
+  (2026-08-30 t177: 73 -> 74, 순증 1). 그럴 때는 **지운 수와 넣은 수를 따로** 적어라 —
+  일치를 억지로 만들지 말고 **왜 안 맞는지**를 적는 것이 이 규칙이 원하는 것이다.
+
+## 4. 0 과 범위를 읽는 법
+
+### 4.0 0 — 「없다」인가 「안 보인다」인가
+
+- **검색이 0을 냈다고 없는 게 아니다.** 술어가 현상보다 좁으면 과소가 나오고 그게
+  「없다」로 읽힌다. 0을 근거로 쓰기 전에 **대조군으로 검출력을 확인**해라.
+- **0의 원인을 갈라라** — 비어서 0인가, 못 읽어서 0인가, 계기가 다른 우주를 재서 0인가.
+- **값이 어디 사는지부터 물어라**: 저장소 텍스트 / 다른 클론·미푸시 브랜치 / 원격 /
+  **콘솔 런타임**. `grep` 은 앞의 하나만 답한다.
+- **개수 차는 방향이 둘이다.** 차집합으로 재고, **어느 우주에 대고 재는지**를 먼저 정해라.
+- **세지 말고 열어라.** 개수만 세면 과소도 과대도 난다. 문면을 읽어야 갈린다.
+- 🔴 **개수나 부재의 근거가 상한에 걸린 출력인가.** `N` 이 나왔는데 **상한도 N**
+  이면 그건 개수가 아니라 상한이다. 개수는 `grep -c`, 자리는 `grep -n` —
+  **`| head` 가 붙은 출력을 개수나 부재의 근거로 쓰지 마라.** 잘림은 **세 종류**이고,
+  가르는 축은 「신호가 있나」가 아니라 **「그 신호가 누구를 가리키나」**다
+  (2026-08-31 t174·t192 실측):
+
+  | 잘림 | 신호 | 복구 |
+  |---|---|---|
+  | 하네스 출력 상한 **30,000바이트** | **참** — `Output too large (NN.NKB)` + 전량 파일 경로 + `Preview (first 2KB)` | 그 **파일**을 읽어라. 단 **「온전하다」의 기준은 아래를 봐라** |
+  | `\| head -N` | **없다** — 출력이 정확히 N행이라 「개수 N」과 「상한 N」이 바이트 동일 | 없다. 다시 세는 수밖에 |
+  | 🔴 **둘이 겹침** — `head` 로 자른 출력이 저장본으로도 밀려남 | **거짓** — 배너가 붙으니 **하네스가 잘랐다고 읽힌다.** 실제로 자른 것은 네 파이프다 | **자기 명령줄을 읽어라.** 저장본은 안 도와준다 |
+
+  **셋째가 가장 나쁘다.** 둘째는 신호가 없어서 의심이라도 남는데, 셋째는 신호가
+  **있고 그것이 남을 가리킨다** — 의심이 엉뚱한 데로 간다.
+
+  🔴 **「온전하다」의 기준은 하네스가 받은 스트림이지 명령의 전체 출력이 아니다.**
+  네가 앞 단에서 `head` 로 잘랐다면 **저장본도 잘려 있고, 그런데도 배너는 붙는다.**
+  2026-08-31 t192 실측: 저장본 **68건 중 35건**이 `head` 로 자른 명령이고, 그 표본에
+  `moai todo 2>&1 | head -60` 형태가 **반복 출현**한다 — 한 사람의 부주의가 아니라
+  **반복되는 배치**다. 실제로 한 레인이 저장본 144,942바이트·80장을 보고 「하네스가
+  136장을 80장으로 잘랐다」로 읽었고, 그 거짓이 리드 확인과 새 카드까지 갔다.
+  자른 것은 자기 `| head -80` 이었다. **배너를 보면 먼저 자기 명령줄을 읽어라.**
+
+  🔴 **개수보다 「부재」가 더 위험하다.** 잘린 **목록**은 「그런 수단이 없다」를 낳고,
+  그 결론은 개수와 달리 **다음 사람이 검산하지 않는다.** 2026-08-31 실측 — 리드가
+  `moai todo --help | head -30` 을 돌렸고 30행이 `next` 에서 끊겼다. 31~35행에
+  `unpick` `edit` `move` `drop` `undrop` 다섯이 있었다. 그래서 「동사는 넷뿐」→
+  「닫힌 카드를 고칠 수단이 없다」가 나왔고, 그 거짓이 카드 본문 · 감독 보고 ·
+  **메모리 색인**까지 갔다. 전체 도움말은 **40행**이라 하네스는 자를 이유가 없었다 —
+  **읽기 편하려고 붙인 `head` 가 스스로 만든 잘림**이다.
+
+  같은 사람이 몇 시간 뒤 `grep -n … | head -5` 로 8건을 5건으로 읽었다.
+  **두 오류가 아니라 같은 형태 하나다** — 그리고 그 사이에 이 함정을 카드로 세웠다.
+  규칙을 만드는 중에 그 규칙을 밟는다.
+
+  **조용한 쪽은 `head` 다.** 하네스는 크게 말한다 — 그러니 하네스 잘림의 실패는
+  「몰래 잘렸다」가 아니라 **「배너를 보고도 프리뷰를 grep 했다」**다. 배너가 보이면
+  프리뷰 말고 **경로의 파일**을 grep 해라. 상한은 **바이트**이지 행이 아니다 —
+  1행 30,000바이트는 통과하고 1행 30,001바이트는 잘린다. 3,000행 6,000바이트는
+  안 잘린다.
+
+  ⚠️ **다만 하네스가 크게 말하는 것이 늘 자기 얘기는 아니다.** 셋째 행처럼 겹치면
+  그 큰 소리가 **네 상한을 자기 탓으로 뒤집어쓴다** — 배너는 「내가 받은 스트림을 다
+  못 실었다」를 말할 뿐, **그 스트림이 이미 잘려서 왔는지는 모른다.**
+- 🔴 **「계기가 잘랐다」를 주장하기 전에 파이프를 떼고 한 번 더 돌려라.** 명령 하나면
+  갈린다. 2026-08-31 실측 — 그 한 번이 거짓 결론을 뒤집었다: `moai todo | head -80 |
+  wc -c` 가 144,942 인데, 파이프 없는 `moai todo` 는 243,063 이고 **저장본도 243,063**
+  이었다. 즉 하네스는 아무것도 안 잘랐다.
+  ⚠️ **적용 조건: 재실행이 싸고 부작용이 없는 명령에 한한다.** 비싸거나, 쓰기를 하거나,
+  출력이 시각에 따라 변하는 명령에는 이 대조가 **성립하지 않는다.** 특히 **콘솔에 쓰는
+  명령은 재실행하지 마라** — **확인과 사고가 같은 행위가 된다.** 그때는 대신
+  **명령줄을 인용**해라(§3.6).
+- **큰 출력은 셸에서 먼저 걸러라.** 파이프는 표시 단계를 안 거치므로 전량이 흐른다:
+  `moai todo 2>/dev/null | grep -E '^t1'`. `moai todo` 는 2026-08-31 기준
+  **224,087바이트**(상한의 7.5배)이고 축소 플래그가 없다(`list` 의 플래그는 `--json`
+  뿐). 큐가 자라므로 이 값은 **늘기만 한다** — 이 숫자는 만료되는 쪽이 아니라
+  낮아지지 않는 쪽이다. 같은 날 뒤에 두 번 더 쟀다: **238,237** → **243,063**
+  (t192). 하루 안에 세 값이다 — **하한으로만 읽어라.**
+
+### 4.1 범위 — 「내 결론이 너무 넓나?」를 물을 때
+
+- 🔴 **소비 지점만 읽고 일반화하지 마라 — 생산 지점을 같이 재라.**
+  「이 루프가 종류를 안 가린다」는 참인데 **그 목록에 무엇이 들어오는지**를 안 읽으면
+  폭발 반경이 틀린다. 2026-08-30 에 이 형태가 **양방향으로** 났다 — 리드는 표만 읽고
+  소비 루프를 안 봐 반경을 좁혔고, 레인은 소비 루프만 읽고 생산 지점을 안 봐 넓혔다.
+  **넓히는 쪽이 더 나쁘다**: 없는 위험을 만들고, 그것이 카드가 되어 정본 수정 직전까지 갔다.
+- 🔴 **세 보이는 인용문이 네 결론의 범위를 덮지 않는다.** 「코드가 스스로 말한다」는
+  강한 근거지만, 그 문장의 **범위**와 네 **결론의 범위**를 나란히 적어야 한다.
+  실제 사례: 거절 문면의 「**한 줄도** 보내지 않았다」는 「**그 계획의** 한 줄도」이지
+  「모든 계획의 한 줄도」가 아니었다. 인용은 참이었고 결론만 넓었다.
+
+## 5. 문서를 고칠 때
+
+- **날짜·베이스·버전이 박힌 측정 기록** → 숫자를 고치지 마라. **만료 고지**를 붙여라.
+  시간순 로그면 「마지막 절이 현재 상태」라는 읽는 법을 함께 적어라.
+- **다음 사람이 읽고 착수하는 처방·현재상태 서술** → 고쳐라. 안 고치면 이미 끝난 일을
+  다시 시작한다.
+- **`.moai/reports/` 아래는 그 시점 기록이다** — 정정 대상이 아니라 고지 대상.
+  자기가 틀리게 주장했다는 사실 자체가 감사 기록이다.
+- **매치 수를 처방 수로 세지 마라.** 세 갈래(날짜 기록 / 여전히 옳음 / 진짜 만료)로
+  분류한 표를 산출물로 내라.
+- **코드 변경 0 이니 검증할 게 없다는 것은 함정이다.** 문서 카드에도 실행 확인을 붙여라.
+
+## 6. 리드에게 말해야 하는 것
+
+- **범위를 넓히기 전에 한 줄 보내라.** 근거는 「두면 알려진 결함이 남는다」 하나뿐.
+  **사후 보고는 리드가 막을 기회를 없앤다.**
+- **배차서의 값을 고쳤으면**(브랜치 이름 등) 한 줄이라도 알려라. 조용히 고치면
+  리드의 습관이 안 바뀐다.
+- **전제가 틀렸으면 재서 반증하고 알려라.** 이건 마찰이 아니라 이 보드가 도는 방식이다.
+- **막힌 채 idle 로 두지 마라.** 밖에서 보면 「잰 채 idle」과 「안 한 것」이 구별되지
+  않는다 — **중간 산출물을 커밋해 가며 가라.** 특히 조사·전수 카드는 커밋할 코드가
+  없어 자연히 아무것도 안 남는다.
+- **컨텍스트가 1M 의 50% 를 넘으면** 감독께 `/clear` 를 권하고 **붙여넣기용 인계를
+  본문에 렌더**해라. 저장은 전달이 아니다.
+
+## 7. 닫기
+
+- PR 을 열고 **`mergeable` 을 맨 먼저 읽어라.** `CONFLICTING` 이면 CI 런이 아예 안
+  생겨 「헤드 밀림」으로 오진된다.
+- CI 는 **「초록이다」가 아니라 「이 헤드가 초록이다」**로 읽어라 — `headRefOid` 를
+  같이 확인.
+- **자체 머지한다.** 다만 **diff 가 아니라 결정이 안전장치에 닿으면** 리드에게 넘겨라.
+  조이는 변경은 리드가 판정하고, **무르는 변경은 감독 판단이 붙을 수 있다.**
+- 보고서에 **안 잰 것**을 적어라. gap 절이 게으름의 피난처가 되지 않게 —
+  **한 명령이면 답이 나는 것은 지금 재라.**
+- 🔴 **처방은 추측하지 말고 도구에 직접 물어라** — `--dry-run` 이 있으면 그것으로.
+  「이 명령은 이럴 것이다」로 쓴 문장이 실제와 달랐던 자리가 있다. `--dry-run` 은
+  스테이징·커밋을 안 하므로 안전장치를 쏘는 것이 아니다.
+- **등급은 증거를 따라간다.** 판독에서 나온 위험을 관측된 사고로 올려 쓰지 마라.
+
+### 🔴 브랜치·워크트리를 지울 때 — `git branch --merged` 를 판정에 쓰지 마라
+
+**이 저장소는 스쿼시 머지를 쓴다.** 스쿼시는 브랜치 팁을 `main` 의 조상으로 만들지
+않으므로, `--merged` 는 **머지된 브랜치를 unmerged 로** 답한다. 반대로 커밋이 하나도
+없는 브랜치는 HEAD 가 그냥 옛 `main` 이라 **자동으로 조상이 되어 merged 로** 답한다.
+
+실측 (2026-09-02, t262 · 브랜치 여섯):
+
+```
+WT-card-triage            --merged 가 🟢 merged      실제: 커밋 0건, 내용 하나도 안 들어감
+나머지 다섯               --merged 가 ❌ unmerged    실제: PR #299~#303 으로 전부 머지됨
+```
+
+**여섯 중 여섯이 뒤집혔다.** 그리고 제일 위험한 자리는 여기다 —
+🔴 **`--merged` 가 유일하게 「안전」이라고 말한 트리가, 유일하게 못 건진 작업을 들고
+있었다.** 그 술어로 삭제 순서를 잡았으면 그것이 첫 번째로 사라졌다.
+
+**판정은 PR 상태로 한다:**
+
+```bash
+gh pr list --state merged --json headRefName --jq '.[].headRefName'
+```
+
+그리고 지우기 전에 **미커밋·미추적 파일을 전수 스캔해라.** 같은 날 그 스캔에서
+「어느 트리에도 커밋 안 된 소스 7파일」을 포함해 넷이 더 나왔다 — `--merged` 는
+그 자리에 대해 아무 말도 하지 않는다.
+
+## 8. 리드가 지키는 것 (레인이 검산해도 된다)
+
+- 배차서의 문장을 **잰 것 / 가정한 것**으로 가르고, 잰 것은 **값이 나온 필드**까지 댄다
+- 브랜치 이름 충돌을 배차 전에 잰다
+- 카드가 닫히면 **산출물을 되읽어** 검증한다 — 답장이 아니라 디스크를
+- 레인 상태를 진단할 때 **넷을 묻는다**: 미커밋 · 막힘 · 배차 미도달 · **잰 채 idle**
+- 발견을 **카드로 세운다.** 안 세우면 떠 있다가 사라진다
+- 🔴 **레인 보고에 「없다」가 오면 어디까지 찾았는지를 되묻는다** — §1 의 여섯 자리 중
+  무엇을 열었는지. 안 물으면 그 「없다」가 그대로 결정이 된다. 2026-08-31 에 다섯 번 그랬고,
+  그중 하나는 리드 자신이 정본 명세서를 안 열고 「감독께 여쭐 것」으로 배차한 것이었다
+
+## 9. 컨텍스트 — 느낌이 아니라 카드 경계에서 잰다
+
+> **정본 표기, 2026-08-31.** 세션의 clear 시점(다섯 장 / 컨텍스트 50% 이중 임계)에
+> 대한 정본은 이 절이다. `kanban-dispatch.md` § "The `/clear` handoff between
+> phases" 는 companion 세션의 **위상**(누가 누구에게 clear 를 요청하는가)만 규정하고,
+> 카드/페이즈 경계마다 무조건 clear 하라는 뜻이 아니다 — 리드 세션을 포함해 카드를
+> 여러 장 이어 도는 세션의 clear 시점은 이 절의 이중 임계를 따른다.
+
+**자기보고 퍼센트는 리드가 검증할 수 없다.** 레인이 「여유 있다」고 말하면 리드는
+그것을 확인할 방법이 없고, 그래서 배차가 멈추지 않는다. 2026-08-30 에 한 레인이
+**한 세션에서 열두 장**을 돌았다.
+
+**그러니 시각이 아니라 카드 경계에서 잰다:**
+
+- **매 카드를 닫을 때** 컨텍스트를 재고 그 값을 완료 보고에 **숫자로** 실어라.
+  「여유 있다」가 아니라 `raw_pct` 와 `stage` 를 적어라:
+
+      .moai/state/context-usage.json  ->  raw_pct · stage · session_id · captured_at
+
+  🔴 **`session_id` 가 내 것과 같은지 먼저 확인해라.** 공유 트리라 남의 값일 수 있다.
+  **다르면 `raw_pct` 를 쓰지 말고 카드 수 축으로 간다** — 조정하지 말고 **버려라.**
+  2026-08-31 t185 실측: 파일이 다른 세션의 값을 들고 있었고, 그 세션에서 신뢰할 수 있는
+  축은 카드 수뿐이었다. 즉 **카드 수는 퍼센트의 중복이 아니라 대체 경로다** —
+  퍼센트가 오염되면 그것만 남는다. 이 구멍은 **조용하다**: `session_id` 를 안 보면
+  남의 퍼센트가 내 것처럼 읽힌다.
+
+  ⚠️ **자기보고는 마지막 실측에 느낌을 누적한 값이라 오차가 단조 증가한다.** 2026-08-31
+  실측: 레인이 「대략 45%」라고 보고했는데 파일은 53% 였다(8점). 근거를 되짚으니 직전에
+  읽은 41% 에 「좀 썼겠지」를 더한 값이었다. **읽은 지 오래될수록 커진다** — 그래서
+  시각이 아니라 카드 경계에서 **파일을 다시 읽는다.**
+
+- **하드 트리거 둘 — 둘 중 먼저 오는 쪽에서 인계한다:**
+
+  | 축 | 임계 | 왜 |
+  |---|---|---|
+  | 컨텍스트 | 1M 모델의 **50%** | 이 임계 위에서 스트림이 멈춘다 |
+  | **카드 수** | 한 세션 **다섯 장** | 퍼센트가 낮아도 판단이 흐려진다 |
+
+  카드 수 축이 있는 이유: 퍼센트는 **읽은 양**을 재지 **쌓인 판단의 수**를 안 잰다.
+  같은 파일군을 여러 카드에서 보면 「이건 아까 확인했다」가 늘고, 그 확신이 실제
+  재측정을 밀어낸다.
+
+- **다섯 장째를 닫으면 새 카드를 받지 말고 인계를 렌더해라.** 리드가 안 물어도
+  네가 먼저 말해라 — 규약 §6 의 「막힌 채 idle 로 두지 마라」와 같은 이유다.
+
+- **인계는 본문에 렌더한다.** 저장은 전달이 아니다. 감독이 다른 창을 뒤지게 하지 마라.
+
+**리드가 지키는 것**: 배차할 때마다 그 레인이 몇 장째인지 세어 배차서에 적는다.
+다섯 장째면 **배차하지 말고 인계를 요청한다.** 레인의 「여유 있다」를 근거로
+배차를 이어가지 마라 — 검증할 수 없는 값이다.
+
+---
+
+## 참고
+
+- 🔴 **「도구가 걸었다」도 「실재한다」가 아니다.** 「도구가 안 걸었다 ≠ 결함이 아니다」는
+  **놓치는** 실패이고, 이쪽은 **처방을 따르면 거짓을 새로 만드는** 실패라 더 위험하다.
+  도구 출력의 주장 조각이 **전부 참인데 결론이 틀릴** 수 있다 — 좌표가 다 맞으면
+  검산하는 사람이 통과시킨다. 몇 줄 더 읽어라.
+- 감사·게이트는 **자기 검사 목록 밖을 못 본다.** 축이 다른 감사는 서로소일 수 있다 —
+  2026-08-30 에 도구 축·tier 계약 축·인용 축이 **셋 다 서로소**로 실측됐다.
+- **저장소가 이미 갖고 있다.** 짓기 전에 찾아라 — 코드·가드·규약·페이로드 계약까지.
+  **§1 의 「「없다」를 쓰기 전에 여섯을 순서대로 훑는다」가 이 규범의 기전이다** — 어디를 어떤 순서로.
+
+---
+
+Classification: 프로젝트 소유 운영 문서. 배차서가 경로로 참조한다.
+
+## 부록 — kanban-dispatch.md 레인 조항 (t613 에서 이동, 원문 그대로)
+
+> 출처: `.claude/rules/moai/workflow/kanban-dispatch.md`. 레인 세션이 읽는다. 리드 조항은 `.moai/docs/kanban-lead-protocol.md`.
+
+## Isolation is entered, never provisioned
+
+[HARD] A card's work happens inside a worktree, and that worktree is **entered through the launcher** — never created with a bare `git worktree add`.
+
+| Need | Form |
+|---|---|
+| Work inside the worktree in this session | `moai cc -w <name>` |
+| Open it in a new window, keeping this session | `moai cc -w <name> --spawn` |
+| Re-enter one from the current session | `EnterWorktree(<path>)` |
+| Leave it | `ExitWorktree` |
+| Dispose it once the card's work has merged on the remote | L2 tree (`~/.moai/worktrees/…`) only: `moai worktree done`. An L1 tree (`.claude/worktrees/…`) is disposed via the session-end keep/remove prompt — `moai worktree` never registers it |
+
+`moai worktree` deliberately carries no creation verb — entering is the launcher's job. A tree made with a raw `git worktree add` is one git knows about but MoAI does not: `done`, `clean`, and `recover` have nothing to close, and orphans accumulate until reconciled by hand.
+
+[HARD] **`moai worktree done` closes L2 trees only.** A worktree entered by short name (`moai cc -w <name>` → `.claude/worktrees/<name>/`) is L1 and is never in `moai worktree`'s registry — `done` on it is a category error, not a disposal. L1 disposal is the session-end keep/remove prompt, or `git worktree unlock` + `git worktree remove` once the session is done. The full L1/L2 boundary lives in `worktree-integration.md` § Terminology Glossary.
+
+> **Partially disproven by measurement, 2026-08-31** (environment: claude 2.1.251 / moai-adk 3.1.2, one build, one environment). The paragraph above bundles two distinct claims and they do not survive equally:
+> - **The behavior claim** ("`done` on an L1 tree is a category error, not a disposal") — **disproven**. Running `moai worktree done <branch>` against an L1 path (`.claude/worktrees/<name>/`) exits 0, prints `Worktree removed`, and the tree vanishes from `git worktree list` (measured on card t198, PR #241, against a disposable throwaway tree — not a tree with live work). `done` does act on L1 trees.
+> - **The registry claim** ("L1 is never in `moai worktree`'s registry") — **unmeasured, not disproven**. `moai worktree --help` confirms a registry concept exists (`recover` — "Repair worktree registry"), but this environment has no way to inspect its contents (no `list` verb; `--help` itself says "For inspection, use git directly"). The `moai` binary here is not this repository's source — it is `moai-adk 3.1.2` installed at `~/.local/bin/moai` — so the implementation could not be read directly, and `recover` mutates the registry, so firing it to observe would make the observation and the mutation the same act. Left unmeasured; do not report it as disproven.
+
+[HARD] **The card's branch is unpushed, so its worktree is the work's only instance.** Dispose of no worktree — L1 or L2 — until the lead has integrated the branch and the remote merge has landed; disposal before that destroys the only copy.
+
+[HARD] **A new card starts in a new worktree — exit any previous one first.** `EnterWorktree(<card-id>)` cannot run from inside a worktree session: a lane still anchored in the previous card's tree MUST `ExitWorktree` back to the primary checkout before creating the new one, or it does the new card's work on the old card's branch. The fresh tree is created from the remote default branch rather than reused — reuse without a `/clear` in between carries the old card's context and untracked artifacts into the new card. Where the new card depends on a prior card's unmerged code, merge the prior branch inside the new worktree; a dependency is a reason to merge, never to reuse the tree.
+
+[HARD] **Card worktree branches carry the `WT-` prefix and a descriptive slug — never the card id.** `EnterWorktree(<name>)` auto-names its branch `worktree-<name>`, which is unwieldy and invisible to the worktree lifecycle tooling. Immediately after creating a card worktree, rename in place with `git branch -m WT-<slug>`: safe inside a worktree (tree, lock, anchoring unaffected); `moai cc -w <name>` re-entry resolves by tree name, not branch name, and the rename switches the disposal path (`worktree-integration.md` § Terminology Glossary).
+
+The slug is derived from what the card **does**, so a reader of `git branch` or a pull-request list learns the change without a lookup — `WT-t0` says nothing, `WT-branch-naming` says what landed. Its shape:
+
+| Property | Rule |
+|---|---|
+| Source | The card's title, not its id |
+| Tokens | At most 3, hyphen-separated |
+| Length | At most 24 characters (the slug alone; `WT-` brings the branch to at most 27) |
+| Alphabet | Lowercase `a-z`, `0-9`, and `-` |
+| Card id | MUST NOT appear — not as a prefix, a suffix, or a token |
+
+The **worktree directory keeps the card id** (`.claude/worktrees/<card-id>`). Only the branch takes the slug; the tree path is what the disposal tooling and the evidence path key on.
+
+[HARD] **Dropping the id from the branch moves traceability onto three other carriers, and all three are mandatory.** The branch name no longer answers "which card was this?", so nothing may rely on reading it back:
+
+- The dispatch's `card:` field carries the card id — it is the address, and it is never omitted.
+- Every commit on the branch names the card id in its message, so `git log` recovers the card without the branch name.
+- The evidence path keeps the card id (`.moai/reports/<card-id>/verdict.md`).
+
+A lane that reports a branch name without also reporting its card id has not reported the card. Merges reference the `WT-` name; the lead maps it back through the `card:` field it dispatched.
+
+The lead dispatches this rather than assuming it: each instruction names the worktree and says to drive it with `git -C <path>` rather than `cd` — a `cd` inside a compound command lasts for that invocation only, so the next command silently reads the wrong tree. A companion reporting it worked in the shared checkout is a fault to report, not a detail to tidy up (rationale: `kanban-dispatch-detail.md` § Isolation rationale).
+
+
+## Verification load is lane-local
+
+[HARD] **Lane-local verification is scoped to the card.** A lane runs the tests its own change can affect, then pushes and lets CI run the full suite — the better evidence: the full suite, in a clean environment, against the actual pull-request head. A full-suite run on a loaded developer machine measures the machine, not the code. (Incident record — load 413, orphaned spin loops, the contention↔flakiness loop: `kanban-dispatch-detail.md` § Verification load incident record.)
+
+[HARD] **Never spawn background load.** Where a verification genuinely needs contention, the load must be cleanup-guaranteed — kills registered with the test framework's cleanup hook, or a `timeout` wrapper that bounds the process from outside. A trailing `kill` is not cleanup; it is a line the process may never reach, and every path that ends early leaves the load running.
+
+**A verification recipe that spawns processes is itself a hazard, and gets reviewed as one.** The fault belongs to the dispatcher who wrote and approved the recipe, not to the lane that ran it as given.
+
+
+### The env-isolated verification form
+
+[HARD] Inside a worktree, an environment-scrubbed verification runs as one compound `unset … && <command>` invocation:
+
+```bash
+unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && go test ./...
+```
+
+The `env -u VAR <command>` form is rejected — the Claude Code guard rejects shell structures it cannot statically track, `env` among them; `unset … && <command>` stays visible to static analysis. Two load-bearing properties, easy to "simplify" away: **one invocation** (each Bash call is a fresh process — an `unset` issued as its own call does not carry into the next command; the scrub and the command travel together or the scrub does nothing) and **no subshell** (`( unset …; <command> )` is rejected the same way).
+
+Moving the command into a script file is not a workaround — the guard cannot read inside a script, so every check is bypassed for that payload. Where a verification cannot be expressed as one compound invocation, reduce the verification rather than route it around the guard.
+
+
+## Integration into the release branch is self-served
+
+[HARD] A lane whose card has passed verification does not wait for the lead to integrate it: the lane merges its own branch into the batch's release branch (`release/vX.Y.Z`) itself. The lead provisions the release branch and its worktree at batch start; from then on, every integration is lane work.
+
+Two measured constraints — git checks one branch out in exactly one worktree, and the worktree-session guard refuses a cross-tree `git -C` — make the lane enter the release worktree rather than drive it remotely.
+
+- **One integration surface.** The release branch lives in exactly one worktree — the one the lead provisioned; a lane never checks it out in its own tree.
+- **Enter, do not redirect.** The lane switches into the release worktree with `EnterWorktree(<release-worktree-path>)` and runs the merge there as a plain `git merge --no-ff <WT-branch>`. A cross-tree `git -C <release-worktree> merge` from inside the lane's own worktree is refused by the worktree-session guard; entering is the sanctioned path.
+- **Return the same way.** `ExitWorktree` returns the session to the primary checkout, not to the lane's own worktree — after the merge, the lane re-enters its card worktree with `EnterWorktree(<own-path>)` before continuing card work.
+
+  > **Disproven by measurement, 2026-08-31** (environment: claude 2.1.251 / moai-adk 3.1.2, one build, one environment; independently confirmed by two lanes, t198 and t197). `ExitWorktree` returns the session to its **launch directory**, not to "the primary checkout" as a distinct category — and the launch directory can itself be a git worktree (t197: the launch directory's `git-dir` ≠ `git-common-dir`, on branch `jjjh7401/LX-SEQ`). So neither "returns to primary" nor "leaves every worktree" is accurate; the correct statement is "returns to the launch directory, which may itself be a worktree." `lane-protocol.md` § 2 already carries the correct wording ("`ExitWorktree` 뒤에는 세션이 launch dir 로 돌아가고"); this file is the one that needed the correction.
+- **One integrating session at a time.** The release worktree is the serialization point. On entry, confirm no merge is in progress — `git rev-parse -q --verify MERGE_HEAD` must print nothing; a lane that finds a merge in progress exits, waits, and retries.
+- **Conflicts belong to the lane that owns the change.** The integrating lane resolves the conflicts its own merge raises. A conflict it cannot resolve — a semantic clash with another lane's already-merged change — is a blocker report to the lead, not a forced merge.
+- **Push the release branch; the batch pull request stays with the lead.** After its merge, the lane pushes the release branch (`git push origin release/vX.Y.Z`). A rejected push means another lane pushed first — fetch, integrate the fetched release branch, and push again; never force. Until the pushed release branch's batch PR merges, the disposal rule above still binds.
+
+The completion signal is the branch name, merge SHA, and evidence path.
+
+
+## Factory Mode — the card travels whole
+
+`moai cc -f <N>` launches one lead plus lane sessions `lane-1..lane-N` ("lane" is the user-facing term). No per-column companions: the lead routes each card WHOLE to a free lane, which carries it `plan → run → sync` in-session — serial stages, each stage's execution spawned as sub-agents — and owns it end to end. A/B/C collapse into the lane (the class still names which ceremonies are skipped — `plan` for A and B — but no card changes sessions). Queue, evidence-reading, integration, and disposal rules are unchanged. Mechanics: `kanban-dispatch-detail.md` § Factory in-lane 3-stage.
+
+

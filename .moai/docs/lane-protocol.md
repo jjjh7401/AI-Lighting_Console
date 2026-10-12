@@ -544,3 +544,102 @@ gh pr list --state merged --json headRefName --jq '.[].headRefName'
 ---
 
 Classification: 프로젝트 소유 운영 문서. 배차서가 경로로 참조한다.
+
+## 부록 — kanban-dispatch.md 레인 조항 (t613 에서 이동, 원문 그대로)
+
+> 출처: `.claude/rules/moai/workflow/kanban-dispatch.md`. 레인 세션이 읽는다. 리드 조항은 `.moai/docs/kanban-lead-protocol.md`.
+
+## Isolation is entered, never provisioned
+
+[HARD] A card's work happens inside a worktree, and that worktree is **entered through the launcher** — never created with a bare `git worktree add`.
+
+| Need | Form |
+|---|---|
+| Work inside the worktree in this session | `moai cc -w <name>` |
+| Open it in a new window, keeping this session | `moai cc -w <name> --spawn` |
+| Re-enter one from the current session | `EnterWorktree(<path>)` |
+| Leave it | `ExitWorktree` |
+| Dispose it once the card's work has merged on the remote | L2 tree (`~/.moai/worktrees/…`) only: `moai worktree done`. An L1 tree (`.claude/worktrees/…`) is disposed via the session-end keep/remove prompt — `moai worktree` never registers it |
+
+`moai worktree` deliberately carries no creation verb — entering is the launcher's job. A tree made with a raw `git worktree add` is one git knows about but MoAI does not: `done`, `clean`, and `recover` have nothing to close, and orphans accumulate until reconciled by hand.
+
+[HARD] **`moai worktree done` closes L2 trees only.** A worktree entered by short name (`moai cc -w <name>` → `.claude/worktrees/<name>/`) is L1 and is never in `moai worktree`'s registry — `done` on it is a category error, not a disposal. L1 disposal is the session-end keep/remove prompt, or `git worktree unlock` + `git worktree remove` once the session is done. The full L1/L2 boundary lives in `worktree-integration.md` § Terminology Glossary.
+
+> **Partially disproven by measurement, 2026-08-31** (environment: claude 2.1.251 / moai-adk 3.1.2, one build, one environment). The paragraph above bundles two distinct claims and they do not survive equally:
+> - **The behavior claim** ("`done` on an L1 tree is a category error, not a disposal") — **disproven**. Running `moai worktree done <branch>` against an L1 path (`.claude/worktrees/<name>/`) exits 0, prints `Worktree removed`, and the tree vanishes from `git worktree list` (measured on card t198, PR #241, against a disposable throwaway tree — not a tree with live work). `done` does act on L1 trees.
+> - **The registry claim** ("L1 is never in `moai worktree`'s registry") — **unmeasured, not disproven**. `moai worktree --help` confirms a registry concept exists (`recover` — "Repair worktree registry"), but this environment has no way to inspect its contents (no `list` verb; `--help` itself says "For inspection, use git directly"). The `moai` binary here is not this repository's source — it is `moai-adk 3.1.2` installed at `~/.local/bin/moai` — so the implementation could not be read directly, and `recover` mutates the registry, so firing it to observe would make the observation and the mutation the same act. Left unmeasured; do not report it as disproven.
+
+[HARD] **The card's branch is unpushed, so its worktree is the work's only instance.** Dispose of no worktree — L1 or L2 — until the lead has integrated the branch and the remote merge has landed; disposal before that destroys the only copy.
+
+[HARD] **A new card starts in a new worktree — exit any previous one first.** `EnterWorktree(<card-id>)` cannot run from inside a worktree session: a lane still anchored in the previous card's tree MUST `ExitWorktree` back to the primary checkout before creating the new one, or it does the new card's work on the old card's branch. The fresh tree is created from the remote default branch rather than reused — reuse without a `/clear` in between carries the old card's context and untracked artifacts into the new card. Where the new card depends on a prior card's unmerged code, merge the prior branch inside the new worktree; a dependency is a reason to merge, never to reuse the tree.
+
+[HARD] **Card worktree branches carry the `WT-` prefix and a descriptive slug — never the card id.** `EnterWorktree(<name>)` auto-names its branch `worktree-<name>`, which is unwieldy and invisible to the worktree lifecycle tooling. Immediately after creating a card worktree, rename in place with `git branch -m WT-<slug>`: safe inside a worktree (tree, lock, anchoring unaffected); `moai cc -w <name>` re-entry resolves by tree name, not branch name, and the rename switches the disposal path (`worktree-integration.md` § Terminology Glossary).
+
+The slug is derived from what the card **does**, so a reader of `git branch` or a pull-request list learns the change without a lookup — `WT-t0` says nothing, `WT-branch-naming` says what landed. Its shape:
+
+| Property | Rule |
+|---|---|
+| Source | The card's title, not its id |
+| Tokens | At most 3, hyphen-separated |
+| Length | At most 24 characters (the slug alone; `WT-` brings the branch to at most 27) |
+| Alphabet | Lowercase `a-z`, `0-9`, and `-` |
+| Card id | MUST NOT appear — not as a prefix, a suffix, or a token |
+
+The **worktree directory keeps the card id** (`.claude/worktrees/<card-id>`). Only the branch takes the slug; the tree path is what the disposal tooling and the evidence path key on.
+
+[HARD] **Dropping the id from the branch moves traceability onto three other carriers, and all three are mandatory.** The branch name no longer answers "which card was this?", so nothing may rely on reading it back:
+
+- The dispatch's `card:` field carries the card id — it is the address, and it is never omitted.
+- Every commit on the branch names the card id in its message, so `git log` recovers the card without the branch name.
+- The evidence path keeps the card id (`.moai/reports/<card-id>/verdict.md`).
+
+A lane that reports a branch name without also reporting its card id has not reported the card. Merges reference the `WT-` name; the lead maps it back through the `card:` field it dispatched.
+
+The lead dispatches this rather than assuming it: each instruction names the worktree and says to drive it with `git -C <path>` rather than `cd` — a `cd` inside a compound command lasts for that invocation only, so the next command silently reads the wrong tree. A companion reporting it worked in the shared checkout is a fault to report, not a detail to tidy up (rationale: `kanban-dispatch-detail.md` § Isolation rationale).
+
+
+## Verification load is lane-local
+
+[HARD] **Lane-local verification is scoped to the card.** A lane runs the tests its own change can affect, then pushes and lets CI run the full suite — the better evidence: the full suite, in a clean environment, against the actual pull-request head. A full-suite run on a loaded developer machine measures the machine, not the code. (Incident record — load 413, orphaned spin loops, the contention↔flakiness loop: `kanban-dispatch-detail.md` § Verification load incident record.)
+
+[HARD] **Never spawn background load.** Where a verification genuinely needs contention, the load must be cleanup-guaranteed — kills registered with the test framework's cleanup hook, or a `timeout` wrapper that bounds the process from outside. A trailing `kill` is not cleanup; it is a line the process may never reach, and every path that ends early leaves the load running.
+
+**A verification recipe that spawns processes is itself a hazard, and gets reviewed as one.** The fault belongs to the dispatcher who wrote and approved the recipe, not to the lane that ran it as given.
+
+
+### The env-isolated verification form
+
+[HARD] Inside a worktree, an environment-scrubbed verification runs as one compound `unset … && <command>` invocation:
+
+```bash
+unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && go test ./...
+```
+
+The `env -u VAR <command>` form is rejected — the Claude Code guard rejects shell structures it cannot statically track, `env` among them; `unset … && <command>` stays visible to static analysis. Two load-bearing properties, easy to "simplify" away: **one invocation** (each Bash call is a fresh process — an `unset` issued as its own call does not carry into the next command; the scrub and the command travel together or the scrub does nothing) and **no subshell** (`( unset …; <command> )` is rejected the same way).
+
+Moving the command into a script file is not a workaround — the guard cannot read inside a script, so every check is bypassed for that payload. Where a verification cannot be expressed as one compound invocation, reduce the verification rather than route it around the guard.
+
+
+## Integration into the release branch is self-served
+
+[HARD] A lane whose card has passed verification does not wait for the lead to integrate it: the lane merges its own branch into the batch's release branch (`release/vX.Y.Z`) itself. The lead provisions the release branch and its worktree at batch start; from then on, every integration is lane work.
+
+Two measured constraints — git checks one branch out in exactly one worktree, and the worktree-session guard refuses a cross-tree `git -C` — make the lane enter the release worktree rather than drive it remotely.
+
+- **One integration surface.** The release branch lives in exactly one worktree — the one the lead provisioned; a lane never checks it out in its own tree.
+- **Enter, do not redirect.** The lane switches into the release worktree with `EnterWorktree(<release-worktree-path>)` and runs the merge there as a plain `git merge --no-ff <WT-branch>`. A cross-tree `git -C <release-worktree> merge` from inside the lane's own worktree is refused by the worktree-session guard; entering is the sanctioned path.
+- **Return the same way.** `ExitWorktree` returns the session to the primary checkout, not to the lane's own worktree — after the merge, the lane re-enters its card worktree with `EnterWorktree(<own-path>)` before continuing card work.
+
+  > **Disproven by measurement, 2026-08-31** (environment: claude 2.1.251 / moai-adk 3.1.2, one build, one environment; independently confirmed by two lanes, t198 and t197). `ExitWorktree` returns the session to its **launch directory**, not to "the primary checkout" as a distinct category — and the launch directory can itself be a git worktree (t197: the launch directory's `git-dir` ≠ `git-common-dir`, on branch `jjjh7401/LX-SEQ`). So neither "returns to primary" nor "leaves every worktree" is accurate; the correct statement is "returns to the launch directory, which may itself be a worktree." `lane-protocol.md` § 2 already carries the correct wording ("`ExitWorktree` 뒤에는 세션이 launch dir 로 돌아가고"); this file is the one that needed the correction.
+- **One integrating session at a time.** The release worktree is the serialization point. On entry, confirm no merge is in progress — `git rev-parse -q --verify MERGE_HEAD` must print nothing; a lane that finds a merge in progress exits, waits, and retries.
+- **Conflicts belong to the lane that owns the change.** The integrating lane resolves the conflicts its own merge raises. A conflict it cannot resolve — a semantic clash with another lane's already-merged change — is a blocker report to the lead, not a forced merge.
+- **Push the release branch; the batch pull request stays with the lead.** After its merge, the lane pushes the release branch (`git push origin release/vX.Y.Z`). A rejected push means another lane pushed first — fetch, integrate the fetched release branch, and push again; never force. Until the pushed release branch's batch PR merges, the disposal rule above still binds.
+
+The completion signal is the branch name, merge SHA, and evidence path.
+
+
+## Factory Mode — the card travels whole
+
+`moai cc -f <N>` launches one lead plus lane sessions `lane-1..lane-N` ("lane" is the user-facing term). No per-column companions: the lead routes each card WHOLE to a free lane, which carries it `plan → run → sync` in-session — serial stages, each stage's execution spawned as sub-agents — and owns it end to end. A/B/C collapse into the lane (the class still names which ceremonies are skipped — `plan` for A and B — but no card changes sessions). Queue, evidence-reading, integration, and disposal rules are unchanged. Mechanics: `kanban-dispatch-detail.md` § Factory in-lane 3-stage.
+
+
