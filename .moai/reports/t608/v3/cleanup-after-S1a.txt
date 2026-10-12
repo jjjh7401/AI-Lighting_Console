@@ -1,0 +1,6 @@
+ClearAll
+Delete Timecode 70 /NoConfirm
+Delete Preset 2.351 /NoConfirm
+Delete Preset 4.351 /NoConfirm
+Delete Preset 22.98 /NoConfirm
+ClearAll

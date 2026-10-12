@@ -1,0 +1,11 @@
+ChangeDestination Root
+ClearAll
+Group 4 + 3
+Attribute 'Dimmer' At 100
+Step 2
+Attribute 'Dimmer' At 0
+Attribute 'Dimmer' At Phase 0 Thru 360
+Attribute 'Dimmer' At Speed 60
+Store Preset 22.97 'SCR FX MULTI' /Universal
+Label Preset 22.97 'SCR FX MULTI'
+ClearAll

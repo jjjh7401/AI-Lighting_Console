@@ -1,0 +1,49 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v3/step-S1b.txt", "sha256": "fb11c5bd378ea23667a4c7a00c892a2e4e91916ca9f5683581ae8a8806f7a298", "lines": 46, "started_at": "2026-10-12T11:56:35.639+00:00"}
+{"event": "screen", "at": "2026-10-12T11:56:35.706+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 46, "by_status": {"cleared": 46}}
+{"index": 1, "line": "Store Sequence 702", "sent_at": "2026-10-12T11:56:35.706+00:00", "responded_at": "2026-10-12T11:56:35.772+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Set Sequence 702 Property 'Name' 'LDBEAT MOVER-D'", "sent_at": "2026-10-12T11:56:35.772+00:00", "responded_at": "2026-10-12T11:56:35.839+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Assign Sequence 702 At Timecode 70.1.1", "sent_at": "2026-10-12T11:56:35.839+00:00", "responded_at": "2026-10-12T11:56:35.906+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Store Sequence 703", "sent_at": "2026-10-12T11:56:35.906+00:00", "responded_at": "2026-10-12T11:56:35.972+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Set Sequence 703 Property 'Name' 'LDBEAT WASH-ALL'", "sent_at": "2026-10-12T11:56:35.972+00:00", "responded_at": "2026-10-12T11:56:36.040+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Assign Sequence 703 At Timecode 70.1.2", "sent_at": "2026-10-12T11:56:36.040+00:00", "responded_at": "2026-10-12T11:56:36.107+00:00", "status": "ok", "detail": "OK"}
+{"index": 7, "line": "Group 4 ; Attribute 'Dimmer' At 30", "sent_at": "2026-10-12T11:56:36.107+00:00", "responded_at": "2026-10-12T11:56:36.173+00:00", "status": "ok", "detail": "OK"}
+{"index": 8, "line": "Store Sequence 701 Cue 1", "sent_at": "2026-10-12T11:56:36.173+00:00", "responded_at": "2026-10-12T11:56:36.239+00:00", "status": "ok", "detail": "OK"}
+{"index": 9, "line": "Set Sequence 701 Property 'Name' 'LDBEAT BACK'", "sent_at": "2026-10-12T11:56:36.239+00:00", "responded_at": "2026-10-12T11:56:36.306+00:00", "status": "ok", "detail": "OK"}
+{"index": 10, "line": "ClearAll", "sent_at": "2026-10-12T11:56:36.307+00:00", "responded_at": "2026-10-12T11:56:36.372+00:00", "status": "ok", "detail": "OK"}
+{"index": 11, "line": "Set Cue 1 Sequence 701 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:36.372+00:00", "responded_at": "2026-10-12T11:56:36.438+00:00", "status": "ok", "detail": "OK"}
+{"index": 12, "line": "Set Cue 1 Sequence 701 Property 'TrigTime' 2", "sent_at": "2026-10-12T11:56:36.438+00:00", "responded_at": "2026-10-12T11:56:36.505+00:00", "status": "ok", "detail": "OK"}
+{"index": 13, "line": "Group 4 ; Attribute 'Dimmer' At 50", "sent_at": "2026-10-12T11:56:36.505+00:00", "responded_at": "2026-10-12T11:56:36.572+00:00", "status": "ok", "detail": "OK"}
+{"index": 14, "line": "Store Sequence 701 Cue 2", "sent_at": "2026-10-12T11:56:36.572+00:00", "responded_at": "2026-10-12T11:56:36.639+00:00", "status": "ok", "detail": "OK"}
+{"index": 15, "line": "ClearAll", "sent_at": "2026-10-12T11:56:36.639+00:00", "responded_at": "2026-10-12T11:56:36.706+00:00", "status": "ok", "detail": "OK"}
+{"index": 16, "line": "Set Cue 2 Sequence 701 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:36.706+00:00", "responded_at": "2026-10-12T11:56:36.773+00:00", "status": "ok", "detail": "OK"}
+{"index": 17, "line": "Set Cue 2 Sequence 701 Property 'TrigTime' 6", "sent_at": "2026-10-12T11:56:36.773+00:00", "responded_at": "2026-10-12T11:56:36.839+00:00", "status": "ok", "detail": "OK"}
+{"index": 18, "line": "Assign Sequence 701 At Timecode 70.1.3", "sent_at": "2026-10-12T11:56:36.839+00:00", "responded_at": "2026-10-12T11:56:36.906+00:00", "status": "ok", "detail": "OK"}
+{"index": 19, "line": "Group 3 ; Attribute 'Dimmer' At 20", "sent_at": "2026-10-12T11:56:36.906+00:00", "responded_at": "2026-10-12T11:56:36.972+00:00", "status": "ok", "detail": "OK"}
+{"index": 20, "line": "Store Sequence 700 Cue 1", "sent_at": "2026-10-12T11:56:36.972+00:00", "responded_at": "2026-10-12T11:56:37.039+00:00", "status": "ok", "detail": "OK"}
+{"index": 21, "line": "Set Sequence 700 Property 'Name' 'LDBEAT FOH'", "sent_at": "2026-10-12T11:56:37.039+00:00", "responded_at": "2026-10-12T11:56:37.106+00:00", "status": "ok", "detail": "OK"}
+{"index": 22, "line": "ClearAll", "sent_at": "2026-10-12T11:56:37.106+00:00", "responded_at": "2026-10-12T11:56:37.172+00:00", "status": "ok", "detail": "OK"}
+{"index": 23, "line": "Set Cue 1 Sequence 700 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:37.172+00:00", "responded_at": "2026-10-12T11:56:37.239+00:00", "status": "ok", "detail": "OK"}
+{"index": 24, "line": "Set Cue 1 Sequence 700 Property 'TrigTime' 2", "sent_at": "2026-10-12T11:56:37.239+00:00", "responded_at": "2026-10-12T11:56:37.306+00:00", "status": "ok", "detail": "OK"}
+{"index": 25, "line": "Group 3 ; Attribute 'Dimmer' At 40", "sent_at": "2026-10-12T11:56:37.306+00:00", "responded_at": "2026-10-12T11:56:37.373+00:00", "status": "ok", "detail": "OK"}
+{"index": 26, "line": "Store Sequence 700 Cue 2 CueFade 1", "sent_at": "2026-10-12T11:56:37.373+00:00", "responded_at": "2026-10-12T11:56:37.438+00:00", "status": "ok", "detail": "OK"}
+{"index": 27, "line": "ClearAll", "sent_at": "2026-10-12T11:56:37.438+00:00", "responded_at": "2026-10-12T11:56:37.506+00:00", "status": "ok", "detail": "OK"}
+{"index": 28, "line": "Set Cue 2 Sequence 700 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:37.506+00:00", "responded_at": "2026-10-12T11:56:37.572+00:00", "status": "ok", "detail": "OK"}
+{"index": 29, "line": "Set Cue 2 Sequence 700 Property 'TrigTime' 4", "sent_at": "2026-10-12T11:56:37.572+00:00", "responded_at": "2026-10-12T11:56:37.639+00:00", "status": "ok", "detail": "OK"}
+{"index": 30, "line": "Group 3 ; Attribute 'Dimmer' At 60", "sent_at": "2026-10-12T11:56:37.639+00:00", "responded_at": "2026-10-12T11:56:37.706+00:00", "status": "ok", "detail": "OK"}
+{"index": 31, "line": "Store Sequence 700 Cue 3", "sent_at": "2026-10-12T11:56:37.706+00:00", "responded_at": "2026-10-12T11:56:37.772+00:00", "status": "ok", "detail": "OK"}
+{"index": 32, "line": "ClearAll", "sent_at": "2026-10-12T11:56:37.772+00:00", "responded_at": "2026-10-12T11:56:37.839+00:00", "status": "ok", "detail": "OK"}
+{"index": 33, "line": "Set Cue 3 Sequence 700 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:37.839+00:00", "responded_at": "2026-10-12T11:56:37.906+00:00", "status": "ok", "detail": "OK"}
+{"index": 34, "line": "Set Cue 3 Sequence 700 Property 'TrigTime' 7", "sent_at": "2026-10-12T11:56:37.906+00:00", "responded_at": "2026-10-12T11:56:37.972+00:00", "status": "ok", "detail": "OK"}
+{"index": 35, "line": "Group 3 ; Attribute 'Dimmer' At 80", "sent_at": "2026-10-12T11:56:37.972+00:00", "responded_at": "2026-10-12T11:56:38.039+00:00", "status": "ok", "detail": "OK"}
+{"index": 36, "line": "Store Sequence 700 Cue 4", "sent_at": "2026-10-12T11:56:38.039+00:00", "responded_at": "2026-10-12T11:56:38.105+00:00", "status": "ok", "detail": "OK"}
+{"index": 37, "line": "ClearAll", "sent_at": "2026-10-12T11:56:38.105+00:00", "responded_at": "2026-10-12T11:56:38.172+00:00", "status": "ok", "detail": "OK"}
+{"index": 38, "line": "Set Cue 4 Sequence 700 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:38.172+00:00", "responded_at": "2026-10-12T11:56:38.239+00:00", "status": "ok", "detail": "OK"}
+{"index": 39, "line": "Set Cue 4 Sequence 700 Property 'TrigTime' 8", "sent_at": "2026-10-12T11:56:38.239+00:00", "responded_at": "2026-10-12T11:56:38.306+00:00", "status": "ok", "detail": "OK"}
+{"index": 40, "line": "Block Sequence 700 Cue 4", "sent_at": "2026-10-12T11:56:38.306+00:00", "responded_at": "2026-10-12T11:56:38.372+00:00", "status": "ok", "detail": "OK"}
+{"index": 41, "line": "Group 3 ; Attribute 'Dimmer' At 100", "sent_at": "2026-10-12T11:56:38.372+00:00", "responded_at": "2026-10-12T11:56:38.439+00:00", "status": "ok", "detail": "OK"}
+{"index": 42, "line": "Store Sequence 700 Cue 5 CueFade 2 /CueOnly", "sent_at": "2026-10-12T11:56:38.439+00:00", "responded_at": "2026-10-12T11:56:38.505+00:00", "status": "ok", "detail": "OK"}
+{"index": 43, "line": "ClearAll", "sent_at": "2026-10-12T11:56:38.505+00:00", "responded_at": "2026-10-12T11:56:38.575+00:00", "status": "ok", "detail": "OK"}
+{"index": 44, "line": "Set Cue 5 Sequence 700 Property 'TrigType' 'Time'", "sent_at": "2026-10-12T11:56:38.576+00:00", "responded_at": "2026-10-12T11:56:38.638+00:00", "status": "ok", "detail": "OK"}
+{"index": 45, "line": "Set Cue 5 Sequence 700 Property 'TrigTime' 10", "sent_at": "2026-10-12T11:56:38.638+00:00", "responded_at": "2026-10-12T11:56:38.705+00:00", "status": "ok", "detail": "OK"}
+{"index": 46, "line": "Assign Sequence 700 At Timecode 70.1.4", "sent_at": "2026-10-12T11:56:38.705+00:00", "responded_at": "2026-10-12T11:56:38.772+00:00", "status": "ok", "detail": "OK"}
+{"event": "end", "sent": 46, "stopped_at": null, "status": "ok", "ended_at": "2026-10-12T11:56:38.772+00:00"}

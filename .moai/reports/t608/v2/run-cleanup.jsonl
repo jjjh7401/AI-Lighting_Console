@@ -1,0 +1,11 @@
+{"event": "start", "input": "/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t608/v2/cleanup.txt", "sha256": "cf84b16eaca1ad6e6fe4f0f1f84cf9c484db1feed3bd894ca14593b8639b0a4f", "lines": 12, "started_at": "2026-10-12T10:55:59.385+00:00"}
+{"event": "screen", "at": "2026-10-12T10:55:59.451+00:00", "cleared": true, "status": "cleared", "notice": "", "commands": 12, "by_status": {"cleared": 12}}
+{"index": 1, "line": "ClearAll", "sent_at": "2026-10-12T10:55:59.451+00:00", "responded_at": "2026-10-12T10:55:59.518+00:00", "status": "ok", "detail": "OK"}
+{"index": 2, "line": "Delete Preset 2.351 /NoConfirm", "sent_at": "2026-10-12T10:55:59.518+00:00", "responded_at": "2026-10-12T10:55:59.584+00:00", "status": "ok", "detail": "OK"}
+{"index": 3, "line": "Delete Preset 4.351 /NoConfirm", "sent_at": "2026-10-12T10:55:59.584+00:00", "responded_at": "2026-10-12T10:55:59.651+00:00", "status": "ok", "detail": "OK"}
+{"index": 4, "line": "Delete Preset 22.98 /NoConfirm", "sent_at": "2026-10-12T10:55:59.651+00:00", "responded_at": "2026-10-12T10:55:59.718+00:00", "status": "ok", "detail": "OK"}
+{"index": 5, "line": "Delete Timecode 70 /NoConfirm", "sent_at": "2026-10-12T10:55:59.718+00:00", "responded_at": "2026-10-12T10:55:59.784+00:00", "status": "ok", "detail": "OK"}
+{"index": 6, "line": "Delete Sequence 702 /NoConfirm", "sent_at": "2026-10-12T10:55:59.784+00:00", "responded_at": "2026-10-12T10:55:59.851+00:00", "status": "ok", "detail": "OK"}
+{"index": 7, "line": "Delete Sequence 703 /NoConfirm", "sent_at": "2026-10-12T10:55:59.851+00:00", "responded_at": "2026-10-12T10:55:59.918+00:00", "status": "ok", "detail": "OK"}
+{"index": 8, "line": "Delete Sequence 701 /NoConfirm", "sent_at": "2026-10-12T10:55:59.918+00:00", "responded_at": "2026-10-12T10:55:59.984+00:00", "status": "failed", "detail": "Illegal object"}
+{"event": "end", "sent": 8, "stopped_at": 8, "status": "stopped", "ended_at": "2026-10-12T10:55:59.984+00:00"}
