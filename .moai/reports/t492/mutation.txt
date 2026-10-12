@@ -1,0 +1,13 @@
+CAUGHT U1 저장된 큐에도 생성기를 가리킴
+    × changeGuideText — 4칸 「바꾸려면」은 실제 편집 위치를 가리킨다 > 콘솔에 저장·검증된 큐는 생성기가 열리지 않으므로 데이터 없음 + 사유 3ms
+CAUGHT U2 해제 위치를 released_q(행 번호)로 읽음
+    × grammarView — 탭 3 「아껴 두는 것」은 concept_report.reserve 를 그대로 읽는다 > 해제 위치는 screen_position 의 구간 큐 번호다(released_q 행 번호가 아니다) 3ms
+CAUGHT U3 움직임=포지션이어도 따로 셈(공간 반복)
+    × materialSummary — 탭 2 는 구간 행 나열이 아니라 곡 단위 집계다 > 움직임이 모든 구간에서 포지션과 같으면(서버 movement = 포지션 프리셋) 공간을 되풀이하지 않는다 2ms
+CAUGHT U4 4칸이 바꾸려면 문장을 무시
+    × changeGuideText — 4칸 「바꾸려면」은 실제 편집 위치를 가리킨다 > explanationCells 에 넘기면 「바꾸려면」 칸만 바뀌고 무슨 뜻·왜는 데이터 없음 그대로 2ms
+CAUGHT U5 해제 못 찾음에 이유를 지어냄
+    × grammarView — 탭 3 「아껴 두는 것」은 concept_report.reserve 를 그대로 읽는다 > released_q 가 null 이면 이유를 지어내지 않고 미해제 4ms
+CAUGHT U6 시작–끝이 빈 값 경계도 바뀜으로 셈
+    × materialSummary — 탭 2 는 구간 행 나열이 아니라 곡 단위 집계다 > 시작–끝은 이웃 구간 사이에서 재료가 바뀐 횟수다(빈 값 경계는 세지 않는다) 2ms
+6/6 CAUGHT

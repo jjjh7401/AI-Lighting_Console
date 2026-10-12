@@ -1,0 +1,139 @@
+{
+ "outcome_cells": [
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음",
+  "데이터 없음"
+ ],
+ "outcome_note": "그래서 보이는 것 · 데이터 없음 — 구간별 원천 없음 — 인터뷰가 곡 단위",
+ "explain": [
+  [
+   "무슨 뜻",
+   "데이터 없음 — 항목 뜻풀이 원천이 서버에 없다"
+  ],
+  [
+   "무대에서",
+   "+BACK컨셉 파이프라인 계산 — 밝기 수치는 CUE SHEET 기준(큐 생성 경로 미통합, REQ-003)"
+  ],
+  [
+   "왜 이렇게 제안했나",
+   "데이터 없음 — 제안 사유 문장 원천이 서버에 없다"
+  ],
+  [
+   "바꾸려면",
+   "타임라인 Q101 PLAN CUE 카드 → 수정요청 생성기(그룹·밝기·페이드·전환·트래킹·MIB·콘솔 반영 값)"
+  ]
+ ],
+ "generator_cards": 10,
+ "tab2": [
+  {
+   "title": "감정",
+   "text": "데이터 없음 — 서버가 구간 무드를 계획으로 넘기지 못한다",
+   "nodata": true
+  },
+  {
+   "title": "공간",
+   "text": "Center 10구간",
+   "nodata": false
+  },
+  {
+   "title": "움직임",
+   "text": "데이터 없음 — 움직임 값이 포지션 프리셋과 같다(공간에서 셌다)",
+   "nodata": true
+  },
+  {
+   "title": "질감",
+   "text": "long fade 10구간",
+   "nodata": false
+  },
+  {
+   "title": "시작–끝",
+   "text": "구간 경계 9곳 중 공간 바뀜 0번 · 질감 바뀜 0번",
+   "nodata": false
+  }
+ ],
+ "tab3": [
+  {
+   "title": "지키는 것·하지 않는 것",
+   "text": "데이터 없음 — 규칙별 지킴/금지 분류 원천이 없다 — 규칙 판정은 게이트 바",
+   "nodata": true
+  },
+  {
+   "title": "아껴 두는 것",
+   "text": "BLIND 그룹 — Q109 Chorus 3 에서 처음 푼다STROBE 그룹 — 미해제 — 해제 큐를 찾지 못했다",
+   "nodata": false
+  }
+ ],
+ "tab3_reserve": [
+  "BLIND 그룹 — Q109 Chorus 3 에서 처음 푼다",
+  "STROBE 그룹 — 미해제 — 해제 큐를 찾지 못했다"
+ ],
+ "page_errors": [],
+ "server": {
+  "section_count": 10,
+  "positions": [
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center",
+   "Center"
+  ],
+  "textures": [
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade",
+   "long fade"
+  ],
+  "movement_equals_position": true,
+  "reserve": [
+   {
+    "name": "BLIND",
+    "kind": "group",
+    "released_q": 17,
+    "screen_position": 8
+   },
+   {
+    "name": "STROBE",
+    "kind": "group",
+    "released_q": null,
+    "screen_position": null
+   }
+  ],
+  "released_section": [
+   "Q109 Chorus 3",
+   null
+  ],
+  "first_status": "draft",
+  "first_cue": 101
+ },
+ "causal_tab3": [
+  {
+   "title": "지키는 것·하지 않는 것",
+   "text": "데이터 없음 — 규칙별 지킴/금지 분류 원천이 없다 — 규칙 판정은 게이트 바",
+   "nodata": true
+  },
+  {
+   "title": "아껴 두는 것",
+   "text": "데이터 없음 — BPM이 선언되지 않았다 — 컨셉 파이프라인의 마디 계산 전제가 없다",
+   "nodata": true
+  }
+ ],
+ "causal_page_errors": []
+}
