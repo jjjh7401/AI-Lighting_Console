@@ -683,9 +683,10 @@ class TestApplyCreatesTheColorPreset:
         status, _store, approval, _console = _apply_session(
             tmp_path, _grid_with_color_cell(), pool4=None
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert POOL_UNREAD_HOLD in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert POOL_UNREAD_HOLD in status["reason"]
 
     # COLOR_GROUP_UNCONFIRMED 는 순수 판정 층(`TestColorPresetOutcomes.
     # test_missing_piece_holds_with_its_reason`)에서 전수로 잠근다. 반영
@@ -721,25 +722,28 @@ class TestApplyCreatesTheColorPreset:
             members={"BACK": [101], "SIDE": [201]},
             channels={101: _CHANNELS_OK, 201: _CHANNELS_OK},
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_MULTI_GROUP in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert COLOR_MULTI_GROUP in status["reason"]
 
     def test_members_unread_holds(self, tmp_path) -> None:
         status, _store, approval, _console = _apply_session(
             tmp_path, _grid_with_color_cell(), pool4=[1], members={}
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_MEMBERS_UNREAD in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert COLOR_MEMBERS_UNREAD in status["reason"]
 
     def test_channels_unread_holds(self, tmp_path) -> None:
         status, _store, approval, _console = _apply_session(
             tmp_path, _grid_with_color_cell(), pool4=[1], channels={101: None, 102: _CHANNELS_OK}
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_CHANNELS_UNREAD in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert COLOR_CHANNELS_UNREAD in status["reason"]
 
     def test_cmy_only_rig_holds_with_attrs_missing(self, tmp_path) -> None:
         status, _store, approval, _console = _apply_session(
@@ -748,17 +752,19 @@ class TestApplyCreatesTheColorPreset:
             pool4=[1],
             channels={101: _CHANNELS_CMY, 102: _CHANNELS_CMY},
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_ATTRS_MISSING in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert COLOR_ATTRS_MISSING in status["reason"]
 
     def test_rgb_missing_holds(self, tmp_path) -> None:
         grid = _grid_with_color_cell()
         del grid["preset_colors"]
         status, _store, approval, _console = _apply_session(tmp_path, grid, pool4=[1])
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_RGB_MISSING in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert COLOR_RGB_MISSING in status["reason"]
 
 
 class TestTwoColorPresetsSurviveTheSendDedupe:

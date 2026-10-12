@@ -46,6 +46,7 @@ from server.design.beat_grid import (
     CELL_HOLD,
     EMPTY_PRESET_HOLD,
     apply_pending_approval,
+    approval_preview_tracks,
     approved_preset_numbers,
     attach_beat_grid_default,
     attach_beat_grid_runtime_extras,
@@ -10479,8 +10480,10 @@ class ChatSession:
                 recorded_cue_numbers[name] = {
                     int(bar): int(number) for bar, number in cues_record.items()
                 }
+            # 카드 t615 (A) — 승인 대기 칸의 줄은 미리보기 사본으로 방출해 승인 카드에 싣는다.
+            # 승인이 통과하면 그 줄이 그대로 나가고, 증거는 아래에서 같은 칸에 적힌다.
             result = emit_beat_grid_write_bundle(
-                tracks,
+                approval_preview_tracks(tracks, pending_before, held_presets),
                 timing=timing,
                 sequence_numbers=sequence_numbers,
                 timecode_numbers=timecode_numbers,
@@ -10490,11 +10493,26 @@ class ChatSession:
                 dimmer_attribute_reasons=dimmer_reasons,
                 held_cells=approved_held_cells,
             )
-            if result.blocked_reason is not None or not result.commands:
+            # 카드 t615 — 저장되는 큐가 없는 트랙은 맨 Store 줄을 내지 않는다(빈 Cue 1 방지).
+            # 그래서 줄이 하나도 없어도 만들기 줄(새 프리셋 생성)이 있으면 승인 카드를 올린다.
+            # 만들기 줄도 없고 줄도 없으면 보낼 내용이 없으므로 거절한다.
+            if result.blocked_reason is not None or (
+                not result.commands and not position_plan.creations
+            ):
+                # 카드 t615 — 보낼 줄이 없는 반영은 승인 카드를 올리지 못한다(게이트는 줄이 있어야
+                # 받는다). 그래서 보류된 칸의 사유를 거절 사유에 실어 운영자가 보게 한다.
+                reason = result.blocked_reason or "콘솔에 반영할 내용이 없습니다."
+                if result.blocked_reason is None and held_presets:
+                    listed = ", ".join(
+                        f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
+                        f"{entry['value']}({entry['hold_reason']})"
+                        for entry in held_presets
+                    )
+                    reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"
                 return self._beat_grid_send_status(
                     last_action="apply",
                     ok=False,
-                    reason=result.blocked_reason or "콘솔에 반영할 내용이 없습니다.",
+                    reason=reason,
                     blocked_cells=result.blocked_cells,
                 )
 

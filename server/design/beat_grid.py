@@ -1009,6 +1009,48 @@ def split_empty_preset_holds(
     return approvable, held
 
 
+def approval_preview_tracks(
+    tracks: Sequence[Mapping[str, object]],
+    pending: Sequence[Mapping[str, object]],
+    held: Sequence[Mapping[str, object]],
+) -> list[Mapping[str, object]]:
+    """카드 t615 (A) — 승인 카드에 승인 대기 칸의 줄을 싣기 위한 **미리보기 사본**.
+
+    ``pending``(``pending_before``)이 열거한 칸 가운데, 보류가 걸리지 않고 열거된 (필드, 번호)가
+    그 칸의 승인 대기 전부인 칸만 「승인되었다고 가정한」 ``evidence.approval`` 을 단 사본으로
+    바꾼다. ``apply_pending_approval`` 이 승인을 적는 조건(카드가 보여 준 집합과 칸의 승인 대기가
+    정확히 같을 때)과 같은 조건이므로, 카드에 보인 줄의 칸과 승인 뒤 적히는 칸이 같다.
+
+    원본 격자와 게이트(``check_evidence_approval``)는 건드리지 않는다. 사본은 방출기에 넘겨
+    줄을 만드는 데만 쓰고 어디에도 저장하지 않는다. 보류가 섞인 칸은 칸 전체를 빼서, 보류된
+    번호가 승인 가정으로 나가지 않게 한다.
+    """
+    card: dict[tuple[object, object], set[tuple[str, object]]] = {}
+    for entry in pending:
+        key = (entry.get("group_name"), entry.get("bar"))
+        card.setdefault(key, set()).add((str(entry.get("field")), entry.get("value")))
+    held_keys = {(entry.get("group_name"), entry.get("bar")) for entry in held}
+    previewed: list[Mapping[str, object]] = []
+    for track in tracks:
+        group_name = track.get("group_name")
+        cues: list[object] = []
+        for cue in track.get("cues") or []:
+            if isinstance(cue, Mapping):
+                key = (group_name, cue.get("bar"))
+                if (
+                    key in card
+                    and key not in held_keys
+                    and set(pending_preset_fields(cue)) == card[key]
+                ):
+                    evidence = cue.get("evidence")
+                    grade = evidence.get("grade") if isinstance(evidence, Mapping) else None
+                    approval = {"by": "supervisor", "date": "preview", "source": "apply-preview"}
+                    cue = {**cue, "evidence": {"grade": grade, "approval": approval}}
+            cues.append(cue)
+        previewed.append({**track, "cues": cues})
+    return previewed
+
+
 def apply_pending_approval(
     grid: Mapping[str, object],
     pending: Sequence[Mapping[str, object]],

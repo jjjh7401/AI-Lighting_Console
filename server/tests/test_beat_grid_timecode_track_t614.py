@@ -46,8 +46,12 @@ def _emit(
 
 
 def _two_tracks_on_one_timecode() -> BeatGridEmitResult:
+    # 카드 t615 — 배정은 저장 큐가 있는 트랙만 낸다. 두 트랙 모두 칸을 하나씩 가진다.
     return _emit(
-        [_track("FOH", 3, []), _track("BLIND", 14, [])],
+        [
+            _track("FOH", 3, [_position_cue(3, position_preset_no="1.1")]),
+            _track("BLIND", 14, [_position_cue(3, position_preset_no="1.2")]),
+        ],
         sequence_numbers={"FOH": 300, "BLIND": 301},
         timecode_numbers={"FOH": 30, "BLIND": 30},
     )
@@ -62,7 +66,7 @@ class TestAssignLineIsATrackAddress:
 
     def test_a_single_track_alone_on_its_timecode_gets_index_one(self) -> None:
         result = _emit(
-            [_track("FOH", 3, [])],
+            [_track("FOH", 3, [_position_cue(3, position_preset_no="1.1")])],
             sequence_numbers={"FOH": 300},
             timecode_numbers={"FOH": 30},
         )
@@ -70,10 +74,10 @@ class TestAssignLineIsATrackAddress:
         assert track.assign_timecode_commands == ("Assign Sequence 300 At Timecode 30.1.1",)
 
     def test_no_assign_line_is_in_the_bare_form(self) -> None:
-        # 칸이 있는 트랙과 칸이 없는 트랙 둘 다 — 어느 경로로도 맨 꼴이 나가면 안 된다.
+        # 칸이 있는 두 트랙 모두 — 어느 경로로도 맨 꼴이 나가면 안 된다.
         tracks = [
             _track("FOH", 3, [_position_cue(18, position_preset_no="2.1")]),
-            _track("BLIND", 14, []),
+            _track("BLIND", 14, [_position_cue(18, position_preset_no="2.2")]),
         ]
         result = _emit(
             tracks,
@@ -102,7 +106,11 @@ class TestBlockedTrackDoesNotConsumeAnIndex:
         if middle_sequence is not None:
             sequence_numbers["MYSTERY"] = middle_sequence
         result = _emit(
-            [_track("FOH", 3, []), middle, _track("BLIND", 14, [])],
+            [
+                _track("FOH", 3, [_position_cue(3, position_preset_no="1.1")]),
+                middle,
+                _track("BLIND", 14, [_position_cue(3, position_preset_no="1.2")]),
+            ],
             sequence_numbers=sequence_numbers,
             timecode_numbers={"FOH": 30, "MYSTERY": 30, "BLIND": 30},
         )
@@ -113,10 +121,17 @@ class TestBlockedTrackDoesNotConsumeAnIndex:
         assert blind.assign_timecode_commands == ("Assign Sequence 302 At Timecode 30.1.2",)
 
     def test_a_held_cell_blocks_the_cell_not_the_track_so_the_track_keeps_its_index(self) -> None:
-        # 보류 칸은 그 칸의 명령만 막는다 — 트랙은 여전히 배정되므로 순번을 쓴다.
+        # 보류 칸은 그 칸의 명령만 막는다. 트랙에 보낼 칸이 남아 있으면 배정되어 순번을 쓴다.
         tracks = [
-            _track("FOH", 3, [_position_cue(18, position_preset_no="2.1")]),
-            _track("BLIND", 14, []),
+            _track(
+                "FOH",
+                3,
+                [
+                    _position_cue(18, position_preset_no="2.1"),
+                    _position_cue(20, position_preset_no="2.2"),
+                ],
+            ),
+            _track("BLIND", 14, [_position_cue(3, position_preset_no="1.2")]),
         ]
         result = _emit(
             tracks,
@@ -152,7 +167,11 @@ class TestTimecodeSetupStoresTheTrackGroup:
 
     def test_track_index_counts_per_timecode_and_each_used_timecode_stores_its_group(self) -> None:
         result = _emit(
-            [_track("FOH", 3, []), _track("BLIND", 14, []), _track("BACK", 4, [])],
+            [
+                _track("FOH", 3, [_position_cue(3, position_preset_no="1.1")]),
+                _track("BLIND", 14, [_position_cue(3, position_preset_no="1.2")]),
+                _track("BACK", 4, [_position_cue(3, position_preset_no="1.3")]),
+            ],
             sequence_numbers={"FOH": 300, "BLIND": 301, "BACK": 302},
             timecode_numbers={"FOH": 30, "BLIND": 31, "BACK": 30},
         )

@@ -408,17 +408,19 @@ class TestApplyCreatesThePreset:
 
     def test_unreadable_pool_is_never_stored(self, tmp_path) -> None:
         status, store, approval = _apply(tmp_path, dict(_POSITION_CUE), pool2=None)
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "2.71" in c]
-        assert POOL_UNREAD_HOLD in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert POOL_UNREAD_HOLD in status["reason"]
         cue = _cue_of(store.latest["beat_grid"], "BACK", 1)
         assert check_evidence_approval(cue) is not None
 
     def test_missing_recipe_holds_with_reason(self, tmp_path) -> None:
         status, store, approval = _apply(tmp_path, dict(_POSITION_CUE), pool2=[1], grid_extra={})
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "2.71" in c]
-        assert POSITION_TARGET_MISSING in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert POSITION_TARGET_MISSING in status["reason"]
         cue = _cue_of(store.latest["beat_grid"], "BACK", 1)
         assert check_evidence_approval(cue) is not None
 

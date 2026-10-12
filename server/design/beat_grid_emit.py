@@ -238,8 +238,9 @@ class TrackEmitResult:
     group_no: int | None
     sequence_number: int | None
     timecode_number: int | None
-    #: 카드 t612 — 저장되는 큐가 하나라도 있으면 비어 있다(첫 큐 저장이 시퀀스를 만들고
-    #: 이름은 그 뒤에 붙는다). 저장되는 큐가 없을 때만 맨 Store Sequence 줄 + 이름이 온다.
+    #: 카드 t615 — 항상 비어 있다. 첫 큐 저장이 시퀀스를 만들고(카드 t612) 이름은 그 뒤에 붙는다.
+    #: 저장되는 큐가 없는 트랙은 맨 Store Sequence 줄도 내지 않는다(빈 Cue 1 을 만든다).
+    #: 필드는 소비자(beat_grid_send · web/session) 호환을 위해 남긴다.
     store_sequence_commands: tuple[str, ...]
     cues: tuple[CueEmitResult, ...]
     assign_timecode_commands: tuple[str, ...]
@@ -716,21 +717,22 @@ def emit_beat_grid_write_bundle(
                 next_cue_number += 1
             cue_results.append(result)
 
-        # 카드 t612 — 저장되는 큐가 하나도 없을 때만 맨 Store Sequence 줄로 시퀀스를 만든다
-        # (배정 줄이 가리킬 시퀀스가 있어야 한다). 저장되는 큐가 있으면 그 큐가 만든다.
-        store_sequence_commands: tuple[str, ...] = (
-            (f"Store Sequence {sequence_number}", name_command) if name_pending else ()
-        )
-        used_timecode_numbers.add(timecode_number)
-        # 카드 t614 — 맨 꼴 ``At Timecode N`` 은 같은 타임코드의 둘째 트랙부터 콘솔이
-        #   ``Illegal object`` 로 거절했다(t608 v2 S1b). 실기 선례(t520 · t506 · t553)대로
-        #   트랙 주소 ``N.1.k`` 로 배정한다 — 1 은 트랙 그룹, k 는 이 타임코드에서 실제로
-        #   배정된 트랙의 1부터 센 순번이다. 막혀서 여기 닿지 못한 트랙은 순번을 쓰지 않는다.
-        track_index = assigned_track_counts.get(timecode_number, 0) + 1
-        assigned_track_counts[timecode_number] = track_index
-        assign_timecode_commands = (
-            f"Assign Sequence {sequence_number} At Timecode {timecode_number}.1.{track_index}",
-        )
+        # 카드 t615 — 저장되는 큐가 하나도 없는 트랙은 시퀀스·이름·배정·타임코드를 내지 않는다.
+        # 맨 Store Sequence 줄은 빈 Cue 1 을 만들고(실기 판별: .moai/reports/t615/live/), 그 번호에
+        # 나중에 큐를 저장하면 콘솔이 User Canceled Command 로 멈춘다. 칸별 사유는 그대로 남긴다.
+        assign_timecode_commands: tuple[str, ...] = ()
+        if not name_pending:
+            used_timecode_numbers.add(timecode_number)
+            # 카드 t614 — 맨 꼴 ``At Timecode N`` 은 같은 타임코드의 둘째 트랙부터 콘솔이
+            #   ``Illegal object`` 로 거절했다(t608 v2 S1b). 실기 선례(t520 · t506 · t553)대로
+            #   트랙 주소 ``N.1.k`` 로 배정한다 — 1 은 트랙 그룹, k 는 이 타임코드에서 실제로
+            #   배정된 트랙의 1부터 센 순번이다. 막혀서 여기 닿지 못한 트랙은 순번을 쓰지 않는다.
+            #   카드 t615 — 저장 큐가 없는 트랙도 여기 닿지 않으므로 순번을 쓰지 않는다.
+            track_index = assigned_track_counts.get(timecode_number, 0) + 1
+            assigned_track_counts[timecode_number] = track_index
+            assign_timecode_commands = (
+                f"Assign Sequence {sequence_number} At Timecode {timecode_number}.1.{track_index}",
+            )
 
         track_results.append(
             TrackEmitResult(
@@ -738,7 +740,8 @@ def emit_beat_grid_write_bundle(
                 group_no=group_no,  # type: ignore[arg-type]
                 sequence_number=sequence_number,
                 timecode_number=timecode_number,
-                store_sequence_commands=store_sequence_commands,
+                # 첫 큐 저장이 시퀀스를 만들고 이름은 그 칸 줄에 붙는다(카드 t612) — 맨 줄은 없다.
+                store_sequence_commands=(),
                 cues=tuple(cue_results),
                 assign_timecode_commands=assign_timecode_commands,
                 blocked_reason=None,

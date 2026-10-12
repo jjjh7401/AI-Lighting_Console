@@ -404,18 +404,20 @@ class TestApplyCreatesTheEffect:
 
     def test_unreadable_pool_is_never_stored(self, tmp_path) -> None:
         status, store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=None)
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "22.1" in c]
-        assert POOL_UNREAD_HOLD in _risk(approval)
+        assert POOL_UNREAD_HOLD in status["reason"]
         assert check_evidence_approval(_cue_of(store.latest["beat_grid"], "BACK", 1)) is not None
 
     def test_missing_recipe_holds_with_reason(self, tmp_path) -> None:
         status, store, approval, _console = _apply(
             tmp_path, [dict(_CUE)], pool22=[5], grid_extra={"preset_labels": {"22.1": "LA Wave"}}
         )
-        assert status["ok"] is True
+        assert status["ok"] is False
+        assert approval.requests == []
         assert not [c for c in _sent(approval) if "22.1" in c]
-        assert EFFECT_RECIPE_MISSING in _risk(approval)
+        assert EFFECT_RECIPE_MISSING in status["reason"]
         assert check_evidence_approval(_cue_of(store.latest["beat_grid"], "BACK", 1)) is not None
 
     def test_two_new_effects_send_both_stores(self, tmp_path) -> None:
