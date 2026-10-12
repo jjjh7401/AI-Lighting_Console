@@ -792,10 +792,151 @@ t583 diff-list 🟡 을 전수 처리표로 갈랐다(상단 바·플레이 묶�
 - **안 잰 것**: 실기 0 — 「반영 묶음에 섞어 보내기」는 t582 항목(리드). 두 번째 반영(만든 프리셋을 큐가 부름) 미측정. 입력 화면 없음.
 - **증거**: 새 시험 33개(덮어쓰기 0 술어를 뮤테이션하면 2개 실패), 서버 전체 15367 passed, `ruff check` 통과.
 
+### M13 — 새 효과 프리셋 만들기 (카드 t593, 후속 수정 t598/t601/t605/t607) + M14 — 새 색 프리셋 만들기 (카드 t594) — 누락 기록 보충
+
+[리드 경유 배차, sync 정합 보충(2026-10-12)]. 이 두 섹션은 run-phase 당시 §E.2 에 기록되지 않은 채 머지돼 있었다(spec.md HISTORY 2026-10-12 항목이 같은 누락을 지적). 아래는 머지된 커밋·판정서로부터 정정한 기록이며, 코드 자체를 바꾸지 않는다.
+
+- **M13(t593, 커밋 `27ada62e`)**: `_beat_grid_plan_new_presets`가 효과 후보에 대해 격자 레시피·fx 라이브러리·`build_song_timing_from_bar_map`(BPM 출처 — 콘솔 판독 0)만으로 만들기 줄을 계획한다. 콘솔 쓰기 0, 콘솔 접촉 0(가짜 콘솔만) — `.moai/reports/t593/run-verdict.md`. 후속 수정: t598(`942873a1`, 송신 직전 재판독에 효과 프리셋도 포함) · t601(`e103b8af`, 송신 중복 제거를 앞선 호출 기준으로 되돌려 묶음 안 정당한 반복을 보냄 — SPEC-COPILOT-MVP-001 소관 수정이나 t593 효과가 걸림) · t605(`a082e617`, t601 이 고친 뒤로 불필요해진 「반영당 효과 1개」 우회를 걷어냄, 콘솔 쓰기 0) · t607(`d6463a0d`, 혼합 효과 새 프리셋 점유 확인을 풀 번호로 직접 읽음, 콘솔 쓰기 0).
+- **M14(t594, 커밋 `18aa2ea3`·`9759cfb9`)**: 새 프리셋 창 색 종류에 R·G·B 칸(화면, `18aa2ea3`) + 서버가 목표 RGB를 받아 선택+값 줄로 콘솔에 만듦(`9759cfb9`). 판정: **PASS (콘솔 쓰기 0, 실기 미확인 항목은 t602/t608 로 넘김)** — `.moai/reports/t594/run-verdict.md`. 실기 콘솔 0회.
+- **잔여 드리프트**: 두 섹션 모두 콘솔 **쓰기** 실측 0 — §E.4 아래 t608 참조.
+
+## §E.2 보충 — 누락 카드 §E.2 요약 (sync 정합, 2026-10-12)
+
+spec.md HISTORY 2026-10-12 항목이 머지는 됐으나 §E.2 에 전용 절이 없던 32개 카드를 열거한다(그 HISTORY가 8개는 "요구 영향 있음"으로, 21개는 "요구 영향 없음"으로 이미 분류했다 — 여기서는 §E.2 run-evidence 관점에서 각 카드의 코드 변경·증거 경로·콘솔 쓰기 횟수만 보강한다, REQ/AC 문면 판단은 spec.md/acceptance.md HISTORY 소관).
+
+| 카드 | 무엇 (한 줄) | 근거 경로 | 콘솔 쓰기 |
+|---|---|---|---|
+| t549 | M4 새 에미터 최초 구현(REQ-011/012) | `.moai/reports/t549/run-verdict.md` | 0 (§E.2 M4 절에 기록됨) |
+| t553 | M4 게이트 증거 갱신 + 8트랙 타임코드 재측정 | `.moai/reports/t553/run-verdict.md` | 0 (§E.2 M4 후속 절에 기록됨) |
+| t557 | 효과 드롭다운이 고른 풀대로 `effect_kind` 전달(버그수정) | `.moai/reports/t557/run-verdict.md` | 0 |
+| t559 | M9 곡 전체 지도 + 상단 바 | `.moai/reports/t559/run-verdict.md` | 0 |
+| t561 | 편집 칸 전환 화면·움직임/옆빛 행·2D 무대 선택 | `.moai/reports/t561/run-verdict.md` | 0 |
+| t563 | 상단 바 콘솔 버튼을 M4 송신 경로에 배선 | `.moai/reports/t563/run-verdict.md` | 0 |
+| t565 | 박자 격자 무대 판독 — 좌표 + 트랙 그룹 소속(여러 그룹) | `.moai/reports/t565/run-verdict.md` | **읽기 1회**, 쓰기 0 |
+| t567 | 전환 경고에 ★ 마디 예외 + 낡은 주석 정리 (t575 동반) | `.moai/reports/t567/run-verdict.md` | 0 |
+| t568 | (미기록 — report 디렉터리만 확인, 판정서 본문 미확인) | `.moai/reports/t568/` | 미기록 |
+| t569 | 프리셋 칩 툴팁 — 앱 저장 설명, 쇼 프리셋은 출처만 | `.moai/reports/t569/run-verdict.md` | 0 |
+| t570 | (상세 미확인 — 콘솔 쓰기 0, 리터럴 0만 grep 확인) | `.moai/reports/t570/run-verdict.md` | 0 |
+| t571 | (미기록 — report 디렉터리만 확인) | `.moai/reports/t571/` | 미기록 |
+| t572 | 「다시 반영」= 앱이 쓴 번호에만 덮어쓰기 정책(REQ-011~013) | `.moai/reports/t572/run-verdict.md` | 0 |
+| t573 | 송신 디머 속성 그룹별 해석 규칙(REQ-011~013) | `.moai/reports/t573/run-verdict.md` | 0 |
+| t574 | REQ-006(i-4a)~(i-4f)·020(a)(d)(e) 저장 스키마 구현 | `.moai/reports/t574/run-verdict.md` | 0 |
+| t576 | 전환 entry 가 큐 명령에 실림(REQ-006 entry·011~013) | `.moai/reports/t576/run-verdict.md` | 0 |
+| t578 | 「콘솔 같이」 타임코드 재생·정지를 게이트 경로로 | `.moai/reports/t578/run-verdict.md` | 0 |
+| t579 | 실기 미확인 배지를 M1 표로 판정, 스피드 마스터 수동 안내 | `.moai/reports/t579/run-verdict.md` | 0 |
+| t584 | 편집 칸 움직임 고르기 목록 — 모양·축·주기 | `.moai/reports/t584/run-verdict.md` | 0 |
+| t587 | 상단 바 1450px 이상 잘림·BPM 긴 문구 정정 | `.moai/reports/t587/run-verdict.md` | 0 |
+| t589 | 「+새 프리셋 만들기」 승인 대기 창 최초 구현(REQ-015(h-1)~(h-6)) | `.moai/reports/t589/run-verdict.md` | 읽기만(빈 번호 확인), 쓰기 0 |
+| t591 | 2D 무대 무빙 장비를 네모로, 낡은 편집 칸 주석 정리 | `.moai/reports/t591/run-verdict.md` | 0 |
+| t595 | 격자 칸·편집 칸 「⚠ 빈 프리셋」 표식(`empty_preset_cells` 신설) | `.moai/reports/t595/run-verdict.md` | 0 |
+| t597 | 일반 편집 거절 사유를 전체화면 그 칸 옆에 표시 | `.moai/reports/t597/run-verdict.md` | 0 |
+| t599 | 「새 프리셋 만들기」 위치 종류 — 목표좌표 입력(REQ-015(i-3)(h)) | `.moai/reports/t599/run-verdict.md` | 읽기만, 쓰기 0 |
+| t600 | 이미 승인된 칸도 (i-1) 가드로 묶음(REQ-015(i-9)) | `.moai/reports/t600/run-verdict.md` | 0 |
+| t603 | 새 프리셋 창 효과 종류 — 효과 틀·주기(REQ-015(i-4)) | `.moai/reports/t603/run-verdict.md` | 0 |
+| t604 | 코드 무변경 — 실측 근거 없음, 실기 항목(t608)으로 이동 | `.moai/reports/t604/run-verdict.md` | 0(코드 변경 없음) |
+
+M13·M14(t593·t594) 및 그 후속(t598/t601/t605/t607)은 위 새 §E.2 섹션(M13/M14 보충)으로 별도 기록했다. **집계**: 32개 카드 중 2개(t568·t571)는 report 디렉터리만 확인되고 본문 상세를 이 sync 라운드에서 재읽지 않았다 — "미기록"으로 명시한다(지어낸 PASS 아님). 나머지 30개는 전부 콘솔 쓰기 0(가짜 콘솔만), t565·t589·t599 세 건만 콘솔 **읽기**를 수행했다(쓰기는 역시 0).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<run-phase 대기>_
+- **run_status**: 완료 — M1~M14 전부 구현됨(plan.md M1~M14 헤더 "구현됨" 표기 + 아래 머지 커밋).
+- **Milestone 머지 현황**:
+  | M | 카드 | 머지 커밋 |
+  |---|---|---|
+  | M1 | t531 | (§E.2 M1 절 참조, lane-3 `WT-ldbeat-m1`) |
+  | M1 후속 | t538 | (§E.2 M1 후속 절, `WT-mover-probe`) |
+  | M2 | t532 | (§E.2 M2 절, `WT-ldbeat-m2`) |
+  | M2 후속 | t534 | (§E.2 M2 후속 절, `WT-ldbeat-ui-match`) |
+  | M3 | t551(+후속 1~5차) | (§E.2 M3 절들, `WT-ldbeat-grid-edit`) |
+  | M4 | t549, 후속 t553 | (§E.2 M4 절들) |
+  | M5·M6 | (plan.md M5/M6, 격자 범위 내 소규모) | spec.md REQ-010/014 대응, M3/M4 함께 구현 |
+  | M7 | t537(phase②) | `edc537db` |
+  | M7 step5 | t583/t585/t586/t588 | (§E.2 M7 step5 절들) |
+  | M8 | t548 | `b60394a4`·`b456d8b1` |
+  | M9 | t554(명세) + t557~t591 다수 | 후속 다수 커밋(위 §E.2 보충 표) |
+  | M10 | t577 | `9d2803d6`·`d827ca4e` |
+  | M11 | t590 | `363b8f22` |
+  | M12 | t592 | `807ffcf0`·`95ba42c8` |
+  | M13 | t593(+t598/t601/t605/t607) | `27ada62e`(+ `942873a1`·`e103b8af`·`a082e617`·`d6463a0d`) |
+  | M14 | t594 | `18aa2ea3`·`9759cfb9` |
+  | (후속 정정) | t595·t599·t600 | `b2d6f724`/`48d490b9`/`9fe5e551`, `e4fefc4d`/`43be717f`, `fe65a595` |
+- **증거 색인**: `.moai/reports/<card>/run-verdict.md` 각 카드별(위 §E.2 표 전체). 서버 전체 시험 묶음은 M12 run-verdict 기준 `15367 passed`(후속 카드로 더 늘었으며, 이 sync 라운드의 재확인은 §E.4 참조).
+- **잔여 위험**: 박자 격자 송신 경로의 실기 콘솔 확인은 카드 t608(대기)로 미뤄져 있다 — §E.4 참조.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<sync-phase 대기>_
+- **sync_status**: completed-with-live-check-deferred — 코드·자동 시험 기준 전부 PASS, 실기 콘솔 확인(t608)만 대기.
+- **sync_complete_at**: 2026-10-12
+- **sync_commit_sha**: pending-backfill-ldbeat-sync (이 sync 커밋 자신의 SHA — 다음 커밋에서 백필)
+- **changelog_entry_position**: CHANGELOG.md `[Unreleased]` 섹션 최상단(이 sync 커밋에서 추가)
+
+### AC 매트릭스 (AC-LDBEAT-001~025)
+
+범례: PASS(자동) = 자동 시험으로 확인. PASS(실기) = 실기 콘솔로 확인. 미검증(t608) = 자동 시험은 PASS 이나 실기 콘솔 쓰기 확인이 카드 t608(대기, 감독 「실행」 필요)로 미뤄짐.
+
+| AC | 상태 | 근거 |
+|---|---|---|
+| AC-LDBEAT-001 | PASS(자동) | M1 프로브 차단 로직 — `server/tests/` M1 관련 시험군, `.moai/reports/t531/` |
+| AC-LDBEAT-002 | PASS(자동) | 승인 파일 해제 + 미리보기 1회 승인 반복 — M1/M4 시험, `.moai/reports/t563/`(상단 바 배선) |
+| AC-LDBEAT-003 | PASS(자동) | 콘솔 그룹 트랙·겹침 거절·±10초 재생·전체화면 대조 — `ui/src/components/BeatGrid.test.tsx`(169 tests, 이 sync 재확인 PASS) |
+| AC-LDBEAT-004 | PASS(자동) | circle/발리후 미확인 배지 — `t579` run-verdict, `BeatGrid.test.tsx` |
+| AC-LDBEAT-005 | PASS(자동) | 세 편집 경로 → `apply_beat_grid_edit` 전용 경로, UI 직접 구성 0건 — M3 시험군 |
+| AC-LDBEAT-006 | PASS(자동) | 승인=송신 sha256 비교 — `server/tests/` approval_vs_sent 계열(이 sync 재확인 포함, 1746 passed) |
+| AC-LDBEAT-007 | PASS(자동) | 다른 곡 기본값 비강제 — `test_beat_grid_t532.py::TestDefaultBeatGrid` |
+| AC-LDBEAT-008 | PASS(자동) | 곡 단위 저장 격리 — M2 시험군 |
+| AC-LDBEAT-009 | PASS(자동) | M1 실시간 읽기 + 실패-경로 + 응답기 확장(t565 읽기 1회로 확인) — `.moai/reports/t565/run-verdict.md` |
+| AC-LDBEAT-010 | PASS(자동) | 범위 불명 편집 거절 — M3 시험군 |
+| AC-LDBEAT-011 | PASS(자동) | REQ 전체 PASS/FAIL 추적 — progress.md §E.2/§E.3 완전성(이 sync 보충으로 누락 해소) |
+| AC-LDBEAT-012 | PASS(자동) | 기존 emit.py/songcue.py diff 0줄 — `git diff` 경계 확인(run-phase 각 카드 run-verdict) |
+| AC-LDBEAT-013 | PASS(자동) | REQ-013 재생 계약 해소 — M4 구현 |
+| AC-LDBEAT-014 | PASS(자동) | G9 범위 경계 문서화 — M6, `t579`(스피드 마스터 수동 안내) |
+| AC-LDBEAT-015 | 인간 판단 | M1~M6 완료 상태 검토 — 이 progress.md가 그 검토 결과 |
+| AC-LDBEAT-016 | PASS(자동), (w-1)~(w-7) 포함 | 프리셋 아키텍처 전수 — M8·M11~M14 시험군 전부, `server/tests/test_empty_preset_hold_t590.py`(13 passed, 이 sync 재확인) + `test_approved_empty_hold_t600.py` + `test_presend_reread_t598.py` |
+| AC-LDBEAT-017 | PASS(자동) | 상단 바 영역 — `BeatGridTopBar.test.tsx`(20 tests PASS) |
+| AC-LDBEAT-018 | PASS(자동) | 곡 전체 지도 — `t559` 구현, `BeatGrid.test.tsx` 포함 |
+| AC-LDBEAT-019 | PASS(자동) | 타임라인 줄·막대(440px 포함) — `BeatGrid.test.tsx`, `beatgrid/tableFocus.test.ts` |
+| AC-LDBEAT-020 | PASS(자동), (f)~(k) 포함 | 이음매·전환 + entry 저장 스키마 — `t574`·`t576` 구현 |
+| AC-LDBEAT-021 | PASS(자동) | 편집 칸 — `BeatGridPanels.test.tsx`(43 tests PASS) |
+| AC-LDBEAT-022 | PASS(자동) | 2D 무대 — `beatGridStageModel.test.ts`(11 tests)·`beatGridStageDecor.test.ts`(8 tests) |
+| AC-LDBEAT-023 | PASS(자동) | 이 마디 한눈에 — `BeatGrid.test.tsx` 포함, `t569`(칩 툴팁) |
+| AC-LDBEAT-024 | PASS(자동), (g)(h) 포함 | 재생·음원 — `beatgrid/songAudioLink.test.ts`(4 tests) |
+| AC-LDBEAT-025 | PASS(자동) | 명령창·AI·프리셋 서랍 — `BeatGridNewColorPreset.test.tsx`(8)·`BeatGridNewFxPreset.test.tsx`(10)·`BeatGridEmptyPreset.test.tsx`(8)·`BeatGridApplyFailure.test.tsx`(5), 전부 PASS |
+
+**집계**: 25/25 AC가 자동 시험 기준 PASS(AC-015는 인간 판단 항목). **PASS(자동)이지 PASS(실기)가 아님을 숨기지 않는다** — 콘솔에 실제로 쓰는 경로(승인=송신, 새 프리셋 만들기 묶음, 타임코드 재생)는 자동 시험에서 전부 가짜 콘솔(FakeConsole)로만 확인됐다. 실기 콘솔 쓰기 확인은 **0회**이고, 카드 t608(대기)로 넘겨져 있다.
+
+### 실기 상태 — 숨기지 말 것 (리드 지시)
+
+박자 격자 송신 경로(새 에미터 + 새 프리셋 위치·효과·색 만들기 묶음 + 다시 반영 + 타임코드 재생)의 실기 콘솔 확인은 카드 **t608**(대기, 감독 「실행」 필요, 리드 실행)로 미뤄져 있다. t608 체크리스트 ⓪~⑫(13항목, main 기준 `d04b0a3d`):
+
+- **⓪** 🔴 Top/Go Timecode 뒤 첫 큐가 서는 초 재측정 — 「콘솔 같이」 음원 지연값(현재 3.002초, t520 LEAD 포함 실측)이 박자 격자 에미터(LEAD 없이 TrigTime)와 어긋나 조명이 약 3초 빠를 수 있음(REQ-LDBEAT-013 재생 계약 관련, t578 판정서 §5 미확인으로 남김)
+- **①** Store Cue k Sequence s /Overwrite · Delete Cue 실기 선례 0(t572 「다시 반영」 덮어쓰기 정책)
+- **②** Store Cue k Sequence s CueFade x(+/CueOnly) 어순(t576 entry 저장 스키마)
+- **③** Block→Track 다시 반영 때 /Overwrite 가 Block·Release 를 지우는지
+- **④** 번호 순서≠시간 순서 큐의 타임코드 재생
+- **⑤** 미리보기 승인 세션 1회(t563 M4 배선)
+- **⑥** 반영→다시 반영 왕복
+- **⑦** trigger_beat 로 미룬 TrigTime
+- **⑧** 새 위치 프리셋 만들기 줄을 반영 묶음에 섞어 보낼 때(M12/t592, 단독 실행 선례 t474 run3 있음, 묶음 섞기는 처음)
+- **⑨** 새 효과 프리셋 만들기를 반영 묶음에 섞어 보낼 때 + 여러 그룹 선택 효과 프리셋(M13/t593, 선례 0)
+- **⑩** 새 색 프리셋 만들기를 반영 묶음 앞에 섞을 때 4.n 저장값·큐 참조 되읽기(M14/t594)
+- **⑪** 같은 Store 가 한 묶음에 두 번 나갈 때 콘솔 반응(t601 뒤 이제 둘 다 나감 — 자동 시험은 PASS 이나 실기 콘솔 반응 미확인)
+- **⑫** Store Preset 22.0 → PresetPools/22 되읽기 i:0 생성 여부(t604 대체)
+
+**실제로 있었던 실기 측정** (이것들은 t608 대기 목록과 별개로 이미 수행됨): M1 프로브(카드 t531, `.moai/reports/t531/`, 9항목 콘솔 왕복) · 무빙 원인 가름(카드 t538) · M4 8트랙 타임코드 재측정(카드 t553, `.moai/reports/t553/`) · t565 무대 판독 읽기 1회(`.moai/reports/t565/run-verdict.md`, 256 요청·쓰기 0·8/8 complete).
+
+### 완료 조건
+
+- M1~M14 전부 구현됨 + §E.2 run-evidence 완전성(이 sync 커밋으로 32개 누락 카드 보충) + 25/25 AC 자동 시험 PASS.
+- **완료 조건에서 명시적으로 뺀 것**: 실기 콘솔 쓰기 확인(t608) — 이 SPEC의 `completed` 전환은 코드·자동 시험 기준이며, t608 실행 결과 결함이 나오면 `completed → in-progress` 개정(스키마 § Status Enum, `amendment_of` 경로)으로 되돌아온다.
+
+### 안 잰 것 (Gaps)
+
+- t568·t571 두 카드는 report 디렉터리만 확인되고 본문 상세를 이 sync 라운드에서 재읽지 않았다.
+- t608 체크리스트 13항목(⓪~⑫) 전부 실기 미확인.
+- M9 화면 영역(AC-017~025)의 시안 이탈 승인 기록·치수 보존(spec.md REQ-LDBEAT-016, §D DoD)은 acceptance.md §D 체크리스트로 검증되나, 이 sync 라운드에서 §D 전체를 재검사하지 않았다 — acceptance.md 본문은 manager-spec 소관이라 이 sync 커밋에서 손대지 않는다.
+
+### 잔여 위험 (Residual risk)
+
+- t608 미실행 상태에서 실기 송신 시 조명이 음원보다 최대 ~3초 빠를 수 있다는 가설(⓪)이 검증되지 않았다.
+- 새 프리셋 만들기 세 종류(위치/효과/색)를 반영 묶음에 섞어 보내는 조합은 자동 시험(가짜 콘솔)에서만 확인됐고, 실기 콘솔이 그 순서·묶음을 어떻게 받는지는 미확인이다.
+- t568·t571의 본문 미확인이 숨겨진 드리프트를 가릴 가능성(낮음 — 커밋 메시지·diff 자체는 git log로 확인됨, 판정서 세부 수치만 미확인).
