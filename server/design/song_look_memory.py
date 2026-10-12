@@ -17,7 +17,8 @@ t486 이 지운 ``SongLookMemory`` 는 아무도 안 읽는 배선이었으므�
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from typing import TypeVar
 
 from server.design.song_cue_composer import SongCueCompositionResult
 
@@ -25,6 +26,43 @@ from server.design.song_cue_composer import SongCueCompositionResult
 Look = tuple[str | None, tuple[str, ...]]
 #: 곡 하나의 룩 — 구간 큐 순서대로.
 SongLooks = tuple[Look, ...]
+
+_Built = TypeVar("_Built")
+
+
+def compose_avoiding_previous(
+    build: Callable[[int], tuple[_Built, SongCueCompositionResult]],
+    history: Sequence[SongLooks],
+    *,
+    enabled: bool = True,
+) -> tuple[_Built, SongCueCompositionResult, int]:
+    """오프셋 0, 1, 2 … 로 ``build`` 를 불러 앞 곡들과 다르게 열리는 것을 고른다.
+
+    카드 t609 — 대화 길(``session._song_compose``)과 업로드 길(``prepare_songcue``)이
+    같은 고르기를 쓰도록 t491 의 반복문을 여기로 옮겼다. ``build(k)`` 는 k칸 돌린
+    조립을 돌려준다. 곡 룩이 앞서 본 후보와 같아지면(회전이 한 바퀴) 멈춘다 — 회전은
+    감독 답의 목록 길이로 주기가 정해지므로 상수 없이 끝난다. 기억이 없거나
+    ``enabled`` 가 거짓이면 오프셋 0(감독 답 그대로)만 조립한다.
+
+    반환: ``(build 의 첫 값, 조립 결과, 고른 오프셋)``.
+    """
+    if not enabled or not history:
+        built, composition = build(0)
+        return built, composition, 0
+    candidates: list[tuple[_Built, SongCueCompositionResult]] = []
+    seen: set[SongLooks] = set()
+    offset = 0
+    while True:
+        built, composition = build(offset)
+        looks = song_looks(composition)
+        if looks in seen:
+            break
+        seen.add(looks)
+        candidates.append((built, composition))
+        offset += 1
+    chosen = choose_look_offset([song_looks(c) for _, c in candidates], history)
+    built, composition = candidates[chosen]
+    return built, composition, chosen
 
 
 def song_looks(composition: SongCueCompositionResult) -> SongLooks:
