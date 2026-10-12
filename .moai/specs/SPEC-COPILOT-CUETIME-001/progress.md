@@ -98,7 +98,7 @@
 
 - `sync_status: audit-ready`
 - `sync_complete_at: 2026-10-13`
-- `sync_commit_sha: PLACEHOLDER` (sync 커밋은 자기 SHA 를 적을 수 없어 placeholder 로 두고, 같은 PR 의 후속 커밋에서 백필한다)
+- `sync_commit_sha: 18c2a3bfce81c3b101428e58739b95417ad1fa47` (sync 커밋 자신. 앞 커밋이 자기 SHA 를 적을 수 없어 placeholder 로 두었다가 같은 PR 의 후속 커밋에서 백필했다)
 - 상태 전환: `in-progress → completed`. spec.md frontmatter `status` 만 바꿨고 본문은 건드리지 않았다. plan.md·acceptance.md·progress.md 는 frontmatter 가 없어 전환 대상이 아니다.
 
 이 sync 는 기존 진행 기록(M1~M3, 최종 E2E, 피드백 2건)을 그대로 두고 상태만 닫는다. §E.1~§E.3 은 이 파일에 없으며 새로 만들지 않았다.
