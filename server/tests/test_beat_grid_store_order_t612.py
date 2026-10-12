@@ -68,12 +68,11 @@ class TestFirstStoredCueCreatesTheSequence:
         assert not any(line.startswith("Store Cue ") for line in track.commands)
 
 
-class TestTrackWithoutAStoredCueStillCreatesItsSequence:
-    def test_the_assign_never_points_at_a_sequence_that_was_not_created(self) -> None:
-        # 저장되는 큐가 하나도 없으면 첫 큐 저장이 시퀀스를 만들 수 없다 — 그러니
-        # 배정 줄이 가리키는 시퀀스를 이 트랙이 직접 만들어야 한다(옛 순서 그대로).
+class TestTrackWithoutAStoredCueEmitsNothing:
+    def test_the_bare_store_line_is_not_emitted(self) -> None:
+        # 카드 t615 — 맨 Store Sequence 는 빈 Cue 1 을 만든다(실기 판별: .moai/reports/t615/live/).
+        # 저장되는 큐가 하나도 없으면 시퀀스·이름·배정 줄을 아무것도 내지 않는다.
+        # 상세 시험은 test_beat_grid_empty_track_t615.py.
         track = _track([])
-        assert track.commands[0] == f"Store Sequence {_SEQ}"
-        assert track.commands[1].startswith(_NAME_PREFIX)
-        # 카드 t614 — 배정 줄은 트랙 주소(<타임코드>.1.<k>)로 나간다(이 타임코드의 첫 트랙).
-        assert track.commands[-1] == f"Assign Sequence {_SEQ} At Timecode {_TC}.1.1"
+        assert f"Store Sequence {_SEQ}" not in track.commands
+        assert track.commands == ()

@@ -349,7 +349,9 @@ class TestEmitBeatGridWriteBundleHappyPath:
         )
 
     def test_track_emits_store_sequence_and_ascii_name(self) -> None:
-        tracks = [_track("FOH", 3, [])]
+        # 카드 t615 — 저장 큐가 있어야 시퀀스가 생긴다(맨 Store 줄은 없다). 이름 줄은 그 첫 큐
+        # 저장 바로 뒤에 붙는다(카드 t612).
+        tracks = [_track("FOH", 3, [_position_cue(3, position_preset_no="1.1")])]
         result = emit_beat_grid_write_bundle(
             tracks,
             timing=_TIMING,
@@ -359,21 +361,18 @@ class TestEmitBeatGridWriteBundleHappyPath:
             probe_results=_ALL_M1_PASS,
         )
         track_result = result.tracks[0]
-        assert "Store Sequence 300" in track_result.store_sequence_commands
-        assert any(
-            "Set Sequence 300 Property 'Name'" in line
-            for line in track_result.store_sequence_commands
-        )
+        assert track_result.store_sequence_commands == ()
+        assert any(line.startswith("Store Sequence 300 Cue 1") for line in track_result.commands)
+        name_line = next(line for line in track_result.commands if "Property 'Name'" in line)
+        assert name_line.startswith("Set Sequence 300 Property 'Name'")
         # 이름은 ASCII만(한글 0건) — songcue._ascii_label 재사용 확인.
-        name_line = next(
-            line for line in track_result.store_sequence_commands if "Property 'Name'" in line
-        )
         assert all(ord(ch) < 128 for ch in name_line)
 
     def test_many_to_many_timecode_assignment_one_line_per_track(self) -> None:
+        # 카드 t615 — 배정은 저장 큐가 있는 트랙만 낸다(빈 트랙은 줄도 순번도 없다).
         tracks = [
-            _track("FOH", 3, []),
-            _track("BLIND", 14, []),
+            _track("FOH", 3, [_position_cue(3, position_preset_no="1.1")]),
+            _track("BLIND", 14, [_position_cue(3, position_preset_no="1.2")]),
         ]
         result = emit_beat_grid_write_bundle(
             tracks,

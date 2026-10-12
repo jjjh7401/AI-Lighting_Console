@@ -74,8 +74,9 @@ class TestHoldWhenSlotIsAbsent:
         status, _store, _console, approval = _apply(
             tmp_path, _timeline_with_cue(dict(_EMPTY_EFFECT_CUE)), _tree_with_pools(p4=[21])
         )
-        assert status["ok"] is True
-        risk = _risk_text(approval)
+        assert status["ok"] is False
+        assert approval.requests == []
+        risk = status["reason"]
         assert _HOLD_LABEL in risk
         assert "4.99" in risk
         assert "새로 만드는 프리셋" not in risk, "보류 칸이 승인 기록 대상 목록에 올랐다"
@@ -104,8 +105,9 @@ class TestHoldWhenPoolIsUnreadable:
         status, store, _console, approval = _apply(
             tmp_path, _timeline_with_cue(dict(_EMPTY_EFFECT_CUE)), tree
         )
-        assert status["ok"] is True
-        risk = _risk_text(approval)
+        assert status["ok"] is False
+        assert approval.requests == []
+        risk = status["reason"]
         assert "풀을 못 읽어 빈 프리셋인지 확인 못 함" in risk
         assert "새로 만드는 프리셋" not in risk
         cue = _cue_of(store.latest["beat_grid"], "BACK", 1)
@@ -141,8 +143,9 @@ class TestHoldIsCellScoped:
         status, store, _console, approval = _apply(
             tmp_path, _timeline_with_cue(cue), _tree_with_pools(p2=[5], p4=[21])
         )
-        assert status["ok"] is True
-        risk = _risk_text(approval)
+        assert status["ok"] is False
+        assert approval.requests == []
+        risk = status["reason"]
         assert _HOLD_LABEL in risk
         assert "새로 만드는 프리셋" not in risk, "보류 칸의 다른 번호가 승인 대상으로 남았다"
         held = _cue_of(store.latest["beat_grid"], "BACK", 1)
@@ -153,11 +156,14 @@ class TestHoldIsCellScoped:
 class TestApprovalVsSentExcludesHeldCells:
     """(w-5) 보류 칸은 송신으로 세지 않는다 — 승인=송신 대조가 맞는다."""
 
-    def test_approval_vs_sent_matches_with_a_held_cell(self, tmp_path) -> None:
-        status, _store, _console, _approval = _apply(
+    def test_held_cell_is_not_counted_as_sent(self, tmp_path) -> None:
+        status, _store, console, _approval = _apply(
             tmp_path, _timeline_with_cue(dict(_EMPTY_EFFECT_CUE)), _tree_with_pools(p4=[21])
         )
-        assert status["approval_vs_sent"]["match"] is True
+        # 보류 칸은 송신으로 세지 않는다 — 보낼 줄이 없어 반영은 거절되고 콘솔 쓰기는 0건이다.
+        assert status["ok"] is False
+        assert status["approval_vs_sent"] is None
+        assert console.executed == []
 
 
 class TestSplitEmptyPresetHolds:

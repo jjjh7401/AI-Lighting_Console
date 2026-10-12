@@ -541,9 +541,9 @@ class TestApprovalCardShowsLabelAndDescription:
         )
         assert "승인 대기" in edit_event["text"]
         apply_event = session.beat_grid_apply()
-        assert apply_event["ok"] is True
-        risk_reasons = approval.requests[0].items[0].risk_reasons
-        joined = " ".join(risk_reasons)
+        assert apply_event["ok"] is False
+        assert approval.requests == []
+        joined = apply_event["reason"]
         assert "빈 프리셋 — 아직 콘솔에 만들 길 없음(송신 보류) 1개" in joined
         assert "2.65(풀을 못 읽어 빈 프리셋인지 확인 못 함)" in joined
         assert "2.65 '" not in joined  # 이름이 붙지 않았다
