@@ -1,7 +1,7 @@
 # SPEC-COPILOT-SONGSTD-001 — 곡 단위 조명연출 표준 엔진
 
 - 브랜치: `feature/song-design-standard`
-- 근거 문서: `docs/proposals/song-lighting-design-standard.md` (표준 v0.2),
+- 근거 문서: `docs/proposals/song-lighting-design-standard.md` (표준 v0.5),
   `research.md` (출처 80+), `feasibility.md` (실측 판정)
 - 선행: SPEC-COPILOT-CUETIME-001 (포지션 큐·MIB·곡 시트 — main PR #41)
 
@@ -10,7 +10,7 @@
 현 시스템은 구간을 독립적으로 푸는 사전이다: 다이내믹스 1~5가 룩 선택
 인덱스에 불과해 값을 스케일하지 않고(busking.py:96-115), 실측된 메탈 시트
 (Seq 114)는 점등 큐 전부 디머 100%·페이드 동일 0.5초였다. "1곡의 연출"을
-판단하는 기준이 없다. 표준 v0.2가 그 기준이고, 이 SPEC은 그것을 집행하는
+판단하는 기준이 없다. 표준 v0.5가 그 기준이고, 이 SPEC은 그것을 집행하는
 엔진이다.
 
 ## 핵심 설계 판정 (실측 근거 — 변경 시 재실측 필요)
