@@ -67,6 +67,8 @@
 
 **살아남은 돌연변이.** `probe_store_fail.py` 로 재 보니 저장 거부 시험은 실제로 `Store Sequence 3 Cue 1 …` 을 보냈고 콘솔이 거부했으며, 그때 `run_commands` 가 결과를 오류(`is_error: True`)로 돌려줬다. 그래서 `is_error` 조건이 이미 막고 있었고 `store_failed` 조건은 중복이었다. 중복 조건을 지우고, `is_error` 조건이 시험에 걸리는 것(위 셋째 줄)을 확인했다. 모든 돌연변이는 되돌렸다(`grep -c MUTANT` → 0).
 
+**tools.py 헝크 재고 목록.** 커밋 뒤 푸시 전 검사에서 `test_songcue_bundle.py::test_tools_hunks_are_only_songcue_registration_and_not_dedupe_or_state` 가 실패했다. 이 시험은 run-phase 기준 커밋부터 지금까지 쌓인 tools.py 변경의 헝크 시작점을 적어 둔 **재고 목록**이고, 커밋 전에는 변경이 범위에 안 잡혀 커밋 전 `make ci-local` 은 통과했었다. 잰 값(`measure_hunks.py`): 95 → 93 헝크, 새 시작점 0, 사라진 시작점 971 · 975(새 Protocol 을 넣은 자리 근처 경계가 합쳐짐). 안전 성질을 지키는 보호 구간 시험(`TestToolsProtectedRegions` 등)은 그대로 통과했고, 목록에서 두 시작점을 빼며 사유를 적었다. 갱신 뒤 두 파일 86개 통과(`measure_hunks.out.txt` 는 갱신 뒤 상태 — 새·사라진 시작점 둘 다 빈 목록).
+
 **기존 시험:** `pytest server/tests -k "song or chorus or palette or composer or web_session or songcue or timeline or arc or accent or ldrender or upload or concept or beat_grid or preset or tools"` → 3722 passed, 8 skipped. `make ci-local` → exit 0. 전체 묶음은 CI 가 잰다.
 
 ## 5. 안 잰 것

@@ -576,8 +576,13 @@ _TOOLS_EXPECTED_HUNK_OLD_STARTS = (
     # 문단(t358)을 지우자, 기준 968 과 971 사이의 추가 블록 경계가 재정렬돼 둘이 한
     # 헝크로 합쳐졌다(위 t306 · t317 · t480 과 같은 기제). 보호 구간 겹침은 t476 허용분
     # (237, 0) 하나 그대로다 — 커밋 **뒤에** 잰 값이다(`.moai/reports/t486/measure_hunks.txt`).
-    971,
-    975,
+    # 카드 t609 (업로드 길에도 곡 사이 룩 기억, 2026-10-12) 갱신: 95 -> **93** hunks. 새
+    # 시작점 0, 사라진 시작점 둘(971 · 975). `SongAnalysisPort` 아래에 새 Protocol
+    # `SongLookMemoryPort` 를 넣고 `build_toolset` 에 `song_look_memory` 인자를 다시 달자
+    # (t486 이 지운 이름과 같다 — 이번에는 `prepare_songcue` 본문이 실제로 읽는다), 기준
+    # 971 · 975 · 977 근처의 추가 블록 경계가 재정렬돼 한 헝크로 합쳐졌다(위 t306 · t486
+    # 과 같은 기제). 보호 구간 겹침은 아래 `_overlaps` 로 다시 잰다 — 커밋 **뒤에** 잰
+    # 값이다(`.moai/reports/t609/measure_hunks.out.txt`).
     977,
     984,
     986,
