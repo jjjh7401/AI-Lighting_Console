@@ -75,4 +75,5 @@ class TestTrackWithoutAStoredCueStillCreatesItsSequence:
         track = _track([])
         assert track.commands[0] == f"Store Sequence {_SEQ}"
         assert track.commands[1].startswith(_NAME_PREFIX)
-        assert track.commands[-1] == f"Assign Sequence {_SEQ} At Timecode {_TC}"
+        # 카드 t614 — 배정 줄은 트랙 주소(<타임코드>.1.<k>)로 나간다(이 타임코드의 첫 트랙).
+        assert track.commands[-1] == f"Assign Sequence {_SEQ} At Timecode {_TC}.1.1"

@@ -383,8 +383,13 @@ class TestEmitBeatGridWriteBundleHappyPath:
             dimmer_attributes={},
             probe_results=_ALL_M1_PASS,
         )
-        assert result.tracks[0].assign_timecode_commands == ("Assign Sequence 300 At Timecode 30",)
-        assert result.tracks[1].assign_timecode_commands == ("Assign Sequence 301 At Timecode 30",)
+        # 카드 t614 — 같은 타임코드의 트랙은 트랙 주소(<타임코드>.1.<k>)로 배정한다.
+        assert result.tracks[0].assign_timecode_commands == (
+            "Assign Sequence 300 At Timecode 30.1.1",
+        )
+        assert result.tracks[1].assign_timecode_commands == (
+            "Assign Sequence 301 At Timecode 30.1.2",
+        )
         assert any("Store Timecode 30" in cmd for cmd in result.commands)
 
     def test_exceeding_measured_max_timecode_tracks_refuses_the_whole_timecode_group(self) -> None:
