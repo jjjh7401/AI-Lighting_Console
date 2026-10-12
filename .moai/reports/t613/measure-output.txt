@@ -1,0 +1,86 @@
+[1] 파일 16개 글자 수
+    raw (frontmatter·주석 포함)        :   228816
+    counted (frontmatter·주석 제외)     :   227701  = 227.7k  (보고값 227.7k)
+    한도 150.0k 대비 초과분              :    77701  (34.1% of total)
+
+[2] 이동 항목별 추정 (헤딩 단위; stub 은 가정치)
+  -- A군 (역할·로더 변경 불필요)
+     item                            counted    moved   stub      net  parser-coverage
+     moai-constitution                 18794     5815    600     5215  1.000
+         H2:Opus 5 / 4.8                                      section=  2517 keep=    0 moved=  2517
+         H2:Lessons Protocol                                  section=  4198 keep=  900 moved=  3298
+     main-checkout-branch-guard        11523     6410    650     5760  1.000
+         H2:Mechanical Enforcement                            section=  6410 keep=    0 moved=  6410
+     verification-claim-integrity      12811     4194    500     3694  1.000
+         H2:4. Cross-References                               section=  1115 keep=    0 moved=  1115
+         H2:5. Worked Example                                 section=  1127 keep=    0 moved=  1127
+         H2:6. Worked Example                                 section=  1952 keep=    0 moved=  1952
+     context-window-management         12925     9095    600     8495  1.000
+         H2:Claude Code's Graduated                           section=  1240 keep=    0 moved=  1240
+         H2:Reduction Ladder                                  section=  2500 keep=    0 moved=  2500
+         H2:Detection Heuristics                              section=  3624 keep=    0 moved=  3624
+         H2:Cross-references                                  section=   862 keep=    0 moved=   862
+         H3:GLM-5.3                                           section=   869 keep=    0 moved=   869
+  -- B군 (로딩 경로 변경 필요)
+     item                            counted    moved   stub      net  parser-coverage
+     kanban-dispatch                   31108    27978   1500    26478  1.000
+         H2:The board                                         section=   447 keep=    0 moved=   447
+         H2:Entry into the board                              section=   974 keep=    0 moved=   974
+         H2:Report milestones                                 section=   580 keep=    0 moved=   580
+         H2:Card classes                                      section=  2033 keep=    0 moved=  2033
+         H2:The dispatch cycle                                section=  4561 keep=    0 moved=  4561
+         H2:Completion is read                                section=  3724 keep=    0 moved=  3724
+         H2:Review lens selection                             section=   439 keep=    0 moved=   439
+         H2:The `/clear` handoff                              section=  2462 keep=    0 moved=  2462
+         H2:Isolation is entered                              section=  6050 keep=    0 moved=  6050
+         H2:Verification load                                 section=  2191 keep=    0 moved=  2191
+         H2:Integration into the release branch               section=  3042 keep=    0 moved=  3042
+         H2:Factory Mode                                      section=   631 keep=    0 moved=   631
+         H2:Cross-references                                  section=   844 keep=    0 moved=   844
+     session-handoff                   22437    15629   1800    13829  1.000
+         H2:Canonical Format                                  section=  7171 keep=    0 moved=  7171
+         H2:Paste-Time Activation Matrix                      section=   629 keep=    0 moved=   629
+         H2:Auto-Injected Resume Flow                         section=  1742 keep=    0 moved=  1742
+         H2:Auto-Memory Integration                           section=  2001 keep=    0 moved=  2001
+         H2:Worktree-Anchored Resume Pattern                  section=   721 keep=    0 moved=   721
+         H2:Diet Constraints                                  section=   902 keep=    0 moved=   902
+         H2:Cross-references                                  section=  2463 keep=    0 moved=  2463
+     cross-session-messaging           16579    10255    700     9555  1.000
+         H2:What the channel is                               section=  1690 keep=  700 moved=   990
+         H2:Availability constraints                          section=  1265 keep=    0 moved=  1265
+         H2:Where it sits                                     section=   964 keep=    0 moved=   964
+         H2:An idle notice                                    section=  1087 keep=  400 moved=   687
+         H2:Addressing, sending                               section=  2388 keep=    0 moved=  2388
+         H2:Configuration surface                             section=  3233 keep=    0 moved=  3233
+         H2:Cross-references                                  section=   728 keep=    0 moved=   728
+     askuser-protocol                  29710    10390   1000     9390  1.000
+         H2intro:Non-ASCII Tool-Call Encoding                 section=   404 keep=    0 moved=   404
+         H3:Failure Mode                                      section=   382 keep=    0 moved=   382
+         H3:Root-Cause Mechanism                              section=   967 keep=    0 moved=   967
+         H3:Self-Reinforcing Pollution Loop                   section=  1628 keep=    0 moved=  1628
+         H3:Scope Note                                        section=   731 keep=    0 moved=   731
+         H3:Report Completeness Criteria                      section=   980 keep=    0 moved=   980
+         H3:Preview-as-Report Substitution                    section=   523 keep=    0 moved=   523
+         H3:Report-Promise Fulfillment                        section=   451 keep=    0 moved=   451
+         H2:Blind Spot Pass                                   section=  1860 keep=    0 moved=  1860
+         H3:Why this matters                                  section=   394 keep=    0 moved=   394
+         H3:Correct Pattern                                   section=   563 keep=    0 moved=   563
+         H3:The Unknowns 4-Quadrant Lens                      section=   961 keep=    0 moved=   961
+         H3:Interview-Round Structure Example                 section=   546 keep=    0 moved=   546
+     agent-common-protocol             26501     8008    400     7608  1.000
+         H3:Verbatim batch                                    section=  1471 keep=    0 moved=  1471
+         H3:Attributable diff-check                           section=  1704 keep=    0 moved=  1704
+         H3:Hook Invocation Surface                           section=  2887 keep=  459 moved=  2428
+         H3:Pre-Spawn Sync Check                              section=  2414 keep= 1600 moved=   814
+         H3:Super-Advisor Escalation                          section=  1562 keep=  700 moved=   862
+         H3:Per-Spawn Model Injection                         section=  1069 keep=  340 moved=   729
+
+[3] kanban-dispatch 역할 분할 (이동 글자 수): lead=15220  lane=11914  공통/참고=844
+
+[4] 누적 시나리오 (base 에서 순감소를 차례로 뺀 추정치)
+    A군만                                      순감소   23164  →   204537  (204.5k)  초과 54537
+    A + kanban                               순감소   49642  →   178059  (178.1k)  초과 28059
+    A + kanban + session-handoff             순감소   63471  →   164230  (164.2k)  초과 14230
+    … + cross-session-messaging              순감소   73026  →   154675  (154.7k)  초과 4675
+    … + askuser-protocol (최소 세트)             순감소   82416  →   145285  (145.3k)  이하 (여유 4715)
+    … + agent-common-protocol (권장 세트)        순감소   90024  →   137677  (137.7k)  이하 (여유 12323)
