@@ -238,10 +238,6 @@ class TrackEmitResult:
     group_no: int | None
     sequence_number: int | None
     timecode_number: int | None
-    #: 카드 t615 — 항상 비어 있다. 첫 큐 저장이 시퀀스를 만들고(카드 t612) 이름은 그 뒤에 붙는다.
-    #: 저장되는 큐가 없는 트랙은 맨 Store Sequence 줄도 내지 않는다(빈 Cue 1 을 만든다).
-    #: 필드는 소비자(beat_grid_send · web/session) 호환을 위해 남긴다.
-    store_sequence_commands: tuple[str, ...]
     cues: tuple[CueEmitResult, ...]
     assign_timecode_commands: tuple[str, ...]
     blocked_reason: str | None
@@ -249,7 +245,7 @@ class TrackEmitResult:
     @property
     def commands(self) -> tuple[str, ...]:
         cue_commands = tuple(line for cue in self.cues for line in cue.commands)
-        return self.store_sequence_commands + cue_commands + self.assign_timecode_commands
+        return cue_commands + self.assign_timecode_commands
 
 
 @dataclass(frozen=True)
@@ -552,7 +548,6 @@ def _blocked_track(
         group_no=track.get("group_no"),  # type: ignore[arg-type]
         sequence_number=sequence_numbers.get(group_name),
         timecode_number=timecode_numbers.get(group_name),
-        store_sequence_commands=(),
         cues=(),
         assign_timecode_commands=(),
         blocked_reason=reason,
@@ -746,8 +741,6 @@ def emit_beat_grid_write_bundle(
                 group_no=group_no,  # type: ignore[arg-type]
                 sequence_number=sequence_number,
                 timecode_number=timecode_number,
-                # 첫 큐 저장이 시퀀스를 만들고 이름은 그 칸 줄에 붙는다(카드 t612) — 맨 줄은 없다.
-                store_sequence_commands=(),
                 cues=tuple(cue_results),
                 assign_timecode_commands=assign_timecode_commands,
                 blocked_reason=None,

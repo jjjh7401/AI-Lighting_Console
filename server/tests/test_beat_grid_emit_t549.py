@@ -361,7 +361,7 @@ class TestEmitBeatGridWriteBundleHappyPath:
             probe_results=_ALL_M1_PASS,
         )
         track_result = result.tracks[0]
-        assert track_result.store_sequence_commands == ()
+        assert not hasattr(track_result, "store_sequence_commands")
         assert any(line.startswith("Store Sequence 300 Cue 1") for line in track_result.commands)
         name_line = next(line for line in track_result.commands if "Property 'Name'" in line)
         assert name_line.startswith("Set Sequence 300 Property 'Name'")
