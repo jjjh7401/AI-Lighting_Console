@@ -119,7 +119,7 @@ SPEC          46개    .moai/specs/
 
 ## ⑥ 큐·시퀀스 — 🔴 연출 표준이 여기 있다
 
-**정본**: `docs/proposals/song-lighting-design-standard.md` (v0.4)
+**정본**: `docs/proposals/song-lighting-design-standard.md` (v0.5)
 > 「효과의 나열」이 아니라 **조명감독이 타임라인 위에서 내리는 판단**을 기계 검사 가능한 규칙으로.
 
 **철학 4조**: ①조명은 곡의 구두점 ②긴장-해소 모델 ③헤드룸 보존 ④하나의 완벽한 아이디어
