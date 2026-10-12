@@ -157,7 +157,7 @@ base `origin/main` = `b1a630e` · branch `spec/writepath-001` · worktree `write
 
 - `sync_status: audit-ready`
 - `sync_complete_at: 2026-10-13`
-- `sync_commit_sha: pending-backfill-sync` (이 커밋은 자기 SHA 를 적을 수 없어 placeholder 로 두고, 같은 PR 의 후속 커밋에서 백필한다)
+- `sync_commit_sha: e6647fff01c3d3dff62b8298e6cb6e42a4114c64` (sync 커밋 자신. 앞 커밋이 자기 SHA 를 적을 수 없어 placeholder 로 두었다가 같은 PR 의 후속 커밋에서 백필했다)
 - 상태 전환: `in-progress → completed`. frontmatter `status`·`updated` 만 바꿨고 spec.md 본문은 건드리지 않았다.
 
 **M2 실기 미실행 (sync 에서 명시 기록).** §E.2 의 `SKIP: CONDITION_NOT_MET` 은 이 sync 이후에도 그대로다. 라이브 1턴(승인 카드 렌더)은 실행하지 않았다. 구조 기준 AC-001~011 은 §E.2 기록대로 M2 없이 충족됐다(REQ-WRITEGATE-014). 따라서 이 SPEC 의 `completed` 는 **구조 기준의 완료**이고, 라이브 증거의 완료가 아니다. 남은 관측 1건(카드 렌더)은 사용자 입회 세션에서만 닫을 수 있으며, §E.2 의 재개 조건을 그대로 따른다.
