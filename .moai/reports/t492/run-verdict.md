@@ -68,3 +68,57 @@
 4. ④ 탭 3 = reserve 배선 + 게이트 지킴/금지 분류표(UI 상수) OK?
 
 승인한 항목부터 구현하고, 각 항목은 실제 세션 페이로드 + 브라우저로 잰다.
+
+---
+
+## 7. 구현 (리드 결정 2026-10-12 반영)
+
+리드 결정: ① (가) 사유만 · ② 「바꾸려면」만(경로가 코드에 실재하는 것만) · ③ 곡 단위 집계, 감정은 빈칸 · ④ reserve 배선, 게이트 분류표는 안 함. 원칙: 다른 칸 값 반복 금지(REQ-097), 원천 없는 내용 짓기 금지.
+
+### 판정
+
+- **AC-018 잔여 3건: 원천이 있는 자리는 채움(PASS), 원천이 없는 자리는 사유를 보이며 비움.** 남은 빈 칸(「그래서 보이는 것」·무슨 뜻·왜·감정·지킴/금지)은 화면에 사유가 보인다. 원천 신설(인터뷰 구간 질문)은 감독 결정이며 리드가 따로 묻는다.
+
+### 바뀐 코드
+
+- `ui/src/components/conceptTabs.ts`(신규) — 순수 함수.
+  - `OUTCOME_NO_SOURCE` = 「구간별 원천 없음 — 인터뷰가 곡 단위」. 칸에는 「데이터 없음」만 쓰고, 사유는 **표 아래 한 번만** 쓴다(행마다 같은 문장을 반복하지 않는다).
+  - `changeGuideText(section, status)` — PLAN CUE(콘솔 저장 전)면 「타임라인 Q### PLAN CUE 카드 → 수정요청 생성기(…)」. 생성기는 `SongTimeline.tsx` 에서 `!onConsole && onGeneratorSend` 일 때만 열리고(`onConsole = stored|verified`), 앱이 `onGeneratorSend` 를 넘긴다(`App.tsx:1250` → `RunbookMode.tsx:252`). 저장·검증된 큐는 데이터 없음 + 사유.
+  - `materialSummary(sections)` — 탭 2. 감정(데이터 없음 — `session.py:1503` "못 채우는 것: mood") · 공간(값별 구간 수) · 움직임 · 질감(값별 구간 수) · 시작–끝(이웃 구간 사이에서 공간·질감이 바뀐 횟수). 구간 라벨을 늘어놓지 않는다.
+  - **찾은 것 — 움직임 = 포지션.** 서버 `movement` 는 `cue.position.stored or cue.position.requested`(`session.py:1539`)라서 「공간」과 같은 축이다. 실측 페이로드에서 10/10 구간이 같았다(`panel_probe.json` `movement_equals_position: true`). 그래서 모든 구간에서 같으면 「움직임」은 데이터 없음 + 「포지션 프리셋과 같다(공간에서 셌다)」로 두고, 다른 구간이 하나라도 있을 때만 따로 센다.
+  - `grammarView(report, sections)` — 탭 3 「아껴 두는 것」. `concept_report.reserve` 를 그대로 쓴다. 해제 위치는 `screen_position` → 그 구간의 `Q###` + 라벨이다(`released_q` 는 컨셉 행 번호라 쓰지 않는다 — `cueRequestWarnings.reserveLock` 과 같은 규칙). `released_q` 가 null 이면 「미해제 — 해제 큐를 찾지 못했다」. 서버가 "한 번도 안 켜짐"과 "입력 색 없음"을 둘 다 null 로 내므로 이유를 짓지 않는다. 「지키는 것·하지 않는 것」은 데이터 없음 + 「규칙별 지킴/금지 분류 원천이 없다 — 규칙 판정은 게이트 바」.
+- `ui/src/components/conceptGlance.ts` — `explanationCells(report, position, changeGuide?)` 에 세 번째 인자를 추가했다(추가만, 기존 호출은 그대로).
+- `ui/src/components/ConceptPanel.tsx` — 위 셋을 그린다. 4칸은 `sectionPlanStatus(section, timeline.lifecycle)` 로 상태를 읽는다(타임라인이 없으면 「바꾸려면」도 데이터 없음).
+- `ui/src/styles.css` — `.concept-materials`·`.concept-reserve`·`.concept-grammar-note` 몇 줄.
+- **불릿 클릭 4칸은 붙이지 않았다.** 「Q1 다시」 재시작은 인터뷰 루프 안(`session.py:8069-8074` `_song_run_interview`)에서만 확인됐고, 타임라인이 나온 뒤의 경로는 확인하지 못했다 — "경로가 코드에 실재하는 것만" 조건을 채우지 못한다.
+
+### 증거
+
+| 항목 | 명령 | 결과 | 원본 |
+|---|---|---|---|
+| UI 범위 | `npx vitest run src/components/conceptTabs.test.ts src/components/conceptGlance.test.ts` | 26 passed | `vitest_scope.txt` |
+| UI 전체 | `npx vitest run`(하니스 지운 뒤) | **59 파일 · 1262 passed** | `vitest_full.txt` |
+| 타입 | `npx tsc --noEmit -p ui` | 오류 0(exit 0) | `tsc.txt` |
+| 가드 변이 | `uv run python .moai/reports/t492/mutate.py` | **6/6 CAUGHT**(첫 실행은 5/6 — U2 가 살아남아 픽스처를 구간 10개로 늘림) | `mutation.txt` |
+| 실제 세션 페이로드 ① | `uv run python .moai/reports/t492/make_payload.py`(인터뷰부터, 가짜 콘솔) | 컨셉 리포트 `available: false`(「BPM이 선언되지 않았다」) | `payload_causal.json` |
+| 서버 실경로 페이로드 ② | `uv run python .moai/reports/t492/make_roles_payload.py`(`_song_timeline_payload`, 10구간) | 리포트 있음, reserve BLIND(screen_position 8)·STROBE(null) | `payload_roles.json` |
+| 브라우저 | `panel_probe.js`(헤드리스 Chrome 1600×1000, vite :5492, 하니스 `acuiHarness.tsx.txt`) | 「그래서 보이는 것」 칸 10/10 「데이터 없음」 + 표 아래 사유 1줄 · Intro 4칸 「바꾸려면」=「타임라인 Q101 PLAN CUE 카드 → …」, 같은 화면에 생성기 카드 10개 · 탭 2 = 감정 사유 / 「Center 10구간」 / 움직임 사유 / 「long fade 10구간」 / 「구간 경계 9곳 중 공간 바뀜 0번 · 질감 바뀜 0번」 · 탭 3 = 「BLIND 그룹 — Q109 Chorus 3 에서 처음 푼다」(서버 screen_position 8 → Q109 Chorus 3 과 일치) · 「STROBE 그룹 — 미해제 — 해제 큐를 찾지 못했다」 · 페이로드 ① 의 탭 3 은 서버 사유 그대로 · 페이지 오류 0/0 | `panel_probe.json`, `panel_tab1.png`·`panel_tab2.png`·`panel_tab3.png` |
+
+변이별로 잡은 시험:
+
+| 변이 | 잡은 시험 |
+|---|---|
+| U1 저장된 큐에도 생성기를 가리킴 | `콘솔에 저장·검증된 큐는 생성기가 열리지 않으므로…` |
+| U2 해제 위치를 released_q(행 번호)로 읽음 | `해제 위치는 screen_position 의 구간 큐 번호다…` |
+| U3 움직임=포지션이어도 따로 셈 | `움직임이 모든 구간에서 포지션과 같으면…` |
+| U4 4칸이 「바꾸려면」 문장을 무시 | `explanationCells 에 넘기면 「바꾸려면」 칸만 바뀌고…` |
+| U5 해제 못 찾음에 이유를 지어냄 | `released_q 가 null 이면 이유를 지어내지 않고 미해제` |
+| U6 시작–끝이 빈 값 경계도 셈 | `시작–끝은 이웃 구간 사이에서 재료가 바뀐 횟수다…` |
+
+### 안 잰 것
+
+- `ConceptPanel.tsx` 배선(4칸에 `changeGuideText` 를 넘기는 줄, 탭 2·3 렌더)을 끊는 변이는 단위 시험이 못 잡는다. 이 프로젝트에는 DOM 시험 하니스가 없다. 배선은 브라우저 실측(`panel_probe.json`)으로만 확인했다.
+- 실측한 곡 둘 다 테스트 자료다(인터뷰 하니스 곡 · t482 의 10구간 곡). 10구간 곡은 포지션·질감이 전 구간 같아서 탭 2 집계가 단조롭다. 값이 섞인 곡의 화면은 단위 시험(`Center 2구간 · Fan 1구간 · 값 없음 1구간`)으로만 쟀다.
+- 저장·검증된(stored/verified) 큐의 「바꾸려면」 화면은 브라우저로 보지 않았다(두 페이로드 모두 draft). 단위 시험만 있다.
+- 앱 본체(App + 웹소켓)가 아니라 하니스로 띄웠다. 좁은 화면은 재지 않았다.
+- 서버 코드는 바꾸지 않았으므로 pytest 는 돌리지 않았다(CI 가 전체를 돈다).
