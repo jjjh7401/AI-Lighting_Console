@@ -867,7 +867,9 @@ M13·M14(t593·t594) 및 그 후속(t598/t601/t605/t607)은 위 새 §E.2 섹션
 
 - **sync_status**: completed-with-live-check-deferred — 코드·자동 시험 기준 전부 PASS, 실기 콘솔 확인(t608)만 대기.
 - **sync_complete_at**: 2026-10-12
-- **sync_commit_sha**: pending-backfill-ldbeat-sync (이 sync 커밋 자신의 SHA — 다음 커밋에서 백필)
+
+sync_commit_sha: 48e51135  # sync 커밋(completed 전환) — 카드 t610 백필. 줄 맨 앞 꼴이어야 era 판정기가 읽는다
+
 - **changelog_entry_position**: CHANGELOG.md `[Unreleased]` 섹션 최상단(이 sync 커밋에서 추가)
 
 ### AC 매트릭스 (AC-LDBEAT-001~025)
