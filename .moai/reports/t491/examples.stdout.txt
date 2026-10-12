@@ -1,0 +1,40 @@
+## fixed/same_session 곡별 첫 큐 룩 · 서로 다른 룩 수
+Club Diver | ('Ring In', ('블루', 'cyan')) | distinct 11 / 13
+Cut and Run | ('Ring In', ('블루', 'cyan')) | distinct 14 / 17
+Ice cream | ('Ring In', ('블루', 'cyan')) | distinct 7 / 7
+Morning | ('Ring In', ('블루', 'cyan')) | distinct 11 / 13
+Rain | ('Ring In', ('블루', 'cyan')) | distinct 10 / 12
+Too Cool | ('Ring In', ('블루', 'cyan')) | distinct 14 / 23
+scott-buckley-neon | ('Ring In', ('블루', 'cyan')) | distinct 14 / 17
+걸그룹DinoDino_C_max최고품질 | ('Ring In', ('블루', 'cyan')) | distinct 9 / 10
+
+## fixed 이웃 쌍별 다음 곡 재사용
+Club Diver -> Cut and Run 13 / 17 shared distinct 10
+Cut and Run -> Ice cream 4 / 7 shared distinct 4
+Ice cream -> Morning 6 / 13 shared distinct 5
+Morning -> Rain 11 / 12 shared distinct 9
+Rain -> Too Cool 15 / 23 shared distinct 9
+Too Cool -> scott-buckley-neon 11 / 17 shared distinct 9
+scott-buckley-neon -> 걸그룹DinoDino_C_max최고품질 7 / 10 shared distinct 6
+
+## fixed 앞 곡 Club Diver -> Cut and Run 큐 대조(처음 6개)
+1.0 Intro ('Ring In', ('블루', 'cyan')) 앞 곡에 있음
+2.0 Chorus 1 ('Ring In', ('블루', 'warm white')) 앞 곡에 있음
+3.0 Chorus 2 ('Home', ('블루', 'warm white')) 앞 곡에 있음
+4.0 Chorus 3 ('Home', ('블루', 'warm white')) 앞 곡에 있음
+5.0 Verse 1 ('Vocal DSC', ('블루', 'cyan')) 새 룩
+6.0 Chorus 4 ('Vocal DSC', ('블루', 'warm white')) 앞 곡에 있음
+
+## fixed 8곡 전체에서 쓰인 서로 다른 룩 수
+23
+
+## rotated: 첫 큐 같은 쌍 = 같은 컨셉 쌍인가
+same-concept pairs 7
+Club Diver 우주 ('Ring In', ('블루', 'cyan'))
+Cut and Run 네온 ('Cross', ('마젠타', 'cyan'))
+Ice cream 빈티지 ('Wall', ('웜화이트', 'cyan'))
+Morning 우주 ('Ring In', ('블루', 'cyan'))
+Rain 네온 ('Cross', ('마젠타', 'cyan'))
+Too Cool 빈티지 ('Wall', ('웜화이트', 'cyan'))
+scott-buckley-neon 우주 ('Ring In', ('블루', 'cyan'))
+걸그룹DinoDino_C_max최고품질 네온 ('Cross', ('마젠타', 'cyan'))

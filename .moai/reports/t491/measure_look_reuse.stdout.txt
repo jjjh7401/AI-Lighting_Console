@@ -1,0 +1,22 @@
+== fixed/same_session
+  adjacent      {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 13, 'pairs_with_any_shared_look': 3}
+  adjacent+fx   {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 5, 'pairs_with_any_shared_look': 2}
+  all pairs     {'pairs': 28, 'opening_same': 5, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 104, 'pairs_with_any_shared_look': 17}
+== fixed/fresh
+  adjacent      {'pairs': 7, 'opening_same': 7, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 67, 'pairs_with_any_shared_look': 7}
+  adjacent+fx   {'pairs': 7, 'opening_same': 7, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 19, 'pairs_with_any_shared_look': 7}
+  all pairs     {'pairs': 28, 'opening_same': 28, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 253, 'pairs_with_any_shared_look': 28}
+== rotated/same_session
+  adjacent      {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 0, 'pairs_with_any_shared_look': 0}
+  adjacent+fx   {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 0, 'pairs_with_any_shared_look': 0}
+  all pairs     {'pairs': 28, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 12, 'pairs_with_any_shared_look': 2}
+== rotated/fresh
+  adjacent      {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 0, 'pairs_with_any_shared_look': 0}
+  adjacent+fx   {'pairs': 7, 'opening_same': 0, 'identical_look_set': 0, 'b_cues_total': 99, 'b_cues_reusing_a_look': 0, 'pairs_with_any_shared_look': 0}
+  all pairs     {'pairs': 28, 'opening_same': 7, 'identical_look_set': 0, 'b_cues_total': 405, 'b_cues_reusing_a_look': 52, 'pairs_with_any_shared_look': 7}
+fixed/same_vs_fresh_identical [('Club Diver', True, 13), ('Cut and Run', False, 17), ('Ice cream', False, 7), ('Morning', False, 13), ('Rain', False, 12), ('Too Cool', False, 23), ('scott-buckley-neon', False, 17), ('걸그룹DinoDino_C_max최고품질', False, 10)]
+rotated/same_vs_fresh_identical [('Club Diver', True, 13), ('Cut and Run', True, 17), ('Ice cream', True, 7), ('Morning', False, 13), ('Rain', False, 12), ('Too Cool', False, 23), ('scott-buckley-neon', False, 17), ('걸그룹DinoDino_C_max최고품질', False, 10)]
+-- fixed/same_session [('Club Diver', '우주', 'ok', 13), ('Cut and Run', '우주', 'ok', 17), ('Ice cream', '우주', 'ok', 7), ('Morning', '우주', 'ok', 13), ('Rain', '우주', 'ok', 12), ('Too Cool', '우주', 'ok', 23), ('scott-buckley-neon', '우주', 'ok', 17), ('걸그룹DinoDino_C_max최고품질', '우주', 'ok', 10)]
+-- fixed/fresh [('Club Diver', '우주', 'ok', 13), ('Cut and Run', '우주', 'ok', 17), ('Ice cream', '우주', 'ok', 7), ('Morning', '우주', 'ok', 13), ('Rain', '우주', 'ok', 12), ('Too Cool', '우주', 'ok', 23), ('scott-buckley-neon', '우주', 'ok', 17), ('걸그룹DinoDino_C_max최고품질', '우주', 'ok', 10)]
+-- rotated/same_session [('Club Diver', '우주', 'ok', 13), ('Cut and Run', '네온', 'ok', 17), ('Ice cream', '빈티지', 'ok', 7), ('Morning', '우주', 'ok', 13), ('Rain', '네온', 'ok', 12), ('Too Cool', '빈티지', 'ok', 23), ('scott-buckley-neon', '우주', 'ok', 17), ('걸그룹DinoDino_C_max최고품질', '네온', 'ok', 10)]
+-- rotated/fresh [('Club Diver', '우주', 'ok', 13), ('Cut and Run', '네온', 'ok', 17), ('Ice cream', '빈티지', 'ok', 7), ('Morning', '우주', 'ok', 13), ('Rain', '네온', 'ok', 12), ('Too Cool', '빈티지', 'ok', 23), ('scott-buckley-neon', '우주', 'ok', 17), ('걸그룹DinoDino_C_max최고품질', '네온', 'ok', 10)]

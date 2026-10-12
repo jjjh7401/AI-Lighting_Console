@@ -1,0 +1,43 @@
+## fixed/same_session 곡별 첫 큐 룩 (전 → 후)
+  Club Diver | ('Ring In', ('블루', 'cyan')) → ('Ring In', ('블루', 'cyan'))
+  Cut and Run | ('Ring In', ('블루', 'cyan')) → ('Home', ('cyan', '블루'))
+  Ice cream | ('Ring In', ('블루', 'cyan')) → ('Vocal DSC', ('블루', 'cyan'))
+  Morning | ('Ring In', ('블루', 'cyan')) → ('Fan Out', ('블루', 'cyan'))
+  Rain | ('Ring In', ('블루', 'cyan')) → ('Ring In', ('블루', 'cyan'))
+  Too Cool | ('Ring In', ('블루', 'cyan')) → ('Home', ('cyan', '블루'))
+  scott-buckley-neon | ('Ring In', ('블루', 'cyan')) → ('Vocal DSC', ('블루', 'cyan'))
+  걸그룹DinoDino_C_max최고품질 | ('Ring In', ('블루', 'cyan')) → ('Ring In', ('블루', 'cyan'))
+  전체 쌍 중 첫 큐가 같은 쌍:
+    Club Diver ( 1 ) = Rain ( 5 )
+    Club Diver ( 1 ) = 걸그룹DinoDino_C_max최고품질 ( 8 )
+    Cut and Run ( 2 ) = Too Cool ( 6 )
+    Ice cream ( 3 ) = scott-buckley-neon ( 7 )
+    Rain ( 5 ) = 걸그룹DinoDino_C_max최고품질 ( 8 )
+  8곡 전체 서로 다른 룩 수: 38
+  이웃 쌍별 재사용:
+    Club Diver -> Cut and Run 0 / 17
+    Cut and Run -> Ice cream 0 / 7
+    Ice cream -> Morning 2 / 13
+    Morning -> Rain 6 / 12
+    Rain -> Too Cool 0 / 23
+    Too Cool -> scott-buckley-neon 0 / 17
+    scott-buckley-neon -> 걸그룹DinoDino_C_max최고품질 5 / 10
+## rotated/same_session 곡별 첫 큐 룩 (전 → 후)
+  Club Diver | ('Ring In', ('블루', 'cyan')) → ('Ring In', ('블루', 'cyan'))
+  Cut and Run | ('Cross', ('마젠타', 'cyan')) → ('Cross', ('마젠타', 'cyan'))
+  Ice cream | ('Wall', ('웜화이트', 'cyan')) → ('Wall', ('웜화이트', 'cyan'))
+  Morning | ('Ring In', ('블루', 'cyan')) → ('Home', ('cyan', '블루'))
+  Rain | ('Cross', ('마젠타', 'cyan')) → ('Home', ('cyan', '마젠타'))
+  Too Cool | ('Wall', ('웜화이트', 'cyan')) → ('Home', ('cyan', '웜화이트'))
+  scott-buckley-neon | ('Ring In', ('블루', 'cyan')) → ('Vocal DSC', ('블루', 'cyan'))
+  걸그룹DinoDino_C_max최고품질 | ('Cross', ('마젠타', 'cyan')) → ('Center', ('cyan', '마젠타'))
+  전체 쌍 중 첫 큐가 같은 쌍:
+  8곡 전체 서로 다른 룩 수: 81
+  이웃 쌍별 재사용:
+    Club Diver -> Cut and Run 0 / 17
+    Cut and Run -> Ice cream 0 / 7
+    Ice cream -> Morning 0 / 13
+    Morning -> Rain 0 / 12
+    Rain -> Too Cool 0 / 23
+    Too Cool -> scott-buckley-neon 0 / 17
+    scott-buckley-neon -> 걸그룹DinoDino_C_max최고품질 0 / 10
