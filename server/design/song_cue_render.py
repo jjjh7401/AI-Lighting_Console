@@ -179,6 +179,7 @@ def _section_director_override(
     section_count: int,
     records: Sequence[object],
     climax_index: int,
+    look_offset: int = 0,
 ) -> DirectorOverride | None:
     d_level: int | None = None
     color: str | None = None
@@ -187,8 +188,10 @@ def _section_director_override(
     q4 = _projection(records, Q4_SPATIAL_STORY)
     spatial_story = getattr(q4, "spatial_story", None)
     if spatial_story is not None:
+        # 카드 t491 — 감독이 고른 위치 목록을 곡 단위로 돌려 앞 곡과 다르게 연다
+        # (0 이면 오늘과 같다). 새 위치를 짓지 않고 순서만 바꾼다.
         position = _distributed_position(
-            tuple(getattr(spatial_story, "positions", ()) or ()),
+            rotate_palette(tuple(getattr(spatial_story, "positions", ()) or ()), look_offset),
             section_index,
             section_count,
         )
@@ -1074,7 +1077,11 @@ def _build_unified_song_plan(
     section_origin: Sequence[int] | None = None,
     position_disabled_reason: str = "",
     blinder_group_no: int | None = None,
+    look_offset: int = 0,
 ) -> UnifiedSongLightingPlan:
+    """``look_offset`` — 카드 t491. 감독이 고른 위치 후보와 팔레트 색 순서를 곡
+    단위로 몇 칸 돌릴지. 0 이면 오늘과 바이트 동일하다. 값은 세션이
+    ``song_look_memory.choose_look_offset`` 으로 고른다(앞 곡과 다르게 열기)."""
     arc_positions, head_indexes, units, section_count, climax_index = _section_arc_geometry(
         sections, section_origin
     )
@@ -1123,6 +1130,7 @@ def _build_unified_song_plan(
             section_count=section_count,
             records=records,
             climax_index=climax_index,
+            look_offset=look_offset,
         )
         # Priority (결함 4): 구간 재질의 답변 > 구간 직접 자연어 의도 > Q3/Q4.
         merged = (requery_overrides or {}).get(head_index)
@@ -1160,7 +1168,10 @@ def _build_unified_song_plan(
                     position_source="fallback",
                 )
             resolved = fallback
-        position = resolved.position_candidates[0] if resolved.position_candidates else "Home"
+        # 카드 t491 — 후보가 여럿이면(무드·컨셉·절정 위치) 곡 단위 오프셋으로 고른다.
+        # Q4 경로는 위에서 이미 돌렸으므로 후보가 하나라 여기서는 항등이다.
+        candidates = resolved.position_candidates
+        position = candidates[look_offset % len(candidates)] if candidates else "Home"
         # D-level: arc replaces only undecided defaults — a mood-word or
         # director tier keeps its value.
         d_level, d_source = resolved.d_level, resolved.d_source
@@ -1186,6 +1197,12 @@ def _build_unified_song_plan(
             occurrence=occurrence,
             color_usage=color_usage,
         )
+        # 카드 t491 — 곡 단위 오프셋으로 팔레트 색 순서를 돌린다(색 추가 없음, 출처
+        # 유지). 구간이 직접 적은 색(``section_text``)은 감독이 그 구간에 쓴 것이라
+        # 건드리지 않는다. 곡 안의 모든 구간이 같은 칸만큼 돌므로 t445 의 「후렴
+        # 주색 고정」은 곡 안에서 그대로 성립한다.
+        if look_offset and palette_source != "section_text":
+            palette_colors = rotate_palette(palette_colors, look_offset)
         # 카드 t305 — 구간 안에서 이어지는 큐는 앞 큐와 **달라야** 한다.
         # 정본이 하는 것과 같은 축: 강도는 유지하고 색만 돌린다(Q060 "강도
         # 유지, 색만 교체" · Q140 "색상만 순환"). 색이 하나뿐인 구간은

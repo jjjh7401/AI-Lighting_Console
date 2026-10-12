@@ -246,6 +246,7 @@ from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김 
     reviewed_song_commands,
     reviewed_song_timing_commands,
 )
+from server.design.song_look_memory import SongLooks, choose_look_offset, song_looks
 from server.design.song_plan import (
     MANUAL_GO,
     ApprovalState,
@@ -1018,6 +1019,12 @@ _PLAN_EDIT_TIME_MOVE = re.compile(
 _PLAN_EDIT_SEQUENCE = re.compile(
     r"시퀀스\s*(?P<no>\d+)\s*(?:번)?\s*(?:으로|로)\s*(?:변경|바꿔|바꾸|옮겨|옮기|저장|이동)"
 )
+# 카드 t491 — 앞 곡과 다른 룩으로 열기는 기본값이다. 감독이 이 곡만 끄고(「앞 곡 룩
+# 허용」) 다시 켤(「앞 곡과 다른 룩」) 자리.
+_PLAN_EDIT_LOOK_REPEAT_OK = re.compile(
+    r"앞\s*곡\s*(?:과|이랑|하고)?\s*(?:같은\s*)?룩\s*(?:을|를)?\s*(?:허용|그대로|유지|써도)"
+)
+_PLAN_EDIT_LOOK_AVOID = re.compile(r"앞\s*곡\s*(?:과|이랑|하고)?\s*다른\s*룩")
 
 # 리허설 편집 (handoff 2026-08-15 priority 5): "지금 이 큐"/"현재 큐" names the
 # cue the console is PLAYING right now — no cue number in the instruction.
@@ -3034,6 +3041,11 @@ class _SongDesignState:
     #: 집합이면 오늘과 동일(모든 기구가 RGB 줄만 받는다). 열거 실패·판독
     #: 불가는 빈 집합으로 남는다(무대 색 변화 0 — fail-closed).
     w_fids: frozenset[int] = dataclass_field(default_factory=frozenset)
+    #: 카드 t491 — 앞 곡과 다른 룩으로 열기(기본 켬). 감독이 이 곡만 끌 수 있다
+    #: (계획 수정 「앞 곡 룩 허용」). 끄면 오프셋 0 — 감독 답 그대로.
+    avoid_previous_looks: bool = True
+    #: 카드 t491 — 마지막 조립에서 고른 오프셋(0 = 감독 답 그대로).
+    look_offset: int = 0
 
 
 @dataclass(frozen=True)
@@ -4032,6 +4044,10 @@ class ChatSession:
         # and confirmed by the director ONCE per session. None = not yet asked;
         # [] = declined or nothing inferable (single-layer, disclosed).
         self._song_layer_mapping: list[dict[str, object]] | None = None
+        #: 카드 t491 — 이 세션(한 쇼)에서 콘솔에 저장된 곡들의 룩, 저장 순서대로.
+        #: ``_song_compose`` 가 읽어 다음 곡을 앞 곡과 다르게 연다. 세션 밖으로
+        #: 나가지 않는다 — 기억 범위는 한 쇼 안의 곡 순서다.
+        self._song_look_history: list[SongLooks] = []
         #: 카드 t311 — 이번 디자인 턴의 좌표 결손 고지(없으면 빈 문자열).
         self._design_coord_notice: str = ""
         self._timeline_store = timeline_store
@@ -8147,6 +8163,35 @@ class ChatSession:
     def _song_compose(
         self, state: _SongDesignState
     ) -> tuple[UnifiedSongLightingPlan, SongCueCompositionResult]:
+        """카드 t491 — 앞 곡들과 다른 룩으로 열리는 오프셋을 골라 조립한다.
+
+        오프셋 0, 1, 2 … 로 조립해 보고 곡 룩이 앞서 본 후보와 같아지면(회전이
+        한 바퀴 돌았다) 멈춘다. 고르기는 ``choose_look_offset`` — 바닥나면 가장
+        오래전에 쓴 룩으로, 멈추지 않는다. 기억이 없거나 감독이 이 곡에서 끄면
+        오프셋 0(감독 답 그대로)이다. 저장 전 기억은 바뀌지 않으므로 같은 계획을
+        다시 조립해도(편집·재질의) 같은 오프셋이 나온다."""
+        history = self._song_look_history
+        if not state.avoid_previous_looks or not history:
+            state.look_offset = 0
+            return self._song_compose_at(state, 0)
+        candidates: list[tuple[UnifiedSongLightingPlan, SongCueCompositionResult]] = []
+        seen: set[SongLooks] = set()
+        offset = 0
+        while True:
+            built, composition = self._song_compose_at(state, offset)
+            looks = song_looks(composition)
+            if looks in seen:
+                break
+            seen.add(looks)
+            candidates.append((built, composition))
+            offset += 1
+        chosen = choose_look_offset([song_looks(c) for _, c in candidates], history)
+        state.look_offset = chosen
+        return candidates[chosen]
+
+    def _song_compose_at(
+        self, state: _SongDesignState, look_offset: int
+    ) -> tuple[UnifiedSongLightingPlan, SongCueCompositionResult]:
         built = _build_unified_song_plan(
             sections=state.sections,
             profile=state.interview.working_profile,
@@ -8162,6 +8207,7 @@ class ChatSession:
             section_origin=state.section_origin or None,
             position_disabled_reason=state.position_disabled_reason,
             blinder_group_no=_blinder_group_no(state.layer_mapping),
+            look_offset=look_offset,
         )
         return built, compose_song_cue_bundle(built)
 
@@ -8327,6 +8373,8 @@ class ChatSession:
                 duration_seconds=0.0,
             )
         sequence_move = _PLAN_EDIT_SEQUENCE.search(text)
+        look_repeat_ok = _PLAN_EDIT_LOOK_REPEAT_OK.search(text) is not None
+        look_avoid = not look_repeat_ok and _PLAN_EDIT_LOOK_AVOID.search(text) is not None
         delete = _PLAN_EDIT_DELETE.search(text)
         between = _PLAN_EDIT_INSERT_BETWEEN.search(text)
         adjacent = _PLAN_EDIT_INSERT_ADJACENT.search(text)
@@ -8338,6 +8386,13 @@ class ChatSession:
             previous = state.sequence_no
             state.sequence_no = new_sequence
             note = f"저장 대상 시퀀스 {previous} → {new_sequence}"
+        elif look_repeat_ok or look_avoid:
+            state.avoid_previous_looks = look_avoid
+            note = (
+                "앞 곡과 다른 룩으로 열기 켬"
+                if look_avoid
+                else "앞 곡 룩 허용(이 곡은 감독 답 그대로)"
+            )
         elif delete is not None:
             cue = int(delete.group("cue"))
             if not 1 <= cue <= count:
@@ -11983,6 +12038,12 @@ class ChatSession:
         composition: SongCueCompositionResult,
     ) -> InstructionResult:
         review_text = _review_text(plan, composition, layer_mapped=bool(state.layer_mapping))
+        if state.look_offset:
+            # 카드 t491 — 앱이 스스로 바꾼 것은 감독이 알아야 끌 수 있다.
+            review_text += (
+                f"\n앞 곡과 겹치지 않게 고른 위치·색 순서를 {state.look_offset}칸 돌렸습니다 "
+                "(새 위치·새 색 없음). 감독 답 그대로 쓰려면 '앞 곡 룩 허용'이라고 답해 주세요."
+            )
         audit_lines = [
             f"{_DI_STEP_LABELS[record.step]}: {_describe_di_value(record.value)} "
             f"({'확정' if record.confirmed else '감독 미확정'})"
@@ -12239,6 +12300,12 @@ class ChatSession:
                 "않았습니다. 계획은 그대로 보존했습니다 — '시퀀스 N으로 변경' 후 "
                 "다시 승인해 주세요."
             )
+        # 카드 t491 — 콘솔에 저장된 곡만 기억한다. 저장 전 계획·취소·거절된 계획은
+        # 쇼에 나간 적이 없으므로 다음 곡이 피할 이유가 없다. 이 곡에서 회피를
+        # 껐어도 저장은 됐으니 기억에 넣는다.
+        stored_looks = song_looks(approved_composition)
+        if stored_looks:
+            self._song_look_history.append(stored_looks)
         sequence_no = state.sequence_no
         timed_cues = (
             _song_timed_cue_expectations(approved_composition.bundle, state.timing)
