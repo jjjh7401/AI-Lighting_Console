@@ -2,7 +2,7 @@
 id: SPEC-COPILOT-FILEARG-001
 title: "시트 판별기 — 업로드 바이트가 무엇인지 판정하는 술어 레지스트리 (분할 A)"
 version: "1.1.0"
-status: in-progress
+status: completed
 created: 2026-08-22
 updated: 2026-10-13
 author: manager-spec (칸반 카드 t10)

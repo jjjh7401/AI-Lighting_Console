@@ -443,7 +443,88 @@ findings_for_sync: "결함 1(D-1: AC-021의 N/A 검증 토큰이 판별력 없�
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+### 1. 판정
+
+`in-progress` 에서 `completed` 로 전환한다. 이 커밋은 3-phase close 의 sync 커밋이다.
+
+```yaml
+sync_complete_at: 2026-10-13
+sync_commit_sha: pending-backfill-sync   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
+sync_status: complete-without-sync-audit # sync-auditor 미실행 — 리드 순서: sync → PR → 병합
+branch: WT-filearg-sync
+worktree: .claude/worktrees/t629
+base: 19a52738
+b12_self_test_a: "grep -c SPEC-COPILOT-FILEARG-001 CHANGELOG.md = 0 (사전 중복 없음)"
+b12_self_test_b: "acceptance.md 의 ### AC-FILEARG- 제목 20개 = 판정표 20건(PASS 19 · N/A 1). 원시 토큰 패턴은 고유 21개 — 하나(AC-FILEARG-017)는 제목이 아닌 본문 인용"
+b12_self_test_c: "CHANGELOG 가 인용하는 경로(reports/filearg-close/, .moai/specs/SPEC-COPILOT-FILEARG-001/)는 ls 로 확인"
+changelog_entry_position: "[Unreleased] > Added 맨 위 (SPEC-COPILOT-SHEETPIPE-001 항목 앞)"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (updated 2026-10-13, 이미 반영돼 있어 불변)"
+  plan_md_acceptance_md: "본문·frontmatter 무수정 — 기준 재고정은 기준 커밋 190f0654 가 이미 담았다"
+close_commits:
+  - "190f0654 — 기준 재고정 (acceptance.md v1.1.0 · spec.md HISTORY 1.1.0)"
+  - "이 sync 커밋 (SHA 는 위 placeholder)"
+  - "백필 커밋 (뒤따름)"
+```
+
+### 2. 기준 재고정 (v1.1.0)
+
+출처는 `acceptance.md` 「개정 기록 (v1.1.0)」 과 `spec.md` HISTORY 1.1.0 이다. 넷을 M1 자기 트리 `3ffda31b` 에 다시 고정했다: AC-001 ④ · AC-006 ① · AC-020 · AC-030 ①. 좌표 정정: AC-022 ④(`tools.py:2861`), AC-006 ④ 와 AC-023(`ChatSession` 3405 → 3481, `upload_vectorworks_export` 9655 → 9781). 행 수 단언이 바뀐 근거 커밋은 `8d981c2e` · `7efbf413` · `82bfa68f` 이다.
+
+### 3. 이 카드에서 잰 값
+
+증거 파일은 `reports/filearg-close/` 에 있다.
+
+| 파일 | 대상 | 관측 |
+|---|---|---|
+| `m1-tree-measure.txt` | M1 트리 `3ffda31b` | AC-001 ④ 소유 행 `tools.py:2861` · `reader.py` 의 mvr 참조 0 · `server/vwx/mvr.py` 있음 · `REGISTRY` 2행 · `-k "exactly_two or no_row_reserved"` → `2 passed, 87 deselected` · `server/sheets/` 에서 `preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex` grep → 출력 없음 · AC-030 ① 보존 트리 자기 커밋 diff → 빈 출력 · `test_overlap_preserve.py` → `41 passed` · `session.py` `ChatSession` 3481 · `upload_vectorworks_export` 9781 |
+| `full-suite-uv-head.txt` | HEAD `19a52738` | `uv run pytest server/tests -q` → `15707 passed, 35 skipped, 1 warning` (rc=0) |
+| `vitest-head.txt` | HEAD `19a52738` | `Test Files 59 passed (59)` · `Tests 1262 passed (1262)` · 실패 0 |
+| `mutations.txt` | 뮤테이션 원장 | 아래 표 |
+
+| 뮤테이션 | 결과 | 대조군 |
+|---|---|---|
+| AC-003 first-match | 빨강 2 | 4/4 |
+| AC-006 사본 목록 | 빨강 1 | 1/1 |
+| AC-009 시험 파싱 | 빨강 2 (parse_once 는 초록) | 3/3 |
+| AC-023 세션 분기 끔 | 빨강 1 | 5/5 |
+| AC-025 배제 절 제거 | 빨강 2 | 3/3 |
+| AC-027 임계 2→1 | 빨강 5 | 20/20 |
+| AC-029 힌트 제거 | 빨강 2 | 5/5 |
+| AC-030 미커밋 | 가드 초록 73 (AC 가 예고한 거짓 초록) | — |
+| AC-030 커밋 | 빨강 1 | 73/73 |
+
+AC-022 ① 뮤테이션은 보류(F3)이며 위 원장에 세지 않았다.
+
+### 4. AC 판정
+
+| AC | 판정 | 근거 |
+|---|---|---|
+| AC-FILEARG-001 ④ | PASS | M1 트리 측정 |
+| AC-FILEARG-006 ① | PASS | M1 트리 측정 |
+| AC-FILEARG-020 | PASS | M1 트리 측정 |
+| AC-FILEARG-030 ① · ③ | PASS | M1 트리 측정 |
+| AC-FILEARG-021 | N/A | 조건부 안전판, 미발동 — `-k declared_fallback` 수집 0 · `plan.md` 에 `^상태: 발동함` 0행 |
+| 그 밖 | PASS | HEAD 전체 스위트 |
+| AC-FILEARG-022 ① 뮤테이션 | 보류 | F3 — 세지 않음 |
+
+합계 PASS 19 · N/A 1 (20건 중).
+
+### 5. 옮긴 값 (이 카드에서 재지 않음)
+
+- 배차서의 「AC 20건 PASS 19·FAIL 0·N/A 1 — lane-3 t622 재측정 1013」 — 옮긴 값이며 증거로 쓰지 않았다. 위 4절은 이 카드의 측정에서 따로 도출했다.
+- 착수 기준선 「9885 passed, 12 skipped @ 1c104f0」 — §E.1 에 당시 기록된 값이며 이 카드에서 다시 재지 않았다.
+
+### 6. 기록된 공백 (해소하지 않음)
+
+- §E.1 은 Implementation Kickoff Approval 을 「미통과」, plan_audit 를 「미실시」로 적었고 §F 는 「승인 통과 후 착수 예정」이라 적었다. 이 파일에서 Kickoff 승인 기록은 **기록 없음**이다. 소급 승인이나 추정은 하지 않았다.
+- sync-audit(sync-auditor)는 이 close 에서 실행하지 않았다. 리드 순서는 sync → PR → 병합이다.
+
+### 7. 잔여 위험
+
+- 좌표 표류 미정정: `session.py:2492-2508`(`_UploadedVectorworksExport`, M1 클래스 줄 2569)과 `session.py:9660-9688`(`upload_layout_image`, M1 def 줄 9786)이 `spec.md` §A(사전 확정 사실 2)·§H 와 `research.md` §2.2·§5 에 남아 있다. v1.1.0 에서 고치지 않았다.
+- 문구 주의(판정에 영향 없음): AC-030 ① 본문은 「server/sheets/** 와 시험 파일」이라 쓰나 M1 커밋은 SPEC 산출물 여섯 개도 바꿨다. 명령 범위는 보존 트리이므로 판정은 그대로다.
+- `sync_commit_sha` 는 백필 전까지 placeholder 다.
 
 ## §F.1 Phase 4 Mode Selection
 
