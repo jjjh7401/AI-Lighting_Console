@@ -449,7 +449,7 @@ findings_for_sync: "결함 1(D-1: AC-021의 N/A 검증 토큰이 판별력 없�
 
 ```yaml
 sync_complete_at: 2026-10-13
-sync_commit_sha: pending-backfill-sync   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
+sync_commit_sha: 552f8f8b   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
 sync_status: complete-without-sync-audit # sync-auditor 미실행 — 리드 순서: sync → PR → 병합
 branch: WT-filearg-sync
 worktree: .claude/worktrees/t629
@@ -524,7 +524,7 @@ AC-022 ① 뮤테이션은 보류(F3)이며 위 원장에 세지 않았다.
 
 - 좌표 표류 미정정: `session.py:2492-2508`(`_UploadedVectorworksExport`, M1 클래스 줄 2569)과 `session.py:9660-9688`(`upload_layout_image`, M1 def 줄 9786)이 `spec.md` §A(사전 확정 사실 2)·§H 와 `research.md` §2.2·§5 에 남아 있다. v1.1.0 에서 고치지 않았다.
 - 문구 주의(판정에 영향 없음): AC-030 ① 본문은 「server/sheets/** 와 시험 파일」이라 쓰나 M1 커밋은 SPEC 산출물 여섯 개도 바꿨다. 명령 범위는 보존 트리이므로 판정은 그대로다.
-- `sync_commit_sha` 는 백필 전까지 placeholder 다.
+- `sync_commit_sha` 는 후속 백필 커밋으로 채웠다(552f8f8b).
 
 ## §F.1 Phase 4 Mode Selection
 
