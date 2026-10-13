@@ -153,6 +153,11 @@ describe("상단 바 — 버튼 전부 + 1450px 줄임 (AC-LDBEAT-017(a)(b))", (
     expect(html).toMatch(/title="■ 끄기 — 아직 배선 안 됨[^"]*" disabled/);
     expect(html).not.toContain('class="badge"');
   });
+
+  it("카드 t630 — 반영 기록이 아직 없으면(null) 숫자 대신 「—」 배지와 이유 title 을 보인다", () => {
+    const html = renderTopBar({ onApply: noop, pendingApplyCount: null });
+    expect(html).toContain('<span class="badge" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">—</span>');
+  });
 });
 
 describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () => {

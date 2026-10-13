@@ -107,7 +107,9 @@ export interface BeatGridTopBarProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
-  /** 콘솔에 아직 안 보낸 편집 수. 출처가 없으면 생략 — 숫자를 지어내지 않는다. */
+  /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
+   * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
+   * 않는다), 숫자는 그 개수다. */
   pendingApplyCount?: number | null;
   onDrawerToggle?: () => void;
   /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
@@ -313,6 +315,11 @@ export function BeatGridTopBar({
       >
         <ShortenedLabel action={apply} />
         {typeof pendingApplyCount === "number" && <span className="badge">{pendingApplyCount}</span>}
+        {pendingApplyCount === null && (
+          <span className="badge" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">
+            —
+          </span>
+        )}
       </button>
       <button
         type="button"
