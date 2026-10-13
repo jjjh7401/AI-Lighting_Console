@@ -231,7 +231,7 @@ All checks passed!
 
 ```yaml
 run_complete_at: 2026-09-06
-run_commit_sha: pending-backfill-run
+run_commit_sha: fb13557a
 run_status: audit-ready
 ac_pass_count: 13
 ac_pass_with_debt_count: 1
@@ -259,3 +259,34 @@ dod_text_mismatch: "acceptance.md §D.5 (완료 정의) 문면 'AC-001..014 전�
 code_files_changed_in_sync: 0
 spec_plan_acceptance_body_modified: false   # spec.md 는 frontmatter status/updated 만 갱신, plan.md·acceptance.md 는 손대지 않음
 ```
+
+### 후속 기록 (카드 t627): 생략된 sync 게이트 1·2 재실행
+
+측정 트리: origin/main 19a52738 (워크트리 WT-d1grant-followup, 이 커밋 이전), 2026-10-13.
+
+이 기록은 재측정 기록이다. 앞선 §E.4 본문은 다시 쓰지 않는다. 구현 PR #347 은 squash 머지되어 머리 SHA(7be8a517)가 main 에 없으므로, §E.3 의 `run_commit_sha` 는 main 위의 머지 커밋 fb13557a 로 보충했다.
+
+**게이트 1 (사전 sync 품질) — 명령과 실측 결과**
+
+1. `uv run ruff check .` → 종료 코드 0. 마지막 줄: `All checks passed!`
+2. `uv run ruff format --check .` → 종료 코드 1. 출력:
+   - `Would reformat: packaging/rust_scan.py`
+   - `Would reformat: packaging/verify_packaged_e2e.py`
+   - `2 files would be reformatted, 1365 files already formatted`
+   - 실행 커밋 fb13557a 는 `packaging/` 경로를 바꾸지 않았다. 이 두 파일을 마지막으로 건드린 커밋은 ee50a9a4 와 e2814fea (DEPLOY-001)다. 이 SPEC 밖의 기존 결함이라 여기서 고치지 않았다.
+3. `TZ=Asia/Seoul uv run pytest -q -rs` → 종료 코드 0. 마지막 줄: `15707 passed, 35 skipped, 1 warning in 257.24s (0:04:17)`. 건너뛴 35건은 테스트 코드에 사유가 적혀 있다. 경고 1건은 `fastapi/testclient` 에서 나온 `StarletteDeprecationWarning`(httpx 폐지 예고)이며 이 SPEC 이 원인이 아니다.
+4. 타입 검사: 실행하지 않음. pyproject.toml 이 타입 검사기(mypy, pyright)를 선언하지 않는다.
+5. MX 태그 검증: 실행하지 않음. `moai mx` 는 `query` 와 `scan` 만 제공하고 검증 하위 명령이 없다. `scan` 은 사이드카 색인을 쓰므로 이 기록에서는 돌리지 않았다.
+6. HARD 규칙 위반 점검: 실행하지 않음. 쓸 수 있는 도구가 없다.
+
+판정: 깨끗한 통과가 아니다. 포맷 검사는 SPEC 밖 파일 두 개에서 실패했고, 두 점검은 실행하지 못했다. 「게이트 1 통과」가 아니라 부분 통과로 기록한다.
+
+**게이트 2 (문서 범위) — 읽기 전용 불일치 스캔**
+
+- `git grep -c "D1GRANT" HEAD -- docs README.md CHANGELOG.md ui .moai/docs .claude/rules` → CHANGELOG.md:13 하나뿐이다. 그 문면(`completed`, AC 14개 중 13개 PASS, 1개(AC-013) PASS-WITH-DEBT, FAIL 0)은 §E.3 및 §E.4 와 일치한다.
+- 따라서 이 스캔은 다시 생성할 문서를 찾지 못했다.
+- 이 기록에서는 AskUserQuestion 라운드를 열지 않았다. 문서 범위에 대한 사람의 승인은 아직 대기 중이다.
+
+**그 밖**
+
+- acceptance.md §D.5 의 「AC-001..014 전부 PASS」 문면은 여기서 바꾸지 않는다. 위 §E.4 의 `dod_text_mismatch` 항목을 본다.
