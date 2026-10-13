@@ -576,7 +576,7 @@ blocked: false
 
 ```yaml
 sync_complete_at: 2026-10-13
-sync_commit_sha: pending-backfill-sheetpipe-close
+sync_commit_sha: 463c3711775deb55a58e468655db8f182f043260
 sync_status: complete
 base: 8452171c
 branch: WT-sheetpipe-sync
