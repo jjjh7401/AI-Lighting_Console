@@ -1,0 +1,26 @@
+# SPEC-COPILOT-SHEETPIPE-001 sync 증거 검사 (origin/main 8452171c 기반 워크트리, 2026-10-13)
+# 각 명령은 따로 실행했고 출력은 원문 그대로다.
+
+$ grep -cE "[\"'`]Vectorworks" ui/src/App.tsx ui/src/useCopilotSocket.ts
+ui/src/useCopilotSocket.ts:0
+ui/src/App.tsx:0
+
+$ grep -c "SPEC-COPILOT-SHEETPIPE-001" ui/src/App.tsx
+1
+
+$ grep -c "^- \*\*REQ-SHEETPIPE-" .moai/specs/SPEC-COPILOT-SHEETPIPE-001/spec.md
+9
+
+$ grep -c "^### AC-SHEETPIPE-" .moai/specs/SPEC-COPILOT-SHEETPIPE-001/acceptance.md
+11
+
+# 보조: 병합 커밋 조상 여부와 SPEC 디렉터리 최신 커밋 (§E.4 전제 확인)
+$ git merge-base --is-ancestor 2040a9c0 origin/main; echo "exit=$?"
+exit=0
+
+$ git log origin/main --oneline -1 -- .moai/specs/SPEC-COPILOT-SHEETPIPE-001/
+2040a9c0 feat(SPEC-COPILOT-SHEETPIPE-001): 시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B) (#118)
+
+# 보조: 콘솔 프로세스 확인 (출력 없음, 종료 코드 1)
+$ pgrep -il grandma
+(출력 없음)
