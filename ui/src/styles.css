@@ -4273,6 +4273,7 @@ body {
 .beat-grid-topbar-bar {
   min-width: 64px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .beat-grid-topbar .tbtn {

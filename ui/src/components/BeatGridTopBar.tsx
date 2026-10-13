@@ -99,6 +99,9 @@ export interface BeatGridTopBarProps {
   versionLabel: string | null;
   bpm: number | null | undefined;
   currentBar: number;
+  /** 지금 마디가 속한 구간 이름 — 「N마디 한눈에」 제목에 붙는 값과 같다. 없거나
+   * `null`이면 마디 번호만 보인다. */
+  barSectionLabel?: string | null;
   barRange: { start: number; end: number };
   onBarChange: (bar: number) => void;
   onPreviewBar?: (bar: number) => void;
@@ -127,6 +130,7 @@ export function BeatGridTopBar({
   versionLabel,
   bpm,
   currentBar,
+  barSectionLabel,
   barRange,
   onBarChange,
   onPreviewBar,
@@ -183,6 +187,8 @@ export function BeatGridTopBar({
 
   const [preview, apply, drawer] = TOP_BAR_SHORTENED_ACTIONS;
   const titleFor = (full: string, wired: boolean) => (wired ? full : full + UNWIRED_NOTE);
+  // 카드 t630 — 구간 이름은 마디 번호 뒤에 붙인 한 덩어리 문자열(텍스트 노드 하나).
+  const barLabel = barSectionLabel ? `${currentBar}마디 · ${barSectionLabel}` : `${currentBar}마디`;
 
   return (
     <header className="beat-grid-topbar">
@@ -270,7 +276,7 @@ export function BeatGridTopBar({
       >
         ◀
       </button>
-      <span className="beat-grid-topbar-bar">{currentBar}마디</span>
+      <span className="beat-grid-topbar-bar">{barLabel}</span>
       <button
         type="button"
         className="tbtn"

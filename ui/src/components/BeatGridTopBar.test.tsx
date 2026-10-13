@@ -79,6 +79,23 @@ describe("상단 바 — 곡·버전·BPM", () => {
   });
 });
 
+describe("상단 바 — 마디 옆 구간 이름 (카드 t630)", () => {
+  // BPM 알약에도 「 · 」 가 있어 마크업 전체로는 구분점 유무를 못 가린다 —
+  // 마디 칸 하나의 글자만 뽑아 단언한다.
+  const barText = (html: string) => html.match(/<span class="beat-grid-topbar-bar">([^<]*)<\/span>/)?.[1];
+
+  it("구간 이름이 있으면 「12마디 · 벌스1」 한 덩어리로 보인다", () => {
+    const html = renderTopBar({ currentBar: 12, barRange: { start: 0, end: 40 }, barSectionLabel: "벌스1" });
+    expect(html).toContain("12마디 · 벌스1");
+    expect(barText(html)).toBe("12마디 · 벌스1");
+  });
+
+  it("구간 이름이 없으면(생략·null) 마디 번호만 보이고 구분점이 없다", () => {
+    expect(barText(renderTopBar())).toBe("3마디");
+    expect(barText(renderTopBar({ barSectionLabel: null }))).toBe("3마디");
+  });
+});
+
 /** styles.css 의 `@media (min-width: 1450px) { … }` 블록 본문(안쪽 규칙들). */
 function wideMediaBlock(): string {
   const css = readFileSync(fileURLToPath(new URL("../styles.css", import.meta.url)), "utf-8");
