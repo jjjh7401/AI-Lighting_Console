@@ -268,7 +268,7 @@ t256 단독 회계   : 10905 -> 10913 = +8, 검사 파일 +89/-0, 기존 검사 
 
 - `sync_status: audit-ready`
 - `sync_complete_at: 2026-10-13`
-- `sync_commit_sha: PLACEHOLDER`
+- `sync_commit_sha: 503d17745f756d86c383953bcde1c12b7f91f31f` (sync 커밋 자신. 커밋이 자기 SHA 를 적을 수 없어 placeholder 로 두었다가 후속 커밋에서 백필했다)
 - 상태 전환: `in-progress → completed`. spec.md frontmatter 의 `status`·`updated` 만 바꿨고 본문은 건드리지 않았다. plan.md·acceptance.md 와 이 파일의 기존 본문도 그대로다.
 
 이 파일 위쪽에도 「§E.4 회귀 회계 (자체 venv, 이 트리)」가 있다. 그것은 별개의 기록이며 보고서(`.moai/reports/t256/verdict.md`)가 인용하므로 제목을 바꾸지 않았다. sync 신호는 파일 맨 끝의 이 절이다.
