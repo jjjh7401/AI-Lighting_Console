@@ -638,6 +638,26 @@ frontmatter_status_transitions:
 
 002 에서 010 은 파일 전체가 통과했으므로 각 `-k` 부분집합도 포함된다. `-k` 부분집합을 따로 다시 돌리지는 않았다.
 
+### 선행 SPEC 의존성 판단 — SPEC-COPILOT-FILEARG-001
+
+**판단.** SHEETPIPE 의 어떤 AC 도 아직 열려 있는 FILEARG AC 에 기대지 않는다. 근거: FILEARG 의 AC 는 20개(AC-FILEARG-001~006, 009, 018~030)이고 20개 모두 `.moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` 의 M1 판정표에 있다. 해당 파일 193행 원문은 `합 **19 PASS · 0 FAIL · 1 N/A**(021은 조건 미발동).` 이다(`git grep -n "합 " origin/main -- …/progress.md`).
+
+**연결표.** 재관측 명령은 모두 `uv run pytest server/tests/test_sheets_registry.py -q` 에 아래 `-k` 를 붙인 것이다(8452171c).
+
+| SHEETPIPE 항목 | FILEARG 연결 | run-phase 판정 | 8452171c 재관측 (`-k` · 요약 줄) | 증거 파일 |
+|---|---|---|---|---|
+| AC-SHEETPIPE-001 ⑤ | AC-FILEARG-023 (태그로 핸들러 결정) | PASS (M1) | `handler_resolution` · `5 passed, 84 deselected in 0.31s` | `reports/sheetpipe-close/filearg_023_handler_resolution.txt` |
+| AC-SHEETPIPE-005 전제 (vectorworks 행이 session_method 태그와 함께 등록됨) | AC-FILEARG-006 ④ · AC-FILEARG-023 | PASS (M1) | `registry` · `89 passed in 0.31s` | `reports/sheetpipe-close/filearg_006_registry.txt` |
+| AC-SHEETPIPE-004 ④ (파싱 정확히 1회) · AC-SHEETPIPE-006 ③ (행 수 명시) | AC-FILEARG-009 절 ②③ 은 v1.0.0 분할(G-6)로 SHEETPIPE 로 이관됨. A 에는 절 ①④(순서)만 남음 | PASS (M1, ①④) | `"no_trial_parse or parse_once"` · `3 passed, 86 deselected in 0.26s` | `reports/sheetpipe-close/filearg_009_order.txt` |
+| ASSUMPTION-79 | AC-FILEARG-022 | PASS (M1) | `"mvr or headerless"` · `10 passed, 79 deselected in 0.27s` | `reports/sheetpipe-close/filearg_022_mvr.txt` |
+| 확인용 (직접 연결 없음) | AC-FILEARG-005 | PASS (M1) | `ambiguous` · `6 passed, 83 deselected in 0.24s` | `reports/sheetpipe-close/filearg_005_ambiguous.txt` |
+| 허용이지 의존 아님: REQ-SHEETPIPE-003 은 REQ-FILEARG-005 의 "종류가 정해진 뒤 파싱 1회" 허용에 기댐 | REQ-FILEARG-005 | AC-FILEARG-002/005/009 가 덮음 (PASS) | 다시 돌리지 않음 | — |
+| 비목표이지 의존 아님: SHEETPIPE 는 `.mvr`/`.xlsx` zip 위임 계약을 만들지 않음 | REQ-FILEARG-021 | AC-FILEARG-021 N/A (조건 미발동) | 다시 돌리지 않음 | — |
+
+**상태 수준의 잔여 위험.** `origin/main` 에서 읽은 FILEARG 의 frontmatter 는 `status: in-progress`(`spec.md:5`)이고, 같은 SPEC 의 progress.md 는 `plan_status: audit-pending` 과 "Implementation Kickoff Approval 미통과(M0 착수 전제)" 를 기록한다(91행). SHEETPIPE 의 착수 전제("SPEC-COPILOT-FILEARG-001(A · 판별기)이 통과한 뒤 착수한다")는 AC 수준에서는 성립한다(19 PASS + 1 N/A). 문서 상태 수준에서는 성립하지 않는다. 이번 sync 는 의존성을 AC 수준에서 판단했다.
+
+**관찰.** 레지스트리 테스트 파일의 테스트 수가 M1 판정표 기록 시점보다 늘었다. 선택자별 개수가 83 에서 89 로 올랐다(`-k registry` 합계와 선택자별 합계가 모두 6씩 증가). 전부 통과한다. 늘어난 원인은 확인하지 않았다.
+
 ### 5. 미검증 (Gaps)
 
 - (a) 리뷰 소인(리뷰 태그) 처분은 `origin/main` 에 추적되는 기록이 없어 검증하지 않았다.
