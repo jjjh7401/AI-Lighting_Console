@@ -1,0 +1,19 @@
+# 뮤테이션 원장 — 카드 t629 (HEAD 19a52738 기준, 2026-10-13)
+
+규칙: 원본 코드에 한 가지 변이를 넣고 → 해당 시험 선택자 실행 → 원본으로 되돌림(git checkout) → 같은 선택자를 다시 돌려 대조군(초록) 확인.
+실행 명령은 모두 `uv run pytest ... -p no:cacheprovider`.
+
+| AC | 변이 | 실행 선택자 | 변이 결과 | 대조군(되돌린 뒤) |
+|---|---|---|---|---|
+| 003 | 판별기를 첫 일치 반환으로 변경 (`matched.append` 뒤 `break`) | `-k "superset or count"` | 2 failed, 2 passed | 4 passed |
+| 006 | 레지스트리 행이 정규 열 목록의 사본을 든다 (`tuple(list(CANONICAL_COLUMNS))`) | `-k canonical_columns_by_identity` | 1 failed | 1 passed |
+| 009 | 판별 중 실제 파서 시험 호출 추가 | `-k "no_trial_parse or parse_once"` | 2 failed (no_trial × 2), 1 passed (parse_once) | 3 passed |
+| 023 | 세션 메서드 핸들러 해소를 무력화 (`if False:`) — 태그와 무관하게 툴 집합만 보는 회귀와 같은 방향 | `-k handler_resolution` | 1 failed (`never_excludes_todays_rows`), 4 passed | 5 passed |
+| 025 | `vectorworks` 행의 배제 절 제거 (`excluded_by_other_rows=False`) | `-k patch_identity` | 2 failed, 1 passed (세 번째 시험은 원시 신원 술어 True를 고정하므로 초록이 설계와 맞음) | 3 passed |
+| 027 | 별칭 임계 2 → 1 (`_MIN_HEADER_ALIAS_MATCHES = 1`, 하한 방향) | `-k "cross_classify or reexport_hint or alias_threshold"` | 5 failed (019 ④ 1 · 029 2 · 027 2), 15 passed | 20 passed |
+| 029 | 재수출 힌트 제거 (`hint = None`) | `-k reexport_hint` | 2 failed, 3 passed | 5 passed |
+| 030 | 보존 대상 `server/web/preview.py`에 한 줄 추가 — **커밋하지 않음** | `tests/test_overlap_preserve.py` | 73 passed (거짓 초록 — AC가 막는 상태) | (해당 없음) |
+| 030 | 같은 한 줄을 **커밋한 뒤** 실행 (임시 커밋 객체 f51d5fc, 어느 브랜치에도 없음, 브랜치 이동 없이 detached 체크아웃) | `tests/test_overlap_preserve.py` | 1 failed (`test_the_preserved_paths_are_unchanged`), 72 passed | 73 passed (원복 후 HEAD) |
+| 022 ① | `vectorworks` 술어를 열 집합으로 되돌리는 뮤테이션 | (AC 규약 F3에 따라 미집계) | 이월 — F1 종료 뒤 재점화 | — |
+
+비고: AC-018은 대조군(포함 검사만 쓴 서명이 두 종류에 맞는 것)을 시험 안에 내장하고 있어 별도 뮤테이션을 두지 않았다. 해당 시험 `test_format_sufficiency_control_inclusion_only_collides`는 9개 선택 중 초록이다.
