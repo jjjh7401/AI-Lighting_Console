@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-COPILOT-SHEETPIPE-001**(`completed`, 감독 결정 2026-10-12) — 판별된 시트 바이트를 세션 슬롯과 래퍼 툴 인자까지 나르는 전달 경로를 붙였다(구현 PR #118, 분할 B). AC 001–011 PASS.
+  - 재확인(origin/main 8452171c): test_sheet_pipe.py 34 passed, 전체 pytest 15707 passed · 0 failed.
 - **SPEC-COPILOT-D1GRANT-001**(`completed`, 감독 결정 2026-10-12) — 장르별 D1 룩 라이브러리를 확장하고 승인 등록·핀을 갱신했다(구현 PR #347). AC 14개 중 13개 PASS, 1개(AC-013) PASS-WITH-DEBT, FAIL 0.
   - AC-013 부채: `grep -rn 'Nine looks' server/` 가 0이 아니라 2행이며, 두 행은 REQ-007/009 가 요구하는 핀(`server/tests/test_overlap_preserve.py`)이다.
 - **SPEC-LDBEAT-001**(`completed`, 실기 콘솔 확인은 t608 대기) — 런북 모드에 **박자 격자**(콘솔 그룹 트랙 × 마디)를 독립 전체화면 뷰로 추가했다. 감독이 한 화면에서 전곡의 조명 배치를 마디 단위로 보고 고친다. M1~M14 14개 마일스톤, Tier L(REQ 25개·AC 25개).

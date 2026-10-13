@@ -1,0 +1,14 @@
+
+> ma3-copilot-ui@0.1.0 test
+> vitest run attachmentCopy
+
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t622/ui
+
+ ✓ src/attachmentCopy.test.ts (4 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  09:00:13
+   Duration  162ms (transform 15ms, setup 0ms, collect 10ms, tests 2ms, environment 0ms, prepare 37ms)
+

@@ -570,4 +570,104 @@ blocked: false
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+### 1. 판정
+
+`in-progress` 에서 `completed` 로 전환한다. 근거는 2026-10-12 감독 결정(사실상 완료, `/moai sync` 로 completed)과 아래 재확인이다.
+
+```yaml
+sync_complete_at: 2026-10-13
+sync_commit_sha: 463c3711775deb55a58e468655db8f182f043260
+sync_status: complete
+base: 8452171c
+branch: WT-sheetpipe-sync
+worktree: .claude/worktrees/t622
+b12_self_test_a: "grep -c SPEC-COPILOT-SHEETPIPE-001 CHANGELOG.md = 0 (사전 중복 없음)"
+b12_self_test_b: "고유 AC-SHEETPIPE-NNN 11개 = CHANGELOG 의 AC 001–011 (원시 AC 패턴 22개 중 11개는 축약 표기 AC-002… 9개와 FILEARG 인용 2개)"
+b12_self_test_c: "CHANGELOG 가 인용하는 경로(reports/sheetpipe-close/, .moai/specs/SPEC-COPILOT-SHEETPIPE-001/)는 ls 로 확인"
+changelog_entry_position: "[Unreleased] > Added 맨 위 (SPEC-COPILOT-D1GRANT-001 항목 앞)"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (updated 2026-10-13)"
+  plan_md_acceptance_md: "본문 무수정 — 아래 잔여 위험 (c)"
+```
+
+### 2. 전제 확인
+
+| 명령 | 관측 |
+|---|---|
+| `git merge-base --is-ancestor 2040a9c0 origin/main` | 종료 코드 0 (조상임) |
+| `git log origin/main --oneline -1 -- .moai/specs/SPEC-COPILOT-SHEETPIPE-001/` | `2040a9c0 feat(SPEC-COPILOT-SHEETPIPE-001): 시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B) (#118)` |
+
+구현 PR #118 은 2026-08-24T07:22:37Z 에 MERGED 이며 병합 커밋 `2040a9c0` 이 `origin/main` 의 조상이다. PR 상태와 병합 시각(MERGED · 2026-08-24T07:22:37Z)은 이 sync 세션 초반에 오케스트레이터가 `gh pr view 118 --json number,state,mergedAt,title,headRefName,mergeCommit,url` 로 직접 확인했다. 병합 커밋의 조상 관계는 위 명령으로 확인했다.
+
+### 3. 재측정 증거 (8452171c)
+
+산출물은 `reports/sheetpipe-close/` 에 이미 있던 파일이며 다시 생성하지 않았다.
+
+| 파일 | 명령 | 요약 줄 (원문) |
+|---|---|---|
+| `test_sheet_pipe.txt` | `uv run pytest server/tests/test_sheet_pipe.py -q` | `34 passed in 4.61s` |
+| `full_suite.txt` | `uv run pytest server/tests -q` | `15707 passed, 35 skipped, 1 warning in 252.46s (0:04:12)` (종료 코드 0) |
+| `vitest.txt` | `npm --prefix ui run test` | `Test Files  59 passed (59)` · `Tests  1262 passed (1262)` · 62행 `src/attachmentCopy.test.ts (4 tests)` |
+| `vitest_attachmentCopy.txt` | `npm --prefix ui run test -- attachmentCopy` | `Test Files  1 passed (1)` · `Tests  4 passed (4)` (종료 코드 0) |
+| `checks.txt` | 아래 4개 명령 | 아래 표 |
+
+전체 스위트의 경고 1건은 httpx 와 starlette.testclient 에 관한 StarletteDeprecationWarning 이며 이 SPEC 에서 나온 것이 아니다.
+
+| 검사 명령 | 관측 |
+|---|---|
+| `grep -cE "[\"'\`]Vectorworks" ui/src/App.tsx ui/src/useCopilotSocket.ts` | `useCopilotSocket.ts:0` · `App.tsx:0` |
+| `grep -c "SPEC-COPILOT-SHEETPIPE-001" ui/src/App.tsx` | `1` |
+| `grep -c "^- \*\*REQ-SHEETPIPE-" .moai/specs/SPEC-COPILOT-SHEETPIPE-001/spec.md` | `9` |
+| `grep -c "^### AC-SHEETPIPE-" .moai/specs/SPEC-COPILOT-SHEETPIPE-001/acceptance.md` | `11` |
+
+### 4. AC 판정표
+
+| AC | run-phase 판정 (§E.2.4) | 재확인 (8452171c) |
+|---|---|---|
+| `AC-SHEETPIPE-001` | PASS | 레지스트리 테스트가 전체 스위트 15707 passed 안에 있다 |
+| `AC-SHEETPIPE-002` | PASS | `test_sheet_pipe.py` 34 passed 에 포함 |
+| `AC-SHEETPIPE-003` | PASS | 같음 |
+| `AC-SHEETPIPE-004` | PASS | 같음 |
+| `AC-SHEETPIPE-005` | PASS | 같음. 문구·앵커 grep 은 위 검사 표(0 · 1) |
+| `AC-SHEETPIPE-006` | PASS | 같음 |
+| `AC-SHEETPIPE-007` | PASS | 같음 |
+| `AC-SHEETPIPE-008` | PASS | 같음 |
+| `AC-SHEETPIPE-009` | PASS | 같음 |
+| `AC-SHEETPIPE-010` | PASS | 같음 |
+| `AC-SHEETPIPE-011` | PASS | `test_overlap_preserve.py` 가 전체 스위트 안에 있다 |
+
+002 에서 010 은 파일 전체가 통과했으므로 각 `-k` 부분집합도 포함된다. `-k` 부분집합을 따로 다시 돌리지는 않았다.
+
+### 선행 SPEC 의존성 판단 — SPEC-COPILOT-FILEARG-001
+
+**판단.** SHEETPIPE 의 어떤 AC 도 아직 열려 있는 FILEARG AC 에 기대지 않는다. 근거: FILEARG 의 AC 는 20개(AC-FILEARG-001~006, 009, 018~030)이고 20개 모두 `.moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` 의 M1 판정표에 있다. 해당 파일 193행 원문은 `합 **19 PASS · 0 FAIL · 1 N/A**(021은 조건 미발동).` 이다(`git grep -n "합 " origin/main -- …/progress.md`).
+
+**연결표.** 재관측 명령은 모두 `uv run pytest server/tests/test_sheets_registry.py -q` 에 아래 `-k` 를 붙인 것이다(8452171c).
+
+| SHEETPIPE 항목 | FILEARG 연결 | run-phase 판정 | 8452171c 재관측 (`-k` · 요약 줄) | 증거 파일 |
+|---|---|---|---|---|
+| AC-SHEETPIPE-001 ⑤ | AC-FILEARG-023 (태그로 핸들러 결정) | PASS (M1) | `handler_resolution` · `5 passed, 84 deselected in 0.31s` | `reports/sheetpipe-close/filearg_023_handler_resolution.txt` |
+| AC-SHEETPIPE-005 전제 (vectorworks 행이 session_method 태그와 함께 등록됨) | AC-FILEARG-006 ④ · AC-FILEARG-023 | PASS (M1) | `registry` · `89 passed in 0.31s` | `reports/sheetpipe-close/filearg_006_registry.txt` |
+| AC-SHEETPIPE-004 ④ (파싱 정확히 1회) · AC-SHEETPIPE-006 ③ (행 수 명시) | AC-FILEARG-009 절 ②③ 은 v1.0.0 분할(G-6)로 SHEETPIPE 로 이관됨. A 에는 절 ①④(순서)만 남음 | PASS (M1, ①④) | `"no_trial_parse or parse_once"` · `3 passed, 86 deselected in 0.26s` | `reports/sheetpipe-close/filearg_009_order.txt` |
+| ASSUMPTION-79 | AC-FILEARG-022 | PASS (M1) | `"mvr or headerless"` · `10 passed, 79 deselected in 0.27s` | `reports/sheetpipe-close/filearg_022_mvr.txt` |
+| 확인용 (직접 연결 없음) | AC-FILEARG-005 | PASS (M1) | `ambiguous` · `6 passed, 83 deselected in 0.24s` | `reports/sheetpipe-close/filearg_005_ambiguous.txt` |
+| 허용이지 의존 아님: REQ-SHEETPIPE-003 은 REQ-FILEARG-005 의 "종류가 정해진 뒤 파싱 1회" 허용에 기댐 | REQ-FILEARG-005 | AC-FILEARG-002/005/009 가 덮음 (PASS) | 다시 돌리지 않음 | — |
+| 비목표이지 의존 아님: SHEETPIPE 는 `.mvr`/`.xlsx` zip 위임 계약을 만들지 않음 | REQ-FILEARG-021 | AC-FILEARG-021 N/A (조건 미발동) | 다시 돌리지 않음 | — |
+
+**상태 수준의 잔여 위험.** `origin/main` 에서 읽은 FILEARG 의 frontmatter 는 `status: in-progress`(`spec.md:5`)이고, 같은 SPEC 의 progress.md 는 `plan_status: audit-pending` 과 "Implementation Kickoff Approval 미통과(M0 착수 전제)" 를 기록한다(91행). SHEETPIPE 의 착수 전제("SPEC-COPILOT-FILEARG-001(A · 판별기)이 통과한 뒤 착수한다")는 AC 수준에서는 성립한다(19 PASS + 1 N/A). 문서 상태 수준에서는 성립하지 않는다. 이번 sync 는 의존성을 AC 수준에서 판단했다.
+
+**관찰.** 레지스트리 테스트 파일의 테스트 수가 M1 판정표 기록 시점보다 늘었다. 선택자별 개수가 83 에서 89 로 올랐다(`-k registry` 합계와 선택자별 합계가 모두 6씩 증가). 전부 통과한다. 늘어난 원인은 확인하지 않았다.
+
+### 5. 미검증 (Gaps)
+
+- (a) 리뷰 소인(리뷰 태그) 처분은 `origin/main` 에 추적되는 기록이 없어 검증하지 않았다.
+- (b) 뮤테이션 8건(§E.2.5)은 다시 돌리지 않았다. 코드를 바꾸는 실험이라 이 sync 범위 밖이다.
+- (c) `spec.md` §G 명령 세트는 다시 돌리지 않았다. 시작 SHA 가 진행 기록에서 확인되지 않았고, 그 뒤 main 커밋이 같은 경로를 건드렸다.
+- (d) run-phase 최종 커밋 `86ae6cf` 는 로컬에 있으나 `origin/main` 의 조상이 아니다. PR #118 의 squash 병합과 맞는 모양이다. 재확인은 `origin/main` 내용으로 했다.
+- (e) `-k` 부분집합별 개별 재실행, `ruff`, `tsc`, `vite build` 는 이 sync 에서 다시 돌리지 않았다.
+
+### 6. 잔여 위험
+
+- (a) 전체 스위트 수가 run-phase 의 10009 에서 15707 로 달라졌다. 이후 병합에서 테스트가 늘어난 것으로 보이며 관찰일 뿐 이 SPEC 이 만든 차이로 판정하지 않는다.
+- (b) run-phase 최종 pytest 는 grandMA3 콘솔 프로세스가 떠 있는 상태에서 돌았다(§E.2.3). 이번 재확인은 `pgrep -il grandma` 가 아무것도 내지 않은 상태에서 돌렸다.
+- (c) `plan.md` 와 `acceptance.md` 본문 줄은 여전히 `문서 상태: in-progress` 로 읽힌다. manager-docs 는 본문을 고칠 수 없어 그대로 두었다. `spec.md` §H 좌표표가 낡은 것(§E.2.6 F-8)도 같은 이유로 남아 있다.
