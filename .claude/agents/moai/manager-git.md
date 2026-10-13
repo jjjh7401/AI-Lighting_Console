@@ -29,7 +29,7 @@ Manage Git workflows, branch strategies, commit conventions, and code review pro
 
 [HARD] Read `git_strategy.mode`, then resolve these once per operation and reuse the resolved values at every site below:
 - `main_branch = git_strategy.{mode}.main_branch` (default: `main`) — used as `--base {main_branch}` in every `gh pr create`
-- `merge_method = git_strategy.{mode}.merge_method` (`squash` | `merge` | `rebase`; default `squash`) — every merge is executed as `gh pr merge --<merge_method> --delete-branch`, which under the squash default renders `gh pr merge --squash --delete-branch`
+- `merge_method = git_strategy.{mode}.merge_method` (`squash` | `merge` | `rebase`; default `merge`) — every merge is executed as `gh pr merge --<merge_method> --delete-branch`, which under the merge default renders `gh pr merge --merge --delete-branch`
 
 ## Core Operational Principles
 
@@ -111,20 +111,20 @@ git switch -c feat/SPEC-XXX
 git push -u origin feat/SPEC-XXX
 gh pr create --base main --title "..." --body "..."
 # CI passes → merge with the resolved merge_method (§ Configuration Loading and Resolution);
-gh pr merge <PR> --squash --delete-branch   # squash default
+gh pr merge <PR> --merge --delete-branch   # merge default
 ```
 
 Phase D — Local main reset (canonical Late-branch closure):
 ```bash
 git checkout main
 git fetch origin
-git reset --hard origin/main   # align local main with squashed remote
+git reset --hard origin/main   # align local main with remote
 git pull origin main           # verify (no-op if reset succeeded)
 ```
 
 [HARD] Caveat: `git push origin main` is BLOCKED in Phase A/B even with `auto_push: true` — the orchestrator MUST hold push until Phase C branch creation, and the agent MUST NOT attempt a direct push during Phase A/B. Branch protection enforces this server-side and rejects with `! [remote rejected]`; recovery is `git switch -c feat/SPEC-*` to enter Phase C.
 
-Failure mode — skipping Phase D leaves local main with un-squashed history → next `git pull` produces merge conflict against squashed remote. Recovery: `git fetch origin && git reset --hard origin/main`.
+Failure mode — skipping Phase D leaves local main with history that diverges from origin/main → next `git pull` produces a merge conflict against the remote. Recovery: `git fetch origin && git reset --hard origin/main`.
 
 Cross-reference: `.claude/rules/moai/workflow/spec-workflow.md` § Step 1 entry precondition + § Step 4 Late-branch closure for canonical step ordering.
 
@@ -134,7 +134,7 @@ Cross-reference: `.claude/rules/moai/workflow/spec-workflow.md` § Step 1 entry 
 
 SPEC Git Workflow options (from git-strategy.yaml):
 - **main_direct** [RETIRED — main direct push blocked by enforce_admins:true; all tiers require PR]: Direct commits to main, no branches needed
-- **main_late_branch**: main commit + late `git switch -c feat/SPEC-*` at PR time, PR squash + delete-branch, local main `reset --hard origin/main` cleanup (4-phase procedure — see Late-Branch Invocation Pattern above)
+- **main_late_branch**: main commit + late `git switch -c feat/SPEC-*` at PR time, PR merge commit + delete-branch, local main `reset --hard origin/main` cleanup (4-phase procedure — see Late-Branch Invocation Pattern above)
 - **main_feature**: Feature branches from main, optional PR
 - **develop_direct** [RETIRED — main direct push blocked by enforce_admins:true; all tiers require PR]: Direct commits to develop
 - **feature_branch** / **per_spec**: Feature branches with PR required
