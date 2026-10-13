@@ -309,7 +309,7 @@ Tasks:
 - Stage all relevant implementation and test files
 - Create commits with conventional commit messages
 - If SPEC metadata contains `issue_number` (non-zero): Include `Fixes #{issue_number}` in commit message footer
-- Open a PR per the configured `merge_method` (default `squash`)
+- Open a PR per the configured `merge_method` (default `merge`)
 - Verify each commit was created successfully
 
 Commit message format when issue_number exists (both routes):
