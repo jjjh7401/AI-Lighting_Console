@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LXSEQ-004
 title: "LX-SEQ 연계 4단계 — cue-ex 시트 89행을 콘솔 큐로 (곡 큐 투입)"
 version: "0.1.0"
-status: in-progress
+status: completed
 created: 2026-08-31
-updated: 2026-09-02
+updated: 2026-10-13
 author: manager-spec
 priority: P1
 phase: "v0.4.0 target — LX-SEQ 연계 4단계(곡 큐)"

@@ -263,3 +263,26 @@ t256 단독 회계   : 10905 -> 10913 = +8, 검사 파일 +89/-0, 기존 검사 
 (`spec-frontmatter-schema.md` § Status Transition Ownership Matrix). 이 전이는
 **리드 지시로 문서 작업으로 수행**했고, 밀린 전이를 따라잡는 것이라 새 판단을
 넣지 않았다. 다음 sync 회차가 `implemented → completed` 를 정상 경로로 나르면 된다.
+
+## §E.4 Sync-phase Audit-Ready Signal
+
+- `sync_status: audit-ready`
+- `sync_complete_at: 2026-10-13`
+- `sync_commit_sha: 503d17745f756d86c383953bcde1c12b7f91f31f` (sync 커밋 자신. 커밋이 자기 SHA 를 적을 수 없어 placeholder 로 두었다가 후속 커밋에서 백필했다)
+- 상태 전환: `in-progress → completed`. spec.md frontmatter 의 `status`·`updated` 만 바꿨고 본문은 건드리지 않았다. plan.md·acceptance.md 와 이 파일의 기존 본문도 그대로다.
+
+이 파일 위쪽에도 「§E.4 회귀 회계 (자체 venv, 이 트리)」가 있다. 그것은 별개의 기록이며 보고서(`.moai/reports/t256/verdict.md`)가 인용하므로 제목을 바꾸지 않았다. sync 신호는 파일 맨 끝의 이 절이다.
+
+이 close 에서 직접 잰 것 (트리 `10f0b6d9`, 2026-10-13):
+
+- `TZ=Asia/Seoul uv run pytest -q -rs server/tests/test_lxseq_cue_*.py` → `199 passed`, exit 0, skip 없음. glob 이 7개 파일에 걸렸다.
+- 6개 파일 묶음(test_lxseq_cue_mapper, test_lxseq_cue_parser, test_lxseq_cue_partial_ship, test_lxseq_cue_tool, test_lxseq_parser, test_songcue_bundle) → `174 passed`, exit 0. 이 값은 오케스트레이터가 같은 트리에서 잰 것을 옮겼고, 이 close 에서 다시 돌리지는 않았다.
+- `git grep -n -i -E "osc|udp|socket" HEAD -- server/lxseq/` → 출력 없음(grep exit 1). AC-LXSEQ4-011 의 기계 검사이며, 이 close 에서 다시 확인한 AC 는 이것 하나뿐이다.
+- PR #302(t256): `gh pr view 302` → `state: MERGED`, `mergedAt: 2026-09-02T07:14:49Z`, mergeCommit `8bdadf009e9c9588ee31f7b25a15b46d0c395c7c`.
+- acceptance.md 의 살아 있는 AC 제목은 13개(AC-LXSEQ4-001~014, 004 는 폐기).
+
+위쪽 기록의 `pytest server/tests/test_lxseq_cue_*.py -q -> 128 passed` 는 더 앞선 트리에서 잰 값이다. 오늘 이 트리의 측정은 199 이므로 128 은 이 트리와 맞지 않는다. 옛 기록은 고치지 않았다.
+
+수용 기준 판정: 13개 PASS 는 기록된 표에서 옮겼다. 이 close 에서 다시 잰 AC 는 AC-LXSEQ4-011 하나뿐이며, 나머지 판정을 재측정했다고 주장하지 않는다.
+
+이 close 에서 CHANGELOG·README·docs-site 는 갱신하지 않았다(CUETIME close 와 같은 범위).
