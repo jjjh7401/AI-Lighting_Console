@@ -597,7 +597,7 @@ frontmatter_status_transitions:
 | `git merge-base --is-ancestor 2040a9c0 origin/main` | 종료 코드 0 (조상임) |
 | `git log origin/main --oneline -1 -- .moai/specs/SPEC-COPILOT-SHEETPIPE-001/` | `2040a9c0 feat(SPEC-COPILOT-SHEETPIPE-001): 시트 전달경로 — 판별된 바이트를 세션 슬롯과 래퍼 툴 인자까지 나른다 (분할 B) (#118)` |
 
-구현 PR #118 은 2026-08-24T07:22:37Z 에 MERGED 이며 병합 커밋 `2040a9c0` 이 `origin/main` 의 조상이다. PR 의 병합 시각은 지시문에서 받은 값이고 이 세션에서 `gh` 로 다시 조회하지 않았다(조상 관계만 위 명령으로 확인).
+구현 PR #118 은 2026-08-24T07:22:37Z 에 MERGED 이며 병합 커밋 `2040a9c0` 이 `origin/main` 의 조상이다. PR 상태와 병합 시각(MERGED · 2026-08-24T07:22:37Z)은 이 sync 세션 초반에 오케스트레이터가 `gh pr view 118 --json number,state,mergedAt,title,headRefName,mergeCommit,url` 로 직접 확인했다. 병합 커밋의 조상 관계는 위 명령으로 확인했다.
 
 ### 3. 재측정 증거 (8452171c)
 
