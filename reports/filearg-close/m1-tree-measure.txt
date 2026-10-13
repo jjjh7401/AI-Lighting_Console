@@ -1,0 +1,69 @@
+# AC 재측정 — M1 자기 트리 3ffda31b (카드 t629, 2026-10-13)
+
+환경: `git checkout --detach 3ffda31b` 후 `uv sync --locked` (M1 커밋의 uv.lock 기준).
+명령은 워크트리 루트에서 실행했다. 아래 출력은 실행 결과를 그대로 옮긴 것이다.
+
+## 001 ④ · 022 ④ — `.mvr` 판정 소유자 줄 (M1)
+
+$ sed -n '2859,2862p' server/orchestrator/tools.py
+        try:
+            with zipfile.ZipFile(io.BytesIO(raw_bytes)) as archive:
+                is_mvr = SCENE_ENTRY in archive.namelist()
+        except zipfile.BadZipFile:
+
+$ grep -n "is_mvr = SCENE_ENTRY" server/orchestrator/tools.py
+2861:                is_mvr = SCENE_ENTRY in archive.namelist()
+
+$ grep -c "mvr\|MVR" server/vwx/reader.py
+0
+
+$ ls server/vwx/mvr.py
+server/vwx/mvr.py
+
+## 006 ① · 020 — 레지스트리 행 (M1)
+
+$ grep -n "^REGISTRY" -A2 server/sheets/registry.py
+302:REGISTRY: tuple[SheetKindRow, ...] = (PATCH_ROW, VECTORWORKS_ROW)
+
+$ sed -n '185,187p' server/tests/test_sheets_registry.py
+    def test_registry_holds_exactly_two_filled_rows(self):
+        assert [row.kind for row in REGISTRY] == ["patch", "vectorworks"]
+
+$ uv run pytest server/tests/test_sheets_registry.py -q -p no:cacheprovider -k "exactly_two or no_row_reserved"
+2 passed, 87 deselected in 0.07s
+
+$ grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/
+(출력 없음, rc=1 — 일치 0건)
+
+## 030 ① — 보존 트리 (M1 자기 커밋)
+
+$ git diff --stat 3ffda31b^ 3ffda31b -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets
+(출력 없음 — 보존 트리 변경 0건)
+
+$ git diff --name-only 3ffda31b^ 3ffda31b
+.moai/specs/SPEC-COPILOT-FILEARG-001/acceptance.md
+.moai/specs/SPEC-COPILOT-FILEARG-001/design.md
+.moai/specs/SPEC-COPILOT-FILEARG-001/plan.md
+.moai/specs/SPEC-COPILOT-FILEARG-001/progress.md
+.moai/specs/SPEC-COPILOT-FILEARG-001/research.md
+.moai/specs/SPEC-COPILOT-FILEARG-001/spec.md
+server/sheets/__init__.py
+server/sheets/registry.py
+server/tests/test_sheets_registry.py
+
+## 030 ③ — 저장소 PRESERVE 가드 (M1)
+
+$ uv run pytest server/tests/test_overlap_preserve.py -q -p no:cacheprovider
+41 passed in 0.69s
+
+## 006 ④ · 023 — 좌표 정정 근거 (M1 = 착수 base 1c104f0과 session.py 동일)
+
+$ grep -n "^class ChatSession\|def upload_vectorworks_export" server/web/session.py
+3481:class ChatSession:
+9781:    def upload_vectorworks_export(self, file_name: str, content_base64: str) -> dict:
+
+## 참고 — HEAD 19a52738 드리프트 (재측정 기준이 아님, 기록용)
+
+- `sed -n '2859,2862p' server/orchestrator/tools.py` → 소유자 줄 없음. `grep -n "is_mvr = SCENE_ENTRY"` → 4051.
+- `grep -n "^REGISTRY" -A9 server/sheets/registry.py` → 7행 (patch, group, preset-dim, preset-col, preset-bm, vectorworks, cue-ex).
+- `git diff --stat 1c104f0..HEAD -- <보존 트리>` → 148 파일 (타 SPEC 커밋 혼입).

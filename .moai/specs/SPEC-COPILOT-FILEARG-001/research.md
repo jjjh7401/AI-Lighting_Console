@@ -50,7 +50,7 @@
 
 ### 2.2 세션이 바이트를 담아 둔다 — 그런데 담자마자 실행한다 `[리드]`
 
-`server/web/session.py:9655-9658` — `upload_vectorworks_export`는 `self._vectorworks_upload`(`_UploadedVectorworksExport`, `session.py:2492-2508`)에 담은 **뒤 곧바로** 고정 지시문으로 `run_instruction(...)`을 부른다.
+`server/web/session.py:9781-9784` — `upload_vectorworks_export`는 `self._vectorworks_upload`(`_UploadedVectorworksExport`, `session.py:2492-2508`)에 담은 **뒤 곧바로** 고정 지시문으로 `run_instruction(...)`을 부른다.
 
 이 즉시 실행이 LXSEQ-001이 "세션 업로드 포트 재사용"을 기각한 이유였고(`plan.md` 결정 H), 본 SPEC이 **기존 프레임을 재사용하지 않는** 이유이기도 하다(plan.md 결정 H). 저장 형태는 빌려오되 실행하는 태도는 빌려오지 않는다.
 
@@ -77,7 +77,7 @@
 ### 3.3 계승하는 안전 요구 `[문서]`
 
 - `REQ-LXSEQ-016` `[Unwanted]` — 바이트는 **파일 판독**에서만 오고 채팅 본문 텍스트에서는 오지 않는다(붙여넣기는 개행·공백이 조용히 깨져 잘못 패치된다). 페이로드는 `source.sha256`을 실어 운영자가 원본과 대조할 수 있게 한다.
-- 기각 두 건의 **상태가 서로 다르다**는 점이 중요하다. LXSEQ-001이 기각한 것은 ① 세션 업로드 포트(`upload_vectorworks_export`) 재사용 — 업로드 즉시 Vectorworks 안내 분석이 도는 까닭(`session.py:9655-9658`)이며 이 기각은 **여전히 유효**하다. ② "신규 업로드 엔드포인트는 UI 변경을 수반한다" — 이 기각은 **LXSEQ-001이 신규 툴 밖 0-diff를 유지하려던 사정 때문**이었고, 카드 t10은 그 UI 변경 자체가 목적이므로 **그 사정은 본 SPEC에 미치지 않는다**. 지나간 기각을 다시 적용하지 않도록 여기 명시해 둔다.
+- 기각 두 건의 **상태가 서로 다르다**는 점이 중요하다. LXSEQ-001이 기각한 것은 ① 세션 업로드 포트(`upload_vectorworks_export`) 재사용 — 업로드 즉시 Vectorworks 안내 분석이 도는 까닭(`session.py:9781-9784`)이며 이 기각은 **여전히 유효**하다. ② "신규 업로드 엔드포인트는 UI 변경을 수반한다" — 이 기각은 **LXSEQ-001이 신규 툴 밖 0-diff를 유지하려던 사정 때문**이었고, 카드 t10은 그 UI 변경 자체가 목적이므로 **그 사정은 본 SPEC에 미치지 않는다**. 지나간 기각을 다시 적용하지 않도록 여기 명시해 둔다.
 
 ---
 
@@ -103,7 +103,7 @@
 | 프레임 종류 허용 목록 | `server/web/messages.py:81` · `:83` | 신규 종류 1행 |
 | 프레임 검증기 | `server/web/messages.py:194`(vectorworks) · `:227`(layout image) | 신규 검증 1블록(비어 있지 않음 · 8 MiB 이하 · base64 유효) |
 | 소켓 분기 | `server/web/app.py:494` · `:505` | 신규 분기 1블록 |
-| 세션 핸들러 | `server/web/session.py:9655` · `:9660` | 신규 핸들러(판별 → 저장 → 넷 보고) |
+| 세션 핸들러 | `server/web/session.py:9781` · `:9660` | 신규 핸들러(판별 → 저장 → 넷 보고) |
 
 기존 두 검증기는 각각 Vectorworks 확장자 목록과 이미지 MIME에 묶여 있다 — 재사용하면 LX-SEQ CSV가 남의 규칙으로 검사받는다. 그래서 신규 프레임 1종이다(plan.md 결정 H).
 

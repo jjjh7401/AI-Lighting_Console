@@ -1,0 +1,8 @@
+ ✓ src/components/beatgrid/LRSplitGlanceRow.test.tsx (2 tests) 4ms
+ ✓ src/components/BeatGridApplyFailure.test.tsx (5 tests) 11ms
+
+ Test Files  59 passed (59)
+      Tests  1262 passed (1262)
+   Start at  15:30:59
+   Duration  1.36s (transform 2.23s, setup 0ms, collect 7.54s, tests 1.19s, environment 6ms, prepare 3.48s)
+

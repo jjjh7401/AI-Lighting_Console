@@ -1,10 +1,33 @@
 # SPEC-COPILOT-FILEARG-001 — 인수 기준 (acceptance)
 
-문서 상태: **in-progress** (updated 2026-08-24 — M1 실행됨) · 직전 개정 (v1.0.0, 2026-08-24 — M1 구현 반영: AC-021 ③ `^상태: 발동함` 앵커 · AC-009 ②③을 B로 이관하고 ①④ 번호 유지) · **Tier L · 통과 임계 0.85** · AC **20건**(전부 오프라인 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
+문서 상태: **in-progress** (updated 2026-10-13 — M1 실행됨) · 최신 개정 (v1.1.0, 2026-10-13 — 카드 t629: 판정 기준 넷을 M1 자기 트리 `3ffda31b`에 재고정하고 좌표 셋을 정정. 아래 「개정 기록」) · 직전 개정 (v1.0.0, 2026-08-24 — M1 구현 반영: AC-021 ③ `^상태: 발동함` 앵커 · AC-009 ②③을 B로 이관하고 ①④ 번호 유지) · **Tier L · 통과 임계 0.85** · AC **20건**(전부 오프라인 · 그중 AC-021은 조건부). 본 문서는 spec.md의 요구를 관측 가능한 Given-When-Then 기준으로 전개한다. 요구(GEARS)는 spec.md가 소유하며 여기서 되풀이하지 않는다.
 
 > **참조 규약**: 정본(spec.md · 본 문서)은 줄번호로 인용하지 않고 안정 토큰만 쓴다. `파일:줄`은 코드·타 SPEC 아티팩트에만 쓴다.
 >
 > **검증 명령 규약**: 아래 명령은 워크트리 루트에서 실행한다. 테스트 파일이 아직 없는 시점에는 그 AC가 미충족이라는 뜻이며, "명령이 없어서 건너뜀"은 PASS가 아니다. **카드를 닫을 때 각 AC의 증거는 로컬 실행 출력이다**(spec.md §C) — 이 저장소의 `test.yml`은 **PR이 열려야** 돌므로 카드 안에서는 AC를 판정해 주지 않는다. PR을 연 뒤에는 CI가 독립 증거로 **더해지지만**, 로컬 출력을 **대체하지 않는다**.
+
+---
+
+## 개정 기록 (v1.1.0 · 2026-10-13 · 카드 t629)
+
+리드 결정 (a)에 따라 이 문서의 판정 기준 넷을 **이 카드의 M1 자기 트리(`3ffda31b`, 부모 `1c104f0f`)**에 다시 고정하고, 좌표 셋을 같은 트리에서 다시 쟀다. 사정은 이렇다. 몇몇 기준이 트리를 적지 않아 "지금 HEAD"로 읽히는데, M1 뒤에 다른 SPEC의 커밋이 같은 자리를 바꿨다. 레지스트리 행 단언은 `8d981c2e`(t66 · `group` 행을 더하며 `…exactly_two_filled_rows` 테스트를 소유권 검사로 바꾸고 `len(REGISTRY) == 2`를 `>= 2`로 낮췄다)가 처음 바꿨고, `7efbf413`(feat(SPEC-COPILOT-LXSEQ-003) · 프리셋 3종 행)과 `82bfa68f`(feat(t209) · `cue-ex` 행)가 행 목록을 일곱으로 늘렸다. 보존 트리는 `1c104f0f`부터 HEAD `19a52738`까지 148개 파일이 바뀌었는데, 이 카드가 아닌 다른 SPEC의 커밋이 섞인 값이다. 그래서 같은 명령이 HEAD에서는 이 카드의 M1 결과물과 무관한 값을 낸다. 재고정은 판정 기준이 가리키는 트리를 옮길 뿐이며, 요구(REQ)·AC의 번호와 개수(REQ 16 · AC 20)는 건드리지 않는다. 재측정은 M1 트리에서 직접 했고 명령과 출력은 증거 파일에 그대로 있다. 좌표는 같은 값을 인용하던 `spec.md` · `plan.md` · `research.md`도 함께 맞췄다.
+
+증거 파일은 모든 행에서 `reports/filearg-close/m1-tree-measure.txt`이다(행마다 해당 절을 적는다).
+
+| 항목 | 이전 기준 (요약) | 새 기준 | 사유 | 출처 커밋 | 검증 (M1 트리 3ffda31b) | 증거 파일 |
+|---|---|---|---|---|---|---|
+| AC-FILEARG-001 ④ | `.mvr` 판정이 `tools.py:2860-2861`에 실재(결정 줄 2861). 어느 트리인지 적혀 있지 않았다 | `tools.py:2861`로 줄을 고정하고 M1 자기 트리 기준임을 명시. 범위 `2860-2861`은 그 트리에서 여전히 정확해 본문에 병기. 검증 명령에 실행 트리를 적음 | 트리 없이 적힌 좌표라 HEAD에서는 같은 줄이 나오지 않는다 — HEAD에서는 소유자 줄이 `tools.py:4051`로 옮겨 가 있다(참고 관측이며 판정 기준이 아니다) | `3ffda31b`(측정 트리) · `1c104f0f`(착수 base) · `19a52738`(HEAD 관측) | `sed -n '2859,2862p' server/orchestrator/tools.py` → 2861에 `is_mvr = SCENE_ENTRY in archive.namelist()` · `grep -n "is_mvr = SCENE_ENTRY" server/orchestrator/tools.py` → `2861:` · `grep -c "mvr\|MVR" server/vwx/reader.py` → `0` · `ls server/vwx/mvr.py` → 존재 | `m1-tree-measure.txt` §「001 ④ · 022 ④」 · 「참고 — HEAD 19a52738 드리프트」 |
+| AC-FILEARG-006 ① | `-k "registry"`로 검증. 채워진 행이 정확히 둘(`patch` · `vectorworks`) | 속성은 그대로 — M1에서 정확히 둘(`["patch","vectorworks"]`)이며 M1 자기 트리 기준임을 명시. 선택자를 `-k "exactly_two or no_row_reserved"`로 교체. HEAD와의 괴리를 사실로 기록 | **선택자**: 파일 이름에 `registry`가 들어 있어 `-k "registry"`는 이 파일의 테스트 전부(M1 기준 89건)를 고른다 — ① 항을 가려내지 못한다(리드 확인이며, 본 개정에서 `-k "registry"`는 재실행하지 않았다). **괴리**: HEAD의 `test_sheets_registry.py`에는 `exactly_two` 테스트가 없다. `test_registry_rows_are_the_kinds_that_have_an_owner`가 행 일곱을 단언하고, `test_registry_has_no_row_reserved_for_a_later_spec`은 `len(REGISTRY) == 2`가 아니라 핸들러 실재와 `>= 2`를 잰다 | `3ffda31b`(측정 트리) · `8d981c2e`(행 셋 · `exactly_two` 테스트 교체 · `== 2` → `>= 2`) · `7efbf413`(행 여섯) · `82bfa68f`(행 일곱) | `uv run pytest server/tests/test_sheets_registry.py -q -p no:cacheprovider -k "exactly_two or no_row_reserved"` → `2 passed, 87 deselected in 0.07s` · `grep -n "^REGISTRY" -A2 server/sheets/registry.py` → `302:REGISTRY … = (PATCH_ROW, VECTORWORKS_ROW)` · `sed -n '185,187p' server/tests/test_sheets_registry.py` → `assert [row.kind for row in REGISTRY] == ["patch", "vectorworks"]` | `m1-tree-measure.txt` §「006 ① · 020 — 레지스트리 행 (M1)」 |
+| AC-FILEARG-020 | "착수 후 트리"에서 `server/sheets/`에 프리셋 4종 · `group` · `fx` · `cue-ex`의 서명 · 행 · 파서 · 핸들러가 없고, 등록 행이 둘뿐 | 기준 트리를 M1 자기 트리로 명시. 기준은 둘 — 등록 행이 정확히 둘, 그리고 `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/`가 빈 출력. 선택자는 `-k "exactly_two or no_row_reserved"` | HEAD에서는 프리셋 3종 · `cue-ex` 행이 `server/sheets/`에 들어와 있어(위 006 ① 괴리) 같은 grep이 출력을 낸다 — 읽기 전용으로 센 값은 6줄이다. 둘 다 이 카드의 M1 결과물과 무관하다 | `3ffda31b`(측정 트리) · `7efbf413`(프리셋 3종) · `82bfa68f`(`cue-ex`) | `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` → 출력 없음, rc=1(일치 0건) · pytest → `2 passed, 87 deselected`(006 ①과 같은 실행) | `m1-tree-measure.txt` §「006 ① · 020 — 레지스트리 행 (M1)」 |
+| AC-FILEARG-030 ① | `git diff --stat <착수 SHA>..HEAD -- <보존 트리 10개>`가 빈 출력 | `git diff --stat 3ffda31b^ 3ffda31b -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets`가 빈 출력(카드 자기 커밋만 본다). 이전 명령 원문은 HEAD 관측으로 보존(본문 030 아래 인용 블록) | 누적 `base..HEAD` diff는 다른 SPEC이 같은 트리를 건드린 뒤로 이 카드의 경계 보존을 가리지 못한다. HEAD 관측: `1c104f0f..19a52738`가 같은 트리에서 148개 파일을 바꾼다(타 SPEC 커밋 혼입) | `3ffda31b^`(= `1c104f0f`) · `3ffda31b` · `19a52738`(HEAD 관측) | 위 명령 → 출력 없음(보존 트리 변경 0건) · `git diff --name-only 3ffda31b^ 3ffda31b` → 9개(SPEC 아티팩트 6 · `server/sheets/__init__.py` · `server/sheets/registry.py` · `server/tests/test_sheets_registry.py`) | `m1-tree-measure.txt` §「030 ① — 보존 트리 (M1 자기 커밋)」 · 「참고 — HEAD 19a52738 드리프트」 |
+| AC-FILEARG-022 ④ (좌표) | `server/orchestrator/tools.py:2860-2861` | `server/orchestrator/tools.py:2861`(M1 트리 `3ffda31b`). `server/vwx/mvr.py`는 그대로 | 결정 줄 하나로 고정해 001 ④와 같은 줄을 가리키게 한다 | `3ffda31b` | `grep -n "is_mvr = SCENE_ENTRY" server/orchestrator/tools.py` → `2861:` · `grep -c "mvr\|MVR" server/vwx/reader.py` → `0` · `ls server/vwx/mvr.py` → 존재 | `m1-tree-measure.txt` §「001 ④ · 022 ④」 |
+| AC-FILEARG-006 ④ (좌표) | `ChatSession`(`server/web/session.py:3405`) | `ChatSession`(`server/web/session.py:3481`) | M1 트리에서 `class ChatSession`은 3481이다. 측정 파일은 `session.py`가 착수 base `1c104f0f`와 같다고 기록한다 | `3ffda31b`(측정 트리) · `1c104f0f`(착수 base) | `grep -n "^class ChatSession\|def upload_vectorworks_export" server/web/session.py` → `3481:class ChatSession:` · 읽기 전용 교차 확인 `git show 3ffda31b:server/web/session.py \| grep -n "^class ChatSession"` → `3481` | `m1-tree-measure.txt` §「006 ④ · 023 — 좌표 정정 근거」 |
+| AC-FILEARG-023 표 (좌표) | `ChatSession`(`server/web/session.py:3405`) · `upload_vectorworks_export`(`:9655`) | `ChatSession`(`server/web/session.py:3481`) · `upload_vectorworks_export`(`:9781`) | 같은 사유. M1 트리에서 메서드는 9781에서 시작해 9784(`return self.run_instruction(…)`)에서 끝난다 | `3ffda31b`(측정 트리) · `1c104f0f`(착수 base) | `grep -n …` → `9781:    def upload_vectorworks_export(self, file_name: str, content_base64: str) -> dict:` · 읽기 전용 교차 확인 `git show 3ffda31b:server/web/session.py \| sed -n '9781,9818p'` → 9781 `def`, 9784 `return` | `m1-tree-measure.txt` §「006 ④ · 023 — 좌표 정정 근거」 |
+| 같은 좌표를 인용하던 타 문서 (전수 훑기 파생) | `spec.md` §A 사전 확정 사실 2 · §H 참조 표 · `plan.md` §A.1 결정 H 행 · §D.1 `session.py:9655-9658` / `spec.md` §G.0 · `plan.md` §A.3 결정 M 행 `ChatSession`(`session.py:3405`) · `:9655` / `research.md` §2.2 · §3.3 `session.py:9655-9658` · §5 `session.py:9655` | `9655-9658` → `9781-9784` · `3405` → `3481` · `:9655` → `:9781` (아홉 곳) | 본문이 같은 위치를 인용하므로 한 곳만 고치면 나머지가 조용히 남는다(§D 계수 규약의 [HARD]). 훑기 패턴 `grep -rn "3405\|9655\|2860-2861" .moai/specs/SPEC-COPILOT-FILEARG-001/ --include="*.md"`, `progress.md` 제외 | `3ffda31b`(측정 트리) | 위 두 행과 같은 명령 | `m1-tree-measure.txt` §「006 ④ · 023 — 좌표 정정 근거」 |
+
+**바꾸지 않은 것.** `AC-FILEARG-021`은 조건부 N/A 그대로다(이 개정은 발동 여부를 다시 판정하지 않는다). `AC-FILEARG-022` ①의 뮤테이션은 F3에 따라 이연된 채다. 그 밖의 AC · REQ 문구, 뮤테이션 원장, 통과 임계 0.85는 그대로다.
+
+**판정.** 이 개정은 PASS/FAIL 판정을 본문에 기록하지 않는다. 위 표의 "검증"은 재고정한 기준을 M1 트리에서 쟀을 때 관측된 출력이며, 각 AC의 판정과 증거 표는 `progress.md`가 소유한다.
 
 ---
 
@@ -91,11 +114,11 @@
 ① `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`(정규 9열) · `_normalize_header` · `_resolve_header_map`가 실재하고, 정규 열 밖의 열을 관용한다(§F 속성 A의 전제).
 ② `server/vwx/reader.py:158 _best_header_candidate`와 `:43 _MIN_HEADER_ALIAS_MATCHES = 2`가 실재한다.
 ③ `server/vwx/reader.py:360`의 `PK` 매직 분기가 실재하고, `grep -c "mvr\|MVR" server/vwx/reader.py`가 **0**이다.
-④ `.mvr` 판정이 `server/orchestrator/tools.py:2860-2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)에 실재한다 — **결정 줄은 2861**이다.
+④ `.mvr` 판정이 `server/orchestrator/tools.py:2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)에 실재한다 — **M1 자기 트리(`3ffda31b`) 기준이며, 결정 줄은 2861**이다. 이전 인용 범위 `2860-2861`(2860은 `with zipfile.ZipFile(...) as archive:`)도 그 트리에서 여전히 정확하다.
 ⑤ `server/tests/fixtures/vwx/` 12개 항목과 `server/tests/fixtures/lxseq/` 패치 CSV가 실재한다.
 ⑥ `progress.md`의 "M0 — Kickoff 결정 기록"에 결정 **I · J · K · L**의 답이 적혀 있고, 그 표에 `미정`이 **남아 있지 않다**(남아 있으면 **명시적 FAIL** — 건너뛰기 아님).
 
-**검증**: `grep -n "_best_header_candidate\|_MIN_HEADER_ALIAS_MATCHES" server/vwx/reader.py` · `grep -c "mvr\|MVR" server/vwx/reader.py`(**0**일 것) · `sed -n '2859,2862p' server/orchestrator/tools.py`(2861에 `is_mvr` 줄이 보일 것) · `grep -n "Kickoff 결정 기록" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` · `grep -c "미정" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md`가 Kickoff 표에 대해 **0**일 것.
+**검증**: `grep -n "_best_header_candidate\|_MIN_HEADER_ALIAS_MATCHES" server/vwx/reader.py` · `grep -c "mvr\|MVR" server/vwx/reader.py`(**0**일 것) · `sed -n '2859,2862p' server/orchestrator/tools.py`(**M1 트리 `3ffda31b`에서 실행** — 2861에 `is_mvr` 줄이 보일 것) · `grep -n "Kickoff 결정 기록" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md` · `grep -c "미정" .moai/specs/SPEC-COPILOT-FILEARG-001/progress.md`가 Kickoff 표에 대해 **0**일 것.
 
 
 ### AC-FILEARG-002 — 포함 검사 술어 (REQ-FILEARG-001 · REQ-FILEARG-005 별 구간)
@@ -124,9 +147,9 @@
 
 ### AC-FILEARG-006 — 레지스트리 표 (REQ-FILEARG-007 · REQ-FILEARG-008)
 
-**Given** 레지스트리, **When** 표를 읽으면, **Then** ① 채워진 행이 **정확히 둘**(`patch` · `vectorworks`)이고 그 밖의 종류 행은 **없다**(결정 I) · ② 각 행이 드는 것은 열 목록이 아니라 **판별 술어**다(결정 K) — `patch`는 **열 집합 술어**이고 그 정본은 `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`를 **참조**하며 사본이 아니다(참조 동일성 단언) · ③ `vectorworks`는 **위임 술어**이며 `server/vwx/reader.py`의 판정을 **호출**한다 — 판정 논리를 이 모듈에 옮겨 적지 않았고(사본 0건), `columns.py`를 서명 정본으로 삼지 않는다(v0.2.0의 오귀속 교정) · ④ 두 행의 **핸들러가 자기 태그가 지정하는 레지스트리에서 해소된다** — `patch`는 `(tool, import_lxseq_patch)`이므로 `TOOL_NAMES`에서, `vectorworks`는 `(session_method, upload_vectorworks_export)`이므로 `ChatSession`(`server/web/session.py:3405`)의 속성으로 확인한다(결정 M · `spec.md` §G.0; 상세 판정은 `AC-FILEARG-023`) · ⑤ 표에 없는 종류 이름은 판별에서 `unknown_sheet_kind`로 떨어지고 통과하는 경로가 없다.
+**Given** 레지스트리, **When** 표를 읽으면, **Then** ① 채워진 행이 **정확히 둘**(`["patch","vectorworks"]`)이고 그 밖의 종류 행은 **없다**(결정 I) — **M1 자기 트리(`3ffda31b`) 기준이다**. HEAD에서는 이 단언이 소유권 검사로 바뀌어 있다(`8d981c2e` · `7efbf413` · `82bfa68f`, 아래 「개정 기록」) · ② 각 행이 드는 것은 열 목록이 아니라 **판별 술어**다(결정 K) — `patch`는 **열 집합 술어**이고 그 정본은 `server/lxseq/parser.py`의 `CANONICAL_COLUMNS`를 **참조**하며 사본이 아니다(참조 동일성 단언) · ③ `vectorworks`는 **위임 술어**이며 `server/vwx/reader.py`의 판정을 **호출**한다 — 판정 논리를 이 모듈에 옮겨 적지 않았고(사본 0건), `columns.py`를 서명 정본으로 삼지 않는다(v0.2.0의 오귀속 교정) · ④ 두 행의 **핸들러가 자기 태그가 지정하는 레지스트리에서 해소된다** — `patch`는 `(tool, import_lxseq_patch)`이므로 `TOOL_NAMES`에서, `vectorworks`는 `(session_method, upload_vectorworks_export)`이므로 `ChatSession`(`server/web/session.py:3481`)의 속성으로 확인한다(결정 M · `spec.md` §G.0; 상세 판정은 `AC-FILEARG-023`) · ⑤ 표에 없는 종류 이름은 판별에서 `unknown_sheet_kind`로 떨어지고 통과하는 경로가 없다.
 
-**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`
+**검증**: `uv run pytest server/tests/test_sheets_registry.py -q -p no:cacheprovider -k "exactly_two or no_row_reserved"` — **M1 트리 `3ffda31b`에서 실행**(M1 측정: `2 passed, 87 deselected`). 이전 선택자 `-k "registry"`는 파일 이름에 `registry`가 들어 있어 이 파일의 테스트 전부(M1 기준 89건)를 골랐으므로 ① 항을 가려내지 못했다.
 
 ### AC-FILEARG-009 — 판별은 파싱하지 않는다 · **순서** 단언 (REQ-FILEARG-005 · 분할 A 몫)
 
@@ -167,9 +190,9 @@
 
 ### AC-FILEARG-020 — 레지스트리는 이 카드에서 늘지 않는다 (REQ-FILEARG-017)
 
-**Given** 착수 후 트리, **When** `server/sheets/`를 훑으면, **Then** 프리셋 4종·`group`·`fx`·`cue-ex`의 **서명도 행도 파서도 핸들러도 없다**. 등록 행은 `patch`와 `vectorworks` 둘뿐이다.
+**Given** 착수 후 트리 — **이 카드의 M1 자기 트리(`3ffda31b`)**, **When** `server/sheets/`를 훑으면, **Then** 프리셋 4종·`group`·`fx`·`cue-ex`의 **서명도 행도 파서도 핸들러도 없다**. 등록 행은 `patch`와 `vectorworks` 둘뿐이다.
 
-**검증**: `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` — **빈 출력**이어야 한다(합성 픽스처는 `server/tests/`에 있으므로 이 grep에 걸리지 않는다). 아울러 `uv run pytest server/tests/test_sheets_registry.py -q -k "registry"`의 ① 항(행 정확히 둘)이 통과할 것.
+**검증**(M1 트리 `3ffda31b`에서 실행): `grep -rn "preset-dim\|preset-col\|preset-bm\|preset-pos\|cue-ex" server/sheets/` — **빈 출력**이어야 한다(M1 측정: 출력 없음, rc=1; 합성 픽스처는 `server/tests/`에 있으므로 이 grep에 걸리지 않는다). 아울러 `uv run pytest server/tests/test_sheets_registry.py -q -p no:cacheprovider -k "exactly_two or no_row_reserved"`가 통과할 것(M1 측정: `2 passed, 87 deselected`) — ① 항(행 정확히 둘)을 가려낸다. 이전 선택자 `-k "registry"`는 파일의 테스트 전부를 고르므로 쓰지 않는다.
 
 **grep의 한계를 기록한다(감사 F4).** 위 grep 패턴은 프리셋 4종과 `cue-ex`만 훑고 **`group`과 `fx`는 빠져 있다** — Then 절이 그 둘을 포함하는데 검증 명령이 그것을 재지 않는다. 보완하는 것은 같은 AC의 **행 수 단언**(등록 행이 정확히 둘)이다: `group`이나 `fx` 행이 생기면 행 수가 셋이 되어 그 단언이 죽는다. 그러므로 이 AC는 여전히 비공허하지만, **grep 하나만으로 통과를 주장하지 않는다** — 두 검사가 함께여야 Then 절 전체를 덮는다.
 
@@ -203,7 +226,7 @@ grep -n "^상태: 발동함" .moai/specs/SPEC-COPILOT-FILEARG-001/plan.md
 
 이 AC가 없으면 SPEC은 `.mvr`·`.xlsx`의 처분에 대해 **한 줄도 말하지 않는 상태**로 남는다. 그것이 B1이 들어온 경로였다.
 
-**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c` 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다 · ④ **`.mvr` 판정의 소유자를 정확히 부른다** — `server/vwx/reader.py`가 아니라 `server/orchestrator/tools.py:2860-2861`(`is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`다(`grep -c "mvr\|MVR" server/vwx/reader.py` → **0**) · ⑤ `openpyxl` **두 경로 모두** 닫혀 있다 — 설치 시 `KeyError: '[Content_Types].xml'`도, 미설치 시 `unapproved_dependency` 안내도 나오지 않는다(후자가 더 나쁘다: `.mvr`은 xlsx가 아니므로 설치해도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다).
+**Given** 실물 `server/tests/fixtures/vwx/demoshow_grandma3.mvr`(ZIP 아카이브, **315,155 바이트** — `wc -c` 실측), **When** 판별기에 그 바이트를 넣으면, **Then** ① 결과가 `unknown_sheet_kind`가 **아니다** · ② `vectorworks` 단일 일치이며 대상이 기존 세션 업로드 경로로 해소된다 · ③ 판별 과정에서 그 바이트를 CSV 텍스트로 해석하려는 시도가 없다 · ④ **`.mvr` 판정의 소유자를 정확히 부른다** — `server/vwx/reader.py`가 아니라 `server/orchestrator/tools.py:2861`(M1 트리 `3ffda31b`; `is_mvr = SCENE_ENTRY in archive.namelist()`)와 `server/vwx/mvr.py`다(`grep -c "mvr\|MVR" server/vwx/reader.py` → **0**) · ⑤ `openpyxl` **두 경로 모두** 닫혀 있다 — 설치 시 `KeyError: '[Content_Types].xml'`도, 미설치 시 `unapproved_dependency` 안내도 나오지 않는다(후자가 더 나쁘다: `.mvr`은 xlsx가 아니므로 설치해도 고쳐지지 않는데 운영자를 쓸모없는 곳으로 보낸다).
 
 **v0.4.0 개정 — 헤더 없는 `.txt`는 여기서 빠진다.** v0.3.0의 ④는 `vectorworks_export_instrument_data_no_header.txt`도 `vectorworks`에 도달한다고 단언했다. 결정 L 이후 그 파일은 **`unknown_sheet_kind`가 정답이다**(신원 술어 `_best_header_candidate` → `-1`). 그것은 결함이 아니라 **의도된 결과**이며, 잃는 문구는 `AC-FILEARG-029`가 조건부 힌트로 보존한다.
 
@@ -221,7 +244,7 @@ grep -n "^상태: 발동함" .moai/specs/SPEC-COPILOT-FILEARG-001/plan.md
 | `kind_tag` | 확인 대상 | 오늘 등록된 행 |
 |---|---|---|
 | `tool` | `TOOL_NAMES`에 `name`이 있다 | `patch` → `import_lxseq_patch` |
-| `session_method` | `ChatSession`(`server/web/session.py:3405`)에 `name` 속성이 있고 호출 가능하다 | `vectorworks` → `upload_vectorworks_export`(`:9655`) |
+| `session_method` | `ChatSession`(`server/web/session.py:3481`)에 `name` 속성이 있고 호출 가능하다 | `vectorworks` → `upload_vectorworks_export`(`:9781`) |
 
 **Given** 주입한 표에 ① 태그 `tool`인데 `TOOL_NAMES`에 없는 행 · ② 태그 `session_method`인데 `ChatSession`에 그런 속성이 없는 행 · ③ **태그를 선언하지 않은** 행이 각각 있을 때, **When** 아무 바이트나 판별하면, **Then** ⓐ 세 행 모두 **판별 시점에** 후보에서 제외된다 — 일치 계수에 들어가지 않는다 · ⓑ 제외 사실이 **오류로 보고**된다(조용한 무시가 아니다) · ⓒ 그 오류가 판별 결과에 실려 올라와, 나중에 실행 시점에 발견되기 **전에** 드러난다 · ⓓ 정상 행들의 판별은 그 오류와 무관하게 그대로 진행된다 · ⓔ **오늘 등록된 두 행은 어느 것도 제외되지 않는다**(`vectorworks`가 제외되면 결정 I가 무효라는 뜻이므로, 이것이 이 AC의 회귀 방지선이다).
 
@@ -299,7 +322,7 @@ bread	3	2500
 
 **Given** M1 완료 후의 트리, **When** 보존 대상 변경을 기계로 확인하면, **Then**
 
-**① 직접 diff — 이것이 ②의 트리 전부에 대한 유일한 검사다.** `server/sheets/**`와 `server/tests/test_sheets_registry.py` **밖의 파일 변경이 0건**이다(아래 검증 3단계).
+**① 직접 diff — 이것이 ②의 트리 전부에 대한 유일한 검사다.** `server/sheets/**`와 `server/tests/test_sheets_registry.py` **밖의 파일 변경이 0건**이다(아래 검증 3단계). 비교 대상은 **이 카드의 M1 자기 커밋**(`3ffda31b^` → `3ffda31b`)이며, 착수 SHA부터 HEAD까지의 누적 diff가 아니다.
 
 **② 대상 트리.** `server/lxseq/**` · `server/vwx/**` · `server/orchestrator/**` · `server/web/**` · `ui/**` · `console/lua/**` · `server/safety/**` · `server/prechk/**` · `server/paperwork/**` · `server/rulebook/assets/**` 가 한 줄도 바뀌지 않았다(A는 읽기만 한다).
 
@@ -328,10 +351,12 @@ console/lua/            server/rulebook/assets/v2.4.2/
 ```
 1) git add <A가 만든 파일들> && git commit          # 반드시 먼저
 2) uv run pytest server/tests/test_overlap_preserve.py -q     # ③ (좁은 범위)
-3) git diff --stat <착수 SHA>..HEAD -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets     # ① (②의 전 트리)
+3) git diff --stat 3ffda31b^ 3ffda31b -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets     # ① (②의 전 트리) — 카드 자기 커밋만 본다
 ```
 
-3)이 **빈 출력**이고 2)가 초록일 것. **3)이 본 검사이고 2)는 보조다** — 위 [HARD] 주석대로 2)는 ②의 대부분을 보지 못한다. 커밋 전에 잰 결과는 증거로 인정하지 않으며, `progress.md`에는 **커밋 SHA와 함께** 적는다.
+3)이 **빈 출력**이고 2)가 초록일 것(M1 측정: 3)은 출력 없음). **3)이 본 검사이고 2)는 보조다** — 위 [HARD] 주석대로 2)는 ②의 대부분을 보지 못한다. 커밋 전에 잰 결과는 증거로 인정하지 않으며, `progress.md`에는 **커밋 SHA와 함께** 적는다.
+
+> **[HEAD 관측 기록 — 판정 기준이 아니다]** 이전 3)의 명령은 `git diff --stat <착수 SHA>..HEAD -- server/lxseq server/vwx server/orchestrator server/web ui console/lua server/safety server/prechk server/paperwork server/rulebook/assets`였다. 착수 SHA `1c104f0f`부터 HEAD `19a52738`까지로 같은 명령을 돌리면 이 트리에서 **148개 파일**이 바뀐 것으로 나온다 — 이 카드가 아니라 **다른 SPEC의 커밋**이 섞여 들어온 값이다. 누적 `base..HEAD` diff는 그 뒤 다른 SPEC이 같은 트리를 건드리는 순간부터 이 카드의 경계 보존을 가리지 못하므로, 판정 기준을 카드 자기 커밋으로 옮겼다.
 
 **뮤테이션 — 대상은 `server/web/preview.py` 하나로 지정한다.**
 
