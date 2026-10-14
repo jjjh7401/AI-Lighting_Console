@@ -140,6 +140,7 @@ def credential_source_marker_names() -> tuple[str, ...]:
     """Distinct source-marker names of the ``credential`` invariant."""
     return tuple(dict.fromkeys(marker for marker, _ in _CREDENTIAL_SOURCE_MARKERS))
 
+
 # Crates denied ANYWHERE, including as a TRANSITIVE Cargo.lock entry: nothing in
 # a legitimate Tauri dependency graph pulls an OSC or raw-UDP crate, so a
 # transitive appearance is itself the finding.
