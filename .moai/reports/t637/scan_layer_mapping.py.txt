@@ -1,0 +1,33 @@
+import json
+import sys
+
+
+def walk(o):
+    stack = [o]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k == "layer_mapping" and isinstance(v, list) and len(v) > 0:
+                    yield len(v)
+                stack.append(v)
+        elif isinstance(x, list):
+            stack.extend(x)
+
+
+paths = [l.strip() for l in sys.stdin if l.strip()]
+hits = []
+ok = 0
+bad = 0
+for p in paths:
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        bad += 1
+        continue
+    ok += 1
+    for n in walk(d):
+        hits.append((p, n))
+print("json_parsed", ok, "unparsed", bad, "nonempty_layer_mapping", len(hits))
+for h in hits[:15]:
+    print(h)

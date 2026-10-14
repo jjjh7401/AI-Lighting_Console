@@ -1,0 +1,179 @@
+"""t637 - runbook UI capture against the recorded real song timeline (read-only, no console contact).
+
+Setup:
+- App: the runbook preview entry (ui/runbook-preview.html) served by vite dev from this worktree.
+  No UI source file is edited.
+- Data: the preview imports ui/src/components/runbookServerPayload.json. Only that request is
+  intercepted with Playwright and answered with the real timeline the server recorded
+  (.moai/reports/t474/rehearsal_0719c95d/events.json, events[3].timeline). If the interception
+  never fires the run stops, so test data cannot slip in silently.
+- Mockup: .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html via file URL.
+- Process: vite runs in its own process group and is terminated in finally on every path.
+  The wall-clock limit is a SIGALRM (macOS has no timeout command).
+"""
+
+import hashlib
+import json
+import os
+import pathlib
+import signal
+import socket
+import subprocess
+import time
+import urllib.request
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path("/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/WT-runbook-recapture")
+OUT = ROOT / ".moai/reports/t637"
+EVENTS = ROOT / ".moai/reports/t474/rehearsal_0719c95d/events.json"
+MOCKUP = ROOT / ".moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html"
+WIDTHS = [1450, 1700]
+HEIGHT = 900
+TOTAL_LIMIT_S = 280
+
+CHECKS = [
+    "Design Interview", "마디", "구간", "반영 대기", "쓰기 잠김", "[미확인]", "▤", "프리셋",
+    "빔", "이름표", "KEY", "FOH", "BACK", "BLIND", "STROBE", "HAZE", "★", "⚠", "페이드",
+    "딜레이", "프로브", "AI", "Ring In", "한눈에", "무대",
+]
+
+
+def free_port():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def load_payload():
+    events = json.loads(EVENTS.read_text(encoding="utf-8"))
+    t = events[3]["timeline"]
+    assert t["song_title"] == "Design Interview", t["song_title"]
+    assert t["lifecycle"] == "approved", t["lifecycle"]
+    assert len(t["sections"]) == 12, len(t["sections"])
+    assert len(t["layer_mapping"]) == 6, len(t["layer_mapping"])
+    body = json.dumps(t, ensure_ascii=False)
+    provenance = dict(
+        source_file=str(EVENTS.relative_to(ROOT)),
+        source_file_sha256=hashlib.sha256(EVENTS.read_bytes()).hexdigest(),
+        source_path="events[3].timeline",
+        payload_sha256=hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        song_title=t["song_title"],
+        lifecycle=t["lifecycle"],
+        bpm=t["bpm"],
+        sections=len(t["sections"]),
+        layer_mapping=[[m.get("role"), m.get("group_no"), m.get("group_name")] for m in t["layer_mapping"]],
+        section_palette_hex=[[s.get("palette_primary_hex"), s.get("palette_secondary_hex")] for s in t["sections"]],
+        section_position=[s.get("position") for s in t["sections"]],
+    )
+    return body, provenance
+
+
+def count_checks(page):
+    body = page.inner_text("body")
+    return dict((s, body.count(s)) for s in CHECKS)
+
+
+def wait_ready(port, proc, limit_s):
+    url = "http://127.0.0.1:" + str(port) + "/runbook-preview.html"
+    t0 = time.time()
+    while time.time() - t0 < limit_s:
+        if proc.poll() is not None:
+            raise RuntimeError("vite exited early: " + str(proc.returncode))
+        try:
+            with urllib.request.urlopen(url, timeout=3) as r:
+                if r.status == 200:
+                    return round(time.time() - t0, 2)
+        except Exception:
+            time.sleep(0.5)
+    raise RuntimeError("vite not ready in time")
+
+
+def stop(proc):
+    if proc is None or proc.poll() is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=10)
+
+
+def alarm(_signum, _frame):
+    raise TimeoutError("capture exceeded the time limit")
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    payload_body, provenance = load_payload()
+    (OUT / "payload-provenance.json").write_text(json.dumps(provenance, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    port = free_port()
+    base = "http://127.0.0.1:" + str(port)
+    run = dict(port=port, vite_ready_s=None, payload_hits=dict(), page_errors=[], console_errors=[], failed_requests=[], body_chars=dict())
+    dom = dict()
+    proc = None
+    signal.signal(signal.SIGALRM, alarm)
+    signal.alarm(TOTAL_LIMIT_S)
+    try:
+        proc = subprocess.Popen(
+            ["npm", "--prefix", "ui", "run", "dev", "--", "--port", str(port), "--strictPort", "--host", "127.0.0.1"],
+            cwd=str(ROOT), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+        )
+        run["vite_ready_s"] = wait_ready(port, proc, 120)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel="chrome", headless=True)
+            for w in WIDTHS:
+                ctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+                hits = dict(n=0)
+
+                def on_route(route):
+                    hits["n"] += 1
+                    route.fulfill(status=200, content_type="application/javascript; charset=utf-8", body="export default " + payload_body + ";")
+
+                ctx.route("**/runbookServerPayload.json*", on_route)
+                page = ctx.new_page()
+                page.set_default_timeout(60000)
+                page.on("pageerror", lambda e: run["page_errors"].append(str(e)[:300]))
+                page.on("console", lambda m: run["console_errors"].append(m.text[:300]) if m.type == "error" else None)
+                page.on("requestfailed", lambda r: run["failed_requests"].append(r.url[:200]))
+                page.goto(base + "/runbook-preview.html", wait_until="load")
+                page.wait_for_function("() => document.body && document.body.innerText.trim().length > 100", timeout=60000)
+                page.wait_for_timeout(1500)
+                if hits["n"] == 0:
+                    raise RuntimeError("payload interception did not fire - refusing to capture test data")
+                run["payload_hits"]["app-" + str(w)] = hits["n"]
+                run["body_chars"]["app-" + str(w)] = len(page.inner_text("body"))
+                page.screenshot(path=str(OUT / ("app-" + str(w) + ".png")), full_page=True)
+                dom["app-" + str(w)] = count_checks(page)
+                ctx.close()
+
+                mctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+                mpage = mctx.new_page()
+                mpage.set_default_timeout(60000)
+                mpage.goto(MOCKUP.as_uri(), wait_until="load")
+                mpage.wait_for_timeout(1000)
+                run["body_chars"]["mockup-" + str(w)] = len(mpage.inner_text("body"))
+                mpage.screenshot(path=str(OUT / ("mockup-" + str(w) + ".png")), full_page=True)
+                dom["mockup-" + str(w)] = count_checks(mpage)
+                mctx.close()
+            browser.close()
+    finally:
+        signal.alarm(0)
+        stop(proc)
+        run["port_free_after_stop"] = True
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1):
+                run["port_free_after_stop"] = False
+        except OSError:
+            pass
+        (OUT / "run-log.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        (OUT / "dom-checks.json").write_text(json.dumps(dom, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
