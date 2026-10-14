@@ -732,7 +732,7 @@ halfdouble`에 반영해야 한다(`lesson-a-subagent-may-land-in-its-own-worktr
 
 ```yaml
 sync_complete_at: 2026-10-14
-sync_commit_sha: pending-backfill-sync   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
+sync_commit_sha: 5b883e464678c86ad9e88d260fe77daa24f6a4c6   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
 sync_status: complete-without-sync-audit # sync-auditor 미실행 — 리드 순서: sync → PR → 병합 (FILEARG 선례)
 branch: worktree-WT-ldbarmap-close
 worktree: .claude/worktrees/WT-ldbarmap-close
