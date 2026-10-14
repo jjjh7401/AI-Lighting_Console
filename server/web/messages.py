@@ -134,6 +134,10 @@ CLIENT_MESSAGE_TYPES = (
     # BPM 확정(REQ-MUSICSYNC-015)을 **부르는 것**이 따로 필요하다. 이 타입이
     # 없으면 ``ChatSession.analyse_song_audio`` 는 시험만이 부르는 죽은 경로다.
     "song_audio_analyse",
+    # 카드 t647(SPEC-LDBARMAP-002 M3) — 첨부된 곡 오디오로 마디 지도를 만들어 달라는 요청.
+    # 위 ``song_audio_analyse`` 와 달리 BPM 확정 계약에 닿지 않는다. 오프셋은 사람이 귀로
+    # 정한 값을 프레임이 싣는다(필수, 기본값 없음). ``ui/src/protocol.ts`` 는 UI 카드의 몫이다.
+    "bar_map_analyse",
     "approval_decision",
     "review_decision",
     # [round24 후속] 모델이 되묻고 사용자가 답하는 통로. 승인·검토와 달리
@@ -757,6 +761,21 @@ def parse_client_message(raw: str) -> dict:
             "type": "song_audio_analyse",
             "sheet_bpm": sheet_bpm,
             **normalized_contrast,
+        }
+
+    if message_type == "bar_map_analyse":
+        # 카드 t647(SPEC-LDBARMAP-002 M3, AC-LDBARENTRY-002) — 첫 박 오프셋은 필수이고 기본값이
+        # 없다. 없거나 null 이거나 정수가 아니면 0 으로 채우지 않고 거절한다: 조용히 0 이 되면
+        # 첫 박을 잘못 짚은 마디 지도가 아무 신호 없이 저장된다. ``bool`` 을 먼저 거른다 — 위
+        # 분기와 같은 이유로 파이썬에서 ``bool`` 은 ``int`` 의 하위형이라 ``True`` 가 1 로 샌다.
+        # 범위(0~3)는 여기서 재지 않는다 — 박 수는 세션이 한 곳에서 판정한다.
+        first_beat_offset = message.get("first_beat_offset")
+        if not isinstance(first_beat_offset, int) or isinstance(first_beat_offset, bool):
+            raise ProtocolError("bar_map_analyse.first_beat_offset must be an integer")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "bar_map_analyse",
+            "first_beat_offset": first_beat_offset,
         }
 
     if message_type == "question_answer":
