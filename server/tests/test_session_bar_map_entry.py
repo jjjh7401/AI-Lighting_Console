@@ -348,9 +348,9 @@ def test_ac006_a_non_audio_bytes_report_the_detectors_own_reason(tmp_path: Path)
     bad_audio = b"not audio"
     expected = detect_beat_grid(bad_audio)
     assert isinstance(expected, BeatGridFailure)
-    # 디코더의 사유는 예외 문구를 끼운다 — ``Error opening <_io.BytesIO object at 0x…>`` 처럼 호출마다
-    # 달라지는 객체 주소가 든다. 같은 바이트열에 두 번 부른 사유가 글자까지 같다고 기대하지 않고,
-    # 예외 문구 앞의 고정된 부분(단계가 붙인 말)을 대조한다.
+    # 디코더의 사유는 예외 문구를 끼운다 — ``Error opening <_io.BytesIO object at 0x...>``
+    # 처럼 호출마다 달라지는 객체 주소가 든다. 같은 바이트열에 두 번 부른 사유가 글자까지
+    # 같다고 기대하지 않고, 예외 문구 앞의 고정된 부분(단계가 붙인 말)을 대조한다.
     stable_reason = expected.reason.split(": ", 1)[0]
     h = _make_harness(tmp_path, audio=bad_audio)
     before = _snapshot(h)
