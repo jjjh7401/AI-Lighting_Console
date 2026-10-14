@@ -158,9 +158,8 @@
 - `final_integrated.py`의 13게이트(G1~G13)를 `server/tests/
   test_concept_gates.py`(신규)로 고정, `pilot_baseline.json`(8곡) 기준
   회귀 기준선 — 오늘 실측치(PASS 98/n·a 6/FAIL 0)를 최소선으로 삼는다.
-  이 시험 데이터는 `.claude/worktrees/pilot-labeling/pilot_baseline.json`
-  을 그대로 참조하거나 `server/tests/fixtures/`로 복사한다(경로는 M6
-  착수 시 확정).
+  이 시험 데이터는 `server/tests/fixtures/pilot_baseline.json`
+  을 그대로 참조한다(경로는 M6 착수 시 확정).
 - `server/orchestrator/tools.py`·`server/web/session.py`가 신규 컨셉
   계층을 통해 단일 컴포저를 호출하도록 최종 배선(M0에서 미룬 실제 통합).
 - 파일: `server/design/song_cue_composer.py`(수정 — 컨셉 계층 결과
@@ -298,9 +297,8 @@ M7은 별도 마일스톤으로 쪼개지 않지만, 내부 착수 순서는 다
   자체를 삭제하는 것은 이 SPEC이 강제하지 않는다(다른 소비자가 있는지
   M3 착수 시 grep으로 확인 필요).
 - **D3 — 게이트 회귀 기준선의 데이터 파일 위치.** `pilot_baseline.json`은
-  현재 `.claude/worktrees/pilot-labeling/`(임시 워크트리)에 있다 — M6
-  착수 시 이 파일이 여전히 존재하는지, 저장소 정본 위치(`server/tests/
-  fixtures/` 등)로 옮겨야 하는지 확인이 필요하다.
+  현재 저장소 정본 `server/tests/fixtures/pilot_baseline.json`에 있다 — M6
+  착수 시 이 파일이 여전히 존재하는지 확인이 필요하다.
 - **D4 — `server/director/validate/mib.py`와 M5 신규 MIB 판정기의 중복
   가능성.** REQ-067은 명시적으로 "import하지 않는다"고 정했다(계약
   경계가 다르다 — `mib.py`는 director 교환 경로 전용). 이 결정이
