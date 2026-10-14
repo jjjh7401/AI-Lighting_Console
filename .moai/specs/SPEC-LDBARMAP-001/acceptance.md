@@ -6,13 +6,14 @@
 
 ## 개정 기록 (v0.1.8 · 2026-10-14 · 카드 t636)
 
-리드 결정에 따라 AC-LDBARMAP-009의 판정 기준을 **이 SPEC 자기 트리의 M4 머지 커밋 `364ab000`**(PR #585, 브랜치 `WT-barmap-store`)에 다시 고정했다. 사정은 이렇다. 원래 기준 「`grep -rln "downbeat" server`가 0건」은 plan-phase 시점(계획 base `88ecfb9d`)의 전제였고, 그 시점에는 참이었다. M2가 첫 생산자 `server/audio/bar_map.py`를 들여오면서 전제가 만료됐고, 지금의 main에서 같은 grep은 이 SPEC과 무관한 다른 SPEC(LDBEAT 박자 격자)의 파일까지 세어 값이 달라진다. 기준은 조용히 바꾸지 않았다 — 원문은 AC-LDBARMAP-009 본문에 인용 블록으로 남겼고, 개정 기준을 그 바로 아래에 적었다. REQ·AC의 번호와 개수(REQ 16 · AC 16)와 다른 AC 문구는 건드리지 않았다.
+이 절은 version 0.1.8의 정정 둘을 기록한다 — AC-LDBARMAP-009 판정 기준 재고정과 AC-LDBARMAP-008 단위 표기 정정이다. 008 정정은 값과 의미를 바꾸지 않는다(표의 둘째 행과 AC-LDBARMAP-008 블록 참조). 아래 설명은 009 재고정에 관한 것이다. 리드 결정에 따라 AC-LDBARMAP-009의 판정 기준을 **이 SPEC 자기 트리의 M4 머지 커밋 `364ab000`**(PR #585, 브랜치 `WT-barmap-store`)에 다시 고정했다. 사정은 이렇다. 원래 기준 「`grep -rln "downbeat" server`가 0건」은 plan-phase 시점(계획 base `88ecfb9d`)의 전제였고, 그 시점에는 참이었다. M2가 첫 생산자 `server/audio/bar_map.py`를 들여오면서 전제가 만료됐고, 지금의 main에서 같은 grep은 이 SPEC과 무관한 다른 SPEC(LDBEAT 박자 격자)의 파일까지 세어 값이 달라진다. 기준은 조용히 바꾸지 않았다 — 원문은 AC-LDBARMAP-009 본문에 인용 블록으로 남겼고, 개정 기준을 그 바로 아래에 적었다. REQ·AC의 번호와 개수(REQ 16 · AC 16)와 그 밖의 AC 문구는 건드리지 않았다.
 
 | 항목 | 이전 기준 | 새 기준 | 사유 | 출처 커밋 | 검증 |
 |---|---|---|---|---|---|
 | AC-LDBARMAP-009 | `grep -rln "downbeat" server`의 출력이 0건 (트리를 적지 않아 「지금 트리」로 읽힌다) | PASS ⇔ ① `git grep -l downbeat 88ecfb9d -- server`가 출력 없음(계획 시점 전제가 그때 참이었음) **그리고** ② `git grep -l downbeat 364ab000 -- server`의 파일 집합 F의 모든 파일이 ③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server \| sort -u`의 파일 집합 G에 든다. 기대 F = `server/audio/bar_map.py` · `server/tests/test_audio_bar_map.py` · `server/tests/test_audio_bar_map_store.py` (②의 출력 앞에 붙는 `364ab000:` 접두는 떼고 비교한다) | 전제 「다운비트 생산자 0건」은 M2 이후 낡았다. 계획 base `88ecfb9d`에서는 참이고, 이 SPEC의 M2~M4가 첫 생산자를 들여왔다. 한편 LDBEAT 박자 격자 커밋(`b95a691a`부터)이 다른 SPEC의 파일 10개에 같은 토큰을 더해, origin/main `b023fc59`에서 같은 grep은 13개 파일(LDBARMAP 3 + LDBEAT 10)을 낸다. 「0건」은 어느 트리에서도 더는 판정할 수 없고, 「이 SPEC이 들여온 것만 센다」가 새 기준의 뜻이다 | `3ce577b8`(M2 · t530 · 첫 생산자 `bar_map.py`) · `502856c0` · `97e9aa2f`(M3 · t535) · `bea723bb`(M4 · t539) · `364ab000`(M4 머지 · 판정 트리) · `88ecfb9d`(계획 base) · `b95a691a`(LDBEAT 첫 추가) | ① `git grep -l downbeat 88ecfb9d -- server` → 출력 없음(rc=1) · ② `git grep -l downbeat 364ab000 -- server` → `364ab000:server/audio/bar_map.py` · `364ab000:server/tests/test_audio_bar_map.py` · `364ab000:server/tests/test_audio_bar_map_store.py` · ③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server \| sort -u` → `server/audio/bar_map.py` · `server/tests/test_audio_bar_map_store.py` · `server/tests/test_audio_bar_map.py` (2026-10-14 실행, 이 브랜치 `b023fc59`에서 위 트리 지정) |
+| AC-LDBARMAP-008 (단위 명시 감사) | §A 표 14·15행의 수치 칸 `±60`·`±1`에는 단위가 없고 단위는 옆 칸에 있다. AC-010 조건 1의 `상대오차 1e-9 이내`에는 허용 단위 목록(ms·%·마디·박·BPM)의 단위가 없다. | 수치 칸에 단위를 같이 적는다 — `±60 ms`, `±1 마디`, `1e-9(1e-7 %) 이내`. 값과 의미는 바뀌지 않는다(1e-9 상대오차 = 1e-7 %, 60 ms와 1 마디는 기존 단위 열과 같다). 단위 열은 그대로 둔다. AC-008이 말하는 「문턱값」의 범위 판정(α · w_mid · 개수 전제 제외)은 AC-008 블록 맨 위에 적었다 | AC 본문의 감사 절차(문턱값을 grep으로 뽑고, 허용 단위가 같은 문장이나 같은 표 칸에 있는지 확인)를 문면대로 적용하면 위 셋이 위반이다. 리드 결정 (가), 2026-10-14 | `9385f867`(§A 표 14·15행의 두 허용오차 수치 칸 도입 · plan-phase 최초 작성 · t527) · `0c3bdf0c`(AC-010 조건 1의 상대오차 문턱 도입 · M4 저장 키 확정 · t539) | 수정 뒤 감사(2026-10-14, 세 문서): 표 셀 감사 awk → 출력 1줄(`spec.md` REQ-LDBARMAP-003 셀의 후보 검출기 개수 전제 — 위 범위 판정 (iii)) · 단위 없는 문턱값 grep → 잔여 줄은 전부 REQ·AC 번호 인용, 날짜, α, w_mid, 개수 전제이며 허용오차·통과율로 읽히는 줄은 없음 · 부등호 grep → α 비교 한 줄과 코드 서명 한 줄. 출력 원문과 분류는 카드 t636 보고에 있다 |
 
-**바꾸지 않은 것.** AC-LDBARMAP-009 외의 모든 AC·REQ 문구, §A 상수, AC 번호와 개수는 그대로다. 이 개정은 PASS/FAIL 판정을 본문에 기록하지 않는다. 위 「검증」은 새 기준을 위 트리에서 쟀을 때 관측된 출력이며, 판정과 증거 표는 `progress.md`가 소유한다.
+**바꾸지 않은 것.** AC-LDBARMAP-009 · AC-LDBARMAP-008 외의 모든 AC·REQ 문구, §A 상수(위 표 둘째 행의 단위 병기 두 칸 제외), AC 번호와 개수는 그대로다. 이 개정은 PASS/FAIL 판정을 본문에 기록하지 않는다. 위 「검증」은 새 기준을 위 트리에서 쟀을 때 관측된 출력이며, 판정과 증거 표는 `progress.md`가 소유한다.
 
 ---
 
@@ -23,8 +24,8 @@
 | 정답 BPM | 112.35 | BPM | 지도 보고서 §한눈에보기 1번(확신 0.967) |
 | 박 간격 | 0.534 | 초/박 | 60 / 112.35 |
 | 마디 길이 | 2.136 | 초/마디 | 4박 × 0.534초 |
-| 다운비트/마디 경계 허용오차 | ±60 | ms | 1/8박(≈67ms)을 반올림해 보수적으로 채택 — REQ-LDBARMAP-004 |
-| 마디별 이벤트 허용오차 | ±1 | 마디 | 카드 지시("downbeat/bar-boundary hit rate within a stated tolerance window in ms/beats, per-bar event recall") |
+| 다운비트/마디 경계 허용오차 | ±60 ms | ms | 1/8박(≈67ms)을 반올림해 보수적으로 채택 — REQ-LDBARMAP-004 |
+| 마디별 이벤트 허용오차 | ±1 마디 | 마디 | 카드 지시("downbeat/bar-boundary hit rate within a stated tolerance window in ms/beats, per-bar event recall") |
 | 절반 BPM 함정 | 56.175 | BPM | 지도 보고서 §한눈에보기 1번 — 격자 정합 0.34(112.35 격자는 0.65). **각주(카드 t547, 재설계)**: 이 값(56.175 BPM) 자체는 사실로 남지만, "격자 정합 0.34라서 함정"이라는 설명은 고정 격자 비교(옛 REQ-LDBARMAP-006)의 설명이다 — 새 설계는 절반을 홀짝 부호검정(w_odd·p_two, 진단용·자동 채택 안 함)으로만 다룬다(spec.md REQ-LDBARMAP-006 근거 칸). |
 | 두 배 BPM 함정 | 224.69 | BPM | 지도 보고서 §한눈에보기 1번 — 실측 격자 정합 0.81, 8분음표 하이햇으로 추정(plan-audit D5: spec.md REQ-LDBARMAP-006 인용과 통일, 이론값 224.70이 아니라 보고서 실측값). **각주(카드 t547, 재설계)**: 224.69 BPM 자체는 LOVE ATTACK의 실측 두 배 값으로 사실이지만, "격자 정합 0.81이라서 함정"이라는 설명은 고정 격자 비교(옛 REQ-LDBARMAP-006)의 설명이다 — 그 비교는 BPM이 정확해질수록(t546 회귀 BPM) 오히려 더 높게 나와 10곡 중 3곡을 거짓 두 배로 뒤집었다(`.moai/reports/t547/probe_songs.txt`). 새 설계(아래 α·대칭점 행)에서는 LOVE ATTACK 전체곡이 p_mid=2.34e-38(<α)로 **keep**된다(AC-LDBARMAP-004c). |
 | 정답 마디 수 | 82 | 마디 | 지도 보고서 부록 A |
@@ -140,6 +141,8 @@
 
 ### AC-LDBARMAP-008 (REQ-LDBARMAP-007) — 단위 명시 감사
 
+**범위 판정(2026-10-14, 카드 t636).** 이 AC의 "문턱값"은 허용오차·통과율을 뜻한다. 다음 항목은 그 범위 밖이라 단위 판정 대상에서 뺀다 — (i) α 0.01: 유의수준이며 통계 검정의 관행 상수이고 판정 비율이 아니다. (ii) w_mid 0.5: 판정 대칭점이며 비율 문턱이지만 허용오차·통과율이 아니다. (iii) `≥ 1 줄`과 `N개 이상`: 개수 전제이며 단위가 줄·개라서 허용 단위 목록에 없다. 허용오차·통과율이 아니다. 판정 근거만 적고 이 항목들의 값과 문면은 바꾸지 않는다.
+
 **Given** `spec.md`·`plan.md`·`acceptance.md` 세 문서가 주어진 상태에서
 **When** 문서 안의 모든 문턱값(허용오차·통과율)을 grep으로 추출하면
 **Then** 발견된 모든 수치가 단위(ms, %, 마디, 박, BPM 중 하나)를 같은 문장 또는 같은 표 칸에 동반한다 — 단위 없는 "초" 단독 기준이 음악적 경계(다운비트·마디) 판정에 쓰이지 않는다.
@@ -167,7 +170,7 @@
 **When** 그 마디 지도를 `timeline["bar_map"]`에 쓰고 곧바로 읽으면
 **Then** 아래 여섯 조건이 모두(AND) PASS다:
 
-1. **왕복 동등성**: 읽은 값이 쓴 값과 필드 단위로 동일하다(부동소수 `bpm`은 상대오차 1e-9 이내, 그 외 필드는 완전 일치).
+1. **왕복 동등성**: 읽은 값이 쓴 값과 필드 단위로 동일하다(부동소수 `bpm`은 상대오차 1e-9(1e-7 %) 이내, 그 외 필드는 완전 일치).
 2. **영속화(구체화, plan-audit iteration 9 D4 교정)**: 같은 파일 경로로 `SongTimelineStore(path)`를 새로 생성해 `latest`를 읽으면, 쓰기 전 생성한 `SongTimelineStore` 인스턴스가 쓴 값과 같은 `timeline["bar_map"]`이 나온다(프로세스 재시작을 흉내 — 새 인스턴스가 디스크의 원자적 JSON을 다시 읽는다는 뜻이다). 그리고 `SongTimelineLibrary.save(name, timeline)` → `get(entry_id)`를 호출하면 저장한 타임라인과 같은 `timeline["bar_map"]` 값이 돌아온다.
 3. **되돌리기 1회**: 마디 지도 쓰기 전 `TimelineDraftHistory`에 1회 `record()`된 깊은 사본이 있고, 되돌리기(undo) 1회를 실행하면 타임라인이 쓰기 이전 상태로 정확히 복원된다 — 쓰기 이전에 `bar_map` 키가 없었던 경우는 되돌린 뒤 그 키가 다시 부재여야 한다(키가 빈 값으로 남지 않는다).
 4. **잘못된 페이로드 거부**: 스키마 밖 페이로드(예: `bars[]`의 `bar` 번호가 음수, 또는 `events[].start_beat`가 0이거나 그 마디 박자표 분자를 초과)를 쓰려고 하면 쓰기가 거부되고, 거부 전후로 `timeline["bar_map"]` 값과 `TimelineDraftHistory`의 되돌리기 깊이(기록 개수)가 둘 다 변하지 않는다(거부가 되돌리기 기록을 남기지 않는다).
