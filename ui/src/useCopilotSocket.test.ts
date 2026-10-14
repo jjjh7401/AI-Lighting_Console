@@ -10,7 +10,12 @@
 // directly rather than instantiating a real WebSocket + React render.
 import { afterEach, describe, expect, it } from "vitest";
 
-import { initialState, type ReviewRequestView, type UiState } from "./protocol";
+import {
+  clearOnDisconnect,
+  initialState,
+  type ReviewRequestView,
+  type UiState,
+} from "./protocol";
 import {
   awaitingOperatorAction,
   BASE_SUBPROTOCOL,
@@ -62,6 +67,22 @@ describe("reducer — disconnect clears stale pending cards", () => {
   it("is a no-op when nothing is pending", () => {
     const next = reducer(initialState, { kind: "disconnected" });
     expect(next).toEqual(initialState);
+  });
+
+  it("is the same single path as clearOnDisconnect — the suggestion card goes too (t652)", () => {
+    const state: UiState = {
+      ...stateWithPending(),
+      pendingBeatGridSuggestion: {
+        suggestion_id: "sug-1",
+        bar: 1,
+        target: "BACK",
+        changes: {},
+        rationale: "테스트용 제안",
+      },
+    };
+    const next = reducer(state, { kind: "disconnected" });
+    expect(next.pendingBeatGridSuggestion).toBeNull();
+    expect(next).toEqual(clearOnDisconnect(state));
   });
 });
 
