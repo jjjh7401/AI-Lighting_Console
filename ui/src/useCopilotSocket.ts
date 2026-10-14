@@ -41,7 +41,7 @@ import {
   buildSongAudioUploadEnd,
   buildHistoryRestore,
   CHAT_STORAGE_KEY,
-  clearPendingRequests,
+  clearOnDisconnect,
   initialState,
   parseServerEvent,
   parseStoredEntries,
@@ -62,7 +62,7 @@ export type Action =
 // the state transition is a pure function like the rest of protocol.ts.
 export function reducer(state: UiState, action: Action): UiState {
   if (action.kind === "user") return addUserMessage(state, action.text);
-  if (action.kind === "disconnected") return clearPendingRequests(state);
+  if (action.kind === "disconnected") return clearOnDisconnect(state);
   if (action.kind === "clear_chat") return { ...state, entries: [] };
   const event = parseServerEvent(action.raw);
   return event === null ? state : reduceServerEvent(state, event);

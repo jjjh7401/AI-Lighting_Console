@@ -220,10 +220,10 @@ class TestLoadResponseParity:
 
 
 class TestPendingSuggestionAcrossReconnect:
-    """``_beat_grid_suggestions`` — 조건부 결함, 별도 카드.
+    """``_beat_grid_suggestions`` — 연결 수명 (감독 결정: 재연결하면 버린다, t652).
 
-    현재 빌드에서는 도달하지 않고, 제안 소스가 붙으면 결함이다. 감독 결정(연결 수명,
-    재연결하면 버린다)은 별도 카드로 뺐다. 여기서는 현재 동작을 고정만 한다.
+    보류 제안은 그것을 만든 연결의 세션 객체에만 산다. 재연결은 새 세션 객체라
+    이전 연결의 제안을 보지 못한다. 아래 시험들이 그 경계를 고정한다.
     """
 
     def test_default_source_creates_no_pending_suggestion_in_this_build(self, tmp_path):
@@ -261,8 +261,22 @@ class TestPendingSuggestionAcrossReconnect:
         )
         applied = session_b.beat_grid_suggestion_apply(suggestion_id)
 
-        # 특성 시험: 현재 동작을 고정한다. 서버는 재연결로 보류 목록을 잃고 「이미 적용됐거나
-        # 만료됐습니다」로 거절한다 — 원인이 틀린 사유다. 기대 동작(클라이언트가 재연결 때 카드를
-        # 지우는지)은 별도 카드에서 정한다. 그 카드에서 이 단언을 바꾼다.
+        # 감독 결정(t652): 재연결 뒤의 거절은 원인을 틀리게 말하면 안 된다. 이 저장소에
+        # 「만료」는 없고, 재연결로 제안을 잃은 것이 실제 원인일 수 있다.
         assert "찾을 수 없습니다" in _text(applied)
+        assert "만료" not in _text(applied)
+        assert "재연결" in _text(applied)
         assert any(event.get("type") == "beat_grid_suggestion_consumed" for event in sent_b)
+
+    def test_each_connection_owns_its_own_suggestion_store(self, tmp_path):
+        store = SongTimelineStore()
+        store.latest = _timeline_t563()
+        session_a, _console_a = t551._new_session(
+            tmp_path, store=store, suggestion_source=_suggest_source
+        )
+        session_b, _console_b = t551._new_session(
+            tmp_path, store=store, suggestion_source=_suggest_source
+        )
+        # 연결 수명의 고정: 재연결(새 세션 객체)이 이전 연결의 제안 저장소를 물려받으면
+        # 제안이 연결을 넘어 살아남는다. 저장소는 세션마다 따로여야 한다.
+        assert session_a._beat_grid_suggestions is not session_b._beat_grid_suggestions

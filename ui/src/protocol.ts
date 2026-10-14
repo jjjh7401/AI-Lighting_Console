@@ -2184,15 +2184,24 @@ export function buildHistoryRestore(entries: ChatEntry[]): string | null {
 }
 
 /**
- * Drop every pending approval/review card. The server fail-safe-denies all
- * of a session's own outstanding requests on that session's disconnect —
- * without this, a stale card sits in the UI forever after a reconnect,
- * misleading the operator into thinking a decision is still awaited when
- * the server already resolved it.
+ * Drop every pending card: approval and review requests, AND the pending
+ * beat-grid suggestion. The server fail-safe-denies all of a session's own
+ * outstanding requests on that session's disconnect — without this, a stale
+ * card sits in the UI forever after a reconnect, misleading the operator into
+ * thinking a decision is still awaited when the server already resolved it.
+ *
+ * The suggestion is connection-lifetime (director decision, t652): it lives in
+ * the server session that created it, and a reconnect opens a new session that
+ * cannot apply it. Keeping its card would invite a click that can only be
+ * refused, so it goes with the rest. Internal: the disconnect action reaches
+ * this only through `clearOnDisconnect`, the one disconnect path.
  */
-export function clearPendingRequests(state: UiState): UiState {
-  if (state.pendingApprovals.length === 0 && state.pendingReviews.length === 0) return state;
-  return { ...state, pendingApprovals: [], pendingReviews: [] };
+function clearPendingRequests(state: UiState): UiState {
+  const hasSuggestion = state.pendingBeatGridSuggestion !== null;
+  if (state.pendingApprovals.length === 0 && state.pendingReviews.length === 0 && !hasSuggestion) {
+    return state;
+  }
+  return { ...state, pendingApprovals: [], pendingReviews: [], pendingBeatGridSuggestion: null };
 }
 
 /**
