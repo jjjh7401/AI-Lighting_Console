@@ -1,0 +1,50 @@
+[director] OS credential store unavailable (DEPENDENCY_UNAVAILABLE: OS credential store 를 쓸 수 없어 pairing secret 을 저장하지 못했습니다.); no operator credential issued this boot -- director routes stay unauthenticated until a reissue succeeds.
+INFO:     Started server process [17415]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:56445 (Press CTRL+C to quit)
+@copilot:status online
+@copilot:ready http://127.0.0.1:56445
+INFO:     127.0.0.1:56467 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56468 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /assets/index-Bt-LQBE2.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56468 - "GET /assets/index-DQfxh51s.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56470 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56469 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /favicon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56476 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56476 - "GET /assets/index-DQfxh51s.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56477 - "GET /assets/index-Bt-LQBE2.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56479 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56477 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56468 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56477 - "GET /favicon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56476 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56477 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56477 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56497 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56497 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56503 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56504 - "GET /assets/index-Bt-LQBE2.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56503 - "GET /assets/index-DQfxh51s.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56505 - "WebSocket /ws" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56504 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56504 - "GET /favicon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56503 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56504 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56504 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56520 - "GET /api/timelines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56469 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17415]
