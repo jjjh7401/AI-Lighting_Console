@@ -95,6 +95,17 @@
   - plan.md M4 의 가칭 `-k real_song` 은 `test_ac016_real_song_entry_gate` 로 맞게 선택된다.
   - §D 1–8 검증, PR, 머지 판단, sync 는 이번 세션에서 하지 않았다. 다음 세션으로 넘긴다(`.moai/reports/t647/resume.md`).
 
+### §D 검증 1–8 (카드 t647, 재개 2회차)
+
+- 기준선: 5d48234f 에 origin/main c85560e8 을 합친 aa5dbf38(`git merge-tree` 충돌 0, main 쪽 변경 중 `server/web/session.py` 겹침). 원문은 `.moai/reports/t647/verify-d/`.
+- 1: 5파일 `218 passed, 1 warning in 26.88s` (exit 0). 직전 기준선은 217 이었다. main 에서 들어온 시험 1건이 차이다.
+- 2: 회귀 6파일에 main 이 새로 넣은 `test_beat_grid_field_life_t651.py` 를 더해 7파일 `487 passed, 1 warning in 17.23s` (exit 0).
+- 3: 변경 `.py` 9개 `ruff check` → `All checks passed!`, `ruff format --check` → `9 files already formatted`.
+- 4: 오디오 확장자 0건. 5: `console/` 0건.
+- 6: AC-016 은 다시 돌리지 않았다. M4 절의 로컬 출력(정밀도 5/6, 83.3 %, 분모 6)을 그대로 쓴다.
+- 7: 변경 코드 파일 9개가 plan.md §C 의 9개와 일치한다. 그 밖은 SPEC 문서·`resume.md`, 그리고 리드 결정으로 넣은 `server/web/PROTOCOL.md` 1행이다.
+- 8: 추가 줄 고유값 훑기 0건.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
