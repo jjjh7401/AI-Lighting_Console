@@ -30,7 +30,22 @@ from server.audio.bar_map import (
 )
 from server.audio.bar_map_store import BarMapStoreError, build_bar_map_payload
 
-__all__ = ["BarMapEntryFailure", "first_beat_offset_problem", "synthesize_bar_map"]
+__all__ = [
+    "KIND_FAILED",
+    "KIND_REJECTED",
+    "BarMapEntryFailure",
+    "first_beat_offset_problem",
+    "synthesize_bar_map",
+]
+
+#: 실패 종류 — 규칙이 요청이나 결과를 거절했다(첫 박 오프셋의 범위·형식 점검, 두 배 BPM
+#: 채택 거절 — 결정 E1). 사유는 설계된 문장이라 화면에 그대로 보여 줘도 된다.
+KIND_REJECTED = "rejected"
+
+#: 실패 종류 — 분석 단계가 실패했다(검출·마디 파생·특징 추출·분류·빌더, 예기치 않은 예외).
+#: 사유는 단계나 예외가 낸 원문이라 객체 주소 같은 내부 표현이 들 수 있어, 화면에 보여 주지
+#: 않고 로그에만 남긴다.
+KIND_FAILED = "failed"
 
 #: 합성이 다루는 박자표 — 분석기(``derive_bars``)가 4/4 전용이다(REQ-LDBARENTRY-015,
 #: 결정 D2). 박자표는 이 한 곳에서만 정한다.
@@ -51,9 +66,14 @@ class BarMapEntryFailure:
     단계별 실패 객체(``BeatGridFailure``·``BarMapFailure``·``BarFeaturesFailure``)와
     빌더의 ``BarMapStoreError`` 를 한 모양으로 모은다. 단계가 낸 사유 문자열은 바꾸지
     않고 그대로 싣는다 — 예외 문구를 끼운 사유도 정제하지 않는다(spec.md Gaps 7번, 미결).
+
+    ``reason`` 은 로그에 남기는 원문이다. 화면에 무엇을 보여 줄지는 부르는 쪽이 ``kind`` 로
+    정한다: :data:`KIND_REJECTED` 는 설계된 문장이라 그대로 보여 줘도 되고,
+    :data:`KIND_FAILED`(기본값)는 원문에 객체 주소 같은 내부 표현이 들 수 있어 보여 주지 않는다.
     """
 
     reason: str
+    kind: str = KIND_FAILED
 
 
 def first_beat_offset_problem(first_beat_offset: object) -> str | None:
@@ -111,7 +131,7 @@ def _synthesize(
     # 싼 점검은 오디오 디코드 전에 한다(REQ-LDBARENTRY-007).
     problem = first_beat_offset_problem(first_beat_offset)
     if problem is not None:
-        return BarMapEntryFailure(problem)
+        return BarMapEntryFailure(problem, kind=KIND_REJECTED)
 
     grid = detect(audio_bytes)
     if isinstance(grid, BeatGridFailure):
@@ -125,7 +145,8 @@ def _synthesize(
         return BarMapEntryFailure(
             f"박 격자 검출이 BPM 을 두 배로 보정했습니다(원시 {check.raw_bpm:.2f} → "
             f"보정 {grid.bpm:.2f}). 박 격자는 두 배로 다시 만들어지지 않아 마디 시작이 "
-            "어긋나므로 어느 BPM 으로도 마디 지도를 저장하지 않습니다."
+            "어긋나므로 어느 BPM 으로도 마디 지도를 저장하지 않습니다.",
+            kind=KIND_REJECTED,
         )
 
     bars = derive_bars(grid.beat_times_ms, first_beat_offset)

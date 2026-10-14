@@ -35,6 +35,8 @@ from server.audio.bar_map import (
     extract_bar_features,
 )
 from server.audio.bar_map_entry import (
+    KIND_FAILED,
+    KIND_REJECTED,
     BarMapEntryFailure,
     first_beat_offset_problem,
     synthesize_bar_map,
@@ -189,17 +191,31 @@ def _fake_grid(
 
 
 # ---------------------------------------------------------------------------
+# 실패 종류 — 거절(화면에 사유 문장을 그대로)과 분석 실패(원문은 로그에만)를 가른다.
+# ---------------------------------------------------------------------------
+
+
+def test_failure_kinds_are_distinct_and_the_default_is_an_analysis_failure() -> None:
+    """종류를 적지 않은 실패는 분석 실패다 — 원문을 화면에 내지 않는 쪽이 기본이다."""
+    assert KIND_REJECTED != KIND_FAILED
+    assert BarMapEntryFailure("사유").kind == KIND_FAILED
+    assert BarMapEntryFailure("사유", kind=KIND_REJECTED).kind == KIND_REJECTED
+
+
+# ---------------------------------------------------------------------------
 # REQ-LDBARENTRY-007 — 오프셋 점검은 오디오 디코드(박 격자 검출) 전에 한다.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("offset", [0, 3])
 def test_req007_a_valid_offset_does_reach_the_detector(offset: int) -> None:
-    """대조군 — 대역 주입이 실제로 이어져 있어야 아래 「불리지 않았다」가 공허하지 않다."""
+    """대조군 — 대역 주입이 실제로 이어져 있어야 아래 「불리지 않았다」가 공허하지 않다.
+
+    같은 입구에서 유효한 오프셋의 검출 실패는 분석 실패(아래 오프셋 거절과 종류가 다르다)."""
     detect = _Step(BeatGridFailure("검출 사유"))
     result = synthesize_bar_map(b"not decoded", offset, detect=detect)
     assert len(detect.calls) == 1
-    assert result == BarMapEntryFailure("검출 사유")
+    assert result == BarMapEntryFailure("검출 사유", kind=KIND_FAILED)
 
 
 @pytest.mark.parametrize("bad_offset", [-1, 4, 99])
@@ -208,6 +224,7 @@ def test_req007_out_of_range_offset_fails_before_decode(bad_offset: int) -> None
     result = synthesize_bar_map(b"not decoded", bad_offset, detect=detect)
     assert isinstance(result, BarMapEntryFailure), result
     assert "0~3" in result.reason
+    assert result.kind == KIND_REJECTED
     assert detect.calls == []
 
 
@@ -217,6 +234,7 @@ def test_req007_non_int_offset_fails_before_decode(bad_offset: object) -> None:
     result = synthesize_bar_map(b"not decoded", bad_offset, detect=detect)
     assert isinstance(result, BarMapEntryFailure), result
     assert "정수" in result.reason
+    assert result.kind == KIND_REJECTED
     assert detect.calls == []
 
 
@@ -369,6 +387,7 @@ def test_ac007_adopt_double_is_rejected_and_nothing_downstream_runs() -> None:
     result = synthesize_bar_map(b"unused", 0, detect=detect, extract=extract, classify=classify)
     assert isinstance(result, BarMapEntryFailure), result
     assert "두 배" in result.reason
+    assert result.kind == KIND_REJECTED  # 규칙이 결과를 거절했다 — 분석이 실패한 게 아니다(E1)
     assert len(detect.calls) == 1
     assert extract.calls == []
     assert classify.calls == []
@@ -397,7 +416,7 @@ def test_detector_failure_reason_passes_through_unchanged() -> None:
         extract=extract,
         classify=classify,
     )
-    assert result == BarMapEntryFailure("검출기 사유")
+    assert result == BarMapEntryFailure("검출기 사유", kind=KIND_FAILED)
     assert extract.calls == []
     assert classify.calls == []
 
@@ -409,7 +428,7 @@ def test_empty_beat_grid_reports_derive_bars_own_reason() -> None:
     result = synthesize_bar_map(
         b"unused", 0, detect=_Step(_fake_grid(beat_count=0)), extract=extract
     )
-    assert result == BarMapEntryFailure(expected.reason)
+    assert result == BarMapEntryFailure(expected.reason, kind=KIND_FAILED)
     assert extract.calls == []
 
 
@@ -422,7 +441,7 @@ def test_feature_failure_reason_passes_through_unchanged() -> None:
         extract=_Step(BarFeaturesFailure("특징 사유")),
         classify=classify,
     )
-    assert result == BarMapEntryFailure("특징 사유")
+    assert result == BarMapEntryFailure("특징 사유", kind=KIND_FAILED)
     assert classify.calls == []
 
 
@@ -434,7 +453,7 @@ def test_too_few_bars_reports_the_analyzers_own_reason() -> None:
     expected = extract_bar_features(b"unused", bars.bar_boundaries_ms)
     assert isinstance(expected, BarFeaturesFailure)
     result = synthesize_bar_map(b"unused", 0, detect=_Step(grid))
-    assert result == BarMapEntryFailure(expected.reason)
+    assert result == BarMapEntryFailure(expected.reason, kind=KIND_FAILED)
 
 
 def _mask_object_addresses(text: str) -> str:
@@ -454,10 +473,13 @@ def test_undecodable_audio_reports_the_detectors_own_reason(bad_audio: object) -
     assert isinstance(result, BarMapEntryFailure), result
     # 디코더 사유에 든 객체 주소(0x…)는 호출마다 달라져 주소만 가리고 대조한다.
     assert _mask_object_addresses(result.reason) == _mask_object_addresses(expected.reason)
+    assert result.kind == KIND_FAILED  # 원문 사유 — 화면에 낼 문장이 아니라 로그에 남길 원문
 
 
-def test_builder_rejection_reason_passes_through_unchanged() -> None:
-    """빌더가 스스로 검증해 낸 BarMapStoreError 문구를 그대로 싣는다(앞뒤로 덧붙이지 않는다)."""
+def test_builder_error_reason_passes_through_unchanged() -> None:
+    """빌더가 스스로 검증해 낸 BarMapStoreError 문구를 그대로 싣는다(앞뒤로 덧붙이지 않는다).
+
+    빌더의 오류도 분석 단계의 실패다 — 규칙이 요청을 거절한 게 아니라서 종류는 분석 실패다."""
     grid = _fake_grid()
     bad_events = [BarEvent("not_a_kind", 1, 1)]
     with pytest.raises(BarMapStoreError) as expected:
@@ -467,7 +489,7 @@ def test_builder_rejection_reason_passes_through_unchanged() -> None:
     result = synthesize_bar_map(
         b"unused", 0, detect=_Step(grid), extract=_FlatFeatures(), classify=_Step(bad_events)
     )
-    assert result == BarMapEntryFailure(str(expected.value))
+    assert result == BarMapEntryFailure(str(expected.value), kind=KIND_FAILED)
 
 
 @pytest.mark.parametrize("raising_step", ["detect", "extract", "classify"])
@@ -483,6 +505,7 @@ def test_no_exception_escapes_from_any_step(raising_step: str) -> None:
     assert isinstance(result, BarMapEntryFailure), result
     assert "RuntimeError" in result.reason
     assert "시험용 오류" in result.reason
+    assert result.kind == KIND_FAILED  # 예기치 않은 예외는 분석 실패다 — 문구는 로그로만 간다
 
 
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])

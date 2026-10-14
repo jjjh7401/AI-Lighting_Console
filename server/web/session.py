@@ -26,6 +26,7 @@ import copy
 import hashlib
 import inspect
 import json
+import logging
 import math
 import os
 import re
@@ -38,6 +39,7 @@ from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
 from server.audio.bar_map_entry import (
+    KIND_REJECTED,
     BarMapEntryFailure,
     first_beat_offset_problem,
     synthesize_bar_map,
@@ -388,6 +390,9 @@ from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_draft import TimelineDraftHistory
 from server.web.timeline_library import SongTimelineLibrary
 
+# 모듈 로그 — 화면에 보이면 안 되는 원문 사유(마디 지도 분석 실패)를 여기에 남긴다.
+_LOG = logging.getLogger(__name__)
+
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
 # by tests here AND by the gate's own tests — a wording change fails both.
 UNCONFIRMED_MARKER = "execution unconfirmed"
@@ -402,6 +407,15 @@ HISTORY_MAX_MESSAGES = 16
 # 결과(거절·분석 실패)의 ``chat_response`` 가 쓰는 고정 요약 라벨. 성공의 요약은 저장 관문이
 # 정한다("마디 지도 저장"). 사유 문장은 요약이 아니라 본문(``text``)에 싣는다.
 _BAR_MAP_ENTRY_REJECTED_SUMMARY = "마디 지도 분석 거절"
+
+# 마디 지도 분석 실패(``KIND_FAILED``)의 화면 문구 — 이 한 문장뿐이다. 실패 원문은 예외 문구를
+# 끼워 객체 주소 같은 내부 표현이 들 수 있어 화면에 싣지 않고 로그(``_LOG``)에만 남긴다.
+# 거절(``KIND_REJECTED``)은 설계된 사유 문장을 그대로 싣는다.
+_BAR_MAP_ENTRY_FAILED_TEXT = (
+    "마디 지도를 저장하지 않았습니다 — 곡 분석에 실패했습니다. "
+    "첨부한 오디오 파일을 확인한 뒤 다시 시도해 주세요. "
+    "콘솔에는 아무것도 쓰지 않았습니다."
+)
 
 # Korean labels for every per-command status the chat surface can show.
 STATUS_LABELS: dict[str, str] = {
@@ -9433,7 +9447,10 @@ class ChatSession:
         프레임 계약(REQ-LDBARENTRY-012): 첨부 오디오가 없으면 ``error`` 한 개만 보내고
         ``chat_response`` 는 보내지 않는다. 그 밖에는 ``chat_response`` 가 정확히 한 개 나간다.
         성공이면 저장 관문이 ``song_timeline`` 과 함께 이미 보냈으므로 여기서 더 보내지 않고,
-        거절·분석 실패는 고정 요약 라벨로 여기서 한 번 보낸다(사유 문장은 본문에 싣는다).
+        거절·분석 실패는 고정 요약 라벨로 여기서 한 번 보낸다. 본문은 종류에 따라 갈린다 —
+        거절(``KIND_REJECTED``)은 설계된 사유 문장을 싣고, 분석 실패는 일반 문구
+        (``_BAR_MAP_ENTRY_FAILED_TEXT``) 하나만 싣는다. 분석 실패의 원문 사유는 예외 문구를 끼워
+        객체 주소가 들 수 있어 로그(``_LOG``)에만 남긴다.
 
         콘솔과 ``SongTimelineLibrary`` 는 건드리지 않고 BPM 확정 상태는 읽지도 쓰지도 않는다
         (REQ-LDBARENTRY-011).
@@ -9461,6 +9478,10 @@ class ChatSession:
         def reject_with_reason(reason: str) -> None:
             reject(f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다.")
 
+        def fail_analysis(raw: str) -> None:
+            _LOG.warning("마디 지도 분석 실패 — 원문 사유: %s", raw)
+            reject(_BAR_MAP_ENTRY_FAILED_TEXT)
+
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if store is None or timeline is None:
@@ -9475,13 +9496,20 @@ class ChatSession:
 
         try:
             audio_bytes = base64.b64decode(audio.content_base64, validate=True)
-        except (binascii.Error, ValueError):
-            reject_with_reason("첨부된 곡 오디오를 읽지 못했습니다(base64 디코드 실패)")
+        except (binascii.Error, ValueError) as error:
+            fail_analysis(
+                "첨부된 곡 오디오를 읽지 못했습니다(base64 디코드 실패): "
+                f"{type(error).__name__}: {error}"
+            )
             return
 
         result = synthesize_bar_map(audio_bytes, first_beat_offset)
         if isinstance(result, BarMapEntryFailure):
-            reject_with_reason(result.reason)
+            if result.kind == KIND_REJECTED:
+                reject_with_reason(result.reason)
+            else:
+                # KIND_FAILED 와 알 수 없는 종류 모두 원문을 화면에 내지 않는 쪽으로 처리한다.
+                fail_analysis(result.reason)
             return
 
         # 분석이 도는 사이 초안이 다른 곡으로 바뀌었거나 사라졌으면 저장하지 않는다

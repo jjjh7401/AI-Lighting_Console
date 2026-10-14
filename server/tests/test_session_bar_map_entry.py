@@ -3,6 +3,11 @@
 ``ChatSession.analyse_bar_map`` 만 다룬다. 합성 단계(``synthesize_bar_map``) 자체는
 ``test_audio_bar_map_entry.py``, 와이어 프레임은 M3 의 몫이다.
 
+화면 문구 정책(카드 t647, 리드 결정): 분석 실패는 일반 문구 하나를 보여 주고 원문 사유는 로그에만
+남긴다. 거절(오프셋 점검·두 배 BPM 채택 등)은 설계된 사유 문장을 그대로 보여 준다. 그래서 거절·실패
+시험은 화면 문구에 ``0x`` 와 ``object at`` 이 없음을 단언하고(``assert_no_raw_text``), 실패 시험은
+원문이 세션 로거의 WARNING 에 들어 있음을 단언한다.
+
 재는 지점은 반환값이 아니라 **연결이 주입한 송신 콜백이 받은 프레임**이다(AC-LDBARENTRY-015).
 저장 관문의 거절 경로는 이벤트를 반환만 하고 보내지 않기 때문이다(``session.py``
 ``store_timeline_bar_map``). 그래서 모든 시험이 프레임 종류의 순서까지 단언한다.
@@ -19,6 +24,8 @@ from __future__ import annotations
 import base64
 import copy
 import io
+import logging
+import re
 from pathlib import Path
 from typing import NamedTuple
 
@@ -34,7 +41,7 @@ from server.audio.bar_map import (
     detect_beat_grid,
     extract_bar_features,
 )
-from server.audio.bar_map_entry import BarMapEntryFailure
+from server.audio.bar_map_entry import KIND_FAILED, KIND_REJECTED, BarMapEntryFailure
 from server.audio.bar_map_store import BAR_MAP_KEY, build_bar_map_payload, validate_bar_map
 from server.design.beat_grid_send import build_song_timing_from_bar_map
 from server.safety.audit import AuditLog
@@ -42,6 +49,7 @@ from server.safety.console import ExecOutcome
 from server.safety.gate import SafetyGate
 from server.web.approval_bridge import ApprovalChannel
 from server.web.session import (
+    _BAR_MAP_ENTRY_FAILED_TEXT,
     _BAR_MAP_ENTRY_REJECTED_SUMMARY,
     ChatSession,
     SongAudioUpload,
@@ -57,6 +65,17 @@ requires_analysis = pytest.mark.skipif(
 
 #: 성공의 요약 라벨은 저장 관문이 정한다(``store_timeline_bar_map``) — 진입 경로가 바꾸지 않는다.
 SUCCESS_SUMMARY = "마디 지도 저장"
+
+#: 분석 실패의 원문 사유가 가는 로거 — 세션 모듈의 로거다. 원문은 화면이 아니라 여기에 남는다.
+_SESSION_LOGGER = "server.web.session"
+
+#: 분석 단계가 예외 문구를 끼워 내는 원문 사유의 모양 — 객체 주소(``0x…``)가 든다. 실제 검출기의
+#: 사유(``Error opening <_io.BytesIO object at 0x…>``)와 같은 모양이라, 분석 라이브러리가 없는
+#: 환경에서도 「원문이 화면에 새지 않는다」를 잴 수 있다.
+_RAW_REASON_WITH_ADDRESS = (
+    "오디오 형식을 읽지 못했습니다: Error opening <_io.BytesIO object at 0x7f3a2c1d9e80>: "
+    "Format not recognised."
+)
 
 #: hop_length(512)가 박 간격을 정확히 나누는 표본율 — 이 BPM 에서 박 하나가 정확히 30 프레임이다
 #: (test_audio_bar_map_entry.py 의 같은 상수 주석 참조).
@@ -188,18 +207,71 @@ def _without(timeline: dict, *keys: str) -> dict:
     return {k: v for k, v in timeline.items() if k not in keys}
 
 
-def _assert_rejected_and_untouched(h: _Harness, before: _Snapshot, *, reason: str) -> dict:
-    """성공이 아닌 결과의 공통 조건 — 프레임은 ``chat_response`` 하나뿐이고, 타임라인·되돌리기
-    깊이·콘솔 모두 호출 전과 같다. 그 ``chat_response`` 를 돌려준다."""
+def assert_no_raw_text(text: str) -> None:
+    """화면 문구에 분석기 원문의 흔적이 없다 — 객체 주소(``0x``)도 ``object at`` 도 없다.
+
+    분석 실패의 원문은 예외 문구를 끼워 ``<_io.BytesIO object at 0x…>`` 같은 내부 표현이 들 수
+    있다. 거절이든 실패든 화면 문구는 이 점검을 통과해야 한다."""
+    assert "0x" not in text, f"화면 문구에 객체 주소(0x)가 있다: {text!r}"
+    assert "object at" not in text, f"화면 문구에 'object at' 이 있다: {text!r}"
+
+
+def _assert_one_response_and_untouched(h: _Harness, before: _Snapshot) -> dict:
+    """성공이 아닌 결과의 공통 조건 — 프레임은 ``chat_response`` 하나뿐이고, 화면 문구에 원문의
+    흔적이 없으며, 타임라인·되돌리기 깊이·콘솔 모두 호출 전과 같다. 그 ``chat_response`` 를
+    돌려준다."""
     assert _types(h.sent) == ["chat_response"], h.sent
     [response] = h.sent
     assert response["status"] == "ok"
     assert response["summary"] == _BAR_MAP_ENTRY_REJECTED_SUMMARY
-    assert reason in response["text"], response["text"]
+    assert_no_raw_text(response["text"])
     assert h.store.latest == before.timeline
     assert h.session._draft_history.depth == before.depth
     assert h.console.calls == []
     return response
+
+
+def _assert_rejected_and_untouched(h: _Harness, before: _Snapshot, *, reason: str) -> dict:
+    """거절 — 설계된 사유 문장이 본문에 실린다."""
+    response = _assert_one_response_and_untouched(h, before)
+    assert reason in response["text"], response["text"]
+    return response
+
+
+def _assert_failed_and_untouched(h: _Harness, before: _Snapshot) -> dict:
+    """분석 실패 — 본문은 일반 문구 하나뿐이다. 원문 사유는 로그로만 간다."""
+    response = _assert_one_response_and_untouched(h, before)
+    assert response["text"] == _BAR_MAP_ENTRY_FAILED_TEXT, response["text"]
+    return response
+
+
+def _mask_object_addresses(text: str) -> str:
+    return re.sub(r"0x[0-9a-fA-F]+", "0x…", text)
+
+
+def _logged_warnings(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """세션 로거가 남긴 WARNING 메시지들."""
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == _SESSION_LOGGER and record.levelno == logging.WARNING
+    ]
+
+
+def _assert_raw_reason_logged(caplog: pytest.LogCaptureFixture, raw_reason: str) -> None:
+    """원문 사유가 세션 로그의 WARNING 에 글자 그대로 들어 있다 — 화면이 아니라 여기에 간다."""
+    messages = _logged_warnings(caplog)
+    assert any(raw_reason in message for message in messages), messages
+
+
+def _assert_base64_error_logged(caplog: pytest.LogCaptureFixture, content_base64: str) -> None:
+    """base64 풀기 오류가 로그에 남았다 — 오류 문구는 같은 입력을 직접 풀어 얻는다."""
+    with pytest.raises(ValueError) as decode_error:
+        base64.b64decode(content_base64, validate=True)
+    detail = str(decode_error.value)
+    assert detail  # 문구가 비면 아래 대조가 공허하다
+    messages = _logged_warnings(caplog)
+    assert any("base64 디코드 실패" in m and detail in m for m in messages), messages
 
 
 def _attach_undecodable_base64(h: _Harness) -> None:
@@ -284,9 +356,12 @@ def test_ac003_out_of_range_offset_is_refused_before_the_detector(
 
 
 def test_ac003_control_a_valid_offset_does_reach_the_detector(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """대조군 — 대역 바꿔 끼우기가 실제로 이어져 있어야 위의 「불리지 않았다」가 공허하지 않다."""
+    """대조군 — 대역 바꿔 끼우기가 실제로 이어져 있어야 위의 「불리지 않았다」가 공허하지 않다.
+
+    유효한 오프셋의 검출 실패는 분석 실패다 — 화면에는 일반 문구가, 대역의 사유는 로그에 간다."""
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     detector = _Step(BeatGridFailure("대역 사유"))
     monkeypatch.setattr("server.audio.bar_map_entry.detect_beat_grid", detector)
     h = _make_harness(tmp_path, audio=b"not decoded")
@@ -295,7 +370,8 @@ def test_ac003_control_a_valid_offset_does_reach_the_detector(
     h.session.analyse_bar_map(0)
 
     assert len(detector.calls) == 1
-    _assert_rejected_and_untouched(h, before, reason="대역 사유")
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, "대역 사유")
 
 
 def test_ac003_out_of_range_offset_is_refused_before_the_base64_decode(tmp_path: Path) -> None:
@@ -310,16 +386,23 @@ def test_ac003_out_of_range_offset_is_refused_before_the_base64_decode(tmp_path:
     assert "base64" not in response["text"], response["text"]
 
 
-def test_ac003_control_a_valid_offset_does_reach_the_base64_decode(tmp_path: Path) -> None:
-    """대조군 — 같은 깨진 첨부에 유효한 오프셋이면 base64 풀기까지 가서 그 사유가 나온다."""
+def test_ac003_control_a_valid_offset_does_reach_the_base64_decode(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """대조군 — 같은 깨진 첨부에 유효한 오프셋이면 base64 풀기까지 가서 분석 실패가 된다.
+
+    화면에는 일반 문구뿐이다(오프셋 사유도 base64 사유도 없다). 풀기 오류는 로그에 남는다."""
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     h = _make_harness(tmp_path)
     _attach_undecodable_base64(h)
     before = _snapshot(h)
 
     h.session.analyse_bar_map(0)
 
-    response = _assert_rejected_and_untouched(h, before, reason="base64 디코드 실패")
+    response = _assert_failed_and_untouched(h, before)
     assert "0~3" not in response["text"], response["text"]
+    assert "base64" not in response["text"], response["text"]
+    _assert_base64_error_logged(caplog, "!!!")
 
 
 def test_ac003_missing_timeline_is_refused_before_the_detector(
@@ -379,67 +462,136 @@ def test_ac004_success_saves_reads_back_and_pushes_one_timeline(
 # ---------------------------------------------------------------------------
 
 
-def test_ac006_a_non_audio_bytes_report_the_detectors_own_reason(tmp_path: Path) -> None:
+@requires_analysis
+def test_ac006_a_non_audio_bytes_show_the_general_sentence_and_log_the_raw_reason(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """오디오가 아닌 바이트 — 화면에는 일반 문구뿐이고, 객체 주소가 든 검출기 원문은 로그로만 간다.
+
+    분석 라이브러리가 있어야 검출기 사유가 디코더 예외 문구(``<_io.BytesIO object at 0x…>``)를
+    끼운다. 없는 환경의 폴백 사유는 (다)가 맡고, 주소가 든 원문이 화면에 새지 않는다는 점은
+    ``test_failed_kind_...`` 가 어느 환경에서나 잰다."""
     bad_audio = b"not audio"
     expected = detect_beat_grid(bad_audio)
     assert isinstance(expected, BeatGridFailure)
-    # 디코더의 사유는 예외 문구를 끼운다 — ``Error opening <_io.BytesIO object at 0x...>``
-    # 처럼 호출마다 달라지는 객체 주소가 든다. 같은 바이트열에 두 번 부른 사유가 글자까지
-    # 같다고 기대하지 않고, 예외 문구 앞의 고정된 부분(단계가 붙인 말)을 대조한다.
-    stable_reason = expected.reason.split(": ", 1)[0]
+    # 양성 대조군 — 원문에 객체 주소가 실제로 든다. 없으면 아래 「화면에 주소가 없다」가 공허하다.
+    assert "object at" in expected.reason, expected.reason
+    assert "0x" in expected.reason, expected.reason
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     h = _make_harness(tmp_path, audio=bad_audio)
     before = _snapshot(h)
 
     h.session.analyse_bar_map(0)
 
-    _assert_rejected_and_untouched(h, before, reason=stable_reason)
+    response = _assert_failed_and_untouched(h, before)
+    text = response["text"]
+    assert "0x" not in text
+    assert "object at" not in text
+    assert text == _BAR_MAP_ENTRY_FAILED_TEXT
+    # 원문은 로그에 간다. 객체 주소는 호출마다 달라 주소만 가리고 대조한다.
+    logged = _logged_warnings(caplog)
+    masked_expected = _mask_object_addresses(expected.reason)
+    assert any(masked_expected in _mask_object_addresses(m) for m in logged), logged
+    assert any("object at" in m for m in logged), logged  # 로그에는 주소가 든 원문 그대로다
 
 
 @requires_analysis
-def test_ac006_b_audio_shorter_than_two_seconds_reports_the_detectors_own_reason(
-    tmp_path: Path,
+def test_ac006_b_audio_shorter_than_two_seconds_logs_the_detectors_own_reason(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     short_audio = _click_track(1.0)
     expected = detect_beat_grid(short_audio)
     assert isinstance(expected, BeatGridFailure)
     assert "너무 짧습니다" in expected.reason  # 의도한 실패 단계인지 못박는다
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     h = _make_harness(tmp_path, audio=short_audio)
     before = _snapshot(h)
 
     h.session.analyse_bar_map(0)
 
-    _assert_rejected_and_untouched(h, before, reason=expected.reason)
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, expected.reason)
 
 
-def test_ac006_c_analysis_unavailable_reports_the_fallback_reason(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_ac006_c_analysis_unavailable_logs_the_fallback_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """검출기가 부르는 ``analysis_available`` 은 ``server.audio.bar_map`` 의 이름이다. 그 이름을
-    거짓으로 바꾸면 어떤 바이트열이든 디코드 전에 폴백 사유로 거절된다."""
+    거짓으로 바꾸면 어떤 바이트열이든 디코드 전에 폴백 사유로 실패한다."""
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     monkeypatch.setattr("server.audio.bar_map.analysis_available", lambda: False)
     h = _make_harness(tmp_path, audio=b"not decoded")
     before = _snapshot(h)
 
     h.session.analyse_bar_map(0)
 
-    _assert_rejected_and_untouched(h, before, reason=MANUAL_BPM_FALLBACK_REASON)
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, MANUAL_BPM_FALLBACK_REASON)
 
 
-def test_ac006_d_too_few_beats_report_the_feature_extractors_own_reason(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_ac006_d_too_few_beats_log_the_feature_extractors_own_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """박이 3개뿐이면 마디 경계가 2개 미만이다 — 실제 추출 함수가 디코드 전에 스스로 거절한다."""
+    """박이 3개뿐이면 마디 경계가 2개 미만이다 — 실제 추출 함수가 디코드 전에 스스로 실패한다."""
     grid = _fake_grid(beat_count=3)
     bars = derive_bars(grid.beat_times_ms, 0)
     expected = extract_bar_features(b"unused", bars.bar_boundaries_ms)
     assert isinstance(expected, BarFeaturesFailure)
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     monkeypatch.setattr("server.audio.bar_map_entry.detect_beat_grid", _Step(grid))
     h = _make_harness(tmp_path, audio=b"not decoded")
     before = _snapshot(h)
 
     h.session.analyse_bar_map(0)
 
-    _assert_rejected_and_untouched(h, before, reason=expected.reason)
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, expected.reason)
+
+
+# ---------------------------------------------------------------------------
+# 실패 종류에 따른 화면 문구 — 어느 환경에서나 도는 대조 시험(실제 검출기가 필요 없다).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("kind", [KIND_FAILED, "unknown_kind"])
+def test_failed_kind_shows_the_general_sentence_and_logs_the_raw_reason(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    kind: str,
+) -> None:
+    """분석 실패는 원문에 객체 주소가 들어 있어도 화면에는 일반 문구뿐이다. 주소가 든 원문은
+    로그에 글자 그대로 남는다. 알 수 없는 종류도 원문을 내지 않는 쪽(분석 실패)으로 처리한다."""
+    # 전제 — 원문에 주소가 실제로 든다. 없으면 아래 「화면에 주소가 없다」가 공허하다.
+    assert "0x" in _RAW_REASON_WITH_ADDRESS and "object at" in _RAW_REASON_WITH_ADDRESS
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
+    synthesis = _Step(BarMapEntryFailure(_RAW_REASON_WITH_ADDRESS, kind=kind))
+    monkeypatch.setattr("server.web.session.synthesize_bar_map", synthesis)
+    h = _make_harness(tmp_path, audio=b"not decoded")
+    before = _snapshot(h)
+
+    h.session.analyse_bar_map(0)
+
+    assert len(synthesis.calls) == 1  # 합성 대역이 실제로 쓰였다
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, _RAW_REASON_WITH_ADDRESS)
+
+
+def test_rejected_kind_keeps_its_designed_sentence_on_the_screen(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """대조군 — 거절은 설계된 사유 문장을 그대로 보여 준다(일반 문구로 바꾸지 않는다)."""
+    designed = "설계된 거절 사유 문장입니다."
+    synthesis = _Step(BarMapEntryFailure(designed, kind=KIND_REJECTED))
+    monkeypatch.setattr("server.web.session.synthesize_bar_map", synthesis)
+    h = _make_harness(tmp_path, audio=b"not decoded")
+    before = _snapshot(h)
+
+    h.session.analyse_bar_map(0)
+
+    assert len(synthesis.calls) == 1
+    response = _assert_rejected_and_untouched(h, before, reason=designed)
+    assert response["text"] != _BAR_MAP_ENTRY_FAILED_TEXT
 
 
 # ---------------------------------------------------------------------------
@@ -693,7 +845,12 @@ def test_ac015_every_outcome_that_reaches_analysis_sends_exactly_one_chat_respon
     for name in scenarios[1:]:
         assert _types(frames[name]) == ["chat_response"], name
         assert responses[name]["summary"] == _BAR_MAP_ENTRY_REJECTED_SUMMARY, name
+        assert_no_raw_text(responses[name]["text"])
     assert SUCCESS_SUMMARY != _BAR_MAP_ENTRY_REJECTED_SUMMARY
+    # (4) 분석 실패의 본문은 일반 문구 하나다. 나머지 넷은 거절이라 설계된 사유 문장을 싣는다.
+    assert responses["analysis_failure"]["text"] == _BAR_MAP_ENTRY_FAILED_TEXT
+    for name in ("timeline_missing", "offset_out_of_range", "double_bpm", "song_changed"):
+        assert responses[name]["text"] != _BAR_MAP_ENTRY_FAILED_TEXT, name
 
 
 # ---------------------------------------------------------------------------
@@ -717,7 +874,10 @@ def test_no_audio_attached_sends_one_error_frame_and_no_chat_response(tmp_path: 
     assert h.console.calls == []
 
 
-def test_undecodable_base64_is_refused_with_one_chat_response(tmp_path: Path) -> None:
+def test_undecodable_base64_is_a_general_failure_with_one_chat_response(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     h = _make_harness(tmp_path)
     # 와이어 검증을 통과한 업로드는 이럴 수 없다 — 세션이 직접 불려도 안전한지를 잰다.
     h.session._song_audio = SongAudioUpload(
@@ -731,12 +891,15 @@ def test_undecodable_base64_is_refused_with_one_chat_response(tmp_path: Path) ->
 
     h.session.analyse_bar_map(0)
 
-    _assert_rejected_and_untouched(h, before, reason="base64")
+    response = _assert_failed_and_untouched(h, before)
+    assert "base64" not in response["text"], response["text"]
+    _assert_base64_error_logged(caplog, "@@ not base64 @@")
 
 
 def test_synthesis_receives_the_decoded_bytes_and_the_requested_offset(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    caplog.set_level(logging.WARNING, logger=_SESSION_LOGGER)
     audio = b"\x00\x01 attached bytes \xff"
     synthesis = _Step(BarMapEntryFailure("대역 사유"))
     monkeypatch.setattr("server.web.session.synthesize_bar_map", synthesis)
@@ -746,4 +909,5 @@ def test_synthesis_receives_the_decoded_bytes_and_the_requested_offset(
     h.session.analyse_bar_map(2)
 
     assert synthesis.calls == [(audio, 2)]
-    _assert_rejected_and_untouched(h, before, reason="대역 사유")
+    _assert_failed_and_untouched(h, before)
+    _assert_raw_reason_logged(caplog, "대역 사유")
