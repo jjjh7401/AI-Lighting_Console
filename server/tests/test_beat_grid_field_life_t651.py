@@ -31,7 +31,6 @@ from server.web.session import SongTimelineStore
 
 from . import test_session_beat_grid_edit_t551 as t551
 from .test_apply_time_approval_t577 import _new_session as _new_session_t577
-from .test_apply_time_approval_t577 import _state_tree
 from .test_apply_time_approval_t577 import _timeline as _timeline_t577
 from .test_beat_grid_send_t563 import _timeline as _timeline_t563
 from .test_web_beat_grid_send_t563 import _deps as _web_deps
@@ -133,23 +132,20 @@ class TestEmptyMarkMemoAfterReconnect:
         session_a, _console_a, _approval_a, _audit_a = _new_session_t577(tmp_path, store=store)
         session_a.beat_grid_apply()  # 풀 4 = {21} 을 저장소에 판독해 둔다
 
-        # 재연결 B 의 콘솔: 풀 4 에 99 가 생겼다 → 4.99 는 이제 빈 번호가 아니다.
-        tree = _state_tree()
-        tree["DataPool/PresetPools/4"] = {
-            "children": [{"i": 21, "name": "P21"}, {"i": 99, "name": "P99"}]
-        }
         sent_b: list[dict] = []
         session_b, _console_b, _approval_b, _audit_b = _new_session_t577(
-            tmp_path, store=store, sent=sent_b, state_tree=tree
+            tmp_path, store=store, sent=sent_b
         )
         # 재연결 재생은 저장소 기억 [1] 을 준다 — 클라이언트가 지금 보는 값이다.
         assert _marked_bars(session_b.song_timeline_replay()) == [1]
-        sent_b.clear()
 
-        # 읽기: 콘솔이 바뀌었으니 표식이 사라져야 하고, 메모와 달라졌으므로 격자를 다시 보내야 한다.
-        session_b.beat_grid_apply()
+        # 판독 경로(서랍·반영이 부르는 같은 진입점)가 풀 4 를 다시 읽었다: 이제 99 가 있다.
+        # 4.99 는 빈 번호가 아니므로 표식이 사라진다. 클라이언트가 가진 값([1])과 달라졌으니
+        # 격자를 다시 보내야 한다. 메모가 이 변화를 가리면 클라이언트는 옛 표식을 계속 본다.
+        sent_b.clear()
+        session_b._beat_grid_learn_pools({4: {21: "P21", 99: "P99"}})
         resent = [event for event in sent_b if event.get("type") == "song_timeline"]
-        assert any(_marked_bars(event) == [] for event in resent), (
+        assert [_marked_bars(event) for event in resent] == [[]], (
             f"콘솔 변화가 격자로 다시 나가지 않음 — song_timeline 이벤트 {len(resent)}건"
         )
 
