@@ -4,7 +4,7 @@
 
 > 공통 전제: 시험 파일 이름은 가칭이며 run-phase가 확정한다. 곡 파일명은 시험 안에서 가짜 이름 `sample-track.wav`만 쓴다. 실제 곡 파일을 저장소에 두지 않는다.
 
-## AC-LDBARUI-001 (REQ-LDBARUI-001) — 요청은 정확히 한 번, 조건이 안 맞으면 보내지 않는다
+## AC-LDBARUI-001 (REQ-LDBARUI-001) — 요청 문자열과 조건부 전송
 
 시험 파일: `ui/src/protocol.test.ts`(빌더), `ui/src/components/BarMapEntry.test.tsx`(정적 HTML)
 
@@ -12,7 +12,7 @@
 **When** 결과 문자열을 파싱하면
 **Then** 값이 `{"v":1,"type":"bar_map_analyse","first_beat_offset":2}`와 같고 키가 세 개뿐이다.
 **And Given** `responding`이 참인 `BarMapEntry`일 때 **When** 정적 HTML을 보면 **Then** 마디 지도 분석 버튼에 `disabled` 속성이 있다.
-**And** 검사: `grep -n "sendBarMapAnalyse(" ui/src/App.tsx`의 결과 중 분석 버튼의 `onClick` 안에서 호출되는 줄은 정확히 한 줄이다.
+**And** 검사: `grep -n "sendBarMapAnalyse" ui/src/App.tsx`의 출력은 정확히 두 줄이다. 한 줄은 훅 구조분해의 이름이고, 다른 한 줄은 「마디 지도 분석」 버튼의 `onClick` 안의 호출이다.
 
 ## AC-LDBARUI-002 (REQ-LDBARUI-002) — 빈 값으로 시작하고 기본값이 없다
 
@@ -42,7 +42,7 @@
 **Then** 상태가 `waiting`이 된다.
 **And When** 리듀서에 `not-connected` 이벤트를 넣으면 **Then** 상태는 `idle`로 남고, 안내 줄이 정확히 「연결되어 있지 않아 분석을 시작하지 못했습니다.」다.
 **And Given** 상태가 `waiting`인 `BarMapEntry`일 때 **When** 정적 HTML을 보면 **Then** 마디 지도 분석 버튼과 드롭다운에 `disabled`가 있고, 「분석 중」과 「취소」 글자가 있다.
-**And** 검사: `App.tsx`의 기존 「분석」 버튼(`composer-song-analyse`) 속성에 `disabled=` 식이 있고, 그 식이 대기 상태 값을 읽는다(소스 텍스트 검사).
+**And** 검사: `grep -c "disabled={barMapWaiting}" ui/src/App.tsx`의 결과가 정확히 2다(「마디 지도 분석」 버튼과 기존 「분석」 버튼).
 
 ## AC-LDBARUI-005 (REQ-LDBARUI-005) — 대기는 결과, 오류, 끊김, 취소로만 끝나고 busy는 끝내지 않는다
 
@@ -82,6 +82,7 @@
 **When** `error` 이벤트의 `kind`가 `song_audio_missing`이면 **Then** 안내 줄이 정확히 「곡 오디오를 먼저 첨부해 주세요.」이고, 상태는 `idle`이다.
 **And When** `kind`가 `protocol`이면 **Then** 안내 줄이 정확히 「분석 요청 형식이 맞지 않아 시작하지 못했습니다.」이고, 상태는 `idle`이다.
 **And When** `kind`가 `song_audio_missing`도 `protocol`도 아니면 **Then** 상태와 안내 줄이 바뀌지 않는다.
+**And Given** 상태가 `idle`일 때 **When** `error` 이벤트(`kind`가 `song_audio_missing` 또는 `protocol`)가 오면 **Then** 상태와 안내 줄이 바뀌지 않는다.
 
 ## AC-LDBARUI-009 (REQ-LDBARUI-009) — 대기 중 busy는 안내만 하고 대기는 유지한다
 
@@ -126,14 +127,15 @@
 **Given** 파일명이 있는 상태에서 **When** `BarMapEntry`가 `waiting`이고 안내 줄이 있을 때 정적 HTML을 보면
 **Then** 「분석 중」 문구와 안내 문구는 컨트롤 묶음(`composer-bar-map` 클래스)과 다른 요소에 들어 있다.
 **And Given** `ui/src/styles.css`를 텍스트로 읽을 때 **When** `.composer-bar-map` 규칙 블록을 찾으면 **Then** 그 블록에 `flex-wrap: wrap`과 `max-width: 100%`가 모두 있다.
+**And** 검사: `grep -n "<BarMapEntry" ui/src/App.tsx`의 줄 번호가 `songAudioName !== null` 블록의 시작 줄과 끝 줄 사이에 있다(블록은 1031~1042행 부근이고, 줄 번호는 기준점 B 기준의 참고값이다).
 **And** 수동 확인(시험 아님): 1450, 1490, 1520, 1700px 폭에서 긴 파일명과 긴 거절 사유를 넣어 스크린샷을 찍고, 컨트롤이 블록 밖으로 나가지 않는지 본다.
 
 ## AC-LDBARUI-014 (REQ-LDBARUI-014) — 변경 파일과 변경 내용이 허용 범위 안에 있다
 
 검사 명령(기준점 B = `git merge-base origin/main HEAD`. 구현을 시작할 때 고정하고, 모든 변경을 커밋한 뒤 실행한다):
-- `git diff --name-only B` — 출력이 다음 목록의 부분집합이어야 한다: `ui/src/protocol.ts`, `ui/src/protocol.test.ts`, `ui/src/useCopilotSocket.ts`, `ui/src/App.tsx`, `ui/src/styles.css`, `ui/src/components/barMapEntryState.ts`, `ui/src/components/barMapEntryState.test.ts`, `ui/src/components/BarMapEntry.tsx`, `ui/src/components/BarMapEntry.test.tsx`, `.moai/specs/SPEC-LDBARMAP-003/` 아래 파일.
+- `git diff --name-only B` — 출력이 다음 목록의 부분집합이어야 한다: `ui/src/protocol.ts`, `ui/src/protocol.test.ts`, `ui/src/useCopilotSocket.ts`, `ui/src/App.tsx`, `ui/src/styles.css`, `ui/src/components/barMapEntryState.ts`, `ui/src/components/barMapEntryState.test.ts`, `ui/src/components/BarMapEntry.tsx`, `ui/src/components/BarMapEntry.test.tsx`, `.moai/specs/SPEC-LDBARMAP-003/` 아래 파일, `.moai/reports/t648/` 아래 파일(수동 확인 결과).
 - `git diff -U0 B -- ui/src/styles.css` — 바뀐 줄 어디에도 `beat-grid-`가 없고 「카드 t630」이 없어야 한다.
-- `git diff -U0 B -- ui/src/App.tsx` — 바뀐 줄 어디에도 `BeatGrid`, `beat-grid`, `beatGrid`가 없어야 한다. 바뀐 줄은 임포트 블록, 훅 호출과 구조분해 및 그 아래 상태 선언(400~440행 부근), 곡 첨부 상태 블록(1031~1042행 부근) 안에만 있어야 한다.
+- `git diff -U0 B -- ui/src/App.tsx` — 바뀐 줄 어디에도 `BeatGrid`, `beat-grid`, `beatGrid`가 없어야 한다. 바뀐 줄은 다음 세 곳 안에만 있어야 한다. (가) 임포트 블록의 `import` 줄들. (나) 훅 구조분해 블록(`const {`로 시작해 `} = useCopilotSocket(`로 끝나는 392~429행 부근)과 `songAudioName` 선언(446행 부근) 사이의 상태 선언. (다) `songAudioName !== null` 블록(1031~1042행 부근). 행 번호는 기준점 B 기준의 참고값이고, 판정은 식별자로 한다.
 - `npm --prefix ui test -- BeatGridTopBar` — 폭 규칙을 지키는 기존 시험이 모두 통과해야 한다.
 
 **Given** 구현이 끝난 뒤

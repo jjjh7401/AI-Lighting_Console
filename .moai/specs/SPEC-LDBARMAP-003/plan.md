@@ -6,7 +6,7 @@
 
 - 서버는 바꾸지 않는다. 요청 프레임과 응답 모양은 `server/web/PROTOCOL.md` 26행에 있고 main에 있다.
 - 상태 로직은 전부 순수 리듀서(`barMapEntryState.ts`)에 둔다. 소켓 훅과 컴포넌트는 그 리듀서를 호출하거나 props를 받을 뿐이다. 그래서 DOM 없이 시험할 수 있다.
-- 입력창은 막지 않는다. 막는 것은 「분석」 버튼(새 것과 기존 것)뿐이다.
+- 입력창은 막지 않는다. 막는 것은 「분석」 버튼 두 개(새 것과 기존 것)와 대기 중의 드롭다운이다.
 
 ## 2. 바뀌는 파일
 
@@ -18,8 +18,8 @@
 | 4 | `ui/src/components/barMapEntryState.test.ts` (신규) | 리듀서 전이 시험, `isOffMeter` 시험 | AC-LDBARUI-003~009 |
 | 5 | `ui/src/components/BarMapEntry.tsx` (신규) | props만 받는 표시 컴포넌트: 드롭다운, 분석 버튼, 「분석 중」과 「취소」, 안내 줄, 사실 문구. 숫자 4는 상수에서 가져온다 | REQ-LDBARUI-002, 003, 011~013 |
 | 6 | `ui/src/components/BarMapEntry.test.tsx` (신규) | `renderToStaticMarkup` 정적 HTML 시험, `styles.css` 텍스트 검사 | AC-LDBARUI-001, 002, 003, 004, 012, 013 |
-| 7 | `ui/src/useCopilotSocket.ts` | `sendBarMapAnalyse(offset, songName): boolean`: 연결이 열렸는지 본 뒤 화면 기록을 남기고 보낸다. 열리지 않았으면 `false`. 훅 옵션 `onServerEvent`와 `onSocketClosed`로 수신 프레임과 끊김을 알린다 | REQ-LDBARUI-001, 004, 005 |
-| 8 | `ui/src/App.tsx` | (가) 임포트 블록에 `BarMapEntry` 추가. (나) 훅 호출에 옵션 두 개를 넘기고, 그 아래에 `useReducer(barMapEntryReducer, ...)` 상태 선언. (다) 곡 첨부 상태 블록에 `BarMapEntry`를 놓고, 기존 「분석」 버튼의 `disabled`에 대기 상태를 더한다 | REQ-LDBARUI-004, 012, 014 |
+| 7 | `ui/src/useCopilotSocket.ts` | `sendBarMapAnalyse(offset, songName): boolean`: 연결이 열렸는지 본 뒤 화면 기록을 남기고 보낸다. 열리지 않았으면 `false`. 훅의 두 번째 인자 `options`(`{ onServerEvent, onSocketClosed }`)로 수신 프레임과 끊김을 알린다. 첫 인자 `url`과 기존 호출 방식은 바꾸지 않는다 | REQ-LDBARUI-001, 004, 005 |
+| 8 | `ui/src/App.tsx` | (가) 임포트 블록에 `BarMapEntry` 추가. (나) 훅 호출(`} = useCopilotSocket();`, 429행)의 두 번째 인자로 옵션 객체를 넘기고, 바로 아래(446행 `songAudioName` 선언 전)에 `const [barMap, barMapDispatch] = useReducer(barMapEntryReducer, ...)` 상태 선언. 대기 여부는 `const barMapWaiting = barMap.phase === "waiting"`로 둔다. (다) 곡 첨부 상태 블록에 `BarMapEntry`를 놓고, 기존 「분석」 버튼의 `disabled`에 대기 상태를 더한다 | REQ-LDBARUI-004, 012, 014 |
 | 9 | `ui/src/styles.css` | 입력창 규칙(795~814행 부근)에 `.composer-bar-map` 규칙만 더한다. `beat-grid-` 규칙과 「카드 t630」 블록은 건드리지 않는다 | REQ-LDBARUI-013, 014 |
 
 파일 아홉 개(새 파일 네 개 포함)다. Tier M(5~15개) 범위다.
@@ -45,6 +45,8 @@
 
 수동 확인(시험이 아님, 결과를 `.moai/reports/t648/`에 남긴다. 이 경로는 `.gitignore`의 재포함 규칙으로 추적되므로 `git add -f`가 필요 없다):
 - 브라우저에서 분석 버튼 클릭 한 번이 프레임 한 개를 보내는지(개발자 도구의 WebSocket 기록).
+- 연결이 끊긴 상태에서 누르면 프레임이 없고 안내만 보이는지.
+- 분석 중에 채팅을 보내 `busy`가 와도 「분석 중」이 유지되는지.
 - 「취소」 뒤 늦은 결과가 안내 줄에 나타나는지.
 - 1450, 1490, 1520, 1700px 폭에서 긴 파일명과 긴 거절 사유의 넘침 여부와 스크린샷.
 
