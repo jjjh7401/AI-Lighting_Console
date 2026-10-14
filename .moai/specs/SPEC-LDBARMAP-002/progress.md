@@ -128,4 +128,4 @@
   - 이중 실패 시 폴백이 드물게 일어나는 경우는 재 보지 않았다.
   - AC-016 정밀도는 5/6 = 83.3 % 이고 분모는 6 이다.
 - CHANGELOG: `[Unreleased]` 에 한 항목을 추가했다.
-- MX 태그 점검과 sync-auditor 판정은 이 커밋 시점에 하지 않았다.
+- sync-auditor 판정(같은 날, 뒤 커밋에서 반영): PASS — Functionality 0.92 · Security 0.90 · Craft 0.88 · Consistency 0.82. 소견 F2(PROTOCOL 행 응답 누락)는 반영했다. F1(draft→completed 건너뜀)·F3(업로드의 `_song_bpm` 유지를 직접 고정하는 시험 없음)은 기록만 한다. AC-016 은 감사자가 로컬에서 다시 돌려 같은 값(정밀도 5/6)을 얻었다. MX 태그는 `@MX:NOTE` 존재만 보았고 `moai mx` 검증은 하지 않았다.
