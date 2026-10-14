@@ -1,0 +1,76 @@
+import json
+import pathlib
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path("/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/WT-runbook-beatcapture")
+OUT = ROOT / ".moai/reports/t643"
+URL = "http://127.0.0.1:47010/"
+MOCKUP = ROOT / ".moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html"
+WIDTHS = [1450, 1700]
+HEIGHT = 900
+PLACEHOLDER = "박자 격자 데이터가 아직 없습니다"
+CHECKS = [
+    "LOVE ATTACK", "Design Interview", "마디", "구간", "재생", "10초", "프리셋", "▤", "BPM", "음원",
+    "반영 대기", "라이브 잠금", "라이브 잠금 꺼짐", "쓰기 잠김", "AI", "바로 적용", "AI 제안", "이름표",
+    "빔", "한눈에", "무대", "페이드", "딜레이", "★", "⚠", PLACEHOLDER, "KEY", "FOH", "BACK", "BLIND", "STROBE", "HAZE",
+]
+
+
+def count_checks(page):
+    body = page.inner_text("body")
+    return dict((s, body.count(s)) for s in CHECKS)
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    dom = dict()
+    run = dict(url=URL, widths=dict(), errors=[], server_writes_by_this_run=0)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=True)
+        for w in WIDTHS:
+            key = str(w)
+            rec = dict()
+            ctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+            page = ctx.new_page()
+            page.set_default_timeout(60000)
+            errs = []
+            page.on("pageerror", lambda e, errs=errs: errs.append(str(e)[:200]))
+            page.goto(URL, wait_until="load")
+            page.wait_for_timeout(3000)
+            btn = page.locator("button.runbook-toggle")
+            rec["toggle_before"] = btn.first.get_attribute("aria-label") if btn.count() > 0 else "no-toggle"
+            if rec["toggle_before"] == "런북 모드 켜기":
+                btn.first.click()
+                page.wait_for_timeout(3000)
+            page.screenshot(path=str(OUT / ("lead-current-runbook-" + key + ".png")), full_page=True)
+            dom["lead-runbook-" + key] = count_checks(page)
+            bg = page.locator("button", has_text="박자 배치")
+            rec["bg_button_found"] = bg.count() > 0
+            if bg.count() > 0:
+                bg.first.click()
+                page.wait_for_timeout(3000)
+            page.screenshot(path=str(OUT / ("lead-current-grid-" + key + ".png")), full_page=True)
+            dom["lead-grid-" + key] = count_checks(page)
+            rec["placeholder_present"] = PLACEHOLDER in page.inner_text("body")
+            rec["topbar_present"] = page.locator(".beat-grid-topbar").count() > 0
+            rec["page_errors"] = errs
+            run["widths"][key] = rec
+            ctx.close()
+        for w in WIDTHS:
+            mctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+            mpage = mctx.new_page()
+            mpage.set_default_timeout(60000)
+            mpage.goto(MOCKUP.as_uri(), wait_until="load")
+            mpage.wait_for_timeout(1000)
+            mpage.screenshot(path=str(OUT / ("mockup-" + str(w) + ".png")), full_page=True)
+            dom["mockup-" + str(w)] = count_checks(mpage)
+            mctx.close()
+        browser.close()
+    (OUT / "dom-checks-lead.json").write_text(json.dumps(dom, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (OUT / "run-log-lead.json").write_text(json.dumps(run, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(run, ensure_ascii=False)[:900])
+
+
+if __name__ == "__main__":
+    main()
