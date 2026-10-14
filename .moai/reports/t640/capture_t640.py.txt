@@ -1,0 +1,255 @@
+"""t640 - full-app beat-grid capture against a local fake console.
+
+Invariants enforced here:
+- every console flag is passed explicitly; the scratch HOME has no settings.toml
+- ports come from a bind test on 127.0.0.1 and never equal 8000, 9000, 9005 or 8765
+- the fake console and the web server bind 127.0.0.1 only
+- both child processes run in their own process groups and are stopped in finally
+"""
+
+import json
+import os
+import pathlib
+import queue
+import re
+import signal
+import socket
+import subprocess
+import threading
+import time
+import urllib.request
+
+from playwright.sync_api import sync_playwright
+
+ROOT = pathlib.Path("/Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/WT-runbook-fullcapture")
+PY = str(ROOT / ".venv/bin/python")
+SCRATCH = pathlib.Path("/private/tmp/claude-501/-Users-studiox-Documents-Claude-Code-AI-Lighting-Console--claude-worktrees-WT-t611-c2-files/dfdb65b9-715d-4d64-bb58-00e882e713ec/scratchpad/t640")
+OUT = ROOT / ".moai/reports/t640"
+MOCKUP = ROOT / ".moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html"
+REFUSED = [8000, 9000, 9005, 8765]
+WIDTHS = [1450, 1700]
+HEIGHT = 900
+CHECKS = [
+    "Design Interview", "마디", "구간", "반영 대기", "쓰기 잠김", "[미확인]", "▤", "프리셋",
+    "빔", "이름표", "KEY", "FOH", "BACK", "BLIND", "STROBE", "HAZE", "★", "⚠", "페이드",
+    "딜레이", "프로브", "AI", "Ring In", "한눈에", "무대", "회색 블록", "색값을 못 찾은",
+    "런북 모드 끄기", "박자 배치", "콘솔",
+]
+
+
+def free_port(kind):
+    for _ in range(200):
+        s = socket.socket(socket.AF_INET, kind)
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+        if port not in REFUSED:
+            return port
+    raise RuntimeError("no usable port")
+
+
+def is_free(kind, port):
+    try:
+        s = socket.socket(socket.AF_INET, kind)
+        s.bind(("127.0.0.1", port))
+        s.close()
+        return True
+    except OSError:
+        return False
+
+
+def stop(proc):
+    if proc is None or proc.poll() is not None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        proc.wait(timeout=15)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=10)
+
+
+def start_fake(cmd, rcv):
+    proc = subprocess.Popen(
+        [PY, "-m", "server.tests.fake_console", str(cmd), str(rcv), "default"],
+        cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True,
+    )
+    lines = queue.Queue()
+
+    def pump():
+        for line in proc.stdout:
+            lines.put(line)
+
+    threading.Thread(target=pump, daemon=True).start()
+    t0 = time.time()
+    while time.time() - t0 < 60:
+        try:
+            line = lines.get(timeout=1)
+        except queue.Empty:
+            if proc.poll() is not None:
+                break
+            continue
+        if "fake console on" in line:
+            return proc, line.strip()
+    stop(proc)
+    raise RuntimeError("fake console did not announce")
+
+
+def start_web(home, web, cmd, rcv, log_path):
+    env = dict(os.environ)
+    env["HOME"] = str(home)
+    env.pop("COPILOT_LAUNCH_TOKEN", None)
+    args = [
+        PY, "-m", "server.web",
+        "--host", "127.0.0.1", "--port", str(web),
+        "--console-host", "127.0.0.1", "--console-port", str(cmd), "--receive-port", str(rcv),
+        "--ui-dist", str(ROOT / "ui/dist"), "--plugin-import-dir", "", "--no-session-backup",
+    ]
+    logf = open(log_path, "w", encoding="utf-8")
+    proc = subprocess.Popen(args, cwd=str(ROOT), env=env, stdout=logf, stderr=subprocess.STDOUT, start_new_session=True)
+    return proc, [a.replace(str(ROOT), "<root>") for a in args]
+
+
+def wait_http(url, limit):
+    t0 = time.time()
+    while time.time() - t0 < limit:
+        try:
+            with urllib.request.urlopen(url, timeout=3) as r:
+                if r.status == 200:
+                    return round(time.time() - t0, 2)
+        except Exception:
+            time.sleep(0.5)
+    raise RuntimeError("not ready: " + url)
+
+
+def token_from_log(path):
+    text = path.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"token=([A-Za-z0-9_\-]{8,})", text)
+    return m.group(1) if m else None
+
+
+def redact(path, token):
+    if token:
+        path.write_text(path.read_text(encoding="utf-8", errors="replace").replace(token, "<redacted>"), encoding="utf-8")
+
+
+def count_checks(page):
+    body = page.inner_text("body")
+    return dict((s, body.count(s)) for s in CHECKS)
+
+
+def capture_condition(label, home):
+    rec = dict(home=label, settings_toml_in_home=(home / "Library/Application Support/GrandMA3 Copilot/settings.toml").exists())
+    cmd = free_port(socket.SOCK_DGRAM)
+    rcv = free_port(socket.SOCK_DGRAM)
+    while rcv == cmd:
+        rcv = free_port(socket.SOCK_DGRAM)
+    web = free_port(socket.SOCK_STREAM)
+    rec["ports"] = dict(console_cmd=cmd, receive=rcv, web=web)
+    rec["ports_overlap_refused"] = any(p in REFUSED for p in (cmd, rcv, web))
+    fake, fake_line = start_fake(cmd, rcv)
+    rec["fake_line"] = fake_line
+    web_proc = None
+    log_path = OUT / ("web-boot-" + label + ".log")
+    token = None
+    dom = dict()
+    try:
+        web_proc, args = start_web(home, web, cmd, rcv, log_path)
+        rec["boot_args"] = args
+        rec["healthz_s"] = wait_http("http://127.0.0.1:" + str(web) + "/healthz", 150)
+        token = token_from_log(log_path)
+        rec["token_in_boot_log"] = token is not None
+        url = "http://127.0.0.1:" + str(web) + "/" + ("?token=" + token if token else "")
+        rec["toggle_before"] = dict()
+        rec["page_errors"] = dict()
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel="chrome", headless=True)
+            for w in WIDTHS:
+                key = "app-" + label + "-" + str(w)
+                ctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+                page = ctx.new_page()
+                page.set_default_timeout(60000)
+                errs = []
+                page.on("pageerror", lambda e, errs=errs: errs.append(str(e)[:200]))
+                page.goto(url, wait_until="load")
+                page.wait_for_timeout(3000)
+                btn = page.locator("button.runbook-toggle")
+                state = "no-toggle"
+                if btn.count() > 0:
+                    state = btn.first.get_attribute("aria-label") or "no-label"
+                    if state == "런북 모드 켜기":
+                        btn.first.click()
+                        page.wait_for_timeout(3000)
+                        state = "clicked-on"
+                rec["toggle_before"][key] = state
+                page.wait_for_timeout(1500)
+                page.screenshot(path=str(OUT / (key + ".png")), full_page=True)
+                dom[key] = count_checks(page)
+                rec["page_errors"][key] = errs
+                bg_btn = page.locator("button", has_text="박자 배치")
+                bgkey = "bg-" + label + "-" + str(w)
+                if bg_btn.count() > 0:
+                    bg_btn.first.click()
+                    page.wait_for_timeout(3000)
+                    page.screenshot(path=str(OUT / (bgkey + ".png")), full_page=True)
+                    dom[bgkey] = count_checks(page)
+                    rec.setdefault("bg_opened", dict())[bgkey] = True
+                else:
+                    rec.setdefault("bg_opened", dict())[bgkey] = False
+                ctx.close()
+            browser.close()
+        rec["ok"] = True
+    finally:
+        stop(web_proc)
+        stop(fake)
+        redact(log_path, token)
+        rec["ports_free_after_stop"] = dict(
+            console_cmd=is_free(socket.SOCK_DGRAM, cmd),
+            receive=is_free(socket.SOCK_DGRAM, rcv),
+            web=is_free(socket.SOCK_STREAM, web),
+        )
+    return rec, dom
+
+
+def capture_mockup():
+    dom = dict()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=True)
+        for w in WIDTHS:
+            ctx = browser.new_context(viewport=dict(width=w, height=HEIGHT), device_scale_factor=1)
+            page = ctx.new_page()
+            page.set_default_timeout(60000)
+            page.goto(MOCKUP.as_uri(), wait_until="load")
+            page.wait_for_timeout(1000)
+            page.screenshot(path=str(OUT / ("mockup-" + str(w) + ".png")), full_page=True)
+            dom["mockup-" + str(w)] = count_checks(page)
+            ctx.close()
+        browser.close()
+    return dom
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    result = dict(conditions=dict(), errors=dict())
+    dom_all = dict()
+    for label, home in [("A", SCRATCH / "home-A"), ("B", SCRATCH / "home-B")]:
+        try:
+            rec, dom = capture_condition(label, home)
+            result["conditions"][label] = rec
+            dom_all.update(dom)
+        except Exception as error:
+            result["errors"][label] = str(error)[:400]
+    try:
+        dom_all.update(capture_mockup())
+    except Exception as error:
+        result["errors"]["mockup"] = str(error)[:400]
+    (OUT / "dom-checks.json").write_text(json.dumps(dom_all, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (OUT / "run-log.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, ensure_ascii=False)[:1500])
+
+
+if __name__ == "__main__":
+    main()

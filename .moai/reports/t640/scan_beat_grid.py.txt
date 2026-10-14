@@ -1,0 +1,30 @@
+import json
+import sys
+
+
+def walk(o):
+    stack = [o]
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            bg = x.get("beat_grid")
+            if isinstance(bg, dict) and isinstance(bg.get("tracks"), list) and len(bg.get("tracks")) > 0:
+                yield len(bg.get("tracks"))
+            stack.extend(x.values())
+        elif isinstance(x, list):
+            stack.extend(x)
+
+
+hits = []
+ok = 0
+for p in [l.strip() for l in sys.stdin if l.strip()]:
+    try:
+        d = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        continue
+    ok += 1
+    for n in walk(d):
+        hits.append((p, n))
+print("json_parsed", ok, "non_empty_beat_grid_tracks_hits", len(hits))
+for h in hits[:8]:
+    print(h)

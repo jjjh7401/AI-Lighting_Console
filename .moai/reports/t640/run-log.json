@@ -1,0 +1,107 @@
+{
+  "conditions": {
+    "A": {
+      "home": "A",
+      "settings_toml_in_home": false,
+      "ports": {
+        "console_cmd": 54908,
+        "receive": 50220,
+        "web": 56345
+      },
+      "ports_overlap_refused": false,
+      "fake_line": "fake console on 54908 -> replies to 50220",
+      "boot_args": [
+        "<root>/.venv/bin/python",
+        "-m",
+        "server.web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "56345",
+        "--console-host",
+        "127.0.0.1",
+        "--console-port",
+        "54908",
+        "--receive-port",
+        "50220",
+        "--ui-dist",
+        "<root>/ui/dist",
+        "--plugin-import-dir",
+        "",
+        "--no-session-backup"
+      ],
+      "healthz_s": 12.12,
+      "token_in_boot_log": false,
+      "toggle_before": {
+        "app-A-1450": "clicked-on",
+        "app-A-1700": "clicked-on"
+      },
+      "page_errors": {
+        "app-A-1450": [],
+        "app-A-1700": []
+      },
+      "bg_opened": {
+        "bg-A-1450": true,
+        "bg-A-1700": true
+      },
+      "ok": true,
+      "ports_free_after_stop": {
+        "console_cmd": true,
+        "receive": true,
+        "web": false
+      }
+    },
+    "B": {
+      "home": "B",
+      "settings_toml_in_home": false,
+      "ports": {
+        "console_cmd": 52814,
+        "receive": 62294,
+        "web": 56445
+      },
+      "ports_overlap_refused": false,
+      "fake_line": "fake console on 52814 -> replies to 62294",
+      "boot_args": [
+        "<root>/.venv/bin/python",
+        "-m",
+        "server.web",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "56445",
+        "--console-host",
+        "127.0.0.1",
+        "--console-port",
+        "52814",
+        "--receive-port",
+        "62294",
+        "--ui-dist",
+        "<root>/ui/dist",
+        "--plugin-import-dir",
+        "",
+        "--no-session-backup"
+      ],
+      "healthz_s": 6.56,
+      "token_in_boot_log": false,
+      "toggle_before": {
+        "app-B-1450": "clicked-on",
+        "app-B-1700": "clicked-on"
+      },
+      "page_errors": {
+        "app-B-1450": [],
+        "app-B-1700": []
+      },
+      "bg_opened": {
+        "bg-B-1450": true,
+        "bg-B-1700": true
+      },
+      "ok": true,
+      "ports_free_after_stop": {
+        "console_cmd": true,
+        "receive": true,
+        "web": false
+      }
+    }
+  },
+  "errors": {}
+}
