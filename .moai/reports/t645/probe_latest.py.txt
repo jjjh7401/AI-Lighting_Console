@@ -1,0 +1,21 @@
+import json
+
+from playwright.sync_api import sync_playwright
+
+out = dict()
+with sync_playwright() as p:
+    browser = p.chromium.launch(channel="chrome", headless=True)
+    ctx = browser.new_context(viewport=dict(width=1700, height=900), device_scale_factor=1)
+    page = ctx.new_page()
+    page.set_default_timeout(60000)
+    page.goto("http://127.0.0.1:47010/", wait_until="load")
+    page.wait_for_timeout(3000)
+    btn = page.locator("button.runbook-toggle")
+    if btn.count() > 0 and btn.first.get_attribute("aria-label") == "런북 모드 켜기":
+        btn.first.click()
+        page.wait_for_timeout(3000)
+    body = page.inner_text("body")
+    for marker in ["확인된 곡", "Design Interview", "Sugar", "LOVE ATTACK", "타임라인 라이브러리", "불러오기", "라이브러리에 저장", "확인된 곡·큐가 없습니다"]:
+        out[marker] = body.count(marker)
+    browser.close()
+print(json.dumps(out, ensure_ascii=False))
