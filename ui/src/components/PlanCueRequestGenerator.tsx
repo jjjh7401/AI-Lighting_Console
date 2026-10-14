@@ -32,6 +32,7 @@ import {
   type PresetPopupState,
 } from "./PresetPoolPopup";
 import { sectionIntensityPercent } from "./CueSheetTimeline";
+import { trimSeconds } from "./beatGridTransition";
 import {
   buildCueRequestSentences,
   cueRequestDiffLabel,
@@ -97,9 +98,10 @@ function changeSignature(change: GeneratorChange): string {
 }
 
 /** 페이드 변경 줄의 「이전 값」. 카드 t490 — 재질의 대기에서는 값이 `null`(미정)이라
- * 없는 키와 같이 「—」다(`null초` 로 찍지 않는다). */
+ * 없는 키와 같이 「—」다(`null초` 로 찍지 않는다). 카드 t654 — 시안 tc 표기(소수 둘째,
+ * 뒤 0 제거)로 찍는다. 표시 전용이고 `fade_seconds` 는 그대로다. */
 export function fadeBeforeLabel(section: SongTimelineSection): string {
-  return section.fade_seconds != null ? `${section.fade_seconds}초` : "—";
+  return section.fade_seconds != null ? `${trimSeconds(section.fade_seconds)}초` : "—";
 }
 
 /** REQ-090 — BLIND 는 해제 구간(reserve 항목의 screen_position) 전까지 잠금.

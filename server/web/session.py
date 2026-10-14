@@ -4183,6 +4183,10 @@ class ChatSession:
         # 가능한 소스(기본값은 정직한 "제안 없음" — 이 카드는 AI 백엔드를
         # 갖지 않는다). 보류 생성은 격자·콘솔 어느 쪽도 바꾸지 않는다
         # (결정④) — `beat_grid_suggestion_apply`가 소비할 때만 바뀐다.
+        # 보류 제안은 연결 수명 (감독 결정, t652): 이 세션 객체와 함께 생기고 함께 사라진다.
+        # 재연결은 `websocket_endpoint`(app.py)가 `ChatSession`을 새로 만들어 연다. 그래서
+        # 이전 연결의 제안은 새 연결에서 보이지 않는다. 이 저장소를 세션 밖으로
+        # 빼면 그 경계가 깨진다.
         self._beat_grid_suggestions = PendingSuggestionStore()
         self._beat_grid_suggestion_source: SuggestionSource = (
             beat_grid_suggestion_source
@@ -11192,7 +11196,8 @@ class ChatSession:
         self._send(beat_grid_suggestion_consumed_event(suggestion_id=suggestion_id))
         if suggestion is None:
             return self._beat_grid_rejection(
-                f"제안 '{suggestion_id}'을 찾을 수 없습니다(이미 적용됐거나 만료됐습니다)."
+                f"제안 '{suggestion_id}'을 찾을 수 없습니다(이미 적용·거절된 제안이거나, "
+                "재연결로 보류 제안이 버려진 경우일 수 있습니다)."
             )
         return self.beat_grid_edit(suggestion.bar, suggestion.target, dict(suggestion.changes))
 

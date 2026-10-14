@@ -1258,6 +1258,22 @@ describe("dash reducer (REQ-DASHUI-006 replace + freshness)", () => {
   });
 });
 
+describe("clearOnDisconnect — beat-grid suggestion is connection-lifetime (t652)", () => {
+  it("drops a pending beat-grid suggestion on disconnect", () => {
+    const state = {
+      ...initialState,
+      pendingBeatGridSuggestion: {
+        suggestion_id: "sug-1",
+        bar: 1,
+        target: "BACK",
+        changes: {},
+        rationale: "테스트용 제안",
+      },
+    };
+    expect(clearOnDisconnect(state).pendingBeatGridSuggestion).toBeNull();
+  });
+});
+
 describe("clearOnDisconnect dash extension (AC-DASHUI-017, reducer half)", () => {
   function syncedState() {
     let state = reduceServerEvent(initialState, event(dashCatalogEvent), 1000);
