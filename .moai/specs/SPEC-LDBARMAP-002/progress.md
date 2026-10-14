@@ -42,6 +42,31 @@
   (c) 전제 P13: 업로드가 지우는 것은 `_song_analysis` 뿐이고 `_song_bpm` 은 유지한다(`session.py` 업로드 함수, 주석 「_song_bpm 은 손대지 않는다」).
 - 열린 항목: 로그가 파일에 남는지 앱 실행 설정을 확인한다(지금은 파이썬 기본 로깅, stderr 의 WARNING 이상). 성공 판정 경쟁(Gaps 4·15·16)은 SPEC 이 받아들인 한계다. 콜드 스타트 첫 실행 약 41초는 시험 한 개 60초 시간 제한에 가깝다(실제 곡 시험은 한 번만). plan-audit 3차 PASS(0.91) 의 산출물 해시는 본문 수정으로 달라졌다. 재감사 여부는 리드가 정한다.
 
+### M3 — WS 프레임 `bar_map_analyse` (카드 t647, 재개 뒤)
+
+- 커밋: `a8482122` (첫 박 오프셋 거절 문구에서 입력값 빼기), `508b372c` (허용 목록·파서·디스패치), `6db71ada` (와이어·파서·동결 시험). M3 끝 트리 `6db71ada`.
+- 기준 갱신: `origin/main` `3f67e525`(12커밋, `server/web/session.py` 포함)을 `3a0fef43` 으로 합침. `git merge-tree` 로 충돌 0을 먼저 확인했다. 합친 뒤 기준선은 `uv run pytest server/tests/test_audio_bar_map_entry.py server/tests/test_session_bar_map_entry.py server/tests/test_web_song_audio.py server/tests/test_session_bar_map_store.py -q -rs` → `187 passed, 1 warning in 8.00s`.
+- 구현 요점
+  - 파서(`server/web/messages.py`): 정수만 받는다. `bool`·실수·문자열·null·필드 없음은 `ProtocolError`다. 범위(0~3)는 세션이 판정한다. 출력은 `v`·`type`·`first_beat_offset` 세 키뿐이다.
+  - 디스패치(`server/web/app.py`): 첨부 없음 → `error` 종류 `song_audio_missing`. 처리 중 → `busy`. 그 밖 → `create_task(run_bar_map_analysis(...))`로 띄우고 `await` 하지 않는다(AC-LDBARENTRY-010).
+  - 래퍼 `run_bar_map_analysis`: 세션 메서드가 예외를 내면 WARNING 로그(`server.web.app`, 트레이스백 포함)를 남긴다. 이 요청에 대해 `chat_response` 가 하나도 나가지 않았을 때만 일반 문구 응답을 하나 보낸다. 판단은 연결 단위 `chat_response` 카운터의 증가분으로 한다.
+  - 거절 문구(`server/audio/bar_map_entry.py`): 정수가 아닌 값의 문구에서 입력값(`repr`)을 뺐다. 객체 주소가 화면에 새지 않게 하기 위해서다.
+- 래퍼 대체 응답의 모양: `status` `ok`, 요약 `마디 지도 분석 거절`, 본문 `_BAR_MAP_ENTRY_FAILED_TEXT`. 지시문의 「non-success」는 SPEC E2(거절은 새 상태값이 아니라 요약으로 가른다)에 맞춰 이렇게 읽었다. 리드 확인이 필요하다.
+- 동결 목록(`server/tests/test_prechk_tool.py`): `_EXPECTED_CLIENT_MESSAGE_TYPES` 에 `"bar_map_analyse",` 한 줄을 `"approval_decision",` 다음에 넣었다. 다른 튜플은 건드리지 않았다.
+- 관찰한 검증 (트리 `6db71ada`, `uv run`)
+  - M3 묶음: `uv run pytest server/tests/test_audio_bar_map_entry.py server/tests/test_session_bar_map_entry.py server/tests/test_messages_bar_map_entry.py server/tests/test_web_bar_map_entry.py server/tests/test_prechk_tool.py -q -rs` → `217 passed, 1 warning in 5.85s`.
+  - 회귀: `uv run pytest server/tests/test_web_song_audio.py server/tests/test_session_bar_map_store.py server/tests/test_audio_bar_map.py server/tests/test_audio_bar_map_store.py server/tests/test_web_messages.py server/tests/test_messages_beat_grid_t551.py -q -rs` → `476 passed, 1 warning in 16.66s`.
+  - 린트: `uv run ruff check` 7개 파일 → `All checks passed!`. `uv run ruff format --check` → `7 files already formatted`.
+  - 구현 레인의 보고(직접 재실행은 §D 단계에서 한다): AC-010 비공허 확인으로 디스패치를 `await` 형태로 바꾸면 `AssertionError: no websocket frame within 5.0s` 로 실패했다. AC-011 역방향 실행으로 `"bar_map_analyse",` 한 줄을 지우면 `assert surface.client_message_types == _EXPECTED_CLIENT_MESSAGE_TYPES` 가 실패했다(`At index 1 diff: 'bar_map_analyse' != 'beat_grid_apply'`). 두 변형 모두 되돌린 뒤 트리는 깨끗했다.
+  - 변이 확인(구현 레인 보고): 파서 bool 가드 제거 → `[true]`·`[false]` 시험이 잡음. 누락 오프셋을 0으로 채움 → 세 시험이 잡음. 래퍼가 「이미 보냈나」를 무시 → 응답 뒤 예외 시험이 잡음. `str(exc)` 를 프레임에 실음 → 예외 시험이 잡음. 첨부 확인 제거 → AC-001·AC-015(a)가 잡음. busy 확인 제거 → AC-009·AC-015(b)가 잡음. 트레이스백 없는 로그 → 래퍼 두 시험이 잡음. 카운터 증가 제거 → 응답 뒤 예외 시험이 잡음.
+  - 넓은 범위(구현 레인 보고): 웹 계열 시험 파일 40개 → `1328 passed in 63.33s`. 와이어 시험 파일은 25회 연속과 16회 동시 실행에서 모두 통과했다(불안정 없음).
+- AC-LDBARENTRY-013 (4) 근거: 운영 파일 diff에서 지워진 줄은 `server/web/app.py` 의 `from server.web.session import ChatSession, PendingSongPlanStore, SongTimelineStore` 한 줄뿐이고, 그 자리에 새 이름이 든 여러 줄 import 가 들어갔다. `song_audio_analyse` 파서·디스패치 본문 변경 0줄. `_song_bpm`·`_song_analysis` 는 손대지 않았다.
+- AC-LDBARENTRY-015 세션 쪽 여섯 경우: `test_session_bar_map_entry.py` 의 `test_ac015_every_outcome_that_reaches_analysis_sends_exactly_one_chat_response` 가 M2에서 이미 덮는다.
+- 열린 항목 (M3 기준)
+  - 계약 문서 누락: `server/web/PROTOCOL.md` 의 클라이언트 프레임 표에 `bar_map_analyse` 행이 없다. plan.md 파일 목록에도 없고 이를 강제하는 시험도 없다. 레인 범위를 넓히지 않고 리드 판단으로 남긴다. UI 쪽 `ui/src/protocol.ts` 도 UI 카드의 몫이다.
+  - 래퍼 판정의 한계: 「이미 보냈나」는 연결 단위 카운터의 증가분이다. 같은 연결의 다른 경로가 같은 시간에 `chat_response` 를 내면, 드문 이중 실패에서 대체 응답이 빠질 수 있다. 측정하지 않았다.
+  - 로그 파일 여부: 서버 코드에는 파일 로그 설정이 없다(`basicConfig`·`FileHandler` 없음). `server/web/launcher.py` 는 `sys.stderr` 로만 내보낸다. 파일로 남는지는 실행 방식에 달려 있어 저장소만으로는 확정하지 못했다.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
