@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 첫 박 오프셋 유효 범위 | 정수 0~3 | 박(beat-index) | REQ-LDBARENTRY-002·007, `bar_map.py:452-457`. 4/4 전용(D2) |
 | 박자표 | `[4, 4]` | 분자/분모 | REQ-LDBARENTRY-015 |
-| 응답 프레임 수 | 결과마다 `chat_response` 정확히 1 | 개 | REQ-LDBARENTRY-012 |
+| 응답 프레임 수 | 분석에 도달한 결과마다 `chat_response` 정확히 1, 도달하지 못한 요청(첨부 없음·busy·프레임 오류)은 0 | 개 | REQ-LDBARENTRY-012 |
 | 되돌리기 깊이 증가 | 저장 성공 1회당 +1, 거절 0 | 단계 | REQ-LDBARENTRY-010 |
 | 실제 곡 다운비트 적중 허용오차 | ±60 ms | ms | `SPEC-LDBARMAP-001` §A 상수표, AC-LDBARMAP-016 |
 | 실제 곡 다운비트 적중 통과선 | 90 % 이상 | % | `SPEC-LDBARMAP-001` AC-LDBARMAP-016 |
@@ -33,8 +33,8 @@
 시험 파일: `server/tests/test_messages_bar_map_entry.py`
 
 **Given** `parse_client_message`(`messages.py:378`)가 있고
-**When** 다음 프레임을 차례로 넣으면: 오프셋 0·1·2·3 정수 / 필드 없음 / `null` / `true` / `1.0` / `"1"` / `[1]`
-**Then** (1) 정수 0~3 프레임은 정확히 키 `{v, type, first_beat_offset}`만 가진 사전으로 통과하고 값은 입력과 같다 — 오디오 바이트나 다른 필드를 싣지 않는다. (2) 나머지 여섯 프레임은 전부 `ProtocolError`다 — 특히 "필드 없음"이 `first_beat_offset == 0`으로 통과하면 FAIL이다(기본값 금지). (3) 새 타입 문자열이 `CLIENT_MESSAGE_TYPES`(`messages.py:116`)에 들어 있다. (4) 범위 밖 정수(-1, 4)는 파서에서 통과하고 범위 판정은 AC-003이 잰다 — 파서는 박 수 상수를 따로 들지 않는다.
+**When** 다음 프레임을 차례로 넣으면: 오프셋 0·1·2·3·-1·4 정수 / 필드 없음 / `null` / `true` / `1.0` / `"1"` / `[1]`
+**Then** (1) 정수 프레임 여섯(0·1·2·3·-1·4)은 전부 정확히 키 `{v, type, first_beat_offset}`만 가진 사전으로 통과하고 값은 입력과 같다 — 오디오 바이트나 다른 필드를 싣지 않는다. -1과 4처럼 범위 밖 정수도 파서는 통과시키고 범위 판정은 AC-003이 잰다. 파서는 박 수 상수를 따로 들지 않는다. (2) 나머지 여섯 프레임(필드 없음·`null`·`true`·`1.0`·`"1"`·`[1]`)은 전부 `ProtocolError`다 — 특히 "필드 없음"이 `first_beat_offset == 0`으로 통과하면 FAIL이다(기본값 금지). (3) 새 타입 문자열이 `CLIENT_MESSAGE_TYPES`(`messages.py:116`)에 들어 있다.
 
 ### AC-LDBARENTRY-003 (REQ-LDBARENTRY-007) — 싼 점검은 디코드 전에: 범위 밖 오프셋, 타임라인 없음
 
@@ -60,7 +60,7 @@
 
 **Given** 합성 클릭 트랙 바이트와 오프셋 k ∈ {0, 1, 2, 3}이 있고
 **When** 합성 단계를 세션·콘솔·UI 객체 없이 바이트와 오프셋만으로 부르면
-**Then** (1) 실패 객체가 아니라 마디 지도 사전이 나오고 `validate_bar_map(그 사전) is None`이다. (2) `bars[]`의 `beats_ms`를 순서대로 이어 붙이면 같은 오디오에 대한 `detect_beat_grid(...).beat_times_ms`와 같다. (3) k > 0이면 첫 마디 번호가 0이고 그 `beats_ms` 길이가 k이며, k = 0이면 첫 마디 번호가 1이다. 마디 번호는 연속한다. (4) `events[].start_bar`·`end_bar`가 전부 저장된 `bars[].bar` 안에 든다. (5) `time_signature == [4, 4]`이고 `first_beat_offset == k`다. (6) 합성 모듈 소스에 곡·장비 고유 리터럴(`LOVE ATTACK`, `112`, `210`, `Group`, `fid`)이 0건이다 — 정적 스캔 시험이고 목록은 run-phase가 시험 도구에서 발견한 고유값으로 넓힌다.
+**Then** (1) 실패 객체가 아니라 마디 지도 사전이 나오고 `validate_bar_map(그 사전) is None`이다. (2) `bars[]`의 `beats_ms`를 순서대로 이어 붙이면 같은 오디오에 대한 `detect_beat_grid(...).beat_times_ms`와 같다. (3) k > 0이면 첫 마디 번호가 0이고 그 `beats_ms` 길이가 k이며, k = 0이면 첫 마디 번호가 1이다. 마디 번호는 연속한다. (4) **양성 대조군(번호 공간)**: 분류 단계를 대역으로 바꾼다 — 대역은 합성 단계가 넘긴 마디별 특징 목록을 기록하고, 그 목록의 **마지막 특징 마디**에 `kick_entry` 사건 하나를 돌려준다. 합성 클릭 트랙은 실제 분류기로는 사건을 거의 내지 않으므로 이 대역이 사건 유무에 기대지 않고 번호 공간을 재는 장치다. 전제 단언: 기록된 특징이 1개 이상이고 저장된 `events`가 1개 이상이다 — **0개면 FAIL**이다(사건이 없어 (4a)~(4c)가 공허하게 참이 되는 것을 막는다). (4a) 기록된 특징의 `bar`가 순서대로 1, 2, …, n이고 n이 저장된 `bar >= 1` 마디 수와 같다. (4b) 저장된 `events`에 주입한 사건이 정확히 1개이고 그 `start_bar == end_bar`가 저장된 `bars[].bar`의 최댓값과 같다(마디 0은 세지 않는 같은 1-base 번호 공간). (4c) 이 (4a)~(4b)를 k = 0·1·2·3 각각에서 되풀이한다 — 오프셋이 달라져도 특징 번호와 저장 마디 번호의 대응이 유지된다. (5) `time_signature == [4, 4]`이고 `first_beat_offset == k`다. (6) **고유값 정적 스캔(닫힌 목록)**: 아래 다섯 정규식이 0건이다 — `\bLOVE ATTACK\b`, `\b112(\.\d+)?\b`, `\b210\b`, `\bGroup\b`, `\bfid\b`. 단어 경계를 써서 `bpm_confidence`·`confidence`가 `fid`에 걸리지 않는다. 목록은 닫혀 있고, 넓히려면 SPEC을 개정한다. 이 시험(pytest)이 훑는 파일은 **신규 5개 중 이 시험 파일을 뺀 넷**이다 — 합성 모듈(가칭 `server/audio/bar_map_entry.py`), `test_session_bar_map_entry.py`, `test_messages_bar_map_entry.py`, `test_web_bar_map_entry.py`. 이 시험 파일 자신은 정규식 목록과 AC-016 실제 곡 고정물이 있어 제외한다. 신규 시험 틀은 중립 제목과 번호(곡 열쇠 예: `"TEST SONG"`, `1`)를 쓴다. 수정한 운영 파일 `server/web/messages.py`·`app.py`·`session.py`는 파일 전체가 아니라 **base 대비 추가된 줄**만 같은 다섯 정규식으로 훑는다 — 이 훑기는 base 커밋이 필요해 pytest가 아니라 §D 8번 명령이 맡는다.
 
 ### AC-LDBARENTRY-006 (REQ-LDBARENTRY-007) — 분석 실패는 타임라인을 건드리지 않는다
 
@@ -91,7 +91,7 @@
 
 **Given** 세션에 첨부 오디오가 있고, 진입 메서드 대역이 이벤트를 기다리며 멈추도록(명시적 시간 상한이 있다) 꽂혀 있고, 첫 마디 지도 분석 프레임이 이미 처리 중일 때
 **When** 두 번째 마디 지도 분석 프레임이 오면
-**Then** (1) `type == "busy"`이고 `message`가 `app.py:90`의 문구와 같은 프레임이 온다. (2) 대역 호출 횟수가 1이다. (3) 대역을 풀어 준 뒤 세 번째 프레임을 보내면 받아들여지고 호출 횟수가 2가 된다.
+**Then** (1) `type == "busy"`이고 `message`가 `app.py:90`의 문구와 같은 프레임이 온다. (2) 대역 호출 횟수가 1이다. (3) 대역은 풀리면 `chat_response` 프레임을 하나 보내고 끝나도록 만든다. 시험은 대역을 푼 뒤 **첫 요청의 `chat_response` 수신을 기다리고**, 이어 `status_request`를 보내 `status` 답을 받은 다음에야 세 번째 프레임을 보낸다 — 그러지 않으면 첫 작업이 아직 끝나지 않아(`current_task.done()` 거짓) 세 번째 프레임에 또 busy가 올 수 있다. 그 뒤 세 번째 프레임은 busy 없이 받아들여지고 호출 횟수가 2가 된다.
 
 ### AC-LDBARENTRY-010 (REQ-LDBARENTRY-005) — 분석 중에도 수신 루프가 산다
 
@@ -107,7 +107,7 @@
 
 **Given** 새 타입이 `messages.py`의 허용 목록에 들어 있고
 **When** `TestBoundaryProhibitions.test_the_axis_adds_no_web_surface`(`test_prechk_tool.py:1484`)를 돌리면
-**Then** (1) PASS다. (2) `_EXPECTED_CLIENT_MESSAGE_TYPES`의 base 대비 diff가 새 문자열 원소 정확히 1개와 그 사유 주석뿐이고, 그 원소는 `"approval_decision"`과 `"beat_grid_apply"` 사이에 있다. (3) `_EXPECTED_SERVER_MESSAGE_TYPES`(`:1335`)와 `_EXPECTED_WEB_ROUTES`의 diff가 0줄이다. **역방향 실행**: 새 원소 줄만 지우고 같은 시험을 돌리면 FAIL이어야 한다 — 그 출력을 `progress.md` §E.2에 남긴다. 이 FAIL이 없으면 이 AC는 공허하다.
+**Then** (1) PASS다. (2) `_EXPECTED_CLIENT_MESSAGE_TYPES`의 base 대비 diff가 새 문자열 원소 정확히 1개와 그 사유 주석뿐이다. 그 원소와 주석은 `"approval_decision",`(base `:1249`) **바로 다음 줄**에서 시작하고 t551 주석 블록(base `:1250-1261`) **앞**에서 끝난다 — 리터럴 튜플이 정렬된 순서여야 `==` 비교(`:1499`)가 통과하므로 이 자리가 정본이다. (3) `_EXPECTED_SERVER_MESSAGE_TYPES`(`:1335`)와 `_EXPECTED_WEB_ROUTES`의 diff가 0줄이다. **역방향 실행**: 새 원소 줄만 지우고 같은 시험을 돌리면 FAIL이어야 한다 — 그 출력을 `progress.md` §E.2에 남긴다. 이 FAIL이 없으면 이 AC는 공허하다.
 
 ### AC-LDBARENTRY-012 (REQ-LDBARENTRY-014) — 소비자 왕복
 
@@ -135,11 +135,15 @@
 
 ### AC-LDBARENTRY-015 (REQ-LDBARENTRY-012) — 어떤 결과든 응답은 연결로 나간다
 
-시험 파일: `server/tests/test_session_bar_map_entry.py`
+시험 파일: `server/tests/test_session_bar_map_entry.py`(분석에 도달한 여섯 경우), `server/tests/test_web_bar_map_entry.py`(도달하지 못한 세 경우)
 
-**Given** 연결이 주입한 `send_event` 콜백(`session.py:4041`)을 리스트에 모으는 세션이고
+**측정 지점은 반환값이 아니라 연결의 송신 지점이다.** 세션 시험은 연결이 주입한 `send_event` 콜백(`session.py:4041`)이 받은 프레임을 세고, 와이어 시험은 클라이언트가 받은 프레임을 센다. 저장 관문의 거절 경로는 반환만 하고 보내지 않기 때문이다(`session.py:9321-9336`).
+
+**Given** `send_event` 콜백을 리스트에 모으는 세션이고
 **When** 다음 결과를 각각 만들면: 성공 / 타임라인 없음 / 범위 밖 오프셋 / 분석 실패(AC-006 (가)) / 두 배 BPM 채택 / 곡 바뀜(AC-008)
-**Then** 여섯 경우 모두 모인 프레임 중 `type == "chat_response"`가 정확히 1개다 — **반환값이 아니라 콜백으로 나간 프레임을 센다.** 저장 관문의 거절 경로는 반환만 하고 보내지 않기 때문이다(`session.py:9321-9336`). 성공에서는 `song_timeline`이 정확히 1개, 나머지 다섯에서는 0개다. 성공의 `summary`가 다섯 거절의 `summary`와 모두 다르다.
+**Then** 여섯 경우 모두 모인 프레임 중 `type == "chat_response"`가 정확히 1개다. **성공에서 그 1개는 저장 관문이 보낸 것이다** — 진입 경로가 성공에서 반환 이벤트를 다시 `_send`하면 2개가 되어 FAIL이다. 거절 다섯에서는 진입 경로가 보낸 것이 그 1개다. 성공에서는 `song_timeline`이 정확히 1개, 나머지 다섯에서는 0개다. 성공의 `summary`가 다섯 거절의 `summary`와 모두 다르다.
+
+**And Given** WS에 연결된 세션이고 **When** 다음 세 요청을 각각 보내면: (가) 첨부 오디오가 없는 상태의 유효한 분석 프레임 (나) 처리 중(멈추는 대역)에 오는 두 번째 분석 프레임 (다) `first_beat_offset`이 없는 프레임 **Then** 클라이언트가 받는 응답은 (가) `error` + kind `song_audio_missing`, (나) `busy`, (다) `error` + kind `protocol`이고, 세 경우 모두 `chat_response`가 0개이며 진입 메서드 대역의 호출 횟수는 (가)·(다)에서 0, (나)에서 첫 요청 몫의 1이다.
 
 ### AC-LDBARENTRY-016 (REQ-LDBARENTRY-001, 006, 016) — 실제 곡 로컬 전용 게이트
 
@@ -176,3 +180,4 @@
 5. 콘솔 접촉 0건: `git diff --name-only origin/main...HEAD`에 `console/` 아래 파일이 0건이고, AC-013이 통과한다.
 6. AC-016은 감독의 로컬 환경에서 한 번 돌려 결과를 기록한다(CI에서는 건너뜀 — 건너뜀 자체를 PASS로 읽지 않는다. 로컬 실행 출력이 없으면 AC-016은 미검증이다).
 7. 변경 파일 목록이 plan.md §C의 파일 목록과 다르면 그 차이를 `progress.md`에 사유와 함께 적는다.
+8. 고유값 훑기 — 수정한 운영 파일의 추가된 줄(AC-005 (6)의 pytest가 못 맡는 부분): `git diff -U0 origin/main...HEAD -- server/web/messages.py server/web/app.py server/web/session.py`의 `+` 줄(헤더 `+++` 제외)을 정규식을 지원하는 도구(예: `rg`)로 `\bLOVE ATTACK\b|\b112(\.[0-9]+)?\b|\b210\b|\bGroup\b|\bfid\b`에 대어 0건이어야 한다. 출력 원문을 `progress.md` §E.2에 붙인다.

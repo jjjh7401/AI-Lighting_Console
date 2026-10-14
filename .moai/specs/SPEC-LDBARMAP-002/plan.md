@@ -15,7 +15,7 @@
 
 1. **프레임의 이름과 모양** — 프로토콜 동결 지점이라 한 번 정하면 클라이언트가 얹힌다. [NEEDS CLARIFICATION: D3 새 타입 `bar_map_analyse`인가, `song_audio_analyse` 확장인가] [NEEDS CLARIFICATION: D1 `first_beat_offset`이 필수 요청 필드인가, 기본값 0인가]
 2. **분석 범위** — [NEEDS CLARIFICATION: D2 4/4 전용인가, 분석기 일반화인가] 일반화를 고르면 이 SPEC은 분석기를 여는 SPEC이 되어 Tier L 후보로 올라간다.
-3. **분석기 한계를 입구에서 어떻게 막는가** — [NEEDS CLARIFICATION: E1 두 배 BPM 채택 시 거절/원래 BPM 저장/보정 BPM 저장] [NEEDS CLARIFICATION: E2 거절 응답의 `status` 값] [NEEDS CLARIFICATION: E3 오디오와 타임라인의 곡 대응을 확인하는가]
+3. **분석기 한계를 입구에서 어떻게 막는가** — [NEEDS CLARIFICATION: E1 두 배 BPM 채택 시 거절/원래 BPM 저장/보정 BPM 저장] [NEEDS CLARIFICATION: E2 거절 응답의 `status` 값] [NEEDS CLARIFICATION: E3 오디오와 타임라인의 곡 대응을 확인하는가] 저장 `bpm`의 출처(E4)는 권고 (가) 검출기 값만 쓰기로 이 문서가 따른다 — 감독 결정이 아니라 엔지니어링 확인 항목이고 spec.md §5에 선택지가 있다.
 4. **합성을 어디에 두는가** — 세션 밖의 순수 단계로 둔다(REQ-LDBARENTRY-006). 대안은 세션 메서드 안에 모두 넣는 것인데, 그러면 오디오 분석 시험이 세션 틀(콘솔 대역, 승인 채널)을 끌고 와야 해서 느리고, 합성 순서의 오류와 세션 배선의 오류를 시험이 가르지 못한다. 이 결정은 되돌리기 쉽다(함수 위치 이동).
 5. **기계적 단계** — 동결 스냅샷 한 줄, 시험 틀 복제, 린트. 뒤로 둔다.
 
@@ -51,7 +51,7 @@
 - 같은 오디오를 `detect_beat_grid`와 `extract_bar_features`가 각각 디코드한다(spec.md Gaps 1번). 지연이 문제가 되면 디코드 결과를 공유하도록 분석기를 고쳐야 하는데, 분석기는 이 SPEC의 범위 밖이다 — 그때는 이 SPEC을 멈추고 분석기 변경을 별도 SPEC으로 올린다.
 - 실패 객체가 셋(`BeatGridFailure`, `BarMapFailure`, `BarFeaturesFailure`)이고 빌더는 예외(`BarMapStoreError`)다. 합성 단계는 이 넷을 하나의 실패 형태로 통일하되 **각 사유 문자열을 바꾸지 않고** 넘긴다.
 - 합성 단계가 예외를 밖으로 내보내면 `to_thread` 작업이 조용히 죽어 응답이 없다(REQ-LDBARENTRY-012 위반). 분석기의 "예외를 밖으로 내보내지 않는다" 계약(`bar_map.py:226-228`)을 합성 단계가 이어받는다.
-- 마디 번호 공간 불일치(P7). `extract_bar_features`의 `bar`는 경계 목록 인덱스 + 1이고 빌더는 마디 0을 따로 둔다. AC-005 (3)·(4)가 이를 직접 잰다.
+- 마디 번호 공간 불일치(P7). `extract_bar_features`의 `bar`는 경계 목록 인덱스 + 1이고 빌더는 마디 0을 따로 둔다. AC-005 (3)과 (4)의 양성 대조군(분류 단계를 기록용 대역으로 바꿔 특징 번호를 가로채고 마디 하나에 사건을 주입하며, 사건 0개면 FAIL)이 CI에서 이를 재고, 실제 분류기가 실제 오디오에서 낸 사건의 번호는 로컬 전용 AC-016이 잰다.
 
 **검증 명령**:
 ```
@@ -73,7 +73,7 @@ ruff format --check server/audio/bar_map_entry.py server/tests/test_audio_bar_ma
 6. 저장 직전 곡 열쇠를 다시 읽어 달라졌거나 타임라인이 없으면 거절(REQ-LDBARENTRY-009).
 7. `store_timeline_bar_map(payload)` 호출. 그 관문의 거절 경로는 반환만 하고 전송하지 않으므로(P2) 반환된 이벤트가 성공 이벤트가 아니면 진입 메서드가 그 이벤트를 `_send`한다. 성공 여부는 관문의 반환 이벤트 모양이 아니라, 호출 뒤 `timeline_bar_map()`이 방금 넘긴 페이로드와 깊은 비교로 같은지로 가른다 — 관문의 문구가 바뀌어도 판정이 흔들리지 않게 한다.
 
-`_song_bpm`, `_song_analysis`, `_song_audio`는 읽기만 하고 쓰지 않는다(REQ-LDBARENTRY-011).
+`_song_audio`만 읽는다(첨부 바이트). `_song_bpm`과 `_song_analysis`는 읽지도 쓰지도 않는다 — 저장되는 `bpm`은 검출기 값만 쓴다(E4 (가), REQ-LDBARENTRY-011).
 
 **시험**: `test_session_bar_map_entry.py` — AC-003, 004, 006, 007(세션 쪽), 008, 012, 013, 014, 015.
 
@@ -97,14 +97,14 @@ ruff format --check server/web/session.py server/tests/test_session_bar_map_entr
 **산출물**:
 - `messages.py`: 허용 목록에 새 타입, 파서 분기. 정수·비bool 점검(REQ-LDBARENTRY-002). 출력은 `{v, type, first_beat_offset}`만.
 - `app.py`: 디스패치 분기. 순서는 `song_audio_analyse`와 같다 — 첨부 없음 → busy → `create_task(to_thread(session.진입메서드, offset))` (P11). 첨부 없음이 busy보다 먼저다.
-- `test_prechk_tool.py`: `_EXPECTED_CLIENT_MESSAGE_TYPES`에 한 줄 + 사유 주석(`"approval_decision"`과 `"beat_grid_apply"` 사이).
+- `test_prechk_tool.py`: `_EXPECTED_CLIENT_MESSAGE_TYPES`에 한 줄 + 사유 주석(`:1249`의 `"approval_decision",` 바로 다음, t551 주석 블록 앞).
 
 **시험**: `test_messages_bar_map_entry.py` — AC-002. `test_web_bar_map_entry.py` — AC-001, 009, 010. `test_prechk_tool.py` — AC-011(역방향 실행 포함).
 
 **위험**:
 - 멈춘 시험이 프로세스째 끊긴다(`pyproject.toml:75-76`). AC-009·010의 멈추는 대역은 반드시 명시적 시간 상한을 둔다.
 - 허용 목록에만 더하고 동결 튜플을 빠뜨리면 `test_prechk_tool.py:1499`에서 실패한다. 반대로 튜플을 먼저 더하고 목록을 빠뜨려도 같은 단언에서 실패한다. 두 줄은 한 변경에 있어야 한다.
-- 정렬 위치. 튜플은 알파벳 순이고 비교는 정렬 후 같음이므로 순서가 어긋나도 단언은 통과할 수 있다 — 그래도 읽는 사람을 위해 `approval_decision` 다음에 둔다.
+- 정렬 위치. 동결 시험은 정렬한 수집 결과(`test_prechk_tool.py:1463`)를 리터럴 튜플과 `==`로 비교하므로(`:1499`) **리터럴 튜플도 정렬 순서여야 하고, 어긋나면 `:1499`에서 실패한다.** 새 원소와 사유 주석은 `:1249`의 `"approval_decision",` 바로 다음 줄, t551 주석 블록(`:1250-1261`) 앞에 둔다 — 그래야 t551 주석이 계속 `beat_grid_apply`에 붙어 있다.
 - `ui/src/protocol.ts`를 건드리지 않는다(UI 범위 밖). 서버에만 있는 타입은 호출하는 클라이언트가 없다(Gaps 9번).
 - `app.py`에는 `song_audio_analyse` 분기가 사람 응답 대기 때문에 `create_task`를 쓴다는 긴 주석이 있다. 새 분기를 이 분기 옆에 두면 읽는 사람이 이유를 혼동한다 — 새 분기의 주석은 "이유가 다르다: 분석 시간"을 적는다(REQ-LDBARENTRY-005).
 

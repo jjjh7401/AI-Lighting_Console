@@ -1,14 +1,14 @@
 ---
 id: SPEC-LDBARMAP-002
 title: "마디 지도 진입 경로 — 오디오에서 마디 지도까지 서버 쪽 입구"
-version: "0.1.0"
+version: "0.1.1"
 status: draft
 created: 2026-10-14
 updated: 2026-10-14
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.2 target"
-module: "server/web/messages.py(프레임 허용 목록·파서), server/web/app.py(디스패치 분기), server/web/session.py(진입 메서드), 신규 server/audio/ 아래 합성 모듈 1개(가칭, run-phase에서 이름 확정), server/tests/test_prechk_tool.py(동결 스냅샷 1행)"
+module: "server/web/messages.py, server/web/app.py, server/web/session.py, server/audio/bar_map_entry.py, server/tests/test_prechk_tool.py"
 lifecycle: spec-anchored
 tags: "bar-map, entry-path, ws-message, audio-analysis, draft-timeline, protocol-freeze"
 tier: M
@@ -23,10 +23,11 @@ depends_on: [SPEC-LDBARMAP-001]
 | 일자 | 내용 |
 |---|---|
 | 2026-10-14 | 최초 작성(카드 t638). 입력: `SPEC-LDBARMAP-001`(status: completed — 분석기·저장 관문이 이미 있고 이 SPEC은 그 둘 사이를 잇는다), `SPEC-LDARRANGE-001` §5 항목 1(소비자 쪽 입력 모양), 코드 직접 읽기(아래 §3 전제표 — 인용한 줄은 전부 이 plan-phase에서 열어 읽은 줄이다). **plan만 — 코드 변경 0줄, 시험 실행 0회, 콘솔 접촉 0건, 다른 SPEC 디렉터리 수정 0건.** REQ 접두사는 `REQ-LDBARENTRY-`, AC 접두사는 `AC-LDBARENTRY-`다 — `REQ-LDBARMAP-001~016`·`AC-LDBARMAP-001~016`(SPEC-LDBARMAP-001 소유)과 grep에서 섞이지 않게 접두사를 갈랐다(origin/main에서 `LDBARENTRY` 0건 확인). |
+| 2026-10-14 | plan-audit 1차 FAIL(MP-7만, 0.84) — F1~F12 반영; 표지 6개는 감독 결정 대기로 유지 |
 
 ## §0. Tier 선택 근거
 
-**Tier M.** 이 SPEC은 신규 서버 코드를 만든다 — 합성 모듈 1개, 세션 메서드 1개, 프레임 파서 1개, 디스패치 분기 1개, 동결 스냅샷 1행 — 그리고 시험 파일 4개를 더한다. 영향 파일은 9개 안팎(운영 코드 4개, 기존 시험 수정 1개, 신규 시험 4개)이고 줄 수는 시험을 포함해 대략 635~955줄로 본다. 둘 다 Tier S 상한(5파일, 300줄)을 넘고 Tier L 기준(15파일, 1000줄, 헌법급 결정)에는 못 미친다. 이 추정은 코드를 짜 본 값이 아니라 아래 plan.md §C의 파일 목록을 센 값이다 — 틀릴 수 있다(Gaps 10번). REQ 16개·AC 16개로 Tier M 상한(각 16개)에 정확히 닿는다. 상한에 닿았다는 것은 이 SPEC이 더 커지면 쪼개야 한다는 신호다 — UI 입구가 같은 SPEC으로 들어오려 하면 그때 분리한다(§8). `research.md`는 두지 않는다(Tier M).
+**Tier M.** 이 SPEC은 신규 서버 코드를 만든다 — 합성 모듈 1개, 세션 메서드 1개, 프레임 파서 1개, 디스패치 분기 1개, 동결 스냅샷 1행 — 그리고 시험 파일 4개를 더한다. 영향 파일은 9개 안팎(운영 코드 4개, 기존 시험 수정 1개, 신규 시험 4개)이고 줄 수는 시험을 포함해 대략 635~955줄로 본다. 둘 다 Tier S 상한(5파일, 300줄)을 넘고 Tier L 기준(15파일, 1000줄, 헌법급 결정)에는 못 미친다. 이 추정은 코드를 짜 본 값이 아니라 아래 plan.md §C의 파일 목록을 센 값이다 — 틀릴 수 있다(Gaps 10번). REQ 16개·AC 16개로 Tier M 상한(각 16개)에 정확히 닿는다. 상한에 닿았다는 것은 이 SPEC이 더 커지면 쪼개야 한다는 신호다 — UI 입구가 같은 SPEC으로 들어오려 하면 그때 분리한다(§8). frontmatter `module`의 `server/audio/bar_map_entry.py`는 가칭이다 — 신규 합성 모듈의 파일 이름은 run-phase에서 확정한다. `research.md`는 두지 않는다(Tier M).
 
 ## §1. 배경 — 왜 지금인가
 
@@ -102,9 +103,9 @@ depends_on: [SPEC-LDBARMAP-001]
 
 | REQ | 요구사항 | 근거 |
 |---|---|---|
-| REQ-LDBARENTRY-010 | [HARD] **When** 저장이 성공하면, 서버 **shall** 타임라인에서 `bar_map` 키 하나만 바꾸고(다른 키는 바이트까지 같다), 되돌리기 깊이를 정확히 1 올리고, `song_timeline` 프레임을 정확히 1회 보낸다. 이미 `bar_map`이 있었다면 새 값으로 교체하되 직전 값은 되돌리기로 복원할 수 있어야 한다. | P1(`session.py:9337-9343`이 이미 이렇게 일한다). 이 요구사항은 새 동작이 아니라 **진입 경로가 그 동작을 깨뜨리지 않는다**는 못박음이다 |
+| REQ-LDBARENTRY-010 | [HARD] **When** 저장이 성공하면, 서버 **shall** 타임라인에서 `bar_map` 키 하나만 바꾸고(다른 키는 바이트까지 같다), 되돌리기 깊이를 정확히 1 올리고, `song_timeline` 프레임을 정확히 1회 보내며, 되돌리기 한 번이 직전 `bar_map` 값(또는 키 없음)을 복원하도록 이력에 기록한다. 이미 `bar_map`이 있었다면 새 값으로 교체한다. | P1(`session.py:9337-9343`이 이미 이렇게 일한다). 이 요구사항은 새 동작이 아니라 **진입 경로가 그 동작을 깨뜨리지 않는다**는 못박음이다 |
 | REQ-LDBARENTRY-011 | [HARD] **The** 진입 경로 **shall not** 콘솔(게이트·실행 포트)에 쓰거나 읽고, `SongTimelineLibrary`에 저장하고, BPM 확정 상태(`_song_bpm`·`_song_analysis`)를 바꾸고, `analyse_song_audio`의 메시지 계약을 바꾼다. | P12. 저장 관문의 성공 문구도 같은 경계를 약속한다("콘솔 무접촉", "라이브러리에 남기려면 별도로 저장", `session.py:9348-9349`) |
-| REQ-LDBARENTRY-012 | [HARD] **When** 요청이 끝나면(성공이든 거절이든), 서버 **shall** 연결로 `chat_response` 프레임을 정확히 1개 보낸다 — 요약 문구가 성공과 거절을 가른다. 저장 관문이 반환만 하고 보내지 않는 거절 경로(P2)는 진입 경로가 직접 보낸다. | P2. 보내지 않으면 화면은 아무 응답도 못 받고 요청이 허공에 사라진 것처럼 보인다. 선례: 박자 격자 거절은 반환과 전송을 함께 한다(`session.py:9376-9384`) |
+| REQ-LDBARENTRY-012 | [HARD] **When** 요청이 분석 단계(진입 메서드)에 도달해 끝나면(성공이든 거절이든 분석 실패든), 서버 **shall** 연결로 `chat_response` 프레임을 정확히 1개 보낸다 — 요약 문구가 성공과 거절을 가른다. 성공의 `chat_response`는 저장 관문이 이미 보내므로 진입 경로는 성공에서 추가로 보내지 **shall not** 하고, 저장 관문이 반환만 하고 보내지 않는 거절 경로(P2)와 분석 실패에서는 진입 경로가 정확히 한 번 직접 보낸다. 분석 단계에 도달하지 못한 요청은 `chat_response`를 0개 보낸다 — 첨부 오디오 없음(REQ-003)은 `error`, busy(REQ-004)는 `busy`, 프레임·프로토콜 오류는 `error`(kind `protocol`)로 답한다. | P1(성공은 관문이 `song_timeline`·`chat_response`를 이미 전송), P2(거절은 반환만). 보내지 않으면 화면은 아무 응답도 못 받고, 성공에서 또 보내면 응답이 둘이 된다. 선례: 박자 격자 거절은 반환과 전송을 함께 한다(`session.py:9376-9384`). 분석에 도달하지 못한 세 경우의 응답 종류는 REQ-003·004와 `app.py:776-788`, 파서 거절 `app.py:536-540`이 정한다 |
 
 ### 4.4 R4 — 프로토콜 동결 (REQ-LDBARENTRY-013)
 
@@ -171,6 +172,7 @@ depends_on: [SPEC-LDBARMAP-001]
 | E1 | 두 배 BPM 채택 시 처리(REQ-LDBARENTRY-008) | (가) 저장 거절 + 사유 (나) 격자와 일치하는 원래 BPM(`bpm_check.raw_bpm`)으로 저장 (다) 보정 BPM으로 저장 | (가) | (다): 소비자 마디 시작이 어긋난다(P9). (나): 저장은 되지만 감독이 "분석기가 두 배라고 판단했다"는 사실을 잃는다 — 마디 지도에 그 메모를 넣을 필드가 없다(P3). (가): 두 배 채택 곡은 입구를 못 쓴다. t547 재설계 뒤 실제 10곡은 전부 keep이었다고 `SPEC-LDBARMAP-001` REQ-LDBARMAP-006 근거 칸이 적었다 — 이 plan-phase가 다시 재지는 않았다 |
 | E2 | 거절 응답의 `status` 값 | (가) 선례대로 `"ok"` + 요약 문구로 구분 (나) 새 값 | (가) | (나): 클라이언트가 모르는 상태값 어휘를 새로 알아야 한다. 이 plan-phase는 `status`의 허용 어휘를 확인하지 못했다(Gaps 13번). 선례는 `session.py:9322`·`:9379-9381` |
 | E3 | 첨부 오디오와 현재 타임라인의 곡이 같은지 | (가) 확인하지 않는다(응답에 파일명을 싣지도 않는다) (나) 저장 스키마에 출처 해시 필드를 더한다 | (가), 단 Gaps 8번에 남긴다 | (가): 다른 곡 오디오를 현재 곡 타임라인에 저장할 수 있다. (나): `validate_bar_map`이 알 수 없는 필드를 거절하므로(P3) `SPEC-LDBARMAP-001`의 completed 스키마를 열고 `SPEC-LDARRANGE-001` 미러 문단도 같이 고쳐야 한다 — 이 SPEC의 범위를 넘는다 |
+| E4 | 저장되는 `bpm`의 출처(REQ-LDBARENTRY-001) | (가) 검출기 값만 쓴다 — 이 경로는 `_song_bpm`을 읽지도 쓰지도 않는다 (나) 감독이 확정한 `_song_bpm`(`session.py:13715`)이 있으면 그 값을 쓴다 (다) 두 값이 허용오차 밖으로 다르면 저장을 거절한다 | (가) | (나): 확정값은 사람이 BPM 배수를 고친 값일 수 있다(`session.py:13730`의 `is_bpm_octave_apart` 분기). 박 격자는 검출기가 만든 것이라 확정 BPM과 격자 간격이 어긋나 E1과 같은 불일치가 생기고, 두 경로(BPM 확정 카드와 마디 지도)가 한 상태를 공유해 REQ-011이 막으려는 결합이 생긴다. (다): 허용오차에 근거가 없고(고른 숫자가 된다), BPM 확정을 거치지 않은 세션은 입구를 못 쓴다. (가): 확정 BPM과 저장 `bpm`이 소수점 이하로 다를 수 있다 — 소비자가 마디 시작을 이 `bpm`으로 계산하므로(P9) 마디가 뒤로 갈수록 어긋남이 쌓인다. 이 어긋남의 크기는 AC-012의 참고 측정(`bar_start_seconds(n)` 대 저장 `start_ms`)이 처음 잰다 — 그 값이 (가)를 다시 따지는 입력이다 |
 
 ## §6. LDARRANGE 매핑
 
@@ -208,8 +210,8 @@ depends_on: [SPEC-LDBARMAP-001]
 
 - **허용 목록**: `server/web/messages.py:116-188`의 `CLIENT_MESSAGE_TYPES`. 파서는 `:389`에서 목록 밖 타입을 거절한다. 새 타입은 이 튜플에 직접 들어가야 한다(별도 `*_MESSAGE_TYPES` 튜플로 두어도 AST 수집이 `*_MESSAGE_TYPES` 이름으로 모으므로 결과는 같다, `test_prechk_tool.py:1417-1426`).
 - **동결 튜플**: `server/tests/test_prechk_tool.py:1248-1331`의 `_EXPECTED_CLIENT_MESSAGE_TYPES`. 단언은 `:1499`(`surface.client_message_types == _EXPECTED_CLIENT_MESSAGE_TYPES`), 이 줄이 든 시험은 `TestBoundaryProhibitions.test_the_axis_adds_no_web_surface`(`:1468`, `:1484`)다.
-- **판정 방식**: `_scan_web_surface`(`:1438-1465`)가 `server/web/*.py`의 `*_MESSAGE_TYPES` 튜플 원소를 AST로 모아 정렬한다(`:1463`). 그래서 허용 목록에만 더하고 동결 튜플에 안 더하면 `:1499`에서 실패한다 — 코드를 읽은 추론이다.
-- **삽입 자리**: 튜플이 알파벳 순이므로 `bar_map_analyse`는 `:1249`의 `"approval_decision",`와 `beat_grid_apply`(`:1262`) 사이에 들어간다(`bar` < `beat`). 사유 주석은 `:1250-1261`·`:1267-1270`의 양식(카드 번호, 날짜, SPEC, 콘솔 접촉 여부, "PRECHK/OVERLAP 축과 무관한 정당한 확장" 문장)을 따른다.
+- **판정 방식**: `_scan_web_surface`(`:1438-1465`)가 `server/web/*.py`의 `*_MESSAGE_TYPES` 튜플 원소를 AST로 모아 정렬한다(`:1463`). 그 정렬된 튜플을 리터럴 튜플과 `==`로 비교하므로(`:1499`) **리터럴도 정렬 순서여야 하고**, 허용 목록에만 더하고 동결 튜플에 안 더하면 `:1499`에서 실패한다. 순서가 어긋난 리터럴도 같은 단언에서 실패한다 — 코드를 읽은 추론이다.
+- **삽입 자리(정확히)**: `:1249`의 `"approval_decision",` **바로 다음 줄**, 그리고 t551 주석 블록(`:1250-1261`) **앞**이다(`bar` < `beat`). 새 원소와 그 사유 주석을 이 자리에 넣으면 t551 주석 블록이 계속 `beat_grid_apply`(`:1262`)에 붙어 있다. 블록 뒤나 `beat_grid_apply` 아래에 넣으면 정렬이 어긋나거나 t551 주석이 새 원소의 주석처럼 읽힌다. 사유 주석은 `:1250-1261`·`:1267-1270`의 양식(카드 번호, 날짜, SPEC, 콘솔 접촉 여부, "PRECHK/OVERLAP 축과 무관한 정당한 확장" 문장)을 따른다.
 - **서버 쪽은 늘지 않는다**: 이 경로의 응답은 기존 `chat_response`(`messages.py:909`)·`song_timeline`(`:1561`)·`error`(`:1168`)·`busy`(`:1173`)뿐이므로 `_EXPECTED_SERVER_MESSAGE_TYPES`(`:1335`)는 그대로다. REST 라우트도 늘지 않는다.
 - **D3(나)를 고르면**: 타입 목록은 그대로이고 동결 시험은 영향이 없지만, `messages.py:731-760`의 파서와 `app.py:762-796`의 분기가 BPM 확정 계약과 같은 곳에서 갈라진다(D3).
 - **기록할 선례**: 카드 t551(`beat_grid_edit` 등 편집 세 길), t563(콘솔 버튼 셋), t578, t589, t565, t571.
@@ -257,3 +259,8 @@ depends_on: [SPEC-LDBARMAP-001]
 12. **실기 콘솔 확인은 해당 없음**이다 — 이 SPEC은 콘솔을 만지지 않는다.
 13. **응답의 `status` 값 어휘를 확인하지 못했다**(E2). 선례가 `"ok"`를 거절에도 쓴다는 것만 읽었다.
 14. **실패 처리 시험 경로**(librosa 부재 폴백)는 `server/tests/test_audio_fallback.py`가 판정한다고 `test_audio_bar_map.py:64-67`이 적었다 — 그 파일은 열어 읽지 않았다.
+15. **수용한 단순화 (가) — 저장 단계에 잠금이 없다.** 같은 곡을 다시 불러온 경우 곡 열쇠 `(song_title, sequence_number)`가 같아 REQ-LDBARENTRY-009의 대조가 잘못 통과하고, `sequence_number`가 없는 타임라인은 `(제목, None)`으로 겹친다. 비용은 새로 불러온 같은 곡 타임라인에 지도가 저장되는 것인데, 같은 곡이므로 해가 작다고 보고 수용했다. 닫으려면 저장 단계의 읽기-쓰기를 잠그거나 타임라인에 변경 번호를 두어야 한다(이 SPEC 밖).
+16. **수용한 단순화 (나) — busy 가드는 같은 WS 연결만 막는다.** 타임라인 저장소는 앱 전체에서 하나다(`server/web/app.py:413` `timeline_store=deps.song_timeline_store`). 다른 연결의 동작이 같은 저장소를 바꿀 수 있고 이 연결의 `current_task`는 그것을 보지 못한다. REQ-009의 곡 열쇠 대조가 유일한 방어다.
+17. **`keep` + `ambiguous` 결과는 평범한 성공으로 저장된다**(`bar_map.py:342`, `:384`, `:412`). 위험: 박자가 두 배나 절반일 수 있다는 검출기의 의심이 저장값에 남지 않아, 소비자는 의심 없이 그 `bpm`으로 모든 마디 시작을 계산한다. 수용한 이유: `adopt_double`과 달리 `ambiguous`는 `bpm`이 원래 격자 간격과 같아(`adopted_bpm = raw_bpm`) 저장값이 구조적으로 일관되고, 의심은 음악적인 것이지 데이터가 서로 모순되는 것이 아니다. 닫는 변경: 응답 문구에 `ambiguous`를 싣는 요구사항 한 줄을 더하거나(REQ 상한 16개에 이미 닿아 있어 다른 REQ를 합쳐야 한다), 스키마에 필드를 더하는 것(`schema_version` 상승, 이 SPEC 밖).
+18. **다중 연결.** 두 번째 브라우저의 `chat` 등이 같은 타임라인 저장소를 바꿀 수 있고, 그 연결의 `current_task`는 이 연결의 분석 중 상태를 보지 못한다(Gaps 4번, 16번과 같은 뿌리). 분석 중 저장소가 어떻게 바뀌었는지는 곡 열쇠 대조로만 걸러진다.
+19. **P7 번호 공간의 실제 분류기 검증**: AC-005는 분류기를 기록용 대역으로 바꿔(특징을 가로채고 마디 하나에 사건을 주입) 특징 번호와 저장 마디 번호의 대응을 CI에서 잰다. 실제 분류기가 실제 오디오에서 낸 사건의 번호가 맞는지는 로컬 전용 AC-016만 잰다.
