@@ -108,8 +108,24 @@
 
 ## §E.3 Run-phase Audit-Ready Signal
 
-_<pending run-phase>_
+- run_status: merged
+- run_complete_at: 2026-10-14
+- 구현 PR #693 머지, 머지 커밋 `d6ca8c8b`. PR #693 CI 통과.
+- 근거: 위 「§D 검증 1–8」 절. 5파일 `218 passed`, 회귀 7파일 `487 passed`, 변경 `.py` 9개 `ruff check` 통과·`ruff format --check` 통과.
+- 공백: AC-016 은 §D 에서 다시 돌리지 않았고 M4 절의 로컬 출력(정밀도 5/6)을 그대로 썼다.
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+- sync_status: completed
+- sync_complete_at: 2026-10-14
+- sync_commit_sha: a8f28a32 (3-phase close 커밋)
+- run PR #693 머지 커밋: `d6ca8c8b`.
+- SPEC 본문 정정 커밋 `a0112143`(카드 t647) 세 가지: ① REQ-010·AC-004(5)의 draft 표지, ② AC-006(다)의 패치 대상을 `bar_map.py:36`/`:179` 로 정정, ③ P13 `_song_bpm` 은 그대로 둔다.
+- frontmatter_status_transitions: spec.md 는 run-phase 에서 `in-progress` 로 넘어간 적이 없다. 머지 시점까지 `status: draft` 였고, 이 sync 커밋에서 `draft` → `completed` 로 한 번에 바꿨다. plan.md·acceptance.md·progress.md 에는 status 필드가 없다. `updated:` 는 2026-10-14 로 이미 같은 값이었다.
+- 리드 결정: plan-audit 는 다시 돌리지 않는다. 본문이 바뀐 부분(위 정정 세 가지)은 sync-auditor 가 판정한다.
+- 알려진 한계:
+  - 로그 파일은 런처의 stderr 처리에 기대므로, 런처가 stderr 를 버리면 남지 않는다.
+  - 이중 실패 시 폴백이 드물게 일어나는 경우는 재 보지 않았다.
+  - AC-016 정밀도는 5/6 = 83.3 % 이고 분모는 6 이다.
+- CHANGELOG: `[Unreleased]` 에 한 항목을 추가했다.
+- sync-auditor 판정(같은 날, 뒤 커밋에서 반영): PASS — Functionality 0.92 · Security 0.90 · Craft 0.88 · Consistency 0.82. 소견 F2(PROTOCOL 행 응답 누락)는 반영했다. F1(draft→completed 건너뜀)·F3(업로드의 `_song_bpm` 유지를 직접 고정하는 시험 없음)은 기록만 한다. AC-016 은 감사자가 로컬에서 다시 돌려 같은 값(정밀도 5/6)을 얻었다. MX 태그는 `@MX:NOTE` 존재만 보았고 `moai mx` 검증은 하지 않았다.

@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-LDBARMAP-002**(`completed`, 카드 t647) — 오디오에서 마디 지도까지 가는 서버 쪽 입구를 붙였다(구현 PR #693, 머지 `d6ca8c8b`). WS 프레임 `bar_map_analyse`, 세션 메서드, 합성 단계 하나로 분석기·저장 관문·소비자를 이었다. 화면(입구 버튼·오프셋 입력)은 후속 카드다. AC 16개(AC-LDBARENTRY-001~016).
+  - 검증: 5파일 `218 passed`, 회귀 7파일 `487 passed`, 변경 `.py` 9개 ruff 통과. AC-016 실음원 정밀도 5/6 = 83.3 %(분모 6).
+  - 공백: 로그 파일은 런처의 stderr 처리에 기댄다 · 이중 실패 폴백은 안 재 봤다 · sync-audit 는 미실행.
 - **SPEC-LDBARMAP-001**(`completed`, 카드 t636) — 마디 지도(오프라인 박자·다운비트·마디 경계·마디별 변화 검출)를 닫았다. M1~M4·M-추가·M5 완료. 판정 기준 재고정(AC-009 → M4 자기 트리 `364ab000`), AC-008 단위 표기 정정(값·의미 불변, v0.1.8). 실음원 재측정: 재현율 7/7 · 정밀도 5/6. 공백: §E.3 기록 없음 · 브레이크 9건 미검증(귀 확인은 감독 몫) · 진입 경로 t638 분리 · M1 원 통과 조건 미충족(감독 결정으로 범위 축소). sync-audit 는 미실행.
 - **SPEC-COPILOT-FILEARG-001**(`completed`, 카드 t629) — 시트 판별기(분할 A)를 닫았다. 판정 기준 넷(AC-001 ④ · AC-006 ① · AC-020 · AC-030 ①)을 M1 트리 `3ffda31b` 에 다시 고정했다(v1.1.0). AC 20건 중 PASS 19 · N/A 1.
   - 재확인(HEAD 19a52738): 전체 pytest 15707 passed · vitest 1262 passed. 근거는 `reports/filearg-close/`. sync-audit 는 미실행.

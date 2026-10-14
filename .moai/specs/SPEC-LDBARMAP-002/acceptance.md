@@ -52,7 +52,7 @@
 
 **Given** 초안 타임라인(곡 열쇠 두 값 포함)이 있는 세션에 합성 클릭 트랙(30초, 알려진 BPM)이 `upload_song_audio`로 첨부돼 있고
 **When** 오프셋 0으로 진입 메서드를 부르면
-**Then** (1) `timeline_bar_map()`이 `None`이 아니고 `store.latest["bar_map"]`와 같다. (2) `validate_bar_map(그 값) is None`이다. (3) 저장된 `bpm`이 합성 BPM의 ±1 % 안이다. (4) 되돌리기 깊이가 호출 전보다 정확히 1 많다. (5) `bar_map`을 뺀 나머지 타임라인 키가 호출 전과 깊은 비교로 같다. (6) 전송된 프레임 중 `song_timeline`이 정확히 1개이고 그 `timeline`이 `bar_map`을 든다.
+**Then** (1) `timeline_bar_map()`이 `None`이 아니고 `store.latest["bar_map"]`와 같다. (2) `validate_bar_map(그 값) is None`이다. (3) 저장된 `bpm`이 합성 BPM의 ±1 % 안이다. (4) 되돌리기 깊이가 호출 전보다 정확히 1 많다. (5) `bar_map`과 `draft` 표식을 뺀 나머지 타임라인 키가 호출 전과 깊은 비교로 같다. (6) 전송된 프레임 중 `song_timeline`이 정확히 1개이고 그 `timeline`이 `bar_map`을 든다.
 
 ### AC-LDBARENTRY-005 (REQ-LDBARENTRY-006, REQ-LDBARENTRY-015, REQ-LDBARENTRY-016) — 합성은 순수하고 번호 공간이 맞다
 
@@ -66,7 +66,7 @@
 
 시험 파일: `server/tests/test_session_bar_map_entry.py`
 
-**Given** 초안 타임라인이 있는 세션에서 다음 실패 입력을 각각 만들고: (가) 오디오가 아닌 바이트 (나) 2000 ms보다 짧은 오디오(`bar_map.py:215`) (다) `analysis_available()`이 거짓인 환경(`analyze.py:229` 대역) (라) 박은 3개뿐이라 마디 경계가 2개 미만이 되는 검출 결과 대역(`bar_map.py:622`)
+**Given** 초안 타임라인이 있는 세션에서 다음 실패 입력을 각각 만들고: (가) 오디오가 아닌 바이트 (나) 2000 ms보다 짧은 오디오(`bar_map.py:215`) (다) `analysis_available()`이 거짓인 환경(대역을 씌울 곳은 `analyze.py:229`의 정의가 아니라 `server/audio/bar_map.py`가 가져다 쓰는 이름이다 — `bar_map.py:36`에서 가져오고 `:179`에서 쓴다) (라) 박은 3개뿐이라 마디 경계가 2개 미만이 되는 검출 결과 대역(`bar_map.py:622`)
 **When** 오프셋 유효값으로 진입 메서드를 부르면
 **Then** 네 경우 모두 (1) `chat_response` 1개가 전송되고 본문에 실패한 단계의 `reason` 문자열이 들어 있다 — (다)는 `MANUAL_BPM_FALLBACK_REASON`(`analyze.py:188`)이다. (2) `store.latest`가 호출 전과 깊은 비교로 같다. (3) 되돌리기 깊이가 그대로다. (4) `song_timeline` 프레임이 0개다.
 
