@@ -8,13 +8,18 @@ AC-LDBARENTRY-005(합성은 순수하고 번호 공간이 맞다) · AC-LDBARENT
 돌린다 — 저장소에 오디오 파일을 두지 않는다(REQ-LDBARENTRY-016). 단계 대역으로 도는
 시험은 librosa 없이도 돈다.
 
+예외 하나(M4): 맨 아래 AC-LDBARENTRY-016 은 로컬 전용 게이트다. 저장소 밖의 실제 곡을 세션에
+첨부해 진입 메서드까지 돌린다. 원곡이 없거나 librosa 가 없으면 건너뛴다.
+
 콘솔 접촉: 0건.
 """
 
 from __future__ import annotations
 
+import base64
 import io
 import re
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -30,6 +35,7 @@ from server.audio.bar_map import (
     BeatGridFailure,
     BeatGridResult,
     BpmCandidateCheck,
+    classify_bar_events,
     derive_bars,
     detect_beat_grid,
     extract_bar_features,
@@ -46,6 +52,19 @@ from server.audio.bar_map_store import (
     build_bar_map_payload,
     validate_bar_map,
 )
+from server.safety.audit import AuditLog
+from server.safety.console import ExecOutcome
+from server.safety.gate import SafetyGate
+from server.web.approval_bridge import ApprovalChannel
+from server.web.session import ChatSession, SongTimelineStore
+from server.web.timeline_library import SongTimelineLibrary
+from tools.barmap.ground_truth import (
+    DOWNBEAT_TOLERANCE_SEC,
+    parse_downbeats,
+    parse_events,
+    parse_precision_evidence,
+)
+from tools.barmap.scorer import event_precision, event_recall, strict_index_hit_rate
 
 #: 실제 오디오 분석(librosa)이 필요한 시험에만 건다 — 단계 대역으로 도는 시험은 어디서나 돈다.
 requires_analysis = pytest.mark.skipif(
@@ -569,3 +588,139 @@ def test_default_steps_are_resolved_at_call_time(monkeypatch: pytest.MonkeyPatch
     assert len(detect.calls) == 1
     assert len(extract.boundaries) == 1
     assert len(classify.calls) == 1
+
+
+# ---------------------------------------------------------------------------
+# AC-LDBARENTRY-016 — 실제 곡 로컬 전용 게이트 (REQ-LDBARENTRY-001, 006, 016).
+# ---------------------------------------------------------------------------
+
+#: 실제 곡 고정물 — 이 AC 한 곳에만 둔다(REQ-LDBARENTRY-016). 곡 파일은 저장소에 없다.
+#: test_audio_bar_map.py 의 같은 경로를 가져오지 않고 다시 둔다(시험 파일 사이 import 를 피한다).
+LOVE_ATTACK_MP3_PATH = Path("/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3")
+
+#: 감독 귀 확정값(SPEC-LDBARMAP-001 HISTORY 카드 t530) — 이 시험의 고정물이지 운영 코드 상수가
+#: 아니다. test_audio_bar_map.py 의 같은 이름 상수와 같은 값이다.
+CONFIRMED_FIRST_BEAT_OFFSET = 1
+
+#: 문턱은 SPEC-LDBARMAP-001(AC-LDBARMAP-016·007)이 정했다. 이 경로가 새 문턱을 만들지 않는다.
+AC016_BAR_COUNT = 82
+AC016_HIT_RATE_THRESHOLD_PCT = 90.0
+AC007_RECALL_THRESHOLD = 5
+AC007_PRECISION_THRESHOLD_PCT = 70.0
+
+
+class _ConsoleStub:
+    """콘솔 포트 대역 — 이 시험은 콘솔에 닿지 않는다(접촉 0건은 session 시험의 AC-013 이 센다)."""
+
+    def execute(self, command: str) -> ExecOutcome:
+        return ExecOutcome(status="ok", detail="OK")
+
+    def ping(self) -> bool:
+        return True
+
+    def query_state(self, path: str) -> dict:
+        return {}
+
+
+class _RefusingProvider:
+    """모델을 부르면 시험이 깨진다 — 이 경로는 제공자 없이 동작해야 한다."""
+
+    def complete(self, *args, **kwargs):  # pragma: no cover - 불려선 안 된다
+        raise AssertionError("이 경로는 모델을 부르지 않는다")
+
+
+def _session_with_song_attached(tmp_path: Path, audio: bytes) -> tuple[ChatSession, list[dict]]:
+    """곡 열쇠가 있는 초안 타임라인과 첨부된 곡 오디오를 가진 세션, 그리고 연결이 받은 프레임 목록.
+
+    test_session_bar_map_entry.py 의 ``_make_harness`` 와 같은 틀이다(가져오지 않고 다시 둔다).
+    첨부가 보내는 안내 프레임은 지운다 — 이 시험이 보는 것은 진입 메서드가 보낸 프레임이다."""
+    store = SongTimelineStore()
+    store.latest = {"song_title": "TEST SONG", "sequence_number": 1}
+    sent: list[dict] = []
+    audit = AuditLog(tmp_path / "audit")
+    channel = ApprovalChannel(timeout_seconds=1.0)
+    gate = SafetyGate(console=_ConsoleStub(), audit=audit, approval_port=channel)
+    session = ChatSession(
+        gate=gate,
+        provider=_RefusingProvider(),
+        system_prefix="PREFIX",
+        audit=audit,
+        send_event=sent.append,
+        approval_channel=channel,
+        timeline_store=store,
+        timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+    )
+    session.upload_song_audio(
+        LOVE_ATTACK_MP3_PATH.name, "audio/mpeg", base64.b64encode(audio).decode("ascii")
+    )
+    sent.clear()
+    return session, sent
+
+
+@requires_analysis
+@pytest.mark.skipif(
+    not LOVE_ATTACK_MP3_PATH.exists(),
+    reason=f"로컬 전용 — 원곡 부재: {LOVE_ATTACK_MP3_PATH}",
+)
+def test_ac016_real_song_entry_gate(tmp_path: Path) -> None:
+    """실제 곡을 첨부한 세션에 오프셋 1로 진입 메서드를 부르면 (1)~(4) 를 지키고, (5) 를 잰다.
+
+    로컬 전용이다 — 원곡이 없으면 건너뛰고, 건너뜀은 통과가 아니다(acceptance.md §D 6).
+    (5) 벽시계 시간은 측정만 한다: 진입 메서드 호출 한 번만 재고, 문턱은 없다.
+    """
+    audio = LOVE_ATTACK_MP3_PATH.read_bytes()
+    session, sent = _session_with_song_attached(tmp_path, audio)
+
+    started = time.perf_counter()
+    session.analyse_bar_map(CONFIRMED_FIRST_BEAT_OFFSET)
+    elapsed = time.perf_counter() - started
+    print(f"AC-016 wall-clock: {elapsed:.2f} s")
+
+    saved = session.timeline_bar_map()
+    assert saved is not None, sent  # 저장되지 않았다면 어떤 응답이 나갔는지 프레임을 싣는다
+
+    # 먼저 모든 수치를 낸다 — 아래 단언 하나가 깨져도 나머지 수치가 출력에 남는다.
+    numbered = [bar for bar in saved["bars"] if bar["bar"] >= 1]
+    pickup = [bar for bar in saved["bars"] if bar["bar"] == 0]
+    # 엄격한 순서 대응: 검출 n번째는 정답 n번째와만 비교한다(최근접 매칭 아님).
+    hit = strict_index_hit_rate(
+        [bar["start_ms"] / 1000.0 for bar in numbered], parse_downbeats(), DOWNBEAT_TOLERANCE_SEC
+    )
+
+    # 같은 오디오에 분석기를 직접 부른 결과 — 진입 경로가 거기에 더하거나 빼지 않았는지 대조한다.
+    grid = detect_beat_grid(audio)
+    assert isinstance(grid, BeatGridResult), grid
+    bars = derive_bars(grid.beat_times_ms, CONFIRMED_FIRST_BEAT_OFFSET)
+    assert not isinstance(bars, BarMapFailure), bars
+    features = extract_bar_features(audio, bars.bar_boundaries_ms)
+    assert not isinstance(features, BarFeaturesFailure), features
+    direct = [(e.kind, e.start_bar, e.end_bar, e.grade) for e in classify_bar_events(features)]
+    stored = [(e["kind"], e["start_bar"], e["end_bar"], e["grade"]) for e in saved["events"]]
+
+    detected = [(e["kind"], e["start_bar"]) for e in saved["events"]]
+    recall = event_recall(detected, parse_events())
+    # 정밀도의 분모는 점 사건(break·kick_entry)만이다(AC-LDBARMAP-007 정밀도 조건).
+    point_events = [(kind, bar) for kind, bar in detected if kind in ("break", "kick_entry")]
+    precision = event_precision(point_events, parse_precision_evidence())
+
+    print(
+        f"AC-016 measured: bars(bar>=1)={len(numbered)} bars(bar==0)={len(pickup)} "
+        f"downbeat_hit={hit} events={len(stored)} direct_events={len(direct)} "
+        f"recall={recall.matched}/{recall.total} precision={precision}"
+    )
+
+    # (1) 마디 수 — 번호가 1, 2, …, 82 로 이어지고(아래 (2)의 순서 대응이 서는 전제),
+    # 못갖춘마디(마디 0)는 하나이고 박이 1개다.
+    assert [bar["bar"] for bar in numbered] == list(range(1, AC016_BAR_COUNT + 1)), len(numbered)
+    assert len(pickup) == 1 and len(pickup[0]["beats_ms"]) == 1, pickup
+    # (2) 마디 시작 시각이 정답지 다운비트와 ±60 ms 에서 90 % 이상 적중한다(분모는 정답지 길이).
+    assert hit.total == AC016_BAR_COUNT, str(hit)
+    assert hit.rate_pct >= AC016_HIT_RATE_THRESHOLD_PCT, str(hit)
+    # (3) 저장된 사건 = 분석기를 직접 부른 사건. 둘 다 비면 대조가 공허하므로 먼저 막는다.
+    assert direct, "분석기를 직접 부른 사건이 없다 — 아래 대조가 공허하다"
+    assert stored == direct
+    # (4) 재현율 5/7 이상, 정밀도 70 % 이상 — 분모 0 은 FAIL 이다.
+    assert recall.total == 7, f"{recall.matched}/{recall.total}"
+    assert recall.matched >= AC007_RECALL_THRESHOLD, f"{recall.matched}/{recall.total}"
+    assert precision.total > 0, "분모 0 — 빈 분류기는 정밀도를 주장할 수 없다"
+    assert precision.rate_pct >= AC007_PRECISION_THRESHOLD_PCT, str(precision)
