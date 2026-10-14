@@ -30,7 +30,7 @@ from server.audio.bar_map import (
 )
 from server.audio.bar_map_store import BarMapStoreError, build_bar_map_payload
 
-__all__ = ["BarMapEntryFailure", "synthesize_bar_map"]
+__all__ = ["BarMapEntryFailure", "first_beat_offset_problem", "synthesize_bar_map"]
 
 #: 합성이 다루는 박자표 — 분석기(``derive_bars``)가 4/4 전용이다(REQ-LDBARENTRY-015,
 #: 결정 D2). 박자표는 이 한 곳에서만 정한다.
@@ -54,6 +54,18 @@ class BarMapEntryFailure:
     """
 
     reason: str
+
+
+def first_beat_offset_problem(first_beat_offset: object) -> str | None:
+    """첫 박 오프셋을 쓸 수 없으면 그 사유 문장을, 쓸 수 있으면 ``None`` 을 돌려준다.
+
+    싼 점검이라 오디오를 풀기 전에 부른다(REQ-LDBARENTRY-007). 세션이 base64 를 풀기 전에,
+    합성이 박 격자 검출 전에 이 한 곳의 문장을 같이 쓴다. 문구는 ``derive_bars`` 와 같다."""
+    if isinstance(first_beat_offset, bool) or not isinstance(first_beat_offset, int):
+        return f"첫 박 오프셋은 정수여야 합니다: {first_beat_offset!r}"
+    if not (0 <= first_beat_offset < _BEATS_PER_BAR):
+        return f"첫 박 오프셋은 0~{_BEATS_PER_BAR - 1} 범위여야 합니다: {first_beat_offset}"
+    return None
 
 
 def synthesize_bar_map(
@@ -96,13 +108,10 @@ def _synthesize(
     extract: _FeaturesStep,
     classify: _ClassifyStep,
 ) -> dict[str, Any] | BarMapEntryFailure:
-    # 싼 점검은 오디오 디코드 전에 한다(REQ-LDBARENTRY-007). 문구는 derive_bars 와 같다.
-    if isinstance(first_beat_offset, bool) or not isinstance(first_beat_offset, int):
-        return BarMapEntryFailure(f"첫 박 오프셋은 정수여야 합니다: {first_beat_offset!r}")
-    if not (0 <= first_beat_offset < _BEATS_PER_BAR):
-        return BarMapEntryFailure(
-            f"첫 박 오프셋은 0~{_BEATS_PER_BAR - 1} 범위여야 합니다: {first_beat_offset}"
-        )
+    # 싼 점검은 오디오 디코드 전에 한다(REQ-LDBARENTRY-007).
+    problem = first_beat_offset_problem(first_beat_offset)
+    if problem is not None:
+        return BarMapEntryFailure(problem)
 
     grid = detect(audio_bytes)
     if isinstance(grid, BeatGridFailure):

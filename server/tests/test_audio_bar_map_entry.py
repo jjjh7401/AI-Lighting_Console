@@ -34,7 +34,11 @@ from server.audio.bar_map import (
     detect_beat_grid,
     extract_bar_features,
 )
-from server.audio.bar_map_entry import BarMapEntryFailure, synthesize_bar_map
+from server.audio.bar_map_entry import (
+    BarMapEntryFailure,
+    first_beat_offset_problem,
+    synthesize_bar_map,
+)
 from server.audio.bar_map_store import (
     BarMapStoreError,
     build_bar_map_payload,
@@ -214,6 +218,26 @@ def test_req007_non_int_offset_fails_before_decode(bad_offset: object) -> None:
     assert isinstance(result, BarMapEntryFailure), result
     assert "정수" in result.reason
     assert detect.calls == []
+
+
+@pytest.mark.parametrize("offset", [0, 1, 2, 3])
+def test_req007_offset_problem_is_none_for_every_valid_offset(offset: int) -> None:
+    """세션이 base64 를 풀기 전에 부르는 공개 점검 — 쓸 수 있는 오프셋에는 사유가 없다."""
+    assert first_beat_offset_problem(offset) is None
+
+
+@pytest.mark.parametrize("bad_offset", [-1, 4, 99])
+def test_req007_offset_problem_names_the_allowed_range(bad_offset: int) -> None:
+    problem = first_beat_offset_problem(bad_offset)
+    assert problem is not None
+    assert "0~3" in problem
+
+
+@pytest.mark.parametrize("bad_offset", [True, 1.0, "1", None], ids=repr)
+def test_req007_offset_problem_demands_an_integer(bad_offset: object) -> None:
+    problem = first_beat_offset_problem(bad_offset)
+    assert problem is not None
+    assert "정수" in problem
 
 
 # ---------------------------------------------------------------------------

@@ -37,7 +37,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
-from server.audio.bar_map_entry import BarMapEntryFailure, synthesize_bar_map
+from server.audio.bar_map_entry import (
+    BarMapEntryFailure,
+    first_beat_offset_problem,
+    synthesize_bar_map,
+)
 from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_bar_map
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
@@ -9422,8 +9426,8 @@ class ChatSession:
         (SPEC-LDBARMAP-002 M2, REQ-LDBARENTRY-001). 작업 스레드에서 도는 동기 메서드다 —
         asyncio 를 쓰지 않고 모든 프레임을 ``self._send`` 로 보낸다.
 
-        순서: 첨부 오디오 확인 → 초안 타임라인 확인 → 곡 열쇠 기억 → base64 풀기 →
-        합성(``synthesize_bar_map`` — 오프셋 범위는 오디오 디코드 전에 거기서 점검한다) →
+        순서: 첨부 오디오 확인 → 초안 타임라인 확인 → 첫 박 오프셋 점검(base64 풀기 전) →
+        곡 열쇠 기억 → base64 풀기 → 합성(``synthesize_bar_map`` — 같은 점검을 거기서도 한다) →
         곡 열쇠 재확인 → 저장 관문(``store_timeline_bar_map``).
 
         프레임 계약(REQ-LDBARENTRY-012): 첨부 오디오가 없으면 ``error`` 한 개만 보내고
@@ -9461,6 +9465,11 @@ class ChatSession:
         timeline = store.latest if store is not None else None
         if store is None or timeline is None:
             reject("분석할 초안 타임라인이 아직 없습니다. 콘솔에는 아무것도 쓰지 않았습니다.")
+            return
+        # 싼 점검은 곡 오디오를 풀기 전에 한다(REQ-LDBARENTRY-007). 합성도 같은 점검을 한다.
+        problem = first_beat_offset_problem(first_beat_offset)
+        if problem is not None:
+            reject_with_reason(problem)
             return
         song_key = self._beat_grid_song_key(timeline)
 

@@ -202,6 +202,17 @@ def _assert_rejected_and_untouched(h: _Harness, before: _Snapshot, *, reason: st
     return response
 
 
+def _attach_undecodable_base64(h: _Harness) -> None:
+    """base64 로 풀 수 없는 첨부를 직접 꽂는다 — 와이어 검증을 통과한 업로드는 이럴 수 없다."""
+    h.session._song_audio = SongAudioUpload(
+        file_name="test.wav",
+        mime_type="audio/wav",
+        content_base64="!!!",
+        sha256="0",
+        byte_length=0,
+    )
+
+
 class _Step:
     """분석 단계 대역 — 호출 인자를 ``calls`` 에 기록하고 정해 둔 값을 돌려준다."""
 
@@ -285,6 +296,30 @@ def test_ac003_control_a_valid_offset_does_reach_the_detector(
 
     assert len(detector.calls) == 1
     _assert_rejected_and_untouched(h, before, reason="대역 사유")
+
+
+def test_ac003_out_of_range_offset_is_refused_before_the_base64_decode(tmp_path: Path) -> None:
+    """깨진 base64 첨부여도 범위 밖 오프셋 사유가 나온다 — base64 풀기에 닿지 않았다."""
+    h = _make_harness(tmp_path)
+    _attach_undecodable_base64(h)
+    before = _snapshot(h)
+
+    h.session.analyse_bar_map(-1)
+
+    response = _assert_rejected_and_untouched(h, before, reason="0~3")
+    assert "base64" not in response["text"], response["text"]
+
+
+def test_ac003_control_a_valid_offset_does_reach_the_base64_decode(tmp_path: Path) -> None:
+    """대조군 — 같은 깨진 첨부에 유효한 오프셋이면 base64 풀기까지 가서 그 사유가 나온다."""
+    h = _make_harness(tmp_path)
+    _attach_undecodable_base64(h)
+    before = _snapshot(h)
+
+    h.session.analyse_bar_map(0)
+
+    response = _assert_rejected_and_untouched(h, before, reason="base64 디코드 실패")
+    assert "0~3" not in response["text"], response["text"]
 
 
 def test_ac003_missing_timeline_is_refused_before_the_detector(
