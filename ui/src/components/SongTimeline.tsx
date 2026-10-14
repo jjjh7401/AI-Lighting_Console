@@ -145,7 +145,8 @@ export function fadeTrackLine(
   section: SongTimelineSection,
   row: SongTimelineConceptRow | undefined,
 ): string {
-  const fade = section.fade_seconds != null ? `${section.fade_seconds}s` : EMPTY_DETAIL;
+  // 표시만 소수 둘째 자리로 — 저장값(fade_seconds)은 그대로 둔다 (카드 t641)
+  const fade = section.fade_seconds != null ? `${Number(section.fade_seconds.toFixed(2))}s` : EMPTY_DETAIL;
   const tracking = row?.tracking;
   const track = tracking === undefined || tracking === "track" ? EMPTY_DETAIL : tracking;
   return `Fade ${fade} · Track ${track}`;
