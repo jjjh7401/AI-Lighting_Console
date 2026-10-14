@@ -413,6 +413,10 @@ def test_too_few_bars_reports_the_analyzers_own_reason() -> None:
     assert result == BarMapEntryFailure(expected.reason)
 
 
+def _mask_object_addresses(text: str) -> str:
+    return re.sub(r"0x[0-9a-fA-F]+", "0x…", text)
+
+
 @pytest.mark.parametrize(
     "bad_audio",
     [b"\x00\x01\x02 not audio", b"", None],
@@ -423,7 +427,9 @@ def test_undecodable_audio_reports_the_detectors_own_reason(bad_audio: object) -
     expected = detect_beat_grid(bad_audio)
     assert isinstance(expected, BeatGridFailure)
     result = synthesize_bar_map(bad_audio, 0)
-    assert result == BarMapEntryFailure(expected.reason)
+    assert isinstance(result, BarMapEntryFailure), result
+    # 디코더 사유에 든 객체 주소(0x…)는 호출마다 달라져 주소만 가리고 대조한다.
+    assert _mask_object_addresses(result.reason) == _mask_object_addresses(expected.reason)
 
 
 def test_builder_rejection_reason_passes_through_unchanged() -> None:
