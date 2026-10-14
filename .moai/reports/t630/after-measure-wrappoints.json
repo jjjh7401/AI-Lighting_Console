@@ -1,0 +1,199 @@
+{
+  "head": "6db8d4ce",
+  "state": "bar 12, HEAD 6db8d4ce (after the change), ui/dist not rebuilt; DOM edits only in the page, in memory",
+  "viewport_height": 1000,
+  "stop_rule": "label's leading number == 12 (at most 20 clicks on button[title=\"다음 마디 (→)\"])",
+  "second_row_rule": "button's top is at or below the first visible button's bottom (entirely on a lower row)",
+  "A_width_1450_name_removed": {
+    "width": 1450,
+    "reached": true,
+    "clicks": 12,
+    "start_text": "0마디",
+    "name_removed": true,
+    "badge_injected_for_A2": true,
+    "A1_no_badge": {
+      "topbar_height": 58,
+      "topbar_width": 1378,
+      "bar_text": "12마디",
+      "second_row": [],
+      "visible_button_count": 11,
+      "apply_button_text": "⇪ 반영",
+      "apply_button_width": 69.89,
+      "badge_present": false
+    },
+    "A2_badge_injected": {
+      "topbar_height": 93,
+      "topbar_width": 1378,
+      "bar_text": "12마디",
+      "second_row": [
+        "▤"
+      ],
+      "visible_button_count": 11,
+      "apply_button_text": "⇪ 반영—",
+      "apply_button_width": 94.83,
+      "badge_present": true
+    },
+    "app_page_errors": []
+  },
+  "B_name_present_badge_injected": {
+    "1475": {
+      "width": 1475,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "badge_injected": true,
+      "with_badge": {
+        "topbar_height": 93,
+        "topbar_width": 1403,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [
+          "▤"
+        ],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영—",
+        "apply_button_width": 94.83,
+        "badge_present": true
+      },
+      "extra_before_injection_no_badge": {
+        "topbar_height": 93,
+        "topbar_width": 1403,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [
+          "▤"
+        ],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영",
+        "apply_button_width": 69.89,
+        "badge_present": false
+      },
+      "app_page_errors": []
+    },
+    "1500": {
+      "width": 1500,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "badge_injected": true,
+      "with_badge": {
+        "topbar_height": 93,
+        "topbar_width": 1428,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [
+          "▤"
+        ],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영—",
+        "apply_button_width": 94.83,
+        "badge_present": true
+      },
+      "extra_before_injection_no_badge": {
+        "topbar_height": 58,
+        "topbar_width": 1428,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영",
+        "apply_button_width": 69.89,
+        "badge_present": false
+      },
+      "app_page_errors": []
+    },
+    "1520": {
+      "width": 1520,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "badge_injected": true,
+      "with_badge": {
+        "topbar_height": 58,
+        "topbar_width": 1448,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영—",
+        "apply_button_width": 94.83,
+        "badge_present": true
+      },
+      "extra_before_injection_no_badge": {
+        "topbar_height": 58,
+        "topbar_width": 1448,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영",
+        "apply_button_width": 69.89,
+        "badge_present": false
+      },
+      "app_page_errors": []
+    },
+    "1540": {
+      "width": 1540,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "badge_injected": true,
+      "with_badge": {
+        "topbar_height": 58,
+        "topbar_width": 1468,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영—",
+        "apply_button_width": 94.83,
+        "badge_present": true
+      },
+      "extra_before_injection_no_badge": {
+        "topbar_height": 58,
+        "topbar_width": 1468,
+        "bar_text": "12마디 · Verse 1",
+        "second_row": [],
+        "visible_button_count": 11,
+        "apply_button_text": "⇪ 반영",
+        "apply_button_width": 69.89,
+        "badge_present": false
+      },
+      "app_page_errors": []
+    }
+  },
+  "C_name_present_no_badge": {
+    "1475": {
+      "width": 1475,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "topbar_height": 93,
+      "topbar_width": 1403,
+      "bar_text": "12마디 · Verse 1",
+      "second_row": [
+        "▤"
+      ],
+      "visible_button_count": 11,
+      "apply_button_text": "⇪ 반영",
+      "apply_button_width": 69.89,
+      "badge_present": false,
+      "app_page_errors": []
+    },
+    "1490": {
+      "width": 1490,
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "topbar_height": 58,
+      "topbar_width": 1418,
+      "bar_text": "12마디 · Verse 1",
+      "second_row": [],
+      "visible_button_count": 11,
+      "apply_button_text": "⇪ 반영",
+      "apply_button_width": 69.89,
+      "badge_present": false,
+      "app_page_errors": []
+    }
+  },
+  "dist_assets": [
+    "index-BMZ29Nk7.js",
+    "index-ecQx59rc.css"
+  ],
+  "browser": "153.0.8010.12",
+  "port_answers_after_shutdown": false,
+  "console_executed_log_bytes": 0
+}

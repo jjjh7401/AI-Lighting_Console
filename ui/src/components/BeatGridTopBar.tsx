@@ -99,12 +99,19 @@ export interface BeatGridTopBarProps {
   versionLabel: string | null;
   bpm: number | null | undefined;
   currentBar: number;
+  /** 지금 마디가 속한 구간 이름 — 「N마디 한눈에」 제목에 붙는 값과 같다. 화면 폭
+   * 1490px 이상에서만 마디 번호 옆에 보이고(CSS), 그보다 좁으면 마디 번호만 보이며
+   * 전체 이름(「N마디 · 이름」)은 마디 칸의 title 로 본다. 없거나 `null`이면 마디
+   * 번호만 보이고 title 도 없다. */
+  barSectionLabel?: string | null;
   barRange: { start: number; end: number };
   onBarChange: (bar: number) => void;
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
-  /** 콘솔에 아직 안 보낸 편집 수. 출처가 없으면 생략 — 숫자를 지어내지 않는다. */
+  /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
+   * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
+   * 않는다), 숫자는 그 개수다. */
   pendingApplyCount?: number | null;
   onDrawerToggle?: () => void;
   /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
@@ -127,6 +134,7 @@ export function BeatGridTopBar({
   versionLabel,
   bpm,
   currentBar,
+  barSectionLabel,
   barRange,
   onBarChange,
   onPreviewBar,
@@ -183,6 +191,13 @@ export function BeatGridTopBar({
 
   const [preview, apply, drawer] = TOP_BAR_SHORTENED_ACTIONS;
   const titleFor = (full: string, wired: boolean) => (wired ? full : full + UNWIRED_NOTE);
+  // 카드 t630 — 구간 이름은 1490px 이상에서만 보이고(CSS) 그보다 좁으면 마디 번호만
+  // 보인다(상단 바가 두 줄로 꺾이지 않게). 전체 이름은 title 로 본다. 구분점 앞
+  // 공백은 JSX 가 지우지 못하게 문자열 안에 둔다.
+  const barTitle = barSectionLabel ? `${currentBar}마디 · ${barSectionLabel}` : undefined;
+  const barSectionSuffix = barSectionLabel ? (
+    <span className="beat-grid-topbar-bar-section">{` · ${barSectionLabel}`}</span>
+  ) : null;
 
   return (
     <header className="beat-grid-topbar">
@@ -270,7 +285,7 @@ export function BeatGridTopBar({
       >
         ◀
       </button>
-      <span className="beat-grid-topbar-bar">{currentBar}마디</span>
+      <span className="beat-grid-topbar-bar" title={barTitle}>{currentBar}마디{barSectionSuffix}</span>
       <button
         type="button"
         className="tbtn"
@@ -307,6 +322,11 @@ export function BeatGridTopBar({
       >
         <ShortenedLabel action={apply} />
         {typeof pendingApplyCount === "number" && <span className="badge">{pendingApplyCount}</span>}
+        {pendingApplyCount === null && (
+          <span className="badge badge-dash" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">
+            —
+          </span>
+        )}
       </button>
       <button
         type="button"

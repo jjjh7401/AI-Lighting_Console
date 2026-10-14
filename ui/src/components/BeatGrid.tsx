@@ -2076,6 +2076,7 @@ export function BeatGrid({
         versionLabel={versionLabel}
         bpm={bpm}
         currentBar={viewBar}
+        barSectionLabel={viewBarSectionLabel}
         barRange={grid.bar_range}
         onBarChange={jumpToBar}
         onPreviewBar={onPreviewBar}

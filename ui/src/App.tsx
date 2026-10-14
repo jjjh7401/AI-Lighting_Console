@@ -23,6 +23,7 @@ import {
 import { ApprovalCard } from "./components/ApprovalCard";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
+import { pendingApplyCountOf } from "./components/beatgrid/pendingApplyCount";
 import { buildFileFromSongAudioLink } from "./components/beatgrid/songAudioLink";
 import { LIFECYCLE_LABEL as SONG_TIMELINE_LIFECYCLE_LABEL } from "./components/SongTimeline";
 import { ChatView } from "./components/ChatView";
@@ -1218,7 +1219,7 @@ export default function App() {
             onConsoleStop={sendBeatGridConsoleStop}
             sendStatus={state.beatGridSendStatus}
             onApply={sendBeatGridApply}
-            pendingApplyCount={state.songTimeline.timeline?.beat_grid?.unsent_cells?.length}
+            pendingApplyCount={pendingApplyCountOf(state.songTimeline.timeline?.beat_grid?.unsent_cells)}
             fixtures={beatGridStageFixtures}
             stageNotes={state.beatGridStage?.unread}
             stageGroups={state.beatGridStage?.groups}

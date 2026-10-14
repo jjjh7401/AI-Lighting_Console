@@ -1,0 +1,98 @@
+t630 BEFORE capture - exact commands, in the order they were run
+=================================================================
+cwd for every command: /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t630  (repo-relative paths below)
+HEAD at start: 19a52738, branch WT-runbook-ui-gaps, git status clean.
+SCRATCH = /private/tmp/claude-501/-Users-studiox-Documents-Claude-Code-AI-Lighting-Console/88051e3a-8f8f-4c4f-88fc-504a062cf7d3/scratchpad
+
+-----------------------------------------------------------------
+A. SUPERSEDED first attempt: ui/runbook-preview.html (renders RunbookMode only, no BeatGrid)
+   Its files were moved to .moai/reports/t630/runbook-preview-misdirected/ after the coordinator redirect.
+-----------------------------------------------------------------
+lsof -nP -iTCP:5190 -sTCP:LISTEN                      # no output (port free)
+T630_HEAD=19a52738 T630_PREFIX=survey T630_OUT=SCRATCH/survey T630_LOG_DIR=SCRATCH node SCRATCH/before-capture.mjs
+    # driver (kept as runbook-preview-misdirected/before-capture.mjs) ran internally:
+    #   npm --prefix ui run dev -- --port 5190 --strictPort        (stopped by the driver, SIGTERM to the process group)
+    #   browser: playwright-core 1.63.0 from /Users/studiox/.npm/_npx/e41f203b7505f1fb/node_modules/playwright-core,
+    #            chromium 153.0.8010.12 (ms-playwright chromium-1243)
+lsof -nP -iTCP:5190 -sTCP:LISTEN                      # no output (server stopped)
+
+-----------------------------------------------------------------
+B. Coordinator redirect: t583 harness = real app UI + FakeConsole backend + built UI
+-----------------------------------------------------------------
+# step 1
+lsof -nP -iTCP:5190 -sTCP:LISTEN                      # no output
+mkdir -p .moai/reports/t630/runbook-preview-misdirected
+mv .moai/reports/t630/before-capture.mjs .moai/reports/t630/runbook-preview-misdirected/before-capture.mjs
+mv SCRATCH/survey/survey-app-1450.png SCRATCH/survey/survey-app-1700.png SCRATCH/survey/survey-design-1450.png \
+   SCRATCH/survey/survey-design-1700.png SCRATCH/survey/survey-design-app-1450.png SCRATCH/survey/survey-design-app-1700.png \
+   SCRATCH/survey/survey-measure.json SCRATCH/t630-vite-5190.log .moai/reports/t630/runbook-preview-misdirected/
+
+# steps 2 and 3 were NOT executed as written (no cp / ln -s). Checks that showed why:
+ls -l .moai/reports/t583/capture.py .moai/reports/t583/serve_fake.py .moai/reports/t583/diff-list.md
+cmp .moai/reports/t583/capture.py     /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t583/capture.py      # IDENTICAL
+cmp .moai/reports/t583/serve_fake.py  /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.moai/reports/t583/serve_fake.py   # IDENTICAL
+git ls-files .moai/reports/t583 | wc -l               # 34 tracked (scripts + side_by_side/*.png + regions.json)
+git ls-files .moai/reports/t509 | wc -l               # 25 tracked (evidence already in the worktree)
+git ls-files .moai/reports/t534 | wc -l               # 9 tracked
+git ls-files .moai/reports/t583/side_by_side | head -40   # tracked outputs that an in-place capture.py run would overwrite
+ls -l reports/ldbeat-runbook-ui-proposal-20261008.html    # exists, 90935 bytes
+cmp reports/ldbeat-runbook-ui-proposal-20261008.html .moai/specs/SPEC-LDBEAT-001/design/ldbeat-runbook-ui-proposal-20261008.html   # IDENTICAL
+uv sync --frozen --dry-run                            # "Would make no changes" (.venv already in sync)
+
+# step 4
+npm --prefix ui run build                             # prebuild cp + tsc + vite build OK; dist/ written
+git status --short                                    # only "?? .moai/reports/t630/" (ui/dist and ui/public/user-guide.html are ignored)
+grep -n "ui_dist\|StaticFiles\|index.html\|FileResponse" server/web/app.py   # StaticFiles(ui_dist, html=True) mounted at "/"
+
+# steps 5 and 6: run byte-identical copies of the t583 scripts one level over, so ROOT (= parents[3]) is this
+# worktree and nothing tracked is overwritten. Outputs land in .moai/reports/t630/side_by_side/.
+cp .moai/reports/t583/serve_fake.py .moai/reports/t630/serve_fake.py
+cp .moai/reports/t583/capture.py .moai/reports/t630/capture.py
+cmp .moai/reports/t583/serve_fake.py .moai/reports/t630/serve_fake.py   # IDENTICAL
+cmp .moai/reports/t583/capture.py .moai/reports/t630/capture.py         # IDENTICAL
+node --check .moai/reports/t630/before-run-harness.mjs
+lsof -nP -iTCP:8798 -sTCP:LISTEN                      # no output (port free)
+T630_LOG_DIR=SCRATCH node .moai/reports/t630/before-run-harness.mjs
+    # the driver ran, children in their own process group, env PYTHONDONTWRITEBYTECODE=1 TMPDIR=SCRATCH NO_COLOR=1:
+    #   uv run --with uvicorn python .moai/reports/t630/serve_fake.py 8798
+    #   polled http://127.0.0.1:8798/ until HTTP 200 (3655 ms, text/html, 458 bytes, has <div id="root">)
+    #   uv run --with playwright --with pillow python .moai/reports/t630/capture.py 8798      -> exit 0
+    #   SIGTERM to the server's process group in finally; port 8798 closed afterwards
+    # observed: app_page_errors [] at 1450 and 1700; console_executed.log 0 bytes (FakeConsole received no write)
+
+# step 7
+cp .moai/reports/t630/side_by_side/app_1450_full.png    .moai/reports/t630/before-app-1450-full.png
+cp .moai/reports/t630/side_by_side/app_1700_full.png    .moai/reports/t630/before-app-1700-full.png
+cp .moai/reports/t630/side_by_side/mockup_1450_full.png .moai/reports/t630/before-design-1450-full.png
+cp .moai/reports/t630/side_by_side/mockup_1700_full.png .moai/reports/t630/before-design-1700-full.png
+cp .moai/reports/t630/side_by_side/regions.json         .moai/reports/t630/before-regions.json
+cmp .moai/reports/t630/serve_fake.py .moai/reports/t583/serve_fake.py     # still IDENTICAL before removal
+cmp .moai/reports/t630/capture.py .moai/reports/t583/capture.py           # still IDENTICAL before removal
+mv .moai/reports/t630/side_by_side .moai/reports/t630/before-side_by_side
+mv .moai/reports/t630/console_executed.log .moai/reports/t630/before-console-executed.log
+rm .moai/reports/t630/serve_fake.py .moai/reports/t630/capture.py          # no .py files left under .moai/reports/t630
+ps -axo pid,ppid,command | grep -E "serve_fake|capture\.py|chrome-headless|vite" | grep -v grep   # no output
+PYTHONDONTWRITEBYTECODE=1 TMPDIR=SCRATCH uv run --with playwright --with pillow python -c "...print versions and p.chromium.executable_path..."
+    # playwright 1.63.0, pillow 12.3.0, browser = ms-playwright chromium-1243 (already installed; nothing was installed)
+
+# to repeat as the AFTER run: re-copy the two scripts as above, run the same driver, then rename side_by_side/ before the next run.
+# viewport used by capture.py: 1450x1000 and 1700x1000 (HEIGHT = 1000 in the t583 script).
+
+-----------------------------------------------------------------
+C. Follow-up task: BEFORE state at bar 12 (same server setup; ui/dist was NOT rebuilt)
+-----------------------------------------------------------------
+git status --short                                    # only "?? .moai/reports/t630/"
+lsof -nP -iTCP:8798 -sTCP:LISTEN                      # no output (port free)
+cp .moai/reports/t583/serve_fake.py .moai/reports/t630/serve_fake.py
+cmp .moai/reports/t583/serve_fake.py .moai/reports/t630/serve_fake.py     # IDENTICAL
+node --check .moai/reports/t630/before-bar12-harness.mjs
+T630_LOG_DIR=SCRATCH node .moai/reports/t630/before-bar12-harness.mjs
+    # same server command and env as section B (uv run --with uvicorn python .moai/reports/t630/serve_fake.py 8798),
+    # ready after 1838 ms. Browser: playwright-core 1.63.0 (Node) driving chromium 153.0.8010.12, the same chromium-1243
+    # as the Python run. Per width (viewport height 1000): capture.py's _app flow, then click
+    # button[title="다음 마디 (→)"] until .beat-grid-topbar-bar reads exactly "12마디"
+    # -> 12 clicks from "0마디" at both widths; server stopped with SIGTERM in finally.
+cmp .moai/reports/t630/serve_fake.py .moai/reports/t583/serve_fake.py && rm .moai/reports/t630/serve_fake.py
+mv .moai/reports/t630/console_executed.log .moai/reports/t630/before-bar12-console-executed.log   # 0 bytes
+ps -axo pid,ppid,command | grep -E "serve_fake|chrome-headless|vite" | grep -v grep               # no output
+lsof -nP -iTCP:8798 -sTCP:LISTEN                      # no output (exit 1)

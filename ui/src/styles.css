@@ -4273,6 +4273,13 @@ body {
 .beat-grid-topbar-bar {
   min-width: 64px;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* 카드 t630 — 구간 이름은 1490px 이상에서만 보인다(아래 미디어 규칙). 그보다
+   좁으면 마디 번호만 보이고 전체 이름은 마디 칸 title 로 본다. */
+.beat-grid-topbar-bar-section {
+  display: none;
 }
 
 .beat-grid-topbar .tbtn {
@@ -4308,6 +4315,12 @@ body {
   padding: 0 6px;
   font-size: 11px;
   margin-left: 4px;
+}
+
+/* 카드 t630 — 반영 기록 없음 「—」 배지는 1520px 이상에서만 보인다(아래 미디어
+   규칙). 마크업에는 늘 있고 좁은 폭에서만 CSS 로 숨긴다. */
+.beat-grid-topbar .badge-dash {
+  display: none;
 }
 
 .beat-grid-topbar .lbl-short {
@@ -4366,6 +4379,23 @@ body {
     display: none;
   }
   .beat-grid-topbar .lbl-short {
+    display: inline;
+  }
+}
+
+/* 카드 t630 — 브라우저 측정: 구간 이름만 붙이면 1475px 에서 상단 바가 두 줄
+   (93px)로 꺾이고 1490px 에서 한 줄, 「—」 배지만 붙이면 1450px 에서 꺾이며,
+   둘을 같이 붙이면 1500px 에서 꺾이고 1520px 에서 한 줄이다. 그래서 이름은
+   1490px, 「—」 는 1520px 부터 보인다. 위 기본 규칙과 특이도가 같아 파일에서
+   뒤에 있어야 이긴다. */
+@media (min-width: 1490px) {
+  .beat-grid-topbar-bar-section {
+    display: inline;
+  }
+}
+
+@media (min-width: 1520px) {
+  .beat-grid-topbar .badge-dash {
     display: inline;
   }
 }

@@ -1,0 +1,691 @@
+{
+  "head": "6db8d4ce",
+  "state": "bar 12, HEAD 6db8d4ce (after the change), ui/dist not rebuilt",
+  "viewport_height": 1000,
+  "stop_rule": "label's leading number == 12 (at most 20 clicks on button[title=\"다음 마디 (→)\"])",
+  "second_row_rules": {
+    "strict": "button's top is at or below the first visible button's bottom (entirely on a lower row)",
+    "literal": "button's top is greater than the first visible button's top"
+  },
+  "threshold": {
+    "1500": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "topbar_height": 58,
+      "topbar_width": 1428,
+      "visible_button_count": 11,
+      "first_button": {
+        "text": "⏮",
+        "title": "처음으로",
+        "top": 102,
+        "bottom": 132
+      },
+      "second_row_strict": [],
+      "second_row_literal": [
+        "▶ 재생",
+        "콘솔 같이 끔",
+        "◀",
+        "▶",
+        "▶ 콘솔",
+        "■ 끄기",
+        "▤"
+      ],
+      "apply_button": {
+        "text": "⇪ 반영",
+        "width": 69.89,
+        "height": 30,
+        "badge_present": false
+      },
+      "buttons": [
+        {
+          "text": "⏮",
+          "title": "처음으로",
+          "top": 102,
+          "bottom": 132,
+          "left": 461.36,
+          "width": 38.06,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "⏪ 10초",
+          "title": "10초 뒤로",
+          "top": 99,
+          "bottom": 135,
+          "left": 505.42,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "▶ 재생",
+          "title": "재생 / 일시정지 (스페이스)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 587.27,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "10초 ⏩",
+          "title": "10초 앞으로",
+          "top": 99,
+          "bottom": 135,
+          "left": 661,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "콘솔 같이 끔",
+          "title": "켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 874.86,
+          "width": 99.63,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "◀",
+          "title": "이전 마디 (←)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1003.22,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶",
+          "title": "다음 마디 (→)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1153.95,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶ 콘솔",
+          "title": "▶ 이 마디 콘솔에서 보기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1195.8,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "■ 끄기",
+          "title": "■ 끄기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1269.53,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "⇪ 반영",
+          "title": "⇪ 콘솔에 반영",
+          "top": 102,
+          "bottom": 132,
+          "left": 1343.27,
+          "width": 69.89,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "▤",
+          "title": "▤ 프리셋 서랍",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1419.16,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        }
+      ]
+    },
+    "1550": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "topbar_height": 58,
+      "topbar_width": 1478,
+      "visible_button_count": 11,
+      "first_button": {
+        "text": "⏮",
+        "title": "처음으로",
+        "top": 102,
+        "bottom": 132
+      },
+      "second_row_strict": [],
+      "second_row_literal": [
+        "▶ 재생",
+        "콘솔 같이 끔",
+        "◀",
+        "▶",
+        "▶ 콘솔",
+        "■ 끄기",
+        "▤"
+      ],
+      "apply_button": {
+        "text": "⇪ 반영",
+        "width": 69.89,
+        "height": 30,
+        "badge_present": false
+      },
+      "buttons": [
+        {
+          "text": "⏮",
+          "title": "처음으로",
+          "top": 102,
+          "bottom": 132,
+          "left": 486.36,
+          "width": 38.06,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "⏪ 10초",
+          "title": "10초 뒤로",
+          "top": 99,
+          "bottom": 135,
+          "left": 530.42,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "▶ 재생",
+          "title": "재생 / 일시정지 (스페이스)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 612.27,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "10초 ⏩",
+          "title": "10초 앞으로",
+          "top": 99,
+          "bottom": 135,
+          "left": 686,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "콘솔 같이 끔",
+          "title": "켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 899.86,
+          "width": 99.63,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "◀",
+          "title": "이전 마디 (←)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1053.22,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶",
+          "title": "다음 마디 (→)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1203.95,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶ 콘솔",
+          "title": "▶ 이 마디 콘솔에서 보기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1245.8,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "■ 끄기",
+          "title": "■ 끄기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1319.53,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "⇪ 반영",
+          "title": "⇪ 콘솔에 반영",
+          "top": 102,
+          "bottom": 132,
+          "left": 1393.27,
+          "width": 69.89,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "▤",
+          "title": "▤ 프리셋 서랍",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1469.16,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        }
+      ]
+    },
+    "1600": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "topbar_height": 58,
+      "topbar_width": 1528,
+      "visible_button_count": 11,
+      "first_button": {
+        "text": "⏮",
+        "title": "처음으로",
+        "top": 102,
+        "bottom": 132
+      },
+      "second_row_strict": [],
+      "second_row_literal": [
+        "▶ 재생",
+        "콘솔 같이 끔",
+        "◀",
+        "▶",
+        "▶ 콘솔",
+        "■ 끄기",
+        "▤"
+      ],
+      "apply_button": {
+        "text": "⇪ 반영",
+        "width": 69.89,
+        "height": 30,
+        "badge_present": false
+      },
+      "buttons": [
+        {
+          "text": "⏮",
+          "title": "처음으로",
+          "top": 102,
+          "bottom": 132,
+          "left": 511.36,
+          "width": 38.06,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "⏪ 10초",
+          "title": "10초 뒤로",
+          "top": 99,
+          "bottom": 135,
+          "left": 555.42,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "▶ 재생",
+          "title": "재생 / 일시정지 (스페이스)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 637.27,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "10초 ⏩",
+          "title": "10초 앞으로",
+          "top": 99,
+          "bottom": 135,
+          "left": 711,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "콘솔 같이 끔",
+          "title": "켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 924.86,
+          "width": 99.63,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "◀",
+          "title": "이전 마디 (←)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1103.22,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶",
+          "title": "다음 마디 (→)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1253.95,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶ 콘솔",
+          "title": "▶ 이 마디 콘솔에서 보기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1295.8,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "■ 끄기",
+          "title": "■ 끄기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1369.53,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "⇪ 반영",
+          "title": "⇪ 콘솔에 반영",
+          "top": 102,
+          "bottom": 132,
+          "left": 1443.27,
+          "width": 69.89,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "▤",
+          "title": "▤ 프리셋 서랍",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1519.16,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        }
+      ]
+    },
+    "1650": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "topbar_height": 58,
+      "topbar_width": 1576.5,
+      "visible_button_count": 11,
+      "first_button": {
+        "text": "⏮",
+        "title": "처음으로",
+        "top": 102,
+        "bottom": 132
+      },
+      "second_row_strict": [],
+      "second_row_literal": [
+        "▶ 재생",
+        "콘솔 같이 끔",
+        "◀",
+        "▶",
+        "▶ 콘솔",
+        "■ 끄기",
+        "▤"
+      ],
+      "apply_button": {
+        "text": "⇪ 반영",
+        "width": 69.89,
+        "height": 30,
+        "badge_present": false
+      },
+      "buttons": [
+        {
+          "text": "⏮",
+          "title": "처음으로",
+          "top": 102,
+          "bottom": 132,
+          "left": 536.36,
+          "width": 38.06,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "⏪ 10초",
+          "title": "10초 뒤로",
+          "top": 99,
+          "bottom": 135,
+          "left": 580.42,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "▶ 재생",
+          "title": "재생 / 일시정지 (스페이스)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 662.27,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "10초 ⏩",
+          "title": "10초 앞으로",
+          "top": 99,
+          "bottom": 135,
+          "left": 736,
+          "width": 75.84,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "콘솔 같이 끔",
+          "title": "켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 949.86,
+          "width": 99.63,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "◀",
+          "title": "이전 마디 (←)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1152.47,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶",
+          "title": "다음 마디 (→)",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1303.2,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "▶ 콘솔",
+          "title": "▶ 이 마디 콘솔에서 보기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1345.05,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "■ 끄기",
+          "title": "■ 끄기",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1418.78,
+          "width": 67.73,
+          "height": 29,
+          "visible": true
+        },
+        {
+          "text": "⇪ 반영",
+          "title": "⇪ 콘솔에 반영",
+          "top": 102,
+          "bottom": 132,
+          "left": 1492.52,
+          "width": 69.89,
+          "height": 30,
+          "visible": true
+        },
+        {
+          "text": "▤",
+          "title": "▤ 프리셋 서랍",
+          "top": 102.5,
+          "bottom": 131.5,
+          "left": 1568.41,
+          "width": 35.84,
+          "height": 29,
+          "visible": true
+        }
+      ]
+    }
+  },
+  "badge_injection": {
+    "1450": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "injected": true,
+      "before": {
+        "topbar_height": 93,
+        "apply_button_width": 69.89,
+        "apply_button_height": 30,
+        "apply_button_text": "⇪ 반영",
+        "badge_present": false,
+        "bar_text": "12마디 · Verse 1",
+        "second_row_strict": [
+          "▤"
+        ],
+        "second_row_literal": [
+          "▶ 재생",
+          "콘솔 같이 끔",
+          "◀",
+          "▶",
+          "▶ 콘솔",
+          "■ 끄기",
+          "▤"
+        ]
+      },
+      "after": {
+        "topbar_height": 94,
+        "apply_button_width": 94.83,
+        "apply_button_height": 30,
+        "apply_button_text": "⇪ 반영—",
+        "badge_present": true,
+        "bar_text": "12마디 · Verse 1",
+        "second_row_strict": [
+          "⇪ 반영—",
+          "▤"
+        ],
+        "second_row_literal": [
+          "▶ 재생",
+          "콘솔 같이 끔",
+          "◀",
+          "▶",
+          "▶ 콘솔",
+          "■ 끄기",
+          "⇪ 반영—",
+          "▤"
+        ]
+      }
+    },
+    "1700": {
+      "reached": true,
+      "clicks": 12,
+      "app_page_errors": [],
+      "start_text": "0마디",
+      "bar_text": "12마디 · Verse 1",
+      "injected": true,
+      "before": {
+        "topbar_height": 58,
+        "apply_button_width": 69.89,
+        "apply_button_height": 30,
+        "apply_button_text": "⇪ 반영",
+        "badge_present": false,
+        "bar_text": "12마디 · Verse 1",
+        "second_row_strict": [],
+        "second_row_literal": [
+          "▶ 재생",
+          "콘솔 같이 끔",
+          "◀",
+          "▶",
+          "▶ 콘솔",
+          "■ 끄기",
+          "▤"
+        ]
+      },
+      "after": {
+        "topbar_height": 58,
+        "apply_button_width": 94.83,
+        "apply_button_height": 30,
+        "apply_button_text": "⇪ 반영—",
+        "badge_present": true,
+        "bar_text": "12마디 · Verse 1",
+        "second_row_strict": [],
+        "second_row_literal": [
+          "▶ 재생",
+          "콘솔 같이 끔",
+          "◀",
+          "▶",
+          "▶ 콘솔",
+          "■ 끄기",
+          "▤"
+        ]
+      }
+    }
+  },
+  "dist_assets": [
+    "index-BMZ29Nk7.js",
+    "index-ecQx59rc.css"
+  ],
+  "browser": "153.0.8010.12",
+  "port_answers_after_shutdown": false,
+  "console_executed_log_bytes": 0
+}
