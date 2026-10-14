@@ -295,7 +295,10 @@ _FORBIDDEN_PATTERNS = (
 
 #: 훑는 파일 목록. 이 시험 파일은 정규식 목록 자신이 있어 뺀다. M2·M3 가 신규 시험 파일을
 #: 만들면 여기에 더한다(AC-LDBARENTRY-005 (6) — 세션·메시지·와이어 시험 파일).
-_SCANNED_FILES = (Path(bar_map_entry.__file__),)
+_SCANNED_FILES = (
+    Path(bar_map_entry.__file__),
+    Path(__file__).with_name("test_session_bar_map_entry.py"),
+)
 
 
 @pytest.mark.parametrize("path", _SCANNED_FILES, ids=lambda p: p.name)
