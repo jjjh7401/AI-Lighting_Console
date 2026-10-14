@@ -99,8 +99,10 @@ export interface BeatGridTopBarProps {
   versionLabel: string | null;
   bpm: number | null | undefined;
   currentBar: number;
-  /** 지금 마디가 속한 구간 이름 — 「N마디 한눈에」 제목에 붙는 값과 같다. 없거나
-   * `null`이면 마디 번호만 보인다. */
+  /** 지금 마디가 속한 구간 이름 — 「N마디 한눈에」 제목에 붙는 값과 같다. 화면 폭
+   * 1490px 이상에서만 마디 번호 옆에 보이고(CSS), 그보다 좁으면 마디 번호만 보이며
+   * 전체 이름(「N마디 · 이름」)은 마디 칸의 title 로 본다. 없거나 `null`이면 마디
+   * 번호만 보이고 title 도 없다. */
   barSectionLabel?: string | null;
   barRange: { start: number; end: number };
   onBarChange: (bar: number) => void;
@@ -189,8 +191,13 @@ export function BeatGridTopBar({
 
   const [preview, apply, drawer] = TOP_BAR_SHORTENED_ACTIONS;
   const titleFor = (full: string, wired: boolean) => (wired ? full : full + UNWIRED_NOTE);
-  // 카드 t630 — 구간 이름은 마디 번호 뒤에 붙인 한 덩어리 문자열(텍스트 노드 하나).
-  const barLabel = barSectionLabel ? `${currentBar}마디 · ${barSectionLabel}` : `${currentBar}마디`;
+  // 카드 t630 — 구간 이름은 1490px 이상에서만 보이고(CSS) 그보다 좁으면 마디 번호만
+  // 보인다(상단 바가 두 줄로 꺾이지 않게). 전체 이름은 title 로 본다. 구분점 앞
+  // 공백은 JSX 가 지우지 못하게 문자열 안에 둔다.
+  const barTitle = barSectionLabel ? `${currentBar}마디 · ${barSectionLabel}` : undefined;
+  const barSectionSuffix = barSectionLabel ? (
+    <span className="beat-grid-topbar-bar-section">{` · ${barSectionLabel}`}</span>
+  ) : null;
 
   return (
     <header className="beat-grid-topbar">
@@ -278,7 +285,7 @@ export function BeatGridTopBar({
       >
         ◀
       </button>
-      <span className="beat-grid-topbar-bar">{barLabel}</span>
+      <span className="beat-grid-topbar-bar" title={barTitle}>{currentBar}마디{barSectionSuffix}</span>
       <button
         type="button"
         className="tbtn"
@@ -316,7 +323,7 @@ export function BeatGridTopBar({
         <ShortenedLabel action={apply} />
         {typeof pendingApplyCount === "number" && <span className="badge">{pendingApplyCount}</span>}
         {pendingApplyCount === null && (
-          <span className="badge" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">
+          <span className="badge badge-dash" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">
             —
           </span>
         )}

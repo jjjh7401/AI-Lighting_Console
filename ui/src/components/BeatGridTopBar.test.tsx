@@ -81,18 +81,25 @@ describe("상단 바 — 곡·버전·BPM", () => {
 
 describe("상단 바 — 마디 옆 구간 이름 (카드 t630)", () => {
   // BPM 알약에도 「 · 」 가 있어 마크업 전체로는 구분점 유무를 못 가린다 —
-  // 마디 칸 하나의 글자만 뽑아 단언한다.
-  const barText = (html: string) => html.match(/<span class="beat-grid-topbar-bar">([^<]*)<\/span>/)?.[1];
+  // 마디 칸 하나의 글자만 뽑아 단언한다. 칸 안에 구간 이름 span 이 한 겹 들어
+  // 있으므로 닫는 태그까지 통째로 잡은 뒤 안쪽 태그를 벗긴다.
+  const barInner = (html: string) =>
+    html.match(/<span class="beat-grid-topbar-bar"[^>]*>((?:[^<]|<span[^>]*>[^<]*<\/span>)*)<\/span>/)?.[1];
+  const barText = (html: string) => barInner(html)?.replace(/<[^>]+>/g, "");
 
-  it("구간 이름이 있으면 「12마디 · 벌스1」 한 덩어리로 보인다", () => {
+  it("구간 이름이 있으면 「12마디 · 벌스1」 이 보이고, 이름은 따로 감싼 span 이며 전체 라벨은 title 에 있다", () => {
     const html = renderTopBar({ currentBar: 12, barRange: { start: 0, end: 40 }, barSectionLabel: "벌스1" });
-    expect(html).toContain("12마디 · 벌스1");
     expect(barText(html)).toBe("12마디 · 벌스1");
+    expect(html).toContain('<span class="beat-grid-topbar-bar" title="12마디 · 벌스1">');
+    expect(html).toContain('<span class="beat-grid-topbar-bar-section"> · 벌스1</span>');
   });
 
-  it("구간 이름이 없으면(생략·null) 마디 번호만 보이고 구분점이 없다", () => {
-    expect(barText(renderTopBar())).toBe("3마디");
-    expect(barText(renderTopBar({ barSectionLabel: null }))).toBe("3마디");
+  it("구간 이름이 없으면(생략·null) 마디 번호만 보이고 구분점·구간 이름 span·title 이 없다", () => {
+    for (const html of [renderTopBar(), renderTopBar({ barSectionLabel: null })]) {
+      expect(barText(html)).toBe("3마디");
+      expect(html).toContain('<span class="beat-grid-topbar-bar">3마디</span>');
+      expect(html).not.toContain("beat-grid-topbar-bar-section");
+    }
   });
 });
 
@@ -122,6 +129,42 @@ describe("상단 바 — 1450px 이상 한 줄 (카드 t587, REQ-LDBEAT-017(b))"
 
   it("넘쳐도 오른쪽 버튼을 잘라 버리지 않는다 — 시안 `.top{flex-wrap:wrap}` 처럼 줄바꿈 금지를 걸지 않는다", () => {
     expect(wideMediaBlock()).not.toMatch(/flex-wrap:\s*nowrap/);
+  });
+});
+
+/** styles.css 전체 글. */
+function readStylesCss(): string {
+  return readFileSync(fileURLToPath(new URL("../styles.css", import.meta.url)), "utf-8");
+}
+
+/** styles.css 의 `@media (min-width: <px>px) { … }` 블록 본문 — `wideMediaBlock` 과 같은 방식. */
+function minWidthMediaBlock(px: number): string {
+  const css = readStylesCss();
+  const start = css.indexOf(`@media (min-width: ${px}px) {`);
+  expect(start).toBeGreaterThanOrEqual(0);
+  const end = css.indexOf("\n}\n", start);
+  return css.slice(start, end);
+}
+
+/** styles.css 의 기본(미디어 블록 밖) 규칙 하나 — 최상위 규칙은 줄 맨 앞에서 시작하고 미디어 블록 안
+ * 규칙은 들여쓴다. 없으면 빈 글. 실패 메시지에 스타일시트 전체가 찍히지 않게 그 규칙만 돌려준다. */
+function baseRule(selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return readStylesCss().match(new RegExp(`\\n${escaped}\\s*\\{[^}]*\\}`))?.[0].trim() ?? "";
+}
+
+describe("상단 바 — 좁은 폭에서 줄이 꺾이지 않게 (카드 t630)", () => {
+  it("구간 이름은 1490px 이상에서만 보인다", () => {
+    expect(minWidthMediaBlock(1490)).toMatch(/\.beat-grid-topbar-bar-section\s*\{\s*display:\s*inline;?\s*\}/);
+  });
+
+  it("반영 기록 없음 「—」 배지는 1520px 이상에서만 보인다", () => {
+    expect(minWidthMediaBlock(1520)).toMatch(/\.beat-grid-topbar \.badge-dash\s*\{\s*display:\s*inline;?\s*\}/);
+  });
+
+  it("기본 규칙은 둘 다 숨긴다 — 그보다 좁은 폭에서는 마크업에만 남는다", () => {
+    expect(baseRule(".beat-grid-topbar-bar-section")).toMatch(/display:\s*none/);
+    expect(baseRule(".beat-grid-topbar .badge-dash")).toMatch(/display:\s*none/);
   });
 });
 
@@ -156,7 +199,9 @@ describe("상단 바 — 버튼 전부 + 1450px 줄임 (AC-LDBEAT-017(a)(b))", (
 
   it("카드 t630 — 반영 기록이 아직 없으면(null) 숫자 대신 「—」 배지와 이유 title 을 보인다", () => {
     const html = renderTopBar({ onApply: noop, pendingApplyCount: null });
-    expect(html).toContain('<span class="badge" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">—</span>');
+    expect(html).toContain(
+      '<span class="badge badge-dash" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">—</span>',
+    );
   });
 });
 
