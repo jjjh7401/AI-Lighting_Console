@@ -4,7 +4,7 @@
 
 서버에 마디 지도를 만드는 분석기, 저장하는 관문, 읽어 쓰는 소비자가 모두 있지만 셋을 잇는 입구가 없다(spec.md §1). 이 SPEC은 그 입구 하나를 낸다 — 프레임 한 종류, 세션 메서드 하나, 합성 단계 하나. 화면은 후속 카드다.
 
-- 작업 위치: 워크트리 `.claude/worktrees/WT-barmap-entry-spec`, 베이스 `origin/main` `f5eada95`(작업 트리 HEAD 같음).
+- 작업 위치: 워크트리 `.claude/worktrees/WT-barmap-entry-spec`, 베이스 `origin/main` `cca88d23`(2026-10-14 rebase, 처음 감사한 base는 `f5eada95`).
 - 선행 SPEC: `SPEC-LDBARMAP-001` — frontmatter `status: completed`(`spec.md:5`)라 `depends_on` 사전 점검을 충족한다. 이 SPEC은 그 SPEC의 분석기·저장 스키마를 수정하지 않는다.
 - 후속: 입구 버튼과 오프셋 입력(UI 카드, D4), 그리고 이 입구가 채운 `bar_map`을 읽는 `SPEC-LDARRANGE-001`의 run-phase.
 - 읽은 전제와 줄 번호는 spec.md §3에 있다. 이 문서는 줄 번호를 되풀이하지 않고 P-번호로 부른다.
@@ -82,7 +82,7 @@ ruff format --check server/audio/bar_map_entry.py server/tests/test_audio_bar_ma
 **위험**:
 - 7단계의 성공 판별. 관문이 성공하면 `song_timeline`과 `chat_response`를 이미 보냈으므로 진입 메서드가 한 번 더 `chat_response`를 보내면 응답이 2개가 된다(AC-015 위반). 성공이면 추가 전송 0, 거절이면 정확히 1이 되도록 판별을 시험이 잡는다.
 - 6단계는 읽기-쓰기 사이를 잠그지 못한다(Gaps 4번). 이 SPEC은 창을 좁힐 뿐이다.
-- 이 메서드가 `session.py`(거대한 파일)에 들어간다. 위치는 `timeline_bar_map`(`:9356`) 바로 아래가 자연스럽다. `session.py`에는 같은 맥락의 메서드가 모여 있어 충돌 가능성이 크므로, 편집 전 Pre-Edit Sync Check를 한다.
+- 이 메서드가 `session.py`(거대한 파일)에 들어간다. 위치는 `timeline_bar_map`(`:9365`) 바로 아래가 자연스럽다. `session.py`에는 같은 맥락의 메서드가 모여 있어 충돌 가능성이 크므로, 편집 전 Pre-Edit Sync Check를 한다.
 - 거절 문구에 분석기의 예외 문구가 섞일 수 있다(Gaps 7번). 정제하는 경우 **사유 문자열의 의미를 지우지 않는** 선에서 한다.
 - 진입 메서드는 작업 스레드에서 돈다. `_send`를 스레드에서 부르는 선례는 `analyse_song_audio`가 이미 있다(P11).
 
@@ -172,5 +172,5 @@ python -m pytest server/tests/test_audio_bar_map_entry.py -q -k real_song -s
 
 - `SPEC-LDBARMAP-001` — 분석기(M2·M3)와 저장 관문(M4). 이 SPEC의 전제 전부.
 - `SPEC-LDARRANGE-001` §5 항목 1 — 소비자 입력 모양. spec.md §6.1이 줄 단위로 대조했다.
-- `server/web/app.py:762-796` — 따라 할 디스패치 틀. `server/web/session.py:9308-9363` — 저장 관문과 읽기. `server/design/beat_grid_send.py:232-284` — 소비자.
+- `server/web/app.py:760-794` — 따라 할 디스패치 틀. `server/web/session.py:9317-9372` — 저장 관문과 읽기. `server/design/beat_grid_send.py:232-284` — 소비자.
 - `.claude/rules/moai/workflow/spec-workflow.md` § SPEC Complexity Tier — Tier M 상한.
