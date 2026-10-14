@@ -49,8 +49,12 @@ def _cue_timeline():
     return timeline
 
 
+def _bars(cells: list[dict]) -> list[int]:
+    return [cell["bar"] for cell in cells]
+
+
 def _marked_bars(event: dict) -> list[int]:
-    return [cell["bar"] for cell in event["timeline"]["beat_grid"]["empty_preset_cells"]]
+    return _bars(event["timeline"]["beat_grid"]["empty_preset_cells"])
 
 
 def _text(event: dict) -> str:
@@ -158,23 +162,31 @@ class TestCreationEstimateAcrossConnections:
     """
 
     def test_a_creation_estimate_survives_and_keeps_the_read_time(self, tmp_path):
+        # 빈 번호를 둘 둔다: 4.99(추정으로 만들 번호)와 4.50(끝까지 빈 번호). 추정은 4.99 만
+        # 지워야 하고, 풀 기억이 살아 있다면 4.50 의 표식은 새 연결에도 남아야 한다.
+        # 두 방향의 소실을 함께 잡는다 — 풀 기억이 없거나, 추정이 저장소에 안 남거나.
         store = SongTimelineStore()
-        store.latest = _cue_timeline()
+        timeline = _cue_timeline()
+        timeline["beat_grid"]["tracks"][0]["cues"].append(
+            {"bar": 2, "effect_preset_no": "4.50", "effect_kind": "position", "evidence": None}
+        )
+        store.latest = timeline
         session_a, _console_a, _approval_a, _audit_a = _new_session_t577(tmp_path, store=store)
         session_a.beat_grid_apply()  # 실제 판독: 풀 4 = {21}
         grid = session_a.song_timeline_replay()["timeline"]["beat_grid"]
         read_at = grid["empty_preset_read_at"]
+        assert _bars(grid["empty_preset_cells"]) == [1, 2]
 
-        # 추정: 4.99 를 만들었다(송신 성공의 결과). 같은 연결에서는 표식이 사라진다.
+        # 추정: 4.99 를 만들었다(송신 성공의 결과). 같은 연결에서는 bar 1 표식만 사라진다.
         session_a._beat_grid_note_created_presets(["4.99"])  # 카드 t595 시험과 같은 진입점
         same = session_a.song_timeline_replay()["timeline"]["beat_grid"]
-        assert same["empty_preset_cells"] == []
+        assert _bars(same["empty_preset_cells"]) == [2]
         assert same["empty_preset_read_at"] == read_at  # 추정은 판독 시각을 바꾸지 않는다
 
-        # 새 연결: 추정은 저장소에 남아 있다 — 표식은 여전히 없고 시각도 그대로다.
+        # 새 연결: 추정은 저장소에 남는다 — bar 1 은 여전히 없고, bar 2 는 빈 번호 그대로다.
         session_b, _console_b, _approval_b, _audit_b = _new_session_t577(tmp_path, store=store)
         replayed = session_b.song_timeline_replay()["timeline"]["beat_grid"]
-        assert replayed["empty_preset_cells"] == []
+        assert _bars(replayed["empty_preset_cells"]) == [2]
         assert replayed["empty_preset_read_at"] == read_at
 
 
