@@ -26,6 +26,7 @@ import copy
 import hashlib
 import inspect
 import json
+import logging
 import math
 import os
 import re
@@ -37,6 +38,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from server.audio.analyze import AnalysisResult, analyze
+from server.audio.bar_map_entry import (
+    KIND_REJECTED,
+    BarMapEntryFailure,
+    first_beat_offset_problem,
+    synthesize_bar_map,
+)
 from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_bar_map
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
@@ -383,6 +390,9 @@ from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_draft import TimelineDraftHistory
 from server.web.timeline_library import SongTimelineLibrary
 
+# 모듈 로그 — 화면에 보이면 안 되는 원문 사유(마디 지도 분석 실패)를 여기에 남긴다.
+_LOG = logging.getLogger(__name__)
+
 # The gate's unconfirmed-execution marker (REQ-MVP-032). String contract pinned
 # by tests here AND by the gate's own tests — a wording change fails both.
 UNCONFIRMED_MARKER = "execution unconfirmed"
@@ -392,6 +402,20 @@ UNCONFIRMED_MARKER = "execution unconfirmed"
 # Bounded so token cost per turn stays finite while the model still sees enough
 # recent context to keep an in-progress task in mind across follow-ups.
 HISTORY_MAX_MESSAGES = 16
+
+# 마디 지도 진입 경로(SPEC-LDBARMAP-002 REQ-LDBARENTRY-012, 결정 E5) — 성공이 아닌 모든
+# 결과(거절·분석 실패)의 ``chat_response`` 가 쓰는 고정 요약 라벨. 성공의 요약은 저장 관문이
+# 정한다("마디 지도 저장"). 사유 문장은 요약이 아니라 본문(``text``)에 싣는다.
+_BAR_MAP_ENTRY_REJECTED_SUMMARY = "마디 지도 분석 거절"
+
+# 마디 지도 분석 실패(``KIND_FAILED``)의 화면 문구 — 이 한 문장뿐이다. 실패 원문은 예외 문구를
+# 끼워 객체 주소 같은 내부 표현이 들 수 있어 화면에 싣지 않고 로그(``_LOG``)에만 남긴다.
+# 거절(``KIND_REJECTED``)은 설계된 사유 문장을 그대로 싣는다.
+_BAR_MAP_ENTRY_FAILED_TEXT = (
+    "마디 지도를 저장하지 않았습니다 — 곡 분석에 실패했습니다. "
+    "첨부한 오디오 파일을 확인한 뒤 다시 시도해 주세요. "
+    "콘솔에는 아무것도 쓰지 않았습니다."
+)
 
 # Korean labels for every per-command status the chat surface can show.
 STATUS_LABELS: dict[str, str] = {
@@ -9450,6 +9474,102 @@ class ChatSession:
         if timeline is None:
             return None
         return read_bar_map(timeline)
+
+    def analyse_bar_map(self, first_beat_offset: int) -> None:
+        """첨부된 곡 오디오로 마디 지도를 만들어 초안 타임라인의 ``bar_map`` 키에 저장한다
+        (SPEC-LDBARMAP-002 M2, REQ-LDBARENTRY-001). 작업 스레드에서 도는 동기 메서드다 —
+        asyncio 를 쓰지 않고 모든 프레임을 ``self._send`` 로 보낸다.
+
+        순서: 첨부 오디오 확인 → 초안 타임라인 확인 → 첫 박 오프셋 점검(base64 풀기 전) →
+        곡 열쇠 기억 → base64 풀기 → 합성(``synthesize_bar_map`` — 같은 점검을 거기서도 한다) →
+        곡 열쇠 재확인 → 저장 관문(``store_timeline_bar_map``).
+
+        프레임 계약(REQ-LDBARENTRY-012): 첨부 오디오가 없으면 ``error`` 한 개만 보내고
+        ``chat_response`` 는 보내지 않는다. 그 밖에는 ``chat_response`` 가 정확히 한 개 나간다.
+        성공이면 저장 관문이 ``song_timeline`` 과 함께 이미 보냈으므로 여기서 더 보내지 않고,
+        거절·분석 실패는 고정 요약 라벨로 여기서 한 번 보낸다. 본문은 종류에 따라 갈린다 —
+        거절(``KIND_REJECTED``)은 설계된 사유 문장을 싣고, 분석 실패는 일반 문구
+        (``_BAR_MAP_ENTRY_FAILED_TEXT``) 하나만 싣는다. 분석 실패의 원문 사유는 예외 문구를 끼워
+        객체 주소가 들 수 있어 로그(``_LOG``)에만 남긴다.
+
+        콘솔과 ``SongTimelineLibrary`` 는 건드리지 않고 BPM 확정 상태는 읽지도 쓰지도 않는다
+        (REQ-LDBARENTRY-011).
+        """
+        audio = self._song_audio
+        if audio is None:
+            self._send(
+                error_event(
+                    message="붙어 있는 곡 오디오가 없습니다 — 먼저 곡 파일을 첨부해 주세요.",
+                    kind="song_audio_missing",
+                )
+            )
+            return
+
+        def reject(text: str) -> None:
+            self._send(
+                chat_response_event(
+                    status="ok",
+                    summary=_BAR_MAP_ENTRY_REJECTED_SUMMARY,
+                    text=text,
+                    commands=[],
+                )
+            )
+
+        def reject_with_reason(reason: str) -> None:
+            reject(f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다.")
+
+        def fail_analysis(raw: str) -> None:
+            _LOG.warning("마디 지도 분석 실패 — 원문 사유: %s", raw)
+            reject(_BAR_MAP_ENTRY_FAILED_TEXT)
+
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if store is None or timeline is None:
+            reject("분석할 초안 타임라인이 아직 없습니다. 콘솔에는 아무것도 쓰지 않았습니다.")
+            return
+        # 싼 점검은 곡 오디오를 풀기 전에 한다(REQ-LDBARENTRY-007). 합성도 같은 점검을 한다.
+        problem = first_beat_offset_problem(first_beat_offset)
+        if problem is not None:
+            reject_with_reason(problem)
+            return
+        song_key = self._beat_grid_song_key(timeline)
+
+        try:
+            audio_bytes = base64.b64decode(audio.content_base64, validate=True)
+        except (binascii.Error, ValueError) as error:
+            fail_analysis(
+                "첨부된 곡 오디오를 읽지 못했습니다(base64 디코드 실패): "
+                f"{type(error).__name__}: {error}"
+            )
+            return
+
+        result = synthesize_bar_map(audio_bytes, first_beat_offset)
+        if isinstance(result, BarMapEntryFailure):
+            if result.kind == KIND_REJECTED:
+                reject_with_reason(result.reason)
+            else:
+                # KIND_FAILED 와 알 수 없는 종류 모두 원문을 화면에 내지 않는 쪽으로 처리한다.
+                fail_analysis(result.reason)
+            return
+
+        # 분석이 도는 사이 초안이 다른 곡으로 바뀌었거나 사라졌으면 저장하지 않는다
+        # (REQ-LDBARENTRY-009). 두 시점만 비교할 뿐 읽기-쓰기 사이를 잠그지는 않는다.
+        current = store.latest
+        if current is None or self._beat_grid_song_key(current) != song_key:
+            reject(
+                "분석하는 사이에 초안 타임라인이 바뀌어 마디 지도를 저장하지 않았습니다. "
+                "콘솔에는 아무것도 쓰지 않았습니다."
+            )
+            return
+
+        # @MX:NOTE: [AUTO] 저장 관문은 성공하면 song_timeline 과 성공 chat_response 를 직접
+        # 보내고, 거절하면 이벤트를 반환만 하고 보내지 않는다. 그래서 성공 여부는 반환 이벤트의
+        # 모양이 아니라 방금 넘긴 페이로드가 읽혀 나오는지로 가른다 — 관문 문구가 바뀌어도
+        # 판정이 흔들리지 않는다. 성공에서 다시 보내면 응답이 둘이 된다(REQ-LDBARENTRY-012).
+        event = self.store_timeline_bar_map(result)
+        if self.timeline_bar_map() == result:
+            return
+        self._send(event)
 
     # -- 카드 t551 — 박자 격자 편집 세 길의 전용 서버 진입점(콘솔 무접촉) ----
     #

@@ -1247,6 +1247,8 @@ _EXPECTED_WEB_ROUTES = (
 # web-layer feature work.
 _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "approval_decision",
+    # 카드 t647 (2026-10-14, SPEC-LDBARMAP-002 M3) — 마디 지도 분석 요청. 콘솔 무접촉.
+    "bar_map_analyse",
     # 카드 t551 (2026-10-11, SPEC-LDBEAT-001 M3) — 박자 격자 칸 편집 전용 채널.
     # 편집 세 길(직접 고르기·문장·AI 제안)이 모두 `apply_beat_grid_edit` 로
     # 수렴하고, 콘솔에는 쓰지 않는다(서랍은 풀 판독만). PRECHK/OVERLAP 축과

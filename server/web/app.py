@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -57,6 +58,7 @@ from server.web.messages import (
     approval_request_event,
     approval_resolved_event,
     busy_event,
+    chat_response_event,
     error_event,
     parse_client_message,
     question_resolved_event,
@@ -76,11 +78,19 @@ from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
-from server.web.session import ChatSession, PendingSongPlanStore, SongTimelineStore
+from server.web.session import (
+    _BAR_MAP_ENTRY_FAILED_TEXT,
+    _BAR_MAP_ENTRY_REJECTED_SUMMARY,
+    ChatSession,
+    PendingSongPlanStore,
+    SongTimelineStore,
+)
 from server.web.settings_api import SettingsDeps, build_settings_router
 from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
 from server.web.timeline_library import SongTimelineLibrary
+
+_LOG = logging.getLogger(__name__)
 
 _PROTOCOL_ERROR_MESSAGE = "잘못된 메시지 형식입니다. 프로토콜 v1 스키마를 확인해 주세요."
 _STALE_APPROVAL_MESSAGE = "만료되었거나 알 수 없는 승인 요청입니다."
@@ -389,8 +399,14 @@ def create_app(deps: WebDeps) -> FastAPI:
                     return candidate
             return websocket
 
+        # 이 연결이 내보낸 chat_response 수. 마디 지도 분석 래퍼(run_bar_map_analysis)만 읽는다.
+        chat_responses_sent = 0
+
         def send_event(event: dict) -> None:
             # Thread-safe: session events originate on the worker thread.
+            nonlocal chat_responses_sent
+            if event.get("type") == "chat_response":
+                chat_responses_sent += 1
             asyncio.run_coroutine_threadsafe(_safe_send(live_target(), event), loop)
 
         session = ChatSession(
@@ -480,6 +496,36 @@ def create_app(deps: WebDeps) -> FastAPI:
             panel_tasks.add(task)
             task.add_done_callback(panel_tasks.discard)
             return task
+
+        async def run_bar_map_analysis(first_beat_offset: int) -> None:
+            """마디 지도 분석 한 건을 작업 스레드에서 돌린다(SPEC-LDBARMAP-002 M3).
+
+            세션 메서드는 어떤 결과든 chat_response 를 스스로 보내고 예외를 내지 않게 짜여 있다.
+            그래도 예외가 새면 create_task 로 띄운 이 작업은 조용히 죽어 운영자는 응답을 못 받는다.
+            그때 도는 동안 chat_response 가 하나도 나가지 않았을 때만 일반 문구 하나를 대신 보낸다
+            (응답은 정확히 하나다). 예외 원문은 프레임에 싣지 않고 로그에만 남긴다.
+            """
+            # @MX:NOTE: [AUTO] busy 가드가 이 작업을 연결의 유일한 진행 작업으로 만든다 — 그동안
+            # 늘어난 chat_response 는 이 요청의 것이다.
+            sent_before = chat_responses_sent
+            try:
+                await asyncio.to_thread(session.analyse_bar_map, first_beat_offset)
+            except Exception:
+                _LOG.warning(
+                    "마디 지도 분석 작업이 예외로 끝났습니다 (오프셋 %s)",
+                    first_beat_offset,
+                    exc_info=True,
+                )
+                if chat_responses_sent == sent_before:
+                    await _safe_send(
+                        live_target(),
+                        chat_response_event(
+                            status="ok",
+                            summary=_BAR_MAP_ENTRY_REJECTED_SUMMARY,
+                            text=_BAR_MAP_ENTRY_FAILED_TEXT,
+                            commands=[],
+                        ),
+                    )
 
         current_task: asyncio.Task | None = None
         # REQ-MUSICSYNC-027 — 분할 곡 전송의 조립 버퍼. **이 연결의 지역 상태**이고
@@ -791,6 +837,27 @@ def create_app(deps: WebDeps) -> FastAPI:
                             fx_rate=message["fx_rate"],
                             beats_per_cycle=message["beats_per_cycle"],
                         )
+                    )
+                elif message_type == "bar_map_analyse":
+                    # SPEC-LDBARMAP-002 M3 — 첨부된 곡 오디오로 마디 지도를 만든다. 분기 모양은
+                    # 바로 위 song_audio_analyse 와 같다(첨부 없음 → busy → create_task). 그러나
+                    # create_task 를 쓰는 **이유가 다르다**: 위 분기는 사람의 답을 기다리느라,
+                    # 이 분기는 전곡 분석이 오래 걸려서다(REQ-LDBARENTRY-005). 사람 대기는 없다.
+                    # 여기서 to_thread 를 await 하면 분석이 끝날 때까지 수신 루프가 멈춰
+                    # status_request 가 읽히지 못한다(AC-LDBARENTRY-010).
+                    if session.song_audio is None:
+                        await _safe_send(
+                            websocket,
+                            error_event(
+                                message=_SONG_AUDIO_MISSING_MESSAGE, kind="song_audio_missing"
+                            ),
+                        )
+                        continue
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    current_task = asyncio.create_task(
+                        run_bar_map_analysis(message["first_beat_offset"])
                     )
                 elif message_type == "history_restore":
                     # Refresh survival: seed the fresh session's rolling memory
