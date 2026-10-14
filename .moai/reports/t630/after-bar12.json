@@ -1,0 +1,92 @@
+{
+  "1450": {
+    "bar0": {
+      "topbar_bar_text": "0마디",
+      "topbar_text": "런북 모드LOVE ATTACK초안BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정 · 콘솔에서 설정플레이⏮⏪ 10초▶ 재생10초 ⏩0:00.0♪ 음원콘솔 같이 끔◀0마디▶▶ 이 마디 콘솔에서 보기▶ 콘솔■ 끄기⇪ 콘솔에 반영⇪ 반영▤ 프리셋 서랍▤",
+      "apply_button_found": true,
+      "apply_button_title": "⇪ 콘솔에 반영",
+      "badge_text": "absent",
+      "badge_title": null,
+      "glance_title_text": "0마디 한눈에훑어보기 · 누르면 오른쪽에서 고치기",
+      "glance_heading": "0마디 한눈에",
+      "glance_section_name": null,
+      "topbar_box": {
+        "x": 36,
+        "y": 88,
+        "width": 1378,
+        "height": 58
+      },
+      "app_page_errors": []
+    },
+    "bar12": {
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "topbar_bar_text": "12마디 · Verse 1",
+      "topbar_text": "런북 모드LOVE ATTACK초안BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정 · 콘솔에서 설정플레이⏮⏪ 10초▶ 재생10초 ⏩0:00.0♪ 음원콘솔 같이 끔◀12마디 · Verse 1▶▶ 이 마디 콘솔에서 보기▶ 콘솔■ 끄기⇪ 콘솔에 반영⇪ 반영▤ 프리셋 서랍▤",
+      "apply_button_found": true,
+      "apply_button_title": "⇪ 콘솔에 반영",
+      "badge_text": "absent",
+      "badge_title": null,
+      "glance_title_text": "12마디 한눈에 — Verse 1훑어보기 · 누르면 오른쪽에서 고치기",
+      "glance_heading": "12마디 한눈에 — Verse 1",
+      "glance_section_name": "Verse 1",
+      "topbar_box": {
+        "x": 36,
+        "y": 88,
+        "width": 1378,
+        "height": 93
+      },
+      "app_page_errors": []
+    },
+    "app_page_errors": []
+  },
+  "1700": {
+    "bar0": {
+      "topbar_bar_text": "0마디",
+      "topbar_text": "런북 모드LOVE ATTACK초안BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정 · 콘솔에서 설정플레이⏮⏪ 10초▶ 재생10초 ⏩0:00.0♪ 음원콘솔 같이 끔◀0마디▶▶ 이 마디 콘솔에서 보기▶ 콘솔■ 끄기⇪ 콘솔에 반영⇪ 반영▤ 프리셋 서랍▤",
+      "apply_button_found": true,
+      "apply_button_title": "⇪ 콘솔에 반영",
+      "badge_text": "absent",
+      "badge_title": null,
+      "glance_title_text": "0마디 한눈에훑어보기 · 누르면 오른쪽에서 고치기",
+      "glance_heading": "0마디 한눈에",
+      "glance_section_name": null,
+      "topbar_box": {
+        "x": 42,
+        "y": 88,
+        "width": 1616,
+        "height": 58
+      },
+      "app_page_errors": []
+    },
+    "bar12": {
+      "reached": true,
+      "clicks": 12,
+      "start_text": "0마디",
+      "topbar_bar_text": "12마디 · Verse 1",
+      "topbar_text": "런북 모드LOVE ATTACK초안BPM 112.35 · 스피드 마스터 — 콘솔에서 직접 설정 · 콘솔에서 설정플레이⏮⏪ 10초▶ 재생10초 ⏩0:00.0♪ 음원콘솔 같이 끔◀12마디 · Verse 1▶▶ 이 마디 콘솔에서 보기▶ 콘솔■ 끄기⇪ 콘솔에 반영⇪ 반영▤ 프리셋 서랍▤",
+      "apply_button_found": true,
+      "apply_button_title": "⇪ 콘솔에 반영",
+      "badge_text": "absent",
+      "badge_title": null,
+      "glance_title_text": "12마디 한눈에 — Verse 1훑어보기 · 누르면 오른쪽에서 고치기",
+      "glance_heading": "12마디 한눈에 — Verse 1",
+      "glance_section_name": "Verse 1",
+      "topbar_box": {
+        "x": 42,
+        "y": 88,
+        "width": 1616,
+        "height": 58
+      },
+      "app_page_errors": []
+    },
+    "app_page_errors": []
+  },
+  "head": "6db8d4ce",
+  "target": "http://127.0.0.1:8798/",
+  "viewport_height": 1000,
+  "stop_rule": "label's leading number == 12 (at most 20 clicks on button[title=\"다음 마디 (→)\"])",
+  "browser": "153.0.8010.12",
+  "port_answers_after_shutdown": false
+}
