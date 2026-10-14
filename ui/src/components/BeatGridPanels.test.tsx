@@ -140,7 +140,7 @@ describe("AC-LDBEAT-020(d)(e) — 전환 화면", () => {
         onEditRequest={() => undefined}
       />,
     );
-    expect(shown).toContain("1.00초 (2박)");
+    expect(shown).toContain("1초 (2박)");
     expect(shown).toMatch(/<option value="3" selected="">3<\/option>/);
     expect(shown).toMatch(/<option value="Block" selected="">Block<\/option>/);
   });
@@ -299,6 +299,42 @@ describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
       },
     });
     expect(edits.map((e) => e.target)).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("카드 t653 — 초 표기 뒤의 0 떼기 (시안 tc·beatsToS 와 같은 표기)", () => {
+  it("전환 화면 「박 = 곡 N초」는 8.00 대신 8로 쓴다", () => {
+    const prev = cue(0);
+    const cur = cue(4, { entry: { fade_bars: 1, mib_mode: null, trigger_beat: 1 } });
+    const html = renderToStaticMarkup(
+      <BeatGridTransitionView
+        track={track("MOVER", [prev, cur])}
+        cue={cur}
+        prevCue={prev}
+        secondsPerBar={2}
+        beatsPerBar={4}
+        sectionStartBars={null}
+        onEditRequest={() => undefined}
+      />,
+    );
+    expect(html).toContain("박 = 곡 8초");
+    expect(html).not.toContain("8.00초");
+  });
+  it("장면 전환 머리글 「(곡 N초)」는 120.00 대신 120으로 쓴다", () => {
+    const tracks = ["A", "B", "C"].map((name) => track(name, [cue(0), cue(60)]));
+    const html = renderToStaticMarkup(
+      <BeatGridScenePanel
+        bar={60}
+        tracks={tracks}
+        secondsPerBar={2}
+        sectionStartBars={null}
+        onClose={() => undefined}
+        onSelectRow={() => undefined}
+        onBulkEntry={() => undefined}
+      />,
+    );
+    expect(html).toContain("(곡 120초)");
+    expect(html).not.toContain("120.00초");
   });
 });
 

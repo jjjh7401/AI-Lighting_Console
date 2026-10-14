@@ -16,8 +16,9 @@ export const SCENE_CHANGE_MIN_ROWS = 3;
 
 const UNSET = "미정";
 
-function trimSeconds(seconds: number): string {
-  return seconds.toFixed(2);
+/** 시안 `beatsToS`·`tc` 와 같은 표기 — 소수 둘째 자리로 맞춘 뒤 뒤의 0을 뗀다(2.00 → 2, 2.50 → 2.5). 표시 전용. */
+export function trimSeconds(seconds: number): string {
+  return seconds.toFixed(2).replace(/\.?0+$/, "");
 }
 
 /** REQ-LDBEAT-020(e) — 초를 먼저, 마디는 괄호. 저장값(`fade_bars`)은 바꾸지

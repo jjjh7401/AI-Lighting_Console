@@ -3740,6 +3740,27 @@ class SongTimelineStore:
         # 두면 새로고침·두 번째 탭이 기록을 잃는다. 콘솔이 하나라 저장소(프로세스 단위)가 맞는
         # 수명이다. 파일에 저장하지 않는다 — 재시작하면 빈 상태(지금과 같다).
         self.beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
+        # 카드 t651 — 콘솔 프리셋 풀의 마지막 「완전 판독」(풀 번호 → {slot: 이름}, 못 읽었으면
+        # None). ``ChatSession._beat_grid_pool_slots`` 와 같은 사전을 여기서 공유한다. 연결마다
+        # 새로 만들면 재연결 뒤 격자의 「빈 프리셋」 표식이 사라진다(콘솔 풀은 그대로인데). 콘솔이
+        # 하나라 프로세스 단위가 맞는 수명이다(t635 스냅샷과 같다). 파일에 저장하지 않는다.
+        self.beat_grid_pool_slots: dict[int, dict[int, str | None] | None] = {}
+        # 카드 t651 — 위 판독의 시각(ISO 8601, UTC). 판독이 실제로 성공했을 때만 찍는다.
+        # 송신 성공으로 만든 번호(추정, 카드 t595)는 찍지 않는다 — 이 시각은
+        # 「마지막으로 콘솔을 읽은 때」다.
+        self.beat_grid_pool_read_at: dict[int, str] = {}
+        # 카드 t642 — 가장 최근 「콘솔에 반영」이 실제로 쓴 시퀀스·큐 번호. 이 번호는 연결이
+        # 아니라 콘솔을 설명하므로 프로세스 단위인 저장소에 둔다(재연결해도 끄기·미리보기가
+        # 같은 번호를 쓴다). 곡별이 아니라 가장 최근 하나 — 파일에 저장하지 않는다.
+        self._beat_grid_applied: _BeatGridAppliedState | None = None
+
+    @property
+    def beat_grid_applied(self) -> _BeatGridAppliedState | None:
+        return self._beat_grid_applied
+
+    @beat_grid_applied.setter
+    def beat_grid_applied(self, state: _BeatGridAppliedState | None) -> None:
+        self._beat_grid_applied = state
 
     @property
     def latest(self) -> dict | None:
@@ -4039,6 +4060,7 @@ def derive_beat_grid_fields(
     snapshots: Mapping[tuple[object, object], Mapping[BeatGridCellKey, object]],
     pool_slots: Mapping[int, Mapping[int, object] | None],
     empty_marks: dict[tuple[object, object], list[dict[str, object]]],
+    pool_read_at: Mapping[int, str] | None = None,
 ) -> dict:
     """``timeline["beat_grid"]``가 있으면 그 자리에 파생 필드(``unsent_cells`` 등)를
     최신으로 채운 **사본**을 돌려준다 — 없으면 그대로(no-op). 코디네이터 계약 2항:
@@ -4050,7 +4072,8 @@ def derive_beat_grid_fields(
     ``snapshots`` 는 곡 열쇠 -> 가장 최근 「콘솔에 반영」 칸 스냅샷, ``pool_slots`` 는
     이미 읽은 프리셋 풀(풀 번호 -> {slot: 이름}), ``empty_marks`` 는 곡마다 마지막으로
     내보낸 빈 프리셋 표식이다 — 이 곡의 표식을 **제자리에서** 갱신하니 같은 사전을
-    계속 넘겨야 한다."""
+    계속 넘겨야 한다. ``pool_read_at`` 은 풀 번호 -> 그 풀을 콘솔에서 마지막으로 읽은
+    시각이다(카드 t651) — 있으면 ``empty_preset_read_at`` 으로 함께 싣는다."""
     grid = timeline.get("beat_grid")
     if not isinstance(grid, Mapping):
         return timeline
@@ -4069,6 +4092,12 @@ def derive_beat_grid_fields(
     marks = empty_preset_cells(grid, pool_slots)
     empty_marks[ChatSession._beat_grid_song_key(timeline)] = marks
     updated_grid["empty_preset_cells"] = marks
+    # 카드 t651 — 표식이 기대는 판독의 시각. 판독이 한 번도 없었으면 키를 싣지 않는다.
+    # (키가 없는 응답은 옛 응답과 같다.)
+    if pool_read_at:
+        updated_grid["empty_preset_read_at"] = {
+            str(no): at for no, at in sorted(pool_read_at.items())
+        }
     updated["beat_grid"] = updated_grid
     return updated
 
@@ -4161,7 +4190,7 @@ class ChatSession:
             else NullSuggestionSource()
         )
         # 카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋의 세션
-        # 상태. ``_beat_grid_applied``는 가장 최근 반영이 실제로 쓴
+        # 상태. 저장소의 ``beat_grid_applied``는 가장 최근 반영이 실제로 쓴
         # 시퀀스·큐 번호(미리보기/끄기가 그 번호로 Goto/Off를 낸다 —
         # 콘솔에 아직 반영된 적이 없으면 ``None``이라 미리볼 대상이
         # 없다), ``_preview_approval``은 미리보기(Goto/Off)의
@@ -4181,14 +4210,21 @@ class ChatSession:
         self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = (
             timeline_store.beat_grid_snapshots if timeline_store is not None else {}
         )
-        self._beat_grid_applied: _BeatGridAppliedState | None = None
-        # 카드 t595 — 이 세션이 콘솔에서 마지막으로 완전 판독한 프리셋 풀(풀
-        # 번호 → {slot: 이름}, 못 읽었으면 None). 반영 때 승인 대기 번호의 풀
-        # 판독(t590)과 프리셋 서랍 판독이 채운다 — 격자 「빈 프리셋」 표식의
-        # 유일한 출처다(표식을 위해 따로 콘솔을 읽지 않는다). 콘솔 풀은 곡과
-        # 무관한 전역이라 곡 열쇠로 나누지 않는다. ``_beat_grid_empty_marks``는
-        # 곡마다 마지막으로 내보낸 표식 — 같으면 격자를 다시 보내지 않는다.
-        self._beat_grid_pool_slots: dict[int, dict[int, str | None] | None] = {}
+        # 카드 t595 — 콘솔에서 마지막으로 완전 판독한 프리셋 풀(풀 번호 → {slot: 이름}, 못
+        # 읽었으면 None). 반영 때 승인 대기 번호의 풀 판독(t590)과 프리셋 서랍 판독이 채운다 —
+        # 격자 「빈 프리셋」 표식의 유일한 출처다(표식을 위해 따로 콘솔을 읽지 않는다). 콘솔 풀은
+        # 곡과 무관한 전역이라 곡 열쇠로 나누지 않는다. 카드 t651 — 연결마다 새로 만들면
+        # 재연결 뒤 표식이 사라지므로 저장소의 사전과 같은 객체를 쓴다. 저장소가 없으면
+        # 이 연결 안에만 둔다.
+        self._beat_grid_pool_slots: dict[int, dict[int, str | None] | None] = (
+            timeline_store.beat_grid_pool_slots if timeline_store is not None else {}
+        )
+        self._beat_grid_pool_read_at: dict[int, str] = (
+            timeline_store.beat_grid_pool_read_at if timeline_store is not None else {}
+        )
+        # ``_beat_grid_empty_marks``는 곡마다 마지막으로 내보낸 표식 — 같으면 격자를 다시
+        # 보내지 않는다. 연결마다 새로 만든다. 재생 프레임이 현재 표식으로 다시 쓰므로
+        # 클라이언트와 어긋나지 않는다(카드 t651 판정: 결함 아님).
         self._beat_grid_empty_marks: dict[tuple[object, object], list[dict[str, object]]] = {}
         self._preview_approval = PreviewApprovalSession()
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
@@ -10069,7 +10105,7 @@ class ChatSession:
         for pool_no, children in console_children.items():
             # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다. 바로 아래 편집
             # 이벤트가 표식을 싣고 나가므로 여기서는 기억만 한다.
-            self._beat_grid_pool_slots[pool_no] = dict(children)
+            self._beat_grid_remember_pool_read(pool_no, children)
 
         preset_no, reject_reason, assign_warning = first_free_preset_number(
             kind, policy=policy, grid=grid, console_children=console_children
@@ -10174,7 +10210,7 @@ class ChatSession:
         result = read_named_pool(query, pool_root, "Position", probe_prefix="beat-grid-new-preset")
         if result is not None:
             # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다(효과 분기와 같은 관행).
-            self._beat_grid_pool_slots[result[0]] = dict(result[1])
+            self._beat_grid_remember_pool_read(result[0], result[1])
 
         policy = load_preset_pool_policy()
         preset_no, reject_reason = first_free_base_position_number(
@@ -10256,7 +10292,7 @@ class ChatSession:
         result = read_named_pool(query, pool_root, "Color", probe_prefix="beat-grid-new-preset")
         if result is not None:
             # 카드 t595 — 이 판독도 빈 프리셋 표식의 출처다(위치 분기와 같은 관행).
-            self._beat_grid_pool_slots[result[0]] = dict(result[1])
+            self._beat_grid_remember_pool_read(result[0], result[1])
 
         policy = load_preset_pool_policy()
         preset_no, reject_reason = first_free_base_color_number(
@@ -10342,6 +10378,7 @@ class ChatSession:
             snapshots=self._beat_grid_snapshots,
             pool_slots=self._beat_grid_pool_slots,
             empty_marks=self._beat_grid_empty_marks,
+            pool_read_at=self._beat_grid_pool_read_at,
         )
 
     def song_timeline_replay(self) -> dict | None:
@@ -10370,6 +10407,20 @@ class ChatSession:
             if slots is not None:
                 slots[int(number.partition(".")[2])] = None
 
+    def _beat_grid_remember_pool_read(
+        self, pool_no: int, children: Mapping[int, str | None] | None
+    ) -> None:
+        """카드 t651 — 콘솔 풀의 「완전 판독」을 기억하고 판독 시각을 함께 찍는다.
+        못 읽었으면(``None``) 풀을 「못 읽음」으로 바꾸고 시각을 지운다 — 이전과 같은 뜻이다.
+        추정(송신 성공으로 만든 번호)은 여기로 들어오지 않는다 — 시각은 「마지막으로 콘솔을
+        읽은 때」이므로 추정으로 바뀌지 않는다(t595)."""
+        if children is None:
+            self._beat_grid_pool_slots[pool_no] = None
+            self._beat_grid_pool_read_at.pop(pool_no, None)
+            return
+        self._beat_grid_pool_slots[pool_no] = dict(children)
+        self._beat_grid_pool_read_at[pool_no] = datetime.now(UTC).isoformat()
+
     def _beat_grid_learn_pools(
         self, pool_slots: Mapping[int, dict[int, str | None] | None]
     ) -> None:
@@ -10377,9 +10428,8 @@ class ChatSession:
         곡의 빈 프리셋 표식이 달라졌으면 격자를 한 번 다시 보낸다(달라지지
         않았으면 보내지 않는다 — 서랍을 열 때마다 격자를 흔들지 않는다)."""
         # 사본으로 기억한다 — ``_beat_grid_note_created_presets``가 제자리에서 더한다.
-        self._beat_grid_pool_slots.update(
-            {no: (dict(slots) if slots is not None else None) for no, slots in pool_slots.items()}
-        )
+        for no, slots in pool_slots.items():
+            self._beat_grid_remember_pool_read(no, slots)
         store = self._timeline_store
         latest = store.latest if store is not None else None
         if latest is None or not isinstance(latest.get("beat_grid"), Mapping):
@@ -10879,9 +10929,10 @@ class ChatSession:
                 for cue in track.cues:
                     if cue.cue_number is not None:
                         cue_numbers.setdefault(track.group_name, {})[cue.bar] = cue.cue_number
-            self._beat_grid_applied = _BeatGridAppliedState(
-                sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
-            )
+            if store is not None:
+                store.beat_grid_applied = _BeatGridAppliedState(
+                    sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
+                )
             # 코디네이터 계약(t568과 합의) — 스냅샷은 "승인=송신까지
             # 확인된 성공"일 때만 갈아 끼운다. 바이트가 어긋나면(verdict.
             # passed 거짓) 이미 콘솔로 나간 것과 승인 사이에 설명 안 되는
@@ -10955,10 +11006,11 @@ class ChatSession:
 
     def _beat_grid_preview_commands(self, verb: str, bar: int | None) -> tuple[str, ...] | None:
         """``verb``가 "goto"면 ``bar``를 담은 최신 큐로, "off"면 전체
-        끄기로 — 둘 다 가장 최근 반영(``_beat_grid_applied``)에서만 번호를
-        가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가 있는
-        트랙이 하나도 없으면) ``None``."""
-        applied = self._beat_grid_applied
+        끄기로 — 둘 다 가장 최근 반영(저장소의 ``beat_grid_applied``)에서만
+        번호를 가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가
+        있는 트랙이 하나도 없으면) ``None``."""
+        store = self._timeline_store
+        applied = store.beat_grid_applied if store is not None else None
         if applied is None:
             return None
         commands: list[str] = []
@@ -11010,11 +11062,12 @@ class ChatSession:
     def beat_grid_preview(self, bar: int) -> dict:
         """상단 바 「▶ 이 마디 콘솔에서 보기」 — 가장 최근 반영에서 이
         마디를 담당하는 큐로 ``Goto Cue … Sequence …``를 낸다. 아직
-        콘솔에 반영된 적이 없으면(``_beat_grid_applied is None``) 번호가
+        콘솔에 반영된 적이 없으면(저장소의 ``beat_grid_applied``가 ``None``) 번호가
         없으므로 거절한다(지어내지 않음)."""
         commands = self._beat_grid_preview_commands("goto", bar)
         if commands is None:
-            applied = self._beat_grid_applied
+            store = self._timeline_store
+            applied = store.beat_grid_applied if store is not None else None
             reason = (
                 "아직 콘솔에 반영된 적이 없어 미리볼 시퀀스가 없습니다."
                 if applied is None

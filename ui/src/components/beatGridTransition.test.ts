@@ -50,6 +50,12 @@ describe("formatFadeSecondsFirst — 초 먼저, 마디는 괄호(REQ-LDBEAT-020
     expect(formatFadeSecondsFirst(1, 2.14)).toBe("2.14초 (1마디)");
     expect(formatFadeSecondsFirst(2, 2.14)).toMatch(/^\d+\.\d{2}초 \(2마디\)$/);
   });
+  it("끝의 0은 뗀다 — 시안 beatsToS 와 같은 표기(2.00 → 2, 10.00 → 10)", () => {
+    expect(formatFadeSecondsFirst(1, 2)).toBe("2초 (1마디)");
+    expect(formatFadeSecondsFirst(1, 2.5)).toBe("2.5초 (1마디)");
+    // 정수부의 0은 건드리지 않는다 — 10.00 을 1 로 깎으면 안 된다.
+    expect(formatFadeSecondsFirst(5, 2)).toBe("10초 (5마디)");
+  });
   it("0마디는 끊기", () => {
     expect(formatFadeSecondsFirst(0, 2.14)).toBe("끊기 (0초)");
   });
@@ -106,6 +112,7 @@ describe("entry 확장 필드(SPEC 0.5.0, 카드 t574)", () => {
     expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 0 }, 2.14, 4)).toBe("끊기 (0초)");
     expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 1 }, 2.14, null)).toBe("— 초 (1박)");
     expect(formatEntryFade({ fade_bars: 1, mib_mode: null }, 2.14, 4)).toBe("2.14초 (1마디)");
+    expect(formatEntryFade({ fade_bars: null, mib_mode: null, fade_beats: 2 }, 2, 4)).toBe("1초 (2박)");
   });
   it("끊기 판정은 두 단위 모두 본다", () => {
     expect(entryFadeIsCut({ fade_bars: 0, mib_mode: null })).toBe(true);
@@ -226,8 +233,8 @@ describe("박 페이드·트리거 박이 이음매·경고·명령에 반영(�
       entry: { fade_bars: null, mib_mode: null, fade_beats: 2, trigger_beat: 3, delay_beats: 1, tracking: "Block" },
     });
     const text = transitionConsoleCommandLines(c, 2, null, 4).join("\n");
-    expect(text).toMatch(/CueFade 1\.00/);
-    expect(text).toMatch(/4마디 3박 = 곡 9\.00초/);
+    expect(text).toMatch(/CueFade 1\n/);
+    expect(text).toMatch(/4마디 3박 = 곡 9초/);
     expect(text).toMatch(/딜레이 1박.*\[미확인\]/);
     expect(text).toMatch(/트래킹 Block.*콘솔 송신 없음/);
   });
