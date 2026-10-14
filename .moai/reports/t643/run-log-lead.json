@@ -1,0 +1,21 @@
+{
+  "url": "http://127.0.0.1:47010/",
+  "widths": {
+    "1450": {
+      "toggle_before": "런북 모드 켜기",
+      "bg_button_found": true,
+      "placeholder_present": true,
+      "topbar_present": false,
+      "page_errors": []
+    },
+    "1700": {
+      "toggle_before": "런북 모드 켜기",
+      "bg_button_found": true,
+      "placeholder_present": true,
+      "topbar_present": false,
+      "page_errors": []
+    }
+  },
+  "errors": [],
+  "server_writes_by_this_run": 0
+}
