@@ -258,6 +258,25 @@ def test_req007_offset_problem_demands_an_integer(bad_offset: object) -> None:
     assert "정수" in problem
 
 
+class _Opaque:
+    """기본 ``repr`` 을 쓰는 임의의 객체 — 그 ``repr`` 에 객체 주소가 든다."""
+
+
+@pytest.mark.parametrize("bad_offset", [object(), _Opaque()], ids=["object", "opaque"])
+def test_req007_non_int_offset_text_does_not_echo_the_value(bad_offset: object) -> None:
+    """정수가 아닌 값의 거절 문구는 입력값의 ``repr`` 을 싣지 않는다.
+
+    직접 호출은 임의 객체를 받을 수 있고, 그 기본 ``repr`` 의 객체 주소(``0x…``)가 화면 문구에
+    새면 호출마다 문구가 달라지고 내부 표현이 보인다."""
+    # 대조군 — 이 객체의 repr 에는 실제로 주소가 든다. 안 들면 아래 단언이 공허하다.
+    assert "object at 0x" in repr(bad_offset)
+    problem = first_beat_offset_problem(bad_offset)
+    assert problem is not None
+    assert "정수" in problem
+    assert "0x" not in problem, problem
+    assert "object at" not in problem, problem
+
+
 # ---------------------------------------------------------------------------
 # AC-LDBARENTRY-005 — 합성은 순수하고 번호 공간이 맞다 (실제 분석, 합성 클릭 트랙).
 # ---------------------------------------------------------------------------

@@ -80,9 +80,11 @@ def first_beat_offset_problem(first_beat_offset: object) -> str | None:
     """첫 박 오프셋을 쓸 수 없으면 그 사유 문장을, 쓸 수 있으면 ``None`` 을 돌려준다.
 
     싼 점검이라 오디오를 풀기 전에 부른다(REQ-LDBARENTRY-007). 세션이 base64 를 풀기 전에,
-    합성이 박 격자 검출 전에 이 한 곳의 문장을 같이 쓴다. 문구는 ``derive_bars`` 와 같다."""
+    합성이 박 격자 검출 전에 이 한 곳의 문장을 같이 쓴다. 문구는 ``derive_bars`` 를 따르되,
+    정수가 아닐 때는 입력값을 싣지 않는다."""
     if isinstance(first_beat_offset, bool) or not isinstance(first_beat_offset, int):
-        return f"첫 박 오프셋은 정수여야 합니다: {first_beat_offset!r}"
+        # 값을 싣지 않는다 — 임의 객체의 기본 repr 에는 객체 주소가 들어 화면 문구가 샌다.
+        return "첫 박 오프셋은 정수여야 합니다."
     if not (0 <= first_beat_offset < _BEATS_PER_BAR):
         return f"첫 박 오프셋은 0~{_BEATS_PER_BAR - 1} 범위여야 합니다: {first_beat_offset}"
     return None
