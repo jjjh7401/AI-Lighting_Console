@@ -19,8 +19,11 @@
    만들어지고 저장소에서 복원되지 않는다. 방금 반영한 곡인데도 새 연결은 「반영 기록
    없음」(``None``)으로 시작한다 — 아무것도 안 바뀌었으면 ``[]`` 여야 한다.
 
+탭 두 개 시험(``TestTwoTabsSharedRecord``)은 위 둘을 웹소켓 층에서 함께 잰다 — 탭이
+동시에 여럿 열려 있어도 반영 기록은 **같은 곡에서만** 보여야 한다.
+
 콘솔 접촉: 0건. ``FakeConsole``(승인=송신 각본)만 쓰고 실기 포트로는 한 바이트도
-나가지 않는다. 두 시험 모두 이 파일이 기록 위치(스냅샷 사전)를 직접 쓰지 않는다 —
+나가지 않는다. 이 파일의 시험 모두 기록 위치(스냅샷 사전)를 직접 쓰지 않는다 —
 반영 기록은 실제 「콘솔에 반영」 성공 경로로만 만들어진다.
 """
 
@@ -33,6 +36,7 @@ from server.web.session import SongTimelineStore
 
 from .conftest import drain_until
 from .test_beat_grid_send_t563 import _new_session, _timeline
+from .test_web_beat_grid_send_t563 import _approve_until, _send
 from .test_web_beat_grid_send_t563 import _deps as _web_deps
 
 
@@ -81,3 +85,55 @@ class TestApplyRecordAcrossConnections:
         session_b, _console_b, _approval_b, _audit_b = _new_session(tmp_path, store=store)
         assert session_b is not session_a
         assert session_b._beat_grid_current_unsent_cells() == []
+
+
+class TestTwoTabsSharedRecord:
+    """WebSocket 층 — 탭 두 개가 **동시에** 열려 있어도 반영 기록은 같은 곡에서만 보인다.
+
+    한 탭이 「콘솔에 반영」을 마친 뒤에 열리는 탭은 새 연결이라 새 ``ChatSession`` 을
+    받는다. 기록이 연결마다 따로 있으면 그 탭의 배지는 「—」(``null``)로 거짓이 된다.
+    같은 곡이면 어느 탭이든 「반영 기록과 같음」(``[]``)이어야 하고, 반영한 적 없는
+    곡으로는 기록이 새지 않아야 한다."""
+
+    def test_two_tabs_share_the_apply_record_for_the_same_song_only(self, tmp_path):
+        deps = _web_deps(tmp_path)
+        store = deps.song_timeline_store
+
+        with (
+            TestClient(create_app(deps)) as client,
+            client.websocket_connect("/ws") as applying_tab,
+        ):
+            # (a) 실제 「콘솔에 반영」(승인=송신) 성공 경로를 웹소켓으로 보낸다 — 스냅샷
+            # 사전은 직접 쓰지 않는다. 반영한 탭은 끝까지 닫지 않는다: 「탭을 닫을 때 기록을
+            # 넘겨주는」 구현이 아니라, 열려 있는 연결과도 기록이 나뉘지 않는지를 재려는 것이다.
+            _send(applying_tab, type="beat_grid_apply")
+            status = _approve_until(applying_tab, "beat_grid_send_status")
+            assert status["last_action"] == "apply"
+            assert status["ok"] is True
+            assert status["approval_vs_sent"]["match"] is True
+            # 대조군: 반영한 연결 자신은 「반영 기록과 같음」을 본다. 이 줄이 빠지면 아래
+            # 탭의 ``null`` 이 「반영이 안 됐다」와 구별되지 않는다.
+            assert status["pending_apply_count"] == 0
+
+            # (b) 반영이 끝난 뒤 탭 둘을 동시에 연다. 서버는 연결마다 마지막 타임라인을
+            # 재생하므로, 이 프레임이 두 탭의 배지가 처음 읽는 값이다.
+            with client.websocket_connect("/ws") as tab_1, client.websocket_connect("/ws") as tab_2:
+                replay_1 = drain_until(tab_1, "song_timeline")
+                replay_2 = drain_until(tab_2, "song_timeline")
+
+                # (c) 같은 곡 — 두 탭 모두 「반영 기록과 같음」이어야 한다. 지금은 기록이
+                # 반영한 연결 안에 갇혀 있어 새 탭은 ``None``(「—」)으로 시작한다.
+                assert replay_1["timeline"]["beat_grid"]["unsent_cells"] == []
+                assert replay_2["timeline"]["beat_grid"]["unsent_cells"] == []
+
+                # (d) 다른 곡 대조 — 격자 내용은 그대로 두고 곡 열쇠(제목·번호)만 바꾼
+                # 사본으로 갈아 끼운 뒤 새 탭을 연다. 이 곡은 반영한 적이 없으니 ``None``
+                # 이어야 한다. 기록을 공유하는 구현(위 갈래 2)이 없는 지금도 통과하는 게
+                # 정상이다 — 나중에 기록이 곡 열쇠 없이 공유되면 격자가 같아서 이 곡도 ``[]``
+                # 로 읽히므로 여기서 잡힌다(「같은 곡에서만」 보인다는 조건을 지키는 단언).
+                store.latest = {**store.latest, "song_title": "OTHER SONG", "sequence_number": 211}
+                with client.websocket_connect("/ws") as tab_3:
+                    replay_3 = drain_until(tab_3, "song_timeline")
+                # 대조군: 재생된 것이 정말 다른 곡이다.
+                assert replay_3["timeline"]["song_title"] == "OTHER SONG"
+                assert replay_3["timeline"]["beat_grid"]["unsent_cells"] is None
