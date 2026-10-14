@@ -2,7 +2,7 @@
 id: SPEC-LDBARMAP-002
 title: "마디 지도 진입 경로 — 오디오에서 마디 지도까지 서버 쪽 입구"
 version: "0.1.2"
-status: draft
+status: completed
 created: 2026-10-14
 updated: 2026-10-14
 author: jaihyun
