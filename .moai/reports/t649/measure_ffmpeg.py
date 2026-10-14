@@ -20,7 +20,18 @@ def run(cmd, binary=False):
 
 def sample_rate(path):
     out = run(
-        ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", str(path)]
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream=sample_rate",
+            "-of",
+            "csv=p=0",
+            str(path),
+        ]
     )
     return int(out.stdout.strip())
 
@@ -28,12 +39,30 @@ def sample_rate(path):
 def measure(path):
     rate = sample_rate(path)
     proc = run(
-        ["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), "-map", "0:a:0", "-ac", "1", "-f", "s16le", "-"],
+        [
+            "ffmpeg",
+            "-nostdin",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-map",
+            "0:a:0",
+            "-ac",
+            "1",
+            "-f",
+            "s16le",
+            "-",
+        ],
         binary=True,
     )
     samples = len(proc.stdout) // 2
     error = proc.stderr.decode(errors="replace").strip()[:120]
-    return f"{path.name} | ffmpeg_samples={samples} | sr={rate} | ffmpeg_decoded_s={samples / rate:.3f} | rc={proc.returncode} | stderr={error or '없음'}"
+    return (
+        f"{path.name} | ffmpeg_samples={samples} | sr={rate} "
+        f"| ffmpeg_decoded_s={samples / rate:.3f} | rc={proc.returncode} "
+        f"| stderr={error or '없음'}"
+    )
 
 
 def main(args):

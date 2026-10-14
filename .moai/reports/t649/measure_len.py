@@ -30,7 +30,16 @@ def run(cmd):
 
 def ffprobe_seconds(path):
     out = run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)]
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=nw=1:nk=1",
+            str(path),
+        ]
     )
     return out or "없음"
 
