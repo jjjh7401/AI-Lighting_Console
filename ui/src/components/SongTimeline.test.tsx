@@ -190,6 +190,12 @@ describe("REQ-LDDESIGN-083 — 하단 3줄이 읽는 컨셉 행 짝짓기 (t460)
     ).toBe("Fade 2s · Track —");
   });
 
+  it("Fade display rounds to 2 decimals but never touches the stored fade_seconds (t641)", () => {
+    const section = { ...SECTION, fade_seconds: 3.1573333333333267 };
+    expect(fadeTrackLine(section, undefined)).toBe("Fade 3.16s · Track —");
+    expect(section.fade_seconds).toBe(3.1573333333333267);
+  });
+
   it("MIB/남김 line reads both fields straight from the row — never recomputed", () => {
     expect(mibHeadroomLine(report.rows![0])).toBe("MIB live · 남김 2");
     expect(mibHeadroomLine(undefined)).toBe("MIB — · 남김 —");
