@@ -359,6 +359,8 @@ _FORBIDDEN_PATTERNS = (
 _SCANNED_FILES = (
     Path(bar_map_entry.__file__),
     Path(__file__).with_name("test_session_bar_map_entry.py"),
+    Path(__file__).with_name("test_messages_bar_map_entry.py"),
+    Path(__file__).with_name("test_web_bar_map_entry.py"),
 )
 
 
