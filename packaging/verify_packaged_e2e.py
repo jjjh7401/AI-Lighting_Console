@@ -169,8 +169,11 @@ def _bundle_has_dir(name: str) -> list[str]:
 def run() -> int:
     if not BINARY.is_file():
         print(f"FATAL: packaged binary not found: {BINARY}", file=sys.stderr)
-        print("Build it first: .venv/bin/python -m PyInstaller --noconfirm --clean "
-              "packaging/GrandMA3-Copilot.spec", file=sys.stderr)
+        print(
+            "Build it first: .venv/bin/python -m PyInstaller --noconfirm --clean "
+            "packaging/GrandMA3-Copilot.spec",
+            file=sys.stderr,
+        )
         return 3
 
     web_port = _free_port()
@@ -188,17 +191,20 @@ def run() -> int:
         sink = WirePacketSink(port=0)
     console_port = sink.port
 
-    steps = [Step(i, name) for i, name in [
-        (1, "launch packaged binary on unused loopback ports"),
-        (2, "GET /healthz until healthy"),
-        (3, "GET / -> 200 bundled SPA"),
-        (4, "GET /api/settings -> 200, key booleans present, NO key values"),
-        (5, "POST /api/settings persists to user config dir (not bundle)"),
-        (6, "POST/GET /api/provision/responder installs bundled plugin to temp dir"),
-        (7, "running app audit dir resolves under user data dir (not bundle)"),
-        (8, "wire sink on the configured send_port reconciles 1:1 with the gate audit log"),
-        (9, "SIGTERM -> clean exit + 0 residual process-tree + ports freed"),
-    ]]
+    steps = [
+        Step(i, name)
+        for i, name in [
+            (1, "launch packaged binary on unused loopback ports"),
+            (2, "GET /healthz until healthy"),
+            (3, "GET / -> 200 bundled SPA"),
+            (4, "GET /api/settings -> 200, key booleans present, NO key values"),
+            (5, "POST /api/settings persists to user config dir (not bundle)"),
+            (6, "POST/GET /api/provision/responder installs bundled plugin to temp dir"),
+            (7, "running app audit dir resolves under user data dir (not bundle)"),
+            (8, "wire sink on the configured send_port reconciles 1:1 with the gate audit log"),
+            (9, "SIGTERM -> clean exit + 0 residual process-tree + ports freed"),
+        ]
+    ]
     S = {s.n: s for s in steps}
 
     # Back up the operator's real settings.toml so the test never clobbers it.
@@ -219,8 +225,16 @@ def run() -> int:
     try:
         # ---- Step 1: launch (own process group -> whole-tree teardown) ----------
         proc = subprocess.Popen(
-            [str(BINARY), "--no-browser", "--port", str(web_port),
-             "--receive-port", str(recv_port), "--console-port", str(console_port)],
+            [
+                str(BINARY),
+                "--no-browser",
+                "--port",
+                str(web_port),
+                "--receive-port",
+                str(recv_port),
+                "--console-port",
+                str(console_port),
+            ],
             stdout=logf,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -332,8 +346,10 @@ def run() -> int:
                         f"settings_file={settings_file} exists={settings_file.is_file()}",
                     )
             else:
-                S[5].fail(f"POST /api/settings -> {status} (endpoint not mounted?)",
-                          f"body[:300]={raw.decode('utf-8', 'replace')[:300]!r}")
+                S[5].fail(
+                    f"POST /api/settings -> {status} (endpoint not mounted?)",
+                    f"body[:300]={raw.decode('utf-8', 'replace')[:300]!r}",
+                )
 
             # ---- Step 6: responder provisioning into a fresh temp dir ----------
             # POST /api/provision/responder resolves import_dir from settings, so
@@ -376,9 +392,7 @@ def run() -> int:
         under_user_data = str(audit_dir).startswith(str(user_data_dir()))
         fresh_entries = []
         if audit_dir.is_dir():
-            fresh_entries = [
-                p.name for p in audit_dir.iterdir() if p.stat().st_mtime >= t0
-            ]
+            fresh_entries = [p.name for p in audit_dir.iterdir() if p.stat().st_mtime >= t0]
         if under_user_data and not bundle_audit:
             S[7].ok(
                 f"audit dir resolves under user data dir: {audit_dir}",
@@ -403,9 +417,7 @@ def run() -> int:
             _http("POST", f"{base}/api/settings", {"console_port": console_port})
             gstatus, graw = _http("GET", f"{base}/api/settings")
             effective_port = (
-                json.loads(graw).get("settings", {}).get("console_port")
-                if gstatus == 200
-                else None
+                json.loads(graw).get("settings", {}).get("console_port") if gstatus == 200 else None
             )
             # Heartbeats are the app's own legitimate gate sends; wait for one
             # window plus the ping timeout so the audit entry lands too.
