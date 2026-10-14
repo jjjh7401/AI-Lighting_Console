@@ -75,7 +75,7 @@
 시험 파일: `server/tests/test_audio_bar_map_entry.py`(합성 단계), `server/tests/test_session_bar_map_entry.py`(세션 응답)
 
 **Given** 박 격자 검출 대역이 `bpm_check.outcome == "adopt_double"`, `bpm == 2 × raw_bpm`인 결과를 돌려주고
-**When** 합성 단계를 부르면 **Then** 마디 지도가 아니라 실패 객체가 나오고 그 `reason`에 `두 배`가 들어 있다(합성 단계의 반환값이며 응답이 아니다). **And When** 같은 대역으로 진입 메서드를 부르면 **Then** AC-006의 네 조건이 성립하고, 그 `chat_response`의 `status`는 실패용 새 값이 아니라 `ok`이며 사유(`두 배`)는 `summary`에 실린다(E2). 어느 BPM으로도 저장하지 않는다(E1 확정, 2026-10-14).
+**When** 합성 단계를 부르면 **Then** 마디 지도가 아니라 실패 객체가 나오고 그 `reason`에 `두 배`가 들어 있다(합성 단계의 반환값이며 응답이 아니다). **And When** 같은 대역으로 진입 메서드를 부르면 **Then** AC-006의 네 조건이 성립하고, 그 `chat_response`의 `status`는 실패용 새 값이 아니라 `ok`이며 사유(`두 배`)는 본문(`text`)에 실리고, `summary`는 거절용 고정 라벨이다(E2, E5). 어느 BPM으로도 저장하지 않는다(E1 확정, 2026-10-14).
 
 ### AC-LDBARENTRY-008 (REQ-LDBARENTRY-009) — 분석 중 타임라인이 바뀌면 저장하지 않는다
 
