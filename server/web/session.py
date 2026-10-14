@@ -10194,6 +10194,19 @@ class ChatSession:
         updated["beat_grid"] = updated_grid
         return updated
 
+    def song_timeline_replay(self) -> dict | None:
+        """새 연결에 재생하는 마지막 타임라인 프레임(카드 t635).
+
+        저장소의 ``latest`` 는 원본이라 파생 필드(``unsent_cells`` 등)가 없다. 라이브 송신과
+        같은 자리(``_beat_grid_refresh_unsent_cells``)에서 채워 보내야 배지가 「옛 서버」로
+        숨겨지지 않는다.
+        """
+        store = self._timeline_store
+        latest = store.latest if store is not None else None
+        if latest is None:
+            return None
+        return song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest))
+
     def _beat_grid_note_created_presets(self, numbers: Iterable[str]) -> None:
         """카드 t595 — 승인=송신까지 확인된 반영이 만든 번호(t592)를 기억한 풀에
         「있음」으로 더한다. 판독이 아니라 송신 성공에서 나온 **추정**이라, 그 풀을

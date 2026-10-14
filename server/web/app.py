@@ -61,7 +61,6 @@ from server.web.messages import (
     parse_client_message,
     question_resolved_event,
     review_resolved_event,
-    song_timeline_event,
 )
 from server.web.panel import (
     PANEL_BACK_VERB,
@@ -487,10 +486,9 @@ def create_app(deps: WebDeps) -> FastAPI:
         # 세션 첨부가 아니다: end 가 검증을 통과해야만 session 으로 넘어간다.
         song_audio_assembly = SongAudioAssembly()
         await websocket.send_json(session.status_snapshot())
-        if deps.song_timeline_store.latest is not None:
-            await _safe_send(
-                websocket, song_timeline_event(timeline=deps.song_timeline_store.latest)
-            )
+        replay = session.song_timeline_replay()
+        if replay is not None:
+            await _safe_send(websocket, replay)
         # Stale-while-revalidate (user direction, 2026-08-15): a dash / cue
         # snapshot costs DOZENS of serialized console round trips, and every
         # lost UDP reply stalls 5s — so a fresh connection used to stare at
