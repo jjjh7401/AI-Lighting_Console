@@ -140,7 +140,7 @@ describe("AC-LDBEAT-020(d)(e) — 전환 화면", () => {
         onEditRequest={() => undefined}
       />,
     );
-    expect(shown).toContain("1.00초 (2박)");
+    expect(shown).toContain("1초 (2박)");
     expect(shown).toMatch(/<option value="3" selected="">3<\/option>/);
     expect(shown).toMatch(/<option value="Block" selected="">Block<\/option>/);
   });
