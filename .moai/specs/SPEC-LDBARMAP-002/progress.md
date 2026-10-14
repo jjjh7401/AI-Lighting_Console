@@ -118,7 +118,7 @@
 
 - sync_status: completed
 - sync_complete_at: 2026-10-14
-- sync_commit_sha: pending-backfill (자기 참조라 이 커밋 안에서는 적을 수 없다. 커밋 뒤 채운다)
+- sync_commit_sha: a8f28a32 (3-phase close 커밋)
 - run PR #693 머지 커밋: `d6ca8c8b`.
 - SPEC 본문 정정 커밋 `a0112143`(카드 t647) 세 가지: ① REQ-010·AC-004(5)의 draft 표지, ② AC-006(다)의 패치 대상을 `bar_map.py:36`/`:179` 로 정정, ③ P13 `_song_bpm` 은 그대로 둔다.
 - frontmatter_status_transitions: spec.md 는 run-phase 에서 `in-progress` 로 넘어간 적이 없다. 머지 시점까지 `status: draft` 였고, 이 sync 커밋에서 `draft` → `completed` 로 한 번에 바꿨다. plan.md·acceptance.md·progress.md 에는 status 필드가 없다. `updated:` 는 2026-10-14 로 이미 같은 값이었다.
