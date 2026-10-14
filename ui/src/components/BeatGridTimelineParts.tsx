@@ -13,6 +13,7 @@ import {
   sceneEntryEdits,
   transitionMib,
   transitionWarnings,
+  trimSeconds,
   type FullBeatGridEntry,
 } from "./beatGridTransition";
 import "./beatGridPanels.css";
@@ -147,7 +148,7 @@ export function BeatGridScenePanel({
       <header>
         <span>
           장면 전환 · {bar}마디
-          {secondsPerBar !== null && secondsPerBar !== undefined ? ` (곡 ${(bar * secondsPerBar).toFixed(2)}초)` : ""}
+          {secondsPerBar !== null && secondsPerBar !== undefined ? ` (곡 ${trimSeconds(bar * secondsPerBar)}초)` : ""}
         </span>
         <button type="button" aria-label="닫기" onClick={onClose}>
           ✕
