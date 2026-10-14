@@ -14,6 +14,7 @@
   - 시험·코드 실행 0회 — 이 plan-phase 는 문서만 쓴다.
 - **Implementation Kickoff Approval 전에 풀어야 할 항목**(`plan.md` §B의 [NEEDS CLARIFICATION] 표지): D1 오프셋 출처, D2 박자표 범위, D3 메시지 모양, E1 두 배 BPM 처리, E2 거절 응답 `status`, E3 오디오-타임라인 곡 대응. D4(화면 자리)는 후속 UI 카드의 결정이라 run-phase 를 막지 않는다.
 - plan-audit 1차: FAIL(MP-7) — `.moai/reports/plan-audit/SPEC-LDBARMAP-002-review-1.md`(0.84, 문턱 0.80 위, 게이트 사유 MP-7 표지 6개). 결함 반영(2026-10-14, version 0.1.1): D2~D11, D13, D14 반영. D12(REQ 본문의 식별자)는 문체 문제이고 변경이 크다고 보아 반영하지 않았다. 표지 6개(D1·D2·D3·E1·E2·E3)는 감독 결정 대기로 유지. 2차 대기.
+- plan-audit 2차: FAIL(MP-7만, 0.94) — review-2. 감독 결정 후 3차 감사.
 
 ## §E.2 Run-phase Evidence
 

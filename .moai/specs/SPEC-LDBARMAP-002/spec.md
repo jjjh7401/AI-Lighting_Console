@@ -24,6 +24,7 @@ depends_on: [SPEC-LDBARMAP-001]
 |---|---|
 | 2026-10-14 | 최초 작성(카드 t638). 입력: `SPEC-LDBARMAP-001`(status: completed — 분석기·저장 관문이 이미 있고 이 SPEC은 그 둘 사이를 잇는다), `SPEC-LDARRANGE-001` §5 항목 1(소비자 쪽 입력 모양), 코드 직접 읽기(아래 §3 전제표 — 인용한 줄은 전부 이 plan-phase에서 열어 읽은 줄이다). **plan만 — 코드 변경 0줄, 시험 실행 0회, 콘솔 접촉 0건, 다른 SPEC 디렉터리 수정 0건.** REQ 접두사는 `REQ-LDBARENTRY-`, AC 접두사는 `AC-LDBARENTRY-`다 — `REQ-LDBARMAP-001~016`·`AC-LDBARMAP-001~016`(SPEC-LDBARMAP-001 소유)과 grep에서 섞이지 않게 접두사를 갈랐다(origin/main에서 `LDBARENTRY` 0건 확인). |
 | 2026-10-14 | plan-audit 1차 FAIL(MP-7만, 0.84) — F1~F12 반영; 표지 6개는 감독 결정 대기로 유지 |
+| 2026-10-14 | plan-audit 2차 FAIL(MP-7만, 0.94) — N1·N2 반영; 표지 6개는 감독 결정 대기 |
 
 ## §0. Tier 선택 근거
 

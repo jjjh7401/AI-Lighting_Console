@@ -45,6 +45,8 @@
 
 **하는 일(순서)**: (1) 오프셋 타입·범위 점검 — 디코드 전 (2) `detect_beat_grid` (3) 두 배 BPM 채택이면 실패(E1이 (가)일 때) (4) `derive_bars` (5) `extract_bar_features`에 `bar_boundaries_ms` 전달 (6) `classify_bar_events` (7) `build_bar_map_payload`에 비트 목록·오프셋·`bpm`·`time_signature=(4, 4)`·사건 목록 전달. 박자표 `(4, 4)`는 이름 붙은 상수 한 곳에만 둔다(REQ-LDBARENTRY-015).
 
+**교체 가능성(시험 대역의 전제)**: 합성 함수는 분석 단계 셋(`detect_beat_grid`, `extract_bar_features`, `classify_bar_events`)을 주입 가능한 인자로 받거나, 시험이 바꿔 끼울 수 있는 모듈 수준 이름으로 두어야 한다. 그래야 AC-005(기록용 분류기 대역)와 AC-009(멈추는 대역)가 운영 호출 지점을 바꾸지 않고 대역을 쓸 수 있다.
+
 **시험**: `test_audio_bar_map_entry.py` — AC-005, AC-007 (합성 단계 쪽).
 
 **위험**:
