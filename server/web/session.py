@@ -4009,6 +4009,46 @@ class _ObservingBundleGate:
         return decision
 
 
+def derive_beat_grid_fields(
+    timeline: dict,
+    *,
+    snapshots: Mapping[tuple[object, object], Mapping[BeatGridCellKey, object]],
+    pool_slots: Mapping[int, Mapping[int, object] | None],
+    empty_marks: dict[tuple[object, object], list[dict[str, object]]],
+) -> dict:
+    """``timeline["beat_grid"]``가 있으면 그 자리에 파생 필드(``unsent_cells`` 등)를
+    최신으로 채운 **사본**을 돌려준다 — 없으면 그대로(no-op). 코디네이터 계약 2항:
+    "격자가 나갈 때마다(편집·AI 제안 적용·반영·로드) 다시 계산한다" — 저장소의
+    ``latest`` 는 파생 필드가 없는 원본이라, 격자를 내보내는 자리마다 이 함수로 채운다.
+    최상위와 ``beat_grid`` 두 층을 새로 만들어 돌려주므로 원본 ``timeline`` 을 공유
+    참조로 건드리지 않는다.
+
+    ``snapshots`` 는 곡 열쇠 -> 가장 최근 「콘솔에 반영」 칸 스냅샷, ``pool_slots`` 는
+    이미 읽은 프리셋 풀(풀 번호 -> {slot: 이름}), ``empty_marks`` 는 곡마다 마지막으로
+    내보낸 빈 프리셋 표식이다 — 이 곡의 표식을 **제자리에서** 갱신하니 같은 사전을
+    계속 넘겨야 한다."""
+    grid = timeline.get("beat_grid")
+    if not isinstance(grid, Mapping):
+        return timeline
+    snapshot = snapshots.get(ChatSession._beat_grid_song_key(timeline))
+    updated = dict(timeline)
+    updated_grid = dict(grid)
+    updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
+    # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
+    # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
+    updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
+    updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
+    # 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 효과 틀 목록(출하 라이브러리, 콘솔 0).
+    updated_grid["fx_templates"] = effect_template_catalog()
+    # 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 이미 읽은 풀로만 가른
+    # 빈 프리셋 칸. 편집으로 번호가 바뀐 칸도 같은 자리에서 다시 계산된다.
+    marks = empty_preset_cells(grid, pool_slots)
+    empty_marks[ChatSession._beat_grid_song_key(timeline)] = marks
+    updated_grid["empty_preset_cells"] = marks
+    updated["beat_grid"] = updated_grid
+    return updated
+
+
 class ChatSession:
     """One WebSocket client's chat session over the shared gate + provider."""
 
@@ -10176,32 +10216,13 @@ class ChatSession:
         return unsent_beat_grid_cells(grid, snapshot)
 
     def _beat_grid_refresh_unsent_cells(self, timeline: dict) -> dict:
-        """``timeline["beat_grid"]``가 있으면 그 자리에 ``unsent_cells``를
-        최신으로 채운 **사본**을 돌려준다 — 없으면 그대로(no-op). 코디
-        네이터 계약 2항: "격자가 나갈 때마다(편집·AI 제안 적용·반영·
-        로드) 다시 계산한다" — 호출자가 이미 만든 얕은 사본(``dict(...)``)
-        을 한 번 더 감싸므로 원본 ``timeline``을 공유 참조로 건드리지
-        않는다(기존 관행과 같다)."""
-        grid = timeline.get("beat_grid")
-        if not isinstance(grid, Mapping):
-            return timeline
-        snapshot = self._beat_grid_snapshots.get(self._beat_grid_song_key(timeline))
-        updated = dict(timeline)
-        updated_grid = dict(grid)
-        updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
-        # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
-        # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
-        updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
-        updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
-        # 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 효과 틀 목록(출하 라이브러리, 콘솔 0).
-        updated_grid["fx_templates"] = effect_template_catalog()
-        # 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 이미 읽은 풀로만 가른
-        # 빈 프리셋 칸. 편집으로 번호가 바뀐 칸도 같은 자리에서 다시 계산된다.
-        marks = empty_preset_cells(grid, self._beat_grid_pool_slots)
-        self._beat_grid_empty_marks[self._beat_grid_song_key(timeline)] = marks
-        updated_grid["empty_preset_cells"] = marks
-        updated["beat_grid"] = updated_grid
-        return updated
+        """이 세션의 반영 기록·풀 기억으로 ``derive_beat_grid_fields`` 를 부른다."""
+        return derive_beat_grid_fields(
+            timeline,
+            snapshots=self._beat_grid_snapshots,
+            pool_slots=self._beat_grid_pool_slots,
+            empty_marks=self._beat_grid_empty_marks,
+        )
 
     def song_timeline_replay(self) -> dict | None:
         """새 연결에 재생하는 마지막 타임라인 프레임(카드 t635).
