@@ -3716,6 +3716,18 @@ class SongTimelineStore:
         # 두면 새로고침·두 번째 탭이 기록을 잃는다. 콘솔이 하나라 저장소(프로세스 단위)가 맞는
         # 수명이다. 파일에 저장하지 않는다 — 재시작하면 빈 상태(지금과 같다).
         self.beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
+        # 카드 t642 — 가장 최근 「콘솔에 반영」이 실제로 쓴 시퀀스·큐 번호. 이 번호는 연결이
+        # 아니라 콘솔을 설명하므로 프로세스 단위인 저장소에 둔다(재연결해도 끄기·미리보기가
+        # 같은 번호를 쓴다). 곡별이 아니라 가장 최근 하나 — 파일에 저장하지 않는다.
+        self._beat_grid_applied: _BeatGridAppliedState | None = None
+
+    @property
+    def beat_grid_applied(self) -> _BeatGridAppliedState | None:
+        return self._beat_grid_applied
+
+    @beat_grid_applied.setter
+    def beat_grid_applied(self, state: _BeatGridAppliedState | None) -> None:
+        self._beat_grid_applied = state
 
     @property
     def latest(self) -> dict | None:
@@ -4137,7 +4149,7 @@ class ChatSession:
             else NullSuggestionSource()
         )
         # 카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋의 세션
-        # 상태. ``_beat_grid_applied``는 가장 최근 반영이 실제로 쓴
+        # 상태. 저장소의 ``beat_grid_applied``는 가장 최근 반영이 실제로 쓴
         # 시퀀스·큐 번호(미리보기/끄기가 그 번호로 Goto/Off를 낸다 —
         # 콘솔에 아직 반영된 적이 없으면 ``None``이라 미리볼 대상이
         # 없다), ``_preview_approval``은 미리보기(Goto/Off)의
@@ -4157,7 +4169,6 @@ class ChatSession:
         self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = (
             timeline_store.beat_grid_snapshots if timeline_store is not None else {}
         )
-        self._beat_grid_applied: _BeatGridAppliedState | None = None
         # 카드 t595 — 이 세션이 콘솔에서 마지막으로 완전 판독한 프리셋 풀(풀
         # 번호 → {slot: 이름}, 못 읽었으면 None). 반영 때 승인 대기 번호의 풀
         # 판독(t590)과 프리셋 서랍 판독이 채운다 — 격자 「빈 프리셋」 표식의
@@ -10759,9 +10770,10 @@ class ChatSession:
                 for cue in track.cues:
                     if cue.cue_number is not None:
                         cue_numbers.setdefault(track.group_name, {})[cue.bar] = cue.cue_number
-            self._beat_grid_applied = _BeatGridAppliedState(
-                sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
-            )
+            if store is not None:
+                store.beat_grid_applied = _BeatGridAppliedState(
+                    sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
+                )
             # 코디네이터 계약(t568과 합의) — 스냅샷은 "승인=송신까지
             # 확인된 성공"일 때만 갈아 끼운다. 바이트가 어긋나면(verdict.
             # passed 거짓) 이미 콘솔로 나간 것과 승인 사이에 설명 안 되는
@@ -10835,10 +10847,11 @@ class ChatSession:
 
     def _beat_grid_preview_commands(self, verb: str, bar: int | None) -> tuple[str, ...] | None:
         """``verb``가 "goto"면 ``bar``를 담은 최신 큐로, "off"면 전체
-        끄기로 — 둘 다 가장 최근 반영(``_beat_grid_applied``)에서만 번호를
-        가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가 있는
-        트랙이 하나도 없으면) ``None``."""
-        applied = self._beat_grid_applied
+        끄기로 — 둘 다 가장 최근 반영(저장소의 ``beat_grid_applied``)에서만
+        번호를 가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가
+        있는 트랙이 하나도 없으면) ``None``."""
+        store = self._timeline_store
+        applied = store.beat_grid_applied if store is not None else None
         if applied is None:
             return None
         commands: list[str] = []
@@ -10890,11 +10903,12 @@ class ChatSession:
     def beat_grid_preview(self, bar: int) -> dict:
         """상단 바 「▶ 이 마디 콘솔에서 보기」 — 가장 최근 반영에서 이
         마디를 담당하는 큐로 ``Goto Cue … Sequence …``를 낸다. 아직
-        콘솔에 반영된 적이 없으면(``_beat_grid_applied is None``) 번호가
+        콘솔에 반영된 적이 없으면(저장소의 ``beat_grid_applied``가 ``None``) 번호가
         없으므로 거절한다(지어내지 않음)."""
         commands = self._beat_grid_preview_commands("goto", bar)
         if commands is None:
-            applied = self._beat_grid_applied
+            store = self._timeline_store
+            applied = store.beat_grid_applied if store is not None else None
             reason = (
                 "아직 콘솔에 반영된 적이 없어 미리볼 시퀀스가 없습니다."
                 if applied is None
