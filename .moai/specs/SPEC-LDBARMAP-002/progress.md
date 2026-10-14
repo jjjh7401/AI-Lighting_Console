@@ -67,6 +67,34 @@
   - 래퍼 판정의 한계: 「이미 보냈나」는 연결 단위 카운터의 증가분이다. 같은 연결의 다른 경로가 같은 시간에 `chat_response` 를 내면, 드문 이중 실패에서 대체 응답이 빠질 수 있다. 측정하지 않았다.
   - 로그 파일 여부: 서버 코드에는 파일 로그 설정이 없다(`basicConfig`·`FileHandler` 없음). `server/web/launcher.py` 는 `sys.stderr` 로만 내보낸다. 파일로 남는지는 실행 방식에 달려 있어 저장소만으로는 확정하지 못했다.
 
+### M4 — 실제 곡 로컬 게이트 AC-016 (카드 t647, 재개 뒤)
+
+- 커밋: `5b2c53fc` (`test(SPEC-LDBARMAP-002): M4 실제 곡 로컬 게이트 AC-016`). 바뀐 파일은 `server/tests/test_audio_bar_map_entry.py` 하나(+155줄, 모듈 독스트링 두 줄 포함)이다. 운영 코드는 건드리지 않았다.
+- 기록 정정(히스토리): 앞선 M3 증거 커밋 `8c2d0705` 에는 M4 테스트 파일이 잘못 섞여 있었다. 원격에 올리기 전에 로컬에서 `reset --soft` 로 되돌려 `503b3f22`(M3 증거 기록, `progress.md` 만)와 `5b2c53fc`(M4 테스트)로 나눴다. 원격 브랜치는 `6db71ada` → `5b2c53fc` 로 빨리 감기 되었다. 그 전에 원격에 올라 있던 것은 병합 커밋 `3a0fef43` 까지였다.
+- 시험: `test_ac016_real_song_entry_gate`. `-k ac016` 과 `-k real_song` 둘 다 고른다. 로컬 전용이다. 원곡이 없으면 `skipif` 로, librosa 가 없으면 `requires_analysis` 로 건너뛴다. 건너뜀은 통과가 아니다.
+- 경로와 고정물: 저장소 밖 `/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3`(4,733,524 바이트)를 복사하지 않고 제자리에서 읽는다. 세션에 첨부(`upload_song_audio`)하고, 곡 열쇠 `TEST SONG` / 1 인 초안 타임라인을 둔 뒤 진입 메서드 `analyse_bar_map(1)` 을 부른다. 첫 박 오프셋 1은 이 시험의 고정물이며 운영 상수가 아니다.
+- 판정(AC-LDBARENTRY-016)
+  - (1) `bar >= 1` 마디가 정확히 82개이고 번호가 1..82로 이어진다. `bar == 0` 은 1개이며 박 1개다.
+  - (2) 엄격한 순서 대응(`strict_index_hit_rate`, 허용오차 `DOWNBEAT_TOLERANCE_SEC` = 0.060 s, 즉 ±60 ms)으로 다운비트 적중이 90 % 이상이다. 분모는 82다.
+  - (3) 저장된 사건이 `detect_beat_grid → derive_bars → extract_bar_features → classify_bar_events` 를 직접 부른 결과와 같다. 직접 쪽이 비면 실패한다.
+  - (4) 재현율은 `event_recall`(전체 사건 대 `parse_events()`)로 7개 중 5개 이상이다. 정밀도는 `event_precision` 으로 70 % 이상이다. 분모는 `break`·`kick_entry` 사건만이며, 기존 AC-007(`test_audio_bar_map.py` 862–865행)과 같은 규칙이다. 분모가 0이면 실패다.
+  - (5) 벽시계 시간은 진입 메서드 호출 한 번만 잰다. 문턱은 없고, 출력 한 줄로 남긴다.
+- 관찰한 결과
+  - 레인이 같은 트리에서 다시 돌린 출력(`uv run pytest server/tests/test_audio_bar_map_entry.py -q -rs -s -k ac016`):
+    `AC-016 wall-clock: 12.60 s` / `AC-016 measured: bars(bar>=1)=82 bars(bar==0)=1 downbeat_hit=82/82 (100.0%, 허용오차 ±60ms) events=8 direct_events=8 recall=7/7 precision=5/6 (83.3%)` / `1 passed, 78 deselected in 23.57s`.
+  - 구현 레인의 실행(같은 값, 보고 기준): 벽시계 12.47 s. 파일 전체 `79 passed in 24.53s`. M3 묶음 `139 passed, 1 warning in 4.54s`.
+  - 린트(레인 확인): `uv run ruff check server/tests/test_audio_bar_map_entry.py` → `All checks passed!`. `uv run ruff format --check` → `1 file already formatted`.
+- 벽시계 시간(AC-016 (5), 기준값 없음): 12.47 s(구현 레인), 12.60 s(레인). 시험 항목 전체는 약 23.6 s다. `pyproject.toml` 의 `faulthandler_timeout = 60` 과 비교하면 여유가 있다. 콜드 스타트(첫 실행) 시간은 이번에 따로 재지 않았다.
+- 구현 레인의 변이 확인(저장소 밖에서 인라인 실행, 파일은 바꾸지 않음. 레인은 재실행하지 않았다)
+  - 사건을 하나 빼면 `assert stored == direct` 에서 실패한다. 재현율은 6/7, 정밀도는 4/5가 되어 (4)만으로는 잡히지 않는다.
+  - 사건을 하나 더하면 같은 단언에서 실패한다. 정밀도는 5/7(71.4 %)로 70 % 를 넘으므로 (4)만으로는 통과한다.
+  - 저장 시각을 +100 ms 밀면 적중률 단언에서 실패한다(0/82).
+- 열린 항목(M4 기준)
+  - 정밀도 분모가 점 사건 6개뿐이다. 사건 하나가 바뀌면 83.3 %가 71.4 %로 움직인다. 이 값은 있는 그대로 적는다. 문턱 70 %는 SPEC-LDBARMAP-001 이 정했다.
+  - 실곡 게이트는 한 곡, 한 장비에서 한 번 잰 값이다. CI 에는 원곡이 없어 건너뛴다. 건너뜀은 통과로 치지 않으므로 이 AC 는 로컬 실행 출력으로만 검증된다.
+  - plan.md M4 의 가칭 `-k real_song` 은 `test_ac016_real_song_entry_gate` 로 맞게 선택된다.
+  - §D 1–8 검증, PR, 머지 판단, sync 는 이번 세션에서 하지 않았다. 다음 세션으로 넘긴다(`.moai/reports/t647/resume.md`).
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
