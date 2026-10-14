@@ -15,15 +15,17 @@
 없으면 UI 는 필드 없는 옛 서버로 읽어 배지를 숨긴다(``pendingApplyCount.ts``). 같은 곡을
 새로고침하면(재생 경로) 맞게 나오니, 같은 곡이 **들어온 길에 따라** 달리 보이는 셈이다.
 
-세 시험은 같은 불변식을 세 방향에서 잰다:
+네 시험은 같은 불변식을 네 방향에서 잰다:
 
 A. 응답에 파생 필드 다섯이 **키로** 들어 있다(반영 기록이 없으면 ``unsent_cells`` 는 ``null``).
 B. 응답은 같은 저장소 내용을 새 연결이 재생한 것과 **같다**.
 C. 이 프로세스에서 「콘솔에 반영」을 마친 곡을 불러오면 응답이 **참인 대기 수**(``[]``)를 싣는다.
+D. 반영한 곡을 **다른 이름으로** 저장해 불러와도 응답은 새 연결 재생과 **같다** — 곡 열쇠가
+   이름을 따라 바뀌므로, 대기 수의 값이 아니라 응답과 재생의 **일치**만 잰다.
 
 콘솔 접촉: 0건. ``FakeConsole``(승인=송신 각본)만 쓰고 실기 포트로는 한 바이트도 나가지
-않는다. 시험 C 의 반영 기록은 실제 「콘솔에 반영」 성공 경로로만 만들어진다 — 스냅샷 사전을
-직접 쓰지 않는다.
+않는다. 시험 C·D 의 반영 기록은 실제 「콘솔에 반영」 성공 경로로만 만들어진다 — 스냅샷
+사전을 직접 쓰지 않는다.
 """
 
 from __future__ import annotations
@@ -133,7 +135,9 @@ class TestLoadResponseDerivedFields:
 
 class TestLoadAfterAnApplyInThisProcess:
     """WebSocket + REST 층 — 반영 기록은 프로세스 단위로 공유된다(카드 t635). 한 탭이 「콘솔에
-    반영」을 마친 **뒤에** 같은 곡을 라이브러리에서 불러오면, 불러오기 응답도 그 기록을 본다."""
+    반영」을 마친 **뒤에** 같은 곡을 라이브러리에서 불러오면, 불러오기 응답도 그 기록을 본다.
+    다른 이름으로 저장해 불러오면 곡 열쇠 ``(song_title, sequence_number)`` 가 달라져 기록은
+    보이지 않는다 — 그때도 응답은 같은 저장소를 새 연결이 재생한 것과 같아야 한다."""
 
     def test_load_after_an_apply_in_this_process_shows_the_true_pending_count(self, tmp_path):
         deps = _web_deps(tmp_path)
@@ -177,4 +181,54 @@ class TestLoadAfterAnApplyInThisProcess:
         assert beat_grid["unsent_cells"] == [], (
             f"방금 반영한 곡인데 불러오기 응답의 unsent_cells 가 [] 가 아니다: "
             f"{beat_grid['unsent_cells']!r}"
+        )
+
+    def test_load_under_a_new_name_matches_a_fresh_replay(self, tmp_path):
+        """반영한 곡을 반영한 제목과 **다른** 이름으로 저장해 불러오는 경우의 가드.
+
+        불러오기는 라이브러리 이름을 ``song_title`` 로 쓰므로 곡 열쇠가 바뀌고, 그 열쇠로는
+        반영 기록이 없다. 이 시험은 그 값(``unsent_cells`` 가 무엇이어야 하는지)을 묻지 않고
+        오직 「불러오기 응답 = 같은 저장소를 새 연결이 재생한 것」만 잰다. 이름을 바꾸기
+        **전** 열쇠로 파생 필드를 채우는 반쪽짜리 수정은 응답에 옛 열쇠의 기록을 싣고
+        재생은 새 열쇠라 기록이 없으므로, 여기서 갈린다."""
+        deps = _web_deps(tmp_path)
+        applied_title = deps.song_timeline_store.latest["song_title"]
+        renamed = "T644 RENAMED"
+        # 대조군: 이름이 정말 **다르다**. 같으면 이 시험은 위 시험 C 와 같은 시험이 된다.
+        assert renamed != applied_title
+
+        with (
+            TestClient(create_app(deps)) as client,
+            client.websocket_connect("/ws") as applying_tab,
+        ):
+            # (a) 시험 C 와 같은 방식 — 실제 「콘솔에 반영」(승인=송신) 성공 경로를 웹소켓으로
+            # 보낸다. 반영한 탭은 끝까지 닫지 않는다.
+            _send(applying_tab, type="beat_grid_apply")
+            status = _approve_until(applying_tab, "beat_grid_send_status")
+            # 대조군: 반영이 승인=송신까지 정말 성공했고, 반영한 연결 자신은 「반영 기록과
+            # 같음」을 본다(시험 C 와 같은 네 줄).
+            assert status["last_action"] == "apply"
+            assert status["ok"] is True
+            assert status["approval_vs_sent"]["match"] is True
+            assert status["pending_apply_count"] == 0
+
+            # (b) 반영한 곡을 **다른 이름으로** 저장하고 불러온다.
+            loaded = _save_and_load(client, renamed)
+
+            # (c) 반영한 탭이 아닌 새 탭이 같은 저장소를 재생한다.
+            with client.websocket_connect("/ws") as fresh_tab:
+                replay = drain_until(fresh_tab, "song_timeline")
+
+        loaded_timeline = loaded["timeline"]
+        replayed_timeline = replay["timeline"]
+        # 대조군 1: 재생된 것이 정말 방금 이름을 바꿔 불러온 곡이다.
+        assert replayed_timeline["song_title"] == renamed
+        # 대조군 2: 재생 쪽에는 파생 필드가 **있다**(카드 t635). 이 줄이 빠지면 응답과 재생이
+        # 둘 다 비어 「같다」로 공허하게 통과할 수 있다.
+        replay_missing = [key for key in _DERIVED_KEYS if key not in replayed_timeline["beat_grid"]]
+        assert replay_missing == []
+
+        differing = _differing_keys(loaded_timeline, replayed_timeline)
+        assert loaded_timeline == replayed_timeline, (
+            f"이름을 바꿔 불러온 응답이 같은 곡의 새 연결 재생과 다르다 — 다른 키: {differing}"
         )
