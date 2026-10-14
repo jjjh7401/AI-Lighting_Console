@@ -3711,6 +3711,11 @@ class SongTimelineStore:
             if isinstance(allocations, dict)
             else {}
         )
+        # 카드 t635 — 「콘솔에 반영」 스냅샷(곡별 칸 기록). ``ChatSession._beat_grid_snapshots``
+        # 와 같은 사전을 여기서 공유한다. ChatSession 은 연결마다 새로 만들어지므로 연결 안에
+        # 두면 새로고침·두 번째 탭이 기록을 잃는다. 콘솔이 하나라 저장소(프로세스 단위)가 맞는
+        # 수명이다. 파일에 저장하지 않는다 — 재시작하면 빈 상태(지금과 같다).
+        self.beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
 
     @property
     def latest(self) -> dict | None:
@@ -4107,7 +4112,11 @@ class ChatSession:
         # 끼운다(거절·막힘은 스냅샷을 건드리지 않는다) — 곡을 가르는
         # 열쇠는 ``_remember_draft_baseline``이 이미 쓰는 것과 같다(새
         # id 체계를 짓지 않는다).
-        self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
+        # 반영 기록은 저장소(프로세스 단위)에 둔다 — 카드 t635(SongTimelineStore 주석).
+        # 저장소가 없으면(테스트 등) 이 연결 안에만 둔다.
+        self._beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = (
+            timeline_store.beat_grid_snapshots if timeline_store is not None else {}
+        )
         self._beat_grid_applied: _BeatGridAppliedState | None = None
         # 카드 t595 — 이 세션이 콘솔에서 마지막으로 완전 판독한 프리셋 풀(풀
         # 번호 → {slot: 이름}, 못 읽었으면 None). 반영 때 승인 대기 번호의 풀
