@@ -727,4 +727,72 @@ halfdouble`에 반영해야 한다(`lesson-a-subagent-may-land-in-its-own-worktr
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+### 1. 판정
+`in-progress` 에서 `completed` 로 전환한다. 이 커밋은 3-phase close 의 sync 커밋이다.
+
+```yaml
+sync_complete_at: 2026-10-14
+sync_commit_sha: 5b883e464678c86ad9e88d260fe77daa24f6a4c6   # 커밋은 자기 SHA 를 적을 수 없다(D3). 후속 백필 커밋이 실제 SHA 로 바꾼다
+sync_status: complete-without-sync-audit # sync-auditor 미실행 — 리드 순서: sync → PR → 병합 (FILEARG 선례)
+branch: worktree-WT-ldbarmap-close
+worktree: .claude/worktrees/WT-ldbarmap-close
+base: b023fc59
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (updated 2026-10-14, 이미 반영돼 있어 불변)"
+  acceptance_md_plan_md: "본문 무수정 — 기준 재고정과 단위 정정은 a3a45e5b · 991f6141 이 담았다"
+close_commits:
+  - "a3a45e5b — AC-LDBARMAP-009 판정 기준 재고정 (판정 트리 M4 머지 364ab000, 개정 기록 v0.1.8)"
+  - "991f6141 — AC-LDBARMAP-008 단위 표기 정정 · 0.1.8 행 문구 정정 (값·의미 불변)"
+  - "41f356a7 — SPEC-LDRHYTHM-001 HISTORY 교차참조 한 줄 (M5, manager-spec 재위임)"
+  - "이 sync 커밋 (SHA 는 위 placeholder)"
+  - "백필 커밋 (뒤따름)"
+```
+
+### 2. 기준 재고정·정정 (v0.1.8)
+- AC-LDBARMAP-009: 판정 트리를 M4 머지 `364ab000`(PR #585) 자기 트리로 고정했다. 원문은 AC 본문에 인용 블록으로 보존했다. PASS ⇔ ① `git grep -l downbeat 88ecfb9d -- server` 출력 없음, 그리고 ② `364ab000` 의 파일 집합 F 가 ③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server` 의 파일 집합 G 에 모두 든다.
+- AC-LDBARMAP-008: §A 표 두 칸에 단위를 병기했다(`±60 ms`, `±1 마디`), AC-010 조건 1 에 `1e-9(1e-7 %)` 를 병기했다. 값과 의미는 같다. 범위 판정: α · w_mid · `≥ 1 줄` · `N개 이상` 은 허용오차·통과율이 아니므로 단위 판정 대상이 아니다.
+
+### 3. 이 카드에서 잰 값
+측정 코드 기준은 `b023fc59` 다. b023fc59 이후 이 카드의 커밋은 전부 문서만 바꿨고 코드 diff 는 0 이다.
+
+| 대상 | 명령 | 관측 |
+|---|---|---|
+| M1 보정 재실행 | `tools/barmap/run_calibration.py` 실음원 출력을 커밋본과 비교 | 실행 시간 값 4줄만 다름, 나머지 동일 |
+| 음성 대조군 | `pytest tools/barmap/test_scorer.py` | `5 passed in 0.04s` |
+| bar map 모듈 | `pytest server/tests/test_audio_bar_map.py` 외 store 2개 · tempo_t546 | `173 passed in 15.33s` |
+| M3 실음원 재측정 | detect_beat_grid → derive_bars(1) → extract_bar_features → classify_bar_events (임시 스크립트를 워크트리에서 실행한 뒤 삭제, 파일 출력 없음) | precision 5/6 = 83.3% · recall 7/7 = 100.0% · break bars 33, 61, 82 · 옛 9건 재검출 없음 · 픽스처 82행 최대 차이 0 |
+| 귀 확인 후보 | `gen_ear_check_candidates` 재생성 vs 커밋본 | 동일 (1281자) |
+| AC-009 새 기준 | 세 명령, 트리 364ab000 | ① 출력 없음 · ② F = bar_map.py, test_audio_bar_map.py, test_audio_bar_map_store.py · ③ G 는 같은 3개 |
+| AC-008 감사 | 세 문서 감사 (표 셀 awk · 문턱 grep · 부등호 grep) | 표 셀 1줄 (spec.md 후보 검출기 「2개 이상」, 개수 전제라 범위 밖) · 문턱 grep 잔여 줄: α · w_mid · ≥1 줄 · N개 이상 · 식별자 · 날짜 · 부등호: α 1줄, 코드 화살표 1줄 |
+| AC-015 | `grep -n "^def "` 시그니처 | `detect_beat_grid(audio_bytes: bytes)` · `extract_bar_features(audio_bytes: bytes, bar_boundaries_ms)` |
+| AC-011 | LDARRANGE 존재 · §5 인용 · 필드 8종 | 존재 · 인용 5건 · 필드 8종 양쪽 1줄 이상 |
+| AC-012 | 경로 기준 커밋 이력의 mp3·wav | 0건 |
+| AC-014 | plan §C M5 문구 · LDRHYTHM 경로를 건드린 LDBARMAP 커밋 | 문구 있음 · 0건 (M5 는 41f356a7 로 집행) |
+
+### 4. AC 판정
+| AC | 판정 | 근거 |
+|---|---|---|
+| 001 | PASS | M1 재실행 = 커밋본 (4지표 출력은 m1-calibration.md) |
+| 002 · 003 | PASS | 1박·1마디 음성 대조군 각각 10% 미만 (test_scorer) |
+| 004a–d | PASS | 테스트 전부 통과. 004c 실음원 BPM 112.0019 (오차 0.31%), outcome=keep |
+| 005 · 006 | 보류 | PASS 요구 대상 아님. 자체 위상 선택 3후보 모두 0/82, 재실행 일치 |
+| 007 | PASS | 재현율 7/7, 정밀도 5/6 (83.3%). 근거 없음 1건 (kick_entry 4마디) 은 귀 확인 후보 |
+| 008 | PASS | 허용오차·통과율 범위에서 같은 칸 단위 충족 (991f6141). 범위 밖 항목의 근거는 AC 블록에 기록 |
+| 009 | PASS | 개정 기준 (트리 364ab000) 의 세 명령 확인 |
+| 010 | PASS | store·session 테스트 전부 통과 (왕복 · 영속 · 되돌리기 · 거부 · 3/4 · 6/8 · 2마디) |
+| 011 | PASS | LDARRANGE 존재 · §5 연결 · 필드 8종 |
+| 012 | PASS | 경로 기준 mp3·wav 0건 |
+| 013 | N/A | 계획 단계 한정 AC |
+| 014 | PASS | 계획 문구 있음 · LDRHYTHM 교차참조는 41f356a7 (sync 단계 재위임) |
+| 015 | PASS | 시그니처 확인 · 테스트 2건 통과 |
+| 016 | PASS | 오프셋 1 적중률 90% 이상 · 오답 오프셋 10% 미만 · 실음원 픽스처 테스트 통과 |
+
+### 5. 공백 (sync 시 기록, 판정에 영향 없음)
+- §E.3 기록 없음: 이 SPEC 의 progress.md 에는 `## §E.3 Run-phase Audit-Ready Signal` 헤딩이 원래 작성되지 않았다. 사실로 적고, 사후에 소급 작성하지 않았다.
+- 브레이크 9건 (11·52·53·56·72·75·76·77·79): 미검증 공백으로 둔다. 현 규칙에서는 검출되지 않는다 (검출 33·61·82). 오검출 확정도, 진짜 킥 빠짐 확정도 아니다. 귀 확인은 감독 몫이며 이 카드의 작업이 아니다. sync 를 막지 않는다.
+- 진입 경로 (음원→마디 지도, WS/HTTP): 이 SPEC 범위 밖이다 (REQ-001·010·011 에 없음, §5 M4 「진입 경로 후속」). 카드 t638 로 분리했고 이 카드에서는 만들지 않았다.
+- M1 원 통과 조건 미충족: 「AC-001~006 전부 PASS 인 후보 1개 이상」은 충족되지 않았다 (t530, 3후보 자체 위상 0/82). 감독 결정 (t530) 으로 M2 범위를 축소했다. AC-005·006 은 보류 상태로 보존한다.
+
+### 6. 옮긴 값·재지 않은 것
+- 배차서의 「브레이크 정밀도 6/15」는 옛 규칙·브레이크 단독 값이라 판정 근거로 쓰지 않았다. 현재 측정은 §3 이다.
+- AC-013 은 계획 단계 한정이라 재측정하지 않았다.

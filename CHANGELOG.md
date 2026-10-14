@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **SPEC-LDBARMAP-001**(`completed`, 카드 t636) — 마디 지도(오프라인 박자·다운비트·마디 경계·마디별 변화 검출)를 닫았다. M1~M4·M-추가·M5 완료. 판정 기준 재고정(AC-009 → M4 자기 트리 `364ab000`), AC-008 단위 표기 정정(값·의미 불변, v0.1.8). 실음원 재측정: 재현율 7/7 · 정밀도 5/6. 공백: §E.3 기록 없음 · 브레이크 9건 미검증(귀 확인은 감독 몫) · 진입 경로 t638 분리 · M1 원 통과 조건 미충족(감독 결정으로 범위 축소). sync-audit 는 미실행.
 - **SPEC-COPILOT-FILEARG-001**(`completed`, 카드 t629) — 시트 판별기(분할 A)를 닫았다. 판정 기준 넷(AC-001 ④ · AC-006 ① · AC-020 · AC-030 ①)을 M1 트리 `3ffda31b` 에 다시 고정했다(v1.1.0). AC 20건 중 PASS 19 · N/A 1.
   - 재확인(HEAD 19a52738): 전체 pytest 15707 passed · vitest 1262 passed. 근거는 `reports/filearg-close/`. sync-audit 는 미실행.
 - **SPEC-COPILOT-SHEETPIPE-001**(`completed`, 감독 결정 2026-10-12) — 판별된 시트 바이트를 세션 슬롯과 래퍼 툴 인자까지 나르는 전달 경로를 붙였다(구현 PR #118, 분할 B). AC 001–011 PASS.
