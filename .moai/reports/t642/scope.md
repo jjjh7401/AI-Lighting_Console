@@ -148,4 +148,48 @@ exit=1
 - 미리보기 승인(`_preview_approval`)은 재연결 뒤 다시 묻는 것이 설계상 맞다. 수정이 승인 상태까지 옮기지 않도록 주의해야 하고, 이 시험은 승인을 기본 각본(모두 승인)으로 통과시키므로 그 동작을 지켜 주지 않는다.
 - 두 번째 곡을 반영한 뒤 재연결하는 경우처럼 「가장 최근 반영」과 곡별 열쇠가 갈리는 경우는 이 시험이 다루지 않는다.
 
+## 8. 카드 브랜치에서 재확인과 기준선 보완
+
+섹션 2와 3의 실행은 서브에이전트가 자체로 만든 워크트리(`worktree-agent-addce6e350c6fc41f`)에서 이뤄졌다. 두 커밋(`f452c54f` 시험, `081ce38a` 보고)은 카드 브랜치 `WT-beat-grid-reconnect`에 `git merge --ff-only`로 옮겼다. 커밋 SHA는 그대로다.
+
+옮긴 뒤 카드 워크트리에서 같은 시험을 한 번 더 돌렸다.
+
+명령(한 번 실행, 환경 격리 형태):
+
+```
+unset MOAI_KANBAN MOAI_KANBAN_ID MOAI_KANBAN_LABEL MOAI_KANBAN_LEAD_ADDR MOAI_KANBAN_SETTINGS_INJECTED && uv run pytest -v -rs server/tests/test_beat_grid_reconnect_t642.py; echo "exit=$?"
+```
+
+관측(원문 발췌, 트레이스백의 위치 줄은 생략):
+
+```
+server/tests/test_beat_grid_reconnect_t642.py::TestOffAndPreviewAfterReconnect::test_off_after_reconnect_still_turns_off_applied_sequences FAILED [ 33%]
+server/tests/test_beat_grid_reconnect_t642.py::TestOffAndPreviewAfterReconnect::test_preview_after_reconnect_still_goes_to_applied_cues FAILED [ 66%]
+server/tests/test_beat_grid_reconnect_t642.py::TestSameSessionControl::test_off_in_same_session_after_apply_control PASSED [100%]
+E       AssertionError: 재연결 뒤 끄기가 거절됨: 아직 콘솔에 반영된 적이 없어 끌 시퀀스가 없습니다.
+E       assert False is True
+E       AssertionError: 재연결 뒤 미리보기가 거절됨: 아직 콘솔에 반영된 적이 없어 미리볼 시퀀스가 없습니다.
+E       assert False is True
+========================= 2 failed, 1 passed in 1.59s =========================
+exit=1
+```
+
+판독: 두 재연결 시험은 `ok` 단언에서 실패했고, 사유는 결함 메시지다. 대조군은 통과했다. 섹션 2의 서브에이전트 실행과 결과가 같다.
+
+확인한 줄 번호(읽기와 grep으로 확인했다. 실행으로 확인한 것은 아니다):
+
+- `server/web/app.py` 396행: `ChatSession(` 생성 (grep).
+- `server/web/session.py` 3672행 `SongTimelineStore`, 3746행과 3749행 할당 기록 메서드 (grep).
+- `server/web/session.py` 10762행의 `_beat_grid_applied` 쓰기는 10772행 `if verdict.passed:` 앞에 있다 (읽기). 따라서 판정과 무관하게 쓰인다.
+- 할당 기록 쓰기(10812행)는 10772행 `if verdict.passed:` 블록 안에 있다. 10778~10811행 사이에 이 블록을 닫는 줄은 없다 (읽기).
+- `server/web/session.py` 10792~10795행의 주석: 할당 기록은 원래 소유한 트랙과 이번에 실제로 만든 트랙만 적는다. 그렇지 않으면 다음 반영이 「기록한 시퀀스가 콘솔에 없다」로 거절된다 (읽기).
+- `server/tests/test_write_dispatch_census.py` 179행: `_beat_grid_dispatch_preview` 항목 (grep).
+
+기준선 보완:
+
+- 통합 전 카드 브랜치: `WT-beat-grid-reconnect` @ `31c11421`, `git status --short` 비어 있음, `git rev-list --count --left-right origin/main...HEAD` = `0 0`.
+- 통합 뒤: `WT-beat-grid-reconnect` @ `081ce38a`.
+
+서브에이전트 자체 워크트리(`worktree-agent-addce6e350c6fc41f`)는 아직 남아 있다. 정리(폐기)는 리드의 통합과 원격 병합이 끝난 뒤에 한다.
+
 상태: RED 확인, 수정 미착수, 「실행」 대기.
