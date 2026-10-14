@@ -19,7 +19,28 @@
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### 중간 인계 (카드 t647, 재개 전 기록)
+- 기준: origin/main `7cfc80c2`. 워크트리 `.claude/worktrees/t647`, 브랜치 `WT-barmap-entry-impl`. 배차서의 `WT-barmap-run` 은 SPEC-LDBARMAP-001 때 머지된 옛 브랜치라 쓰지 않았다(지우지 않았다).
+- 끝난 단계:
+  - M1 합성 단계 `6a54dc13` (`server/audio/bar_map_entry.py`, 시험 `test_audio_bar_map_entry.py`).
+  - 수정 `ad671c5d` (M1 시험의 객체 주소 흔들림 제거), `637934e4` (첫 박 오프셋 점검을 base64 디코드 앞으로).
+  - M2 세션 진입 메서드 `cd0dc342` (`ChatSession.analyse_bar_map`, 시험 `test_session_bar_map_entry.py`), 후속 `fb941a3d`.
+  - 실패 표시 정책 `faf915b9` (분석 실패는 일반 문구 화면, 원문은 로그. 거절은 설계 문구).
+  - SPEC 결정 E5 `5fc9319c`, `4ca0585e` (라벨은 성공과 그 밖을 가르고, 사유 문장은 본문).
+- 검증 현황 (faf915b9 기준): 시험 4개 파일 137개 통과(M1·M2 파일과 이웃 2개), ruff 통과, 추가된 줄 금지어 0건. 변이 시험으로 시험의 힘을 확인함(M2 네 종, 실패 표시 두 종).
+- 남은 일 (이 순서):
+  1. M3: WS 프레임 `bar_map_analyse`(허용 목록·파서: 정수만, bool·실수·문자열·null·없음은 거절), app 디스패치(첨부 없음 → error song_audio_missing, busy, create_task + to_thread, 래퍼는 예외 시 non-success chat_response 1개), 프로토콜 동결 목록 한 줄(`test_prechk_tool.py`, `:1249` 다음 줄, t551 주석 앞)과 AC-011 역방향 실행, 시험 AC-001·002·009·010·011·015(와이어 3경우), AC-005 스캔 목록에 두 파일 추가. 첫 커밋 후보: 첫 박 오프셋 거절 문구가 직접 호출 때 `repr(offset)` 을 싣는 것을 뺀다.
+  2. M4: AC-016 실제 곡 로컬 게이트. 원곡 `/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3` 는 이 머신에 있다(4.7MB). 저장소 밖 경로, skipif, 오프셋 1, 벽시계 시간 기록.
+  3. 검증: SPEC §D 1–8.
+  4. PR·CI·머지: `WT-barmap-entry-impl` → main, 머지 방식 merge(spec-workflow 기본값). 허용 목록 확장(D3)은 감독 결정이라 머지 판단은 리드에게 넘긴다. mergeable 을 먼저 읽고, CI 는 헤드 SHA 와 같이 읽는다.
+  5. sync: `/moai sync SPEC-LDBARMAP-002` — manager-docs 가 status completed 와 §E.4 를 한 커밋으로, sync-auditor 가 독립 판정. SPEC 정정 세 가지는 manager-spec 로 한꺼번에.
+- 객체 주소 처리 방침 (확정): 분석 실패의 화면 문구는 일반 문구 하나(`_BAR_MAP_ENTRY_FAILED_TEXT`). 원문 사유는 WARNING 로그(`server.web.session`). 거절 문구는 설계 문구. 시험은 화면 사유에 `0x` 와 `object at` 이 없다는 것으로 단언한다.
+- D1 에서 고른 쪽 (디스패치의 「D1」, SPEC 에서는 E5): 거절 사유 문장은 본문(`text`)에 싣고, `summary` 는 성공(「마디 지도 저장」)과 그 밖(「마디 지도 분석 거절」)을 가르는 고정 라벨이다. 근거: `server/web/session.py` 의 기존 응답 모양(저장 관문 거절 `:9378-9385`, 박자 격자 수정 거절 `:9428` 등 고정 라벨 13곳).
+- SPEC 정정 세 가지 (sync 에서 한꺼번에 반영하고, 보고서에 목록으로 남긴다):
+  (a) REQ-LDBARENTRY-010 과 AC-LDBARENTRY-004 (5): 저장 관문이 `draft` 표식을 얹으므로, 「bar_map 키 외 바이트 동일」을 「bar_map 과 draft 표식 외 바이트 동일」로 고친다.
+  (b) AC-LDBARENTRY-006 (다): 패치 대상은 `analyze.py:229` 의 정의가 아니라 `server/audio/bar_map.py` 가 가져다 쓰는 이름(`bar_map.py:36`, `:179`).
+  (c) 전제 P13: 업로드가 지우는 것은 `_song_analysis` 뿐이고 `_song_bpm` 은 유지한다(`session.py` 업로드 함수, 주석 「_song_bpm 은 손대지 않는다」).
+- 열린 항목: 로그가 파일에 남는지 앱 실행 설정을 확인한다(지금은 파이썬 기본 로깅, stderr 의 WARNING 이상). 성공 판정 경쟁(Gaps 4·15·16)은 SPEC 이 받아들인 한계다. 콜드 스타트 첫 실행 약 41초는 시험 한 개 60초 시간 제한에 가깝다(실제 곡 시험은 한 번만). plan-audit 3차 PASS(0.91) 의 산출물 해시는 본문 수정으로 달라졌다. 재감사 여부는 리드가 정한다.
 
 ## §E.3 Run-phase Audit-Ready Signal
 
