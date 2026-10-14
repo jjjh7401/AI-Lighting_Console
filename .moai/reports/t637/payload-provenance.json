@@ -1,0 +1,106 @@
+{
+  "source_file": ".moai/reports/t474/rehearsal_0719c95d/events.json",
+  "source_file_sha256": "6c7212f35af8d003fe565dbe9081b06d4676880e5e2131ae49660993e06880a8",
+  "source_path": "events[3].timeline",
+  "payload_sha256": "9c50448403a50f008ab0905c409d1be0e735823f2505136db902361cdff26820",
+  "song_title": "Design Interview",
+  "lifecycle": "approved",
+  "bpm": 76.01351351351367,
+  "sections": 12,
+  "layer_mapping": [
+    [
+      "key",
+      1,
+      "KEY"
+    ],
+    [
+      "key",
+      2,
+      "FOH"
+    ],
+    [
+      "back",
+      3,
+      "BACK"
+    ],
+    [
+      "effect",
+      13,
+      "BLIND"
+    ],
+    [
+      "effect",
+      14,
+      "STROBE"
+    ],
+    [
+      "effect",
+      15,
+      "HAZE"
+    ]
+  ],
+  "section_palette_hex": [
+    [
+      "#0D33FF",
+      "#00E6FF"
+    ],
+    [
+      "#0D33FF",
+      "#00E6FF"
+    ],
+    [
+      "#0D33FF",
+      "#00E6FF"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#00E6FF"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#00E6FF"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ],
+    [
+      "#0D33FF",
+      "#FFBF66"
+    ]
+  ],
+  "section_position": [
+    "Ring In",
+    "Home",
+    "Home",
+    "Vocal DSC",
+    "Center",
+    "Center",
+    "Wall",
+    "Wall",
+    "Cross",
+    "Fan Out",
+    "Ring In",
+    "Audience"
+  ]
+}

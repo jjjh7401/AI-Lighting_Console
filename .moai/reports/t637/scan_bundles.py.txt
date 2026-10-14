@@ -1,0 +1,13 @@
+import json
+import sys
+
+print("file | cues | cues_with_preset | distinct_presets | cues_with_palette | distinct_palettes")
+for line in sys.stdin:
+    f = line.strip()
+    if not f:
+        continue
+    d = json.load(open(f, encoding="utf-8"))
+    cues = d.get("cues", [])
+    pres = [(c.get("position") or dict()).get("stored") for c in cues]
+    pal = [tuple((c.get("color") or dict()).get("palette") or []) for c in cues]
+    print(f, "|", len(cues), "|", sum(1 for p in pres if p), "|", len(set(p for p in pres if p)), "|", sum(1 for p in pal if p), "|", len(set(p for p in pal if p)))
