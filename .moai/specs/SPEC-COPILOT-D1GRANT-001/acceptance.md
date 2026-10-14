@@ -146,7 +146,8 @@
 
 ## §D.5 완료 정의 (Definition of Done)
 
-- AC-001..014 전부 PASS 이며 각 항목이 **실행한 명령과 그 출력**으로 뒷받침된다.
+- AC-001..014 각 항목은 PASS 이거나, progress 에 부채 사유와 함께 기록된 PASS-WITH-DEBT 여야 하며, 각 항목은 **실행한 명령과 그 출력**으로 뒷받침된다.
+  - 정정 기록(카드 t626): 기존 문면 「AC-001..014 전부 PASS」는 AC-013 이 PASS-WITH-DEBT 로 판정된 사실과 문자 그대로 어긋나 정정했다. 근거: `.moai/specs/SPEC-COPILOT-D1GRANT-001/progress.md` 69행(AC-013 판정), 72행(부채 사유), 255행(`ac_pass_with_debt_count: 1`), 258행(`dod_text_mismatch`). AC 판정 자체는 바꾸지 않았다.
 - `server/tests` 전량 초록, 새 회귀 0건.
 - 심은 변경 세 종의 실패 출력이 인용돼 있고, 되돌림이 diff 로 확인된다.
 - `SPEC-COPILOT-PRECHK-001/` diff 0.
