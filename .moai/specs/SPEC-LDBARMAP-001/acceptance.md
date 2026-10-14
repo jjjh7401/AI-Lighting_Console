@@ -4,6 +4,18 @@
 
 > **매칭 방법론(전역, REQ-LDBARMAP-005 정의)**: 다운비트·마디 경계·마디별 이벤트를 포함한 모든 "적중/재현" 판정은 **엄격한 순서 대응(strict index-aligned matching)**을 쓴다 — 검출된 n번째 마디는 정답지(지도 보고서 부록 A, 1마디부터 번호 매김)의 n번째 마디와만 비교하고, 허용오차 안의 "가장 가까운 아무 정답 마디"를 허용하는 최근접 매칭은 쓰지 않는다. 이 규칙이 아래 AC-002/003/005/006에 공통으로 적용된다.
 
+## 개정 기록 (v0.1.8 · 2026-10-14 · 카드 t636)
+
+리드 결정에 따라 AC-LDBARMAP-009의 판정 기준을 **이 SPEC 자기 트리의 M4 머지 커밋 `364ab000`**(PR #585, 브랜치 `WT-barmap-store`)에 다시 고정했다. 사정은 이렇다. 원래 기준 「`grep -rln "downbeat" server`가 0건」은 plan-phase 시점(계획 base `88ecfb9d`)의 전제였고, 그 시점에는 참이었다. M2가 첫 생산자 `server/audio/bar_map.py`를 들여오면서 전제가 만료됐고, 지금의 main에서 같은 grep은 이 SPEC과 무관한 다른 SPEC(LDBEAT 박자 격자)의 파일까지 세어 값이 달라진다. 기준은 조용히 바꾸지 않았다 — 원문은 AC-LDBARMAP-009 본문에 인용 블록으로 남겼고, 개정 기준을 그 바로 아래에 적었다. REQ·AC의 번호와 개수(REQ 16 · AC 16)와 다른 AC 문구는 건드리지 않았다.
+
+| 항목 | 이전 기준 | 새 기준 | 사유 | 출처 커밋 | 검증 |
+|---|---|---|---|---|---|
+| AC-LDBARMAP-009 | `grep -rln "downbeat" server`의 출력이 0건 (트리를 적지 않아 「지금 트리」로 읽힌다) | PASS ⇔ ① `git grep -l downbeat 88ecfb9d -- server`가 출력 없음(계획 시점 전제가 그때 참이었음) **그리고** ② `git grep -l downbeat 364ab000 -- server`의 파일 집합 F의 모든 파일이 ③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server \| sort -u`의 파일 집합 G에 든다. 기대 F = `server/audio/bar_map.py` · `server/tests/test_audio_bar_map.py` · `server/tests/test_audio_bar_map_store.py` (②의 출력 앞에 붙는 `364ab000:` 접두는 떼고 비교한다) | 전제 「다운비트 생산자 0건」은 M2 이후 낡았다. 계획 base `88ecfb9d`에서는 참이고, 이 SPEC의 M2~M4가 첫 생산자를 들여왔다. 한편 LDBEAT 박자 격자 커밋(`b95a691a`부터)이 다른 SPEC의 파일 10개에 같은 토큰을 더해, origin/main `b023fc59`에서 같은 grep은 13개 파일(LDBARMAP 3 + LDBEAT 10)을 낸다. 「0건」은 어느 트리에서도 더는 판정할 수 없고, 「이 SPEC이 들여온 것만 센다」가 새 기준의 뜻이다 | `3ce577b8`(M2 · t530 · 첫 생산자 `bar_map.py`) · `502856c0` · `97e9aa2f`(M3 · t535) · `bea723bb`(M4 · t539) · `364ab000`(M4 머지 · 판정 트리) · `88ecfb9d`(계획 base) · `b95a691a`(LDBEAT 첫 추가) | ① `git grep -l downbeat 88ecfb9d -- server` → 출력 없음(rc=1) · ② `git grep -l downbeat 364ab000 -- server` → `364ab000:server/audio/bar_map.py` · `364ab000:server/tests/test_audio_bar_map.py` · `364ab000:server/tests/test_audio_bar_map_store.py` · ③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server \| sort -u` → `server/audio/bar_map.py` · `server/tests/test_audio_bar_map_store.py` · `server/tests/test_audio_bar_map.py` (2026-10-14 실행, 이 브랜치 `b023fc59`에서 위 트리 지정) |
+
+**바꾸지 않은 것.** AC-LDBARMAP-009 외의 모든 AC·REQ 문구, §A 상수, AC 번호와 개수는 그대로다. 이 개정은 PASS/FAIL 판정을 본문에 기록하지 않는다. 위 「검증」은 새 기준을 위 트리에서 쟀을 때 관측된 출력이며, 판정과 증거 표는 `progress.md`가 소유한다.
+
+---
+
 ## §A. 수치 상수 (한 번 정의, 전체에서 재사용)
 
 | 상수 | 값 | 단위 | 근거 |
@@ -134,9 +146,20 @@
 
 ### AC-LDBARMAP-009 (REQ-LDBARMAP-001 — 간접 인용, plan-audit iteration 2 D-NEW-2 교정) — 다운비트 생산자 0건 기준선 재확인
 
-**Given** 이 plan-phase가 재측정 시점에 `server/` 트리 전체가 주어진 상태에서
-**When** `grep -rln "downbeat" server`를 실행하면
-**Then** 출력이 0건이다 — 이 SPEC이 메우려는 공백(다운비트 생산자 부재)이 plan-phase 시점에도 그대로 존재함을 재확인한다. (이 plan-phase 실측: 2026-10-10, 0건.) **REQ 인용 교정**: 이 AC는 특정 REQ의 shall 절을 직접 검증하지 않는다 — spec.md §1 배경이 적은, 이 SPEC 전체의 동기가 되는 베이스라인 사실(다운비트 생산자 부재)을 재확인하는 premise-check다. REQ-LDBARMAP-001(오프라인 분석 범위 — 이 공백을 메우는 작업의 범위를 선언하는 요구사항)을 가장 가까운 간접 인용으로 둔다. (이전 버전은 REQ-LDBARMAP-008을 인용했으나, REQ-008은 네 가지 이벤트-검출-대상 범주를 정의할 뿐 이 베이스라인 사실과 무관했다 — plan-audit iteration 2 D-NEW-2.)
+**이전 기준 (원문 보존 — 2026-10-10 plan-phase 확정, 카드 t636 개정 전).** 아래 인용 블록은 지우지 않고 역사로 둔다. 이 전제는 M2 머지(`3ce577b8`) 뒤로 낡았다.
+
+> **Given** 이 plan-phase가 재측정 시점에 `server/` 트리 전체가 주어진 상태에서
+> **When** `grep -rln "downbeat" server`를 실행하면
+> **Then** 출력이 0건이다 — 이 SPEC이 메우려는 공백(다운비트 생산자 부재)이 plan-phase 시점에도 그대로 존재함을 재확인한다. (이 plan-phase 실측: 2026-10-10, 0건.) **REQ 인용 교정**: 이 AC는 특정 REQ의 shall 절을 직접 검증하지 않는다 — spec.md §1 배경이 적은, 이 SPEC 전체의 동기가 되는 베이스라인 사실(다운비트 생산자 부재)을 재확인하는 premise-check다. REQ-LDBARMAP-001(오프라인 분석 범위 — 이 공백을 메우는 작업의 범위를 선언하는 요구사항)을 가장 가까운 간접 인용으로 둔다. (이전 버전은 REQ-LDBARMAP-008을 인용했으나, REQ-008은 네 가지 이벤트-검출-대상 범주를 정의할 뿐 이 베이스라인 사실과 무관했다 — plan-audit iteration 2 D-NEW-2.)
+
+**개정 기준 (v0.1.8 · 2026-10-14 · 카드 t636 — 판정 트리: 이 SPEC 자기 트리의 M4 머지 커밋 `364ab000`).** 판정은 위 원문이 아니라 이 개정 기준으로 한다. 사유와 출처 커밋은 상단 「개정 기록」.
+
+**Given** 계획 base `88ecfb9d`와 M4 머지 커밋 `364ab000`이 모두 저장소에 있는 상태에서
+**When** 아래 세 명령을 실행하면
+① `git grep -l downbeat 88ecfb9d -- server`
+② `git grep -l downbeat 364ab000 -- server` — 이 출력의 파일 집합을 F라 한다 (각 줄 앞의 `364ab000:` 접두는 떼고 비교한다)
+③ `git log --format= --name-only -S downbeat 88ecfb9d..364ab000 -- server | sort -u` — 이 출력의 파일 집합을 G라 한다
+**Then** ①이 출력 없이 끝나고(계획 시점에 다운비트 생산자가 없었다는 전제가 그때 참이었음) **그리고** F의 모든 파일이 G에 든다(`364ab000`에서 다운비트를 다루는 파일은 전부 이 SPEC의 M2~M4 범위 안에서 들어왔다). 기대 F는 `server/audio/bar_map.py` · `server/tests/test_audio_bar_map.py` · `server/tests/test_audio_bar_map_store.py` 셋이다. 세 명령 모두 트리를 명시하므로 이후 main에 다른 SPEC이 같은 토큰을 더해도 판정이 흔들리지 않는다. **REQ 인용은 그대로다**: 이 AC는 특정 REQ의 shall 절을 직접 검증하지 않는 premise-check이며, 가장 가까운 간접 인용은 REQ-LDBARMAP-001이다.
 
 ### AC-LDBARMAP-010 (REQ-LDBARMAP-010, REQ-LDBARMAP-011) — 저장 인터페이스 왕복(쓰기→읽기)·되돌리기·버전·거부·인용 추적성 (카드 t539, M4 확정 — 2026-10-10 개정, plan-audit iteration 9 D1/D3/D4 교정)
 
