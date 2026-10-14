@@ -17,7 +17,7 @@ export const SCENE_CHANGE_MIN_ROWS = 3;
 const UNSET = "미정";
 
 /** 시안 `beatsToS`·`tc` 와 같은 표기 — 소수 둘째 자리로 맞춘 뒤 뒤의 0을 뗀다(2.00 → 2, 2.50 → 2.5). 표시 전용. */
-function trimSeconds(seconds: number): string {
+export function trimSeconds(seconds: number): string {
   return seconds.toFixed(2).replace(/\.?0+$/, "");
 }
 

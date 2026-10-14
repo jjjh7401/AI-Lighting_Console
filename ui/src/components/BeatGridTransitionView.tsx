@@ -16,6 +16,7 @@ import {
   transitionMib,
   transitionWarnings,
   triggerSeconds,
+  trimSeconds,
   type FullBeatGridEntry,
 } from "./beatGridTransition";
 import "./beatGridPanels.css";
@@ -151,7 +152,7 @@ export function BeatGridTransitionView({
               </option>
             ))}
           </select>{" "}
-          박{triggerAt !== null ? ` = 곡 ${triggerAt.toFixed(2)}초` : ""}
+          박{triggerAt !== null ? ` = 곡 ${trimSeconds(triggerAt)}초` : ""}
         </div>
 
         <label>딜레이</label>
