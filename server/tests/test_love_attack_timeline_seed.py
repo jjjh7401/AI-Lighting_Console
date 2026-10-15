@@ -1,7 +1,8 @@
 """LOVE ATTACK 라이브러리 시드 — 항목 모양, 기본 격자, 불러오기 경로.
 
-시드는 저장소에 있는 값만 싣는다: 구간·마디 지도는 비어 있어야 하고(마디 지도는 곡
-오디오 분석이 만든다), 격자는 곡별 기본값 레지스트리와 같아야 한다.
+시드는 저장소에 있는 값만 싣는다: 구간은 측정 마디 지도 위의 §3 배치이고(값과 시험은
+test_love_attack_sections.py), 마디 지도 전체는 곡 오디오 분석이 만들어 싣는다(시드는
+싣지 않는다). 격자는 곡별 기본값 레지스트리와 같아야 한다.
 """
 
 from __future__ import annotations
@@ -20,15 +21,15 @@ from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
 from server.web.timeline_library import SongTimelineLibrary
 
 
-def test_seed_entry_names_the_song_and_invents_no_sections() -> None:
+def test_seed_entry_names_the_song_and_carries_the_section_plan() -> None:
     entry = love_attack_library_entry()
     timeline = entry["timeline"]
 
     assert entry["id"] == LOVE_ATTACK_ENTRY_ID
     assert entry["name"] == LOVE_ATTACK_TITLE
     assert timeline["song_title"] == LOVE_ATTACK_TITLE
-    # 구간 초안은 마디 번호가 측정 지도와 어긋나 옮기지 않는다 — 시드에는 구간이 없다.
-    assert timeline["sections"] == []
+    # 구간은 측정 마디 지도에 맞춘 §3 배치다 — 값과 자세한 시험은 test_love_attack_sections.py.
+    assert timeline["sections"]
     # 마디 지도는 곡 오디오 분석이 만들어 초안에 붙인다 — 시드가 미리 싣지 않는다.
     assert "bar_map" not in timeline
 
