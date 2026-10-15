@@ -1264,6 +1264,11 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_apply",
     "beat_grid_console_play",
     "beat_grid_console_stop",
+    # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 제안·적용·거절(화면이 보내는 요청).
+    # 같은 사유의 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_draft_apply",
+    "beat_grid_draft_propose",
+    "beat_grid_draft_reject",
     "beat_grid_drawer_request",
     "beat_grid_edit",
     # 카드 t589 (2026-10-11, SPEC-LDBEAT-001 REQ-LDBEAT-015(h)) — 「＋ 새
@@ -1341,6 +1346,10 @@ _EXPECTED_SERVER_MESSAGE_TYPES = (
     "answer_delta",
     "approval_request",
     "approval_resolved",
+    # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 카드 응답(제안 한 단위)과 보류 소비 통지.
+    # 같은 사유의 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_draft",
+    "beat_grid_draft_consumed",
     # 카드 t551 (2026-10-11, SPEC-LDBEAT-001 M3) — 위 클라이언트 쪽 박자 격자
     # 채널의 응답(서랍 판독 결과·보류 중인 AI 제안·제안 소비 통지). 같은 사유의
     # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
