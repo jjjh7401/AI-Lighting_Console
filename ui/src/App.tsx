@@ -1236,6 +1236,7 @@ export default function App() {
         <div className="runbook-mode-frame beat-grid-fullscreen-frame">
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
+            onExit={() => setBeatGridFullscreen(false)}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
