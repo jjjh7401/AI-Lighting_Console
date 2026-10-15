@@ -1386,8 +1386,13 @@ export function buildBeatGridNewPreset(
 /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
  * 원칙: UI는 콘솔 페이로드를 짓지 않는다). */
-export function buildBeatGridApply(): string {
-  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_apply" });
+export function buildBeatGridApply(mode?: "preset_plan"): string {
+  // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」만 mode 를 싣는다.
+  return JSON.stringify(
+    mode === undefined
+      ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
+      : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode },
+  );
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */

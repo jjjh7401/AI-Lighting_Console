@@ -596,6 +596,41 @@ class TestEvidenceApprovalReuse:
         assert check_evidence_approval(cue) is not None, "승인 완전성 없이도 통과했다"
         assert any("승인 대기" in line for line in report)
 
+    def test_new_dimmer_preset_number_without_approval_is_pending(self) -> None:
+        # 색·위치 프리셋(t577 h-1)과 같은 규칙 — 디머 **기본** 프리셋(dimmer_preset) 번호도
+        # 완전한 승인 없이 넣으면 「승인 대기」로 센다. 번호대 검사는 디머 효과만의 것이다.
+        grid = _grid()
+        updated, report = apply_beat_grid_edit(
+            grid,
+            bar=3,
+            target="BACK",
+            changes={
+                "brightness": {"mode": "dimmer_preset", "value_percent": None, "preset_no": "1.8"}
+            },
+        )
+        cue = _cue(updated, "BACK", 3)
+        assert cue["brightness"]["preset_no"] == "1.8"
+        assert check_evidence_approval(cue) is not None
+        assert any("승인 대기" in line and "디머 프리셋" in line for line in report)
+        assert not any("번호대 미확인" in line for line in report)
+
+    def test_new_dimmer_preset_number_with_full_approval_is_not_pending(self) -> None:
+        grid = _grid()
+        updated, report = apply_beat_grid_edit(
+            grid,
+            bar=3,
+            target="BACK",
+            changes={
+                "brightness": {"mode": "dimmer_preset", "value_percent": None, "preset_no": "1.8"},
+                "evidence": {
+                    "grade": "name_only",
+                    "approval": {"by": "supervisor", "date": "2026-10-15", "source": "test"},
+                },
+            },
+        )
+        assert check_evidence_approval(_cue(updated, "BACK", 3)) is None
+        assert not any("승인 대기" in line for line in report)
+
     def test_new_effect_preset_number_with_full_approval_is_accepted(self) -> None:
         # BACK bar 3 에는 기존 app_movement 가 없다 — MOVER-U bar 11(기존
         # app_movement=Pan)을 쓰면 effect_kind="position"의 축 모호성과

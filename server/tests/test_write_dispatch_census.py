@@ -183,6 +183,10 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "`Sequence N` 참조라 게이트 자신의 expand-or-hold 검증은 호출마다 독립으로 "
         "돈다(이 표는 그 축과 무관, 이 모듈이 선언하는 쪽만 다스린다)"
     ),
+    ("server/web/session.py", "beat_grid_preset_plan", 0): (
+        "Store Preset (색·디머·포지션) — 앱이 만든 프리셋을 승인 카드 뒤에 콘솔에 "
+        "굳힌다. risk=BatchRisk 로 한 번에 1개 승인(Store preset commands)"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.

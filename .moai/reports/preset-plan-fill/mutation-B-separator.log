@@ -1,0 +1,76 @@
+.F......................F.....FF..                                       [100%]
+=================================== FAILURES ===================================
+_____ TestMultiGroupDimmer.test_dim_100_saves_as_one_multi_group_selection _____
+
+self = <server.tests.test_love_attack_presets_fill.TestMultiGroupDimmer object at 0x1085ae410>
+
+    def test_dim_100_saves_as_one_multi_group_selection(self) -> None:
+        lines = save_commands(_plan())
+>       assert "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100" in lines
+E       assert "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100" in ('ClearAll', "Group 10 ; Attribute 'Dimmer' At 40", 'Store Preset 1.8', "Label Preset 1.8 'DIM-40'", 'ClearAll', "Group 10 ; Attribute 'Dimmer' At 25", ...)
+
+server/tests/test_love_attack_presets_fill.py:25: AssertionError
+______ TestSaveCommands.test_only_ready_dimmers_are_saved_with_exact_text ______
+
+self = <server.tests.test_love_attack_presets.TestSaveCommands object at 0x1085ca810>
+
+    def test_only_ready_dimmers_are_saved_with_exact_text(self) -> None:
+>       assert save_commands(_plan()) == _EXPECTED_SAVE
+E       assert ('ClearAll', ...' At 25", ...) == ('ClearAll', ...' At 25", ...)
+E         
+E         At index 13 diff: "Group 4 - 7 - 11 - 12 - 14 ; Attribute 'Dimmer' At 100" != "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100"
+E         Use -v to get more diff
+
+server/tests/test_love_attack_presets.py:243: AssertionError
+_ TestApprovalCardRejected.test_approved_fake_card_writes_references_only_after_approval _
+
+self = <server.tests.test_love_attack_presets.TestApprovalCardRejected object at 0x1085d4690>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-3224/test_approved_fake_card_writes0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106f04e50>
+
+    def test_approved_fake_card_writes_references_only_after_approval(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, approval, store = _love_attack_session(
+            tmp_path, decisions=(True,), monkeypatch=monkeypatch
+        )
+        before = copy.deepcopy(store.latest["beat_grid"])
+    
+        event = session.love_attack_preset_card()
+    
+        assert event["ok"] is True
+        # 가짜 콘솔(테스트 전용)에만 저장 줄이 나갔다.
+>       assert console.executed == list(_EXPECTED_SAVE)
+E       assert ['ClearAll', ...' At 25", ...] == ['ClearAll', ...' At 25", ...]
+E         
+E         At index 13 diff: "Group 4 - 7 - 11 - 12 - 14 ; Attribute 'Dimmer' At 100" != "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100"
+E         Use -v to get more diff
+
+server/tests/test_love_attack_presets.py:350: AssertionError
+_ TestApprovalCardRealAsyncChannel.test_cells_are_repointed_when_a_other_thread_approves_the_card _
+
+self = <server.tests.test_love_attack_presets.TestApprovalCardRealAsyncChannel object at 0x1085d4e10>
+tmp_path = PosixPath('/private/var/folders/3n/gsq1nhd14hng_6kbpdw2jdxw0000gn/T/pytest-of-studiox/pytest-3224/test_cells_are_repointed_when_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x106ebcf90>
+
+    def test_cells_are_repointed_when_a_other_thread_approves_the_card(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, store = _real_channel_session(tmp_path, monkeypatch)
+    
+        event = session.love_attack_preset_card()
+    
+        assert event["ok"] is True
+>       assert console.executed == list(_EXPECTED_SAVE)
+E       assert ['ClearAll', ...' At 25", ...] == ['ClearAll', ...' At 25", ...]
+E         
+E         At index 13 diff: "Group 4 - 7 - 11 - 12 - 14 ; Attribute 'Dimmer' At 100" != "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100"
+E         Use -v to get more diff
+
+server/tests/test_love_attack_presets.py:424: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_love_attack_presets_fill.py::TestMultiGroupDimmer::test_dim_100_saves_as_one_multi_group_selection
+FAILED server/tests/test_love_attack_presets.py::TestSaveCommands::test_only_ready_dimmers_are_saved_with_exact_text
+FAILED server/tests/test_love_attack_presets.py::TestApprovalCardRejected::test_approved_fake_card_writes_references_only_after_approval
+FAILED server/tests/test_love_attack_presets.py::TestApprovalCardRealAsyncChannel::test_cells_are_repointed_when_a_other_thread_approves_the_card
+4 failed, 30 passed in 0.88s
