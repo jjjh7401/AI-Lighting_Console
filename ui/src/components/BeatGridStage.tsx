@@ -18,6 +18,7 @@ import {
 } from "./BeatGrid";
 import { fixtureBelongsTo } from "./beatGridStageModel";
 import { stageGroupZones } from "./beatGridTransition";
+import { StageConceptSvg } from "./beatgrid/StageConceptSvg";
 import "./beatGridPanels.css";
 
 /** 시안 `drawStage`의 그림 높이(`H=300`)와 최소 폭(`420`). */
@@ -149,10 +150,15 @@ export function BeatGridStage({
 
   const bounds = computeStageBounds(fixtures);
   if (!bounds) {
+    // 패치 좌표를 못 읽으면 시안 개념도 배치를 같은 자리에 그린다(좌표는 지어내지 않는다).
     return (
       <div className="beat-grid-stage-box" ref={boxRef}>
-        <p className="beat-grid-empty">
-          {notes && notes.length > 0 ? "무대 좌표를 못 읽음" : "무대 좌표 미제공 — 박자 격자를 열면 콘솔 패치에서 읽어 옵니다."}
+        <StageConceptSvg width={viewW} height={STAGE_H} />
+        {/* 기존 안내(AC-LDBEAT-022)는 그대로 남기고, 그림이 개념도임을 덧붙인다. */}
+        <p className="beat-grid-stage-note">
+          {notes && notes.length > 0
+            ? "무대 좌표를 못 읽음 — 아래 그림은 시안의 개념도 배치예요(장비 위치는 지어내지 않음)."
+            : "무대 좌표 미제공 — 박자 격자를 열면 콘솔 패치에서 읽어 옵니다. 아래 그림은 시안의 개념도 배치예요(장비 위치는 지어내지 않음)."}
         </p>
         <StageNotes notes={notes} />
       </div>

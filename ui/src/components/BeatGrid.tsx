@@ -2586,7 +2586,11 @@ export function BeatGrid({
               <header>
                 <span>
                   {selectedTrack.group_name}
-                  {effectiveLRSplitSide ? ` ${effectiveLRSplitSide.side}` : ""} · {selected.bar}마디
+                  {effectiveLRSplitSide ? ` ${effectiveLRSplitSide.side}` : ""}
+                  {/* 시안 머리 「BACK · Cue 5 'Back Hold'」 — 번호와 이름은 곡 데이터에서. */}
+                  {selectedCue
+                    ? ` · Cue ${selectedTrack.cues.indexOf(selectedCue) + 1} '${selectedCue.label}'`
+                    : ` · ${selected.bar}마디`}
                   {/* 카드 t570(REQ-LDBEAT-024(e)) — 갈라지는 시작 마디
                       표시. 선언 구간의 시작 마디를 보고 있을 때만(부모
                       줄 기준 — 자식 줄 쪽에서도 같은 시작 마디다). */}
@@ -3527,6 +3531,10 @@ export function BeatGrid({
           📁 프리셋
         </button>
       </div>
+      {/* 시안 명령창 아래 단축키 안내 줄(문구 그대로). */}
+      <div className="beat-grid-hint-line">
+        ← → 마디 이동 · 막대 = 큐 편집 · 이음매 ◆ = 전환 편집(◢ 페이드) · M = MIB · ! = 경고 · 「장면 전환」 알약 = 그 순간 전체 · 칩 = 같은 프리셋 강조
+      </div>
 
       {/* 프리셋 서랍 — mockup `drawDrawer()` 그대로(지시 1항):
           "풀별(디머 1 · 위치 2 · 색 4) 목록, 쓰는 큐 수, 누르면 쓰는
@@ -3594,13 +3602,6 @@ export function BeatGrid({
         </div>
       )}
 
-      {/* 카드 t586 — 시안 `.log` 조작 안내 한 줄. 적힌 조작은 전부 앱에 있다:
-          ←→(상단 바 `barNavKeyDelta`), 이음매 글자(◢·M·! — `beatGridTransition`),
-          장면 전환 알약, 같은 프리셋 칩 강조. */}
-      <div className="beat-grid-hint-line">
-        ← → 마디 이동 · 막대 = 큐 편집 · 이음매 ◆ = 전환 편집(◢ 페이드 · M = MIB · ! = 경고) · 「장면
-        전환」 알약 = 그 순간 전체 · 칩 = 같은 프리셋 강조
-      </div>
       <div className="beat-grid-probe-pane" aria-label="M1 프로브 9항목 상태">
         <h5>M1 콘솔 확인 프로브</h5>
         <ul className="beat-grid-probe-list">
