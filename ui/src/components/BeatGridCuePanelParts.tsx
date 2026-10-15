@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { BeatGridAppMovement, BeatGridCue, BeatGridMovementVocabulary, BeatGridTrack } from "../protocol";
+import type { LRSplitToggleControl } from "./beatgrid/lrSplit";
 import "./beatGridPanels.css";
 
 /** 편집 칸이 초점을 둘 수 있는 항목(「이 마디 한눈에」 표 클릭 등에서 온다,
@@ -299,18 +300,40 @@ export function BeatGridMovementRow({
   );
 }
 
-/** REQ-LDBEAT-021(b) 「옆빛 L·R」 행 — 옆빛(side) 줄에서만. L·R 갈라짐(자식
- * 줄, REQ-LDBEAT-019(c))은 타임라인 단계의 일이라 여기서는 지금 상태와
- * 그 버튼 자리만 보인다(지어낸 갈라짐 0건). */
-export function BeatGridSideRow() {
+/** REQ-LDBEAT-021(b) 「옆빛 L·R」 행 — 옆빛(side) 줄에서만. 「이 구간 왼쪽·오른쪽
+ * 따로」는 펼침 줄과 같은 L·R 토글이다(REQ-LDBEAT-019(c)). `lrSplit` 이 `null` 이면
+ * (좌우에 나눌 장비가 없거나 구간이 없으면) 버튼은 비활성이고, 있으면 누를 수 있다. */
+export function BeatGridSideRow({
+  lrSplit = null,
+}: {
+  lrSplit?: LRSplitToggleControl | null;
+} = {}) {
   return (
     <div className="beat-grid-cue-field" data-field="옆빛 L·R">
       <span className="beat-grid-cue-field-label">옆빛 L·R</span>
       <span className="beat-grid-cue-field-value">
-        같이(갈라지지 않음){" "}
-        <button type="button" className="beat-grid-tg" disabled title="L·R 자식 줄은 타임라인 단계(REQ-LDBEAT-019(c))에서 배선">
-          이 구간 왼쪽·오른쪽 따로
-        </button>
+        {lrSplit?.isSplit ? "따로(왼쪽·오른쪽 갈라짐)" : "같이(갈라지지 않음)"}{" "}
+        {lrSplit ? (
+          <button
+            type="button"
+            className="beat-grid-tg"
+            onClick={(event) => {
+              event.stopPropagation();
+              lrSplit.onToggle();
+            }}
+          >
+            {lrSplit.isSplit ? "L·R 다시 합치기" : "이 구간 왼쪽·오른쪽 따로"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="beat-grid-tg"
+            disabled
+            title="이 칸에서는 좌우로 나눌 수 없습니다(좌우에 나눌 장비가 없거나 구간이 없습니다)"
+          >
+            이 구간 왼쪽·오른쪽 따로
+          </button>
+        )}
       </span>
     </div>
   );

@@ -156,6 +156,41 @@ export function clearLRSplit(declarations: LRSplitDeclarations, groupName: strin
   return next;
 }
 
+/** 편집 창 「이 구간 왼쪽·오른쪽 따로」 버튼의 제어 — 펼침 줄(`GlanceRowDetailCells`)의
+ * 토글과 같은 상태·같은 갱신 규칙을 쓴다: 선언이 있으면 「다시 합치기」(그 그룹의
+ * 선언을 제거), 없으면 「따로」(이 구간을 선언). */
+export interface LRSplitToggleControl {
+  isSplit: boolean;
+  onToggle: () => void;
+}
+
+/** 편집 창의 L·R 토글을 만든다. 옆빛이 아니거나, 좌우에 나눌 장비가 없거나, 구간이
+ * 없으면 `null`(버튼은 비활성) — 지어내지 않는다. 펼침 줄(`BeatGrid.tsx` 의
+ * `lrSplitControl`)과 같은 조건·같은 갱신 규칙이다. */
+export function lrSplitToggleControl(input: {
+  track: LRSplitEligibleTrack;
+  stage: LRSplitStage;
+  segment: LRSplitRange | undefined;
+  declarations: LRSplitDeclarations;
+  update: (updater: (prev: LRSplitDeclarations) => LRSplitDeclarations) => void;
+}): LRSplitToggleControl | null {
+  const { track, stage, segment, declarations, update } = input;
+  if (!segment || !canDeclareLRSplit(track, stage)) return null;
+  const isSplit = declarations.has(track.group_name);
+  return {
+    isSplit,
+    onToggle: () =>
+      update((prev) =>
+        isSplit
+          ? clearLRSplit(prev, track.group_name)
+          : declareLRSplit(prev, track.group_name, {
+              startBar: segment.startBar,
+              endBar: segment.endBar,
+            }),
+      ),
+  };
+}
+
 export interface LRChildRow {
   side: "L" | "R";
   label: string;
