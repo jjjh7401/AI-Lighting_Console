@@ -110,6 +110,7 @@ import {
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
+import { presetColorHexMap } from "./beatgrid/presetColorHex";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -1235,23 +1236,25 @@ export interface BeatGridCueColorFill {
   /** CSS 배경색 문자열 — 있을 때만 inline style로 쓴다. */
   background?: string;
   /** `color_preset_no`가 없거나, 있어도 그 색을 아는 자리(`colorPresetHex`)가
-   * 없을 때 참 — 둘 다 "지어내지 않는다"는 같은 규칙의 다른 경로다
-   * (REQ-LDBEAT-015(f)와 같은 원칙을 렌더링에도 적용, plan.md M7 (3)). */
+   * 없을 때 참 — 이때 `background`는 시안 기본색(`CUE_DEFAULT_FILL`)이다.
+   * 프리셋 색을 지어내지 않는다는 원칙은 그대로다(고정 기본색만 쓴다). */
   isColorUnset: boolean;
 }
 
 /** 막대 채우기 색 — `color_preset_no`가 있고 그 번호의 실제 색(`colorPresetHex`,
  * 콘솔에서 읽은 프리셋 색 — 이 카드 범위에서는 콘솔 접촉 0이라 아직 아무
  * 데이터도 없다)을 알 때만 그 색을 쓴다. 번호가 없거나, 번호는 있지만
- * 색을 모르면(아직 `colorPresetHex`가 없다) **중립**이다 — 임의 색을
- * 지어내 칠하지 않는다(plan.md M7 (3), REQ-LDBEAT-015(f)와 같은 원칙). */
+ * 색을 모르면 **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 프리셋 색을 지어내지
+ * 않고, 기본색은 고정 값이다(`isColorUnset` 참). 꺼진 칸에는 부르지 않는다. */
+export const CUE_DEFAULT_FILL = "#d8d8d8";
+
 export function cueColorFill(
   cue: BeatGridCue,
   colorPresetHex?: Readonly<Record<string, string>>,
 ): BeatGridCueColorFill {
-  if (!cue.color_preset_no) return { isColorUnset: true };
+  if (!cue.color_preset_no) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   const hex = colorPresetHex?.[cue.color_preset_no];
-  if (!hex) return { isColorUnset: true };
+  if (!hex) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   return { background: hex, isColorUnset: false };
 }
 
@@ -1940,6 +1943,9 @@ export function BeatGrid({
   }
 
   const maxBar = axisEnd;
+  // 색 프리셋의 목표 RGB(시안 P 의 rgb, 곡 격자 preset_colors) → 화면 색.
+  // 명시한 colorPresetHex 가 있으면 그것이 이긴다.
+  const presetHex = colorPresetHex ?? presetColorHexMap(grid?.preset_colors);
   // 카드 t559 — 곡 전체 지도 모델(곡 데이터에서만 읽음)과 확대 단계별 마디 폭.
   // 아래 `barToX`는 모듈의 같은 이름 함수를 확대 폭으로 감싼 것이다 — 타임라인
   // 그리기 코드는 손대지 않고 가로 스케일만 바뀐다.
@@ -2169,7 +2175,7 @@ export function BeatGrid({
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
         model={overviewModel}
-        filledRange={{ start: grid.bar_range.start, end: maxBar }}
+        filledRange={{ start: grid.bar_range.start, end: grid.bar_range.end }}
         visibleWindow={
           laneView.visibleWidth > 0
             ? overviewVisibleWindow({
@@ -2295,6 +2301,8 @@ export function BeatGrid({
                     const trackIndex = grid.tracks.indexOf(track);
                     const segments = trackCueSegments(track, maxBar);
                     const leadGapEnd = segments[0]?.startBar ?? maxBar + 1;
+                    // 배치 범위 밖(범위 끝 다음 마디부터 축 끝까지) — 시안 .clip.empty 의 빗금 영역.
+                    const tailStart = grid.bar_range.end + 1;
                     // 카드 t560 후속(REQ-LDBEAT-019(c)) — "이 구간 왼쪽·오른쪽
                     // 따로"/"L·R 다시 합치기" 토글은 더 이상 이 자리(타임라인
                     // 줄 이름 칸)에서 그리지 않는다 — 아래 「이 마디 한눈에」
@@ -2323,25 +2331,32 @@ export function BeatGrid({
                           {segments.length === 0 && (
                             <span className="beat-grid-cue-empty">이 구간에 칸 없음</span>
                           )}
-                          {/* 첫 칸 앞의 빈 구간 — "아직 선언 안 됨"을 지어내지 않고 그대로
-                              빈 칸으로 보인다(시안 `.clip.empty`). */}
+                          {/* 첫 칸 앞의 구간 — 칸이 없으니 꺼진 칸과 같다. 시안의 첫 구간처럼
+                              빗금 + 「꺼짐」으로 보인다(「아직 선언 안 됨」이라는 글은 지어내지 않는다). */}
                           {leadGapEnd > grid.bar_range.start && (
                             <span
-                              className="beat-grid-cue beat-grid-cue-gap"
+                              className="beat-grid-cue beat-grid-cue-gap is-off"
                               style={{ left: barToX(grid.bar_range.start), width: barToX(leadGapEnd) - barToX(grid.bar_range.start) - 2 }}
                             >
-                              —
+                              꺼짐
+                            </span>
+                          )}
+                          {tailStart <= maxBar && (
+                            <span
+                              className="beat-grid-cue beat-grid-cue-gap beat-grid-cue-unplaced"
+                              style={{ left: barToX(tailStart), width: barToX(maxBar + 1) - barToX(tailStart) - 2 }}
+                            >
+                              {`${tailStart}마디~ 아직 배치 안 함`}
                             </span>
                           )}
                           {segments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
                             const hasNext = segIndex < segments.length - 1;
-                            // t537 (3) — 막대 채우기 색은 color_preset_no가 실제 색을
-                            // 아는 자리일 때만 쓴다. 지금 LOVE ATTACK 기본값은 §4에
-                            // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
-                            // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
-                            const colorFill = cueColorFill(segment.cue, colorPresetHex);
+                            // t537 (3) — 켜진 칸의 채우기 색은 color_preset_no가 실제 색을
+                            // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
+                            // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
+                            const colorFill = active ? cueColorFill(segment.cue, presetHex) : { isColorUnset: false };
                             // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
                             // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
                             const isHighlighted =
@@ -2380,7 +2395,7 @@ export function BeatGrid({
                                   }`}
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
-                                  {segment.cue.label}
+                                  {active ? segment.cue.label : "꺼짐"}
                                   <CueBarVisual cue={segment.cue} />
                                   {(() => {
                                     const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
