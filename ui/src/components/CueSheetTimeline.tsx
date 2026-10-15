@@ -119,7 +119,23 @@ export function sectionIntensityText(section: SongTimelineSection): string {
   if (section.intensity && section.intensity.length > 0) {
     return section.intensity.map((entry) => `${entry.group} ${entry.level}`).join(" / ");
   }
-  return String(sectionIntensityPercent(section));
+  const percent = knownIntensityPercent(section);
+  return percent === null ? EMPTY_CELL : String(percent);
+}
+
+/** 구간 인텐시티(0..100)를 아는 만큼만. 그룹별 값도 d_level 도 없으면 null —
+ * 0 이나 NaN 으로 찍지 않는다. */
+function knownIntensityPercent(section: SongTimelineSection): number | null {
+  if (section.intensity && section.intensity.length > 0) {
+    return Math.max(...section.intensity.map((entry) => entry.level));
+  }
+  return Number.isFinite(section.d_level) ? Math.min(100, Math.max(0, section.d_level * 20)) : null;
+}
+
+/** 인텐시티 막대 폭(px). 값을 모르면 null — 막대를 그리지 않는다(0 폭도 「0」처럼 읽힌다). */
+function levelBarWidth(section: SongTimelineSection): number | null {
+  const percent = knownIntensityPercent(section);
+  return percent === null ? null : percent * 0.4;
 }
 
 /** 폴리라인 높이용 0..100. 그룹별 값이 있으면 최댓값, 없으면 d_level(1..5)×20. */
@@ -209,22 +225,31 @@ function ticksFor(totalMs: number): number[] {
   return ticks;
 }
 
-function intensityPolyline(
+/** 구간별 인텐시티 선. 값을 아는 구간이 이어진 동안만 한 선으로 잇고, 모르는 구간에서
+ * 끊는다 — NaN 을 찍지 않고, 빈 구간 양옆의 값을 직선으로 이어 지어내지 않는다
+ * (곡 전체 지도의 에너지선과 같은 규칙). */
+function intensityRuns(
   sections: SongTimelineSection[],
   totalMs: number,
   width: number,
   height: number,
-): string {
-  if (sections.length === 0) return "";
-  const points: string[] = [];
+): string[] {
+  const runs: string[] = [];
+  let run: string[] = [];
   sections.forEach((section, index) => {
-    const next = sections[index + 1];
-    const end = sectionEndMs(section, next, totalMs) ?? totalMs;
-    const y = height - (sectionIntensityPercent(section) / 100) * height;
-    points.push(`${((section.start_ms / totalMs) * width).toFixed(2)},${y.toFixed(2)}`);
-    points.push(`${((end / totalMs) * width).toFixed(2)},${y.toFixed(2)}`);
+    const percent = knownIntensityPercent(section);
+    const end = sectionEndMs(section, sections[index + 1], totalMs) ?? totalMs;
+    if (percent === null || !Number.isFinite(section.start_ms) || !Number.isFinite(end)) {
+      if (run.length > 0) runs.push(run.join(" "));
+      run = [];
+      return;
+    }
+    const y = height - (percent / 100) * height;
+    run.push(`${((section.start_ms / totalMs) * width).toFixed(2)},${y.toFixed(2)}`);
+    run.push(`${((end / totalMs) * width).toFixed(2)},${y.toFixed(2)}`);
   });
-  return points.join(" ");
+  if (run.length > 0) runs.push(run.join(" "));
+  return runs;
 }
 
 // t454 — REQ-LDDESIGN-082 14열(src/DESIGN.md §4.4 순서). 옛 5열(TC Out·Dur·
@@ -565,13 +590,16 @@ export function CueSheetTimeline({
             >
               <line x1="0" y1="0" x2={trackWidth} y2="0" stroke="#2f394b" strokeDasharray="3 4" />
               <line x1="0" y1="50" x2={trackWidth} y2="50" stroke="#2a3243" strokeDasharray="3 4" />
-              <polyline
-                points={intensityPolyline(sections, totalMs, trackWidth, 100)}
-                fill="none"
-                stroke="#ff3c9e"
-                strokeWidth="2"
-                vectorEffect="non-scaling-stroke"
-              />
+              {intensityRuns(sections, totalMs, trackWidth, 100).map((points, i) => (
+                <polyline
+                  key={i}
+                  points={points}
+                  fill="none"
+                  stroke="#ff3c9e"
+                  strokeWidth="2"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
             </svg>
 
             {/* t458 — REQ-081 원샷·Mark 점 줄. 서버 행 ts 위치에 찍는다. */}
@@ -760,10 +788,12 @@ export function CueSheetTimeline({
                   </td>
                   <td className="m cst-level">
                     {sectionIntensityText(section)}
-                    <i
-                      className="cst-level-bar"
-                      style={{ width: `${sectionIntensityPercent(section) * 0.4}px`, background: railColor }}
-                    />
+                    {levelBarWidth(section) !== null && (
+                      <i
+                        className="cst-level-bar"
+                        style={{ width: `${levelBarWidth(section)}px`, background: railColor }}
+                      />
+                    )}
                     <b className="cst-level-trend">{intensityTrend(sections, index)}</b>
                   </td>
                   <td className="fx">{cell(section.fixture_groups)}</td>
