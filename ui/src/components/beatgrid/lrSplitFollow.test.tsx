@@ -1,9 +1,10 @@
 // 갈라짐 표시 시험(시안 `.clip.split`·`.clip.follow`) — 띠 글 기준, 따름 칸 자리(px)를 확인한다.
 // 자식 줄 데이터가 아직 없어서 화면 전체 대신 작은 컴포넌트를 직접 그려 본다.
 import { renderToStaticMarkup } from "react-dom/server";
+import type { BeatGridCue } from "../../protocol";
 import { describe, expect, it } from "vitest";
 
-import { LRSplitBanner, LRSplitRow, lrFollowSpans } from "./LRSplitRow";
+import { LRSplitBanner, LRSplitRow, lrFollowSpans, lrParentCellsReplaced } from "./LRSplitRow";
 
 // 시험용 눈금: 1마디 = 100px.
 const toX = (bar: number) => bar * 100;
@@ -62,5 +63,18 @@ describe("LRSplitRow — 따름 칸", () => {
   it("따름 칸이 없으면 예전 자식 줄 그대로다", () => {
     const html = renderToStaticMarkup(<LRSplitRow child={child} left={400} width={398} />);
     expect(html).not.toContain("beat-grid-cue-follow");
+  });
+});
+
+describe("lrParentCellsReplaced — 자식 칸 데이터가 있을 때만 부모 칸을 띠로 대신", () => {
+  const base = { side: "L" as const, label: "SIDE-ALL L", memberCount: 3, startBar: 4, endBar: 8 };
+
+  it("자식 칸 데이터가 없으면 부모 칸을 그대로 둔다(지금의 데이터)", () => {
+    expect(lrParentCellsReplaced([base])).toBe(false);
+    expect(lrParentCellsReplaced([{ ...base, cues: [] }])).toBe(false);
+  });
+
+  it("자식 칸 데이터가 한 줄이라도 있으면 대신한다", () => {
+    expect(lrParentCellsReplaced([{ ...base, cues: [{ bar: 4 } as BeatGridCue] }])).toBe(true);
   });
 });

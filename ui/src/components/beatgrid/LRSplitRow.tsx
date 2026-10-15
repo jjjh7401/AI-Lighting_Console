@@ -70,6 +70,11 @@ export function LRSplitRow({ child, left, width, onSelect, follow }: LRSplitRowP
   );
 }
 
+/** 자식 칸 데이터가 한 줄이라도 있으면 부모 칸을 띠로 대신하고, 없으면 부모 칸을 그대로 둔다(리드 결정). */
+export function lrParentCellsReplaced(childRows: readonly LRChildRow[]): boolean {
+  return childRows.some((child) => (child.cues?.length ?? 0) > 0);
+}
+
 /** 시안 `.clip.split` — 갈라진 구간 띠(줄무늬). 글은 시안과 같은 기준으로 넓을 때만 쓴다(40px·70px). */
 export function LRSplitBanner({ left, width }: { left: number; width: number }) {
   return (

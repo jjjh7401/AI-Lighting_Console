@@ -1,3 +1,5 @@
+import type { BeatGridCue } from "../../protocol";
+
 // 타임라인 자식 줄 — "이 구간 L·R 따로" 선언 / "다시 합치기"
 // (REQ-LDBEAT-019(c), AC-LDBEAT-019(c)). SPEC-LDBEAT-001 M9, 카드 t560
 // 후속(리드 결정 2026-10-11, 근본 원인 정정) → 카드 t568(같은 REQ) 후속.
@@ -198,6 +200,8 @@ export interface LRChildRow {
   memberCount: number;
   startBar: number;
   endBar: number;
+  /** 자식 줄 자신의 칸 데이터 — 서버가 실어 줄 때만 있다. 있으면 그 구간의 부모 칸을 띠로 대신한다. */
+  cues?: readonly BeatGridCue[];
 }
 
 /** 이 트랙의 자식 줄 — 선언이 없으면(AC-LDBEAT-019(c) "분리 선언 전에는
