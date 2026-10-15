@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
 
+from server.design.beat_grid_ui_values import attach_beat_grid_ui_values
 from server.web.session import SongTimelineStore, derive_beat_grid_fields
 from server.web.timeline_library import SongTimelineLibrary, timeline_entry_summary
 
@@ -72,6 +73,9 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # 카드 t644 — 응답도 재생(``ChatSession.song_timeline_replay``)과 같은 함수로 파생
         # 필드를 채운다. 카드 t651 — 풀 기억은 저장소의 것을 쓴다(재생 프레임과 같은 값). 이 요청은
         # 콘솔을 읽지 않는다. 저장소에는 원본을 그대로 둔다(보낼 때마다 파생).
+        # 화면용 값(콘솔 프리셋 이름 등)도 재생(``_beat_grid_refresh_unsent_cells``)과 같은 함수로
+        # 채운다 — 풀 기억은 저장소의 것이라 새 연결 재생과 같은 값이다.
+        timeline = attach_beat_grid_ui_values(timeline, pool_slots=deps.store.beat_grid_pool_slots)
         derived = derive_beat_grid_fields(
             timeline,
             snapshots=deps.store.beat_grid_snapshots,
