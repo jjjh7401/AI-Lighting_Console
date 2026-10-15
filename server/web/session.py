@@ -4113,6 +4113,26 @@ def derive_beat_grid_fields(
     return updated
 
 
+def beat_grid_recorded_sequence_numbers(
+    store: SongTimelineStore | None, timeline: Mapping[str, object]
+) -> dict[str, int]:
+    """이 곡의 반영 기록(소유권 레코드)에 남은 트랙별 콘솔 시퀀스 번호 — 그룹 이름 대문자 ->
+    번호. 반영한 적 없으면 비어 있다(번호를 지어내지 않는다).
+
+    재생·반영 경로(``ChatSession``)와 불러오기 경로(``server/web/timeline_api.py``)가 같은
+    값을 얻도록 한 자리에 둔다 — 따로 읽으면 같은 곡이 들어온 길에 따라 번호가 다르게 보인다.
+    """
+    song_key = ChatSession._beat_grid_song_key(timeline)
+    record = store.beat_grid_allocation(song_key) if store else None
+    tracks = record.get("tracks") if isinstance(record, Mapping) else None
+    out: dict[str, int] = {}
+    for name, allocation in tracks.items() if isinstance(tracks, Mapping) else ():
+        number = allocation.get("sequence_number") if isinstance(allocation, Mapping) else None
+        if isinstance(number, int) and not isinstance(number, bool):
+            out[str(name).upper()] = number
+    return out
+
+
 class ChatSession:
     """One WebSocket client's chat session over the shared gate + provider."""
 
@@ -10496,15 +10516,7 @@ class ChatSession:
     ) -> dict[str, int]:
         """이 곡의 반영 기록(소유권 레코드)에 남은 트랙별 콘솔 시퀀스 번호 — 그룹 이름 대문자 ->
         번호. 반영한 적 없으면 비어 있다(번호를 지어내지 않는다)."""
-        store = self._timeline_store
-        record = store.beat_grid_allocation(self._beat_grid_song_key(timeline)) if store else None
-        tracks = record.get("tracks") if isinstance(record, Mapping) else None
-        out: dict[str, int] = {}
-        for name, allocation in tracks.items() if isinstance(tracks, Mapping) else ():
-            number = allocation.get("sequence_number") if isinstance(allocation, Mapping) else None
-            if isinstance(number, int) and not isinstance(number, bool):
-                out[str(name).upper()] = number
-        return out
+        return beat_grid_recorded_sequence_numbers(self._timeline_store, timeline)
 
     def song_timeline_replay(self) -> dict | None:
         """새 연결에 재생하는 마지막 타임라인 프레임(카드 t635).
