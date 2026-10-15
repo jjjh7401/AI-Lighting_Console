@@ -561,6 +561,17 @@ export interface BeatGridView {
    * 라이브러리에서 내려 준다(콘솔 판독 0). `kinds` = 그 틀을 쓸 수 있는 번호대 종류
    * (`position`/`color`/`mixed`) — 반영 때 서버가 받아 주는 판정과 같다. 옛 서버면 `undefined`. */
   fx_templates?: BeatGridFxTemplate[] | null;
+  /** 곡 격자의 색 프리셋 목표 RGB(시안 P 의 rgb) — `preset_colors["4.n"]`, 채널마다
+   * 0~100%. 서버 `beat_grid_color_presets.color_preset_rgb` 가 읽는 바로 그 키다.
+   * 없거나 옛 서버면 `undefined` — 그 번호의 막대는 중립(해칭)으로 남는다. */
+  preset_colors?: Readonly<Record<string, BeatGridPresetRgb | null | undefined>> | null;
+}
+
+/** 색 프리셋 목표 RGB. 세 채널 모두 0~100%(서버 `_percent` 와 같은 범위). */
+export interface BeatGridPresetRgb {
+  r: number;
+  g: number;
+  b: number;
 }
 
 /** 카드 t603 — 효과 틀 하나(`server/design/beat_grid_effect_presets.effect_template_catalog`). */
