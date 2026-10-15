@@ -53,9 +53,29 @@ describe("brightnessLinePercent — 밝기 선은 값 모드의 퍼센트만", (
 });
 
 describe("effectShapeIcon — 시안 아이콘이 있는 구조화 모양만", () => {
-  it("웨이브와 스윕은 그린다", () => {
+  it("웨이브와 스윕은 app_movement 로도 그린다", () => {
     expect(effectShapeIcon(cue({ app_movement: movement("wave") }))).toBe("wave");
     expect(effectShapeIcon(cue({ app_movement: movement("sweep") }))).toBe("sweep");
+  });
+
+  it("서버 effect_shape 의 펄스·체이스는 app_movement 없이도 그린다", () => {
+    expect(effectShapeIcon(cue({ effect_shape: "pulse" }))).toBe("pulse");
+    expect(effectShapeIcon(cue({ effect_shape: "chase" }))).toBe("chase");
+  });
+
+  it("effect_shape 가 있으면 app_movement.shape 보다 먼저 쓴다", () => {
+    expect(effectShapeIcon(cue({ effect_shape: "pulse", app_movement: movement("wave") }))).toBe("pulse");
+  });
+
+  it("effect_shape 가 없거나 null 이면 app_movement.shape 로 간다", () => {
+    expect(effectShapeIcon(cue({ app_movement: movement("sweep") }))).toBe("sweep");
+    expect(effectShapeIcon(cue({ effect_shape: null, app_movement: movement("wave") }))).toBe("wave");
+  });
+
+  it("모르는 effect_shape 값은 없는 것으로 보고 app_movement 로 간다", () => {
+    expect(
+      effectShapeIcon(cue({ effect_shape: "flash" as unknown as BeatGridCue["effect_shape"], app_movement: movement("wave") })),
+    ).toBe("wave");
   });
 
   it("시안에 아이콘이 없는 모양은 그리지 않는다", () => {
@@ -100,6 +120,7 @@ describe("cueBarMetaText / cueBarVisualClass", () => {
   it("그릴 요소가 있는 칸에만 modifier 클래스를 붙인다", () => {
     expect(cueBarVisualClass(cue())).toBe("");
     expect(cueBarVisualClass(cue({ app_movement: movement("wave") }))).toBe(" has-cue-shape");
+    expect(cueBarVisualClass(cue({ effect_shape: "pulse" }))).toBe(" has-cue-shape");
     expect(cueBarVisualClass(cue({ position_preset_no: "2.61" }))).toBe(" has-cue-meta");
     expect(cueBarVisualClass(cue({ app_movement: movement("sweep"), position_preset_no: "2.61" }))).toBe(
       " has-cue-shape has-cue-meta",
@@ -126,6 +147,14 @@ describe("CueBarVisual 렌더 — 시안 요소만 내보낸다", () => {
     expect(html).toContain("width:55%");
     expect(html).toContain('data-shape="wave"');
     expect(html).toContain("위치 2.61 · 55%");
+  });
+
+  it("펄스·체이스 칸은 효과 모양을 내고, 펄스는 시안 경로 그대로 그린다", () => {
+    const pulse = renderToStaticMarkup(<CueBarVisual cue={cue({ effect_shape: "pulse" })} />);
+    expect(pulse).toContain('data-shape="pulse"');
+    expect(pulse).toContain('d="M1 9 H4 V2 H7 V9 H10 V2 H13 V9 H16"');
+    const chase = renderToStaticMarkup(<CueBarVisual cue={cue({ effect_shape: "chase" })} />);
+    expect(chase).toContain('data-shape="chase"');
   });
 
   it("디머 프리셋 칸에는 밝기 선과 모양이 없다", () => {
