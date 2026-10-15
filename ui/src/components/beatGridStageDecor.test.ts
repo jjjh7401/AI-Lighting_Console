@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BeatGridCue, BeatGridStageView, BeatGridTrack } from "../protocol";
-import { fixtureIsMover, stageDecorations } from "./BeatGridStage";
+import { fixtureIsBlind, fixtureIsMover, stageDecorations } from "./BeatGridStage";
 import { stageFixturePoints } from "./beatGridStageModel";
 
 const view: BeatGridStageView = {
@@ -93,5 +93,25 @@ describe("fixtureIsMover — 시안 무빙 네모 (카드 t591)", () => {
   it("이름이 MOVER 처럼 보여도 소속 확인이 없으면 무빙이 아니다", () => {
     const loose = { ...byFid(99), name: "MOVER-U 501" };
     expect(fixtureIsMover(loose, [track("MOVER-U", "mover", "켜짐")])).toBe(false);
+  });
+});
+
+describe("fixtureIsBlind — 무빙이 아닌 효과(effect) 줄 = 사각(리드 결정)", () => {
+  const byFid = (fid: number) => points.find((p) => p.fid === fid)!;
+
+  it("효과 역할 줄에 소속이 확인된 장비는 사각(BLIND 류)이다", () => {
+    const tracks = [track("ZZZ", "effect", "켜짐")];
+    expect(fixtureIsBlind(byFid(11), tracks)).toBe(true);
+    expect(fixtureIsBlind(byFid(12), tracks)).toBe(true);
+  });
+
+  it("무빙 줄의 장비는 사각이 아니라 무빙이다", () => {
+    const tracks = [track("QQQ", "mover", "켜짐")];
+    expect(fixtureIsBlind(byFid(21), tracks)).toBe(false);
+    expect(fixtureIsMover(byFid(21), tracks)).toBe(true);
+  });
+
+  it("소속이 없으면 사각이 아니다", () => {
+    expect(fixtureIsBlind(byFid(99), [track("ZZZ", "effect", "켜짐")])).toBe(false);
   });
 });

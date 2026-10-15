@@ -45,6 +45,7 @@ import {
   findDrawerSection,
   fixtureDisplayColor,
   fixtureDisplayOpacity,
+  fixtureStageColor,
   formatAppMovementField,
   formatBrightnessField,
   formatDrawerEntryOptionLabel,
@@ -709,12 +710,13 @@ describe("fixtureDisplayOpacity — 카드 t534 (2D 무대 밝기: 실측 on/off
     expect(fixtureDisplayOpacity(fixture, LOVE_ATTACK_GRID.tracks, 0)).toBe(1);
   });
 
-  it("확인된 소속이지만 이 마디는 꺼진 칸(「—」) = 흐리게", () => {
+  it("확인된 소속이지만 이 마디는 꺼진 칸(「—」) = 불투명은 최대, 색은 꺼짐(#333)", () => {
     const grid: BeatGridView = {
       ...LOVE_ATTACK_GRID,
       tracks: [track("BACK", "back", [cue(0, "앞박 1회"), cue(11, "—")])],
     };
-    expect(fixtureDisplayOpacity(fixture, grid.tracks, 11)).toBeLessThan(1);
+    expect(fixtureDisplayOpacity(fixture, grid.tracks, 11)).toBe(1);
+    expect(fixtureStageColor(fixture, grid.tracks, 11)).toBe("#333");
   });
 
   it("소속 미확인은 흐리게(회색과 같은 방향)", () => {
@@ -722,12 +724,41 @@ describe("fixtureDisplayOpacity — 카드 t534 (2D 무대 밝기: 실측 on/off
     expect(fixtureDisplayOpacity(unconfirmed, LOVE_ATTACK_GRID.tracks, 0)).toBeLessThan(1);
   });
 
-  it("이 마디에 아직 칸이 선언 안 됐으면 흐리게(지어내지 않음)", () => {
+  it("이 마디에 아직 칸이 선언 안 됐으면 불투명은 최대, 색은 꺼짐(#333, 지어내지 않음)", () => {
     const grid: BeatGridView = {
       ...LOVE_ATTACK_GRID,
       tracks: [track("BACK", "back", [cue(5, "5마디부터")])],
     };
-    expect(fixtureDisplayOpacity(fixture, grid.tracks, 0)).toBeLessThan(1);
+    expect(fixtureDisplayOpacity(fixture, grid.tracks, 0)).toBe(1);
+    expect(fixtureStageColor(fixture, grid.tracks, 0)).toBe("#333");
+  });
+});
+
+describe("fixtureStageColor — 2D 무대 장비 색(리드 결정: 켜짐 = 칸 색, 꺼짐 = #333)", () => {
+  const fixture: BeatGridFixturePoint = {
+    fid: 201,
+    name: "BACK 201",
+    x: -6,
+    y: 4.5,
+    z: 6.2,
+    rotx: 0,
+    roty: 0,
+    rotz: 0,
+    confirmedGroupName: "BACK",
+  };
+
+  it("켜진 칸이고 색 값이 없으면 줄 기본색(팔레트 첫 색)이다", () => {
+    expect(fixtureStageColor(fixture, [track("BACK", "back", [cue(0, "앞박 1회")])], 0)).toBe("#4f8cff");
+  });
+
+  it("켜진 칸에 색 값([r,g,b] 0~100)이 있으면 그 색을 rgb 로 쓴다", () => {
+    const colored = { ...cue(0, "앞박 1회"), color_rgb: [100, 0, 50] as [number, number, number] };
+    expect(fixtureStageColor(fixture, [track("BACK", "back", [colored])], 0)).toBe("rgb(255, 0, 128)");
+  });
+
+  it("소속 미확인이면 기존 회색이다", () => {
+    const unconfirmed: BeatGridFixturePoint = { ...fixture, confirmedGroupName: null };
+    expect(fixtureStageColor(unconfirmed, [track("BACK", "back", [cue(0, "앞박 1회")])], 0)).toBe("#5a5f6b");
   });
 });
 

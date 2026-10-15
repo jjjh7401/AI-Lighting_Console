@@ -462,25 +462,40 @@ export function fixtureDisplayColor(
 /** 소속 미확인/칸 미선언/꺼진 칸일 때 공통으로 쓰는 흐림 값. 수치 디머를
  * 지어내지 않으므로 "밝기"는 이 한 단계(흐림/보통/최대)뿐이다. */
 const UNCONFIRMED_FIXTURE_OPACITY = 0.45;
-const INACTIVE_FIXTURE_OPACITY = 0.55;
 const ACTIVE_FIXTURE_OPACITY = 1;
 
-/** REQ-LDBEAT-004(f) 확장(카드 t534) — 2D 무대의 "밝기"는 콘솔 디머 수치가
- * 없으므로(M2/M3 전까지 칸은 문장 하나뿐) 지어내지 않는다. 대신 이미 있는
- * 실측 정보 두 가지만 흐림 단계로 옮긴다: (1) `fixtureDisplayColor`와 같은
- * "확인된 소속"인지, (2) `viewBar` 시점 그 트랙의 칸이 `cueIsActive`인지
- * (「—」=꺼짐, 배치 규칙서 관례 — 지어낸 수치가 아니라 이미 쓰는 표기).
- * 둘 다 사실일 때만 최대 밝기다. */
-export function fixtureDisplayOpacity(
+/** 시안 `꺼짐` — 이 마디에 켜진 칸이 없는 확인된 줄의 장비 색(어두운 회색). */
+export const OFF_FIXTURE_COLOR = "#333";
+
+/** [r,g,b] 각 0~100% → CSS `rgb(...)`(0~255 로 환산). */
+function rgbPercentToCss(rgb: [number, number, number]): string {
+  const toByte = (percent: number) => Math.min(255, Math.max(0, Math.round((percent * 255) / 100)));
+  return `rgb(${toByte(rgb[0])}, ${toByte(rgb[1])}, ${toByte(rgb[2])})`;
+}
+
+/** 2D 무대 장비 색(리드 결정) — 소속이 확인된 줄이 지금 마디에서 켜져 있으면 그 칸의 색(`color_rgb`,
+ * 없으면 줄 기본색), 꺼져 있으면 어두운 회색. 소속 미확인은 기존 회색. */
+export function fixtureStageColor(
   fixture: BeatGridFixturePoint,
   tracks: readonly BeatGridTrack[],
   viewBar: number,
+): string {
+  const index = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
+  if (index < 0) return UNCONFIRMED_FIXTURE_COLOR;
+  const cue = cueForBar(tracks[index], viewBar);
+  if (!cue || !cueIsActive(cue.label)) return OFF_FIXTURE_COLOR;
+  return cue.color_rgb ? rgbPercentToCss(cue.color_rgb) : TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
+}
+
+/** REQ-LDBEAT-004(f) 확장(카드 t534, 리드 결정으로 갱신) — 확인된 장비의 불투명은 늘 최대다. 켜짐/꺼짐은
+ * 불투명이 아니라 색으로 보인다(`fixtureStageColor`: 켜진 줄 = 칸 색, 꺼진 줄 = #333). 소속 미확인만 흐린다. */
+export function fixtureDisplayOpacity(
+  fixture: BeatGridFixturePoint,
+  tracks: readonly BeatGridTrack[],
+  _viewBar: number,
 ): number {
-  const track = tracks.find((t) => fixtureBelongsTo(fixture, t.group_name));
-  if (!track) return UNCONFIRMED_FIXTURE_OPACITY;
-  const cue = cueForBar(track, viewBar);
-  if (!cue) return INACTIVE_FIXTURE_OPACITY;
-  return cueIsActive(cue.label) ? ACTIVE_FIXTURE_OPACITY : INACTIVE_FIXTURE_OPACITY;
+  const confirmed = tracks.some((t) => fixtureBelongsTo(fixture, t.group_name));
+  return confirmed ? ACTIVE_FIXTURE_OPACITY : UNCONFIRMED_FIXTURE_OPACITY;
 }
 
 /** 밝기 「값 ▾」 칸의 선택지(시안 `#eM` 값 목록). */
@@ -3342,9 +3357,9 @@ export function BeatGrid({
           {/* 카드 t586 — 시안 `#stT` 「12마디 · 25.1초」: 지금 보는 마디와 그 시각
               (곡 BPM 환산 — 모르면 마디만). */}
           <h5 className="beat-grid-stage-title">
-            <span>무대 (2D)</span>
+            <span>무대</span>
             <span>
-              {viewBar}마디
+              {viewBar === 0 ? "앞박" : `${viewBar}마디`}
               {(() => {
                 const seconds = barToSeconds(viewBar, secondsPerBar);
                 return seconds === null ? "" : ` · ${seconds.toFixed(1)}초`;
@@ -3364,8 +3379,7 @@ export function BeatGrid({
             }}
           />
           <p className="beat-grid-stage-note">
-            위 = 무대 뒤 · 색 = 소속 확인된 그룹만, 나머지 회색 · 밝기 = {viewBar}마디 그 칸이 켜져 있는지
-            (수치 디머는 지어내지 않음, M3 전까지는 켜짐/꺼짐 두 단계)
+            2D 개념도 · 위 = 무대 뒤 · 노란 테두리 = 고른 줄 · 장비를 누르면 그 줄 편집 · 앱에서는 패치 좌표(Posx·Posy)로 실제 위치에 그림
           </p>
         </div>
 
