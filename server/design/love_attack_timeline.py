@@ -7,7 +7,7 @@
 (``test_love_attack_sections.py``)이 그 계산과 같은지 지킨다. 마디 지도 전체는 「마디 지도 분석」이
 곡 오디오에서 새로 만들어 초안의 ``bar_map`` 에 붙이므로 시드는 싣지 않는다.
 
-싣는 값과 출처 — 전부 저장소에 이미 있는 값이고, 없는 값은 키를 내지 않는다:
+싣는 값과 출처 — 저장소에 이미 있는 값이거나 실곡 분석에서 잰 값만 싣는다:
 
 * ``bpm`` 112.0 — 박 회귀값 112.002 를 반올림(``server/tests/fixtures/love_attack_beat_grid.json``,
   카드 t550 이 중앙값 112.347 대신 회귀값으로 바꿨다).
@@ -16,6 +16,15 @@
   ``attach_beat_grid_default`` 가 붙인다(카드 t537, 감독 결정 2026-10-10).
 * ``sections`` — 위 §3 배치를 측정 마디 지도에 옮긴 값. 킥 멈춤(33·61마디)은 뒤 구간에 붙이고,
   드럼머신(3~6마디)은 인트로로 묶었다. 마지막 구간은 곡의 끝을 저장소가 모르므로 끝을 적지 않는다.
+* ``bar_count`` 83 — 실곡 마디 지도 분석 응답(``b-love-attack-seed-analyse.json`` 의
+  ``bar_map.bar_count``, 2026-10-15 측정). 근거 파일은 ``.moai/reports`` 아래 git 무시 경로라
+  저장소에는 없다.
+* ``seconds_per_bar`` — ``60 / 112.002 × 4``.
+  ``total_duration_ms`` 는 곡 끝을 저장소가 모르므로 ``None``.
+
+화면이 읽는 키는 값이 없어도 키를 둔다. 값을 지어내지 않고 모양만 맞춘다: 목록은 빈 배열,
+글자는 빈 문자열, 참·거짓(``mib``)은 ``False``, 숫자(``cue_number``·``d_level``)는 ``None``.
+``trig_time_seconds`` 는 구간 시작 시각 ``start_ms / 1000`` 으로 계산한다(Sugar 시드와 같은 규칙).
 
 ``sequence_number`` · ``timecode_number`` 는 저장소 어디에도 없어 비워 둔다.
 """
@@ -62,6 +71,20 @@ def _love_attack_sections() -> list[dict[str, object]]:
             "label": label,
             "bar_start": bar_start,
             "start_ms": start_ms,
+            # 화면이 읽는 키 — 값이 없으면 키는 두고 빈 값을 넣는다(값을 지어내지 않는다).
+            "trig_time_seconds": start_ms / 1000,
+            "cue_number": None,
+            "d_level": None,
+            "palette": [],
+            "fx": [],
+            "accents": [],
+            "intensity": [],
+            "fixture_groups": [],
+            "position": "",
+            "movement": "",
+            "mood": "",
+            "texture": "",
+            "mib": False,
         }
         if position + 1 < len(_SECTION_PLAN):
             next_bar_start, next_start_ms = _SECTION_PLAN[position + 1][1:]
@@ -89,6 +112,12 @@ def build_love_attack_timeline() -> dict[str, object]:
         "readback": {"verified": None, "message": None},
         "bpm": 112.0,
         "time_signature": "4/4",
+        # 실곡 마디 지도 분석 응답 b-love-attack-seed-analyse 의 bar_map.bar_count
+        # (측정, 2026-10-15)
+        "bar_count": 83,
+        # 4/4, 회귀 BPM 112.002 기준. 곡 끝은 저장소가 모르므로 total_duration_ms 는 None 이다.
+        "seconds_per_bar": 60 / 112.002 * 4,
+        "total_duration_ms": None,
     }
     return attach_beat_grid_default(timeline)
 
