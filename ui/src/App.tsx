@@ -16,11 +16,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
+import { BarMapEntry } from "./components/BarMapEntry";
+import { barMapEntryReducer, initialBarMapEntryState } from "./components/barMapEntryState";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
 import { pendingApplyCountOf } from "./components/beatgrid/pendingApplyCount";
@@ -424,9 +427,23 @@ export default function App() {
     sendLayoutImageUpload,
     sendSongAudioUpload,
     sendSongAudioAnalyse,
+    sendBarMapAnalyse,
     clearChat,
     applySongTimeline,
-  } = useCopilotSocket();
+  } = useCopilotSocket(undefined, {
+    // 마디 지도 진입 컨트롤(`barMap`)의 리듀서에 서버 프레임과 소켓 끊김을 먹인다.
+    // `barMapDispatch`는 아래에서 선언되지만 콜백은 소켓 사건 때에야 불려 안전하다.
+    onServerEvent: (event) => {
+      if (event.type === "busy") {
+        barMapDispatch({ type: "busy", message: event.message });
+      } else if (event.type === "chat_response") {
+        barMapDispatch({ type: "chat-response", summary: event.summary, text: event.text });
+      } else if (event.type === "error") {
+        barMapDispatch({ type: "error", kind: event.kind });
+      }
+    },
+    onSocketClosed: () => barMapDispatch({ type: "socket-closed" }),
+  });
   const [draft, setDraft] = useState("");
   // Requests typed while a turn is running. Drained ONE at a time — the next
   // is sent only after the current turn's terminal response arrives, so
@@ -439,6 +456,9 @@ export default function App() {
   // (client-side display only; the server holds the authoritative copy).
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
   const [songAudioUploadError, setSongAudioUploadError] = useState<string | null>(null);
+  // 곡 박자 분석(마디 지도) 진입 컨트롤의 상태 — 리듀서는 components/barMapEntryState.ts.
+  const [barMap, barMapDispatch] = useReducer(barMapEntryReducer, initialBarMapEntryState);
+  const barMapWaiting = barMap.phase === "waiting";
   // SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 이번 연결에서 마지막으로 올린 곡 이름.
   // 「분석」 버튼을 띄우는 조건 그 이상이 아니다: 서버가 정본을 들고 있고,
   // 여기 값은 화면 표시용이다. 첨부 전에는 버튼이 아예 없어야 한다 — 누를 수
@@ -1035,9 +1055,28 @@ export default function App() {
                       type="button"
                       className="composer-song-analyse"
                       onClick={sendSongAudioAnalyse}
+                      disabled={barMapWaiting}
                     >
                       분석
                     </button>
+                    <BarMapEntry
+                      offset={barMap.offset}
+                      waiting={barMapWaiting}
+                      responding={responding}
+                      timelineMeter={state.songTimeline.timeline?.time_signature}
+                      notice={barMap.notice}
+                      onOffsetChange={(offset) =>
+                        barMapDispatch({ type: "offset-selected", offset })
+                      }
+                      onAnalyse={() => {
+                        if (barMap.offset === null) return;
+                        const sent = sendBarMapAnalyse(barMap.offset, songAudioName);
+                        barMapDispatch(
+                          sent ? { type: "sent", songName: songAudioName } : { type: "not-connected" },
+                        );
+                      }}
+                      onCancel={() => barMapDispatch({ type: "cancel" })}
+                    />
                   </div>
                 )}
                 {queue.length > 0 && (

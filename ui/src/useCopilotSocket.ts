@@ -5,6 +5,7 @@ import { backendBase } from "./launchContext";
 import {
   addUserMessage,
   buildApprovalDecision,
+  buildBarMapAnalyse,
   buildBeatGridApply,
   buildBeatGridDrawerRequest,
   buildBeatGridStageRequest,
@@ -48,6 +49,7 @@ import {
   reduceServerEvent,
   serializeEntriesForStorage,
   type PanelTargetKind,
+  type ServerEvent,
   type UiState,
 } from "./protocol";
 
@@ -198,6 +200,20 @@ export function cueMonitorResyncFrame(raw: string): string | null {
     : null;
 }
 
+/**
+ * 카드 t648(SPEC-LDBARMAP-003) — 훅의 소비자가 받는 알림. 둘 다 선택이다.
+ *
+ * 훅이 상태를 접는 일(`state`)과 별개로, 소비자가 자기 상태(마디 지도 진입 컨트롤의
+ * 리듀서)에 같은 사건을 먹일 수 있게 한다. 훅은 이 콜백을 최신 것으로 읽으므로
+ * 호출부가 렌더마다 새 객체를 넘겨도 소켓은 다시 연결되지 않는다.
+ */
+export interface CopilotSocketOptions {
+  /** 서버 프레임 하나가 이벤트로 파싱될 때마다 부른다. 파싱되지 않은 프레임은 부르지 않는다. */
+  onServerEvent?: (event: ServerEvent) => void;
+  /** 현재 연결이 닫힐 때 부른다. 재연결 시도가 실패해 닫힐 때도 부른다. */
+  onSocketClosed?: () => void;
+}
+
 export interface CopilotSocket {
   state: UiState;
   connected: boolean;
@@ -260,6 +276,10 @@ export interface CopilotSocket {
   ) => boolean;
   /** M2 후속 — 담아 둔 곡을 재라고 부른다. 답은 확인 카드로 돌아온다. */
   sendSongAudioAnalyse: () => void;
+  /** 카드 t648(SPEC-LDBARMAP-003) — 마디 지도 분석 요청. 연결이 열려 있어 보냈으면 `true`,
+   * 열려 있지 않으면 프레임도 화면 기록도 남기지 않고 `false`. `songName` 은 이 훅이 쓰지
+   * 않는다(호출부가 `sent` 사건에 직접 싣는다) — 계획의 시그니처를 그대로 둔 것이다. */
+  sendBarMapAnalyse: (offset: number, songName: string | null) => boolean;
   sendLock: (active: boolean) => void;
   sendPanelExecute: (targetKind: PanelTargetKind, target: number) => void;
   sendPanelStop: (targetKind: PanelTargetKind, target: number) => void;
@@ -274,7 +294,7 @@ export interface CopilotSocket {
   /** Apply a library-loaded timeline as if a `song_timeline` frame arrived. */
   applySongTimeline: (timeline: unknown) => void;
 }
-export function useCopilotSocket(url?: string): CopilotSocket {
+export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): CopilotSocket {
   const [state, dispatch] = useReducer(reducer, initialState, restoredInitialState);
   const [connected, setConnected] = useState(false);
   const [responding, setResponding] = useState(false);
@@ -283,6 +303,10 @@ export function useCopilotSocket(url?: string): CopilotSocket {
   // closes over [url] only, so it reads the entries through this ref.
   const entriesRef = useRef(state.entries);
   entriesRef.current = state.entries;
+  // 소비자 알림(`options`)도 같은 이유로 ref 로 읽는다. 연결 효과는 [url] 만 닫고 있어서,
+  // 렌더마다 새로 만들어지는 콜백을 직접 닫으면 첫 렌더의 콜백만 계속 불린다.
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   // Best-effort persistence: quota/denied storage must never break the chat.
   useEffect(() => {
@@ -336,6 +360,9 @@ export function useCopilotSocket(url?: string): CopilotSocket {
         if (resync !== null && socket.readyState === WebSocket.OPEN) {
           socket.send(resync);
         }
+        // 소비자에게는 맨 끝에서 알린다. 위의 갱신(답 상태, 재동기 프레임)이 다 끝난 뒤에
+        // 불러서, 소비자 콜백의 예외가 이 훅의 기존 동작을 막지 못하게 한다.
+        if (event !== null) optionsRef.current?.onServerEvent?.(event);
       };
       socket.onclose = () => {
         // An older connection can close after its replacement opened. It must
@@ -354,6 +381,8 @@ export function useCopilotSocket(url?: string): CopilotSocket {
           timer = window.setTimeout(connect, retryDelay);
           retryDelay = Math.min(retryDelay * 2, 10_000);
         }
+        // 재연결 예약까지 마친 뒤에 알린다. 소비자 콜백이 던져도 재연결은 이미 걸려 있다.
+        optionsRef.current?.onSocketClosed?.();
       };
     };
 
@@ -506,6 +535,18 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     dispatch({ kind: "user", text: "곡 분석 요청" });
     send(buildSongAudioAnalyse());
   }, [send]);
+  // 카드 t648(SPEC-LDBARMAP-003) — 마디 지도 분석 요청. 위 `sendSongAudioAnalyse` 와 같은
+  // 이유로 화면 기록을 남기되, 연결이 열려 있지 않으면 **아무것도 남기지 않고** `false`
+  // 를 돌려준다(REQ-LDBARUI-004: 보내지 못한 요청은 대기도, 기록도 시작하지 않는다).
+  // 호출부가 이 값으로 리듀서에 `sent` 와 `not-connected` 중 어느 쪽을 먹일지 가른다.
+  // 둘째 인자 `songName` 은 훅이 쓰지 않아 `_` 로 받는다(호출부가 `sent` 사건에 싣는다).
+  const sendBarMapAnalyse = useCallback((offset: number, _songName: string | null): boolean => {
+    const socket = socketRef.current;
+    if (socket === null || socket.readyState !== WebSocket.OPEN) return false;
+    dispatch({ kind: "user", text: `마디 지도 분석 요청 (첫 박 오프셋 ${offset})` });
+    socket.send(buildBarMapAnalyse(offset));
+    return true;
+  }, []);
   const sendDecision = useCallback(
     (requestId: string, approved: boolean) => send(buildApprovalDecision(requestId, approved)),
     [send],
@@ -574,6 +615,7 @@ export function useCopilotSocket(url?: string): CopilotSocket {
     sendLayoutImageUpload,
     sendSongAudioUpload,
     sendSongAudioAnalyse,
+    sendBarMapAnalyse,
     sendDecision,
     sendReviewDecision,
     sendQuestionAnswer,

@@ -813,6 +813,13 @@ body {
   padding: 1px 8px;
 }
 
+/* SPEC-LDBARMAP-003 — 마디 지도 진입 컨트롤 묶음. 입력창이 좁으면 줄을 바꾼다. */
+.composer-bar-map {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
 .composer-file-input {
   display: none;
 }
