@@ -26,6 +26,7 @@ from server.deploy.keystore import (
 )
 from server.deploy.pipeline import DeployPipeline
 from server.deploy.settings import resolve_effective_settings
+from server.design.love_attack_timeline import love_attack_library_entry
 from server.design.sugar_timeline import sugar_library_entry
 from server.director.provision import build_director_deps
 from server.llm.config import DEFAULT_CONFIG_PATH, load_provider_config
@@ -444,12 +445,12 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         # survives server restarts, not just page refreshes.
         song_timeline_store=SongTimelineStore(pin_store_path("song_timeline.json")),
         # Timeline library: named/versioned saves, persisted alongside.
-        # 시드로 정본 Sugar 큐시트 한 판을 싣는다 — 감독이 설계를 돌리기 전에도
-        # 라이브러리에서 바로 열어 볼 수 있는 실곡 하나. 감독이 같은 id 로 저장한
-        # 판이 있으면 그 판이 이긴다(timeline_library.SongTimelineLibrary 참조).
+        # 시드로 정본 Sugar 큐시트 한 판과 LOVE ATTACK 기본 격자 한 판을 싣는다 — 감독이
+        # 설계를 돌리기 전에도 라이브러리에서 바로 열어 볼 수 있는 실곡들. 감독이 같은 id 로
+        # 저장한 판이 있으면 그 판이 이긴다(timeline_library.SongTimelineLibrary 참조).
         timeline_library=SongTimelineLibrary(
             pin_store_path("song_timeline_library.json"),
-            seed=(sugar_library_entry(),),
+            seed=(sugar_library_entry(), love_attack_library_entry()),
         ),
         # 카드 t571(REQ-LDBEAT-024(c) 후속) — 곡별 영구 오디오 링크. 색인은
         # panel_pins.json 옆에, 바이트는 그 색인 옆 song_audio_files/ 디렉터리에
