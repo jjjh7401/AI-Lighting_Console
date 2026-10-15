@@ -82,3 +82,12 @@ describe("꺼진 칸과 배치 안 된 마디 — 시안 .clip.off · .clip.empt
     expect(html).not.toContain("아직 배치 안 함");
   });
 });
+
+describe("개요 — 채운 범위 표시 (시안 「← 채운 범위(0~25)」)", () => {
+  it("채운 범위는 격자 데이터 범위(bar_range)다 — 축 끝이 아니다", () => {
+    const grid = gridWith([track("FOH", "key", [cue(0, "앞빛")])]);
+    const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={83} />);
+    expect(html).toContain("← 채운 범위(0~25)");
+    expect(html).not.toContain("← 채운 범위(0~82)");
+  });
+});
