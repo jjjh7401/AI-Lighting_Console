@@ -114,6 +114,8 @@ export interface BeatGridTopBarProps {
    * 않는다), 숫자는 그 개수다. */
   pendingApplyCount?: number | null;
   onDrawerToggle?: () => void;
+  /** 「자동 배치 제안」 — 서버에 초안을 한 번 요청한다(보류만 만든다). 없으면 버튼을 그리지 않는다. */
+  onDraftPropose?: () => void;
   /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
    * 동일. */
   playback?: BeatGridTopBarPlaybackProps | null;
@@ -142,6 +144,7 @@ export function BeatGridTopBar({
   onApply,
   pendingApplyCount,
   onDrawerToggle,
+  onDraftPropose,
   playback = null,
 }: BeatGridTopBarProps) {
   useEffect(() => {
@@ -328,6 +331,16 @@ export function BeatGridTopBar({
           </span>
         )}
       </button>
+      {onDraftPropose && (
+        <button
+          type="button"
+          className="tbtn"
+          title="자동 배치 초안을 보류로 만든다 — 「적용」 전까지 격자는 그대로다"
+          onClick={() => onDraftPropose()}
+        >
+          자동 배치 제안
+        </button>
+      )}
       <button
         type="button"
         className="tbtn"

@@ -5454,3 +5454,10 @@ body {
   gap: 6px;
   margin-top: 8px;
 }
+
+.beat-grid-draft-tracks {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
