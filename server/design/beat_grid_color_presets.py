@@ -51,6 +51,8 @@ __all__ = [
     "COLOR_MEMBERS_UNREAD",
     "COLOR_MULTI_GROUP",
     "COLOR_RGB_MISSING",
+    "attach_color_rgb_to_cues",
+    "attach_color_rgb_to_drawer",
     "color_grid_blocker",
     "color_preset_outcomes",
     "color_preset_rgb",
@@ -112,6 +114,53 @@ def color_preset_rgb(
     if r is None or g is None or b is None:
         return None
     return (r, g, b)
+
+
+def _rgb_list(grid: Mapping[str, object], preset_no: object) -> list[float] | None:
+    if not isinstance(preset_no, str):
+        return None
+    rgb = color_preset_rgb(grid, preset_no)
+    return list(rgb) if rgb is not None else None
+
+
+def attach_color_rgb_to_drawer(
+    sections: Sequence[Mapping[str, object]], grid: Mapping[str, object]
+) -> list[dict[str, object]]:
+    """프리셋 서랍의 Color 섹션 항목에 ``rgb: [r, g, b]``(0~100%)를 단다. 값은 곡 격자
+    ``preset_colors`` 에 기록된 것만 — 기록이 없는 항목(콘솔 쇼 프리셋 등)은 키를 뺀다."""
+    out: list[dict[str, object]] = []
+    for section in sections:
+        section = dict(section)
+        if section.get("pool_name") == "Color":
+            entries: list[object] = []
+            for entry in section.get("entries") or []:  # type: ignore[attr-defined]
+                if isinstance(entry, Mapping):
+                    rgb = _rgb_list(grid, entry.get("preset_no"))
+                    entry = {**entry, "rgb": rgb} if rgb is not None else dict(entry)
+                entries.append(entry)
+            section["entries"] = entries
+        out.append(section)
+    return out
+
+
+def attach_color_rgb_to_cues(grid: Mapping[str, object]) -> dict[str, object]:
+    """격자 사본의 칸(``tracks[].cues[]``)마다 ``color_preset_no`` 가 가리키는 색의
+    ``color_rgb: [r, g, b]``(0~100%)를 단다. 기록이 없으면 키를 뺀다(원본 불변)."""
+    tracks = grid.get("tracks")
+    if not isinstance(tracks, list):
+        return dict(grid)
+    new_tracks: list[object] = []
+    for track in tracks:
+        cues = track.get("cues") if isinstance(track, Mapping) else None
+        if not isinstance(cues, list):
+            new_tracks.append(track)
+            continue
+        new_cues: list[object] = []
+        for cue in cues:
+            rgb = _rgb_list(grid, cue.get("color_preset_no")) if isinstance(cue, Mapping) else None
+            new_cues.append({**cue, "color_rgb": rgb} if rgb is not None else cue)
+        new_tracks.append({**track, "cues": new_cues})
+    return {**grid, "tracks": new_tracks}
 
 
 def record_color_preset_rgb(

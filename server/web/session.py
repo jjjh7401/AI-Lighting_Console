@@ -66,6 +66,7 @@ from server.design.beat_grid import (
     split_empty_preset_holds,
 )
 from server.design.beat_grid_color_presets import (
+    attach_color_rgb_to_drawer,
     color_preset_outcomes,
     color_preset_rgb,
     record_color_preset_rgb,
@@ -9708,7 +9709,9 @@ class ChatSession:
                 query, pool_root, pool_name, probe_prefix="beat-grid-drawer"
             )
         policy = load_preset_pool_policy()
-        sections = build_preset_drawer(grid, pools=pools, policy=policy)
+        sections = attach_color_rgb_to_drawer(
+            build_preset_drawer(grid, pools=pools, policy=policy), grid
+        )
         event = beat_grid_drawer_event(sections=sections)
         self._send(event)
         # 카드 t595 — 서랍이 읽은 풀도 빈 프리셋 표식의 출처다. 못 읽은 풀은
