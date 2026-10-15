@@ -110,6 +110,7 @@ import {
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
+import { presetColorHexMap } from "./beatgrid/presetColorHex";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -1940,6 +1941,9 @@ export function BeatGrid({
   }
 
   const maxBar = axisEnd;
+  // 색 프리셋의 목표 RGB(시안 P 의 rgb, 곡 격자 preset_colors) → 화면 색.
+  // 명시한 colorPresetHex 가 있으면 그것이 이긴다.
+  const presetHex = colorPresetHex ?? presetColorHexMap(grid?.preset_colors);
   // 카드 t559 — 곡 전체 지도 모델(곡 데이터에서만 읽음)과 확대 단계별 마디 폭.
   // 아래 `barToX`는 모듈의 같은 이름 함수를 확대 폭으로 감싼 것이다 — 타임라인
   // 그리기 코드는 손대지 않고 가로 스케일만 바뀐다.
@@ -2169,7 +2173,7 @@ export function BeatGrid({
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
         model={overviewModel}
-        filledRange={{ start: grid.bar_range.start, end: maxBar }}
+        filledRange={{ start: grid.bar_range.start, end: grid.bar_range.end }}
         visibleWindow={
           laneView.visibleWidth > 0
             ? overviewVisibleWindow({
@@ -2295,6 +2299,8 @@ export function BeatGrid({
                     const trackIndex = grid.tracks.indexOf(track);
                     const segments = trackCueSegments(track, maxBar);
                     const leadGapEnd = segments[0]?.startBar ?? maxBar + 1;
+                    // 배치 범위 밖(범위 끝 다음 마디부터 축 끝까지) — 시안 .clip.empty 의 빗금 영역.
+                    const tailStart = grid.bar_range.end + 1;
                     // 카드 t560 후속(REQ-LDBEAT-019(c)) — "이 구간 왼쪽·오른쪽
                     // 따로"/"L·R 다시 합치기" 토글은 더 이상 이 자리(타임라인
                     // 줄 이름 칸)에서 그리지 않는다 — 아래 「이 마디 한눈에」
@@ -2333,6 +2339,14 @@ export function BeatGrid({
                               —
                             </span>
                           )}
+                          {tailStart <= maxBar && (
+                            <span
+                              className="beat-grid-cue beat-grid-cue-gap beat-grid-cue-unplaced"
+                              style={{ left: barToX(tailStart), width: barToX(maxBar + 1) - barToX(tailStart) - 2 }}
+                            >
+                              {`${tailStart}마디~ 아직 배치 안 함`}
+                            </span>
+                          )}
                           {segments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
@@ -2341,7 +2355,7 @@ export function BeatGrid({
                             // 아는 자리일 때만 쓴다. 지금 LOVE ATTACK 기본값은 §4에
                             // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
                             // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
-                            const colorFill = cueColorFill(segment.cue, colorPresetHex);
+                            const colorFill = cueColorFill(segment.cue, presetHex);
                             // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
                             // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
                             const isHighlighted =
@@ -2380,7 +2394,7 @@ export function BeatGrid({
                                   }`}
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
-                                  {segment.cue.label}
+                                  {active ? segment.cue.label : "꺼짐"}
                                   <CueBarVisual cue={segment.cue} />
                                   {(() => {
                                     const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
