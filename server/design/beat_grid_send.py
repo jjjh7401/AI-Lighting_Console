@@ -307,6 +307,11 @@ def build_song_timing_from_bar_map(bar_map: Mapping[str, object] | None) -> Song
     )
 
 
+#: 화면 표시용으로만 붙는 칸 키(콘솔 이름) — 콘솔 풀을 읽는 시점에 따라 나타나고 사라지므로
+#: 「반영 이후 바뀐 칸」 비교에 넣지 않는다(넣으면 풀을 읽는 것만으로 미반영 칸이 생긴다).
+_DISPLAY_ONLY_CUE_KEYS = frozenset({"position_preset_name", "color_preset_name"})
+
+
 def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey, object]:
     """``grid``(``BeatGridView``)의 칸을 ``(group_name, bar) -> 칸 사전``으로
     평평하게 편다 — 트랙 순서·칸 순서와 무관하게 **내용**만으로 두 시점을
@@ -323,7 +328,9 @@ def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey,
                 continue
             bar = cue.get("bar")
             if isinstance(bar, int) and not isinstance(bar, bool):
-                snapshot[(group_name, bar)] = cue
+                snapshot[(group_name, bar)] = {
+                    key: value for key, value in cue.items() if key not in _DISPLAY_ONLY_CUE_KEYS
+                }
     return snapshot
 
 
