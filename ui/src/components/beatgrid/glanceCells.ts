@@ -13,26 +13,47 @@ import type { BeatGridCue, BeatGridDrawerSection } from "../../protocol";
 import { findDrawerEntryByPresetNo, formatPresetChipTooltip } from "./presetChipTooltip";
 import { roleFieldHints } from "./roleFields";
 
-/** `BeatGrid.tsx` `UNSET_FIELD_LABEL`과 같은 문구("미정") — 구조화
- * 필드가 있지만 값이 비어 있을 때. 모듈 순환 참조를 피하려고 문구 하나만
- * 복제한다(로직이 아니라 라벨 상수라 분기 위험 없음). */
+/** 「미정」 — 서버가 값을 아직 안 정했다고 명시한 칸에만 쓴다(protocol
+ * `BeatGridBrightness.mode` 가 `null` 이면 셋 다 미정). 모듈 순환 참조를 피하려고
+ * 문구 하나만 복제한다(라벨 상수). */
 const UNSET = "미정";
-/** 역할이 그 칼럼을 쓰지 않을 때(mockup `cellHTML`의 "—"), 또는 칸 자체가
- * 없을 때(아직 선언 안 됨). */
+/** 빈 칸 — 역할이 그 칼럼을 쓰지 않을 때, 칸 자체가 없을 때, 값이 비어 있을 때 모두
+ * 시안 `cellHTML` 의 「—」다(리드 결정: 「미정」은 서버 표식이 있을 때만). */
 const NOT_APPLICABLE = "—";
 
+/** 무빙 칸에 효과가 없을 때 — 「＋ 없음」(시안 전각 ＋, 리드 결정). */
+const NO_MOVEMENT = "＋ 없음";
+
+/** 칩 = 프리셋 번호(굵게) + 이름. `label` 은 번호와 이름을 한 줄로 이은 글이다(툴팁·시험용). */
 export type GlanceCellValue =
-  | { kind: "chip"; presetNo: string; label: string; tooltip: string }
-  | { kind: "text"; text: string };
+  | { kind: "chip"; presetNo: string; name: string | null; label: string; tooltip: string; swatch?: string }
+  | { kind: "text"; text: string; dim?: boolean };
+
+/** 시안 `cellHTML` 처럼 칩 이름 앞의 「LA 」 는 뗀다. */
+function chipName(name: string): string {
+  return name.replace(/^LA /, "");
+}
+
+/** 프리셋 항목의 색(`rgb`, 0~100%) → 칩 앞 색 네모의 CSS 색. 색 값이 없으면 `null`(네모를 그리지 않는다). */
+export function presetSwatchColor(rgb: [number, number, number] | null | undefined): string | null {
+  if (!rgb) return null;
+  const toByte = (percent: number) => Math.min(255, Math.max(0, Math.round((percent * 255) / 100)));
+  return `rgb(${toByte(rgb[0])}, ${toByte(rgb[1])}, ${toByte(rgb[2])})`;
+}
 
 function chipOrUnset(presetNo: string | null, sections: BeatGridDrawerSection[] | null): GlanceCellValue {
-  if (!presetNo) return { kind: "text", text: UNSET };
+  if (!presetNo) return { kind: "text", text: NOT_APPLICABLE };
   const entry = findDrawerEntryByPresetNo(sections, presetNo);
+  const shown = entry ? chipName(entry.name) : "";
+  const name = shown === "" ? null : shown;
+  const swatch = presetSwatchColor(entry?.rgb);
   return {
     kind: "chip",
     presetNo,
-    label: entry ? `${presetNo} ${entry.name}` : presetNo,
+    name,
+    label: name === null ? presetNo : `${presetNo} ${name}`,
     tooltip: formatPresetChipTooltip(entry?.description, entry?.usage_count ?? 0, entry?.description_source),
+    ...(swatch !== null ? { swatch } : {}),
   };
 }
 
@@ -42,7 +63,7 @@ export function brightnessCell(cue: BeatGridCue | null, sections: BeatGridDrawer
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
   const b = cue.brightness;
   if (b.mode === "value") {
-    return { kind: "text", text: b.value_percent === null ? UNSET : `${b.value_percent}%` };
+    return { kind: "text", text: b.value_percent === null ? NOT_APPLICABLE : `${b.value_percent}%` };
   }
   if (b.mode === "dimmer_preset" || b.mode === "dimmer_effect") {
     return chipOrUnset(b.preset_no, sections);
@@ -69,7 +90,11 @@ export function colorCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("색")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  return chipOrUnset(cue.color_preset_no, sections);
+  // 색 네모: 서랍 항목 색(`rgb`)이 우선, 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
+  const value = chipOrUnset(cue.color_preset_no, sections);
+  if (value.kind !== "chip" || value.swatch !== undefined) return value;
+  const cellSwatch = presetSwatchColor(cue.color_rgb);
+  return cellSwatch === null ? value : { ...value, swatch: cellSwatch };
 }
 
 /** 움직임 칸 — 무빙 역할에서만(`roleFieldHints`) 효과 프리셋을 보여준다. */
@@ -80,6 +105,7 @@ export function movementCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("움직임")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
+  if (!cue.effect_preset_no) return { kind: "text", text: NO_MOVEMENT };
   return chipOrUnset(cue.effect_preset_no, sections);
 }
 
@@ -91,8 +117,8 @@ export function movementCell(
  * 은 "유지". */
 export function transitionCell(cue: BeatGridCue | null, isTransitionBar: boolean): GlanceCellValue {
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  if (!isTransitionBar) return { kind: "text", text: "유지" };
-  return { kind: "text", text: cue.entry.fade_bars === null ? UNSET : `${cue.entry.fade_bars}마디` };
+  if (!isTransitionBar) return { kind: "text", text: "유지", dim: true };
+  return { kind: "text", text: cue.entry.fade_bars === null ? NOT_APPLICABLE : `${cue.entry.fade_bars}마디` };
 }
 
 /** 「바뀐 것」 표시(mockup `changedTxt`) — derivable한 것만 보여준다
@@ -113,4 +139,15 @@ export function changedFieldsLabel(
   if (previousCue.color_preset_no !== currentCue.color_preset_no) changed.push("색");
   if (previousCue.effect_preset_no !== currentCue.effect_preset_no) changed.push("움직임");
   return `● ${changed.length > 0 ? changed.join("·") : "큐"} 바뀜`;
+}
+
+/** 「이 마디 한눈에」 머리의 마디 이름 — 앞박(0번 마디)은 「앞박」, 그 밖은 「N마디」(시안 `drawBar`·`bsT`). */
+export function glanceBarLabel(bar: number): string {
+  return bar === 0 ? "앞박" : `${bar}마디`;
+}
+
+/** 접힌 역할 폴더 머리 뒤의 요약 — 「 — 2줄 접힘 · 이 마디 2줄 바뀜」. 이 마디에 바뀐 줄이 없으면 접힘 수만(시안 `gh` 머리). */
+export function collapsedFolderSummary(rowCount: number, changedRowCount: number): string {
+  const folded = ` — ${rowCount}줄 접힘`;
+  return changedRowCount > 0 ? `${folded} · 이 마디 ${changedRowCount}줄 바뀜` : folded;
 }

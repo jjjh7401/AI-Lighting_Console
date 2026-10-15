@@ -205,6 +205,19 @@ def _fixture_records(reply: Mapping[str, object]) -> tuple[list[dict], str | Non
     return out, reason
 
 
+def fixture_pan_tilt(capability: object) -> bool | None:
+    """리그 능력 판독으로 본 「팬/틸트 기종인가」 — 모르면 ``None`` (이름으로 짐작하지 않는다).
+
+    Pan 또는 Tilt 속성이 읽혔으면 참. 없다는 결론(거짓)은 판독이 전수(``whole``)일 때만 —
+    부분 판독에서 속성이 안 보이는 것은 「없다」가 아니라 「못 읽었다」다."""
+    has = getattr(capability, "has_attribute", None)
+    if has is None:
+        return None
+    if has("Pan") or has("Tilt"):
+        return True
+    return False if getattr(capability, "whole", False) is True else None
+
+
 def read_beat_grid_stage(
     port: StageReadPort,
     *,

@@ -107,3 +107,16 @@ describe("개요 — 채운 범위 표시 (시안 「← 채운 범위(0~25)」)
     expect(html).not.toContain("← 채운 범위(0~82)");
   });
 });
+
+describe("줄 머리 둘째 줄 — 서버 sub_info.text (#726)", () => {
+  it("sub_info.text 가 있으면 둘째 줄에 그대로 쓴다", () => {
+    const withInfo = { ...track("BACK", "back", [cue(0, "앞박")]), sub_info: { text: "G4 · 201~212 · 12대 · Aura XB" } };
+    const html = renderToStaticMarkup(<BeatGrid grid={gridWith([withInfo])} barCount={26} />);
+    expect(html).toContain("G4 · 201~212 · 12대 · Aura XB");
+  });
+
+  it("sub_info 가 없으면 콘솔 판독 문구를 지어내지 않는다", () => {
+    const html = renderToStaticMarkup(<BeatGrid grid={gridWith([track("BACK", "back", [cue(0, "앞박")])])} barCount={26} />);
+    expect(html).not.toContain("Aura XB");
+  });
+});
