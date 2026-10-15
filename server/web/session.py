@@ -253,6 +253,7 @@ from server.design.song_cue_render import (  # 카드 t480 — 자리만 옮김 
     _section_role,
     _split_sections_for_density,
     _white_palette_name,
+    design_song_title_from_file_name,
     reviewed_song_commands,
     reviewed_song_timing_commands,
 )
@@ -8313,6 +8314,15 @@ class ChatSession:
         )
         return built, composition
 
+    def _design_song_title(self) -> str:
+        """설계 초안의 곡 이름 후보 — 붙은 곡 파일 이름(확장자 뺀 것). 없으면 일반 이름.
+
+        감독은 화면에서 이 이름을 바꿀 수 있다(리드 결정, 옵션 b). 이 이름이 곡별 기본 격자와
+        곡 열쇠 ``(song_title, sequence_number)`` 를 가른다.
+        """
+        audio = self._song_audio
+        return design_song_title_from_file_name(audio.file_name if audio is not None else None)
+
     def _song_compose_at(
         self, state: _SongDesignState, look_offset: int
     ) -> tuple[UnifiedSongLightingPlan, SongCueCompositionResult]:
@@ -8332,6 +8342,7 @@ class ChatSession:
             position_disabled_reason=state.position_disabled_reason,
             blinder_group_no=_blinder_group_no(state.layer_mapping),
             look_offset=look_offset,
+            song_title=self._design_song_title(),
         )
         return built, compose_song_cue_bundle(built)
 

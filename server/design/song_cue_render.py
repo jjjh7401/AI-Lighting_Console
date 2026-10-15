@@ -992,6 +992,20 @@ def _accent_fixture_value_lines(cue, previous_fixture) -> tuple[str, ...]:
 #: auto-snapshots fall back to the sequence name instead of versioning it.
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
 
+#: 파일 이름 끝의 짧은 확장자(``.mp3`` 같은 꼬리)를 뺀다.
+_AUDIO_FILE_SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,5}$")
+
+
+def design_song_title_from_file_name(file_name: str | None) -> str:
+    """첨부 곡 파일 이름에서 설계 초안 곡 이름 후보를 만든다 — 경로와 확장자를 뺀 이름.
+
+    이름을 쓸 수 없으면(없음·빈 이름·확장자만 있음) 일반 이름을 돌려준다. 감독은 화면에서
+    이 이름을 바꿀 수 있다. 이 함수가 돌려주는 것은 후보일 뿐이다.
+    """
+    base = re.split(r"[\\/]", file_name or "")[-1]
+    stem = _AUDIO_FILE_SUFFIX.sub("", base).strip()
+    return stem or _DESIGN_INTERVIEW_TITLE
+
 
 def _plan_edit_fx(decision: FxDecision, override: bool | None) -> FxDecision:
     """Apply a director's PLAN-stage FX on/off: off empties the allowed set
@@ -1078,6 +1092,7 @@ def _build_unified_song_plan(
     position_disabled_reason: str = "",
     blinder_group_no: int | None = None,
     look_offset: int = 0,
+    song_title: str = _DESIGN_INTERVIEW_TITLE,
 ) -> UnifiedSongLightingPlan:
     """``look_offset`` — 카드 t491. 감독이 고른 위치 후보와 팔레트 색 순서를 곡
     단위로 몇 칸 돌릴지. 0 이면 오늘과 바이트 동일하다. 값은 세션이
@@ -1292,7 +1307,7 @@ def _build_unified_song_plan(
     if position_disabled_reason:
         disabled = (*disabled, DisabledNote(axis=POSITION_AXIS, reason=position_disabled_reason))
     return UnifiedSongLightingPlan(
-        song_title=_DESIGN_INTERVIEW_TITLE,
+        song_title=song_title,
         sequence_name=f"Sequence {sequence_no}",
         sections=tuple(decisions),
         timing=timing,
