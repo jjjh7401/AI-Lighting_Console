@@ -136,7 +136,7 @@ from server.design.beat_grid_send import (
     verify_owned_sequences,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
-from server.design.beat_grid_stage import read_beat_grid_stage
+from server.design.beat_grid_stage import fixture_pan_tilt, read_beat_grid_stage
 from server.design.beat_grid_suggestion import (
     BeatGridSuggestion,
     PendingSuggestionStore,
@@ -9746,9 +9746,28 @@ class ChatSession:
                 track_names=track_names,
             )
         self._beat_grid_attach_group_sub_info(payload)
+        self._beat_grid_attach_pan_tilt(payload)
         event = beat_grid_stage_event(**payload)
         self._send(event)
         return event
+
+    def _beat_grid_attach_pan_tilt(self, payload: dict) -> None:
+        """무대 장비마다 ``pan_tilt``(참/거짓)를 단다 — 리그 능력 판독으로 알 때만.
+        모르면(판독 실패·그 fid 미판독·부분 판독에서 속성 안 보임) 키를 뺀다."""
+        fixtures = [f for f in payload.get("fixtures") or [] if isinstance(f, dict)]
+        if not fixtures:
+            return
+        try:
+            capabilities = self._try_rig_capabilities().capabilities
+        except Exception:  # noqa: BLE001 — 기종을 모르면 키만 뺀다
+            return
+        if capabilities is None:
+            return
+        for fixture in fixtures:
+            cap = capabilities.fixtures.get(fixture.get("fid"))
+            value = fixture_pan_tilt(cap) if cap is not None else None
+            if value is not None:
+                fixture["pan_tilt"] = value
 
     def _beat_grid_attach_group_sub_info(self, payload: dict) -> None:
         """무대 판독 결과의 그룹마다 트랙 둘째 줄(``sub_info``)을 달고 세션에 기억한다.
