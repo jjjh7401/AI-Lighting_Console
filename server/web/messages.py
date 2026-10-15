@@ -173,6 +173,8 @@ CLIENT_MESSAGE_TYPES = (
     # 설명을 받아 서버가 번호를 배정한다(`beat_grid_edit`과 같은 길로,
     # 새 콘솔 쓰기 경로는 만들지 않는다) — AC-LDBEAT-005.
     "beat_grid_new_preset",
+    # 반영 준비 — 상단 바 타임코드 번호 입력. 콘솔에 쓰지 않는다(초안·보관함에만 적는다).
+    "beat_grid_timecode_set",
     # 카드 t563(SPEC-LDBEAT-001 M4, REQ-LDBEAT-011~013/017) — 상단 바
     # 콘솔 버튼 셋. `beat_grid_edit` 과 달리 이 셋은 콘솔에 **쓴다**
     # (run_commands -> 기존 안전 게이트) — 새 무승인 경로를 만들지 않는다.
@@ -465,6 +467,18 @@ def parse_client_message(raw: str) -> dict:
         if not isinstance(target, str) or not target.strip():
             raise ProtocolError("beat_grid_suggest.target must be a non-empty string")
         return {"v": PROTOCOL_VERSION, "type": "beat_grid_suggest", "bar": bar, "target": target}
+
+    if message_type == "beat_grid_timecode_set":
+        # 반영 준비 — 상단 바 타임코드 번호 입력. 정수 모양만 가리고, 1 이상인지와 초안에
+        # 적을지는 세션이 본다(거절 사유를 화면에 보이려고 여기서 막지 않는다).
+        timecode_number = message.get("timecode_number")
+        if not isinstance(timecode_number, int) or isinstance(timecode_number, bool):
+            raise ProtocolError("beat_grid_timecode_set.timecode_number must be an integer")
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_timecode_set",
+            "timecode_number": timecode_number,
+        }
 
     if message_type == "beat_grid_new_preset":
         # 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
@@ -1006,6 +1020,7 @@ def beat_grid_send_status_event(
     blocked_cells: list[dict],
     approval_vs_sent: dict | None = None,
     stale_tracks: list[str] | None = None,
+    notices: list[str] | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -1025,6 +1040,7 @@ def beat_grid_send_status_event(
         blocked_cells=blocked_cells,
         approval_vs_sent=approval_vs_sent,
         stale_tracks=list(stale_tracks) if stale_tracks is not None else [],
+        notices=list(notices) if notices is not None else [],
     )
 
 

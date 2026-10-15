@@ -478,8 +478,7 @@ class TestTimecodeResolutionBranches:
         number, reason = session._resolve_beat_grid_timecode_number(None)
 
         assert number is None
-        assert reason is not None
-        assert "지정되지" in reason
+        assert reason == "타임코드 번호를 넣어 주세요"
 
     def test_occupied_timecode_is_refused(self, tmp_path) -> None:
         state_tree = _empty_pool_state_tree()

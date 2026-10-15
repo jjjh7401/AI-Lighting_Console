@@ -37,6 +37,7 @@ __all__ = [
     "beat_grid_cell_snapshot",
     "beat_grid_reapply_summary",
     "build_song_timing_from_bar_map",
+    "dimmer_unread_notices",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
     "resolve_group_dimmer_attributes",
@@ -149,6 +150,26 @@ def resolve_dimmer_attributes(
     if not uniform:
         return {}
     return {name: uniform for name in group_names}
+
+
+#: 디머 속성을 「아직 읽지 않았다」로 막힌 사유의 표식. :func:`resolve_group_dimmer_attributes`
+#: 가 쓰는 사유 가운데 판독이 빠진 쪽에만 든다("읽지 못해"·"다 읽지 못했고"). 기종이
+#: 섞인 그룹("섞여 있어")은 읽기는 끝났으므로 여기 들지 않는다.
+_DIMMER_UNREAD_MARKS: tuple[str, ...] = ("읽지 못해", "다 읽지 못했고")
+
+
+def dimmer_unread_notices(blocked_cells: Sequence[tuple[str, int, str]]) -> list[str]:
+    """미리보기 안내 — 디머 속성 판독이 없어 막힌 칸을 한 줄로 센다.
+
+    ``blocked_cells``는 ``(트랙 이름, 마디, 사유)`` 전수 목록이다. 사유에 판독 부재 표식이
+    있는 칸만 세어 「이 장비는 밝기 정보를 아직 읽지 않았어요 — N칸 제외」 한 줄을 낸다.
+    목록 자체는 건드리지 않는다 — 칸별 사유는 그대로 남고, 나머지 칸은 그대로 나간다."""
+    unread = [
+        cell for cell in blocked_cells if any(mark in cell[2] for mark in _DIMMER_UNREAD_MARKS)
+    ]
+    if not unread:
+        return []
+    return [f"이 장비는 밝기 정보를 아직 읽지 않았어요 — {len(unread)}칸 제외"]
 
 
 def resolve_group_dimmer_attributes(

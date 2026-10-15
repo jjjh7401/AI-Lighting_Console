@@ -129,6 +129,7 @@ from server.design.beat_grid_send import (
     beat_grid_cell_snapshot,
     beat_grid_reapply_summary,
     build_song_timing_from_bar_map,
+    dimmer_unread_notices,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
     unsent_beat_grid_cells,
@@ -10513,6 +10514,7 @@ class ChatSession:
             ],
             approval_vs_sent=dict(approval_vs_sent) if approval_vs_sent is not None else None,
             stale_tracks=list(stale_tracks),
+            notices=dimmer_unread_notices(blocked_cells),
         )
         self._send(event)
         return event
@@ -10532,6 +10534,53 @@ class ChatSession:
         section = rig_sections.get("sequences")
         return section if isinstance(section, Mapping) else {"reason": "console_unreachable"}
 
+    def beat_grid_timecode_set(self, timecode_number: object) -> dict:
+        """반영 준비 — 상단 바 타임코드 번호 입력. director 가 적은 번호 하나를 곡 초안에 적고,
+        보관함에 자동 저장 판(``<곡> (자동 vN)``)을 남긴다. 콘솔에는 아무것도 쓰지 않는다.
+        번호가 콘솔에서 비었는지·남의 것인지는 「콘솔에 반영」 때
+        ``_resolve_beat_grid_timecode_number`` 가 본다. 양의 정수만 받는다. 번호를 지어내지
+        않으며, 거절하면 초안은 그대로 둔다."""
+        if (
+            not isinstance(timecode_number, int)
+            or isinstance(timecode_number, bool)
+            or timecode_number < 1
+        ):
+            return self._beat_grid_send_status(
+                last_action="edit", ok=False, reason="타임코드 번호는 1 이상의 정수로 넣어 주세요"
+            )
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if not isinstance(timeline, dict):
+            return self._beat_grid_send_status(
+                last_action="edit",
+                ok=False,
+                reason="곡 초안이 없어 타임코드 번호를 적을 곳이 없습니다",
+            )
+        updated = {**timeline, "timecode_number": timecode_number}
+        store.latest = updated
+        library = self._timeline_library
+        library_saved = False
+        if library is not None:
+            title = str(updated.get("song_title") or "").strip()
+            if not title or title == _DESIGN_INTERVIEW_TITLE:
+                sequence_no = updated.get("sequence_number")
+                title = f"Sequence {sequence_no}" if sequence_no is not None else "타임라인"
+            try:
+                library.auto_save(title, updated)
+                library_saved = True
+            except Exception:
+                # 보관함 장부 실패가 방금 적은 초안을 되돌리면 안 된다 — 사유만 남긴다.
+                library_saved = False
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
+        note = (
+            "초안과 보관함에 저장했어요."
+            if library_saved
+            else "초안에 저장했어요(보관함 자동 저장은 되지 않았어요)."
+        )
+        return self._beat_grid_send_status(
+            last_action="edit", ok=True, reason=f"타임코드 {timecode_number}번을 적었습니다. {note}"
+        )
+
     def _resolve_beat_grid_timecode_number(
         self, wanted: object, *, recorded_name: str | None = None
     ) -> tuple[int | None, str | None]:
@@ -10546,9 +10595,7 @@ class ChatSession:
         (레코드가 기억하는 객체가 콘솔에서 사라졌다) 그 사실 자체를
         거절 사유로 삼는다 — 번호를 지어내 되살리지 않는다."""
         if not isinstance(wanted, int) or isinstance(wanted, bool) or wanted < 1:
-            return None, (
-                "곡 타이밍에 타임코드 번호(timeline.timecode_number)가 지정되지 않았습니다."
-            )
+            return None, "타임코드 번호를 넣어 주세요"
         path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
         occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
         if occupant is not None:

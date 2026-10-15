@@ -1284,6 +1284,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_suggest",
     "beat_grid_suggestion_apply",
     "beat_grid_suggestion_reject",
+    # 반영 준비 (2026-10-15, SPEC-LDBEAT-001 상단 바 타임코드 번호) — 타임코드 번호 입력.
+    # 콘솔에 쓰지 않고 곡 초안과 보관함에만 적는다. 같은 사유의 정당한 확장이다.
+    "beat_grid_timecode_set",
     "chat",
     "cue_monitor_request",
     "dash_catalog_request",
