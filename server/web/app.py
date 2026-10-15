@@ -684,6 +684,11 @@ def create_app(deps: WebDeps) -> FastAPI:
                         message.get("fx"),
                         message.get("rgb"),
                     )
+                elif message_type == "beat_grid_timecode_set":
+                    # 반영 준비 — 상단 바 타임코드 번호 입력. 콘솔 접촉 없이 초안·보관함에만 적는다.
+                    await asyncio.to_thread(
+                        session.beat_grid_timecode_set, message.get("timecode_number")
+                    )
                 elif message_type in (
                     "beat_grid_apply",
                     "beat_grid_preview",

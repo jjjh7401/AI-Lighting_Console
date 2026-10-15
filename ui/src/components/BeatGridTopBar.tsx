@@ -7,7 +7,7 @@
 //
 // 콘솔 쓰기 경로(이 마디 미리보기·끄기·반영)는 이 카드 범위 밖이라 콜백이
 // 없으면 버튼이 비활성으로 남고, 그 사실을 title 로 말한다(지어낸 동작 0).
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
 
@@ -59,6 +59,19 @@ export const SPEED_MASTER_MANUAL_NOTE = "스피드 마스터 — 콘솔에서 �
 export const SPEED_MASTER_MANUAL_SHORT_NOTE = "콘솔에서 설정";
 export const SPEED_MASTER_MANUAL_TITLE =
   "스피드 마스터 BPM 은 앱이 자동으로 싣지 않습니다 — 사람이 콘솔에서 직접 설정합니다(자동 설정 방법 미확인).";
+
+/** 반영 준비 — 타임코드 번호 입력칸의 글자를 번호로 읽는다. 양의 정수 글자만 번호가 되고,
+ * 빈칸·소수·음수·글자는 `null`이다(번호를 지어내지 않는다). */
+export function parseTimecodeInput(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return Number.isSafeInteger(value) && value >= 1 ? value : null;
+}
+
+/** 콜백이 넘어오지 않은 입력칸(배선 전)이 그 사실을 말하는 title. */
+export const TIMECODE_UNWIRED_TITLE =
+  "타임코드 번호 입력은 아직 화면에 연결되지 않았습니다 — 연결 전에는 비활성입니다";
 
 export function formatTopBarBpm(bpm: number | null | undefined): string {
   if (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm <= 0) return "BPM —";
@@ -119,6 +132,51 @@ export interface BeatGridTopBarProps {
   /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
    * 동일. */
   playback?: BeatGridTopBarPlaybackProps | null;
+  /** 반영 준비 — 타임코드 번호. `timecodeNumber`는 지금 초안에 적힌 번호(없으면 `null`).
+   * `onTimecodeSubmit`이 없으면 입력칸은 비활성이고 title 로 그 이유를 말한다. */
+  timecodeNumber?: number | null;
+  onTimecodeSubmit?: (timecodeNumber: number) => void;
+}
+
+function TimecodeField({
+  value,
+  onSubmit,
+}: {
+  value: number | null;
+  onSubmit?: (timecodeNumber: number) => void;
+}) {
+  const [draft, setDraft] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    setDraft(value === null ? "" : String(value));
+  }, [value]);
+  const parsed = parseTimecodeInput(draft);
+  const wired = onSubmit !== undefined;
+  const submit = () => {
+    if (parsed !== null) onSubmit?.(parsed);
+  };
+  return (
+    <span className="beat-grid-timecode" title={wired ? undefined : TIMECODE_UNWIRED_TITLE}>
+      <label>
+        타임코드{" "}
+        <input
+          type="text"
+          inputMode="numeric"
+          aria-label="타임코드 번호"
+          value={draft}
+          placeholder="번호"
+          disabled={!wired}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") submit();
+          }}
+        />
+      </label>
+      <button type="button" className="tbtn" disabled={!wired || parsed === null} onClick={submit}>
+        적기
+      </button>
+      {value === null && <span className="beat-grid-timecode-hint">타임코드 번호를 넣어 주세요</span>}
+    </span>
+  );
 }
 
 function ShortenedLabel({ action }: { action: TopBarAction }) {
@@ -142,6 +200,8 @@ export function BeatGridTopBar({
   onPreviewBar,
   onPreviewOff,
   onApply,
+  timecodeNumber = null,
+  onTimecodeSubmit,
   pendingApplyCount,
   onDrawerToggle,
   onDraftPropose,
@@ -215,6 +275,7 @@ export function BeatGridTopBar({
         <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
         <span className="beat-grid-pill-note-short"> · {SPEED_MASTER_MANUAL_SHORT_NOTE}</span>
       </span>
+      <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
       {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />
       {/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데).
