@@ -537,20 +537,25 @@ _BREAK_ONSET_FRACTION_OF_MEDIAN = 0.25
 #: 곡 전체의 우연한 음량 요동을 빌드업으로 오인하지 않게 막는다).
 _BUILD_MIN_BARS = 3
 
-#: 드롭 — 보컬 대역 비율이 이 값 이하(단위: 비율, 0~1)이면서 저역이 이 배수
-#: 이상(단위: 배, ratio-to-median)인 구간. **이 두 문턱은 이 SPEC이 직접 정한
-#: 것이다** — 지도 보고서 §2.3이 드롭 후보(63~66마디)를 "보컬 대역 비율
-#: 0.03~0.04(곡 평균 0.30의 약 1/10)"로만 서술하고 구체적 채점 문턱을 주지
-#: 않았다(REQ-LDBARMAP-009 "추정" 등급 — 비교 대상 자체가 참고 지표). 드롭은
-#: AC-LDBARMAP-007의 7개 사건에 들지 않는다(REQ-009 — [추정]은 PASS 판정의
-#: 유일한 근거로 쓰지 않는다) — 참고 지표로만 보고한다. **알려진 한계**: 이
-#: 문턱은 지도 보고서의 수치표(0~1 비율) 척도로 골랐다 — 이 모듈이 실제
-#: 오디오에서 재는 ``vocal_band_ratio``(HPSS 화성 성분의 보컬 대역 비중, 역시
-#: 0~1로 묶은 비율이지만 다른 분리 파이프라인)는 절대 분리 폭이 달라 이
-#: 문턱으로 63~66마디를 깨끗하게 가려내지 못할 수 있다(참고 지표라 PASS 판정에
-#: 영향 없음, progress.md Gaps에 정직하게 기록).
-_DROP_VOCAL_BAND_RATIO = 0.15
-_DROP_LOW_BAND_RATIO = 1.4
+#: 드롭 — 보컬 대역 비율을 **곡 중앙값으로 나눠서** 잰다(1 = 곡 평소 보컬 수준).
+#:
+#: **왜 바뀌었나(실측, 척도 불일치)**: 이전 문턱(보컬 비율 ≤0.15, 절대값)은 지도
+#: 보고서 수치표 척도에서 골랐다. 이 모듈이 실제 오디오에서 재는 보컬 비율은 다른
+#: 분리 파이프라인이라 LOVE ATTACK 82마디의 중앙값이 0.41, 최솟값이 0.17이다. 절대
+#: 문턱 0.15에는 한 마디도 닿지 못해 드롭이 0건이었다(스트로브 0칸). 저역·음량이
+#: 이미 곡 중앙값 정규화인 것과 같은 방식으로, 보컬도 곡 자신의 중앙값에 대해 잰다.
+#:
+#: 구간 판정: 연속된 마디 가운데 느슨한 문턱 이하인 것을 한 구간으로 잇고, 그 구간에
+#: 깊은 문턱 이하로 빠진 마디가 하나라도 있을 때만 드롭이다. 한두 마디의 흔들림은
+#: 드롭이 아니다. 드롭은 AC-LDBARMAP-007의 7개 사건에 들지 않는다(REQ-009 — [추정]은
+#: PASS 판정의 유일한 근거로 쓰지 않는다). 참고 지표로만 보고한다.
+_DROP_VOCAL_RATIO_DEEP = 0.55
+_DROP_VOCAL_RATIO_LOOSE = 0.8
+#: 드롭 — 저역이 곡 중앙값 이상이어야 한다. 보컬과 저역이 함께 빠지면 킥 멈춤(브레이크)이다.
+_DROP_LOW_BAND_RATIO = 1.0
+#: 드롭 — 음량이 곡 중앙값의 이 배수 이상이어야 한다. 도입부·아웃트로는 보컬이 없어도
+#: 조용하므로 드롭이 아니다(실측: 도입부 3~5마디 0.61~0.64배, 드롭 63~66마디 0.87~0.93배).
+_DROP_VOLUME_RATIO = 0.75
 
 
 @dataclass(frozen=True)
@@ -589,7 +594,7 @@ class BarEvent:
     공간과 같다). ``grade`` 는 REQ-LDBARMAP-009 신뢰도 갈래(``measured``/
     ``estimated``) — kick_entry·build·break 는 지도 보고서가 [잰 값]으로 매긴
     저역·음량 임계값에서 바로 나오므로 ``measured``, drop 은 이 SPEC이 직접
-    정한 문턱(위 ``_DROP_VOCAL_BAND_RATIO`` 근거 참조)이라 ``estimated`` 다.
+    정한 문턱(위 ``_DROP_VOCAL_RATIO_DEEP`` 근거 참조)이라 ``estimated`` 다.
     """
 
     kind: str
@@ -737,18 +742,10 @@ def classify_bar_events(features: Sequence[BarFeatures]) -> list[BarEvent]:
             and f.onset_count <= _BREAK_ONSET_FRACTION_OF_MEDIAN * median_onset
         )
     )
-    drop_bars = sorted(
-        bar
-        for bar, f in by_bar.items()
-        if f.vocal_band_ratio is not None
-        and f.vocal_band_ratio <= _DROP_VOCAL_BAND_RATIO
-        and f.low_band_norm >= _DROP_LOW_BAND_RATIO
-    )
-
     events: list[BarEvent] = []
     events.extend(BarEvent(EVENT_KIND_KICK_ENTRY, bar, bar, grade="measured") for bar in kick_bars)
     events.extend(BarEvent(EVENT_KIND_BREAK, bar, bar, grade="measured") for bar in break_bars)
-    events.extend(_group_consecutive_bars(drop_bars, EVENT_KIND_DROP, grade="estimated"))
+    events.extend(_drop_events(by_bar))
     events.extend(_builds_anchored_before(by_bar, kick_bars))
 
     events.sort(key=lambda e: (e.start_bar, e.kind))
@@ -766,6 +763,37 @@ def _group_consecutive_bars(bars: Sequence[int], kind: str, grade: str) -> list[
         events.append(BarEvent(kind, bars[i], bars[j], grade=grade))
         i = j + 1
     return events
+
+
+def _drop_events(by_bar: dict[int, BarFeatures]) -> list[BarEvent]:
+    """보컬 대역 비율을 곡 중앙값으로 나눠(1 = 곡 평소) 드롭 구간을 찾는다.
+
+    느슨한 문턱(보컬·저역·음량 조건을 모두 만족하는 마디)을 연속으로 잇고, 그 구간에
+    깊은 보컬 문턱 이하로 빠진 마디가 있을 때만 드롭으로 본다. 보컬 측정이 하나도
+    없거나 곡 중앙값이 0 이하이면 드롭을 내지 않는다(0으로 나누지 않는다).
+    """
+    measured = [f.vocal_band_ratio for f in by_bar.values() if f.vocal_band_ratio is not None]
+    vocal_median = statistics.median(measured) if measured else 0.0
+    if vocal_median <= 0:
+        return []
+    vocal_norm = {
+        bar: f.vocal_band_ratio / vocal_median
+        for bar, f in by_bar.items()
+        if f.vocal_band_ratio is not None
+    }
+    loose_bars = sorted(
+        bar
+        for bar, vocal in vocal_norm.items()
+        if vocal <= _DROP_VOCAL_RATIO_LOOSE
+        and by_bar[bar].low_band_norm >= _DROP_LOW_BAND_RATIO
+        and by_bar[bar].volume_norm >= _DROP_VOLUME_RATIO
+    )
+    return [
+        run
+        for run in _group_consecutive_bars(loose_bars, EVENT_KIND_DROP, grade="estimated")
+        if min(vocal_norm[bar] for bar in range(run.start_bar, run.end_bar + 1))
+        <= _DROP_VOCAL_RATIO_DEEP
+    ]
 
 
 def _builds_anchored_before(

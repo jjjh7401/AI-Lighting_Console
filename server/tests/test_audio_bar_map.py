@@ -649,7 +649,8 @@ def test_classify_bar_events_build_requires_minimum_3_bars() -> None:
 
 
 def test_classify_bar_events_drop_only() -> None:
-    """보컬 대역 비율이 낮고(≤0.15) 저역이 강한(≥1.4배) 구간 — 드롭(참고 지표)만 나온다."""
+    """보컬 대역 비율이 곡 중앙값의 절반 남짓으로 깊게 빠지고 저역이 평소 이상인 구간 —
+    드롭(참고 지표)만 나온다."""
     features = [
         BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, vocal_band_ratio=0.5)
         for i in range(1, 6)
@@ -1074,3 +1075,137 @@ def test_extract_bar_features_rejects_fewer_than_2_bar_boundaries() -> None:
     result = extract_bar_features(b"irrelevant for this check", (0,))
     assert isinstance(result, BarFeaturesFailure)
     assert "2개 미만" in result.reason
+
+
+# ---------------------------------------------------------------------------
+# 9. 드롭 분류 — 보컬 대역 비율을 곡 중앙값으로 나눠 잰다(마디 지도 드롭 보강).
+# ---------------------------------------------------------------------------
+
+
+def test_drop_real_love_attack_detects_bars_63_to_66(
+    love_attack_bar_features_real_fixture: dict,
+) -> None:
+    """LOVE ATTACK 실제 오디오 특징에서 드롭은 63~66마디 한 사건으로 잡혀야 한다.
+
+    이전 규칙은 보컬 대역 비율을 절대값(≤0.15)으로 재서, 이 곡의 최솟값(0.1728)에도
+    닿지 못해 드롭이 0건이었다(스트로브 0칸). 같은 마디들은 곡 중앙값(0.4071)에 대해
+    0.43~0.60배로 가장 깊게 빠져 있다. 도입부 3~5마디는 보컬이 없지만 음량이 0.6배라
+    드롭이 아니다.
+    """
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    drop_events = [e for e in classify_bar_events(features) if e.kind == "drop"]
+    assert drop_events == [BarEvent("drop", 63, 66, grade="estimated")]
+
+
+def test_drop_is_scale_free_under_vocal_ratio_rescaling(
+    love_attack_bar_features_real_fixture: dict,
+) -> None:
+    """보컬 비율의 절대 척도가 달라도(지도 보고서 척도 ×0.1, 다른 분리기 ×3) 드롭 판정은
+    같아야 한다 — 곡 중앙값으로 나눠 재기 때문이다. 절대 문턱 시절에는 ×0.1에서 도입부까지
+    드롭으로 잡혀 이 불변이 깨졌다."""
+    base = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    expected = [BarEvent("drop", 63, 66, grade="estimated")]
+    for scale in (0.1, 3.0):
+        scaled = [
+            BarFeatures(
+                bar=f.bar,
+                volume_norm=f.volume_norm,
+                low_band_norm=f.low_band_norm,
+                vocal_band_ratio=f.vocal_band_ratio * scale,
+                onset_count=f.onset_count,
+            )
+            for f in base
+        ]
+        drops = [e for e in classify_bar_events(scaled) if e.kind == "drop"]
+        assert drops == expected, f"scale={scale}: {drops}"
+
+
+def test_drop_excludes_quiet_section_even_when_vocals_are_absent() -> None:
+    """도입부처럼 조용한(음량 0.6배) 구간은 보컬이 없고 저역이 살아 있어도 드롭이 아니다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, vocal_band_ratio=0.5)
+        for i in range(1, 9)
+    ]
+    features[2] = BarFeatures(bar=3, volume_norm=0.6, low_band_norm=1.5, vocal_band_ratio=0.05)
+    features[3] = BarFeatures(bar=4, volume_norm=0.6, low_band_norm=1.5, vocal_band_ratio=0.04)
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "drop"] == []
+
+
+def test_drop_needs_bass_at_or_above_median() -> None:
+    """보컬과 저역이 함께 빠지면 드롭이 아니다 — 킥 멈춤(브레이크) 쪽이다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, vocal_band_ratio=0.5)
+        for i in range(1, 6)
+    ]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=0.9, vocal_band_ratio=0.05)
+    features[3] = BarFeatures(bar=4, volume_norm=1.0, low_band_norm=0.9, vocal_band_ratio=0.04)
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "drop"] == []
+
+
+def test_drop_run_needs_one_deep_bar() -> None:
+    """보컬이 평소의 0.7배쯤 얕게만 빠진 구간은 드롭이 아니다.
+    구간 안에 깊은 마디(평소의 0.55배 이하)가 하나는 있어야 한다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.0, vocal_band_ratio=0.5)
+        for i in range(1, 6)
+    ]
+    features[2] = BarFeatures(bar=3, volume_norm=1.0, low_band_norm=1.5, vocal_band_ratio=0.35)
+    features[3] = BarFeatures(bar=4, volume_norm=1.0, low_band_norm=1.5, vocal_band_ratio=0.35)
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "drop"] == []
+
+
+def test_drop_zero_vocal_median_yields_no_drop() -> None:
+    """보컬 측정값이 모두 0이면 곡 중앙값도 0이다 — 0으로 나누지 않고 드롭을 내지 않는다."""
+    features = [
+        BarFeatures(bar=i, volume_norm=1.0, low_band_norm=1.5, vocal_band_ratio=0.0)
+        for i in range(1, 6)
+    ]
+    events = classify_bar_events(features)
+    assert [e for e in events if e.kind == "drop"] == []
+
+
+@pytest.mark.parametrize(
+    ("constant_name", "factor"),
+    [
+        ("_DROP_VOCAL_RATIO_DEEP", 0.8),
+        ("_DROP_VOCAL_RATIO_DEEP", 1.2),
+        ("_DROP_VOCAL_RATIO_LOOSE", 0.8),
+        ("_DROP_VOCAL_RATIO_LOOSE", 1.2),
+        ("_DROP_LOW_BAND_RATIO", 0.8),
+        ("_DROP_LOW_BAND_RATIO", 1.2),
+        ("_DROP_VOLUME_RATIO", 0.9),
+        ("_DROP_VOLUME_RATIO", 1.1),
+    ],
+)
+def test_drop_real_love_attack_stays_63_to_66_under_threshold_perturbation(
+    love_attack_bar_features_real_fixture: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    constant_name: str,
+    factor: float,
+) -> None:
+    """드롭 문턱 흔들기 — 보컬(깊은·느슨한)과 저역 문턱은 ±20%, 음량 문턱은 ±10%에서도
+    LOVE ATTACK 드롭이 63~66마디 한 사건으로 남는다. 음량 문턱의 여유는 좁다(아래 지식의 날)."""
+    base_value = getattr(bar_map_module, constant_name)
+    monkeypatch.setattr(bar_map_module, constant_name, base_value * factor)
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    drop_events = [e for e in classify_bar_events(features) if e.kind == "drop"]
+    assert drop_events == [BarEvent("drop", 63, 66, grade="estimated")], (
+        f"{constant_name}*{factor}={base_value * factor}: {drop_events}"
+    )
+
+
+def test_drop_volume_minus_15_percent_is_a_knife_edge(
+    love_attack_bar_features_real_fixture: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """지식의 날, 정직하게 기록 — 음량 문턱을 −15%(0.6375)로 낮추면 도입부 5마디(음량 0.64)가
+    드롭에 들어와 (5,5) 오검출이 생긴다. 음량 문턱은 도입부 최대(0.64)와 드롭 끝마디(0.87)
+    사이 좁은 틈(0.75 ± 15% 남짓)에서만 맞는다."""
+    base = bar_map_module._DROP_VOLUME_RATIO
+    monkeypatch.setattr(bar_map_module, "_DROP_VOLUME_RATIO", base * 0.85)
+    features = _bar_features_from_real_fixture(love_attack_bar_features_real_fixture)
+    drop_events = [e for e in classify_bar_events(features) if e.kind == "drop"]
+    assert [(e.start_bar, e.end_bar) for e in drop_events] == [(5, 5), (63, 66)]
