@@ -488,6 +488,10 @@ export interface BeatGridCue {
   source_ref: string | null;
   /** 카드 t548, REQ-LDBEAT-006(vi) — 앱 2단계 무빙. 없으면 `null`. */
   app_movement: BeatGridAppMovement | null;
+  /** 칸의 구조화 효과 모양(펄스·체이스·웨이브·스윕). 서버 `effect_shape_of_cue`가
+   * 효과 레시피·`app_movement`에서만 파생한다(라벨 글자는 쓰지 않는다). 모양이 없는
+   * 칸은 키가 없다. 막대 아이콘은 이 값을 먼저 읽고, 없으면 `app_movement.shape`를 본다. */
+  effect_shape?: "pulse" | "chase" | "wave" | "sweep" | null;
   /** 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `null`. */
   evidence: BeatGridEvidence | null;
   /** 카드 t577, REQ-LDBEAT-015(h-1) — 뷰 전용 파생 필드(서버
