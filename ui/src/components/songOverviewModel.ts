@@ -18,6 +18,10 @@ export interface SongOverviewSectionInput {
   d_level?: number;
   /** 구간 단위 강조 문구(예: `"climax accent"`). 비어 있지 않으면 ★. */
   accents?: readonly string[];
+  /** 서버가 붙이는 구간 종류 색(`#rrggbb`). 있으면 `palette_primary_hex` 보다 우선한다. */
+  color?: string | null;
+  /** 서버가 붙이는 구간 에너지 0~1(마디 지도 분석 뒤에만). 있으면 `d_level` 환산보다 우선한다. */
+  energy?: number | null;
 }
 
 export interface SongOverviewSection {
@@ -45,11 +49,14 @@ export function buildSongOverview({
   barCount,
   secondsPerBar,
   fallbackRange,
+  accentBars: timelineAccentBars,
 }: {
   sections: readonly SongOverviewSectionInput[] | undefined;
   barCount: number | null | undefined;
   secondsPerBar: number | null | undefined;
   fallbackRange: { start: number; end: number };
+  /** 서버 `timeline.accent_bars[]` — 있으면 ★ 자리는 이 마디들이다. */
+  accentBars?: readonly { bar: number }[] | null;
 }): SongOverviewModel {
   const totalBars =
     typeof barCount === "number" && Number.isFinite(barCount) && barCount > 0
@@ -77,20 +84,27 @@ export function buildSongOverview({
     const endBar = located[i + 1]?.startBar ?? totalBars;
     if (endBar <= startBar) return;
     const level = section.d_level;
+    const energy =
+      typeof section.energy === "number" && Number.isFinite(section.energy)
+        ? Math.max(0, Math.min(1, section.energy))
+        : typeof level === "number" && Number.isFinite(level)
+          ? Math.max(0, Math.min(1, level / D_LEVEL_MAX))
+          : null;
     out.push({
       label: section.label,
       startBar,
       endBar,
-      hex: section.palette_primary_hex ?? null,
-      energy:
-        typeof level === "number" && Number.isFinite(level)
-          ? Math.max(0, Math.min(1, level / D_LEVEL_MAX))
-          : null,
+      hex: section.color ?? section.palette_primary_hex ?? null,
+      energy,
     });
     if ((section.accents ?? []).length > 0) accentBars.push(startBar);
   });
 
-  return { totalBars, sections: out, accentBars };
+  // 서버 `accent_bars` 가 있으면 ★ 는 그 마디들이다. 곡 범위 밖 마디는 버린다.
+  const timelineBars = [...new Set((timelineAccentBars ?? []).map((item) => Math.round(item.bar)))]
+    .filter((bar) => Number.isFinite(bar) && bar >= 0 && bar < totalBars)
+    .sort((a, b) => a - b);
+  return { totalBars, sections: out, accentBars: timelineBars.length > 0 ? timelineBars : accentBars };
 }
 
 export type OverviewZoom = "song" | "bars16" | "bars8";
