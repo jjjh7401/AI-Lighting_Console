@@ -83,6 +83,7 @@ import {
 // 마운트·prop 전달만 한다(세 레인이 이 파일을 동시에 고치는 중이라 diff를
 // 최소로 둔다).
 import { GlanceCell } from "./beatgrid/GlanceCell";
+import { cellBarsOf, gridAxisEnd } from "./beatgrid/gridAxis";
 import {
   type FxPeriodUnit,
   NewPresetFxFields,
@@ -1465,6 +1466,9 @@ export function BeatGrid({
   linkedSongAudioFile = null,
   songAudioLinkMissing = false,
 }: BeatGridProps) {
+  // 격자 축 끝 마디 — 칸이 있는 마지막 마디나 곡의 마디 수까지 넓힌다(기본 범위에 고정하지 않는다).
+  // 재생 계산이 맨 위 훅에서 쓰므로 여기서 먼저 구한다. 격자가 없으면 0(아래 빈 화면이 먼저 돌아간다).
+  const axisEnd = grid ? gridAxisEnd(grid.bar_range, cellBarsOf(grid.tracks), barCount) : 0;
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
@@ -1789,7 +1793,7 @@ export function BeatGrid({
   // 예외가 나도 재생(오디오·시계)은 멈추지 않는다(REQ-LDBEAT-024(f)).
   useEffect(() => {
     if (!playing || typeof window === "undefined") return;
-    const totalSeconds = grid ? barToSeconds(grid.bar_range.end, secondsPerBar) : null;
+    const totalSeconds = grid ? barToSeconds(axisEnd, secondsPerBar) : null;
     let previousBar: number | null = null;
     const tick = () => {
       const anchor = playbackAnchorRef.current;
@@ -1800,7 +1804,7 @@ export function BeatGrid({
       runPlaybackFrameUpdate(
         () => {
           if (!grid) return;
-          const bar = secondsToBar(next, secondsPerBar, grid.bar_range.end);
+          const bar = secondsToBar(next, secondsPerBar, axisEnd);
           if (bar === null || bar === previousBar) return;
           previousBar = bar;
           const ctx = livePlaybackContextRef.current;
@@ -1928,7 +1932,7 @@ export function BeatGrid({
     );
   }
 
-  const maxBar = grid.bar_range.end;
+  const maxBar = axisEnd;
   // 카드 t559 — 곡 전체 지도 모델(곡 데이터에서만 읽음)과 확대 단계별 마디 폭.
   // 아래 `barToX`는 모듈의 같은 이름 함수를 확대 폭으로 감싼 것이다 — 타임라인
   // 그리기 코드는 손대지 않고 가로 스케일만 바뀐다.
@@ -2079,7 +2083,7 @@ export function BeatGrid({
   // (처음으로 되돌아가지 않는다) — `secondsPerBar`가 없으면(환산 불가)
   // 보기만 옮기고 재생 위치는 그대로 둔다(지어내지 않음).
   const jumpToBar = (bar: number) => {
-    const target = Math.max(grid.bar_range.start, Math.min(grid.bar_range.end, bar));
+    const target = Math.max(grid.bar_range.start, Math.min(maxBar, bar));
     setBarCursor({ bar: target, anchor: selected });
     if (playing) {
       const targetSeconds = barToSeconds(target, secondsPerBar);
@@ -2121,7 +2125,7 @@ export function BeatGrid({
         bpm={bpm}
         currentBar={viewBar}
         barSectionLabel={viewBarSectionLabel}
-        barRange={grid.bar_range}
+        barRange={{ start: grid.bar_range.start, end: maxBar }}
         onBarChange={jumpToBar}
         onPreviewBar={onPreviewBar}
         onPreviewOff={onPreviewOff}
@@ -2156,7 +2160,7 @@ export function BeatGrid({
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
         model={overviewModel}
-        filledRange={grid.bar_range}
+        filledRange={{ start: grid.bar_range.start, end: maxBar }}
         visibleWindow={
           laneView.visibleWidth > 0
             ? overviewVisibleWindow({
