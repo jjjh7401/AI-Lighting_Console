@@ -1,0 +1,37 @@
+# LOVE ATTACK 연출 프리셋 계획 주석 — SPEC-LDRHYTHM-001 stage 2.
+#
+# 격자 칸(love_attack.yaml)의 색·방향은 라벨 글자로만 적혀 있어 구조화된
+# 필드가 없다. 칸 → 색·방향 대응은 여기서 한 번만 적고, 계획 코드
+# (server/design/love_attack_presets.py)는 이 파일만 읽는다 — 라벨 글자를
+# 파싱하지 않는다. 디머 %는 칸의 brightness.value_percent 에서 바로 온다.
+#
+# 출처: reports/effect-arrangement-rules-20261007.md §3·§4 와 love_attack.yaml
+# 칸 라벨. 적지 않은 값은 지어내지 않는다(미정).
+
+# 색 — rgb 가 null 이면 「미정」이다. 프로젝트가 정의하지 않은 RGB 는 채우지 않는다.
+# console_name 은 콘솔에 들어갈 영문 이름(ASCII)이고 색 이름의 번역이 아니다.
+colors:
+  - name: 라벤더
+    console_name: LAVENDER
+    rgb: null
+    note: >-
+      프로젝트 한국어 색 표(server/design/color_names.py)에 「라벤더」 항목이 없다.
+      표준 팔레트의 Lavender(55,35,100)는 「퍼플/보라」 감독 판정(t409)에만 연결돼
+      있어 「라벤더」에 자동으로 붙이지 않는다. 규칙 5 「진하게(W 0 + 채도 높은 RGB)」
+      는 색을 고르는 방법이지 값이 아니다.
+    cells:
+      - {group_name: WASH-ALL, bar: 7}
+
+# 위치 방향 — 목표 좌표(3D 좌표)가 프로젝트에 없어 전부 미정이다. 방향 이름만 싣는다.
+directions:
+  - name: 바닥 쪽
+    console_name: FLOOR
+    cells:
+      - {group_name: MOVER-U, bar: 0}
+      - {group_name: MOVER-D, bar: 0}
+
+# 칸 글자는 있으나 프리셋 하나로 만들 수 없는 위치(상대 이동·새 자리) — 미정으로만 남긴다.
+relative_position_cells:
+  - {group_name: MOVER-U, bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+  - {group_name: MOVER-D, bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+  - {group_name: MOVER-D, bar: 11, label: "11마디 1박 새 자리, 정지"}

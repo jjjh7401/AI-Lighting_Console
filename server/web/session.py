@@ -183,6 +183,12 @@ from server.design.ldrender_gate import (
 from server.design.ldrender_gate import (
     gate_cues_from_commands,
 )
+from server.design.love_attack_presets import (
+    apply_plan_references,
+    load_love_attack_annotations,
+    plan_love_attack_presets,
+    save_commands,
+)
 from server.design.phaser_catalog import (  # 카드 t480 — 자리만 옮김
     _PHASER_LABEL_POOL_NAME,
     COLOR_PHASER_SEQUENCE,
@@ -10443,6 +10449,105 @@ class ChatSession:
         )
         self._send(event)
         return event
+
+    # -- SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 저장 승인 카드 ---------
+
+    def _love_attack_dimmer_attributes(
+        self, group_names: Sequence[str]
+    ) -> dict[str, tuple[str, ...]]:
+        """그룹마다 디머 속성 이름 — 「⇪ 콘솔에 반영」(`beat_grid_apply`)이 쓰는 판독을
+        그대로 다시 부른다(읽기 전용). 못 읽은 그룹은 빠지고, 계획이 「미정」으로 남긴다."""
+        names = list(group_names)
+        types_root = str(
+            self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
+        )
+        rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
+        attributes, _reasons = resolve_group_dimmer_attributes(
+            rig_read, names, self._beat_grid_group_members(names)
+        )
+        return {group: tuple(attrs) for group, attrs in attributes.items()}
+
+    def love_attack_preset_card(self) -> dict:
+        """SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 계획을 승인 카드 한 장으로 올린다.
+
+        순서: 콘솔 풀 판독(읽기만) → 계획(순수 함수) → 저장 줄 → 승인 카드(게이트).
+        승인이 **통과한 뒤에만** 칸의 번호 참조와 승인 기록을 적는다. 거절·차단·무응답이면
+        격자는 바이트까지 그대로다. 이 메서드는 UI 메시지에 연결돼 있지 않다 — 실제 저장은
+        감독이 「실행」이라고 한 뒤의 별도 호출이다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection("수정할 박자 격자가 아직 없습니다.")
+        grid = self._beat_grid_view(timeline)
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        dimmer_pool = read_named_pool(query, pool_root, "Dimmer", probe_prefix="love-attack-dimmer")
+        color_pool = read_named_pool(query, pool_root, "Color", probe_prefix="love-attack-color")
+        position_pool = read_named_pool(
+            query, pool_root, "Position", probe_prefix="love-attack-position"
+        )
+        group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
+        plan = plan_love_attack_presets(
+            grid,
+            annotations=load_love_attack_annotations(),
+            policy=load_preset_pool_policy(),
+            dimmer_pool=dimmer_pool,
+            color_pool=color_pool,
+            position_pool=position_pool,
+            dimmer_attributes=self._love_attack_dimmer_attributes(group_names),
+        )
+        commands = save_commands(plan)
+        if not commands:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=False,
+                reason=(
+                    "LOVE ATTACK 프리셋: 지금 저장할 디머 프리셋이 없습니다. 나머지는 미정입니다."
+                ),
+            )
+        ready_count = sum(1 for preset in plan.presets if preset.ready)
+        batch = build_write_approval_batch([commands])
+        token = bind_session_key(self._session_key)
+        try:
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id="love-attack-presets",
+                    name="run_commands",
+                    arguments={"commands": list(commands)},
+                ),
+                risk=BatchRisk(
+                    reason=(
+                        f"LOVE ATTACK 연출 프리셋 저장 — 디머 프리셋 {ready_count}개 "
+                        "(구간 단위 1회 승인)"
+                    ),
+                    kind="love_attack_presets",
+                ),
+            )
+        finally:
+            reset_session_key(token)
+        if executed.result.is_error:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=False,
+                reason=(
+                    "LOVE ATTACK 프리셋 저장이 실행되지 않았습니다(승인 거절·게이트 차단·"
+                    "콘솔 무응답 중 하나). 격자는 그대로입니다."
+                ),
+            )
+        approved = apply_plan_references(
+            grid,
+            plan,
+            by="supervisor",
+            date=datetime.now(UTC).isoformat(),
+            source=f"love_attack_presets:{batch.sha256}",
+        )
+        store.latest = {**timeline, "beat_grid": approved}
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest)))
+        return self._beat_grid_send_status(
+            last_action="apply",
+            ok=True,
+            reason=f"LOVE ATTACK 디머 프리셋 {ready_count}개를 저장하고 칸에 번호를 적었습니다.",
+        )
 
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
     #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
