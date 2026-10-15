@@ -77,9 +77,11 @@ from server.design.beat_grid_edit import (
     apply_beat_grid_edit,
     apply_beat_grid_edit_range,
     beats_per_bar_from_timeline,
+    format_bar_runs,
     load_preset_pool_policy,
     movement_vocabulary,
     resolve_track_scope,
+    skipped_range_bars,
 )
 from server.design.beat_grid_effect_presets import (
     default_effect_library,
@@ -9842,10 +9844,16 @@ class ChatSession:
         # 반환값(chat_response)은 바이트 그대로 유지한다(t551 기존
         # 시험 보존).
         self._beat_grid_send_status(last_action="edit", ok=True)
+        lines = list(report)
+        if bar_end is not None and bar_end != bar:
+            # 범위 편집은 칸이 있는 마디만 고친다 — 건너뛴 마디를 말해, 전부 바뀐 줄 알지 않게 한다.
+            skipped = skipped_range_bars(grid, bar_start=bar, bar_end=bar_end, target=target)
+            if skipped:
+                lines.append(f"{target} 칸이 없어 건너뛴 마디: {format_bar_runs(skipped)}")
         event = chat_response_event(
             status="ok",
             summary="박자 격자 수정",
-            text=(f"{' · '.join(report)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
+            text=(f"{' · '.join(lines)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다."),
             commands=[],
         )
         self._send(event)
