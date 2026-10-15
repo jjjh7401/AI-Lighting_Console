@@ -10500,7 +10500,8 @@ class ChatSession:
         )
         commands = save_commands(plan)
         ready_count = sum(1 for preset in plan.presets if preset.ready)
-        # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다. 승인 카드는 저장할 것이 있을 때만 뜬다.
+        # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다.
+        # 승인 카드는 저장할 것이 있을 때만 뜬다.
         self._send(
             chat_response_event(
                 status="ok",
