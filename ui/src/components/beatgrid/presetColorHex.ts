@@ -12,6 +12,12 @@ export function presetRgbHex(rgb: BeatGridPresetRgb | null | undefined): string 
   return `#${channels.map((value) => Math.round((value / 100) * 255).toString(16).padStart(2, "0")).join("")}`;
 }
 
+/** 칸에 실린 색 `color_rgb` = [r, g, b] 배열(0~100%) → `#rrggbb`. 길이가 3이 아니거나 범위 밖이면 `undefined`. */
+export function cueRgbHex(rgb: readonly number[] | null | undefined): string | undefined {
+  if (!rgb || rgb.length !== 3) return undefined;
+  return presetRgbHex({ r: rgb[0], g: rgb[1], b: rgb[2] });
+}
+
 /** 곡 격자의 `preset_colors` 전체를 번호 → hex 표로. 색을 모르는 번호는 표에 넣지 않는다. */
 export function presetColorHexMap(
   presetColors: Readonly<Record<string, BeatGridPresetRgb | null | undefined>> | null | undefined,

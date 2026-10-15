@@ -98,7 +98,7 @@ import {
 } from "./beatgrid/newPresetColor";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
-import { LRSplitRow } from "./beatgrid/LRSplitRow";
+import { LRSplitBanner, LRSplitRow, lrFollowSpans, lrParentCellsReplaced } from "./beatgrid/LRSplitRow";
 import {
   audioButtonLabel,
   audioSourceId,
@@ -110,7 +110,7 @@ import {
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
-import { presetColorHexMap } from "./beatgrid/presetColorHex";
+import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -510,6 +510,9 @@ export function fixtureDisplayOpacity(
   const confirmed = tracks.some((t) => fixtureBelongsTo(fixture, t.group_name));
   return confirmed ? ACTIVE_FIXTURE_OPACITY : UNCONFIRMED_FIXTURE_OPACITY;
 }
+
+/** 밝기 「값 ▾」 칸의 선택지(시안 `#eM` 값 목록). */
+const BRIGHTNESS_VALUE_CHOICES = [0, 25, 40, 60, 70, 100] as const;
 
 export interface BeatGridProps {
   grid: BeatGridView | null | undefined;
@@ -1273,17 +1276,18 @@ export interface BeatGridCueColorFill {
   isColorUnset: boolean;
 }
 
-/** 막대 채우기 색 — `color_preset_no`가 있고 그 번호의 실제 색(`colorPresetHex`,
- * 콘솔에서 읽은 프리셋 색 — 이 카드 범위에서는 콘솔 접촉 0이라 아직 아무
- * 데이터도 없다)을 알 때만 그 색을 쓴다. 번호가 없거나, 번호는 있지만
- * 색을 모르면 **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 프리셋 색을 지어내지
- * 않고, 기본색은 고정 값이다(`isColorUnset` 참). 꺼진 칸에는 부르지 않는다. */
+/** 막대 채우기 색 — 칸에 실린 RGB(`cue.color_rgb`, 서버 #731)가 있으면 그 색이 이긴다.
+ * 없으면 `color_preset_no` 의 실제 색(`colorPresetHex`)을 쓴다. 둘 다 모르면
+ * **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 색을 지어내지 않는다(`isColorUnset` 참).
+ * 꺼진 칸에는 부르지 않는다. */
 export const CUE_DEFAULT_FILL = "#d8d8d8";
 
 export function cueColorFill(
   cue: BeatGridCue,
   colorPresetHex?: Readonly<Record<string, string>>,
 ): BeatGridCueColorFill {
+  const rgbHex = cueRgbHex(cue.color_rgb);
+  if (rgbHex !== undefined) return { background: rgbHex, isColorUnset: false };
   if (!cue.color_preset_no) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   const hex = colorPresetHex?.[cue.color_preset_no];
   if (!hex) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
@@ -2350,6 +2354,15 @@ export function BeatGrid({
                     // 펼침 상세 줄로 옮겼다. 자식 줄(└ L/R) 자체는 선언된
                     // 구간 전체에 걸쳐 그대로 타임라인에 보인다.
                     const childRows = lrChildRowsForTrack(track, lrSplits, lrStage);
+                    // 시안 `.clip.split` 띠 — 자식 줄이 있을 때만(선언 + 분리 가능 트랙).
+                    const splitRange = childRows.length > 0 ? (lrSplits.get(track.group_name) ?? null) : null;
+                    // 자식 칸 데이터가 생긴 구간에서만 부모 칸을 띠로 대신한다(없으면 부모 칸 유지 — 리드 결정).
+                    const visibleSegments =
+                      lrParentCellsReplaced(childRows) && splitRange
+                        ? segments.filter(
+                            (segment) => !(segment.startBar >= splitRange.startBar && segment.endBar <= splitRange.endBar),
+                          )
+                        : segments;
                     return (
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
@@ -2392,10 +2405,10 @@ export function BeatGrid({
                               {`${tailStart}마디~ 아직 배치 안 함`}
                             </span>
                           )}
-                          {segments.map((segment, segIndex) => {
+                          {visibleSegments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
-                            const hasNext = segIndex < segments.length - 1;
+                            const hasNext = segIndex < visibleSegments.length - 1;
                             // t537 (3) — 켜진 칸의 채우기 색은 color_preset_no가 실제 색을
                             // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
                             // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
@@ -2513,6 +2526,12 @@ export function BeatGrid({
                               AI 제안(보류)
                             </span>
                           )}
+                          {splitRange && (
+                            <LRSplitBanner
+                              left={barToX(splitRange.startBar)}
+                              width={barToX(splitRange.endBar) - barToX(splitRange.startBar) - 2}
+                            />
+                          )}
                         </div>
                       </div>
                       {/* 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언이
@@ -2524,6 +2543,10 @@ export function BeatGrid({
                           child={child}
                           left={barToX(child.startBar)}
                           width={barToX(child.endBar) - barToX(child.startBar) - 2}
+                          follow={{
+                            label: `${track.group_name} 따름`,
+                            spans: lrFollowSpans(child, { start: grid.bar_range.start, end: maxBar + 1 }, barToX),
+                          }}
                           onSelect={() =>
                             selectLRSplitChild(trackIndex, track.group_name, child.side, child.startBar)
                           }
@@ -2899,6 +2922,16 @@ export function BeatGrid({
                       if (section.unread) return "이 풀을 콘솔에서 읽지 못했습니다.";
                       return null;
                     };
+                    // 밝기 두 칸(리드 결정) — 디머 섹션을 프리셋과 효과로 나눈다. 효과는 첫 칸(디머 프리셋)의
+                    // 「디머 효과」 그룹에만 보인다(두 번 나오지 않게 프리셋 목록에서 뺀다).
+                    const dimmerEffects =
+                      dimmerSection && !dimmerSection.unread
+                        ? dimmerSection.entries.filter((entry) => entry.is_effect_band)
+                        : [];
+                    const dimmerPresetSection: BeatGridDrawerSection | null =
+                      dimmerSection && !dimmerSection.unread
+                        ? { ...dimmerSection, entries: dimmerSection.entries.filter((entry) => !entry.is_effect_band) }
+                        : dimmerSection;
                     return rows.map((row) => {
                       const isBrightnessRow = row.field === "밝기";
                       const isPositionRow = row.field === "위치 프리셋";
@@ -2925,48 +2958,62 @@ export function BeatGrid({
                             // 3항 선택 그대로. 디머 프리셋·디머 효과 목록은
                             // 서랍의 디머 섹션에서 온다(못 읽었으면 고르기가 꺼진다).
                             <span className="beat-grid-cue-field-edit">
+                              {/* 밝기 두 칸(리드 결정): 「디머 프리셋 ▾」 과 「값 ▾」. 고른 칸이 밝기 방식을 정한다.
+                                  프리셋 목록은 「이 곡 프리셋」·「쇼에 이미 있는 프리셋」 묶음과 「+ 새 프리셋」을 그대로 쓴다. */}
                               <select
-                                value={brightnessModeDraft}
-                                aria-label="밝기 모드"
+                                value={
+                                  brightnessModeDraft === "dimmer_preset"
+                                    ? brightnessPresetDraft
+                                    : brightnessModeDraft === "dimmer_effect"
+                                      ? brightnessEffectDraft
+                                      : ""
+                                }
+                                disabled={!dimmerSection || dimmerSection.unread}
+                                aria-label="디머 프리셋"
                                 onChange={(event) => {
-                                  const mode = event.target.value as typeof brightnessModeDraft;
-                                  setBrightnessModeDraft(mode);
+                                  const no = event.target.value;
+                                  if (no === "") return;
+                                  if (dimmerEffects.some((entry) => entry.preset_no === no)) {
+                                    setBrightnessModeDraft("dimmer_effect");
+                                    setBrightnessEffectDraft(no);
+                                  } else {
+                                    setBrightnessModeDraft("dimmer_preset");
+                                    setBrightnessPresetDraft(no);
+                                  }
                                 }}
                               >
-                                <option value="value">값</option>
-                                <option value="dimmer_preset">디머 프리셋</option>
-                                <option value="dimmer_effect">디머 효과</option>
+                                {renderPresetOptions(splitDrawerSectionEntries(dimmerPresetSection), false, brightnessPresetDraft)}
+                                {dimmerEffects.length > 0 && (
+                                  <optgroup label="디머 효과">
+                                    {dimmerEffects.map((entry) => (
+                                      <option key={`fx-${entry.preset_no}`} value={entry.preset_no}>
+                                        {entry.preset_no} {entry.name}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                               </select>
-                              {brightnessModeDraft === "value" && (
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={brightnessDraft}
-                                  onChange={(event) => setBrightnessDraft(event.target.value)}
-                                  aria-label="밝기 값(%)"
-                                />
-                              )}
-                              {brightnessModeDraft === "dimmer_preset" && (
-                                <select
-                                  value={brightnessPresetDraft}
-                                  disabled={!dimmerSection || dimmerSection.unread}
-                                  aria-label="디머 프리셋"
-                                  onChange={(event) => setBrightnessPresetDraft(event.target.value)}
-                                >
-                                  {renderPresetOptions(splitDrawerSectionEntries(dimmerSection), false, brightnessPresetDraft)}
-                                </select>
-                              )}
-                              {brightnessModeDraft === "dimmer_effect" && (
-                                <select
-                                  value={brightnessEffectDraft}
-                                  disabled={!dimmerSection || dimmerSection.unread}
-                                  aria-label="디머 효과"
-                                  onChange={(event) => setBrightnessEffectDraft(event.target.value)}
-                                >
-                                  {renderPresetOptions(splitDrawerSectionEffectEntries(dimmerSection), false, brightnessEffectDraft)}
-                                </select>
-                              )}
+                              <select
+                                value={brightnessModeDraft === "value" ? brightnessDraft : ""}
+                                aria-label="밝기 값(%)"
+                                onChange={(event) => {
+                                  setBrightnessModeDraft("value");
+                                  setBrightnessDraft(event.target.value);
+                                }}
+                              >
+                                <option value="" disabled>
+                                  — 값 —
+                                </option>
+                                {brightnessModeDraft === "value" &&
+                                  !BRIGHTNESS_VALUE_CHOICES.some((choice) => String(choice) === brightnessDraft) && (
+                                    <option value={brightnessDraft}>{brightnessDraft}%</option>
+                                  )}
+                                {BRIGHTNESS_VALUE_CHOICES.map((choice) => (
+                                  <option key={choice} value={String(choice)}>
+                                    {choice}%
+                                  </option>
+                                ))}
+                              </select>
                               <button
                                 type="button"
                                 onClick={() => {
