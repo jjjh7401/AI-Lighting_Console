@@ -59,6 +59,26 @@ export function cueBarVisualClass(cue: BeatGridCue): string {
   }`;
 }
 
+/** 둘째 줄에 쓰는 밝기 글자의 원래 값 — 값 모드는 「40%」, 디머 프리셋은 번호. 없으면 `null`. */
+function brightnessToken(cue: BeatGridCue): string | null {
+  const { mode, value_percent: value, preset_no: presetNo } = cue.brightness;
+  if (mode === "value" && value !== null && Number.isFinite(value)) return `${value}%`;
+  if ((mode === "dimmer_preset" || mode === "dimmer_effect") && presetNo) return presetNo;
+  return null;
+}
+
+/** 막대의 이름 글자. 칸 글자 안에 둘째 줄과 같은 밝기 글자(「40%」·디머 번호)가 있으면 그 글자만 뗀다 —
+ * 밝기는 둘째 줄에 한 번만 보이게 하려는 표시 정리다. 다른 숫자의 일부(「140%」·「11.1」)는 건드리지 않고,
+ * 떼고 나서 아무것도 안 남으면 원래 글자를 쓴다. */
+export function barNameText(cue: BeatGridCue): string {
+  const token = brightnessToken(cue);
+  if (token === null) return cue.label;
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stripped = cue.label.replace(new RegExp(`(?<![\\d.])${escaped}(?![\\d.])`, "g"), "");
+  const name = stripped.replace(/\s+/g, " ").trim();
+  return name === "" ? cue.label : name;
+}
+
 /** 시안 `.wave` 자리(18×11, 흰색 선 1.5). 펄스는 시안의 ЛЛ 경로 그대로다. 체이스는
  * 시안에 따로 아이콘이 없어(프로토타입도 펄스 모양을 쓴다) 한 칸씩 밀리는 세 획으로
  * 그렸다. 스윕은 같은 자리의 화살표. */

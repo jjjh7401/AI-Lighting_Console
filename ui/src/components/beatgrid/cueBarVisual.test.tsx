@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { BeatGridAppMovement, BeatGridCue } from "../../protocol";
 import {
   CueBarVisual,
+  barNameText,
   barShortText,
   brightnessLinePercent,
   cueBarMetaText,
@@ -168,6 +169,37 @@ describe("CueBarVisual 렌더 — 시안 요소만 내보낸다", () => {
     expect(html).not.toContain("beat-grid-cue-ib");
     expect(html).not.toContain("<svg");
     expect(html).toContain("1.1");
+  });
+});
+
+describe("barNameText — 둘째 줄과 같은 밝기 글자는 이름에서 뗀다", () => {
+  const value = (percent: number, label: string) =>
+    cue({ label, brightness: { mode: "value", value_percent: percent, preset_no: null } });
+  const dimmer = (presetNo: string, label: string) =>
+    cue({ label, brightness: { mode: "dimmer_preset", value_percent: null, preset_no: presetNo } });
+
+  it("값 모드의 퍼센트를 칸 글자에서 뗀다", () => {
+    expect(barNameText(value(40, "라벤더 워시 40%(2마디 번짐)"))).toBe("라벤더 워시 (2마디 번짐)");
+    expect(barNameText(value(25, "워시 25% 덜어냄"))).toBe("워시 덜어냄");
+    expect(barNameText(value(60, "킥 1·2·4박 60%"))).toBe("킥 1·2·4박");
+  });
+
+  it("디머 프리셋 번호를 칸 글자에서 뗀다", () => {
+    expect(barNameText(dimmer("1.1", "FOH 켬1.1"))).toBe("FOH 켬");
+  });
+
+  it("다른 숫자의 일부는 건드리지 않는다", () => {
+    expect(barNameText(value(40, "가속 140%"))).toBe("가속 140%");
+    expect(barNameText(dimmer("1.1", "FOH 11.1"))).toBe("FOH 11.1");
+  });
+
+  it("떼고 나서 남는 글자가 없으면 원래 글자를 쓴다", () => {
+    expect(barNameText(value(40, "40%"))).toBe("40%");
+  });
+
+  it("밝기 글자가 없으면 칸 글자 그대로다", () => {
+    expect(barNameText(cue({ label: "앞박 1회" }))).toBe("앞박 1회");
+    expect(barNameText(value(40, "앞박 1회"))).toBe("앞박 1회");
   });
 });
 
