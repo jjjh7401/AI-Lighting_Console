@@ -42,7 +42,7 @@
 **Then** 상태가 `waiting`이 된다.
 **And When** 리듀서에 `not-connected` 이벤트를 넣으면 **Then** 상태는 `idle`로 남고, 안내 줄이 정확히 「연결되어 있지 않아 분석을 시작하지 못했습니다.」다.
 **And Given** 상태가 `waiting`인 `BarMapEntry`일 때 **When** 정적 HTML을 보면 **Then** 마디 지도 분석 버튼과 드롭다운에 `disabled`가 있고, 「분석 중」과 「취소」 글자가 있다.
-**And** 검사: `grep -c "disabled={barMapWaiting}" ui/src/App.tsx`의 결과가 정확히 2다(「마디 지도 분석」 버튼과 기존 「분석」 버튼).
+**And** 검사: `grep -c "disabled={barMapWaiting}" ui/src/App.tsx`의 결과가 정확히 1이다(기존 「분석」 버튼 하나). 「마디 지도 분석」 버튼의 비활성화는 `BarMapEntry`가 `waiting` 값으로 처리하며, 같은 AC 위쪽의 정적 HTML 항목이 이를 확인한다.
 
 ## AC-LDBARUI-005 (REQ-LDBARUI-005) — 대기는 결과, 오류, 끊김, 취소로만 끝나고 busy는 끝내지 않는다
 

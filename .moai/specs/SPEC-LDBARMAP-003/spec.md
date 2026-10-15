@@ -1,10 +1,10 @@
 ---
 id: SPEC-LDBARMAP-003
 title: "마디 지도 진입 화면 — 첫 박 오프셋 입력과 분석 요청 UI"
-version: "0.1.3"
-status: draft
+version: "0.1.4"
+status: in-progress
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.2 target"

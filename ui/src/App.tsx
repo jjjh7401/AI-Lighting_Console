@@ -638,6 +638,8 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    // @MX:WARN: [AUTO] 설정 조회 실패가 활성 모델 표시를 지운다
+    // @MX:REASON: 네트워크 오류(fetch 거부)는 catch 에서, 응답 해석 실패는 parseSettingsResponse 의 null 반환으로 둘 다 setActiveModel(null) 이 되어, 일시적 오류 한 번에 활성 모델 표시가 null 분기로 돌아간다.
     const loadActiveModel = async () => {
       try {
         const response = await fetch(apiUrl("/api/settings"));
@@ -673,6 +675,8 @@ export default function App() {
   // 처럼 번호 없는 문장도 어느 큐인지 결정된다. null = 선택 없음.
   const [selectedCue, setSelectedCue] = useState<number | null>(null);
 
+  // @MX:WARN: [AUTO] 라이브러리 저장 실패 처리가 호출 계약에 기댄다 (이 함수에 try/catch 없음)
+  // @MX:REASON: 실패 처리는 saveTimelineToLibrary 가 던지지 않고 false 를 돌려준다는 계약에 기댄다. 그 계약이 바뀌어 던지게 되면 호출부(onSaveDraft)가 void 로 버리므로 거부된 Promise 가 처리되지 않은 채 남는다.
   const saveDraftToLibrary = useCallback(async () => {
     const suggested = state.songTimeline.timeline?.song_title ?? "";
     const name = window.prompt(

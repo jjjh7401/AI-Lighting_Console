@@ -1,6 +1,6 @@
 # SPEC-LDBARMAP-003 — 구현 계획
 
-> plan-phase 산출물이다(v0.1.3). 아직 어떤 코드도 바꾸지 않았고, 시험도 돌리지 않았다. 착수 승인(Implementation Kickoff Approval) 전에는 run-phase를 시작하지 않는다.
+> plan-phase 산출물이다(v0.1.4). 아직 어떤 코드도 바꾸지 않았고, 시험도 돌리지 않았다. 착수 승인(Implementation Kickoff Approval) 전에는 run-phase를 시작하지 않는다.
 
 ## 1. 접근
 

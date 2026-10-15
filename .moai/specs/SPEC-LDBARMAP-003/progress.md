@@ -321,3 +321,36 @@ Decision: serial
 - 쓰기 서브에이전트는 모두 sonnet, 한 번에 하나만 돌린다.
 - 각 단계 뒤에는 시험을 직접 돌려 확인한다. 마지막에 `npm --prefix ui run build`, 전체 `npm --prefix ui test`, AC-010·011 grep, AC-014 git diff 검사를 돌린다. 시안 대조는 manual 로 남긴다.
 - 금지: `moai session list`, `moai todo`, 전역 `git stash`, `git add -A`, 콘솔 쓰기.
+
+## 재개 지점 (최신 — sync 중단, MX 결정 완료 · 주석 추가 대기, 컨텍스트 53%)
+
+> 만료 고지(2026-10-15): 이 절은 MX 주석 추가 전 시점의 기록이다. 이후 상태는 아래 「동기화 기록 — MX 주석 뒤」를 본다.
+
+- HEAD `5c46ff94`, origin 과 같다. `git rev-list --count --left-right origin/main...HEAD` 는 `0 9`. 워킹 트리에는 정정 세 파일(acceptance.md, plan.md, spec.md)만 수정돼 있고, `.moai/reports/t648/handoff-block.txt` 는 미추적으로 둔다.
+- 정정 두 항목은 끝났다(커밋 전). AC-LDBARUI-004 기대값 2→1(acceptance.md 45행), spec.md `version` 0.1.4 · `updated` 2026-10-15, plan.md 머리말 v0.1.4. HEAD 의 acceptance.md 45행은 아직 「정확히 2다」다.
+- Phase 1 게이트 통과: `npm --prefix ui test`(63 파일, 1339 통과), `make typecheck`(tsc + vite build, exit 0), `make lint`, `make fmt`, `make test`(파이썬 15871 통과, 33 건너뜀). 게이트 실행 뒤 워킹 트리에 추가 변경은 없다.
+- Phase 7 품질 감사(읽기 전용 sync-auditor, sonnet): 조건부 PASS. 기능 90 · 보안 92 · 일관성 90 · 코드 품질 75(커버리지 미측정), 조화평균 87.0. 치명·높음 결함 없음. 낮음·참고 6건(F2~F7)은 막지 않는다.
+- Phase 9 MX 검증: 중단. P2 후보는 `ui/src/App.tsx` 의 `saveDraftToLibrary`(try/catch 없음)와 `loadActiveModel`(try/catch 있음)이고, 둘 다 `@MX:WARN` 이 없다. 두 함수는 M1 이전 코드다. M1 이 추가·변경한 내보내기 함수(`buildBarMapAnalyse`, `useCopilotSocket`, `BarMapEntry`, `barMapEntryReducer`, `isOffMeter`)는 테스트를 뺀 호출이 각각 한 곳이라 P1 에 해당하지 않는다. `ui/src` 의 `@MX` 는 0개, `server` 는 102개 파일이다.
+- MX 처리 결정(2026-10-15, 사용자 선택): (1) `@MX:WARN` 주석 추가 (권장). 주석은 아직 넣지 않았다. (2) M1 변경분만 검사, (3) `--skip-mx`, (4) 멈춤은 고르지 않았다. 재개 순서는 기억 파일의 재개 블록을 따른다.
+- 아직 안 한 것: Phase 10 커버리지 측정, Phase 11~12 문서 동기화(HUMAN GATE 2), spec.md `status: draft` 전이 확인(M1 커밋 때 in-progress 로 바뀌었어야 함), 커밋, push, PR, 수동 네 폭 스크린샷(AC-LDBARUI-013), 시험 생성(커밋 범위 밖).
+- 금지 유지: `moai session list`, `moai todo`, 전역 `git stash`, `git add -A`, `--no-verify`, `SKIP_MOAI_PRECOMMIT`, push, PR, 콘솔 쓰기.
+
+## 동기화 기록 — MX 주석 뒤 (2026-10-15, 카드 t648)
+
+- 상태: spec.md `status` draft → in-progress (사용자 결정, HUMAN GATE 2). AC-LDBARUI-013 수동 확인이 열려 있어 completed 로 올리지 않았다.
+- 바꾼 코드: `ui/src/App.tsx` 주석 4줄. `@MX:WARN` 두 곳: `loadActiveModel` 선언 위(641–642행), `saveDraftToLibrary` 선언 위(678–679행). 동작은 바꾸지 않았다. 확인: `git diff -- ui/src/App.tsx` → 4 insertions(+), 0 deletions(-).
+- 전제 정정: P2 후보의 근거 「saveDraftToLibrary 에 try/catch 가 없다」는 위험이 아니었다. `ui/src/timelineLibrary.ts` 의 `saveTimelineToLibrary` 는 예외를 잡고 `false` 를 돌려주므로 지금은 거부 경로가 없다. 사용자가 고르신 WARN 추가는 그대로 두고, 이유 문구만 「호출 계약에 기댄다」로 고쳤다.
+- 증거 (이 트리, 이번 실행):
+  - `npm --prefix ui test` → exit 0 · Test Files 63 passed (63) · Tests 1339 passed (1339)
+  - `make typecheck` → exit 0 (tsc + vite build, built in 417ms)
+  - `moai mx scan` → exit 0 · 189 tags · WARN 18. 스캐너는 `.py` 185 · `.rs` 4 만 색인하고 `.ts`·`.tsx` 는 0이다. 그래서 App.tsx 주석은 `grep -n "@MX:" ui/src/App.tsx` 로 확인했다(641, 642, 678, 679행).
+  - `git rev-list --count --left-right origin/main...HEAD` → `2 9`. origin/main 의 새 커밋 두 개(`1b9de987` PR #698, `9d9710eb` ci(t633))는 `.github/workflows/test.yml` 과 `.moai/reports/t633/` 만 건드려 이 브랜치의 변경 파일과 겹치지 않는다.
+  - Python 게이트(`make lint`, `make fmt`, `make test`)는 MX 주석 전 Phase 1 에서 돌렸다. 이번 변경은 TypeScript 주석뿐이라 다시 돌리지 않았다.
+- Gap (미검증)
+  - 커버리지 측정 불가: `ui/node_modules/@vitest/` 에 coverage 제공자가 없다. 설치하지 않았다(범위 밖).
+  - MX 스캐너가 TypeScript 를 색인하지 않아 P1/P2 재판정을 스캐너로는 하지 못했다.
+  - AC-LDBARUI-013 수동 확인(1450·1490·1520·1700px) 미실시. 사용자가 실제 앱에서 찍어 `.moai/reports/t648/screens/` 에 넣는다.
+  - 브라우저에서의 실제 WebSocket·React 렌더와 시안 대조: 수동 확인 대기.
+  - 스캔 오류 17건(비치명)의 내용은 확인하지 않았다.
+- 잔여 위험: plan.md 머리말의 「아직 어떤 코드도 바꾸지 않았고」는 계획 시점 기록이라 지금은 만료됐다. 본문 수정은 manager-spec 소관이라 고치지 않았다.
+- 절차 메모: 쓰기 서브에이전트를 띄우기 전 동기화 점검을 빠뜨렸다. 띄운 뒤에 확인했다(위 결과). `moai session list` 와 `moai todo` 는 쓰지 않았다.
