@@ -118,8 +118,11 @@ export interface GrammarRow {
  * 원천이 없어 컴포넌트가 NO_DATA 로 그린다. */
 export function grammarRows(sections: SongTimelineSection[]): GrammarRow[] {
   return sections.map((section) => {
-    const primary = section.palette_primary ?? section.palette[0];
-    const secondary = section.palette_primary ? section.palette_secondary : section.palette[1];
+    // 서버가 싣지 않은 배열은 빈 배열로 읽는다 — 값이 없으면 「—」로 떨어진다.
+    const palette = section.palette ?? [];
+    const fx = section.fx ?? [];
+    const primary = section.palette_primary ?? palette[0];
+    const secondary = section.palette_primary ? section.palette_secondary : palette[1];
     const color = [primary, secondary].filter((c): c is string => Boolean(c)).join(" / ");
     const level =
       section.intensity && section.intensity.length > 0
@@ -134,7 +137,7 @@ export function grammarRows(sections: SongTimelineSection[]): GrammarRow[] {
       color: textOrDash(color),
       fixture: `${level}${groups}`,
       motion: textOrDash(section.movement ?? section.position),
-      effect: textOrDash(section.effect ?? (section.fx.length ? section.fx.join(" · ") : null)),
+      effect: textOrDash(section.effect ?? (fx.length ? fx.join(" · ") : null)),
     };
   });
 }
@@ -278,7 +281,7 @@ export function sectionHex(
 ): string | null {
   if (section.palette_primary_hex) return section.palette_primary_hex;
   if (!legend || legend.length === 0) return null;
-  const token = (section.palette_primary ?? section.palette[0] ?? "").trim().split(/\s+/)[0];
+  const token = (section.palette_primary ?? section.palette?.[0] ?? "").trim().split(/\s+/)[0];
   if (!token) return null;
   return legend.find((entry) => entry.id === token || entry.name === token)?.color ?? null;
 }
