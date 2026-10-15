@@ -109,6 +109,7 @@ import {
   shouldMarkAudioLinkMissing,
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
+import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -2368,7 +2369,7 @@ export function BeatGrid({
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
                                   }${isHighlighted ? " is-preset-highlighted" : ""}${
                                     displayState === "edited" ? " is-edited" : ""
-                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}`}
+                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}${cueBarVisualClass(segment.cue)}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -2380,6 +2381,7 @@ export function BeatGrid({
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
                                   {segment.cue.label}
+                                  <CueBarVisual cue={segment.cue} />
                                   {(() => {
                                     const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
                                     return terms ? (

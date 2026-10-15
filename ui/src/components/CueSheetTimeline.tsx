@@ -86,7 +86,8 @@ export function songTotalMs(timeline: SongTimelineView): number {
   if (timeline.total_duration_ms && timeline.total_duration_ms > 0) {
     return timeline.total_duration_ms;
   }
-  const last = timeline.sections[timeline.sections.length - 1];
+  const sections = timeline.sections ?? [];
+  const last = sections[sections.length - 1];
   if (!last) return 1;
   return Math.max(1, last.end_ms ?? last.start_ms + (last.duration_ms ?? 15_000));
 }
@@ -757,6 +758,7 @@ export function CueSheetTimeline({
             {sections.map((section, index) => {
               const selected = index === selectedIndex;
               const sectionStart = index === 0 || sections[index - 1].label !== section.label;
+              const fx = section.fx ?? [];
               const railColor = paletteColorFor(section, legend);
               const cells = conceptCells(concept ? concept[index] : null, section);
               const conceptClass = cells.nodata ? "nodata" : undefined;
@@ -798,7 +800,7 @@ export function CueSheetTimeline({
                   </td>
                   <td className="fx">{cell(section.fixture_groups)}</td>
                   <td>{cell(section.movement)}</td>
-                  <td>{cell(section.effect ?? (section.fx.length ? section.fx.join(" · ") : null))}</td>
+                  <td>{cell(section.effect ?? (fx.length ? fx.join(" · ") : null))}</td>
                   <td className={`m${isSnapCue(section) ? " snap" : ""}`}>
                     {section.fade_seconds == null
                       ? EMPTY_CELL

@@ -40,7 +40,7 @@ function card(
   reason: string | null,
   timeline: SongTimelineView,
 ): GlanceCard {
-  const all = timeline.sections;
+  const all = timeline.sections ?? [];
   if (positions.length === 0) {
     return {
       stage,
@@ -90,7 +90,7 @@ export function glanceView(timeline: SongTimelineView): GlanceView {
   if (!glance.available) {
     return { status: "none", reason: glance.reason ?? "단계 배정 원천이 없다" };
   }
-  const count = timeline.sections.length;
+  const count = timeline.sections?.length ?? 0;
   const outOfRange = glance.stages.some((stage) =>
     stage.positions.some((position) => !Number.isInteger(position) || position < 0 || position >= count),
   );
