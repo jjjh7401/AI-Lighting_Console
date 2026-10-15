@@ -10496,6 +10496,7 @@ class ChatSession:
         blocked_cells: Sequence[tuple[str, int, str]] = (),
         approval_vs_sent: Mapping[str, object] | None = None,
         stale_tracks: Sequence[str] = (),
+        extra_notices: Sequence[str] = (),
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
@@ -10514,7 +10515,7 @@ class ChatSession:
             ],
             approval_vs_sent=dict(approval_vs_sent) if approval_vs_sent is not None else None,
             stale_tracks=list(stale_tracks),
-            notices=dimmer_unread_notices(blocked_cells),
+            notices=[*dimmer_unread_notices(blocked_cells), *extra_notices],
         )
         self._send(event)
         return event
@@ -10818,6 +10819,7 @@ class ChatSession:
                     ok=False,
                     reason=reason,
                     blocked_cells=result.blocked_cells,
+                    extra_notices=result.mib_notes,
                 )
 
             if owned_sequences or owned_timecode is not None:
@@ -11085,6 +11087,7 @@ class ChatSession:
                 last_action="apply",
                 ok=True,
                 blocked_cells=result.blocked_cells,
+                extra_notices=result.mib_notes,
                 approval_vs_sent={
                     "sha256": batch.sha256,
                     "cell_count": batch.cell_count,
