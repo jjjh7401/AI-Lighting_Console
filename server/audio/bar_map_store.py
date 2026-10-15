@@ -55,6 +55,8 @@ _TOP_LEVEL_KEYS = frozenset(
     {"schema_version", "bpm", "time_signature", "first_beat_offset", "bars", "events"}
 )
 _BAR_KEYS = frozenset({"bar", "start_ms", "beats_ms"})
+#: 마디 항목의 선택 키 — 곡 안에서 정규화한 에너지(0~1). 없는 지도(옛 저장분)도 유효하다.
+_BAR_OPTIONAL_KEYS = frozenset({"energy"})
 _EVENT_KEYS = frozenset({"kind", "start_bar", "end_bar", "start_beat", "grade"})
 
 
@@ -104,6 +106,7 @@ def build_bar_map_payload(
     bpm: float,
     time_signature: tuple[int, int] = (4, 4),
     events: Sequence[Any] = (),
+    bar_energy: Mapping[int, float] | None = None,
 ) -> dict:
     """자동 비트 격자 + 사람이 지정한 첫 박 오프셋 → 저장용 마디 지도 사전.
 
@@ -139,6 +142,11 @@ def build_bar_map_payload(
             continue
         bars.append({"bar": bar_no, "start_ms": chunk[0], "beats_ms": list(chunk)})
         bar_no += 1
+    if bar_energy:
+        for bar in bars:
+            value = bar_energy.get(bar["bar"])
+            if value is not None:
+                bar["energy"] = float(value)
 
     events_payload = [_event_to_dict(event) for event in events]
 
@@ -233,12 +241,20 @@ def _validate_bars(bars: object, *, numerator: int) -> str | None:
     for index, bar in enumerate(bars):
         if not isinstance(bar, Mapping):
             return f"bars[{index}] 는 사전이어야 합니다."
-        extra = set(bar.keys()) - _BAR_KEYS
+        extra = set(bar.keys()) - _BAR_KEYS - _BAR_OPTIONAL_KEYS
         if extra:
             return f"bars[{index}] 에 알 수 없는 필드가 있습니다: {sorted(extra)}"
         missing = _BAR_KEYS - set(bar.keys())
         if missing:
             return f"bars[{index}] 에 필요한 필드가 없습니다: {sorted(missing)}"
+
+        energy = bar.get("energy")
+        if "energy" in bar and (
+            isinstance(energy, bool)
+            or not isinstance(energy, int | float)
+            or not (0.0 <= float(energy) <= 1.0)
+        ):
+            return f"bars[{index}].energy 는 0~1 사이 숫자여야 합니다: {energy!r}"
 
         bar_no = bar["bar"]
         if not _is_plain_int(bar_no) or bar_no < 0:

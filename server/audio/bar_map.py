@@ -46,6 +46,7 @@ __all__ = [
     "BeatGridResult",
     "BpmCandidateCheck",
     "classify_bar_events",
+    "compute_bar_energy",
     "derive_bars",
     "detect_beat_grid",
     "extract_bar_features",
@@ -711,6 +712,20 @@ def extract_bar_features(
         )
         for i in range(n_bars)
     )
+
+
+def compute_bar_energy(features: Sequence[BarFeatures]) -> dict[int, float]:
+    """마디별 에너지(0~1) — 곡 안에서 정규화한 상대값(곡 중앙값 대비 음량과 저역 평균을 min-max).
+
+    순수 함수다. 마디가 2개 미만이거나 모든 마디가 같은 값이면(상대 높낮이를 말할 수
+    없다) 빈 사전을 돌려준다 — 값을 지어내지 않는다."""
+    raw = {f.bar: (f.volume_norm + f.low_band_norm) / 2.0 for f in features}
+    if len(raw) < 2:
+        return {}
+    low, high = min(raw.values()), max(raw.values())
+    if high - low <= 1e-12:
+        return {}
+    return {bar: round((value - low) / (high - low), 3) for bar, value in raw.items()}
 
 
 def classify_bar_events(features: Sequence[BarFeatures]) -> list[BarEvent]:

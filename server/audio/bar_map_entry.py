@@ -24,6 +24,7 @@ from server.audio.bar_map import (
     BeatGridFailure,
     BeatGridResult,
     classify_bar_events,
+    compute_bar_energy,
     derive_bars,
     detect_beat_grid,
     extract_bar_features,
@@ -170,6 +171,7 @@ def _synthesize(
             bpm=grid.bpm,
             time_signature=_TIME_SIGNATURE,
             events=events,
+            bar_energy=compute_bar_energy(features),
         )
     except BarMapStoreError as error:
         return BarMapEntryFailure(str(error))

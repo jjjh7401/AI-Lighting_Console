@@ -143,6 +143,7 @@ from server.design.beat_grid_suggestion import (
     SuggestionSource,
 )
 from server.design.beat_grid_suggestion_rules import ArrangementRuleSuggestionSource
+from server.design.beat_grid_ui_values import attach_beat_grid_ui_values, track_sub_info
 from server.design.beat_grid_unverified import unverified_beat_grid_cells
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
@@ -4243,6 +4244,8 @@ class ChatSession:
         # 보내지 않는다. 연결마다 새로 만든다. 재생 프레임이 현재 표식으로 다시 쓰므로
         # 클라이언트와 어긋나지 않는다(카드 t651 판정: 결함 아님).
         self._beat_grid_empty_marks: dict[tuple[object, object], list[dict[str, object]]] = {}
+        # 무대 판독이 만든 트랙 둘째 줄(그룹 이름 대문자 -> sub_info) — 송신 때 트랙에 싣는다.
+        self._beat_grid_track_sub_infos: dict[str, dict] = {}
         self._preview_approval = PreviewApprovalSession()
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
         # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
@@ -9742,9 +9745,41 @@ class ChatSession:
                 groups_path=groups_path,
                 track_names=track_names,
             )
+        self._beat_grid_attach_group_sub_info(payload)
         event = beat_grid_stage_event(**payload)
         self._send(event)
         return event
+
+    def _beat_grid_attach_group_sub_info(self, payload: dict) -> None:
+        """무대 판독 결과의 그룹마다 트랙 둘째 줄(``sub_info``)을 달고 세션에 기억한다.
+
+        기종은 리그 능력 판독(``_try_rig_capabilities``)에서만 온다 — 못 읽으면 기종만 빠진다.
+        기억한 표는 다음 ``song_timeline`` 송신 때 트랙에 실린다(이 판독이 프레임을 더 보내지는
+        않는다 — 무대 이벤트 그룹의 ``sub_info`` 가 즉시 값이다)."""
+        groups = [g for g in payload.get("groups") or [] if isinstance(g, dict)]
+        if not groups:
+            return
+        types: dict[int, str] = {}
+        try:
+            capabilities = self._try_rig_capabilities().capabilities
+        except Exception:  # noqa: BLE001 — 기종을 모르면 그 부분만 뺀다
+            capabilities = None
+        if capabilities is not None:
+            types = {
+                fid: cap.type_name for fid, cap in capabilities.fixtures.items() if cap.type_name
+            }
+        infos: dict[str, dict] = dict(getattr(self, "_beat_grid_track_sub_infos", {}) or {})
+        for group in groups:
+            info = track_sub_info(
+                group_no=group.get("group_no"),
+                member_fids=group.get("member_fids"),
+                complete=group.get("complete") is True,
+                fixture_types=types,
+            )
+            if info is not None:
+                group["sub_info"] = info
+                infos[str(group.get("group_name", "")).upper()] = info
+        self._beat_grid_track_sub_infos = infos
 
     def _beat_grid_group_members(self, group_names: list[str]) -> dict[str, list[int]]:
         """카드 t573 — 트랙 이름 -> 소속 fid. 무대 칸과 같은 판독을 재사용하고
@@ -10420,6 +10455,9 @@ class ChatSession:
         보이게 하려는 것이다.
         """
         timeline = attach_beat_grid_default(timeline)
+        timeline = attach_beat_grid_ui_values(
+            timeline, track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None)
+        )
         return derive_beat_grid_fields(
             timeline,
             snapshots=self._beat_grid_snapshots,
