@@ -96,14 +96,12 @@ export function BeatGridCueHeadMeta({
   const seqText = typeof track.sequence_number === "number" ? `Seq ${track.sequence_number} · ` : "";
   return (
     <div className="beat-grid-cue-head-meta">
-      {confirmedFixtureCount > 0
-        ? `장비 ${confirmedFixtureRange ? `${confirmedFixtureRange} · ` : ""}${confirmedFixtureCount}대(소속 확인)`
-        : "장비 소속 미확인"}{" "}
-      ·{" "}
-      {track.group_no_confirmed && track.group_no !== null ? `그룹 ${track.group_no}` : "그룹 번호 미확인"}
+      {/* 정보 줄(시안 `r.fix`): 그룹·장비 범위·대수·기종 — 서버 `sub_info.text` 가 있으면 그것, 없으면 확인된 것만 쓴 예전 문구. */}
+      {track.sub_info?.text ||
+        `${confirmedFixtureCount > 0 ? `장비 ${confirmedFixtureRange ? `${confirmedFixtureRange} · ` : ""}${confirmedFixtureCount}대(소속 확인)` : "장비 소속 미확인"} · ${track.group_no_confirmed && track.group_no !== null ? `그룹 ${track.group_no}` : "그룹 번호 미확인"}`}
       <br />
       {seqText}Cue {cueNo} · {cue.bar}~{endBar - 1}마디 · {lengthBars}마디
-      {hasTiming ? ` ≈ ${(lengthBars * secondsPerBar).toFixed(1)}초 · 곡 ${(cue.bar * secondsPerBar).toFixed(2)}초` : ""}
+      {hasTiming ? ` ≈ ${(lengthBars * secondsPerBar).toFixed(1)}초 · 타임코드 ${(cue.bar * secondsPerBar).toFixed(2)}초` : ""}
     </div>
   );
 }

@@ -48,6 +48,7 @@ __all__ = [
     "effect_grid_blocker",
     "effect_preset_outcomes",
     "effect_preset_recipe",
+    "effect_shape_of_cue",
     "effect_template_catalog",
     "effect_template_problem",
     "record_effect_preset_recipe",
@@ -145,6 +146,41 @@ def default_effect_library() -> FxLibrary | None:
         return load_library_from_dir()
     except FxSchemaError:
         return None
+
+
+#: 막대 아이콘 모양 어휘 — ``fx.schema.PATTERN_KINDS``(펄스·체이스·웨이브·스윕)와
+#: 앱 무빙 모양 중 UI가 그릴 수 있는 것만. 그 밖의 값(원·대각 등)은 생략한다.
+EFFECT_SHAPES: tuple[str, ...] = ("pulse", "chase", "wave", "sweep")
+
+
+def effect_shape_of_cue(
+    cue: Mapping[str, object],
+    grid: Mapping[str, object],
+    library: FxLibrary | None = None,
+) -> str | None:
+    """칸의 효과 모양(``EFFECT_SHAPES`` 중 하나) — 구조화 데이터에서만 파생한다.
+
+    1. ``app_movement.shape``가 웨이브·스윕이면 그대로.
+    2. ``effect_preset_no``의 레시피(``preset_fx_recipes``) → 효과 템플릿
+       ``Fx.pattern``이 어휘 안이면 그대로.
+
+    라벨 글자는 읽지 않는다. 근거가 없거나 어휘 밖이면 ``None``(지어내지 않는다)."""
+    movement = cue.get("app_movement")
+    if isinstance(movement, Mapping):
+        shape = movement.get("shape")
+        if shape in ("wave", "sweep"):
+            return str(shape)
+    preset_no = cue.get("effect_preset_no")
+    if not isinstance(preset_no, str):
+        return None
+    recipe = effect_preset_recipe(grid, preset_no)
+    if recipe is None:
+        return None
+    lib = library if library is not None else default_effect_library()
+    fx = _find_fx(lib, str(recipe["fx_id"]))
+    if fx is None or fx.pattern not in EFFECT_SHAPES:
+        return None
+    return fx.pattern
 
 
 def _band_kind(preset_no: str, policy: Mapping[str, object]) -> str | None:

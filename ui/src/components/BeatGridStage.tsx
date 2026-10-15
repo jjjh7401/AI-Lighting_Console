@@ -12,8 +12,8 @@ import {
   computeStageBounds,
   cueForBar,
   cueIsActive,
-  fixtureDisplayColor,
   fixtureDisplayOpacity,
+  fixtureStageColor,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
 import { fixtureBelongsTo } from "./beatGridStageModel";
@@ -85,7 +85,7 @@ export function stageDecorations(
       y: zone.y,
       width: zone.width,
       height: zone.height,
-      fill: member ? fixtureDisplayColor(member, tracks) : "#888",
+      fill: member ? fixtureStageColor(member, tracks, viewBar) : "#888",
     });
   }
   tracks.forEach((track, trackIndex) => {
@@ -98,7 +98,7 @@ export function stageDecorations(
       beams.push({
         key: `beam-${trackIndex}-${fixture.fid}`,
         points: `${cx},${cy} ${cx - BEAM_HALF_WIDTH},${cy + len} ${cx + BEAM_HALF_WIDTH},${cy + len}`,
-        fill: fixtureDisplayColor(fixture, tracks),
+        fill: fixtureStageColor(fixture, tracks, viewBar),
       });
     }
   });
@@ -112,6 +112,17 @@ export function fixtureIsMover(fixture: BeatGridFixturePoint, tracks: readonly B
   return tracks.some((track) => track.layer_role === "mover" && fixtureBelongsTo(fixture, track.group_name));
 }
 
+/** 리드 결정(모양은 장비 능력으로, 어휘는 늘리지 않음) — 무빙이 아닌 효과(effect) 줄의 장비는 사각(BLIND 류)으로
+ * 그린다. 무빙 판정(팬·틸트 능력 필드)은 서버가 필드를 줄 때 바꾼다. */
+export function fixtureIsBlind(fixture: BeatGridFixturePoint, tracks: readonly BeatGridTrack[]): boolean {
+  return (
+    !fixtureIsMover(fixture, tracks) &&
+    tracks.some((track) => track.layer_role === "effect" && fixtureBelongsTo(fixture, track.group_name))
+  );
+}
+
+const BLIND_HALF_W = 7;
+const BLIND_HALF_H = 4;
 const MOVER_HALF = 5;
 
 /** 칸 비율에 맞춘 그림 폭 — 시안 `Math.max(420, round(H * clientW/clientH))`. */
@@ -212,7 +223,7 @@ export function BeatGridStage({
         ))}
         {fixtures.map((fixture) => {
           const { cx, cy } = project(fixture);
-          const fill = fixtureDisplayColor(fixture, tracks);
+          const fill = fixtureStageColor(fixture, tracks, viewBar);
           const opacity = fixtureDisplayOpacity(fixture, tracks, viewBar);
           const title = <title>{`${fixture.name} (fid ${fixture.fid})`}</title>;
           return fixtureIsMover(fixture, tracks) ? (
@@ -223,6 +234,19 @@ export function BeatGridStage({
               y={cy - MOVER_HALF}
               width={MOVER_HALF * 2}
               height={MOVER_HALF * 2}
+              fill={fill}
+              opacity={opacity}
+            >
+              {title}
+            </rect>
+          ) : fixtureIsBlind(fixture, tracks) ? (
+            <rect
+              key={fixture.fid}
+              className="beat-grid-stage-blind"
+              x={cx - BLIND_HALF_W}
+              y={cy - BLIND_HALF_H}
+              width={BLIND_HALF_W * 2}
+              height={BLIND_HALF_H * 2}
               fill={fill}
               opacity={opacity}
             >
