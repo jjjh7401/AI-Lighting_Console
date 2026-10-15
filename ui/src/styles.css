@@ -4774,6 +4774,47 @@ body {
   outline-offset: -1px;
 }
 
+/* 격자 막대 표현 — 시안 `.clip .ib`(아래 흰 밝기 선 3px) · `.wave`(우상단
+   모양 아이콘 18×11) · `.s`(위치·밝기 글자 10px). 모양·글자가 있는 칸에만
+   modifier 클래스(has-cue-shape · has-cue-meta)가 붙어 그 칸의 여백과 줄 높이만
+   바뀐다. 없는 칸은 예전 모양 그대로다. */
+.beat-grid-cue-ib {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: #fff;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.beat-grid-cue-shape {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.beat-grid-cue.has-cue-shape {
+  padding-right: 24px;
+}
+
+.beat-grid-cue.has-cue-meta {
+  padding-top: 2px;
+  line-height: 11px;
+}
+
+.beat-grid-cue-meta {
+  display: block;
+  font-size: 10px;
+  line-height: 10px;
+  opacity: 0.92;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .beat-grid-cue-gap {
   position: absolute;
   top: 0;
