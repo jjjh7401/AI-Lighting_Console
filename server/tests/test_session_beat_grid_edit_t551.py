@@ -463,6 +463,67 @@ class TestBeatGridPresetDrawer:
         ]
         assert console.executed == []
 
+    def test_drawer_color_entries_fall_back_to_console_preset_values(self, tmp_path) -> None:
+        # 응답기 1.7.0 `presetdata` 폴백. 아래 GetPresetData 모양은 지어낸 것이다 —
+        # 실기 모양은 확인 전이다.
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        state_tree = {
+            "DataPool/PresetPools": _pool_list_payload({"Dimmer": 1, "Position": 2, "Color": 4}),
+            "DataPool/PresetPools/1": _pool_children_payload({1: "LA Full"}),
+            "DataPool/PresetPools/2": _pool_children_payload({41: "Center"}),
+            "DataPool/PresetPools/4": _pool_children_payload({21: "LA Pink", 22: "Two Tone"}),
+        }
+        session, _console = _new_session(tmp_path, store=store, state_tree=state_tree)
+        calls: list[tuple[str, int]] = []
+
+        class PresetPort:
+            def query_preset_data(self, path, *, offset=0):
+                calls.append((path, offset))
+                if path.endswith("/22"):
+                    data = (
+                        '[{"ColorRGB_R":100,"ColorRGB_G":0,"ColorRGB_B":0},'
+                        '{"ColorRGB_R":0,"ColorRGB_G":0,"ColorRGB_B":100}]'
+                    )
+                else:
+                    data = "[]"
+                return {"ok": True, "offset": offset, "truncated": False, "data": data}
+
+        session._preset_value_port = PresetPort()
+        event = session.beat_grid_preset_drawer()
+        color = next(sec for sec in event["sections"] if sec["pool_name"] == "Color")
+        by_no = {entry["preset_no"]: entry for entry in color["entries"]}
+        assert by_no["4.22"]["rgb"] == [100.0, 0.0, 0.0]
+        assert by_no["4.22"]["rgbs"] == [[100.0, 0.0, 0.0], [0.0, 0.0, 100.0]]
+        assert "rgb" not in by_no["4.21"]  # 읽혔지만 알아볼 값이 없음 — 지어내지 않는다
+        assert {path for path, _ in calls} == {
+            "DataPool/PresetPools/4/21",
+            "DataPool/PresetPools/4/22",
+        }
+        session.beat_grid_preset_drawer()
+        assert len(calls) == 2  # 세션 기억 — 다시 묻지 않는다
+
+    def test_drawer_survives_a_responder_without_presetdata(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        state_tree = {
+            "DataPool/PresetPools": _pool_list_payload({"Dimmer": 1, "Position": 2, "Color": 4}),
+            "DataPool/PresetPools/1": _pool_children_payload({1: "LA Full"}),
+            "DataPool/PresetPools/2": _pool_children_payload({41: "Center"}),
+            "DataPool/PresetPools/4": _pool_children_payload({21: "LA Pink"}),
+        }
+        session, _console = _new_session(tmp_path, store=store, state_tree=state_tree)
+
+        class OldResponder:
+            def query_preset_data(self, path, *, offset=0):
+                raise RuntimeError("unknown request kind: presetdata")
+
+        session._preset_value_port = OldResponder()
+        event = session.beat_grid_preset_drawer()
+        color = next(sec for sec in event["sections"] if sec["pool_name"] == "Color")
+        assert [entry["preset_no"] for entry in color["entries"]] == ["4.21"]
+        assert "rgb" not in color["entries"][0]
+
     def test_drawer_carries_preset_pools_yaml_confirmed_flag(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _timeline()

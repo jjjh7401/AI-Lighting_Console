@@ -201,6 +201,7 @@ from server.design.preset_names import (
     match_preset_name,
     match_preset_name_across_pools,
 )
+from server.design.preset_values import PresetValueCache
 from server.design.profile import (
     DEFAULT_BPM,
     BpmResolution,
@@ -4349,6 +4350,10 @@ class ChatSession:
         # 카드 t565 — 박자 격자 2D 무대 판독(좌표 + 그룹 소속)도 같은 감사 포트를
         # 탄다(읽기 세 가지만 쓴다). 테스트는 이 속성을 직접 스텁한다.
         self._stage_port = gate.state_port
+        # 프리셋 값(색 RGB 등)의 콘솔 판독 기억 — 응답기 1.7.0 `presetdata`(읽기 전용).
+        # 서랍을 열 때만 채우고, 칸 화면은 기억만 읽는다(왕복 없음). 세션 안에서만 산다.
+        self._preset_value_cache = PresetValueCache()
+        self._preset_value_port = gate.state_port
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -9692,6 +9697,34 @@ class ChatSession:
     #: 먼저 읽어도 드로워 조립 순서는 그 모듈이 최종으로 정한다).
     _BEAT_GRID_DRAWER_POOL_NAMES: tuple[str, ...] = ("Dimmer", "Position", "Color")
 
+    def _console_preset_colors(
+        self, preset_no: str
+    ) -> tuple[tuple[float, float, float], ...] | None:
+        """콘솔이 읽어 준 색 목록(기억만 — 왕복 없음). 모르면 ``None``."""
+        cache = getattr(self, "_preset_value_cache", None)
+        return cache.colors(preset_no) if cache is not None else None
+
+    def _refresh_console_preset_colors(
+        self, sections: Sequence[Mapping[str, object]], grid: Mapping[str, object], pool_root: str
+    ) -> None:
+        """서랍의 Color 항목 중 앱 기록(``preset_colors``)이 없는 번호만 콘솔에서 읽어
+        기억한다(읽기 전용 `presetdata`). 포트가 없거나 응답기가 낡아 실패하면 조용히
+        멈춘다 — 색을 못 읽은 항목은 키가 빠질 뿐 지어내지 않는다."""
+        cache = getattr(self, "_preset_value_cache", None)
+        port = getattr(self, "_preset_value_port", None)
+        if cache is None or port is None or not hasattr(port, "query_preset_data"):
+            return
+        unknown: list[str] = []
+        for section in sections:
+            if section.get("pool_name") != "Color":
+                continue
+            for entry in section.get("entries") or []:  # type: ignore[attr-defined]
+                no = entry.get("preset_no") if isinstance(entry, Mapping) else None
+                if isinstance(no, str) and color_preset_rgb(grid, no) is None:
+                    unknown.append(no)
+        if unknown:
+            cache.refresh(port, pool_root, unknown)
+
     def beat_grid_preset_drawer(self) -> dict:
         """카드 t551 후속(지시 1항) — mockup 프리셋 서랍과 같은 세 섹션을
         **실제 콘솔 판독**으로 채운다(데모 데이터 0건). 풀을 못 읽으면
@@ -9709,8 +9742,10 @@ class ChatSession:
                 query, pool_root, pool_name, probe_prefix="beat-grid-drawer"
             )
         policy = load_preset_pool_policy()
+        sections = build_preset_drawer(grid, pools=pools, policy=policy)
+        self._refresh_console_preset_colors(sections, grid, pool_root)
         sections = attach_color_rgb_to_drawer(
-            build_preset_drawer(grid, pools=pools, policy=policy), grid
+            sections, grid, console_colors=self._console_preset_colors
         )
         event = beat_grid_drawer_event(sections=sections)
         self._send(event)
@@ -10478,7 +10513,9 @@ class ChatSession:
         """
         timeline = attach_beat_grid_default(timeline)
         timeline = attach_beat_grid_ui_values(
-            timeline, track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None)
+            timeline,
+            track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None),
+            console_colors=self._console_preset_colors,
         )
         return derive_beat_grid_fields(
             timeline,

@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 
-from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
+from server.design.beat_grid_color_presets import ConsoleColors, attach_color_rgb_to_cues
 
 __all__ = [
     "SECTION_KIND_COLORS",
@@ -192,13 +192,15 @@ def attach_beat_grid_ui_values(
     timeline: Mapping[str, object],
     *,
     track_sub_infos: Mapping[str, Mapping[str, object]] | None = None,
+    console_colors: ConsoleColors | None = None,
 ) -> dict[str, object]:
     """타임라인 사본에 화면용 값을 싣는다(원본 불변, 있는 값은 덮지 않는다).
 
     - ``sections[i].kind``·``color`` — 이름에서 종류를 알아볼 때만.
     - ``sections[i].energy`` — 마디 지도에 마디별 ``energy`` 가 있을 때만.
     - ``accent_bars`` — 마디 지도에 드롭 이벤트가 있을 때만.
-    - ``beat_grid.tracks[i].cues[j].color_rgb`` — ``preset_colors`` 에 그 색 번호가 기록됐을 때만.
+    - ``beat_grid.tracks[i].cues[j].color_rgb`` / ``color_rgbs`` — ``preset_colors`` 에 그 색 번호가
+      기록됐을 때, 없으면 ``console_colors``(콘솔 판독 기억)가 알 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
     """
     merged = dict(timeline)
@@ -228,7 +230,7 @@ def attach_beat_grid_ui_values(
         merged["accent_bars"] = accents
     grid = merged.get("beat_grid")
     if isinstance(grid, Mapping):
-        grid = attach_color_rgb_to_cues(grid)
+        grid = attach_color_rgb_to_cues(grid, console_colors=console_colors)
         merged["beat_grid"] = grid
     if track_sub_infos and isinstance(grid, Mapping) and isinstance(grid.get("tracks"), list):
         tracks: list[object] = []

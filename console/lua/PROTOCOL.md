@@ -7,6 +7,17 @@ M2 deliverable; consumed by the M3 tool-runner and the M4 safety gate.
 Versioning: every reply payload carries `"v": 1`. Any breaking change bumps the
 version in BOTH implementations and revises this document.
 
+> Revision note (responder 1.7.0, 프리셋 값 읽기): a new READ-ONLY verb,
+> `presetdata <id> <object-path> [offset=<n>]` (§2, §4.9), answers the table
+> the Object-Free function `GetPresetData(handle, false, false)` returns for a
+> preset object -- the only route to preset VALUES (color RGB, dimmer,
+> pan/tilt), which are not readable as object properties (`PRESETDATA` reads
+> `""`, `SELECTIONDATA` reads `{}`). Additive: no existing verb, reply field,
+> or default changes; wire protocol version stays 1. NOT live-verified: the
+> shape `GetPresetData` returns on onPC 2.4.2 is unobserved, so the reply
+> carries it as opaque JSON text and the server treats any unrecognised shape
+> as "no data". Deployment is confirmed BY VERSION -- `ping` must answer 1.7.0.
+>
 > Revision note (responder 1.6.6, SPEC-LDBEAT-001 M1, 카드 t531): `props`
 > gains the SAME trailing `offset=<n>` request token `state`/`introspect`
 > already carry (§2), but it addresses TABLE-VALUED entries, not children or
@@ -144,6 +155,7 @@ Plugin "CopilotResponder" "<verb> <request-id> [rest]"
 | `prop` | `prop <id> <object-path> <PropertyName>` — name is the **last** token; path is everything before it | `/copilot/state`, kind=`prop` |
 | `props` | `props <id> <PropertyName,...> <object-path> [offset=<n>]` — name list is the **first** rest token; path is the rest of the line (minus the optional trailing offset token) | `/copilot/state`, kind=`props` |
 | `introspect` | `introspect <id> <object-path> [offset=<n>]` | `/copilot/state`, kind=`introspect` |
+| `presetdata` | `presetdata <id> <object-path> [offset=<n>]` (1.7.0) | `/copilot/state`, kind=`presetdata` |
 | `exec` | `exec <id> <ma3-command>` | `/copilot/feedback`, kind=`result` |
 | `deploy` | `deploy <id> <enc-name> <enc-source>` (M7) | `/copilot/feedback`, kind=`deploy` |
 
@@ -503,6 +515,38 @@ rest token. It never has an "all field values" mode.
 - Request syntax failures, name-list limit failures, and path-resolution
   failures return top-level `ok:false` with `error`, `reads:[]`, and
   `truncated:false`.
+
+### 4.9 `presetdata` (preset VALUE readback -- on `/copilot/state`, responder 1.7.0)
+
+```json
+{"v":1,"kind":"presetdata","id":"<id>","ok":true,"path":"DataPool/PresetPools/4/22","offset":0,"total":2,"truncated":false,"data":"[{...},{...}]"}
+{"v":1,"kind":"presetdata","id":"<id>","ok":false,"path":"...","offset":0,"error":"GetPresetData failed: ..."}
+```
+
+READ-ONLY. The responder resolves `<object-path>` like every other verb (a
+preset is `<preset_pools>/<pool no>/<slot>`), calls
+`GetPresetData(handle, false, false)` under `pcall`, and answers the returned
+table as JSON TEXT in `data` (same encoder as §4.6: depth cap 8, cycle marker,
+sorted hash keys, no metamethod fired). It issues no `Cmd()`, writes no
+property and creates no object.
+
+- `data` is a parseable JSON container (`[...]` or `{...}`) holding a window
+  of WHOLE top-level entries (array elements, or hash key/value pairs in
+  sorted-key order) starting at the 0-based `offset` into the full entry list.
+  `offset` echoes the value used, `total` is the full top-level entry count,
+  `truncated:true` means entries remain **after** this window. The window grows
+  while the FULL percent-encoded reply stays within `CONFIG.max_payload`.
+  `offset >= total` yields an empty container with `truncated:false`. Page by
+  advancing `offset` by the entries received and re-assemble on the server.
+- Failures (`ok:false`, `error`): `GetPresetData` missing on this console,
+  path not resolved, the call raised, it returned a non-table, or a single
+  top-level entry alone exceeds the payload budget (no empty
+  `truncated:true` window is ever emitted, so a pager cannot spin).
+- The INTERNAL shape of the returned table is NOT specified here -- it is
+  unobserved on onPC 2.4.2. A consumer must treat an unrecognised shape as
+  "no data" and never invent values (`server/design/preset_values.py` does).
+- A responder older than 1.7.0 does not know the verb and answers a top-level
+  `kind:"error"` (`unknown request kind: presetdata`) on `/copilot/feedback`.
 
 ## 5. Console-side reply transport (`CONFIG.send_variant`)
 

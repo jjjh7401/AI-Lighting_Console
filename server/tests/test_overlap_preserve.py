@@ -357,9 +357,16 @@ _CONSOLE_LUA_LOCKED_ASSETS = ("console/lua/copilot_responder.xml",)
 #: paging for table values (group SELECTIONDATA was cut to 2 members at
 #: max_prop_value). A request without the token is byte-identical to 1.6.5.
 #: NOT live-verified; `ping` must answer 1.6.6.
+#:
+#: 1.7.0 (프리셋 값 읽기): ONE additive READ-ONLY verb, `presetdata <id> <path>
+#: [offset=<n>]`, that answers the table `GetPresetData(handle, false, false)`
+#: returns (preset VALUES are not readable as object properties). No existing
+#: verb, field or default changes; PROTOCOL.md gains §4.9 and one §2 row. The
+#: table SHAPE on onPC 2.4.2 is unobserved — NOT live-verified; `ping` must
+#: answer 1.7.0. Both files re-pinned below by content digest.
 _CONSOLE_LUA_GRANTED_REVISION_DIGESTS = {
-    "console/lua/copilot_responder.lua": "00dd72dcb780de4bf18fd014b60325a3e226c32c",
-    "console/lua/PROTOCOL.md": "2633a3b9a1ac41337cd277a2792ca50c11e6bea4",
+    "console/lua/copilot_responder.lua": "cd0b7a59abe60035b7e331a0d4d832e5133d61be",
+    "console/lua/PROTOCOL.md": "e0cd442b76a269548cb704c086f99ffd7873aadb",
 }
 
 #: 2026-08-02 granted exception — the upstream vocabulary extension

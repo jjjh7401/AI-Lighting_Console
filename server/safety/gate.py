@@ -183,6 +183,11 @@ class _GateStatePort:
             return self._gate._query_properties(path, property_names, offset=offset)
         return self._gate._query_properties(path, property_names)
 
+    def query_preset_data(self, path: str, *, offset: int = 0) -> dict:
+        if offset:
+            return self._gate._query_preset_data(path, offset=offset)
+        return self._gate._query_preset_data(path)
+
 
 class SafetyGate:
     """3-stage safety gate + live lock + backup + health + audit (M4)."""
@@ -1077,4 +1082,18 @@ class SafetyGate:
             self._audit.log_executed(subject, kind="props_query", ok=False)
             raise
         self._audit.log_executed(subject, kind="props_query", ok=True)
+        return payload
+
+    def _query_preset_data(self, path: str, *, offset: int = 0) -> dict:
+        # One read-only OSC request = one audit row (the props_query rule); the
+        # read VALUES never enter the audit log, only the path.
+        try:
+            if offset:
+                payload = self._console.query_preset_data(path, offset=offset)
+            else:
+                payload = self._console.query_preset_data(path)
+        except Exception:
+            self._audit.log_executed(path, kind="presetdata_query", ok=False)
+            raise
+        self._audit.log_executed(path, kind="presetdata_query", ok=True)
         return payload

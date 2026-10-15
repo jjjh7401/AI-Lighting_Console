@@ -28,6 +28,7 @@ from server.bridge.protocol import (
     build_exec_request,
     build_introspect_query,
     build_ping,
+    build_presetdata_query,
     build_prop_query,
     build_props_query,
     build_state_query,
@@ -193,6 +194,8 @@ class ConsolePort(Protocol):
     def enumerate_fields(self, path: str, *, offset: int = 0) -> dict: ...
 
     def query_properties(self, path: str, property_names: Sequence[str]) -> dict: ...
+
+    def query_preset_data(self, path: str, *, offset: int = 0) -> dict: ...
 
     def deploy_plugin(self, name: str, lua_source: str) -> ExecOutcome:
         """Deploy one reviewed Lua plugin (M7); ok / failed / unconfirmed."""
@@ -821,6 +824,31 @@ class ConsoleLink:
             raise StateQueryError(
                 str(payload.get("error") or f"props query failed: {path} {tuple(property_names)}")
             )
+        return payload
+
+    def query_preset_data(self, path: str, *, offset: int = 0) -> dict:
+        """Read-only ``GetPresetData`` window of one preset (PROTOCOL.md §4.9).
+
+        Same id correlation / timeout / error types as :meth:`query_properties`.
+        The responder answers on the STATE address, which :meth:`deliver`
+        already accepts. A responder that predates the verb answers ``unknown request kind``
+        (``ok:false`` -> :class:`StateQueryError`). ``offset`` windows whole
+        top-level entries; ``0`` emits the first-window request.
+        """
+        request_id = self._new_id()
+        payload = self._round_trip(
+            build_presetdata_query(request_id, path, offset=offset),
+            request_id,
+            self._timeouts.state_query_seconds,
+        )
+        if payload is None:
+            if self._monitor is not None:
+                self._monitor.note_query_timeout()
+            raise ConsoleSilentError(
+                f"no presetdata reply for {path!r} within {self._timeouts.state_query_seconds}s"
+            )
+        if not payload.get("ok"):
+            raise StateQueryError(str(payload.get("error") or f"presetdata query failed: {path}"))
         return payload
 
 

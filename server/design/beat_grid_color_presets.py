@@ -34,7 +34,7 @@ Module#2_ColorRGB_R``)를 뗀 뒤(``server/preshow/fixture_light.py``
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_edit import BeatGridEditError, _assert_ascii_preset_label
@@ -56,6 +56,7 @@ __all__ = [
     "color_grid_blocker",
     "color_preset_outcomes",
     "color_preset_rgb",
+    "color_preset_rgbs",
     "record_color_preset_rgb",
     "referencing_tracks",
 ]
@@ -99,35 +100,83 @@ def _percent(value: object) -> float | None:
     return float(value)
 
 
+#: 콘솔 판독 보조 — 프리셋 번호 → 콘솔이 돌려준 색 목록(0~100%, 순서대로, 서로 다른 것만).
+#: 모르면 ``None``. 앱 자신의 기록(``preset_colors``)이 없을 때만 쓴다.
+ConsoleColors = Callable[[str], Sequence[tuple[float, float, float]] | None]
+
+
 def color_preset_rgb(
-    grid: Mapping[str, object], preset_no: str
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    console_colors: ConsoleColors | None = None,
 ) -> tuple[float, float, float] | None:
     """곡 격자 ``preset_colors[preset_no]``의 R·G·B(0~100%). 없거나 모양이
-    틀리면(수가 아님·범위 밖·결측) ``None``(지어내지 않는다)."""
+    틀리면(수가 아님·범위 밖·결측) ``None``(지어내지 않는다).
+
+    ``console_colors`` 가 있으면 앱 기록이 **없을 때만** 그 첫 색을 대신 낸다(콘솔
+    판독 보조). 기본값(``None``)은 예전 동작 그대로라 반영 레시피(「RGB 가 없음」
+    보류 판정)는 콘솔 판독에 영향을 받지 않는다."""
     colors = grid.get("preset_colors")
     raw = colors.get(preset_no) if isinstance(colors, Mapping) else None
-    if not isinstance(raw, Mapping):
-        return None
-    r = _percent(raw.get("r"))
-    g = _percent(raw.get("g"))
-    b = _percent(raw.get("b"))
-    if r is None or g is None or b is None:
-        return None
-    return (r, g, b)
+    if isinstance(raw, Mapping):
+        r = _percent(raw.get("r"))
+        g = _percent(raw.get("g"))
+        b = _percent(raw.get("b"))
+        if r is not None and g is not None and b is not None:
+            return (r, g, b)
+    if console_colors is not None:
+        read = console_colors(preset_no)
+        if read:
+            return read[0]
+    return None
 
 
-def _rgb_list(grid: Mapping[str, object], preset_no: object) -> list[float] | None:
+def color_preset_rgbs(
+    grid: Mapping[str, object],
+    preset_no: str,
+    *,
+    console_colors: ConsoleColors | None = None,
+) -> list[tuple[float, float, float]]:
+    """색 프리셋 하나의 모든 색(스플릿 스와치용). 앱 기록이 있으면 그 하나, 없으면
+    콘솔이 읽어 준 서로 다른 색 전부(순서 유지), 둘 다 없으면 빈 목록."""
+    own = color_preset_rgb(grid, preset_no)
+    if own is not None:
+        return [own]
+    if console_colors is not None:
+        read = console_colors(preset_no)
+        if read:
+            return [tuple(c) for c in read]  # type: ignore[misc]
+    return []
+
+
+def _rgb_list(
+    grid: Mapping[str, object], preset_no: object, console_colors: ConsoleColors | None = None
+) -> list[float] | None:
     if not isinstance(preset_no, str):
         return None
-    rgb = color_preset_rgb(grid, preset_no)
+    rgb = color_preset_rgb(grid, preset_no, console_colors=console_colors)
     return list(rgb) if rgb is not None else None
 
 
+def _rgbs_list(
+    grid: Mapping[str, object], preset_no: object, console_colors: ConsoleColors | None = None
+) -> list[list[float]] | None:
+    if not isinstance(preset_no, str):
+        return None
+    rgbs = color_preset_rgbs(grid, preset_no, console_colors=console_colors)
+    return [list(c) for c in rgbs] if rgbs else None
+
+
 def attach_color_rgb_to_drawer(
-    sections: Sequence[Mapping[str, object]], grid: Mapping[str, object]
+    sections: Sequence[Mapping[str, object]],
+    grid: Mapping[str, object],
+    *,
+    console_colors: ConsoleColors | None = None,
 ) -> list[dict[str, object]]:
-    """프리셋 서랍의 Color 섹션 항목에 ``rgb: [r, g, b]``(0~100%)를 단다. 값은 곡 격자
-    ``preset_colors`` 에 기록된 것만 — 기록이 없는 항목(콘솔 쇼 프리셋 등)은 키를 뺀다."""
+    """프리셋 서랍의 Color 섹션 항목에 ``rgb: [r, g, b]``(0~100%)와 ``rgbs``(색 목록)를
+    단다. 값은 곡 격자 ``preset_colors`` 에 기록된 것이 먼저, 없으면 ``console_colors``
+    (콘솔 판독)가 있을 때만 — 어느 쪽에도 없는 항목은 키를 뺀다."""
     out: list[dict[str, object]] = []
     for section in sections:
         section = dict(section)
@@ -135,17 +184,25 @@ def attach_color_rgb_to_drawer(
             entries: list[object] = []
             for entry in section.get("entries") or []:  # type: ignore[attr-defined]
                 if isinstance(entry, Mapping):
-                    rgb = _rgb_list(grid, entry.get("preset_no"))
-                    entry = {**entry, "rgb": rgb} if rgb is not None else dict(entry)
+                    no = entry.get("preset_no")
+                    rgb = _rgb_list(grid, no, console_colors)
+                    if rgb is not None:
+                        entry = {**entry, "rgb": rgb, "rgbs": _rgbs_list(grid, no, console_colors)}
+                    else:
+                        entry = dict(entry)
                 entries.append(entry)
             section["entries"] = entries
         out.append(section)
     return out
 
 
-def attach_color_rgb_to_cues(grid: Mapping[str, object]) -> dict[str, object]:
+def attach_color_rgb_to_cues(
+    grid: Mapping[str, object], *, console_colors: ConsoleColors | None = None
+) -> dict[str, object]:
     """격자 사본의 칸(``tracks[].cues[]``)마다 ``color_preset_no`` 가 가리키는 색의
-    ``color_rgb: [r, g, b]``(0~100%)를 단다. 기록이 없으면 키를 뺀다(원본 불변)."""
+    ``color_rgb: [r, g, b]``(0~100%)와 ``color_rgbs``(색 목록 — 스플릿 스와치용)를
+    단다. 앱 기록이 먼저, 없으면 ``console_colors``(콘솔 판독). 둘 다 없으면 키를
+    뺀다(원본 불변)."""
     tracks = grid.get("tracks")
     if not isinstance(tracks, list):
         return dict(grid)
@@ -157,8 +214,14 @@ def attach_color_rgb_to_cues(grid: Mapping[str, object]) -> dict[str, object]:
             continue
         new_cues: list[object] = []
         for cue in cues:
-            rgb = _rgb_list(grid, cue.get("color_preset_no")) if isinstance(cue, Mapping) else None
-            new_cues.append({**cue, "color_rgb": rgb} if rgb is not None else cue)
+            no = cue.get("color_preset_no") if isinstance(cue, Mapping) else None
+            rgb = _rgb_list(grid, no, console_colors)
+            if rgb is None:
+                new_cues.append(cue)
+            else:
+                new_cues.append(
+                    {**cue, "color_rgb": rgb, "color_rgbs": _rgbs_list(grid, no, console_colors)}
+                )
         new_tracks.append({**track, "cues": new_cues})
     return {**grid, "tracks": new_tracks}
 

@@ -29,7 +29,7 @@ from server.safety.gate import SafetyGate
 from server.tools import beatgrid_runner as runner
 
 SAMPLE_LINES = ("ClearAll", "Group 4", "Store Preset 2.351")
-RESPONDER_VERSION = "1.6.6"  # EXPECTED_RESPONDER_VERSION in server/safety/responder_version.py
+RESPONDER_VERSION = "1.7.0"  # EXPECTED_RESPONDER_VERSION in server/safety/responder_version.py
 MODULE_PATH = Path(runner.__file__)
 CONSOLE_READ_METHODS = frozenset(
     {"ping", "query_state", "query_property", "enumerate_fields", "query_properties"}

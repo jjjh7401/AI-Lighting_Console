@@ -312,6 +312,27 @@ def build_props_query(
     return line
 
 
+def build_presetdata_query(request_id: str, path: str, offset: int | None = None) -> str:
+    """Preset VALUE readback (``console/lua/PROTOCOL.md`` §4.9, responder 1.7.0).
+
+    Read-only ``GetPresetData`` window. ``None``/``0`` omit the token (the first
+    window); a positive ``offset`` asks for the whole-entry window starting there.
+    A responder older than 1.7.0 answers ``unknown request kind``.
+    """
+    _validate_request_id(request_id)
+    _validate_rest(path, field="object path")
+    if isinstance(offset, bool) or (offset is not None and not isinstance(offset, int)):
+        raise ProtocolError(f"offset must be an int or None: {offset!r}")
+    if offset is not None and offset < 0:
+        raise ProtocolError(f"offset must be >= 0: {offset!r}")
+    rest = f"presetdata {request_id} {path}"
+    if offset:
+        rest = f"{rest} offset={offset}"
+    line = build_plugin_call(rest)
+    _validate_plugin_call_budget(line, field="presetdata request")
+    return line
+
+
 def build_exec_request(request_id: str, command: str, *, plugin_name: str = PLUGIN_NAME) -> str:
     """Wrapped command execution with result capture (REQ-MVP-004).
 

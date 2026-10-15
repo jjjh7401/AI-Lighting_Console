@@ -15,6 +15,8 @@
 --   Plugin "CopilotResponder" "prop <id> <object-path> <PropertyName>"
 --   Plugin "CopilotResponder" "props <id> <PropertyName,...> <object-path>"
 --   Plugin "CopilotResponder" "introspect <id> <object-path>"
+--   Plugin "CopilotResponder" "presetdata <id> <object-path> [offset=<n>]"
+--     e.g. presetdata 8 DataPool/PresetPools/4/22   (read-only GetPresetData)
 --   Plugin "CopilotResponder" "exec <id> <ma3-command>"    e.g. exec 7 List
 --   Plugin "CopilotResponder" "deploy <id> <enc-name> <enc-source>"  (M7 —
 --     both tokens percent-encoded; reviewed source only, see PROTOCOL.md §2)
@@ -118,7 +120,19 @@ local M = {
     -- 잘려 도착했다). offset 토큰이 없는 요청은 바이트 단위로 그대로다.
     -- NOT live-verified: offline-only bump; deployment is confirmed BY
     -- VERSION -- `ping` must answer 1.6.6.
-    VERSION = "1.6.6",
+    -- 1.7.0: additive READ-ONLY `presetdata` verb (SPEC-LDBEAT-001, 프리셋 값
+    -- 읽기). `presetdata <id> <object-path> [offset=<n>]` calls the Object-Free
+    -- `GetPresetData(handle, false, false)` (manual: lua_objectfree_getpresetdata)
+    -- on the resolved preset object and answers the returned table as JSON TEXT,
+    -- windowed by whole TOP-LEVEL entries with the 1.6.6 offset/total/truncated
+    -- convention -- preset VALUES (color RGB, dimmer, pan/tilt) are not
+    -- readable through object properties (PRESETDATA "", SELECTIONDATA {}).
+    -- Reads only: no Cmd(), no property write, no object created. Every other
+    -- verb is byte-for-byte unchanged. NOT live-verified: the table SHAPE
+    -- GetPresetData returns on onPC 2.4.2 is unobserved (the server parser
+    -- treats any unknown shape as "no data"); deployment is confirmed BY
+    -- VERSION -- `ping` must answer 1.7.0.
+    VERSION = "1.7.0",
     PROTO = 1,
     CONFIG = CONFIG,
 }
@@ -1152,6 +1166,89 @@ function M.build_props_offset_result(id, path, name, offset)
     }
 end
 
+-- 프리셋 값 읽기 (responder 1.7.0, 읽기 전용). `GetPresetData` 는 객체 속성으로는
+-- 안 읽히는 프리셋 값(색 RGB·디머·팬/틸트)을 중첩 테이블로 돌려주는 Object-Free 함수다
+-- (`handle, phasers_only=false, by_fixtures=false`). 이 빌더는 그 테이블을
+-- `build_props_offset_result` 와 같은 규약으로 최상위 엔트리 단위 창으로 나눠
+-- 회신한다: 실제 인코딩한 전체 응답 크기가 `CONFIG.max_payload` 를 넘지 않는 한에서
+-- 창이 늘고, `truncated` 는 "이 창 뒤에 엔트리가 남음"이다. 콘솔 객체를 바꾸지 않는다.
+function M.build_presetdata_result(id, path, offset)
+    offset = offset or 0
+    local function fail(message)
+        return {
+            v = M.PROTO,
+            kind = "presetdata",
+            id = id,
+            ok = false,
+            path = path,
+            offset = offset,
+            error = message,
+        }
+    end
+    if type(GetPresetData) ~= "function" then
+        return fail("GetPresetData is not available on this console")
+    end
+    local handle, err = M.resolve_path(path)
+    if not handle then
+        return fail(err)
+    end
+    local ok, raw = pcall(GetPresetData, handle, false, false)
+    if not ok then
+        return fail("GetPresetData failed: " .. tostring(raw))
+    end
+    if type(raw) ~= "table" then
+        return fail("GetPresetData returned " .. type(raw) .. " (no preset data)")
+    end
+    local open, close, entries = table_entry_parts(raw)
+    local total = #entries
+    local start = offset + 1
+    local kept = {}
+    local best
+    for i = start, total do
+        local candidate = {}
+        for _, e in ipairs(kept) do
+            candidate[#candidate + 1] = e
+        end
+        candidate[#candidate + 1] = entries[i]
+        local trial = {
+            v = M.PROTO,
+            kind = "presetdata",
+            id = id,
+            ok = true,
+            path = path,
+            offset = offset,
+            total = total,
+            truncated = i < total,
+            data = open .. table.concat(candidate, ",") .. close,
+        }
+        if #M.encode_payload(trial) > CONFIG.max_payload then
+            break
+        end
+        kept = candidate
+        best = trial
+    end
+    if best then
+        return best
+    end
+    if start <= total then
+        -- 첫 엔트리 하나가 예산을 넘는다: 빈 창 + truncated 로 두면 호출자가
+        -- 진전 없이 멈추므로 이유를 말하는 실패로 낸다.
+        return fail("a single preset-data entry exceeds the payload budget")
+    end
+    -- offset >= total: 뒤에 남은 게 없다.
+    return {
+        v = M.PROTO,
+        kind = "presetdata",
+        id = id,
+        ok = true,
+        path = path,
+        offset = offset,
+        total = total,
+        truncated = false,
+        data = open .. close,
+    }
+end
+
 -- @MX:ANCHOR: [AUTO] property_accessors is accepted as a complete set or
 --   rejected as a complete set; partial introspection results are not emitted.
 -- @MX:REASON: REQ-INTROSPECT-004 closes the plausible-partial-answer failure
@@ -1571,6 +1668,21 @@ function M.handle_request(request)
         else
             local path, offset = M.parse_paged_args(parsed.rest)
             payload = M.build_introspect_result(parsed.id, path, offset)
+        end
+        M.send_reply(CONFIG.state_address, payload)
+    elseif parsed.kind == "presetdata" then
+        if parsed.rest == "" then
+            payload = {
+                v = M.PROTO,
+                kind = "presetdata",
+                id = parsed.id,
+                ok = false,
+                path = "",
+                error = "missing object path (expected: presetdata <id> <path>)",
+            }
+        else
+            local path, offset = M.parse_paged_args(parsed.rest)
+            payload = M.build_presetdata_result(parsed.id, path, offset)
         end
         M.send_reply(CONFIG.state_address, payload)
     elseif parsed.kind == "exec" then

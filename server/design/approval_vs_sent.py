@@ -44,7 +44,14 @@ __all__ = [
 ]
 
 READ_KINDS = frozenset(
-    {"props_query", "state_query", "property_query", "introspect_query", "heartbeat"}
+    {
+        "props_query",
+        "state_query",
+        "property_query",
+        "introspect_query",
+        "presetdata_query",
+        "heartbeat",
+    }
 )
 SUMMARY_KINDS = frozenset({"deploy"})
 

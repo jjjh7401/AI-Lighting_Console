@@ -470,6 +470,65 @@ class TestIntrospectAndPropsGate:
         assert events[0]["command"] == f"{_PROBE_PATH} CURRENTCUE,FADER"
 
 
+class TestPresetDataQuery:
+    """`presetdata` (responder 1.7.0, PROTOCOL.md §4.9) — a read, audited like props."""
+
+    _PATH = "DataPool/PresetPools/4/22"
+
+    def _link(self, *, ok: bool = True, silent: bool = False):
+        link = ConsoleLink(timeouts=_FAST)
+        sent: list[str] = []
+
+        def send(wire: str) -> None:
+            sent.append(wire)
+            if silent:
+                return
+            match = re.match(
+                r'^Plugin "CopilotResponder" "presetdata (\S+) (.+?)( offset=\d+)?"$', wire
+            )
+            assert match, f"unexpected wire line: {wire!r}"
+            payload = {"v": 1, "kind": "presetdata", "id": match.group(1), "ok": ok}
+            if ok:
+                payload.update(path=match.group(2), offset=0, total=0, truncated=False, data="[]")
+            else:
+                payload["error"] = "unknown request kind: presetdata"
+            link.deliver(FeedbackMessage(address=STATE_ADDRESS, args=(encode_payload(payload),)))
+
+        link.bind_send(send)
+        return link, sent
+
+    def test_round_trip_and_offset_token(self):
+        link, sent = self._link()
+        assert link.query_preset_data(self._PATH)["data"] == "[]"
+        link.query_preset_data(self._PATH, offset=7)
+        assert "offset" not in sent[0] and sent[1].endswith(' offset=7"')
+
+    def test_old_responder_error_and_silence_raise(self):
+        link, _ = self._link(ok=False)
+        with pytest.raises(StateQueryError, match="unknown request kind"):
+            link.query_preset_data(self._PATH)
+        link, _ = self._link(silent=True)
+        with pytest.raises(StateQueryError):
+            link.query_preset_data(self._PATH)
+
+    def test_gate_audits_path_only_and_reraises(self, tmp_path):
+        class Console(_ProbeConsole):
+            def query_preset_data(self, path, *, offset=0):
+                if path.endswith("/9"):
+                    raise StateQueryError("boom")
+                return {"ok": True, "data": "[]", "offset": offset}
+
+        gate, _, audit = _make_probe_gate(tmp_path, Console())
+        assert gate.state_port.query_preset_data(self._PATH)["ok"] is True
+        with pytest.raises(StateQueryError):
+            gate.state_port.query_preset_data("DataPool/PresetPools/4/9")
+        events = _executed(audit, "presetdata_query")
+        assert [(e["command"], e["ok"]) for e in events] == [
+            (self._PATH, True),
+            ("DataPool/PresetPools/4/9", False),
+        ]
+
+
 class TestStateBodyFetcher:
     def _fetcher(self, tree: dict, calls: list | None = None):
         def query(path: str) -> dict:
