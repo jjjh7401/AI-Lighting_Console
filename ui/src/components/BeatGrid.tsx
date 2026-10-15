@@ -23,6 +23,8 @@
 // 바이트 동일하게 동작한다(additive).
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
+import { PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
+import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./beatgrid/presetPlan";
 import { BeatGridTopBar } from "./BeatGridTopBar";
 import { SongOverview } from "./SongOverview";
 import {
@@ -547,6 +549,8 @@ export interface BeatGridProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
+  /** 「필요한 프리셋 만들기」 — 서버가 계획표(chat_response)를 먼저 보내고 승인 카드를 띄운다. */
+  onPresetPlanRequest?: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
@@ -1474,6 +1478,7 @@ export function BeatGrid({
   onPreviewBar,
   onPreviewOff,
   onApply,
+  onPresetPlanRequest,
   timecodeNumber,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -1507,6 +1512,19 @@ export function BeatGrid({
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
+  // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
+  const [presetPlanPending, setPresetPlanPending] = useState<{ sinceSeq: number } | null>(null);
+  const requestPresetPlan = () => {
+    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1 });
+    onPresetPlanRequest?.();
+  };
+  const presetPlan =
+    presetPlanPending !== null &&
+    lastServerReply !== null &&
+    lastServerReply.summary === PRESET_PLAN_SUMMARY &&
+    lastServerReply.seq > presetPlanPending.sinceSeq
+      ? parsePresetPlan(lastServerReply.text)
+      : null;
   const [transitionView, setTransitionView] = useState(false);
   // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
   // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
@@ -2176,6 +2194,7 @@ export function BeatGrid({
         onPreviewBar={onPreviewBar}
         onPreviewOff={onPreviewOff}
         onApply={onApply}
+        onPresetPlanRequest={onPresetPlanRequest ? requestPresetPlan : undefined}
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
@@ -2198,6 +2217,7 @@ export function BeatGrid({
           consoleFollowError,
         }}
       />
+      {presetPlan && <PresetPlanPanel plan={presetPlan} onClose={() => setPresetPlanPending(null)} />}
       {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
       {applyFailureNote(sendStatus) && (
         <p className="beat-grid-apply-fail" role="status">
