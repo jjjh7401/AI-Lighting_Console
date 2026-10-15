@@ -68,7 +68,8 @@ describe("brightnessCell", () => {
     expect(result).toEqual({
       kind: "chip",
       presetNo: "1.31",
-      label: "1.31 LA Dim 30",
+      name: "Dim 30",
+      label: "1.31 Dim 30",
       tooltip: "이 곡에서 큐 2곳 사용",
     });
   });
@@ -89,6 +90,7 @@ describe("positionCell", () => {
     expect(positionCell(cue({ position_preset_no: "2.41" }), "mover", null)).toEqual({
       kind: "chip",
       presetNo: "2.41",
+      name: null,
       label: "2.41",
       tooltip: "이 곡에서 큐 0곳 사용",
     });
@@ -112,6 +114,7 @@ describe("colorCell", () => {
     expect(colorCell(cue({ color_preset_no: "4.21" }), "side", null)).toEqual({
       kind: "chip",
       presetNo: "4.21",
+      name: null,
       label: "4.21",
       tooltip: "이 곡에서 큐 0곳 사용",
     });
@@ -127,13 +130,14 @@ describe("movementCell", () => {
     expect(movementCell(cue({ effect_preset_no: "2.61" }), "mover", null)).toEqual({
       kind: "chip",
       presetNo: "2.61",
+      name: null,
       label: "2.61",
       tooltip: "이 곡에서 큐 0곳 사용",
     });
   });
 
-  it("무빙인데 효과 번호가 없으면 '미정'이다", () => {
-    expect(movementCell(cue({ effect_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "미정" });
+  it("무빙인데 효과 번호가 없으면 '+ 없음'이다", () => {
+    expect(movementCell(cue({ effect_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "+ 없음" });
   });
 });
 
@@ -146,6 +150,7 @@ describe("transitionCell", () => {
     expect(transitionCell(cue({ entry: { fade_bars: 2, mib_mode: null } }), false)).toEqual({
       kind: "text",
       text: "유지",
+      dim: true,
     });
   });
 

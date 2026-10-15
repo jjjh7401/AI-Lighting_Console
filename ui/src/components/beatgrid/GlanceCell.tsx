@@ -8,9 +8,11 @@ export function GlanceCell({ value }: { value: GlanceCellValue }) {
   if (value.kind === "chip") {
     return (
       <span className="beat-grid-glance-chip" title={value.tooltip}>
-        {value.label}
+        <b>{value.presetNo}</b>
+        {value.name !== null && ` ${value.name}`}
       </span>
     );
   }
+  if (value.dim) return <span className="beat-grid-glance-dim">{value.text}</span>;
   return <>{value.text}</>;
 }

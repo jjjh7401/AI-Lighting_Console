@@ -21,17 +21,29 @@ const UNSET = "미정";
  * 없을 때(아직 선언 안 됨). */
 const NOT_APPLICABLE = "—";
 
+/** 무빙 칸에 효과가 없을 때 — 「+ 없음」(checklist 「이 마디 한눈에」, 시안 `＋ 없음`). */
+const NO_MOVEMENT = "+ 없음";
+
+/** 칩 = 프리셋 번호(굵게) + 이름. `label` 은 번호와 이름을 한 줄로 이은 글이다(툴팁·시험용). */
 export type GlanceCellValue =
-  | { kind: "chip"; presetNo: string; label: string; tooltip: string }
-  | { kind: "text"; text: string };
+  | { kind: "chip"; presetNo: string; name: string | null; label: string; tooltip: string }
+  | { kind: "text"; text: string; dim?: boolean };
+
+/** 시안 `cellHTML` 처럼 칩 이름 앞의 「LA 」 는 뗀다. */
+function chipName(name: string): string {
+  return name.replace(/^LA /, "");
+}
 
 function chipOrUnset(presetNo: string | null, sections: BeatGridDrawerSection[] | null): GlanceCellValue {
   if (!presetNo) return { kind: "text", text: UNSET };
   const entry = findDrawerEntryByPresetNo(sections, presetNo);
+  const shown = entry ? chipName(entry.name) : "";
+  const name = shown === "" ? null : shown;
   return {
     kind: "chip",
     presetNo,
-    label: entry ? `${presetNo} ${entry.name}` : presetNo,
+    name,
+    label: name === null ? presetNo : `${presetNo} ${name}`,
     tooltip: formatPresetChipTooltip(entry?.description, entry?.usage_count ?? 0, entry?.description_source),
   };
 }
@@ -80,6 +92,7 @@ export function movementCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("움직임")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
+  if (!cue.effect_preset_no) return { kind: "text", text: NO_MOVEMENT };
   return chipOrUnset(cue.effect_preset_no, sections);
 }
 
@@ -91,7 +104,7 @@ export function movementCell(
  * 은 "유지". */
 export function transitionCell(cue: BeatGridCue | null, isTransitionBar: boolean): GlanceCellValue {
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  if (!isTransitionBar) return { kind: "text", text: "유지" };
+  if (!isTransitionBar) return { kind: "text", text: "유지", dim: true };
   return { kind: "text", text: cue.entry.fade_bars === null ? UNSET : `${cue.entry.fade_bars}마디` };
 }
 
@@ -113,4 +126,15 @@ export function changedFieldsLabel(
   if (previousCue.color_preset_no !== currentCue.color_preset_no) changed.push("색");
   if (previousCue.effect_preset_no !== currentCue.effect_preset_no) changed.push("움직임");
   return `● ${changed.length > 0 ? changed.join("·") : "큐"} 바뀜`;
+}
+
+/** 「이 마디 한눈에」 머리의 마디 이름 — 앞박(0번 마디)은 「앞박」, 그 밖은 「N마디」(시안 `drawBar`·`bsT`). */
+export function glanceBarLabel(bar: number): string {
+  return bar === 0 ? "앞박" : `${bar}마디`;
+}
+
+/** 접힌 역할 폴더 머리 뒤의 요약 — 「 — 2줄 접힘 · 이 마디 2줄 바뀜」. 이 마디에 바뀐 줄이 없으면 접힘 수만(시안 `gh` 머리). */
+export function collapsedFolderSummary(rowCount: number, changedRowCount: number): string {
+  const folded = ` — ${rowCount}줄 접힘`;
+  return changedRowCount > 0 ? `${folded} · 이 마디 ${changedRowCount}줄 바뀜` : folded;
 }
