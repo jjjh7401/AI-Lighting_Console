@@ -79,6 +79,12 @@ describe("꺼진 칸과 배치 안 된 마디 — 시안 .clip.off · .clip.empt
     expect(html).not.toMatch(/is-off[^>]*>—</);
   });
 
+  it("첫 칸 앞의 구간은 빗금 「꺼짐」이다(시안의 꺼진 첫 구간)", () => {
+    const grid = gridWith([track("FOH", "key", [cue(7, "Pace 60")])]);
+    const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={26} />);
+    expect(html).toMatch(/beat-grid-cue-gap is-off[^>]*>꺼짐/);
+  });
+
   it("배치 범위 밖은 「26마디~ 아직 배치 안 함」 빗금 영역이다", () => {
     const grid = gridWith([track("FOH", "key", [cue(0, "앞빛")])]);
     const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={83} />);

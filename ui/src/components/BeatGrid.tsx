@@ -2331,14 +2331,14 @@ export function BeatGrid({
                           {segments.length === 0 && (
                             <span className="beat-grid-cue-empty">이 구간에 칸 없음</span>
                           )}
-                          {/* 첫 칸 앞의 빈 구간 — "아직 선언 안 됨"을 지어내지 않고 그대로
-                              빈 칸으로 보인다(시안 `.clip.empty`). */}
+                          {/* 첫 칸 앞의 구간 — 칸이 없으니 꺼진 칸과 같다. 시안의 첫 구간처럼
+                              빗금 + 「꺼짐」으로 보인다(「아직 선언 안 됨」이라는 글은 지어내지 않는다). */}
                           {leadGapEnd > grid.bar_range.start && (
                             <span
-                              className="beat-grid-cue beat-grid-cue-gap"
+                              className="beat-grid-cue beat-grid-cue-gap is-off"
                               style={{ left: barToX(grid.bar_range.start), width: barToX(leadGapEnd) - barToX(grid.bar_range.start) - 2 }}
                             >
-                              —
+                              꺼짐
                             </span>
                           )}
                           {tailStart <= maxBar && (
