@@ -145,6 +145,24 @@ export function connectResyncFrames(): string[] {
   ];
 }
 
+export interface CloseFollowUp {
+  /** 「서버 연결 끊김」을 화면에 알릴지. */
+  announceDisconnect: boolean;
+  /** 백오프를 기다리지 않고 바로 다시 붙을지. */
+  retryNow: boolean;
+}
+
+/**
+ * 소켓이 닫혔을 때 할 일을 가른다. 의도한 재연결(불러오기 뒤)은 끊김을 알리지 않고 지연 없이 바로
+ * 다시 붙는다 — 화면이 깜빡이거나 경고가 잠깐 뜨지 않게. 그 밖의 끊김은 기존처럼 끊김을 알리고
+ * 백오프 뒤에 다시 붙는다. 순수 함수라 DOM 없이 단위 시험한다.
+ */
+export function closeFollowUp(intentional: boolean): CloseFollowUp {
+  return intentional
+    ? { announceDisconnect: false, retryNow: true }
+    : { announceDisconnect: true, retryNow: false };
+}
+
 // T-C, wave 2 (ad-hoc contract, no SPEC on file): unlike `dash_catalog`
 // (REQ-DASHUI-021 forbids timer polling — it resyncs only on connect and on
 // an executed chat command), the cue monitor is explicitly contracted to
@@ -304,12 +322,19 @@ export interface CopilotSocket {
   clearChat: () => void;
   /** Apply a library-loaded timeline as if a `song_timeline` frame arrived. */
   applySongTimeline: (timeline: unknown) => void;
+  /**
+   * 연결을 한 번 다시 맺어 서버가 세션 값을 다시 보내게 한다(불러오기 뒤). 「연결 끊김」을 알리지
+   * 않는다. 연결이 없는 중(재연결 대기)이면 아무것도 하지 않는다 — 대기 중 재연결이 곧 상태를 받는다.
+   */
+  reconnect: () => void;
 }
 export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): CopilotSocket {
   const [state, dispatch] = useReducer(reducer, initialState, restoredInitialState);
   const [connected, setConnected] = useState(false);
   const [responding, setResponding] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
+  // 의도한 재연결로 우리가 닫는 소켓. onclose 가 이것과 같은지 보고 끊김 표시를 가른다.
+  const intentionalSocketRef = useRef<WebSocket | null>(null);
   // Fresh transcript for the (re)connect handler below — the connect effect
   // closes over [url] only, so it reads the entries through this ref.
   const entriesRef = useRef(state.entries);
@@ -381,19 +406,28 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
         // socketRef with a retrying rejected connection.
         if (socketRef.current !== socket) return;
         socketRef.current = null;
+        // 의도한 재연결이면 우리가 닫은 소켓이다 — 「서버 연결 끊김」을 알리지 않는다.
+        const intentional = intentionalSocketRef.current === socket;
+        if (intentional) intentionalSocketRef.current = null;
+        const follow = closeFollowUp(intentional);
         setResponding(false);
-        setConnected(false);
+        if (follow.announceDisconnect) setConnected(false);
         // The server fail-safe-denies every pending approval/review for
         // this session on disconnect (M6c-1) — clear the stale cards so a
         // reconnect never leaves the operator staring at a decision the
         // server already resolved (M6c-4 finding 3).
         dispatch({ kind: "disconnected" });
         if (!disposed) {
-          timer = window.setTimeout(connect, retryDelay);
-          retryDelay = Math.min(retryDelay * 2, 10_000);
+          if (follow.retryNow) {
+            connect();
+          } else {
+            timer = window.setTimeout(connect, retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 10_000);
+          }
         }
         // 재연결 예약까지 마친 뒤에 알린다. 소비자 콜백이 던져도 재연결은 이미 걸려 있다.
-        optionsRef.current?.onSocketClosed?.();
+        // 의도한 재연결은 끊김이 아니므로 소켓 끊김 콜백(바 맵 상태 등)도 알리지 않는다.
+        if (follow.announceDisconnect) optionsRef.current?.onSocketClosed?.();
       };
     };
 
@@ -607,6 +641,14 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   const sendDashRefresh = useCallback(() => send(buildDashCatalogRequest()), [send]);
   const sendCueMonitorRefresh = useCallback(() => send(buildCueMonitorRequest()), [send]);
   const clearChat = useCallback(() => dispatch({ kind: "clear_chat" }), []);
+  // 의도한 재연결(불러오기 뒤): 지금 연결된 소켓을 우리가 닫고, onclose 가 바로 다시 붙인다.
+  // 연결이 없으면(재연결 대기 중) 아무것도 하지 않는다 — 대기 중인 재연결이 곧 상태를 받는다.
+  const reconnect = useCallback(() => {
+    const current = socketRef.current;
+    if (current === null) return;
+    intentionalSocketRef.current = current;
+    current.close();
+  }, []);
   /** Apply a library-loaded timeline locally, riding the SAME parse/reduce
    * path as a server `song_timeline` frame (the server store was already
    * updated by the load call, so replays stay consistent). */
@@ -660,5 +702,6 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendCueMonitorRefresh,
     clearChat,
     applySongTimeline,
+    reconnect,
   };
 }

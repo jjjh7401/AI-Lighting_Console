@@ -45,6 +45,7 @@ import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
 import { TimelineLibrary } from "./components/TimelineLibrary";
 import { saveTimelineToLibrary } from "./timelineLibrary";
+import { reconnectAfterTimelineLoad } from "./timelineLoadReconnect";
 import { SONG_TIMELINE_EXAMPLE } from "./components/songTimelineExample";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { StatusBanner } from "./components/StatusBanner";
@@ -435,6 +436,7 @@ export default function App() {
     sendBarMapAnalyse,
     clearChat,
     applySongTimeline,
+    reconnect,
   } = useCopilotSocket(undefined, {
     // 마디 지도 진입 컨트롤(`barMap`)의 리듀서에 서버 프레임과 소켓 끊김을 먹인다.
     // `barMapDispatch`는 아래에서 선언되지만 콜백은 소켓 사건 때에야 불려 안전하다.
@@ -489,6 +491,8 @@ export default function App() {
     applySongTimeline(timeline);
     setRunbookMode(true);
     writeRunbookModeToStorage(true);
+    // 불러오기가 성공했으니 연결을 한 번 다시 맺는다 — 서버가 세션 값(줄 머리 sub_info 등)을 다시 보낸다.
+    reconnectAfterTimelineLoad(timeline, reconnect);
   };
   const toggleRunbookMode = () => {
     setRunbookMode((active) => {

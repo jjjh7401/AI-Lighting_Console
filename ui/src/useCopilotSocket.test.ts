@@ -20,6 +20,7 @@ import {
   awaitingOperatorAction,
   BASE_SUBPROTOCOL,
   TOKEN_SUBPROTOCOL_PREFIX,
+  closeFollowUp,
   connectProtocols,
   connectResyncFrames,
   cueMonitorResyncFrame,
@@ -221,5 +222,15 @@ describe("조작자를 기다리는 동안 콘솔을 방해하지 않는다", ()
     };
 
     expect(awaitingOperatorAction(state)).toBe(false);
+  });
+});
+
+describe("closeFollowUp — 의도한 재연결은 끊김을 알리지 않고 바로 다시 붙는다", () => {
+  it("의도한 재연결(불러오기 뒤)은 끊김 표시를 건너뛰고 지연 없이 다시 붙는다", () => {
+    expect(closeFollowUp(true)).toEqual({ announceDisconnect: false, retryNow: true });
+  });
+
+  it("그 밖의 끊김은 기존처럼 끊김을 알리고 백오프 뒤에 다시 붙는다", () => {
+    expect(closeFollowUp(false)).toEqual({ announceDisconnect: true, retryNow: false });
   });
 });
