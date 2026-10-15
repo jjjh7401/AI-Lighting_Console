@@ -4859,6 +4859,41 @@ body {
   color: #5d5b68;
 }
 
+/* 시안 `.clip.split` — 갈라진 구간 띠(줄무늬 바탕). 칸 위에 얹히고 클릭은 칸으로 통과한다. */
+.beat-grid-lr-banner {
+  position: absolute;
+  top: 0;
+  height: 26px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(90deg, #3a2a55 0 8px, #2a2a38 8px 16px);
+  color: #d9c6ff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.beat-grid-lr-banner-s {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.92;
+}
+
+/* 시안 `.clip.follow` — 자식 줄 밖에서 부모를 따르는 칸은 칠하지 않고 점선 테두리만 둔다. */
+.beat-grid-cue.beat-grid-cue-follow {
+  background: transparent;
+  border: 1px dashed #55556a;
+  color: #77758a;
+  text-shadow: none;
+}
+
 /* 이음매(◆) — 칸과 칸이 만나는 자리. 누르면 다음 칸의 "전환" 편집이 바로
    열린다(시안 §"큐 운영": 이음매 = 전환, 카드 t534). */
 .beat-grid-joint {

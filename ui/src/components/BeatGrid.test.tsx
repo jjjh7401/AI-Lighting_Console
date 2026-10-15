@@ -391,6 +391,20 @@ describe("cueColorFill — 미정은 시안 기본색(#d8d8d8), 프리셋 색을
     expect(result.isColorUnset).toBe(false);
     expect(result.background).toBe("#ff69b4");
   });
+
+  it("color_rgb 가 있으면 색 번호 표보다 먼저 그 색을 쓴다(#731)", () => {
+    const result = cueColorFill(structuredCue(0, { color_preset_no: "4.21", color_rgb: [60, 30, 100] }), {
+      "4.21": "#ff69b4",
+    });
+    expect(result.isColorUnset).toBe(false);
+    expect(result.background).toBe("#994dff");
+  });
+
+  it("color_rgb 가 0~100 밖이면 무시하고 기본색으로 간다", () => {
+    const result = cueColorFill(structuredCue(0, { color_preset_no: null, color_rgb: [150, 30, 100] }));
+    expect(result.isColorUnset).toBe(true);
+    expect(result.background).toBe("#d8d8d8");
+  });
 });
 
 describe("sceneMemoForBar — t537 ② 리드 추가 지시 (SCENE 열 값은 메모로만)", () => {

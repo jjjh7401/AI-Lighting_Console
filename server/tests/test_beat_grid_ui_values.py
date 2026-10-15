@@ -267,3 +267,45 @@ def test_session_stage_read_gives_groups_and_next_timeline_tracks_a_sub_info(tmp
     by_name = {t["group_name"]: t for t in replay["timeline"]["beat_grid"]["tracks"]}
     assert by_name["BACK"]["sub_info"]["text"].startswith("G")
     assert any("sub_info" not in t for t in by_name.values())  # 콘솔에 없는 트랙은 달지 않는다
+
+
+# -- 트랙 콘솔 시퀀스 번호 (카드 track-seq-no) ----------------------------------
+
+
+def _grid_timeline() -> dict:
+    return {
+        "beat_grid": {
+            "tracks": [
+                {"group_name": "Spot", "cues": []},
+                {"group_name": "Wash", "cues": []},
+            ]
+        }
+    }
+
+
+def test_sequence_number_attached_only_for_allocated_tracks() -> None:
+    out = attach_beat_grid_ui_values(_grid_timeline(), track_sequence_numbers={"SPOT": 282})
+    spot, wash = out["beat_grid"]["tracks"]
+    assert spot["sequence_number"] == 282
+    assert "sequence_number" not in wash
+
+
+@pytest.mark.parametrize("numbers", [None, {}, {"SPOT": True}, {"SPOT": "282"}])
+def test_sequence_number_absent_without_real_allocation(numbers) -> None:
+    out = attach_beat_grid_ui_values(_grid_timeline(), track_sequence_numbers=numbers)
+    assert all("sequence_number" not in t for t in out["beat_grid"]["tracks"])
+
+
+def test_session_reads_sequence_numbers_from_allocation_record() -> None:
+    from types import SimpleNamespace
+
+    from server.web.session import ChatSession
+
+    timeline = {"song_title": "S", "sequence_number": 5}
+    record = {"tracks": {"Spot": {"sequence_number": 282}, "Bad": {"sequence_number": None}}}
+    store = SimpleNamespace(beat_grid_allocation=lambda key: record if key == ("S", 5) else None)
+    key_of = ChatSession._beat_grid_song_key
+    present = SimpleNamespace(_timeline_store=store, _beat_grid_song_key=key_of)
+    assert ChatSession._beat_grid_recorded_sequence_numbers(present, timeline) == {"SPOT": 282}
+    absent = SimpleNamespace(_timeline_store=None, _beat_grid_song_key=key_of)
+    assert ChatSession._beat_grid_recorded_sequence_numbers(absent, timeline) == {}
