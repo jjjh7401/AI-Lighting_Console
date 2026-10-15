@@ -726,6 +726,8 @@ export interface BeatGridStageFixture {
   x: number;
   y: number;
   z: number;
+  /** 팬·틸트 능력이 있으면 `true`(무빙 모양). 서버가 모르면 키가 없다(`undefined`) — 그때는 임시로 층 역할을 쓴다. */
+  pan_tilt?: boolean;
 }
 
 /** 카드 t565 — 박자 격자 트랙 이름과 같은 콘솔 그룹의 소속 장비(SELECTIONDATA

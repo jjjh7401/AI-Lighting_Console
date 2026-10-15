@@ -14,6 +14,7 @@ import {
   cueIsActive,
   fixtureDisplayOpacity,
   fixtureStageColor,
+  trackStageColor,
   type BeatGridFixturePoint,
 } from "./BeatGrid";
 import { fixtureBelongsTo } from "./beatGridStageModel";
@@ -88,20 +89,20 @@ export function stageDecorations(
       fill: member ? fixtureStageColor(member, tracks, viewBar) : "#888",
     });
   }
-  tracks.forEach((track, trackIndex) => {
-    if (track.layer_role !== "mover" || !lit(track)) return;
-    for (const fixture of fixtures) {
-      if (!fixtureBelongsTo(fixture, track.group_name)) continue;
-      const { cx, cy } = project(fixture);
-      const len = Math.max(0, (frontY - cy) * BEAM_REACH);
-      if (len <= 0) continue;
-      beams.push({
-        key: `beam-${trackIndex}-${fixture.fid}`,
-        points: `${cx},${cy} ${cx - BEAM_HALF_WIDTH},${cy + len} ${cx + BEAM_HALF_WIDTH},${cy + len}`,
-        fill: fixtureStageColor(fixture, tracks, viewBar),
-      });
-    }
-  });
+  // 켜진 무빙만 빔(리드 결정): 무빙 여부는 장비 능력(`fixtureIsMover`), 켜짐은 소속 줄의 칸.
+  for (const fixture of fixtures) {
+    if (!fixtureIsMover(fixture, tracks)) continue;
+    const trackIndex = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
+    if (trackIndex < 0 || !lit(tracks[trackIndex])) continue;
+    const { cx, cy } = project(fixture);
+    const len = Math.max(0, (frontY - cy) * BEAM_REACH);
+    if (len <= 0) continue;
+    beams.push({
+      key: `beam-${trackIndex}-${fixture.fid}`,
+      points: `${cx},${cy} ${cx - BEAM_HALF_WIDTH},${cy + len} ${cx + BEAM_HALF_WIDTH},${cy + len}`,
+      fill: trackStageColor(tracks[trackIndex], trackIndex, viewBar),
+    });
+  }
   return { floor, washes, beams };
 }
 
@@ -109,6 +110,9 @@ export function stageDecorations(
  * 나머지를 동그라미로 그린다. 무빙인지는 층 역할이 mover 인 줄에 **소속이
  * 확인된**(무대 판독 `member_fids`) 장비인가로만 정한다 — 그룹 이름 규칙 0. */
 export function fixtureIsMover(fixture: BeatGridFixturePoint, tracks: readonly BeatGridTrack[]): boolean {
+  // 서버가 팬·틸트 능력(`pan_tilt`)을 알면 그것이 기준이다(리드 결정). 키가 없으면(모름) 임시로 층 역할이
+  // mover 인 줄에 소속이 확인된 장비만 무빙으로 본다.
+  if (fixture.pan_tilt !== undefined) return fixture.pan_tilt;
   return tracks.some((track) => track.layer_role === "mover" && fixtureBelongsTo(fixture, track.group_name));
 }
 
@@ -164,7 +168,14 @@ export function BeatGridStage({
     // 패치 좌표를 못 읽으면 시안 개념도 배치를 같은 자리에 그린다(좌표는 지어내지 않는다).
     return (
       <div className="beat-grid-stage-box" ref={boxRef}>
-        <StageConceptSvg width={viewW} height={STAGE_H} />
+        <StageConceptSvg
+          width={viewW}
+          height={STAGE_H}
+          tracks={tracks}
+          viewBar={viewBar}
+          selectedTrackName={selectedTrackName}
+          onSelectTrack={onSelectTrack}
+        />
         {/* 기존 안내(AC-LDBEAT-022)는 그대로 남기고, 그림이 개념도임을 덧붙인다. */}
         <p className="beat-grid-stage-note">
           {notes && notes.length > 0
