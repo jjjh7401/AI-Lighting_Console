@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
 
 export interface TopBarAction {
-  id: "preview" | "apply" | "drawer" | "preset-plan";
+  id: "preview" | "apply" | "drawer";
   full: string;
   short: string;
 }
@@ -23,13 +23,6 @@ export const TOP_BAR_SHORTENED_ACTIONS: readonly TopBarAction[] = [
   { id: "apply", full: "⇪ 콘솔에 반영", short: "⇪ 반영" },
   { id: "drawer", full: "▤ 프리셋 서랍", short: "▤" },
 ];
-
-/** 「프리셋 계획」 — 한 줄을 지키려고 1450px 이상에서는 아이콘 크기(▦)로 줄인다. */
-export const TOP_BAR_PRESET_PLAN_ACTION: TopBarAction = {
-  id: "preset-plan",
-  full: "▦ 프리셋 계획",
-  short: "▦",
-};
 
 const UNWIRED_NOTE = " — 아직 배선 안 됨(콘솔 송신 경로 없음)";
 
@@ -131,8 +124,6 @@ export interface BeatGridTopBarProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
-  /** 「필요한 프리셋 만들기」 — 계획표를 먼저 받고 이어서 승인 카드가 뜬다. 없으면 버튼을 그리지 않는다. */
-  onPresetPlanRequest?: () => void;
   /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
    * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
    * 않는다), 숫자는 그 개수다. */
@@ -209,7 +200,6 @@ export function BeatGridTopBar({
   onPreviewBar,
   onPreviewOff,
   onApply,
-  onPresetPlanRequest,
   timecodeNumber = null,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -424,17 +414,6 @@ export function BeatGridTopBar({
           onClick={() => onDraftPropose()}
         >
           자동 배치
-        </button>
-      )}
-      {onPresetPlanRequest && (
-        <button
-          type="button"
-          className="tbtn"
-          title="프리셋 계획 — 필요한 프리셋 만들기: 격자 칸이 쓰는 값으로 만들 프리셋 계획표를 보이고, 승인 카드를 띄운다"
-          aria-label="프리셋 계획"
-          onClick={() => onPresetPlanRequest()}
-        >
-          <ShortenedLabel action={TOP_BAR_PRESET_PLAN_ACTION} />
         </button>
       )}
       <button

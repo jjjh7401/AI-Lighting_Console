@@ -1,6 +1,20 @@
 // 「필요한 프리셋 만들기」 계획표 패널. 승인 카드를 가리지 않도록 모달이 아니라 격자 위 패널이다.
 import { PRESET_PLAN_KIND_LABEL, type PresetPlan } from "./presetPlan";
 
+/** 프리셋 서랍 머리의 「프리셋 계획 만들기」 — `beat_grid_apply` mode: preset_plan 을 보낸다. */
+export function PresetPlanButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="tbtn"
+      title="필요한 프리셋 만들기 — 격자 칸이 쓰는 값으로 만들 프리셋 계획표를 보이고, 승인 카드를 띄운다"
+      onClick={onClick}
+    >
+      프리셋 계획 만들기
+    </button>
+  );
+}
+
 export const SUPERVISOR_FIX_MARK = "감독이 고칠 값";
 
 export function PresetPlanPanel({ plan, onClose }: { plan: PresetPlan; onClose?: () => void }) {

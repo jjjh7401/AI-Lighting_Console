@@ -23,7 +23,7 @@
 // 바이트 동일하게 동작한다(additive).
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
+import { PresetPlanButton, PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
 import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./beatgrid/presetPlan";
 import { BeatGridTopBar } from "./BeatGridTopBar";
 import { SongOverview } from "./SongOverview";
@@ -2194,7 +2194,6 @@ export function BeatGrid({
         onPreviewBar={onPreviewBar}
         onPreviewOff={onPreviewOff}
         onApply={onApply}
-        onPresetPlanRequest={onPresetPlanRequest ? requestPresetPlan : undefined}
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
@@ -3691,6 +3690,7 @@ export function BeatGrid({
             </span>
           </h4>
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
+          {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlan} />}
           {drawerSections === null ? (
             <p className="beat-grid-drawer-loading">불러오는 중…</p>
           ) : (

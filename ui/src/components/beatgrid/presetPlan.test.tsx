@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildBeatGridApply } from "../../protocol";
 import { BeatGridTopBar } from "../BeatGridTopBar";
-import { PresetPlanPanel } from "./PresetPlanPanel";
+import { PresetPlanButton, PresetPlanPanel } from "./PresetPlanPanel";
 import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./presetPlan";
 
 const TABLE = [
@@ -36,24 +36,28 @@ describe("필요한 프리셋 만들기", () => {
     });
   });
 
-  it("상단 바에 버튼이 보이고, 콜백이 없으면 그리지 않는다", () => {
-    const props = {
-      songTitle: "곡",
-      versionLabel: null,
-      bpm: 100,
-      currentBar: 0,
-      barRange: { start: 0, end: 4 },
-      onBarChange: () => {},
-    };
+  it("상단 바에는 프리셋 계획 버튼이 없다 — 한 줄을 지킨다", () => {
     const html = renderToStaticMarkup(
-      <BeatGridTopBar {...props} onPresetPlanRequest={() => {}} />,
+      <BeatGridTopBar
+        songTitle="곡"
+        versionLabel={null}
+        bpm={100}
+        currentBar={0}
+        barRange={{ start: 0, end: 4 }}
+        onBarChange={() => {}}
+        onDrawerToggle={() => {}}
+        onApply={() => {}}
+      />,
     );
-    expect(html).toContain('aria-label="프리셋 계획"');
-    // 1450px 이상에서는 아이콘 크기(▦)만 보인다 — 한 줄 유지.
-    expect(html).toContain('<span class="lbl-short">▦</span>');
-    expect(renderToStaticMarkup(<BeatGridTopBar {...props} />)).not.toContain(
-      "프리셋 계획",
-    );
+    expect(html).not.toContain("프리셋 계획");
+  });
+
+  it("서랍 머리의 버튼이 눌리면 콜백을 부른다", () => {
+    let clicked = 0;
+    const el = PresetPlanButton({ onClick: () => (clicked += 1) });
+    expect(renderToStaticMarkup(el)).toContain("프리셋 계획 만들기");
+    el.props.onClick();
+    expect(clicked).toBe(1);
   });
 
   it("계획표 행·종류·표식·제외 항목을 읽고 그린다", () => {
