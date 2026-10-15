@@ -14,14 +14,18 @@ export function brightnessLinePercent(cue: BeatGridCue): number | null {
   return Math.min(100, Math.max(0, value));
 }
 
-/** 시안에 아이콘이 있고 구조화 필드(`app_movement.shape`)로 오는 모양만 그린다.
- * 펄스는 구조화 필드가 없어 제외하고, 원·플라이아웃·발리후는 시안에 아이콘이
- * 없어 아직 그리지 않는다. */
-export type CueShapeIcon = "wave" | "sweep";
+/** 시안에 아이콘이 있는 모양만 그린다. 서버가 주는 `effect_shape`(펄스·체이스·웨이브·
+ * 스윕)를 먼저 읽고, 없으면 구조화 필드 `app_movement.shape`(웨이브·스윕)로 간다.
+ * 원·플라이아웃·발리후는 시안에 아이콘이 없어 아직 그리지 않는다. */
+export type CueShapeIcon = "pulse" | "chase" | "wave" | "sweep";
+
+/** 그릴 수 있는 모양이면 그 모양, 아니면 `null`. 모르는 값은 없는 것과 같다. */
+function shapeIconOf(shape: string | null | undefined): CueShapeIcon | null {
+  return shape === "pulse" || shape === "chase" || shape === "wave" || shape === "sweep" ? shape : null;
+}
 
 export function effectShapeIcon(cue: BeatGridCue): CueShapeIcon | null {
-  const shape = cue.app_movement?.shape;
-  return shape === "wave" || shape === "sweep" ? shape : null;
+  return shapeIconOf(cue.effect_shape) ?? shapeIconOf(cue.app_movement?.shape);
 }
 
 /** 위치·밝기 짧은 글자. 값이 없는 쪽은 `null`이고, 「—」 같은 자리표시도 쓰지 않는다. */
@@ -51,8 +55,12 @@ export function cueBarVisualClass(cue: BeatGridCue): string {
   }`;
 }
 
-/** 시안 `.wave` 자리(18×11, 흰색 선 1.5). 스윕은 같은 자리의 화살표. */
+/** 시안 `.wave` 자리(18×11, 흰색 선 1.5). 펄스는 시안의 ЛЛ 경로 그대로다. 체이스는
+ * 시안에 따로 아이콘이 없어(프로토타입도 펄스 모양을 쓴다) 한 칸씩 밀리는 세 획으로
+ * 그렸다. 스윕은 같은 자리의 화살표. */
 const SHAPE_PATH: Record<CueShapeIcon, string> = {
+  pulse: "M1 9 H4 V2 H7 V9 H10 V2 H13 V9 H16",
+  chase: "M1 9 H6 M6 6 H11 M11 3 H16",
   wave: "M1 6 C4 0 7 0 9 6 S14 12 17 6",
   sweep: "M2 5.5 H15 M11 2 L15 5.5 L11 9",
 };

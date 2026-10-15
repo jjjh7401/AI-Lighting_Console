@@ -111,6 +111,7 @@ import {
 } from "./beatgrid/audioAutoConnect";
 import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
 import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
+import { folderSummarySpans } from "./beatgrid/folderSummary";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -2341,6 +2342,26 @@ export function BeatGrid({
                 >
                   {open ? "▾" : "▸"} {folder.label} ({folder.tracks.length}줄)
                 </button>
+                {!open && (
+                  <div className="beat-grid-track beat-grid-folder-summary" role="row">
+                    <span className="beat-grid-track-label" />
+                    <div className="beat-grid-track-cues" style={{ width: laneContentWidth }}>
+                      {folderSummarySpans(folder.tracks, maxBar + 1).map((span) => (
+                        <span
+                          key={span.startBar}
+                          className={`beat-grid-cue beat-grid-cue-sum${span.lit > 0 ? "" : " is-off"}`}
+                          style={{
+                            left: barToX(span.startBar),
+                            width: barToX(span.endBar) - barToX(span.startBar) - 2,
+                            ...(span.lit > 0 ? { backgroundColor: CUE_DEFAULT_FILL } : {}),
+                          }}
+                        >
+                          {span.lit}/{span.total}줄 켜짐
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {open &&
                   folder.tracks.map((track) => {
                     const trackIndex = grid.tracks.indexOf(track);
@@ -2508,7 +2529,7 @@ export function BeatGrid({
                           {playheadBar !== null && (
                             <span
                               className="beat-grid-playhead"
-                              style={{ left: barToX(playheadBar) }}
+                              style={{ left: barToX(playheadBar), width: barToX(playheadBar + 1) - barToX(playheadBar) }}
                               title={`재생 위치 — ${playheadBar}마디`}
                             />
                           )}
