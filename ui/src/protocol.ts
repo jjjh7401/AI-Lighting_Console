@@ -488,6 +488,10 @@ export interface BeatGridCue {
   source_ref: string | null;
   /** 카드 t548, REQ-LDBEAT-006(vi) — 앱 2단계 무빙. 없으면 `null`. */
   app_movement: BeatGridAppMovement | null;
+  /** 칸의 구조화 효과 모양(펄스·체이스·웨이브·스윕). 서버 `effect_shape_of_cue`가
+   * 효과 레시피·`app_movement`에서만 파생한다(라벨 글자는 쓰지 않는다). 모양이 없는
+   * 칸은 키가 없다. 막대 아이콘은 이 값을 먼저 읽고, 없으면 `app_movement.shape`를 본다. */
+  effect_shape?: "pulse" | "chase" | "wave" | "sweep" | null;
   /** 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `null`. */
   evidence: BeatGridEvidence | null;
   /** 카드 t577, REQ-LDBEAT-015(h-1) — 뷰 전용 파생 필드(서버
@@ -498,8 +502,9 @@ export interface BeatGridCue {
    * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
    * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
   pending_preset_fields?: string[];
-  /** 이 칸이 낼 색(RGB, 각 0~100%) — 「이 마디 한눈에」 색 네모와 무대 장비 색에 쓴다. 서버가 색을
-   * 알 때만 싣는다. 없으면(`undefined`/`null`) 네모는 생략하고 무대는 기본색으로 그린다(리드 결정). */
+  /** #731 — 칸에 실린 색 [r, g, b] 배열(0~100%). 서버가 색 값을 실어 줄 때만 있다. 없으면 키가 없다.
+   * 이 칸이 낼 색(RGB, 각 0~100%) — 「이 마디 한눈에」 색 네모와 2D 무대 장비 색(켜진 줄)에 쓴다. 서버가
+   * 색을 알 때만 싣는다. 없으면(`undefined`/`null`) 네모는 생략하고 무대는 그 줄의 기본색으로 그린다(리드 결정). */
   color_rgb?: [number, number, number] | null;
 }
 

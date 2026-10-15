@@ -11,12 +11,14 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 
+from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
 
 __all__ = [
     "SECTION_KIND_COLORS",
     "accent_bars_from_bar_map",
     "attach_beat_grid_ui_values",
+    "attach_console_preset_names",
     "format_fid_ranges",
     "section_kind",
     "track_sub_info",
@@ -188,10 +190,64 @@ def _section_energies(
     return result
 
 
+_NAME_FIELDS = (
+    ("position_preset_no", "position_preset_name"),
+    ("color_preset_no", "color_preset_name"),
+)
+
+
+def _console_preset_name(
+    pool_slots: Mapping[int, Mapping[int, str | None] | None], preset_no: object
+) -> str | None:
+    """``"pool.slot"`` 번호의 콘솔 이름. 풀을 못 읽었거나(``None``) 슬롯이 없거나 이름이
+    비었으면 ``None`` — 지어내지 않는다."""
+    pool_no = preset_pool_no(preset_no)
+    if pool_no is None or not isinstance(preset_no, str):
+        return None
+    slot_text = preset_no.partition(".")[2]
+    if not slot_text.isdigit():
+        return None
+    slots = pool_slots.get(pool_no)
+    name = slots.get(int(slot_text)) if isinstance(slots, Mapping) else None
+    return name.strip() if isinstance(name, str) and name.strip() else None
+
+
+def attach_console_preset_names(
+    grid: Mapping[str, object],
+    pool_slots: Mapping[int, Mapping[int, str | None] | None],
+) -> dict[str, object]:
+    """격자 사본의 칸마다 위치·색 프리셋의 **콘솔 이름**을 단다(읽기 전용, 원본 불변).
+    이미 칸에 있는 이름은 덮지 않고, 이름을 모르면 키를 뺀다."""
+    tracks = grid.get("tracks")
+    if not isinstance(tracks, list):
+        return dict(grid)
+    new_tracks: list[object] = []
+    for track in tracks:
+        cues = track.get("cues") if isinstance(track, Mapping) else None
+        if not isinstance(cues, list):
+            new_tracks.append(track)
+            continue
+        new_cues: list[object] = []
+        for cue in cues:
+            if isinstance(cue, Mapping):
+                extra = {
+                    name_key: name
+                    for no_key, name_key in _NAME_FIELDS
+                    if name_key not in cue
+                    and (name := _console_preset_name(pool_slots, cue.get(no_key))) is not None
+                }
+                cue = {**cue, **extra} if extra else cue
+            new_cues.append(cue)
+        new_tracks.append({**track, "cues": new_cues})
+    return {**grid, "tracks": new_tracks}
+
+
 def attach_beat_grid_ui_values(
     timeline: Mapping[str, object],
     *,
     track_sub_infos: Mapping[str, Mapping[str, object]] | None = None,
+    pool_slots: Mapping[int, Mapping[int, str | None] | None] | None = None,
+    track_sequence_numbers: Mapping[str, int] | None = None,
 ) -> dict[str, object]:
     """타임라인 사본에 화면용 값을 싣는다(원본 불변, 있는 값은 덮지 않는다).
 
@@ -199,7 +255,11 @@ def attach_beat_grid_ui_values(
     - ``sections[i].energy`` — 마디 지도에 마디별 ``energy`` 가 있을 때만.
     - ``accent_bars`` — 마디 지도에 드롭 이벤트가 있을 때만.
     - ``beat_grid.tracks[i].cues[j].color_rgb`` — ``preset_colors`` 에 그 색 번호가 기록됐을 때만.
+    - ``beat_grid.tracks[i].cues[j].position_preset_name`` / ``color_preset_name`` — 세션이 이미
+      완전 판독해 기억한 콘솔 풀(``pool_slots``)에 그 번호의 이름이 있을 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
+    - ``beat_grid.tracks[i].sequence_number`` — ``track_sequence_numbers``(그룹 이름 대문자 -> 콘솔
+      시퀀스 번호, 반영 때 실제로 배정·기록된 값)에 있을 때만. 없으면 키를 뺀다.
     """
     merged = dict(timeline)
     bar_map = merged.get("bar_map")
@@ -229,14 +289,24 @@ def attach_beat_grid_ui_values(
     grid = merged.get("beat_grid")
     if isinstance(grid, Mapping):
         grid = attach_color_rgb_to_cues(grid)
+        if pool_slots:
+            grid = attach_console_preset_names(grid, pool_slots)
         merged["beat_grid"] = grid
-    if track_sub_infos and isinstance(grid, Mapping) and isinstance(grid.get("tracks"), list):
+    if (
+        (track_sub_infos or track_sequence_numbers)
+        and isinstance(grid, Mapping)
+        and isinstance(grid.get("tracks"), list)
+    ):
         tracks: list[object] = []
         for track in grid["tracks"]:
             if isinstance(track, Mapping):
-                info = track_sub_infos.get(str(track.get("group_name", "")).upper())
+                group = str(track.get("group_name", "")).upper()
+                info = (track_sub_infos or {}).get(group)
                 if info is not None:
                     track = {**track, "sub_info": dict(info)}
+                number = (track_sequence_numbers or {}).get(group)
+                if isinstance(number, int) and not isinstance(number, bool):
+                    track = {**track, "sequence_number": number}
             tracks.append(track)
         merged["beat_grid"] = {**grid, "tracks": tracks}
     return merged

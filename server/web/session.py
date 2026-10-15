@@ -10583,7 +10583,10 @@ class ChatSession:
         """
         timeline = attach_beat_grid_default(timeline)
         timeline = attach_beat_grid_ui_values(
-            timeline, track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None)
+            timeline,
+            track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None),
+            pool_slots=getattr(self, "_beat_grid_pool_slots", None),
+            track_sequence_numbers=self._beat_grid_recorded_sequence_numbers(timeline),
         )
         return derive_beat_grid_fields(
             timeline,
@@ -10592,6 +10595,21 @@ class ChatSession:
             empty_marks=self._beat_grid_empty_marks,
             pool_read_at=self._beat_grid_pool_read_at,
         )
+
+    def _beat_grid_recorded_sequence_numbers(
+        self, timeline: Mapping[str, object]
+    ) -> dict[str, int]:
+        """이 곡의 반영 기록(소유권 레코드)에 남은 트랙별 콘솔 시퀀스 번호 — 그룹 이름 대문자 ->
+        번호. 반영한 적 없으면 비어 있다(번호를 지어내지 않는다)."""
+        store = self._timeline_store
+        record = store.beat_grid_allocation(self._beat_grid_song_key(timeline)) if store else None
+        tracks = record.get("tracks") if isinstance(record, Mapping) else None
+        out: dict[str, int] = {}
+        for name, allocation in tracks.items() if isinstance(tracks, Mapping) else ():
+            number = allocation.get("sequence_number") if isinstance(allocation, Mapping) else None
+            if isinstance(number, int) and not isinstance(number, bool):
+                out[str(name).upper()] = number
+        return out
 
     def song_timeline_replay(self) -> dict | None:
         """새 연결에 재생하는 마지막 타임라인 프레임(카드 t635).
