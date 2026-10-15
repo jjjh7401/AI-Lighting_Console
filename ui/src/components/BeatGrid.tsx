@@ -98,7 +98,7 @@ import {
 } from "./beatgrid/newPresetColor";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
-import { LRSplitRow } from "./beatgrid/LRSplitRow";
+import { LRSplitBanner, LRSplitRow, lrFollowSpans, lrParentCellsReplaced } from "./beatgrid/LRSplitRow";
 import {
   audioButtonLabel,
   audioSourceId,
@@ -2323,6 +2323,15 @@ export function BeatGrid({
                     // 펼침 상세 줄로 옮겼다. 자식 줄(└ L/R) 자체는 선언된
                     // 구간 전체에 걸쳐 그대로 타임라인에 보인다.
                     const childRows = lrChildRowsForTrack(track, lrSplits, lrStage);
+                    // 시안 `.clip.split` 띠 — 자식 줄이 있을 때만(선언 + 분리 가능 트랙).
+                    const splitRange = childRows.length > 0 ? (lrSplits.get(track.group_name) ?? null) : null;
+                    // 자식 칸 데이터가 생긴 구간에서만 부모 칸을 띠로 대신한다(없으면 부모 칸 유지 — 리드 결정).
+                    const visibleSegments =
+                      lrParentCellsReplaced(childRows) && splitRange
+                        ? segments.filter(
+                            (segment) => !(segment.startBar >= splitRange.startBar && segment.endBar <= splitRange.endBar),
+                          )
+                        : segments;
                     return (
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
@@ -2365,10 +2374,10 @@ export function BeatGrid({
                               {`${tailStart}마디~ 아직 배치 안 함`}
                             </span>
                           )}
-                          {segments.map((segment, segIndex) => {
+                          {visibleSegments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
-                            const hasNext = segIndex < segments.length - 1;
+                            const hasNext = segIndex < visibleSegments.length - 1;
                             // t537 (3) — 켜진 칸의 채우기 색은 color_preset_no가 실제 색을
                             // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
                             // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
@@ -2486,6 +2495,12 @@ export function BeatGrid({
                               AI 제안(보류)
                             </span>
                           )}
+                          {splitRange && (
+                            <LRSplitBanner
+                              left={barToX(splitRange.startBar)}
+                              width={barToX(splitRange.endBar) - barToX(splitRange.startBar) - 2}
+                            />
+                          )}
                         </div>
                       </div>
                       {/* 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언이
@@ -2497,6 +2512,10 @@ export function BeatGrid({
                           child={child}
                           left={barToX(child.startBar)}
                           width={barToX(child.endBar) - barToX(child.startBar) - 2}
+                          follow={{
+                            label: `${track.group_name} 따름`,
+                            spans: lrFollowSpans(child, { start: grid.bar_range.start, end: maxBar + 1 }, barToX),
+                          }}
                           onSelect={() =>
                             selectLRSplitChild(trackIndex, track.group_name, child.side, child.startBar)
                           }
