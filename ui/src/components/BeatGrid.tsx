@@ -522,6 +522,9 @@ export interface BeatGridProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
+  /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
+  timecodeNumber?: number | null;
+  onTimecodeSubmit?: (timecodeNumber: number) => void;
   pendingApplyCount?: number | null;
   /** 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 타임코드 재생·정지 송신과 그
    * 응답(`beat_grid_send_status`). 둘 다 넘겨야 토글이 켜진다 — 생략하면 기존처럼
@@ -1442,6 +1445,8 @@ export function BeatGrid({
   onPreviewBar,
   onPreviewOff,
   onApply,
+  timecodeNumber,
+  onTimecodeSubmit,
   pendingApplyCount,
   onConsolePlay,
   onConsoleStop,
@@ -2131,6 +2136,8 @@ export function BeatGrid({
         onPreviewBar={onPreviewBar}
         onPreviewOff={onPreviewOff}
         onApply={onApply}
+        timecodeNumber={timecodeNumber}
+        onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
         onDraftPropose={pendingDraft ? undefined : onDraftPropose}

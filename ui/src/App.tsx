@@ -410,6 +410,7 @@ export default function App() {
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
+    sendBeatGridTimecodeSet,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridConsolePlay,
@@ -1275,6 +1276,8 @@ export default function App() {
             onConsoleStop={sendBeatGridConsoleStop}
             sendStatus={state.beatGridSendStatus}
             onApply={sendBeatGridApply}
+            timecodeNumber={state.songTimeline.timeline?.timecode_number ?? null}
+            onTimecodeSubmit={sendBeatGridTimecodeSet}
             pendingApplyCount={pendingApplyCountOf(state.songTimeline.timeline?.beat_grid?.unsent_cells)}
             fixtures={beatGridStageFixtures}
             stageNotes={state.beatGridStage?.unread}
