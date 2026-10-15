@@ -169,6 +169,19 @@ export function headroomSummaryLine(row: SongTimelineConceptRow | undefined): st
   return remaining < 4 ? `헤드룸 부족 · 잔여 ${remaining}그룹` : `헤드룸 여유 · 잔여 ${remaining}그룹`;
 }
 
+/** FX 칸. 원천(`fx`)이 없으면 「—」, 빈 배열이면 「정적」(효과 없음)이다. */
+function fxText(fx: string[] | undefined): string {
+  if (fx === undefined) return EMPTY_DETAIL;
+  return fx.length > 0 ? fx.join(" · ") : "정적";
+}
+
+/** 콘솔 검증 줄. readback 이 없거나 판정이 빠졌으면 「—」 — 「검증 실패」를 지어내지 않는다. */
+function readbackLine(readback: SongTimelineView["readback"] | undefined): string {
+  if (readback === undefined || readback.verified === undefined) return EMPTY_DETAIL;
+  if (readback.verified === null) return "아직 콘솔에 적용하지 않았습니다.";
+  return readback.message ?? (readback.verified ? "검증 완료" : "검증 실패");
+}
+
 function TimelineSectionCard({
   section,
   next,
@@ -223,12 +236,12 @@ function TimelineSectionCard({
       <dl>
         <div><dt>POSITION</dt><dd>{section.position}</dd></div>
         <div><dt>TEXTURE</dt><dd>{section.texture}</dd></div>
-        <div><dt>FX</dt><dd>{section.fx.length ? section.fx.join(" · ") : "정적"}</dd></div>
+        <div><dt>FX</dt><dd>{fxText(section.fx)}</dd></div>
       </dl>
-      <Palette colors={section.palette} />
+      <Palette colors={section.palette ?? []} />
       <footer>
         {section.mib && <span>MIB</span>}
-        {section.accents.length > 0 && <span>ACCENT</span>}
+        {(section.accents ?? []).length > 0 && <span>ACCENT</span>}
         {section.trig_time_seconds !== null && <span>큐 타임 +{section.trig_time_seconds}s</span>}
       </footer>
       {liveExecutor && (
@@ -264,7 +277,7 @@ function TimelineSectionCard({
 function DecisionRail({ timeline }: { timeline: SongTimelineView }) {
   return (
     <ol className="song-timeline-decisions" aria-label="감독 결정">
-      {timeline.director_decisions.map((decision) => (
+      {(timeline.director_decisions ?? []).map((decision) => (
         <li className={decision.confirmed ? "is-confirmed" : "is-draft"} key={decision.step}>
           <span>{decision.step.replace("_", " ")}</span>
           <strong>{decision.confirmed ? "확정" : "초안"}</strong>
@@ -312,9 +325,11 @@ export function SongTimeline({
 
   const executor = linkedTimelineExecutor(timeline, cueMonitor);
   const consoleStored = timelineConsoleStored(timeline);
-  const readbackText = timeline.readback.verified === null
-    ? "아직 콘솔에 적용하지 않았습니다."
-    : timeline.readback.message ?? (timeline.readback.verified ? "검증 완료" : "검증 실패");
+  const readbackText = readbackLine(timeline.readback);
+  const sections = timeline.sections ?? [];
+  const lint = timeline.lint ?? [];
+  const disabled = timeline.disabled ?? [];
+  const unresolved = timeline.unresolved ?? [];
 
   return (
     <section className="song-timeline" aria-label={`${timeline.song_title} 감독 타임라인`}>
@@ -360,12 +375,12 @@ export function SongTimeline({
       <DecisionRail timeline={timeline} />
 
       <div className="song-timeline-track" role="list">
-        {timeline.sections.map((section, index) => (
+        {sections.map((section, index) => (
           <TimelineSectionCard
             key={`${section.index}-${section.cue_number}`}
             section={section}
-            next={timeline.sections[index + 1]}
-            allSections={timeline.sections}
+            next={sections[index + 1]}
+            allSections={sections}
             executor={executor}
             lifecycle={timeline.lifecycle}
             conceptReport={timeline.concept_report}
@@ -379,9 +394,9 @@ export function SongTimeline({
       </div>
 
       <div className="song-timeline-notes">
-        <p><b>LINT</b> {timeline.lint.length === 0 ? "위반 없음" : `${timeline.lint.length}건 검토 필요`}</p>
-        <p><b>RULES</b> {timeline.disabled.length === 0 ? "비활성 규칙 없음" : `${timeline.disabled.length}개 비활성`}</p>
-        <p><b>REQUERY</b> {timeline.unresolved.length === 0 ? "미해결 입력 없음" : `${timeline.unresolved.length}개 재질의 필요`}</p>
+        <p><b>LINT</b> {lint.length === 0 ? "위반 없음" : `${lint.length}건 검토 필요`}</p>
+        <p><b>RULES</b> {disabled.length === 0 ? "비활성 규칙 없음" : `${disabled.length}개 비활성`}</p>
+        <p><b>REQUERY</b> {unresolved.length === 0 ? "미해결 입력 없음" : `${unresolved.length}개 재질의 필요`}</p>
       </div>
     </section>
   );

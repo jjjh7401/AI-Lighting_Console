@@ -55,7 +55,8 @@ const COLOR_USAGE_LABELS: Record<string, string> = {
 /** 무엇이 색을 정했는지 — 감독의 PLAN 답변 + 구간 아크 역할 + 색 운용 방식. */
 function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null {
   const parts: string[] = [];
-  const paletteDecision = timeline.director_decisions.find((decision) => decision.axis === "palette");
+  const decisions = timeline.director_decisions ?? [];
+  const paletteDecision = decisions.find((decision) => decision.axis === "palette");
   if (paletteDecision) {
     const value =
       typeof paletteDecision.value === "string"
@@ -65,7 +66,7 @@ function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null 
           : String(paletteDecision.value);
     parts.push(`감독 지정(${paletteDecision.step}): ${value}`);
   }
-  const colorUsageDecision = timeline.director_decisions.find((decision) => decision.axis === "color_usage");
+  const colorUsageDecision = decisions.find((decision) => decision.axis === "color_usage");
   if (colorUsageDecision) {
     const rawValue =
       typeof colorUsageDecision.value === "string" ? colorUsageDecision.value : String(colorUsageDecision.value);
@@ -74,7 +75,7 @@ function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null 
     parts.push(`색 운용: ${label}${defaultAcceptedMarker}`);
   }
   const roles = Array.from(
-    new Set(timeline.sections.map((section) => section.role).filter((role): role is string => Boolean(role))),
+    new Set((timeline.sections ?? []).map((section) => section.role).filter((role): role is string => Boolean(role))),
   );
   if (roles.length > 0) {
     parts.push(`구간 역할 ${roles.length}종(${roles.join("/")})이 팔레트를 갈랐다`);
@@ -85,15 +86,17 @@ function buildColorLine(timeline: SongTimelineView): AnalysisSummaryLine | null 
 
 /** 어떤 이펙트가 쓰였는지 — 구간에 실제로 배정된 fx 값의 합집합. */
 function buildFxLine(timeline: SongTimelineView): AnalysisSummaryLine | null {
-  const fxSet = new Set(timeline.sections.flatMap((section) => section.fx));
+  // fx 가 없는 구간은 효과를 0개로 센다 — undefined 를 집합에 넣으면 빈 효과가 한 종으로 잡힌다.
+  const fxSet = new Set((timeline.sections ?? []).flatMap((section) => section.fx ?? []));
   if (fxSet.size === 0) return null;
   return { label: "이펙트", text: `${fxSet.size}종 사용: ${Array.from(fxSet).join(", ")}` };
 }
 
 /** 무엇이 꺼져 있는지 — disabled[] 의 사유를 그대로. */
 function buildDisabledLine(timeline: SongTimelineView): AnalysisSummaryLine | null {
-  if (timeline.disabled.length === 0) return null;
-  const reasons = Array.from(new Set(timeline.disabled.map((note) => note.reason)));
+  const disabled = timeline.disabled ?? [];
+  if (disabled.length === 0) return null;
+  const reasons = Array.from(new Set(disabled.map((note) => note.reason)));
   return { label: "꺼진 축", text: reasons.join(" · ") };
 }
 

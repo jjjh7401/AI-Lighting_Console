@@ -5461,3 +5461,17 @@ body {
   color: var(--muted);
   font-size: 12.5px;
 }
+
+/* 앱 최상단 오류 경계의 안내 — 검은 빈 화면 대신 보이는 자리. */
+.error-boundary-fallback {
+  margin: 24px;
+  padding: 20px;
+  border: 1px solid var(--bad);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.error-boundary-fallback pre {
+  white-space: pre-wrap;
+  color: var(--muted);
+}
