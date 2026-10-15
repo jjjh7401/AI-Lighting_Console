@@ -5060,6 +5060,17 @@ body {
   color: #555;
 }
 
+/* 칩 앞 색 네모 — 프리셋 색 값이 있을 때만 그린다(서버 rgb). */
+.beat-grid-glance-sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 3px;
+  border: 1px solid #0008;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
 .beat-grid-glance-expand-toggle {
   background: none;
   border: none;

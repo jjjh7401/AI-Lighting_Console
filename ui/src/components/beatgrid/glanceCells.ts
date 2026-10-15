@@ -13,20 +13,20 @@ import type { BeatGridCue, BeatGridDrawerSection } from "../../protocol";
 import { findDrawerEntryByPresetNo, formatPresetChipTooltip } from "./presetChipTooltip";
 import { roleFieldHints } from "./roleFields";
 
-/** `BeatGrid.tsx` `UNSET_FIELD_LABEL`과 같은 문구("미정") — 구조화
- * 필드가 있지만 값이 비어 있을 때. 모듈 순환 참조를 피하려고 문구 하나만
- * 복제한다(로직이 아니라 라벨 상수라 분기 위험 없음). */
+/** 「미정」 — 서버가 값을 아직 안 정했다고 명시한 칸에만 쓴다(protocol
+ * `BeatGridBrightness.mode` 가 `null` 이면 셋 다 미정). 모듈 순환 참조를 피하려고
+ * 문구 하나만 복제한다(라벨 상수). */
 const UNSET = "미정";
-/** 역할이 그 칼럼을 쓰지 않을 때(mockup `cellHTML`의 "—"), 또는 칸 자체가
- * 없을 때(아직 선언 안 됨). */
+/** 빈 칸 — 역할이 그 칼럼을 쓰지 않을 때, 칸 자체가 없을 때, 값이 비어 있을 때 모두
+ * 시안 `cellHTML` 의 「—」다(리드 결정: 「미정」은 서버 표식이 있을 때만). */
 const NOT_APPLICABLE = "—";
 
-/** 무빙 칸에 효과가 없을 때 — 「+ 없음」(checklist 「이 마디 한눈에」, 시안 `＋ 없음`). */
-const NO_MOVEMENT = "+ 없음";
+/** 무빙 칸에 효과가 없을 때 — 「＋ 없음」(시안 전각 ＋, 리드 결정). */
+const NO_MOVEMENT = "＋ 없음";
 
 /** 칩 = 프리셋 번호(굵게) + 이름. `label` 은 번호와 이름을 한 줄로 이은 글이다(툴팁·시험용). */
 export type GlanceCellValue =
-  | { kind: "chip"; presetNo: string; name: string | null; label: string; tooltip: string }
+  | { kind: "chip"; presetNo: string; name: string | null; label: string; tooltip: string; swatch?: string }
   | { kind: "text"; text: string; dim?: boolean };
 
 /** 시안 `cellHTML` 처럼 칩 이름 앞의 「LA 」 는 뗀다. */
@@ -34,17 +34,26 @@ function chipName(name: string): string {
   return name.replace(/^LA /, "");
 }
 
+/** 프리셋 항목의 색(`rgb`, 0~100%) → 칩 앞 색 네모의 CSS 색. 색 값이 없으면 `null`(네모를 그리지 않는다). */
+export function presetSwatchColor(rgb: [number, number, number] | null | undefined): string | null {
+  if (!rgb) return null;
+  const toByte = (percent: number) => Math.min(255, Math.max(0, Math.round((percent * 255) / 100)));
+  return `rgb(${toByte(rgb[0])}, ${toByte(rgb[1])}, ${toByte(rgb[2])})`;
+}
+
 function chipOrUnset(presetNo: string | null, sections: BeatGridDrawerSection[] | null): GlanceCellValue {
-  if (!presetNo) return { kind: "text", text: UNSET };
+  if (!presetNo) return { kind: "text", text: NOT_APPLICABLE };
   const entry = findDrawerEntryByPresetNo(sections, presetNo);
   const shown = entry ? chipName(entry.name) : "";
   const name = shown === "" ? null : shown;
+  const swatch = presetSwatchColor(entry?.rgb);
   return {
     kind: "chip",
     presetNo,
     name,
     label: name === null ? presetNo : `${presetNo} ${name}`,
     tooltip: formatPresetChipTooltip(entry?.description, entry?.usage_count ?? 0, entry?.description_source),
+    ...(swatch !== null ? { swatch } : {}),
   };
 }
 
@@ -54,7 +63,7 @@ export function brightnessCell(cue: BeatGridCue | null, sections: BeatGridDrawer
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
   const b = cue.brightness;
   if (b.mode === "value") {
-    return { kind: "text", text: b.value_percent === null ? UNSET : `${b.value_percent}%` };
+    return { kind: "text", text: b.value_percent === null ? NOT_APPLICABLE : `${b.value_percent}%` };
   }
   if (b.mode === "dimmer_preset" || b.mode === "dimmer_effect") {
     return chipOrUnset(b.preset_no, sections);
@@ -105,7 +114,7 @@ export function movementCell(
 export function transitionCell(cue: BeatGridCue | null, isTransitionBar: boolean): GlanceCellValue {
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
   if (!isTransitionBar) return { kind: "text", text: "유지", dim: true };
-  return { kind: "text", text: cue.entry.fade_bars === null ? UNSET : `${cue.entry.fade_bars}마디` };
+  return { kind: "text", text: cue.entry.fade_bars === null ? NOT_APPLICABLE : `${cue.entry.fade_bars}마디` };
 }
 
 /** 「바뀐 것」 표시(mockup `changedTxt`) — derivable한 것만 보여준다

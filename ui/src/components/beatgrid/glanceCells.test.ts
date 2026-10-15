@@ -53,8 +53,15 @@ describe("brightnessCell", () => {
     });
   });
 
-  it("값 모드인데 값이 미정이면 '미정'이다(지어내지 않음)", () => {
+  it("값 모드인데 값이 비어 있으면 '—'다(지어내지 않음)", () => {
     expect(brightnessCell(cue({ brightness: { mode: "value", value_percent: null, preset_no: null } }), null)).toEqual({
+      kind: "text",
+      text: "—",
+    });
+  });
+
+  it("모드가 null 이면(서버가 셋 다 미정이라고 표식) '미정'이다", () => {
+    expect(brightnessCell(cue({ brightness: { mode: null, value_percent: null, preset_no: null } }), null)).toEqual({
       kind: "text",
       text: "미정",
     });
@@ -74,10 +81,10 @@ describe("brightnessCell", () => {
     });
   });
 
-  it("디머 프리셋 모드인데 번호가 없으면(비정상 상태) '미정'이다", () => {
+  it("디머 프리셋 모드인데 번호가 비어 있으면 '—'다", () => {
     expect(
       brightnessCell(cue({ brightness: { mode: "dimmer_preset", value_percent: null, preset_no: null } }), null),
-    ).toEqual({ kind: "text", text: "미정" });
+    ).toEqual({ kind: "text", text: "—" });
   });
 });
 
@@ -96,8 +103,8 @@ describe("positionCell", () => {
     });
   });
 
-  it("역할이 위치를 쓰는데 번호가 없으면 '미정'이다", () => {
-    expect(positionCell(cue({ position_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "미정" });
+  it("역할이 위치를 쓰는데 번호가 비어 있으면 '—'다", () => {
+    expect(positionCell(cue({ position_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "—" });
   });
 
   it("칸 자체가 없으면 대시다(역할 적용 여부와 무관)", () => {
@@ -136,8 +143,8 @@ describe("movementCell", () => {
     });
   });
 
-  it("무빙인데 효과 번호가 없으면 '+ 없음'이다", () => {
-    expect(movementCell(cue({ effect_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "+ 없음" });
+  it("무빙인데 효과 번호가 없으면 '＋ 없음'이다(시안 전각 ＋)", () => {
+    expect(movementCell(cue({ effect_preset_no: null }), "mover", null)).toEqual({ kind: "text", text: "＋ 없음" });
   });
 });
 
@@ -161,10 +168,10 @@ describe("transitionCell", () => {
     });
   });
 
-  it("전환 마디인데 들어올 때가 미정이면 '미정'이다", () => {
+  it("전환 마디인데 들어올 때가 비어 있으면 '—'다", () => {
     expect(transitionCell(cue({ entry: { fade_bars: null, mib_mode: null } }), true)).toEqual({
       kind: "text",
-      text: "미정",
+      text: "—",
     });
   });
 });

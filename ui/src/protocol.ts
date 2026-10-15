@@ -659,6 +659,9 @@ export interface BeatGridDrawerEntry {
   /** 카드 t569 — 설명의 출처. "app" = 앱이 저장한 설명, "show" = 콘솔에서
    * 읽은 쇼 프리셋(설명 없음, 툴팁은 출처만 붙인다). */
   description_source?: PresetDescriptionSource | null;
+  /** 프리셋 색(RGB, 각 0~100%) — 칩 앞 색 네모. 서버가 색 값을 알 때만 싣는다. 없으면(`undefined`/`null`)
+   * 네모를 그리지 않는다(리드 결정: 색 값이 올 때만 그린다). */
+  rgb?: [number, number, number] | null;
 }
 
 export type PresetDescriptionSource = "app" | "show";
