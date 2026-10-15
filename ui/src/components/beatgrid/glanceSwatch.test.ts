@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { BeatGridCue, BeatGridDrawerSection } from "../../protocol";
-import { colorCell, presetSwatchColor } from "./glanceCells";
+import { colorCell, presetSplitSwatch, presetSwatchColor } from "./glanceCells";
 
 function cue(overrides: Partial<BeatGridCue> = {}): BeatGridCue {
   return {
@@ -79,5 +79,60 @@ describe("colorCell 칩의 색 네모", () => {
       COLOR_SECTION,
     );
     expect(result).toMatchObject({ kind: "chip", presetNo: "4.21", swatch: "rgb(255, 128, 0)" });
+  });
+});
+
+describe("presetSplitSwatch — 색이 둘이면 네모를 반반 나눈다", () => {
+  it("두 색이면 가로로 반반 나눈 띠다", () => {
+    expect(
+      presetSplitSwatch([
+        [100, 50, 0],
+        [0, 0, 100],
+      ]),
+    ).toBe("linear-gradient(to right, rgb(255, 128, 0) 0% 50%, rgb(0, 0, 255) 50% 100%)");
+  });
+
+  it("색이 한 개 이하이면 나누지 않는다(null — 호출부가 한 색 네모를 쓴다)", () => {
+    expect(presetSplitSwatch(undefined)).toBeNull();
+    expect(presetSplitSwatch([])).toBeNull();
+    expect(presetSplitSwatch([[100, 50, 0]])).toBeNull();
+  });
+
+  it("세 색이면 세 구간으로 나눈다", () => {
+    const swatch = presetSplitSwatch([
+      [100, 0, 0],
+      [0, 100, 0],
+      [0, 0, 100],
+    ]);
+    expect(swatch?.startsWith("linear-gradient(to right, rgb(255, 0, 0) 0% ")).toBe(true);
+    expect(swatch?.split("rgb(").length).toBe(4);
+  });
+});
+
+describe("colorCell 칩의 색 네모 — 색 목록이 둘이면 반반", () => {
+  it("color_rgbs 가 둘이면 서랍 색보다 반반 띠를 쓴다", () => {
+    expect(
+      colorCell(
+        cue({
+          color_preset_no: "4.21",
+          color_rgbs: [
+            [100, 0, 0],
+            [0, 0, 100],
+          ],
+        }),
+        "side",
+        COLOR_SECTION,
+      ),
+    ).toMatchObject({
+      kind: "chip",
+      presetNo: "4.21",
+      swatch: "linear-gradient(to right, rgb(255, 0, 0) 0% 50%, rgb(0, 0, 255) 50% 100%)",
+    });
+  });
+
+  it("color_rgbs 가 한 개면 기존처럼 서랍 색 한 개를 쓴다", () => {
+    expect(colorCell(cue({ color_preset_no: "4.21", color_rgbs: [[0, 0, 0]] }), "side", COLOR_SECTION)).toMatchObject({
+      swatch: "rgb(255, 128, 0)",
+    });
   });
 });

@@ -41,11 +41,31 @@ export function presetSwatchColor(rgb: [number, number, number] | null | undefin
   return `rgb(${toByte(rgb[0])}, ${toByte(rgb[1])}, ${toByte(rgb[2])})`;
 }
 
-function chipOrUnset(presetNo: string | null, sections: BeatGridDrawerSection[] | null): GlanceCellValue {
+/** 콘솔이 준 프리셋 이름(칸의 `*_preset_name`)이나 서랍 항목 이름을 칩·막대에 쓸 글로 바꾼다 — 「LA 」 를 떼고, 빈 이름은 `null`. */
+export function presetDisplayName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const shown = chipName(name);
+  return shown === "" ? null : shown;
+}
+
+/** 색이 둘 이상인 색 프리셋(칸의 `color_rgbs`)의 네모 CSS — 가로로 n등분한 띠(둘이면 반반). 한 색 이하면 `null`. */
+export function presetSplitSwatch(rgbs: [number, number, number][] | null | undefined): string | null {
+  const colors = (rgbs ?? []).map((rgb) => presetSwatchColor(rgb)).filter((color): color is string => color !== null);
+  if (colors.length < 2) return null;
+  const step = 100 / colors.length;
+  const stops = colors.map((color, i) => `${color} ${i * step}% ${(i + 1) * step}%`);
+  return `linear-gradient(to right, ${stops.join(", ")})`;
+}
+
+/** 칩 값. 이름은 칸이 실어 보낸 콘솔 이름(`cellName`)이 먼저, 없으면 서랍 항목 이름 — 둘 다 없으면 번호만(지어내지 않음). */
+function chipOrUnset(
+  presetNo: string | null,
+  sections: BeatGridDrawerSection[] | null,
+  cellName?: string | null,
+): GlanceCellValue {
   if (!presetNo) return { kind: "text", text: NOT_APPLICABLE };
   const entry = findDrawerEntryByPresetNo(sections, presetNo);
-  const shown = entry ? chipName(entry.name) : "";
-  const name = shown === "" ? null : shown;
+  const name = presetDisplayName(cellName) ?? presetDisplayName(entry?.name);
   const swatch = presetSwatchColor(entry?.rgb);
   return {
     kind: "chip",
@@ -79,7 +99,7 @@ export function positionCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("위치")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  return chipOrUnset(cue.position_preset_no, sections);
+  return chipOrUnset(cue.position_preset_no, sections, cue.position_preset_name);
 }
 
 /** 색 칸 — 역할이 색을 쓰지 않으면(무빙, `roleFieldHints`) 대시. */
@@ -90,9 +110,13 @@ export function colorCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("색")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  // 색 네모: 서랍 항목 색(`rgb`)이 우선, 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
-  const value = chipOrUnset(cue.color_preset_no, sections);
-  if (value.kind !== "chip" || value.swatch !== undefined) return value;
+  // 색 네모: 색이 둘 이상이면(`color_rgbs`) 반반 나눈 띠가 우선, 그다음 서랍 항목 색(`rgb`),
+  // 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
+  const value = chipOrUnset(cue.color_preset_no, sections, cue.color_preset_name);
+  if (value.kind !== "chip") return value;
+  const split = presetSplitSwatch(cue.color_rgbs);
+  if (split !== null) return { ...value, swatch: split };
+  if (value.swatch !== undefined) return value;
   const cellSwatch = presetSwatchColor(cue.color_rgb);
   return cellSwatch === null ? value : { ...value, swatch: cellSwatch };
 }
