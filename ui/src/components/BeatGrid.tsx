@@ -2404,6 +2404,8 @@ export function BeatGrid({
                                     prev={segment.cue}
                                     pxPerBar={pxPerBar}
                                     beatsPerBar={beatsPerBar}
+                                    target={track.group_name}
+                                    onMoveTrigger={onEditRequest ? (request) => requestEdit("transition", request) : undefined}
                                     cue={segments[segIndex + 1].cue}
                                     nextSegmentWidth={
                                       barToX(segments[segIndex + 1].endBar) - barToX(segments[segIndex + 1].startBar) - 2
