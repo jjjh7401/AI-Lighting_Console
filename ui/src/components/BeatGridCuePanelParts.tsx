@@ -92,6 +92,8 @@ export function BeatGridCueHeadMeta({
   const cueNo = track.cues.indexOf(cue) + 1;
   const lengthBars = endBar - cue.bar;
   const hasTiming = secondsPerBar !== null && secondsPerBar !== undefined;
+  // 콘솔 시퀀스 번호(서버 PR #742)는 배정된 줄에만 있다 — 없으면 「Seq」 자체를 빼고, 지어내지 않는다.
+  const seqText = typeof track.sequence_number === "number" ? `Seq ${track.sequence_number} · ` : "";
   return (
     <div className="beat-grid-cue-head-meta">
       {confirmedFixtureCount > 0
@@ -100,7 +102,7 @@ export function BeatGridCueHeadMeta({
       ·{" "}
       {track.group_no_confirmed && track.group_no !== null ? `그룹 ${track.group_no}` : "그룹 번호 미확인"}
       <br />
-      Cue {cueNo} · {cue.bar}~{endBar - 1}마디 · {lengthBars}마디
+      {seqText}Cue {cueNo} · {cue.bar}~{endBar - 1}마디 · {lengthBars}마디
       {hasTiming ? ` ≈ ${(lengthBars * secondsPerBar).toFixed(1)}초 · 곡 ${(cue.bar * secondsPerBar).toFixed(2)}초` : ""}
     </div>
   );

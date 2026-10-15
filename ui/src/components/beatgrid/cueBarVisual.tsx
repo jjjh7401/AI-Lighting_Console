@@ -5,6 +5,7 @@
  * 않고(protocol.ts `BeatGridCue` — REQ-LDBEAT-006(ii-2)), 없는 값은 그리지
  * 않는다. 그래서 아래 함수들은 "그릴 것이 없음"을 `null`로 돌려준다. */
 import type { BeatGridCue } from "../../protocol";
+import { presetDisplayName } from "./glanceCells";
 
 /** 아래쪽 흰 밝기 선의 너비(%). 값 모드(`value`)의 `value_percent`만 쓴다.
  * 디머 프리셋은 퍼센트가 아니라서 선을 긋지 않는다. */
@@ -27,7 +28,10 @@ export function effectShapeIcon(cue: BeatGridCue): CueShapeIcon | null {
 /** 위치·밝기 짧은 글자. 값이 없는 쪽은 `null`이고, 「—」 같은 자리표시도 쓰지 않는다. */
 export function barShortText(cue: BeatGridCue): { position: string | null; brightness: string | null } {
   const { mode, value_percent: value, preset_no: presetNo } = cue.brightness;
-  const position = cue.position_preset_no ? `위치 ${cue.position_preset_no}` : null;
+  // 위치 번호 옆에 콘솔 프리셋 이름(시안 「2.46 Back Aim」)을 붙인다 — 이름이 없으면 번호만.
+  const positionNo = cue.position_preset_no ? `위치 ${cue.position_preset_no}` : null;
+  const positionName = presetDisplayName(cue.position_preset_name);
+  const position = positionNo !== null && positionName !== null ? `${positionNo} ${positionName}` : positionNo;
   let brightness: string | null = null;
   if (mode === "value" && value !== null && Number.isFinite(value)) {
     brightness = `${value}%`;

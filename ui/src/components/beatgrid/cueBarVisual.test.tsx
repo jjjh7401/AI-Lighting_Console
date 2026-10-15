@@ -141,3 +141,27 @@ describe("CueBarVisual 렌더 — 시안 요소만 내보낸다", () => {
     expect(html).toContain("1.1");
   });
 });
+
+describe("barShortText — 콘솔 프리셋 이름은 위치 번호 옆에", () => {
+  it("칸이 위치 이름을 실으면 번호 뒤에 이름을 붙인다(「LA 」는 뗀다)", () => {
+    expect(barShortText(cue({ position_preset_no: "2.46", position_preset_name: "LA Back Aim" }))).toEqual({
+      position: "위치 2.46 Back Aim",
+      brightness: null,
+    });
+  });
+
+  it("이름이 없으면 번호만 쓴다", () => {
+    expect(barShortText(cue({ position_preset_no: "2.46" }))).toEqual({ position: "위치 2.46", brightness: null });
+  });
+
+  it("번호가 없으면 이름이 있어도 위치 글자는 없다", () => {
+    expect(barShortText(cue({ position_preset_name: "LA Back Aim" }))).toEqual({ position: null, brightness: null });
+  });
+
+  it("렌더된 마크업에도 번호 옆 이름이 나온다", () => {
+    const html = renderToStaticMarkup(
+      <CueBarVisual cue={cue({ position_preset_no: "2.46", position_preset_name: "LA Back Aim" })} />,
+    );
+    expect(html).toContain("위치 2.46 Back Aim");
+  });
+});
