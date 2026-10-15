@@ -65,7 +65,7 @@ describe("colorCell 칩의 색 네모", () => {
 
   it("서랍 색이 없으면 칸이 낼 색(color_rgb)을 네모로 쓴다", () => {
     const result = colorCell(
-      cue({ color_preset_no: "4.22", color_rgb: { r: 0, g: 50, b: 100 } }),
+      cue({ color_preset_no: "4.22", color_rgb: [0, 50, 100] }),
       "side",
       COLOR_SECTION,
     );
@@ -74,7 +74,7 @@ describe("colorCell 칩의 색 네모", () => {
 
   it("서랍 색이 있으면 칸 색보다 서랍 색을 쓴다", () => {
     const result = colorCell(
-      cue({ color_preset_no: "4.21", color_rgb: { r: 0, g: 0, b: 0 } }),
+      cue({ color_preset_no: "4.21", color_rgb: [0, 0, 0] }),
       "side",
       COLOR_SECTION,
     );

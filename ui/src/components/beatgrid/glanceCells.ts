@@ -93,7 +93,7 @@ export function colorCell(
   // 색 네모: 서랍 항목 색(`rgb`)이 우선, 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
   const value = chipOrUnset(cue.color_preset_no, sections);
   if (value.kind !== "chip" || value.swatch !== undefined) return value;
-  const cellSwatch = cue.color_rgb ? presetSwatchColor([cue.color_rgb.r, cue.color_rgb.g, cue.color_rgb.b]) : null;
+  const cellSwatch = presetSwatchColor(cue.color_rgb);
   return cellSwatch === null ? value : { ...value, swatch: cellSwatch };
 }
 
