@@ -30,3 +30,11 @@ _<pending run-phase>_
 ## §E.4 Sync-phase Audit-Ready Signal
 
 _<pending sync-phase>_
+
+## §G Plan-audit 이력 (orchestrator 기록, 카드 t656)
+
+- 1회차 — 기준 커밋 `016ec56e`: plan-auditor(sonnet) **FAIL, 0.82** (통과선 0.85, Tier L). 차원별: Clarity 0.80 · Completeness 0.75 · Testability 0.80 · Traceability 0.95 (조화평균). 필수 점검 MP1–MP9는 전부 통과. 보고서: `.moai/reports/plan-audit/SPEC-LDBARMAP-005-review-1.md` (로컬 산출물, gitignored).
+- 블로킹 5건: (1) AC-010 grep이 `bar_map.py:618·620`의 주파수 대역(300~3,400Hz)을 잡는다. (2) 동결 시점이 설계, spec, AC-007에서 서로 다르다. (3) OD-4의 각 선택지가 REQ-001·008·011과 충돌한다. (4) SPEC-004와의 겹침이 파일 단위에만 적혀 있다. (5) SPEC-004 인용이 `f46f6dc7` 시점 내용을 현재인 것처럼 적고 있다(라이브 워크트리는 v0.1.3).
+- 비블로킹 9건(REQ 복합 조항 분리, AC 정밀화, 줄 번호 정정, 태그 누락 등)은 2회차에서 함께 고친다.
+- 리드 조율 결정(2026-10-15): (a) 직렬 실행. 004를 먼저 머지하고 005는 그 뒤 main을 merge 받아 착수하며, 동시 run은 하지 않는다. (b) 타임라인 최상위 새 키 없음. (c) OD-3 닫음. 「박자 추정」 표지는 마디 지도 데이터 안의 필드 하나이며, 착수 승인 때 감독이 확인한다. (d) 의존성 한 줄을 적고, 004 REQ-LDBARLEN-002의 여섯-키 고정을 그 표지 키 하나에 한해 대체한다고 선언한다. 004 문서는 건드리지 않는다.
+- 다음: 2회차 수정(manager-spec, sonnet) → 명시 경로 커밋·push → plan-auditor 재감사. 3회차 한도 안에서 진행한다.
