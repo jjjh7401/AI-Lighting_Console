@@ -16,11 +16,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
+import { BarMapEntry } from "./components/BarMapEntry";
+import { barMapEntryReducer, initialBarMapEntryState } from "./components/barMapEntryState";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
 import { pendingApplyCountOf } from "./components/beatgrid/pendingApplyCount";
@@ -424,9 +427,23 @@ export default function App() {
     sendLayoutImageUpload,
     sendSongAudioUpload,
     sendSongAudioAnalyse,
+    sendBarMapAnalyse,
     clearChat,
     applySongTimeline,
-  } = useCopilotSocket();
+  } = useCopilotSocket(undefined, {
+    // 마디 지도 진입 컨트롤(`barMap`)의 리듀서에 서버 프레임과 소켓 끊김을 먹인다.
+    // `barMapDispatch`는 아래에서 선언되지만 콜백은 소켓 사건 때에야 불려 안전하다.
+    onServerEvent: (event) => {
+      if (event.type === "busy") {
+        barMapDispatch({ type: "busy", message: event.message });
+      } else if (event.type === "chat_response") {
+        barMapDispatch({ type: "chat-response", summary: event.summary, text: event.text });
+      } else if (event.type === "error") {
+        barMapDispatch({ type: "error", kind: event.kind });
+      }
+    },
+    onSocketClosed: () => barMapDispatch({ type: "socket-closed" }),
+  });
   const [draft, setDraft] = useState("");
   // Requests typed while a turn is running. Drained ONE at a time — the next
   // is sent only after the current turn's terminal response arrives, so
@@ -439,6 +456,9 @@ export default function App() {
   // (client-side display only; the server holds the authoritative copy).
   const [layoutImageUploadError, setLayoutImageUploadError] = useState<string | null>(null);
   const [songAudioUploadError, setSongAudioUploadError] = useState<string | null>(null);
+  // 곡 박자 분석(마디 지도) 진입 컨트롤의 상태 — 리듀서는 components/barMapEntryState.ts.
+  const [barMap, barMapDispatch] = useReducer(barMapEntryReducer, initialBarMapEntryState);
+  const barMapWaiting = barMap.phase === "waiting";
   // SPEC-COPILOT-MUSICSYNC-001 M2 후속 — 이번 연결에서 마지막으로 올린 곡 이름.
   // 「분석」 버튼을 띄우는 조건 그 이상이 아니다: 서버가 정본을 들고 있고,
   // 여기 값은 화면 표시용이다. 첨부 전에는 버튼이 아예 없어야 한다 — 누를 수
@@ -618,6 +638,8 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
+    // @MX:WARN: [AUTO] 설정 조회 실패가 활성 모델 표시를 지운다
+    // @MX:REASON: 네트워크 오류(fetch 거부)는 catch 에서, 응답 해석 실패는 parseSettingsResponse 의 null 반환으로 둘 다 setActiveModel(null) 이 되어, 일시적 오류 한 번에 활성 모델 표시가 null 분기로 돌아간다.
     const loadActiveModel = async () => {
       try {
         const response = await fetch(apiUrl("/api/settings"));
@@ -653,6 +675,8 @@ export default function App() {
   // 처럼 번호 없는 문장도 어느 큐인지 결정된다. null = 선택 없음.
   const [selectedCue, setSelectedCue] = useState<number | null>(null);
 
+  // @MX:WARN: [AUTO] 라이브러리 저장 실패 처리가 호출 계약에 기댄다 (이 함수에 try/catch 없음)
+  // @MX:REASON: 실패 처리는 saveTimelineToLibrary 가 던지지 않고 false 를 돌려준다는 계약에 기댄다. 그 계약이 바뀌어 던지게 되면 호출부(onSaveDraft)가 void 로 버리므로 거부된 Promise 가 처리되지 않은 채 남는다.
   const saveDraftToLibrary = useCallback(async () => {
     const suggested = state.songTimeline.timeline?.song_title ?? "";
     const name = window.prompt(
@@ -1035,9 +1059,28 @@ export default function App() {
                       type="button"
                       className="composer-song-analyse"
                       onClick={sendSongAudioAnalyse}
+                      disabled={barMapWaiting}
                     >
                       분석
                     </button>
+                    <BarMapEntry
+                      offset={barMap.offset}
+                      waiting={barMapWaiting}
+                      responding={responding}
+                      timelineMeter={state.songTimeline.timeline?.time_signature}
+                      notice={barMap.notice}
+                      onOffsetChange={(offset) =>
+                        barMapDispatch({ type: "offset-selected", offset })
+                      }
+                      onAnalyse={() => {
+                        if (barMap.offset === null) return;
+                        const sent = sendBarMapAnalyse(barMap.offset, songAudioName);
+                        barMapDispatch(
+                          sent ? { type: "sent", songName: songAudioName } : { type: "not-connected" },
+                        );
+                      }}
+                      onCancel={() => barMapDispatch({ type: "cancel" })}
+                    />
                   </div>
                 )}
                 {queue.length > 0 && (

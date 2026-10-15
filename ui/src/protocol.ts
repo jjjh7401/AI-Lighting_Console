@@ -1452,6 +1452,40 @@ export function buildSongAudioAnalyse(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "song_audio_analyse" });
 }
 
+/**
+ * SPEC-LDBARMAP-003 (카드 t648) — 마디 지도 분석 요청. 첨부된 곡을 분석해 마디 지도를
+ * 초안 타임라인에 저장하라는 프레임이다. 서버 입구는 `server/web/PROTOCOL.md` 의
+ * `bar_map_analyse` (SPEC-LDBARMAP-002)다.
+ *
+ * `first_beat_offset` 은 **필수 정수이고 기본값이 없다**. 호출부가 사람이 고른 값을
+ * 넘긴다. 0 도 유효한 값이라 falsy 로 걸러 내지 않으며, 키는 언제나 세 개다. 범위
+ * (0 이상, 한 마디 박 수 미만) 점검은 서버가 하고, 여기서 한 번 더 막지 않는다.
+ *
+ * 응답은 이 프레임의 반향이 아니라 `chat_response` 다. 결과는 `summary` 라벨이 가른다.
+ */
+export function buildBarMapAnalyse(firstBeatOffset: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "bar_map_analyse",
+    first_beat_offset: firstBeatOffset,
+  });
+}
+
+/**
+ * 마디 지도 분석기가 다루는 박자표 `[분자, 분모]` — 서버 값의 **사본**이다.
+ * 원본은 `server/audio/bar_map_entry.py` 52행의 `_TIME_SIGNATURE = (4, 4)` 다
+ * (분석기가 4/4 전용이라 박자표는 서버의 그 한 곳에서만 정한다).
+ * 서버가 박자표를 바꾸면 이 사본도 같이 바꿔야 한다. 자동 동기화는 하지 않는다
+ * (SPEC-LDBARMAP-003 §2.5).
+ */
+export const BAR_MAP_TIME_SIGNATURE: readonly [number, number] = [4, 4];
+
+/** 한 마디의 박 수(박자표 분자). 첫 박 오프셋 선택지(0 부터 이 값 − 1)의 기준이다. */
+export const BAR_MAP_BEATS_PER_BAR: number = BAR_MAP_TIME_SIGNATURE[0];
+
+/** 화면에 적는 박자표 문자열 `분자/분모`. 사본에서 만들므로 사본과 어긋나지 않는다. */
+export const BAR_MAP_METER_LABEL: string = `${BAR_MAP_TIME_SIGNATURE[0]}/${BAR_MAP_TIME_SIGNATURE[1]}`;
+
 export function buildApprovalDecision(requestId: string, approved: boolean): string {
   return JSON.stringify({
     v: PROTOCOL_VERSION,

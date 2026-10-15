@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   addUserMessage,
+  BAR_MAP_BEATS_PER_BAR,
+  BAR_MAP_METER_LABEL,
+  BAR_MAP_TIME_SIGNATURE,
   buildApprovalDecision,
+  buildBarMapAnalyse,
   buildBeatGridApply,
   buildBeatGridEdit,
   buildBeatGridEditSentence,
@@ -1781,5 +1785,76 @@ describe("answer_delta", () => {
       event({ type: "error", message: "연결이 끊겼습니다", kind: "connection" }),
     );
     expect(failed.streamingAnswer).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SPEC-LDBARMAP-003 (카드 t648) — 마디 지도 분석 요청 빌더와 박자표 사본.
+//
+// REQ-LDBARUI-010: 이 프레임의 클라이언트 빌더와 시험은 **같은 변경**에 들어간다.
+// 서버 쪽 입구(`bar_map_analyse`, server/web/PROTOCOL.md 26행)는 이미 main 에 있다.
+
+describe("buildBarMapAnalyse", () => {
+  it("AC-LDBARUI-001: frame is exactly {v, type, first_beat_offset} with three keys", () => {
+    const parsed = JSON.parse(buildBarMapAnalyse(2));
+    expect(parsed).toEqual({ v: 1, type: "bar_map_analyse", first_beat_offset: 2 });
+    expect(Object.keys(parsed)).toHaveLength(3);
+  });
+
+  it("AC-LDBARUI-001: offset 0 is carried as the integer 0 (not dropped as falsy)", () => {
+    const parsed = JSON.parse(buildBarMapAnalyse(0));
+    expect(parsed).toEqual({ v: 1, type: "bar_map_analyse", first_beat_offset: 0 });
+    expect(Object.keys(parsed)).toHaveLength(3);
+  });
+
+  it("AC-LDBARUI-001: the offset is a JSON integer, not a string", () => {
+    const parsed = JSON.parse(buildBarMapAnalyse(3));
+    expect(typeof parsed.first_beat_offset).toBe("number");
+    expect(Number.isInteger(parsed.first_beat_offset)).toBe(true);
+  });
+
+  it("AC-LDBARUI-012: the frame type differs from the existing song_audio_analyse frame", () => {
+    expect(JSON.parse(buildBarMapAnalyse(1)).type).not.toBe(JSON.parse(buildSongAudioAnalyse()).type);
+  });
+});
+
+describe("bar map time-signature copy (REQ-LDBARUI-011)", () => {
+  it("AC-LDBARUI-011: BAR_MAP_TIME_SIGNATURE is the full [numerator, denominator] copy of the server value", () => {
+    expect(BAR_MAP_TIME_SIGNATURE).toEqual([4, 4]);
+  });
+
+  it("AC-LDBARUI-011: BAR_MAP_BEATS_PER_BAR is the numerator", () => {
+    expect(BAR_MAP_BEATS_PER_BAR).toBe(4);
+    expect(BAR_MAP_BEATS_PER_BAR).toBe(BAR_MAP_TIME_SIGNATURE[0]);
+  });
+
+  it("AC-LDBARUI-011: BAR_MAP_METER_LABEL is 'numerator/denominator' derived from the copy", () => {
+    expect(BAR_MAP_METER_LABEL).toBe("4/4");
+    expect(BAR_MAP_METER_LABEL).toBe(`${BAR_MAP_TIME_SIGNATURE[0]}/${BAR_MAP_TIME_SIGNATURE[1]}`);
+  });
+});
+
+describe("reduceServerEvent — bar map result (REQ-LDBARUI-015)", () => {
+  // 특성 시험(characterization): 이 카드는 채팅 기록 처리를 바꾸지 않는다. 구현 전에도
+  // 통과하는 것이 정상이고, 구현이 이 모양을 깨면 실패한다.
+  it("AC-LDBARUI-015: a 마디 지도 저장 chat_response is appended to the transcript in the existing shape", () => {
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "chat_response",
+        status: "ok",
+        summary: "마디 지도 저장",
+        text: "곡 «sample-track.wav» 마디 지도를 초안에 저장했습니다.",
+        commands: [],
+      }),
+    );
+    expect(next.entries).toHaveLength(1);
+    expect(next.entries[0]).toEqual({
+      kind: "assistant",
+      status: "ok",
+      summary: "마디 지도 저장",
+      text: "곡 «sample-track.wav» 마디 지도를 초안에 저장했습니다.",
+      commands: [],
+    });
   });
 });

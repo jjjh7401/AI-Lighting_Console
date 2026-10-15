@@ -1,0 +1,155 @@
+
+> ma3-copilot-ui@0.1.0 test
+> vitest run barMapEntryState BarMapEntry protocol
+
+
+ RUN  v2.1.8 /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t648/ui
+
+ ❯ src/components/barMapEntryState.test.ts (0 test)
+ ❯ src/components/BarMapEntry.test.tsx (0 test)
+ ❯ src/protocol.test.ts (135 tests | 7 failed) 325ms
+   ✓ encodeSongAudioChunks (REQ-MUSICSYNC-027) > round-trips bytes and keeps every chunk under the server's 4 MiB base64 ceiling 308ms
+   × buildBarMapAnalyse > AC-LDBARUI-001: frame is exactly {v, type, first_beat_offset} with three keys 6ms
+     → buildBarMapAnalyse is not a function
+   × buildBarMapAnalyse > AC-LDBARUI-001: offset 0 is carried as the integer 0 (not dropped as falsy) 0ms
+     → buildBarMapAnalyse is not a function
+   × buildBarMapAnalyse > AC-LDBARUI-001: the offset is a JSON integer, not a string 0ms
+     → buildBarMapAnalyse is not a function
+   × buildBarMapAnalyse > AC-LDBARUI-012: the frame type differs from the existing song_audio_analyse frame 0ms
+     → buildBarMapAnalyse is not a function
+   × bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_TIME_SIGNATURE is the full [numerator, denominator] copy of the server value 1ms
+     → expected undefined to deeply equal [ 4, 4 ]
+   × bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_BEATS_PER_BAR is the numerator 0ms
+     → expected undefined to be 4 // Object.is equality
+   × bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_METER_LABEL is 'numerator/denominator' derived from the copy 0ms
+     → expected undefined to be '4/4' // Object.is equality
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/BarMapEntry.test.tsx [ src/components/BarMapEntry.test.tsx ]
+Error: Failed to load url ./BarMapEntry (resolved id: ./BarMapEntry) in /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t648/ui/src/components/BarMapEntry.test.tsx. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:51920:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯
+
+ FAIL  src/components/barMapEntryState.test.ts [ src/components/barMapEntryState.test.ts ]
+Error: Failed to load url ./barMapEntryState (resolved id: ./barMapEntryState) in /Users/studiox/Documents/Claude/Code/AI-Lighting_Console/.claude/worktrees/t648/ui/src/components/barMapEntryState.test.ts. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-CB_7IfJ-.js:51920:17
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/protocol.test.ts > buildBarMapAnalyse > AC-LDBARUI-001: frame is exactly {v, type, first_beat_offset} with three keys
+TypeError: buildBarMapAnalyse is not a function
+ ❯ src/protocol.test.ts:1799:31
+    1797| describe("buildBarMapAnalyse", () => {
+    1798|   it("AC-LDBARUI-001: frame is exactly {v, type, first_beat_offset} wi…
+    1799|     const parsed = JSON.parse(buildBarMapAnalyse(2));
+       |                               ^
+    1800|     expect(parsed).toEqual({ v: 1, type: "bar_map_analyse", first_beat…
+    1801|     expect(Object.keys(parsed)).toHaveLength(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯
+
+ FAIL  src/protocol.test.ts > buildBarMapAnalyse > AC-LDBARUI-001: offset 0 is carried as the integer 0 (not dropped as falsy)
+TypeError: buildBarMapAnalyse is not a function
+ ❯ src/protocol.test.ts:1805:31
+    1803| 
+    1804|   it("AC-LDBARUI-001: offset 0 is carried as the integer 0 (not droppe…
+    1805|     const parsed = JSON.parse(buildBarMapAnalyse(0));
+       |                               ^
+    1806|     expect(parsed).toEqual({ v: 1, type: "bar_map_analyse", first_beat…
+    1807|     expect(Object.keys(parsed)).toHaveLength(3);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯
+
+ FAIL  src/protocol.test.ts > buildBarMapAnalyse > AC-LDBARUI-001: the offset is a JSON integer, not a string
+TypeError: buildBarMapAnalyse is not a function
+ ❯ src/protocol.test.ts:1811:31
+    1809| 
+    1810|   it("AC-LDBARUI-001: the offset is a JSON integer, not a string", () …
+    1811|     const parsed = JSON.parse(buildBarMapAnalyse(3));
+       |                               ^
+    1812|     expect(typeof parsed.first_beat_offset).toBe("number");
+    1813|     expect(Number.isInteger(parsed.first_beat_offset)).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯
+
+ FAIL  src/protocol.test.ts > buildBarMapAnalyse > AC-LDBARUI-012: the frame type differs from the existing song_audio_analyse frame
+TypeError: buildBarMapAnalyse is not a function
+ ❯ src/protocol.test.ts:1817:23
+    1815| 
+    1816|   it("AC-LDBARUI-012: the frame type differs from the existing song_au…
+    1817|     expect(JSON.parse(buildBarMapAnalyse(1)).type).not.toBe(JSON.parse…
+       |                       ^
+    1818|   });
+    1819| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯
+
+ FAIL  src/protocol.test.ts > bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_TIME_SIGNATURE is the full [numerator, denominator] copy of the server value
+AssertionError: expected undefined to deeply equal [ 4, 4 ]
+
+- Expected: 
+Array [
+  4,
+  4,
+]
+
++ Received: 
+undefined
+
+ ❯ src/protocol.test.ts:1823:36
+    1821| describe("bar map time-signature copy (REQ-LDBARUI-011)", () => {
+    1822|   it("AC-LDBARUI-011: BAR_MAP_TIME_SIGNATURE is the full [numerator, d…
+    1823|     expect(BAR_MAP_TIME_SIGNATURE).toEqual([4, 4]);
+       |                                    ^
+    1824|   });
+    1825| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯
+
+ FAIL  src/protocol.test.ts > bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_BEATS_PER_BAR is the numerator
+AssertionError: expected undefined to be 4 // Object.is equality
+
+- Expected: 
+4
+
++ Received: 
+undefined
+
+ ❯ src/protocol.test.ts:1827:35
+    1825| 
+    1826|   it("AC-LDBARUI-011: BAR_MAP_BEATS_PER_BAR is the numerator", () => {
+    1827|     expect(BAR_MAP_BEATS_PER_BAR).toBe(4);
+       |                                   ^
+    1828|     expect(BAR_MAP_BEATS_PER_BAR).toBe(BAR_MAP_TIME_SIGNATURE[0]);
+    1829|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯
+
+ FAIL  src/protocol.test.ts > bar map time-signature copy (REQ-LDBARUI-011) > AC-LDBARUI-011: BAR_MAP_METER_LABEL is 'numerator/denominator' derived from the copy
+AssertionError: expected undefined to be '4/4' // Object.is equality
+
+- Expected: 
+"4/4"
+
++ Received: 
+undefined
+
+ ❯ src/protocol.test.ts:1832:33
+    1830| 
+    1831|   it("AC-LDBARUI-011: BAR_MAP_METER_LABEL is 'numerator/denominator' d…
+    1832|     expect(BAR_MAP_METER_LABEL).toBe("4/4");
+       |                                 ^
+    1833|     expect(BAR_MAP_METER_LABEL).toBe(`${BAR_MAP_TIME_SIGNATURE[0]}/${B…
+    1834|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯
+
+ Test Files  3 failed (3)
+      Tests  7 failed | 128 passed (135)
+   Start at  23:14:39
+   Duration  541ms (transform 90ms, setup 0ms, collect 55ms, tests 325ms, environment 0ms, prepare 121ms)
+
