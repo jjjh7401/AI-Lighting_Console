@@ -2173,7 +2173,7 @@ export function BeatGrid({
       {/* 카드 t559(M9 step 1) — 곡 전체 지도, REQ-LDBEAT-018. */}
       <SongOverview
         model={overviewModel}
-        filledRange={{ start: grid.bar_range.start, end: maxBar }}
+        filledRange={{ start: grid.bar_range.start, end: grid.bar_range.end }}
         visibleWindow={
           laneView.visibleWidth > 0
             ? overviewVisibleWindow({
