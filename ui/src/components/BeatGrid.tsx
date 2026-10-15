@@ -116,7 +116,9 @@ import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./be
 import {
   brightnessCell,
   changedFieldsLabel,
+  collapsedFolderSummary,
   colorCell,
+  glanceBarLabel,
   movementCell,
   positionCell,
   transitionCell,
@@ -2128,6 +2130,13 @@ export function BeatGrid({
     if (next) onDrawerRequest?.();
   };
 
+  // 「이 마디 한눈에」 접힌 폴더의 「이 마디 N줄 바뀜」 — 이 마디에서 칸이 새로 시작하는 줄 수.
+  // 곡 표시 범위의 첫 마디는 비교할 앞 칸이 없어 0이다(「바뀐 것」 표시와 같은 기준).
+  const changedRowsAtBar = (tracks: BeatGridTrack[]) =>
+    viewBar === grid.bar_range.start
+      ? 0
+      : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
+
   return (
     <section className="beat-grid" aria-label="박자 격자">
       {/* 카드 t559(M9 step 8) — 상단 바, REQ-LDBEAT-017. */}
@@ -3315,7 +3324,7 @@ export function BeatGrid({
               이름은 곡 데이터(overviewModel)에서만 — 없으면 마디만. */}
           <h5 className="beat-grid-glance-title">
             <span>
-              {viewBar}마디 한눈에
+              {glanceBarLabel(viewBar)} 한눈에
               {viewBarSectionLabel ? ` — ${viewBarSectionLabel}` : ""}
             </span>
             <span className="beat-grid-glance-hint">훑어보기 · 누르면 오른쪽에서 고치기</span>
@@ -3355,6 +3364,8 @@ export function BeatGrid({
                       <td colSpan={6}>
                         {isFolderOpen(folder.role) ? "▾" : "▸"} {folder.label}
                         {folder.label !== folder.role && ` · ${folder.role}`}
+                        {!isFolderOpen(folder.role) &&
+                          collapsedFolderSummary(folder.tracks.length, changedRowsAtBar(folder.tracks))}
                       </td>
                     </tr>
                     {isFolderOpen(folder.role) &&
@@ -3429,7 +3440,10 @@ export function BeatGrid({
                           편집 칸이 그 항목에 초점을 두고 연다 — 타임라인
                           막대를 눌렀을 때와 같은 메커니즘이다. 칼럼별 칸을
                           누르면 그 칼럼 이름을 초점으로 함께 올린다. */}
-                      <tr className="beat-grid-glance-row" onClick={() => focus(null)}>
+                      <tr
+                        className={selected?.trackIndex === trackIndex ? "beat-grid-glance-row on" : "beat-grid-glance-row"}
+                        onClick={() => focus(null)}
+                      >
                         <td>
                           <button
                             type="button"

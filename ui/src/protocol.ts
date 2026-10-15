@@ -492,6 +492,9 @@ export interface BeatGridCue {
    * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
    * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
   pending_preset_fields?: string[];
+  /** 이 칸이 낼 색(RGB, 각 0~100%) — 「이 마디 한눈에」 색 네모와 무대 장비 색에 쓴다. 서버가 색을
+   * 알 때만 싣는다. 없으면(`undefined`/`null`) 네모는 생략하고 무대는 기본색으로 그린다(리드 결정). */
+  color_rgb?: [number, number, number] | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
@@ -659,6 +662,9 @@ export interface BeatGridDrawerEntry {
   /** 카드 t569 — 설명의 출처. "app" = 앱이 저장한 설명, "show" = 콘솔에서
    * 읽은 쇼 프리셋(설명 없음, 툴팁은 출처만 붙인다). */
   description_source?: PresetDescriptionSource | null;
+  /** 프리셋 색(RGB, 각 0~100%) — 칩 앞 색 네모. 서버가 색 값을 알 때만 싣는다. 없으면(`undefined`/`null`)
+   * 네모를 그리지 않는다(리드 결정: 색 값이 올 때만 그린다). */
+  rgb?: [number, number, number] | null;
 }
 
 export type PresetDescriptionSource = "app" | "show";
