@@ -161,6 +161,11 @@ CLIENT_MESSAGE_TYPES = (
     # 카드 t551 후속(지시 1항, mockup `aNo` 핸들러) — 제안 거절. 적용과
     # 같은 모양(suggestion_id 하나)이지만 편집을 부르지 않는다.
     "beat_grid_suggestion_reject",
+    # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안(한 단위). 제안은 페이로드 없이
+    # 요청하고, 「적용」·「거절」은 서버가 준 draft_id 하나만 되돌려 보낸다.
+    "beat_grid_draft_propose",
+    "beat_grid_draft_apply",
+    "beat_grid_draft_reject",
     # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기 요청. 페이로드 없음(현재
     # 곡의 격자 사용처 집계는 서버가 안다, dash_catalog_request와 같은 모양).
     "beat_grid_drawer_request",
@@ -566,6 +571,12 @@ def parse_client_message(raw: str) -> dict:
             "suggestion_id": suggestion_id,
         }
 
+    if message_type in ("beat_grid_draft_apply", "beat_grid_draft_reject"):
+        draft_id = message.get("draft_id")
+        if not isinstance(draft_id, str) or not draft_id.strip():
+            raise ProtocolError(f"{message_type}.draft_id must be a non-empty string")
+        return {"v": PROTOCOL_VERSION, "type": message_type, "draft_id": draft_id}
+
     if message_type == "vectorworks_export_upload":
         file_name = message.get("file_name")
         content_base64 = message.get("content_base64")
@@ -893,6 +904,9 @@ def parse_client_message(raw: str) -> dict:
         # 카드 t551 후속(지시 1항) — 프리셋 서랍 열기도 페이로드가 없다
         # (현재 격자 사용처는 서버가 이미 안다).
         "beat_grid_drawer_request",
+        # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 요청도 페이로드가 없다
+        # (마디 지도와 현재 격자 구성은 서버가 안다).
+        "beat_grid_draft_propose",
         # 카드 t563 — 「콘솔에 반영」·「끄기」도 페이로드가 없다. 반영은
         # 지금 격자 초안 전체를 쓰고, 끄기는 가장 최근 반영의 모든
         # 시퀀스를 끈다 — 둘 다 번호를 서버가 쥐고 있어 클라이언트가
@@ -953,6 +967,34 @@ def beat_grid_suggestion_consumed_event(*, suggestion_id: str) -> dict:
     보류 목록에서 지우게 한다. id가 애초에 없었어도(거절 경로) 보낸다 —
     UI 쪽 필터는 없는 id를 지우려 해도 안전한 no-op이다."""
     return _event("beat_grid_suggestion_consumed", suggestion_id=suggestion_id)
+
+
+def beat_grid_draft_event(*, draft_id: str, draft: dict) -> dict:
+    """SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 한 단위(보류). 화면은 이것을 제안
+    카드로 보여 주고, 「적용」이나 「거절」 때 ``draft_id`` 하나만 되돌려 보낸다. 칸마다
+    ``bar``와 ``label``만 싣는다. 구조화 필드는 적용할 때 서버가 정한다."""
+    tracks = [
+        {
+            "group_name": track["group_name"],
+            "group_no": track["group_no"],
+            "group_no_confirmed": track["group_no_confirmed"],
+            "layer_role": track["layer_role"],
+            "cells": [{"bar": cue["bar"], "label": cue["label"]} for cue in track["cues"]],
+        }
+        for track in draft["tracks"]
+    ]
+    return _event(
+        "beat_grid_draft",
+        draft_id=draft_id,
+        bar_range=dict(draft["bar_range"]),
+        windows=[dict(window) for window in draft["windows"]],
+        tracks=tracks,
+    )
+
+
+def beat_grid_draft_consumed_event(*, draft_id: str) -> dict:
+    """SPEC-LDARRANGE-001 두 번째 묶음 — 보류 초안이 소비됐다(적용·거절 공통). 없던 id도 보낸다."""
+    return _event("beat_grid_draft_consumed", draft_id=draft_id)
 
 
 def beat_grid_send_status_event(

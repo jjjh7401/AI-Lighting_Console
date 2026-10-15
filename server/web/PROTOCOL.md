@@ -16,6 +16,9 @@ client (`ui/`), and the M6 measurement harness. Executable half:
 
 | type | fields | meaning |
 |---|---|---|
+| `beat_grid_draft_propose` | — | (SPEC-LDARRANGE-001 두 번째 묶음, additive) Ask for one automatic arrangement draft, **held only** — the server runs the generator on the current song's bar map and grid tracks. The grid and console are unchanged. Reply: `beat_grid_draft` (carries `draft_id`). No bar map, or an unusable one → `chat_response` refusal (`박자 격자 수정 거절`). |
+| `beat_grid_draft_apply` | `draft_id: string` (non-empty) | (additive) The director's 「적용」. Takes the held draft ONCE and applies the whole draft in one step: missing cells are created, existing cells keep their structured fields and get the draft label. Records an undo step; never writes the console. Reply: `song_timeline` + `chat_response` (`박자 배치 초안 적용`). A used or unknown id → `beat_grid_draft_consumed` then a refusal. |
+| `beat_grid_draft_reject` | `draft_id: string` (non-empty) | (additive) The director's 「거절」. Drops the held draft; the grid and console are untouched. Reply: `beat_grid_draft_consumed` + `chat_response` (`박자 배치 초안 거절`). |
 | `chat` | `text: string` (non-empty) | One Korean instruction. The server processes ONE instruction at a time; a second `chat` while busy gets a `busy` event. |
 | `vectorworks_export_upload` | `file_name: string`, `content_base64: string` | Vectorworks Instrument Data export (`.csv`, `.txt`, `.xlsx`, or `.mvr`, non-empty and ≤8 MiB). Replaces this connection's source and immediately starts guided comparison. Raw bytes stay session-local; the model calls `vectorworks_autopatch` rather than receiving base64 or asking the operator to paste it. |
 | `song_audio_upload` | `file_name`, `mime_type`, `content_base64` | (MUSICSYNC M2, additive) Attach one song (`.wav`/`.flac`/`.mp3`/`.m4a`, decoded ≤64 MiB). Store-only; rejection is `error` kind `song_audio_rejected` with a Korean reason. Single frame — only fits files whose base64 frame is under uvicorn's default 16 MiB `ws_max_size`; the UI uses the chunked trio below. |
@@ -61,6 +64,8 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 
 | type | fields | meaning |
 |---|---|---|
+| `beat_grid_draft` | `draft_id: string`, `bar_range: {start: int, end: int}`, `windows: [{start_bar, end_bar, lead, active, drop}]`, `tracks: [{group_name, group_no, group_no_confirmed, layer_role, cells: [{bar, label}]}]` | (SPEC-LDARRANGE-001 두 번째 묶음, additive) One automatic arrangement draft, held. The screen shows it as one proposal card; 「적용」 and 「거절」 send back `draft_id` only. Each cell carries only `bar` and `label`; the structured fields are decided by the server when applied. |
+| `beat_grid_draft_consumed` | `draft_id: string` | (additive) A held draft was consumed (applied or rejected). Sent even for an unknown id — the screen drops that id from its held list, a no-op when absent. |
 | `status` | `health: "online"\|"console_offline"\|"responder_degraded"\|"responder_version_mismatch"\|"responder_version_unrecognized"`, `live_lock: bool`, `executions_blocked: bool`, `console_input: "listening"\|"silent"\|"undetermined"`, `reply_port: int\|null`, `receive_port: int\|null` | Gate-truth status (sent on connect, on change via the heartbeat loop, after lock toggles, and on `status_request`). `console_input` and the `reply_port`/`receive_port` pair are additive diagnosis fields — see below. |
 | `chat_response` | `status: "ok"\|"retries_exhausted"\|"loop_limit"`, `summary: string` (Korean, server-composed), `text: string` (model's final Korean text), `commands: CommandView[]` | One instruction's final report (REQ-MVP-022). |
 | `execution_preview` | `preview_id: string`, `summary: string`, `risk_level: "info"\|"caution"\|"danger"`, `commands: [{command, action, target_kind, target, label}]`, `warnings: [{severity, label, detail, command}]` | Additive command-bundle preview sent before safety screening/approval. It is string-based and does not claim a real cue diff, tracking impact, or showfile mutation graph. |
@@ -85,6 +90,18 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 | `song_audio_link_begin` | `status: "found"`, `file_name`, `mime_type`, `sha256`, `byte_length`, `chunk_count: int ≥ 1` | (card t571, additive) Start of a chunked link reply — the download-direction mirror of `song_audio_upload_begin` (REQ-MUSICSYNC-027), used only when the base64 exceeds one frame. |
 | `song_audio_link_chunk` | `index: int ≥ 0`, `content_base64: string` | (card t571) One piece, in order from 0. The client concatenates in index order; a gap or reorder is a client-side defect (the server always sends in order). |
 | `song_audio_link_end` | — | (card t571) Finish — the client has now received every chunk declared by `chunk_count` and reassembles the full `content_base64`. |
+
+### 배치 초안 — `beat_grid_draft_*` (SPEC-LDARRANGE-001, additive)
+
+- 제안(`beat_grid_draft_propose`)은 **보류만** 만든다. 격자와 콘솔 상태 차이는 0이다.
+- 「적용」은 초안 **한 단위 전체**다. 칸마다 따로 적용하지 않는다. 적용 뒤 트랙 검증(같은 장비를
+  겹쳐 잡는 트랙)에 걸리면 격자는 그대로다.
+- 칸이 없는 마디에는 칸을 새로 만든다. 기존 칸의 구조화 필드(밝기·프리셋·근거)는 지우지 않고
+  라벨만 초안 값으로 바꾼다. 기존 범위 편집(`apply_beat_grid_edit_range`)은 칸이 있는 마디만 고친다.
+- 적용은 되돌리기 기록을 남긴다. 콘솔 반영은 별도의 승인 경로다.
+- `draft_id` 는 한 번만 쓸 수 있다. 적용이나 거절 뒤의 같은 id 는 `찾을 수 없습니다` 거절이다.
+- 구현: `server/design/arrange_generator.py`(초안), `server/design/arrange_apply.py`(적용),
+  `server/design/arrange_draft_store.py`(보류), `server/web/session.py`(`beat_grid_draft_*`).
 
 ### 질문 카드 — `question_request` / `question_answer`
 

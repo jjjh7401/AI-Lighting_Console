@@ -643,6 +643,21 @@ def create_app(deps: WebDeps) -> FastAPI:
                     await asyncio.to_thread(
                         session.beat_grid_suggestion_reject, message["suggestion_id"]
                     )
+                elif message_type == "beat_grid_draft_propose":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_draft_propose)
+                elif message_type == "beat_grid_draft_apply":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_draft_apply, message["draft_id"])
+                elif message_type == "beat_grid_draft_reject":
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    await asyncio.to_thread(session.beat_grid_draft_reject, message["draft_id"])
                 elif message_type == "beat_grid_drawer_request":
                     # 카드 t551 후속(지시 1항) — 프리셋 서랍. 콘솔 풀을 여러
                     # 번 왕복해 읽으므로(최대 세 풀 × 페이지) busy-guard

@@ -1105,6 +1105,9 @@ export type ServerEvent =
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
+  // SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 제안 카드와 보류 소비 짝(서버 messages.py).
+  "beat_grid_draft",
+  "beat_grid_draft_consumed",
   "approval_request",
   "execution_preview",
   "approval_resolved",
