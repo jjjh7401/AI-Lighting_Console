@@ -27,7 +27,12 @@ export function chorusReversalWarning(
     (candidate) => candidate.index > section.index && candidate.role === "chorus",
   );
   if (laterChoruses.length === 0) return null;
-  const maxLaterPercent = Math.max(...laterChoruses.map(sectionIntensityPercent));
+  // 밝기를 모르는 뒤 후렴은 비교하지 않는다 — 0 으로 치면 없는 경고가 난다.
+  const laterPercents = laterChoruses
+    .map(sectionIntensityPercent)
+    .filter((percent): percent is number => percent !== null);
+  if (laterPercents.length === 0) return null;
+  const maxLaterPercent = Math.max(...laterPercents);
   if (proposedIntensityPercent > maxLaterPercent) {
     return `⚠ 뒤 후렴(${maxLaterPercent}%)보다 밝아져 후렴 상승 곡선이 무너진다`;
   }
@@ -57,7 +62,7 @@ export function reserveLock(
   if (item.released_q === null) return { name: item.name, release: "미해제" };
   if (item.screen_position === null || position >= item.screen_position) return null;
   const cue = sections[item.screen_position]?.cue_number;
-  return { name: item.name, release: cue === undefined ? "위치 불명" : `Q${cue}` };
+  return { name: item.name, release: cue == null ? "위치 불명" : `Q${cue}` };
 }
 
 /** REQ-093 (3) — 리저브(BLIND·STROBE·유보색) 대상을 해제 큐 이전에 쓰면 위반. */

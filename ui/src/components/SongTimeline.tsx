@@ -64,7 +64,7 @@ export function linkedTimelineExecutor(
 /** The console reports the current cue as a bare number OR as
  * "<number> — <name>" (live-verified against onPC 2.4). Match on the leading
  * numeric token only — never on the name half. */
-export function isTimelineCurrentCue(entry: CueExecutorEntry | null, cueNumber: number): boolean {
+export function isTimelineCurrentCue(entry: CueExecutorEntry | null, cueNumber: number | null): boolean {
   if (entry?.current_cue?.status !== "ok") return false;
   const leading = /^\s*(\d+(?:\.\d+)?)/.exec(entry.current_cue.value ?? "");
   return leading !== null && Number(leading[1]) === cueNumber;
@@ -108,9 +108,10 @@ const PLAN_STATUS_LINE: Record<SongTimelinePlanStatus, string> = {
 };
 
 export function sectionCardTitle(section: SongTimelineSection, status: SongTimelinePlanStatus): string {
-  if (status === "verified") return `CUE ${section.cue_number}`;
-  if (status === "stored") return `CUE ${section.cue_number} · ${section.label}`;
-  return `PLAN CUE ${section.cue_number} · ${section.label}`;
+  const cue = section.cue_number == null ? EMPTY_DETAIL : String(section.cue_number);
+  if (status === "verified") return `CUE ${cue}`;
+  if (status === "stored") return `CUE ${cue} · ${section.label}`;
+  return `PLAN CUE ${cue} · ${section.label}`;
 }
 
 /** PLAN cues (draft/requires_requery/approved) exist only in the design;
@@ -215,11 +216,13 @@ function TimelineSectionCard({
   const conceptRow = conceptRowForSection(conceptReport, sectionPosition(section, allSections));
   const liveExecutor = liveExecutorForSection(status, executor);
   const current = isTimelineCurrentCue(liveExecutor, section.cue_number);
+  // D 레벨을 모르면 「—」 — 0 으로 읽히지 않게(서버가 null 을 싣는다).
+  const levelText = section.d_level == null ? EMPTY_DETAIL : `D${section.d_level}`;
   return (
     <article
-      className={`song-timeline-section d-level-${section.d_level}${onConsole ? "" : " is-plan-cue"}${!onConsole && onGeneratorSend ? " has-generator" : ""}${current ? " is-current" : ""}`}
+      className={`song-timeline-section d-level-${section.d_level ?? "none"}${onConsole ? "" : " is-plan-cue"}${!onConsole && onGeneratorSend ? " has-generator" : ""}${current ? " is-current" : ""}`}
       style={{ flexGrow: width, flexBasis: 0 }}
-      aria-label={`${formatTimestamp(section.start_ms)} ${section.label}, D${section.d_level}`}
+      aria-label={`${formatTimestamp(section.start_ms)} ${section.label}, ${levelText}`}
     >
       <div className="song-timeline-section-head">
         <span>{formatTimestamp(section.start_ms)}</span>
@@ -229,9 +232,9 @@ function TimelineSectionCard({
       </div>
       <h3>{sectionCardTitle(section, status)}</h3>
       <p className={`song-timeline-plan-state is-${status}`}>{PLAN_STATUS_LINE[status]}</p>
-      <div className="song-timeline-energy" aria-label={`에너지 D${section.d_level}`}>
-        <span>D{section.d_level}</span>
-        <i style={{ width: `${section.d_level * 20}%` }} />
+      <div className="song-timeline-energy" aria-label={`에너지 ${levelText}`}>
+        <span>{levelText}</span>
+        {section.d_level != null && <i style={{ width: `${section.d_level * 20}%` }} />}
       </div>
       <dl>
         <div><dt>POSITION</dt><dd>{section.position}</dd></div>
@@ -258,9 +261,11 @@ function TimelineSectionCard({
           <p>{headroomSummaryLine(conceptRow)}</p>
         </div>
       )}
-      {!onConsole && onGeneratorSend && (
+      {/* 큐 번호가 없는 구간에는 수정요청을 보낼 대상이 없어 생성기를 열지 않는다. */}
+      {!onConsole && onGeneratorSend && section.cue_number != null && (
         <PlanCueRequestGenerator
           section={section}
+          cueNumber={section.cue_number}
           allSections={allSections}
           conceptRow={conceptRow}
           reserve={reserve}

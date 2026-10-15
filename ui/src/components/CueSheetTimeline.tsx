@@ -76,8 +76,9 @@ export function formatBpm(bpm: number | null | undefined): string {
   return String(Math.round(bpm * 100) / 100);
 }
 
-/** Q# 라벨. 정본은 Q010 처럼 세 자리로 적는다. */
+/** Q# 라벨. 정본은 Q010 처럼 세 자리로 적는다. 큐 번호를 모르면 「—」 — Qnull·Qundefined 로 찍지 않는다. */
 export function cueLabel(section: SongTimelineSection): string {
+  if (section.cue_number == null) return EMPTY_CELL;
   return `Q${String(section.cue_number).padStart(3, "0")}`;
 }
 
@@ -120,30 +121,23 @@ export function sectionIntensityText(section: SongTimelineSection): string {
   if (section.intensity && section.intensity.length > 0) {
     return section.intensity.map((entry) => `${entry.group} ${entry.level}`).join(" / ");
   }
-  const percent = knownIntensityPercent(section);
+  const percent = sectionIntensityPercent(section);
   return percent === null ? EMPTY_CELL : String(percent);
-}
-
-/** 구간 인텐시티(0..100)를 아는 만큼만. 그룹별 값도 d_level 도 없으면 null —
- * 0 이나 NaN 으로 찍지 않는다. */
-function knownIntensityPercent(section: SongTimelineSection): number | null {
-  if (section.intensity && section.intensity.length > 0) {
-    return Math.max(...section.intensity.map((entry) => entry.level));
-  }
-  return Number.isFinite(section.d_level) ? Math.min(100, Math.max(0, section.d_level * 20)) : null;
 }
 
 /** 인텐시티 막대 폭(px). 값을 모르면 null — 막대를 그리지 않는다(0 폭도 「0」처럼 읽힌다). */
 function levelBarWidth(section: SongTimelineSection): number | null {
-  const percent = knownIntensityPercent(section);
+  const percent = sectionIntensityPercent(section);
   return percent === null ? null : percent * 0.4;
 }
 
-/** 폴리라인 높이용 0..100. 그룹별 값이 있으면 최댓값, 없으면 d_level(1..5)×20. */
-export function sectionIntensityPercent(section: SongTimelineSection): number {
+/** 0..100 인텐시티. 그룹별 값이 있으면 최댓값, 없으면 d_level(1..5)×20. 둘 다 모르면
+ * null — 0 이나 NaN 으로 찍지 않는다(모르는 값을 0 으로 읽으면 「0」처럼 보인다). */
+export function sectionIntensityPercent(section: SongTimelineSection): number | null {
   if (section.intensity && section.intensity.length > 0) {
     return Math.max(...section.intensity.map((entry) => entry.level));
   }
+  if (section.d_level == null || !Number.isFinite(section.d_level)) return null;
   return Math.min(100, Math.max(0, section.d_level * 20));
 }
 
@@ -238,7 +232,7 @@ function intensityRuns(
   const runs: string[] = [];
   let run: string[] = [];
   sections.forEach((section, index) => {
-    const percent = knownIntensityPercent(section);
+    const percent = sectionIntensityPercent(section);
     const end = sectionEndMs(section, sections[index + 1], totalMs) ?? totalMs;
     if (percent === null || !Number.isFinite(section.start_ms) || !Number.isFinite(end)) {
       if (run.length > 0) runs.push(run.join(" "));
@@ -437,7 +431,7 @@ export function CueSheetTimeline({
   // 보내면 두 축척이 갈리는 순간(구간 삽입·삭제) 조용히 엉뚱한 큐를 고친다.
   useEffect(() => {
     const section = sections[selectedIndex];
-    if (section) onSelectCue?.(section.cue_number);
+    if (section && section.cue_number != null) onSelectCue?.(section.cue_number);
   }, [onSelectCue, sections, selectedIndex]);
 
   if (timeline === null) {
