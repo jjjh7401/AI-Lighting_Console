@@ -10,6 +10,7 @@ import {
   colorCell,
   movementCell,
   positionCell,
+  presetDisplayName,
   transitionCell,
 } from "./glanceCells";
 
@@ -205,5 +206,53 @@ describe("changedFieldsLabel — mockup changedTxt와 같은 「바뀐 것」 �
     const previous = cue({ label: "이전" });
     const current = cue({ label: "다음" });
     expect(changedFieldsLabel(previous, current, false)).toBe("● 큐 바뀜");
+  });
+});
+
+describe("콘솔 프리셋 이름 — 칸이 실은 이름이 먼저, 없으면 서랍 이름, 둘 다 없으면 번호만", () => {
+  const POSITION_SECTIONS: BeatGridDrawerSection[] = [
+    {
+      pool_name: "Position",
+      title: "위치",
+      pool_no: 2,
+      unread: false,
+      bands_confirmed: true,
+      entries: [{ preset_no: "2.46", name: "LA Drawer Aim", usage_count: 1, used_by: [], is_effect_band: false }],
+    },
+  ];
+
+  it("칸이 실은 위치 이름을 번호 옆에 쓰고 「LA 」는 뗀다", () => {
+    expect(
+      positionCell(cue({ position_preset_no: "2.46", position_preset_name: "LA Back Aim" }), "wash", POSITION_SECTIONS),
+    ).toMatchObject({ kind: "chip", presetNo: "2.46", name: "Back Aim", label: "2.46 Back Aim" });
+  });
+
+  it("칸 이름이 없으면 서랍 항목 이름을 쓴다(기존 동작)", () => {
+    expect(positionCell(cue({ position_preset_no: "2.46" }), "wash", POSITION_SECTIONS)).toMatchObject({
+      name: "Drawer Aim",
+      label: "2.46 Drawer Aim",
+    });
+  });
+
+  it("둘 다 없으면 번호만 쓴다(지어내지 않음)", () => {
+    expect(positionCell(cue({ position_preset_no: "2.99" }), "wash", POSITION_SECTIONS)).toMatchObject({
+      kind: "chip",
+      name: null,
+      label: "2.99",
+    });
+  });
+
+  it("색 칸도 칸이 실은 색 이름을 쓴다", () => {
+    expect(colorCell(cue({ color_preset_no: "4.22", color_preset_name: "LA Deep Blue" }), "side", null)).toMatchObject({
+      presetNo: "4.22",
+      label: "4.22 Deep Blue",
+    });
+  });
+
+  it("빈 이름과 「LA 」만 남는 이름은 이름 없음으로 본다", () => {
+    expect(presetDisplayName(undefined)).toBeNull();
+    expect(presetDisplayName("")).toBeNull();
+    expect(presetDisplayName("LA ")).toBeNull();
+    expect(presetDisplayName("LA Back Aim")).toBe("Back Aim");
   });
 });

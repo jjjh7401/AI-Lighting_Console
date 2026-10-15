@@ -256,6 +256,8 @@ export interface CopilotSocket {
   ) => void;
   /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
   sendBeatGridApply: () => void;
+  /** 「필요한 프리셋 만들기」 — `beat_grid_apply` 에 mode: "preset_plan". */
+  sendBeatGridPresetPlan: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호 입력(서버가 초안·보관함에 적는다). */
   sendBeatGridTimecodeSet: (timecodeNumber: number) => void;
   /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
@@ -508,6 +510,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   // 카드 t563 — 상단 바 콘솔 버튼 셋. 콘솔에 **쓰는** 경로라
   // `beat_grid_edit` 류(콘솔 무접촉)와는 분리된 메시지 타입이다.
   const sendBeatGridApply = useCallback(() => send(buildBeatGridApply()), [send]);
+  const sendBeatGridPresetPlan = useCallback(() => send(buildBeatGridApply("preset_plan")), [send]);
   // 반영 준비 — 타임코드 번호 입력. 콘솔에 쓰지 않는다(초안·보관함에만 적힌다).
   const sendBeatGridTimecodeSet = useCallback(
     (timecodeNumber: number) => send(buildBeatGridTimecodeSet(timecodeNumber)),
@@ -632,6 +635,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
+    sendBeatGridPresetPlan,
     sendBeatGridTimecodeSet,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,

@@ -32,6 +32,7 @@ __all__ = [
     "build_preset_drawer",
     "effect_kind_to_pool_name",
     "first_free_base_color_number",
+    "first_free_base_dimmer_number",
     "first_free_base_position_number",
     "first_free_preset_number",
     "pool_name_to_effect_kind",
@@ -535,6 +536,27 @@ def first_free_base_color_number(
     반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
     return _first_free_base_pool_number(
         policy=policy, grid=grid, console_children=console_children, pool_label="Color"
+    )
+
+
+def first_free_base_dimmer_number(
+    *,
+    policy: Mapping[str, object],
+    grid: Mapping[str, object],
+    console_children: tuple[int, Mapping[int, object]] | None,
+) -> tuple[str | None, str | None]:
+    """LOVE ATTACK 연출 프리셋 계획(SPEC-LDRHYTHM-001 stage 2)이 쓰는 **기본 디머**
+    번호 배정. `first_free_base_color_number`와 같은 몸체·같은 규칙 — 디머 기본 풀의
+    효과 번호대(``dimmer_effect_a``·``dimmer_effect_b``)만 건너뛰고, 나머지는 콘솔이
+    실제로 쥔 첫 빈 슬롯이다. 풀을 못 읽었으면 거절한다(위치·색과 같은 비대칭).
+
+    ``first_free_preset_number``(효과 번호대)와 다르다 — 그 함수는 효과 디머 번호를
+    고르고, 이 함수는 ``brightness.mode == "dimmer_preset"`` 이 가리킬 기본 디머 번호를
+    고른다. 기존 「＋ 새 프리셋」 핸들러는 기본 디머를 여전히 거절한다(변경 없음).
+
+    반환: ``(번호 또는 None, 거절 사유 또는 None)``."""
+    return _first_free_base_pool_number(
+        policy=policy, grid=grid, console_children=console_children, pool_label="Dimmer"
     )
 
 

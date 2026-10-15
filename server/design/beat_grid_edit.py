@@ -594,6 +594,16 @@ def apply_beat_grid_edit(
                 pending_fields.append(EDITABLE_CUE_FIELD_LABELS["effect_preset_no"])
 
         brightness = merged.get("brightness") or {}
+        # 디머 **기본** 프리셋(dimmer_preset) 번호도 색·위치 프리셋과 같은 승인 대기 규칙을
+        # 따른다. 번호대 검사는 디머 효과(dimmer_effect)만의 것이다 — 기본 프리셋은 효과 대역
+        # 밖(예: 1.8)에 있어 같은 검사를 걸면 거짓 경고가 난다.
+        if (
+            brightness.get("mode") == "dimmer_preset"
+            and brightness.get("preset_no") is not None
+            and "brightness" in changes
+            and check_evidence_approval(fresh_approval_cue) is not None
+        ):
+            pending_fields.append("디머 프리셋")
         if (
             brightness.get("mode") == "dimmer_effect"
             and brightness.get("preset_no") is not None

@@ -201,6 +201,14 @@ from server.design.preset_names import (
     match_preset_name,
     match_preset_name_across_pools,
 )
+from server.design.preset_plan import (
+    apply_plan_references,
+    build_preset_plan,
+    card_reason,
+    load_preset_annotations,
+    plan_table_markdown,
+    save_commands,
+)
 from server.design.profile import (
     DEFAULT_BPM,
     BpmResolution,
@@ -4111,6 +4119,26 @@ def derive_beat_grid_fields(
         }
     updated["beat_grid"] = updated_grid
     return updated
+
+
+def beat_grid_recorded_sequence_numbers(
+    store: SongTimelineStore | None, timeline: Mapping[str, object]
+) -> dict[str, int]:
+    """이 곡의 반영 기록(소유권 레코드)에 남은 트랙별 콘솔 시퀀스 번호 — 그룹 이름 대문자 ->
+    번호. 반영한 적 없으면 비어 있다(번호를 지어내지 않는다).
+
+    재생·반영 경로(``ChatSession``)와 불러오기 경로(``server/web/timeline_api.py``)가 같은
+    값을 얻도록 한 자리에 둔다 — 따로 읽으면 같은 곡이 들어온 길에 따라 번호가 다르게 보인다.
+    """
+    song_key = ChatSession._beat_grid_song_key(timeline)
+    record = store.beat_grid_allocation(song_key) if store else None
+    tracks = record.get("tracks") if isinstance(record, Mapping) else None
+    out: dict[str, int] = {}
+    for name, allocation in tracks.items() if isinstance(tracks, Mapping) else ():
+        number = allocation.get("sequence_number") if isinstance(allocation, Mapping) else None
+        if isinstance(number, int) and not isinstance(number, bool):
+            out[str(name).upper()] = number
+    return out
 
 
 class ChatSession:
@@ -10444,6 +10472,117 @@ class ChatSession:
         self._send(event)
         return event
 
+    # -- SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 저장 승인 카드 ---------
+
+    def _beat_grid_preset_dimmer_attributes(
+        self, group_names: Sequence[str]
+    ) -> dict[str, tuple[str, ...]]:
+        """그룹마다 디머 속성 이름 — 「⇪ 콘솔에 반영」(`beat_grid_apply`)이 쓰는 판독을
+        그대로 다시 부른다(읽기 전용). 못 읽은 그룹은 빠지고, 계획이 「미정」으로 남긴다."""
+        names = list(group_names)
+        types_root = str(
+            self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
+        )
+        rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
+        attributes, _reasons = resolve_group_dimmer_attributes(
+            rig_read, names, self._beat_grid_group_members(names)
+        )
+        return {group: tuple(attrs) for group, attrs in attributes.items()}
+
+    def beat_grid_preset_plan(self) -> dict:
+        """SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 계획을 승인 카드 한 장으로 올린다.
+
+        순서: 콘솔 풀 판독(읽기만) → 계획(순수 함수) → 저장 줄 → 승인 카드(게이트).
+        승인이 **통과한 뒤에만** 칸의 번호 참조와 승인 기록을 적는다. 거절·차단·무응답이면
+        격자는 바이트까지 그대로다. 이 메서드는 UI 메시지에 연결돼 있지 않다 — 실제 저장은
+        감독이 「실행」이라고 한 뒤의 별도 호출이다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection("수정할 박자 격자가 아직 없습니다.")
+        grid = self._beat_grid_view(timeline)
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        dimmer_pool = read_named_pool(query, pool_root, "Dimmer", probe_prefix="love-attack-dimmer")
+        color_pool = read_named_pool(query, pool_root, "Color", probe_prefix="love-attack-color")
+        position_pool = read_named_pool(
+            query, pool_root, "Position", probe_prefix="love-attack-position"
+        )
+        group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
+        plan = build_preset_plan(
+            grid,
+            annotations=load_preset_annotations(timeline.get("song_title")),
+            policy=load_preset_pool_policy(),
+            dimmer_pool=dimmer_pool,
+            color_pool=color_pool,
+            position_pool=position_pool,
+            dimmer_attributes=self._beat_grid_preset_dimmer_attributes(group_names),
+        )
+        commands = save_commands(plan)
+        ready_count = sum(1 for preset in plan.presets if preset.ready)
+        # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다.
+        # 승인 카드는 저장할 것이 있을 때만 뜬다.
+        self._send(
+            chat_response_event(
+                status="ok",
+                summary="연출 프리셋 계획",
+                text=plan_table_markdown(plan),
+                commands=[],
+            )
+        )
+        if not commands:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=False,
+                reason=(
+                    "연출 프리셋: 지금 저장할 디머 프리셋이 없습니다(콘솔 풀을 읽지 못했거나 "
+                    "값이 미정). 계획표만 보입니다. 나머지는 미정입니다."
+                ),
+            )
+        batch = build_write_approval_batch([commands])
+        token = bind_session_key(self._session_key)
+        try:
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id="preset-plan",
+                    name="run_commands",
+                    arguments={"commands": list(commands)},
+                ),
+                risk=BatchRisk(
+                    reason=(f"연출 프리셋 저장 — {card_reason(plan)} (구간 단위 1회 승인)"),
+                    kind="preset_plan",
+                ),
+            )
+        finally:
+            reset_session_key(token)
+        if executed.result.is_error:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=False,
+                reason=(
+                    "LOVE ATTACK 프리셋 저장이 실행되지 않았습니다(승인 거절·게이트 차단·"
+                    "콘솔 무응답 중 하나). 격자는 그대로입니다."
+                ),
+            )
+        # 승인 창이 떠 있는 동안(다른 스레드가 답한다) 들어온 편집을 지우지 않도록, 카드 구성 때의
+        # 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다. 그 사이 밝기가 바뀐 칸은 건너뛴다.
+        current = store.latest if store.latest is not None else timeline
+        approved = apply_plan_references(
+            self._beat_grid_view(current),
+            plan,
+            by="supervisor",
+            date=datetime.now(UTC).isoformat(),
+            source=f"preset_plan:{batch.sha256}",
+            planned_from=grid,
+        )
+        store.latest = {**current, "beat_grid": approved}
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest)))
+        return self._beat_grid_send_status(
+            last_action="apply",
+            ok=True,
+            reason=f"LOVE ATTACK 디머 프리셋 {ready_count}개를 저장하고 칸에 번호를 적었습니다.",
+        )
+
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
     #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
 
@@ -10496,15 +10635,7 @@ class ChatSession:
     ) -> dict[str, int]:
         """이 곡의 반영 기록(소유권 레코드)에 남은 트랙별 콘솔 시퀀스 번호 — 그룹 이름 대문자 ->
         번호. 반영한 적 없으면 비어 있다(번호를 지어내지 않는다)."""
-        store = self._timeline_store
-        record = store.beat_grid_allocation(self._beat_grid_song_key(timeline)) if store else None
-        tracks = record.get("tracks") if isinstance(record, Mapping) else None
-        out: dict[str, int] = {}
-        for name, allocation in tracks.items() if isinstance(tracks, Mapping) else ():
-            number = allocation.get("sequence_number") if isinstance(allocation, Mapping) else None
-            if isinstance(number, int) and not isinstance(number, bool):
-                out[str(name).upper()] = number
-        return out
+        return beat_grid_recorded_sequence_numbers(self._timeline_store, timeline)
 
     def song_timeline_replay(self) -> dict | None:
         """새 연결에 재생하는 마지막 타임라인 프레임(카드 t635).

@@ -1,0 +1,42 @@
+# LOVE ATTACK 연출 프리셋 계획 주석 — SPEC-LDRHYTHM-001 stage 2.
+#
+# 격자 칸(love_attack.yaml)의 색·방향은 라벨 글자로만 적혀 있어 구조화된
+# 필드가 없다. 칸 → 색·방향 대응은 여기서 한 번만 적고, 계획 코드
+# (server/design/love_attack_presets.py)는 이 파일만 읽는다 — 라벨 글자를
+# 파싱하지 않는다. 디머 %는 칸의 brightness.value_percent 에서 바로 온다.
+#
+# 출처: reports/effect-arrangement-rules-20261007.md §3·§4 와 love_attack.yaml
+# 칸 라벨. 적지 않은 값은 지어내지 않는다(미정). 앱이 기본값을 쓴 곳은 「감독이 고칠 값」으로
+# 계획 화면에 그대로 드러난다.
+
+# 색 — rgb 가 null 이면 색 이름을 표준 팔레트에서 찾는다(color_names.resolve_color_name).
+# 표준 팔레트에 없는 이름은 「미정」으로 남는다. console_name 은 콘솔에 들어갈 영문 이름(ASCII)이고
+# 색 이름의 번역이 아니다.
+colors:
+  - name: 라벤더
+    console_name: LAVENDER
+    rgb: null
+    note: >-
+      「라벤더」는 색 표(server/design/color_names.py)에서 표준 팔레트 Lavender(55,35,100)
+      슬롯을 가리키도록 이었다(카드 2단계, 2026-10-15) — 값을 새로 짓지 않았다. 「퍼플/보라」의
+      감독 판정(t409)과 같은 슬롯이다. 감독이 고칠 값: 실기 라벤더가 다르면 색 표에서 바꾼다.
+    cells:
+      - {group_name: WASH-ALL, bar: 7}
+
+# 위치 방향 — 목표 좌표 표는 없다. 방향마다 대략 목표를 target 에 적는다(감독이 콘솔에서 고칠 값).
+# 「바닥 쪽」 = 무대 중앙 깊이의 바닥점(장비 x 유지 · y=cy · z=0). 근거: 보고서
+# .moai/reports/t221/verdict.md 의 POS.04 정의(각 장비 x · y=cy · z=0).
+directions:
+  - name: 바닥 쪽
+    console_name: FLOOR
+    target: "무대 중앙 깊이 바닥 (장비 x 유지 · y=cy · z=0)"
+    cells:
+      - {group_name: MOVER-U, bar: 0}
+      - {group_name: MOVER-D, bar: 0}
+
+# 칸 글자는 있으나 프리셋 하나로 만들 수 없는 위치(상대 이동·새 자리) — 이번 계획에서 제외하고
+# 사유를 승인 카드에 적는다.
+relative_position_cells:
+  - {group_name: MOVER-U, bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+  - {group_name: MOVER-D, bar: 3, label: "5마디 1박 위치 한 칸 올림"}
+  - {group_name: MOVER-D, bar: 11, label: "11마디 1박 새 자리, 정지"}

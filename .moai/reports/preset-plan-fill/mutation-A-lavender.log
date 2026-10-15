@@ -1,0 +1,45 @@
+......F.F.......F.................                                       [100%]
+=================================== FAILURES ===================================
+_ TestColorAndPositionStayOnTheirOwnPaths.test_lavender_keeps_the_palette_rgb_marked_and_out_of_this_card _
+
+self = <server.tests.test_love_attack_presets_fill.TestColorAndPositionStayOnTheirOwnPaths object at 0x108476650>
+
+    def test_lavender_keeps_the_palette_rgb_marked_and_out_of_this_card(self) -> None:
+        plan = _plan()
+        preset = _preset(plan, "LAVENDER")
+>       assert preset.value == "RGB 55 35 100"
+E       AssertionError: assert 'RGB 미정' == 'RGB 55 35 100'
+E         
+E         - RGB 55 35 100
+E         + RGB 미정
+
+server/tests/test_love_attack_presets_fill.py:63: AssertionError
+_ TestColorAndPositionStayOnTheirOwnPaths.test_color_table_resolves_lavender_to_the_palette_slot _
+
+self = <server.tests.test_love_attack_presets_fill.TestColorAndPositionStayOnTheirOwnPaths object at 0x108484b90>
+
+    def test_color_table_resolves_lavender_to_the_palette_slot(self) -> None:
+>       assert resolve_color_name("라벤더") == (55, 35, 100)
+E       AssertionError: assert None == (55, 35, 100)
+E        +  where None = resolve_color_name('라벤더')
+
+server/tests/test_love_attack_presets_fill.py:82: AssertionError
+_ TestReadyAndHeldPresets.test_lavender_is_a_palette_rgb_and_stays_out_of_this_card _
+
+self = <server.tests.test_love_attack_presets.TestReadyAndHeldPresets object at 0x10848cc90>
+
+    def test_lavender_is_a_palette_rgb_and_stays_out_of_this_card(self) -> None:
+        preset = _preset(_plan(), "LAVENDER")
+        assert preset.kind == "color"
+>       assert preset.value == "RGB 55 35 100"
+E       AssertionError: assert 'RGB 미정' == 'RGB 55 35 100'
+E         
+E         - RGB 55 35 100
+E         + RGB 미정
+
+server/tests/test_love_attack_presets.py:173: AssertionError
+=========================== short test summary info ============================
+FAILED server/tests/test_love_attack_presets_fill.py::TestColorAndPositionStayOnTheirOwnPaths::test_lavender_keeps_the_palette_rgb_marked_and_out_of_this_card
+FAILED server/tests/test_love_attack_presets_fill.py::TestColorAndPositionStayOnTheirOwnPaths::test_color_table_resolves_lavender_to_the_palette_slot
+FAILED server/tests/test_love_attack_presets.py::TestReadyAndHeldPresets::test_lavender_is_a_palette_rgb_and_stays_out_of_this_card
+3 failed, 31 passed in 0.88s

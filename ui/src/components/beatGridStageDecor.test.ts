@@ -115,3 +115,31 @@ describe("fixtureIsBlind — 무빙이 아닌 효과(effect) 줄 = 사각(리드
     expect(fixtureIsBlind(byFid(99), [track("ZZZ", "effect", "켜짐")])).toBe(false);
   });
 });
+
+describe("pan_tilt — 서버 능력 필드가 있으면 무빙 판정의 기준(리드 결정)", () => {
+  const byFid = (fid: number) => points.find((p) => p.fid === fid)!;
+
+  it("pan_tilt 가 true 면 층 역할과 무관하게 무빙이다", () => {
+    expect(fixtureIsMover({ ...byFid(11), pan_tilt: true }, [track("ZZZ", "wash", "켜짐")])).toBe(true);
+  });
+
+  it("pan_tilt 가 false 면 무빙 줄 소속이어도 무빙이 아니다", () => {
+    expect(fixtureIsMover({ ...byFid(21), pan_tilt: false }, [track("QQQ", "mover", "켜짐")])).toBe(false);
+  });
+
+  it("pan_tilt 키가 없으면(모름) 임시로 층 역할을 따른다", () => {
+    expect(fixtureIsMover(byFid(21), [track("QQQ", "mover", "켜짐")])).toBe(true);
+  });
+});
+
+describe("빔 — 켜진 무빙만(리드 결정)", () => {
+  it("무빙 줄이 켜져 있으면 그 소속 장비마다 빔이 있다", () => {
+    const decor = stageDecorations(points, [track("QQQ", "mover", "스윕")], project, 0, FRONT_Y, 0);
+    expect(decor.beams.map((beam) => beam.key).sort()).toEqual(["beam-0-21", "beam-0-22"]);
+  });
+
+  it("무빙 줄이 꺼져 있으면 빔이 없다", () => {
+    const decor = stageDecorations(points, [track("QQQ", "mover", "—")], project, 0, FRONT_Y, 0);
+    expect(decor.beams).toEqual([]);
+  });
+});

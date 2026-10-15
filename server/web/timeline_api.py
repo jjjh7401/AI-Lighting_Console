@@ -14,7 +14,11 @@ from dataclasses import dataclass
 from fastapi import APIRouter, HTTPException
 
 from server.design.beat_grid_ui_values import attach_beat_grid_ui_values
-from server.web.session import SongTimelineStore, derive_beat_grid_fields
+from server.web.session import (
+    SongTimelineStore,
+    beat_grid_recorded_sequence_numbers,
+    derive_beat_grid_fields,
+)
 from server.web.timeline_library import SongTimelineLibrary, timeline_entry_summary
 
 __all__ = ["TimelineLibraryDeps", "build_timeline_router"]
@@ -75,7 +79,13 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # 콘솔을 읽지 않는다. 저장소에는 원본을 그대로 둔다(보낼 때마다 파생).
         # 화면용 값(콘솔 프리셋 이름 등)도 재생(``_beat_grid_refresh_unsent_cells``)과 같은 함수로
         # 채운다 — 풀 기억은 저장소의 것이라 새 연결 재생과 같은 값이다.
-        timeline = attach_beat_grid_ui_values(timeline, pool_slots=deps.store.beat_grid_pool_slots)
+        # 콘솔 시퀀스 번호도 같은 방식이다: 반영 기록을 저장소에서 읽는데, 곡 열쇠가 이 응답의
+        # 이름(``song_title``)을 따르므로 이름을 바꾼 **뒤의** 타임라인으로 읽는다.
+        timeline = attach_beat_grid_ui_values(
+            timeline,
+            pool_slots=deps.store.beat_grid_pool_slots,
+            track_sequence_numbers=beat_grid_recorded_sequence_numbers(deps.store, timeline),
+        )
         derived = derive_beat_grid_fields(
             timeline,
             snapshots=deps.store.beat_grid_snapshots,

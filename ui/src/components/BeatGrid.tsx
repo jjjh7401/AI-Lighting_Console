@@ -23,6 +23,8 @@
 // 바이트 동일하게 동작한다(additive).
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
+import { PresetPlanButton, PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
+import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./beatgrid/presetPlan";
 import { BeatGridTopBar } from "./BeatGridTopBar";
 import { SongOverview } from "./SongOverview";
 import {
@@ -375,6 +377,8 @@ export interface BeatGridFixturePoint {
   rotx: number;
   roty: number;
   rotz: number;
+  /** 팬·틸트 능력(서버 판독) — 있으면 무빙 모양을 따른다. 없으면(`undefined`) 임시로 층 역할을 쓴다. */
+  pan_tilt?: boolean;
   /** 콘솔 SELECTIONDATA로 **확인된** 소속 그룹 이름 — 이름 추정이 아니라
    * 읽은 값이어야 한다. 없으면(`null`/`undefined`) 미확인이고, 화면은
    * 반드시 회색이다(REQ-LDBEAT-004(f)). 이 값을 채우는 유일한 근거는
@@ -483,9 +487,20 @@ export function fixtureStageColor(
 ): string {
   const index = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
   if (index < 0) return UNCONFIRMED_FIXTURE_COLOR;
-  const cue = cueForBar(tracks[index], viewBar);
-  if (!cue || !cueIsActive(cue.label)) return OFF_FIXTURE_COLOR;
-  return cue.color_rgb ? rgbPercentToCss(cue.color_rgb) : TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
+  return trackStageColor(tracks[index], index, viewBar);
+}
+
+/** 줄이 지금 마디에서 켜져 있는가 — 칸이 있고 `cueIsActive`. */
+export function trackIsLitAt(track: BeatGridTrack, viewBar: number): boolean {
+  const cue = cueForBar(track, viewBar);
+  return cue !== null && cueIsActive(cue.label);
+}
+
+/** 줄이 지금 마디에서 내는 장비 색 — 켜져 있으면 칸 색(`color_rgb`, 없으면 줄 기본색), 꺼져 있으면 #333. */
+export function trackStageColor(track: BeatGridTrack, trackIndex: number, viewBar: number): string {
+  if (!trackIsLitAt(track, viewBar)) return OFF_FIXTURE_COLOR;
+  const rgb = cueForBar(track, viewBar)?.color_rgb;
+  return rgb ? rgbPercentToCss(rgb) : TRACK_COLOR_PALETTE[trackIndex % TRACK_COLOR_PALETTE.length];
 }
 
 /** REQ-LDBEAT-004(f) 확장(카드 t534, 리드 결정으로 갱신) — 확인된 장비의 불투명은 늘 최대다. 켜짐/꺼짐은
@@ -547,6 +562,8 @@ export interface BeatGridProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
+  /** 「필요한 프리셋 만들기」 — 서버가 계획표(chat_response)를 먼저 보내고 승인 카드를 띄운다. */
+  onPresetPlanRequest?: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
@@ -1474,6 +1491,7 @@ export function BeatGrid({
   onPreviewBar,
   onPreviewOff,
   onApply,
+  onPresetPlanRequest,
   timecodeNumber,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -1507,6 +1525,19 @@ export function BeatGrid({
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
+  // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
+  const [presetPlanPending, setPresetPlanPending] = useState<{ sinceSeq: number } | null>(null);
+  const requestPresetPlan = () => {
+    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1 });
+    onPresetPlanRequest?.();
+  };
+  const presetPlan =
+    presetPlanPending !== null &&
+    lastServerReply !== null &&
+    lastServerReply.summary === PRESET_PLAN_SUMMARY &&
+    lastServerReply.seq > presetPlanPending.sinceSeq
+      ? parsePresetPlan(lastServerReply.text)
+      : null;
   const [transitionView, setTransitionView] = useState(false);
   // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
   // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
@@ -2198,6 +2229,7 @@ export function BeatGrid({
           consoleFollowError,
         }}
       />
+      {presetPlan && <PresetPlanPanel plan={presetPlan} onClose={() => setPresetPlanPending(null)} />}
       {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
       {applyFailureNote(sendStatus) && (
         <p className="beat-grid-apply-fail" role="status">
@@ -3671,6 +3703,7 @@ export function BeatGrid({
             </span>
           </h4>
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
+          {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlan} />}
           {drawerSections === null ? (
             <p className="beat-grid-drawer-loading">불러오는 중…</p>
           ) : (

@@ -708,9 +708,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     if message_type == "beat_grid_apply":
-                        current_task = asyncio.create_task(
-                            asyncio.to_thread(session.beat_grid_apply)
+                        apply_fn = (
+                            session.beat_grid_preset_plan
+                            if message.get("mode") == "preset_plan"
+                            else session.beat_grid_apply
                         )
+                        current_task = asyncio.create_task(asyncio.to_thread(apply_fn))
                     elif message_type == "beat_grid_preview":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_preview, message["bar"])

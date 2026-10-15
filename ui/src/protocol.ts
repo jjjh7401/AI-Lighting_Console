@@ -506,6 +506,14 @@ export interface BeatGridCue {
    * 이 칸이 낼 색(RGB, 각 0~100%) — 「이 마디 한눈에」 색 네모와 2D 무대 장비 색(켜진 줄)에 쓴다. 서버가
    * 색을 알 때만 싣는다. 없으면(`undefined`/`null`) 네모는 생략하고 무대는 그 줄의 기본색으로 그린다(리드 결정). */
   color_rgb?: [number, number, number] | null;
+  /** 콘솔이 준 위치 프리셋 이름(서버 PR #741) — 「이 마디 한눈에」 칩과 막대 둘째 줄에서 번호 옆에 쓴다.
+   * 번호가 있고 콘솔이 이름을 줄 때만 키가 있다. 없으면 번호만 보인다. */
+  position_preset_name?: string | null;
+  /** 콘솔이 준 색 프리셋 이름(서버 PR #741). 쓰임은 `position_preset_name`과 같다. */
+  color_preset_name?: string | null;
+  /** 색이 둘 이상인 색 프리셋의 RGB 목록(각 0~100%, `color_rgb`와 같은 단위). 둘 이상이면 색 네모를
+   * 가로로 나눠 그린다. 서버가 아직 안 보내면 키가 없다. */
+  color_rgbs?: [number, number, number][] | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
@@ -540,6 +548,8 @@ export interface BeatGridTrack {
   cues: BeatGridCue[];
   /** #726 — 줄 머리 둘째 줄(`text`). 없으면 키가 없다. */
   sub_info?: BeatGridTrackSubInfo | null;
+  /** 콘솔 시퀀스 번호(서버 PR #742) — 큐 패널 머리 줄에 「Seq 282」로 쓴다. 시퀀스가 배정된 줄에만 키가 있다. */
+  sequence_number?: number | null;
 }
 
 /** t532 — 박자 격자 전체. `timeline["beat_grid"]`에 임베드된다(REQ-LDBEAT-006
@@ -716,6 +726,8 @@ export interface BeatGridStageFixture {
   x: number;
   y: number;
   z: number;
+  /** 팬·틸트 능력이 있으면 `true`(무빙 모양). 서버가 모르면 키가 없다(`undefined`) — 그때는 임시로 층 역할을 쓴다. */
+  pan_tilt?: boolean;
 }
 
 /** 카드 t565 — 박자 격자 트랙 이름과 같은 콘솔 그룹의 소속 장비(SELECTIONDATA
@@ -1374,8 +1386,13 @@ export function buildBeatGridNewPreset(
 /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
  * 원칙: UI는 콘솔 페이로드를 짓지 않는다). */
-export function buildBeatGridApply(): string {
-  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_apply" });
+export function buildBeatGridApply(mode?: "preset_plan"): string {
+  // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」만 mode 를 싣는다.
+  return JSON.stringify(
+    mode === undefined
+      ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
+      : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode },
+  );
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */
