@@ -108,6 +108,17 @@ describe("개요 — 채운 범위 표시 (시안 「← 채운 범위(0~25)」)
   });
 });
 
+describe("막대 색 — 칸에 실린 RGB(color_rgb, #731) 우선", () => {
+  it("color_rgb 가 있으면 색 번호 표 없이도 그 색으로 칠한다", () => {
+    const grid = gridWith([
+      track("WASH-ALL", "wash", [cue(0, "라벤더 워시", { color_rgb: [60, 30, 100] })]),
+    ]);
+    const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={26} />);
+    expect(html).toContain("background-color:#994dff");
+    expect(html).not.toContain("is-color-unset");
+  });
+});
+
 describe("줄 머리 둘째 줄 — 서버 sub_info.text (#726)", () => {
   it("sub_info.text 가 있으면 둘째 줄에 그대로 쓴다", () => {
     const withInfo = { ...track("BACK", "back", [cue(0, "앞박")]), sub_info: { text: "G4 · 201~212 · 12대 · Aura XB" } };

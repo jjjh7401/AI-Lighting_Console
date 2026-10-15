@@ -247,6 +247,7 @@ def attach_beat_grid_ui_values(
     *,
     track_sub_infos: Mapping[str, Mapping[str, object]] | None = None,
     pool_slots: Mapping[int, Mapping[int, str | None] | None] | None = None,
+    track_sequence_numbers: Mapping[str, int] | None = None,
 ) -> dict[str, object]:
     """타임라인 사본에 화면용 값을 싣는다(원본 불변, 있는 값은 덮지 않는다).
 
@@ -257,6 +258,8 @@ def attach_beat_grid_ui_values(
     - ``beat_grid.tracks[i].cues[j].position_preset_name`` / ``color_preset_name`` — 세션이 이미
       완전 판독해 기억한 콘솔 풀(``pool_slots``)에 그 번호의 이름이 있을 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
+    - ``beat_grid.tracks[i].sequence_number`` — ``track_sequence_numbers``(그룹 이름 대문자 -> 콘솔
+      시퀀스 번호, 반영 때 실제로 배정·기록된 값)에 있을 때만. 없으면 키를 뺀다.
     """
     merged = dict(timeline)
     bar_map = merged.get("bar_map")
@@ -289,13 +292,21 @@ def attach_beat_grid_ui_values(
         if pool_slots:
             grid = attach_console_preset_names(grid, pool_slots)
         merged["beat_grid"] = grid
-    if track_sub_infos and isinstance(grid, Mapping) and isinstance(grid.get("tracks"), list):
+    if (
+        (track_sub_infos or track_sequence_numbers)
+        and isinstance(grid, Mapping)
+        and isinstance(grid.get("tracks"), list)
+    ):
         tracks: list[object] = []
         for track in grid["tracks"]:
             if isinstance(track, Mapping):
-                info = track_sub_infos.get(str(track.get("group_name", "")).upper())
+                group = str(track.get("group_name", "")).upper()
+                info = (track_sub_infos or {}).get(group)
                 if info is not None:
                     track = {**track, "sub_info": dict(info)}
+                number = (track_sequence_numbers or {}).get(group)
+                if isinstance(number, int) and not isinstance(number, bool):
+                    track = {**track, "sequence_number": number}
             tracks.append(track)
         merged["beat_grid"] = {**grid, "tracks": tracks}
     return merged
