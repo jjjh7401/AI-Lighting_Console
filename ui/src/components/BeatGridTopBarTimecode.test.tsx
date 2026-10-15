@@ -49,10 +49,19 @@ describe("타임코드 번호 입력칸", () => {
     expect(markup).not.toContain("타임코드 번호를 넣어 주세요");
   });
 
-  it("asks for a timecode number when the draft has none", () => {
-    const markup = render({ timecodeNumber: null });
+  it("asks for a timecode number when the draft has none — the guidance lives in the input's title", () => {
+    const markup = render({ timecodeNumber: null, onTimecodeSubmit: noop });
 
-    expect(markup).toContain("타임코드 번호를 넣어 주세요");
+    expect(markup).toContain('title="타임코드 번호를 넣어 주세요 — Enter 로 적기"');
+  });
+
+  it("is only a small input next to 반영 — no label text, no 적기 button, no visible hint", () => {
+    const markup = render({ timecodeNumber: 20, onTimecodeSubmit: noop });
+
+    expect(markup).toContain('class="beat-grid-timecode-input"');
+    expect(markup).not.toContain('<span class="beat-grid-timecode"');
+    expect(markup).not.toContain(">적기<");
+    expect(markup).not.toMatch(/>타임코드/);
   });
 
   it("is enabled when a submit callback is wired", () => {

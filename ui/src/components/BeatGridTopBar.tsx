@@ -72,6 +72,8 @@ export function parseTimecodeInput(text: string): number | null {
 /** 콜백이 넘어오지 않은 입력칸(배선 전)이 그 사실을 말하는 title. */
 export const TIMECODE_UNWIRED_TITLE =
   "타임코드 번호 입력은 아직 화면에 연결되지 않았습니다 — 연결 전에는 비활성입니다";
+/** 입력칸의 안내 — 시안에 없는 작은 칸이라 글 대신 title 로 말하고, 적기는 Enter 로 한다. */
+export const TIMECODE_HINT_TITLE = "타임코드 번호를 넣어 주세요 — Enter 로 적기";
 
 export function formatTopBarBpm(bpm: number | null | undefined): string {
   if (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm <= 0) return "BPM —";
@@ -149,34 +151,32 @@ function TimecodeField({
   useEffect(() => {
     setDraft(value === null ? "" : String(value));
   }, [value]);
-  const parsed = parseTimecodeInput(draft);
   const wired = onSubmit !== undefined;
   const submit = () => {
+    const parsed = parseTimecodeInput(draft);
     if (parsed !== null) onSubmit?.(parsed);
   };
   return (
-    <span className="beat-grid-timecode" title={wired ? undefined : TIMECODE_UNWIRED_TITLE}>
-      <label>
-        타임코드{" "}
-        <input
-          type="text"
-          inputMode="numeric"
-          aria-label="타임코드 번호"
-          value={draft}
-          placeholder="번호"
-          disabled={!wired}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") submit();
-          }}
-        />
-      </label>
-      <button type="button" className="tbtn" disabled={!wired || parsed === null} onClick={submit}>
-        적기
-      </button>
-      {value === null && <span className="beat-grid-timecode-hint">타임코드 번호를 넣어 주세요</span>}
-    </span>
+    <input
+      type="text"
+      inputMode="numeric"
+      className="beat-grid-timecode-input"
+      aria-label="타임코드 번호"
+      title={wired ? TIMECODE_HINT_TITLE : TIMECODE_UNWIRED_TITLE}
+      value={draft}
+      placeholder="번호"
+      disabled={!wired}
+      onChange={(event) => setDraft(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") submit();
+      }}
+    />
   );
+}
+
+/** 배지·버튼 툴팁 — 자기 말 뒤에 격자 출처 안내(감독 상태)를 잇는다. 둘 다 없으면 title 을 두지 않는다. */
+function badgeTitle(own: string | null, note: string | null): string | undefined {
+  return [own, note].filter(Boolean).join(" · ") || undefined;
 }
 
 function ShortenedLabel({ action }: { action: TopBarAction }) {
@@ -275,8 +275,6 @@ export function BeatGridTopBar({
         <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
         <span className="beat-grid-pill-note-short"> · {SPEED_MASTER_MANUAL_SHORT_NOTE}</span>
       </span>
-      <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
-      {note && <span className="beat-grid-note">{note}</span>}
       <span className="beat-grid-topbar-spacer" />
       {/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데).
           두 번째 스페이서(아래)로 가운데 고정 — `playback`이 없으면(즉
@@ -306,7 +304,10 @@ export function BeatGridTopBar({
               10초 ⏩
             </button>
             <span className="beat-grid-clock">{formatPlaybackClock(playback.positionSeconds)}</span>
-            <label className="tbtn beat-grid-audio-label" title="음원 파일을 불러오면 음악에 맞춰 재생">
+            <label
+              className="tbtn beat-grid-audio-label"
+              title={`${playback.audioButtonLabel} — 음원 파일을 불러오면 음악에 맞춰 재생`}
+            >
               ♪ {playback.audioButtonLabel}
               <input
                 type="file"
@@ -377,17 +378,30 @@ export function BeatGridTopBar({
       >
         ■ 끄기
       </button>
+      <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
+      {/* 격자 출처 안내(감독 상태)는 반영 배지 툴팁으로 옮겼다. 배지가 없는 배선 전 상태에서만 버튼 title 에 싣는다. */}
       <button
         type="button"
         className="tbtn"
-        title={titleFor(apply.full, !!onApply)}
+        title={
+          pendingApplyCount === undefined
+            ? badgeTitle(titleFor(apply.full, !!onApply), note)
+            : titleFor(apply.full, !!onApply)
+        }
         disabled={!onApply}
         onClick={() => onApply?.()}
       >
         <ShortenedLabel action={apply} />
-        {typeof pendingApplyCount === "number" && <span className="badge">{pendingApplyCount}</span>}
+        {typeof pendingApplyCount === "number" && (
+          <span className="badge" title={badgeTitle(null, note)}>
+            {pendingApplyCount}
+          </span>
+        )}
         {pendingApplyCount === null && (
-          <span className="badge badge-dash" title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다">
+          <span
+            className="badge badge-dash"
+            title={badgeTitle("반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다", note)}
+          >
             —
           </span>
         )}
@@ -396,10 +410,10 @@ export function BeatGridTopBar({
         <button
           type="button"
           className="tbtn"
-          title="자동 배치 초안을 보류로 만든다 — 「적용」 전까지 격자는 그대로다"
+          title="자동 배치 제안 — 초안을 보류로 만든다. 「적용」 전까지 격자는 그대로다"
           onClick={() => onDraftPropose()}
         >
-          자동 배치 제안
+          자동 배치
         </button>
       )}
       <button
