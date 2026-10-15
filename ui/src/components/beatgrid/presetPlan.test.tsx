@@ -45,13 +45,14 @@ describe("필요한 프리셋 만들기", () => {
       barRange: { start: 0, end: 4 },
       onBarChange: () => {},
     };
-    expect(
-      renderToStaticMarkup(
-        <BeatGridTopBar {...props} onPresetPlanRequest={() => {}} />,
-      ),
-    ).toContain(">프리셋 계획<");
+    const html = renderToStaticMarkup(
+      <BeatGridTopBar {...props} onPresetPlanRequest={() => {}} />,
+    );
+    expect(html).toContain('aria-label="프리셋 계획"');
+    // 1450px 이상에서는 아이콘 크기(▦)만 보인다 — 한 줄 유지.
+    expect(html).toContain('<span class="lbl-short">▦</span>');
     expect(renderToStaticMarkup(<BeatGridTopBar {...props} />)).not.toContain(
-      ">프리셋 계획<",
+      "프리셋 계획",
     );
   });
 
