@@ -165,8 +165,9 @@ describe("없는 필드는 조용히 떨어진다 — undefined 를 그리지 �
   });
 
   it("그룹별 인텐시티가 없으면 d_level 로 % 를 만든다 — 표는 비지 않는다", () => {
-    expect(sectionIntensityPercent(bareSection)).toBe(bareSection.d_level * 20);
-    expect(sectionIntensityText(bareSection)).toBe(String(bareSection.d_level * 20));
+    const level = bareSection.d_level as number;
+    expect(sectionIntensityPercent(bareSection)).toBe(level * 20);
+    expect(sectionIntensityText(bareSection)).toBe(String(level * 20));
   });
 
   it("팔레트 범례가 없으면 중립색으로 떨어진다 — 색이 없어 깨지지 않는다", () => {

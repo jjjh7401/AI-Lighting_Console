@@ -6,7 +6,7 @@
 // 도우미(cueLabel·formatTc·sectionEndMs·sectionHex)로 계산한다. 한 줄 설명도 그
 // 수치로만 조립한다 — 형용 문장을 두지 않는다.
 import type { SongTimelineConceptReport, SongTimelineSection, SongTimelineView } from "../protocol";
-import { cueLabel, formatTc, sectionEndMs, songTotalMs } from "./CueSheetTimeline";
+import { cueLabel, formatTc, sectionEndMs, sectionIntensityPercent, songTotalMs } from "./CueSheetTimeline";
 import { NO_DATA, sectionHex } from "./runbookM7";
 
 export interface GlanceCard {
@@ -30,8 +30,9 @@ function sectionLevels(section: SongTimelineSection): number[] {
   if (section.intensity && section.intensity.length > 0) {
     return section.intensity.map((entry) => entry.level);
   }
-  // CUE SHEET 밝기 칸과 같은 대체값(sectionIntensityPercent 의 D 레벨 환산).
-  return [Math.min(100, Math.max(0, section.d_level * 20))];
+  // CUE SHEET 밝기 칸과 같은 대체값(sectionIntensityPercent 의 D 레벨 환산). 모르면 빈 목록.
+  const percent = sectionIntensityPercent(section);
+  return percent === null ? [] : [percent];
 }
 
 function card(
@@ -64,7 +65,7 @@ function card(
     if (hex && !hexes.includes(hex)) hexes.push(hex);
   }
   const levels = picked.flatMap(sectionLevels);
-  const brightness = `${Math.min(...levels)}–${Math.max(...levels)}%`;
+  const brightness = levels.length > 0 ? `${Math.min(...levels)}–${Math.max(...levels)}%` : null;
   const seconds = end === null ? null : ((end - first.start_ms) / 1000).toFixed(1);
   const qFirst = cueLabel(first);
   const qLast = cueLabel(picked[picked.length - 1]);
@@ -77,7 +78,7 @@ function card(
     hexes,
     colorBar: hexes[0] ?? null,
     brightness,
-    line: `구간 ${picked.length}개 · ${seconds === null ? "길이 —" : `${seconds}초`} · 밝기 ${brightness}`,
+    line: `구간 ${picked.length}개 · ${seconds === null ? "길이 —" : `${seconds}초`} · 밝기 ${brightness ?? "—"}`,
   };
 }
 

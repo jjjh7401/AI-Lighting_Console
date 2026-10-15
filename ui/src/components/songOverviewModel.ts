@@ -14,8 +14,8 @@ export interface SongOverviewSectionInput {
   palette_primary_hex?: string | null;
   /** 큐시트 확장(t279) — 있으면 `start_ms` 환산보다 우선한다. */
   bar_start?: number;
-  /** 1~5(서버 `song_plan.py`가 검증). 없으면 에너지 미정. */
-  d_level?: number;
+  /** 1~5(서버 `song_plan.py`가 검증). 없거나 null 이면 에너지 미정. */
+  d_level?: number | null;
   /** 구간 단위 강조 문구(예: `"climax accent"`). 비어 있지 않으면 ★. */
   accents?: readonly string[];
 }

@@ -68,11 +68,13 @@ export function gateTally(report: SongTimelineConceptReport | undefined): GateTa
 }
 
 /** 밝기 칸 막대·증감에 쓰는 0..100. 그룹 값이 있으면 최댓값, 없으면 d_level×20
- * (CueSheetTimeline 의 sectionIntensityPercent 와 같은 규칙 — 값은 그쪽이 정본). */
-function levelOf(section: SongTimelineSection): number {
+ * (CueSheetTimeline 의 sectionIntensityPercent 와 같은 규칙 — 값은 그쪽이 정본).
+ * 둘 다 모르면 null — 0 으로 치지 않는다. */
+function levelOf(section: SongTimelineSection): number | null {
   if (section.intensity && section.intensity.length > 0) {
     return Math.max(...section.intensity.map((entry) => entry.level));
   }
+  if (section.d_level == null) return null;
   return Math.min(100, Math.max(0, section.d_level * 20));
 }
 
@@ -81,6 +83,7 @@ export function intensityTrend(sections: SongTimelineSection[], index: number): 
   if (index <= 0 || index >= sections.length) return "";
   const now = levelOf(sections[index]);
   const before = levelOf(sections[index - 1]);
+  if (now === null || before === null) return ""; // 모르는 구간과의 증감은 없다.
   if (now > before) return "▲";
   if (now < before) return "▼";
   return "";
@@ -127,7 +130,9 @@ export function grammarRows(sections: SongTimelineSection[]): GrammarRow[] {
     const level =
       section.intensity && section.intensity.length > 0
         ? section.intensity.map((entry) => `${entry.group} ${entry.level}`).join(" / ")
-        : `D${section.d_level}`;
+        : section.d_level == null
+          ? "—"
+          : `D${section.d_level}`;
     const groups = section.fixture_groups && section.fixture_groups.length > 0
       ? ` · ${section.fixture_groups.join("+")}`
       : "";

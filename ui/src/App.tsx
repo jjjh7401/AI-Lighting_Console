@@ -122,6 +122,29 @@ const SONG_AUDIO_EXTENSION_MIME_TYPES: ReadonlyArray<readonly [string, string]> 
 const MAX_SONG_AUDIO_BYTES = 64 * 1024 * 1024;
 
 
+const BEAT_GRID_FULLSCREEN_STORAGE_KEY = "ma3-copilot.beat-grid-fullscreen";
+
+/** 박자 배치 전체화면을 기억한다 — 런북 모드와 같은 방식. 저장소를 쓸 수 없으면 꺼진 것으로 본다. */
+export function readBeatGridFullscreenFromStorage(): boolean {
+  try {
+    return window.localStorage.getItem(BEAT_GRID_FULLSCREEN_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function writeBeatGridFullscreenToStorage(active: boolean): void {
+  try {
+    if (active) {
+      window.localStorage.setItem(BEAT_GRID_FULLSCREEN_STORAGE_KEY, "1");
+    } else {
+      window.localStorage.removeItem(BEAT_GRID_FULLSCREEN_STORAGE_KEY);
+    }
+  } catch {
+    // 저장소를 쓸 수 없으면 화면은 그대로 동작한다 — 기억만 못 한다.
+  }
+}
+
 export function readRunbookModeFromStorage(): boolean {
   try {
     return window.localStorage.getItem(RUNBOOK_MODE_STORAGE_KEY) === "1";
@@ -505,8 +528,15 @@ export default function App() {
   // 카드 t537 (REQ-LDBEAT-004(a)(g)) — 박자 격자 전체화면 뷰. 런북 모드
   // 안쪽의 전환이고, 런북 모드 자체(runbookMode)가 꺼지면 같이 꺼진다
   // (아래 toggleRunbookMode는 건드리지 않는다 — 이 상태는 이 전환 전용).
-  // paperworkMode와 같은 이유로 세션-휘발성(localStorage 없음).
-  const [beatGridFullscreen, setBeatGridFullscreen] = useState(false);
+  // 전체화면 상태는 새로고침 뒤에도 기억한다(런북 모드와 같은 localStorage 방식).
+  // 처음에는 paperworkMode 와 같은 이유로 세션-휘발성으로 두었는데, 리드가 새로고침
+  // 때 전체화면이 풀리는 것을 보고 이 결정을 뒤집었다(PR #722 본문 참고).
+  const [beatGridFullscreen, setBeatGridFullscreen] = useState(readBeatGridFullscreenFromStorage);
+  const toggleBeatGridFullscreen = () => {
+    const next = !beatGridFullscreen;
+    setBeatGridFullscreen(next);
+    writeBeatGridFullscreenToStorage(next);
+  };
   // 카드 t565 — 박자 격자 전체화면을 열 때(그리고 곡이 바뀔 때) 2D 무대를 콘솔에서
   // 한 번 읽어 온다(좌표 + 트랙 그룹 소속, 읽기만). 결과는 `state.beatGridStage`.
   const beatGridSongTitle = state.songTimeline.timeline?.beat_grid?.song_title ?? null;
@@ -1193,7 +1223,7 @@ export default function App() {
           {runbookMode && (
             <button
               className={`beat-grid-fullscreen-toggle${beatGridFullscreen ? " beat-grid-fullscreen-toggle-active" : ""}`}
-              onClick={() => setBeatGridFullscreen((active) => !active)}
+              onClick={toggleBeatGridFullscreen}
               aria-label={beatGridFullscreen ? "박자 배치 전체화면 닫기" : "박자 배치 전체화면 열기"}
               aria-pressed={beatGridFullscreen}
             >
@@ -1244,7 +1274,10 @@ export default function App() {
         <div className="runbook-mode-frame beat-grid-fullscreen-frame">
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
-            onExit={() => setBeatGridFullscreen(false)}
+            onExit={() => {
+              setBeatGridFullscreen(false);
+              writeBeatGridFullscreenToStorage(false);
+            }}
             hasTimeline={Boolean(state.songTimeline.timeline)}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             timeSignature={state.songTimeline.timeline?.time_signature}

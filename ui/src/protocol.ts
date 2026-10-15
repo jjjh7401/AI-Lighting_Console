@@ -315,8 +315,10 @@ export interface SongTimelineSection {
   index: number;
   label: string;
   start_ms: number;
-  cue_number: number;
-  d_level: number;
+  /** 큐 번호. 서버가 모르면 null — 화면은 「—」로 그리고 Qnull·Qundefined 로 찍지 않는다. */
+  cue_number: number | null;
+  /** D 레벨 1~5. 서버가 모르면 null — 화면은 「—」로 그리고 0 으로 읽지 않는다. */
+  d_level: number | null;
   palette: string[];
   position: string;
   texture: string;

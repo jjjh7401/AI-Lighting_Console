@@ -151,6 +151,8 @@ export function applyTurnResult(
 
 export interface PlanCueRequestGeneratorProps {
   section: SongTimelineSection;
+  /** 수정요청이 가리키는 큐 번호. 호출하는 쪽이 번호가 있을 때만 넘긴다. */
+  cueNumber: number;
   /** 후렴 밝기 역전 경고(REQ-093 (1))가 필요로 하는 곡 전체 구간. */
   allSections: SongTimelineSection[];
   conceptRow: SongTimelineConceptRow | undefined;
@@ -215,6 +217,7 @@ export interface PlanCueRequestGeneratorViewModel {
  * 값·핸들러만 본다. */
 export function usePlanCueRequestGenerator({
   section,
+  cueNumber,
   allSections,
   conceptRow,
   reserve,
@@ -249,7 +252,6 @@ export function usePlanCueRequestGenerator({
   const queueRef = useRef<{ id: string; sentence: string }[]>([]);
   const prevResponding = useRef(responding);
 
-  const cueNumber = section.cue_number;
   const position = sectionPosition(section, allSections);
 
   // 턴 종료(D1) 감시 — responding: true → false 전이에서만 판정한다.
@@ -308,7 +310,10 @@ export function usePlanCueRequestGenerator({
   }
 
   function beforeIntensityLabel(): string {
-    if (selectedGroups.length === 0) return `${sectionIntensityPercent(section)}%`;
+    if (selectedGroups.length === 0) {
+      const percent = sectionIntensityPercent(section);
+      return percent === null ? "—" : `${percent}%`;
+    }
     const levels = selectedGroups.map(
       (g) => section.intensity?.find((entry) => entry.group === g)?.level ?? 0,
     );
