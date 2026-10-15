@@ -138,10 +138,10 @@ from server.design.beat_grid_sentence import parse_beat_grid_sentence
 from server.design.beat_grid_stage import read_beat_grid_stage
 from server.design.beat_grid_suggestion import (
     BeatGridSuggestion,
-    NullSuggestionSource,
     PendingSuggestionStore,
     SuggestionSource,
 )
+from server.design.beat_grid_suggestion_rules import ArrangementRuleSuggestionSource
 from server.design.beat_grid_unverified import unverified_beat_grid_cells
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
@@ -4198,10 +4198,12 @@ class ChatSession:
         self._beat_grid_suggestions = PendingSuggestionStore()
         # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 한 단위의 보류 저장소.
         self._arrangement_drafts = PendingDraftStore()
+        # 제안 소스의 기본값은 자동 배치 규칙이다 — 지금 열린 곡의 마디 지도와 격자에서 그 줄·그
+        # 마디의 칸을 제안한다(마디 지도가 없으면 제안하지 않는다). 시험은 다른 소스를 넘길 수 있다.
         self._beat_grid_suggestion_source: SuggestionSource = (
             beat_grid_suggestion_source
             if beat_grid_suggestion_source is not None
-            else NullSuggestionSource()
+            else ArrangementRuleSuggestionSource(bar_map_of=self._open_song_bar_map)
         )
         # 카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋의 세션
         # 상태. 저장소의 ``beat_grid_applied``는 가장 최근 반영이 실제로 쓴
@@ -9618,6 +9620,13 @@ class ChatSession:
             return dict(grid)
         return dict(attach_beat_grid_default(dict(timeline))["beat_grid"])
 
+    def _open_song_bar_map(self) -> dict | None:
+        """지금 열린 곡의 마디 지도(없으면 ``None``) — 자동 배치 규칙 제안 소스가 읽는다.
+        저장소만 읽는다. 콘솔에는 닿지 않는다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        return read_bar_map(timeline) if timeline is not None else None
+
     def _beat_grid_preset_pool_root(self) -> str:
         return self._rig_paths.get("preset_pools", "DataPool/PresetPools")
 
@@ -11186,9 +11195,9 @@ class ChatSession:
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.
-        격자·콘솔 어느 쪽도 바뀌지 않는다(결정④, 상태 diff 0) — 제안
-        소스가 교체 가능(pluggable)하고, 이 카드의 기본값(``NullSuggestion
-        Source``)은 실제 AI 백엔드 없이 정직하게 "제안 없음"을 말한다."""
+        격자·콘솔 어느 쪽도 바뀌지 않는다(결정④, 상태 diff 0). 제안 소스는 교체 가능
+        (pluggable)하고, 기본값은 자동 배치 규칙 소스다 — 열린 곡의 마디 지도로 그 줄·그 마디의
+        칸을 고른다. 근거가 없으면 정직하게 "제안 없음"을 말한다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         grid = self._beat_grid_view(timeline) if timeline is not None else {"tracks": []}
@@ -11200,8 +11209,8 @@ class ChatSession:
                 status="ok",
                 summary="박자 격자 제안 없음",
                 text=(
-                    f"{target} {bar}마디에 대한 제안이 없습니다 (AI 제안 소스가 아직 연결"
-                    "되지 않았습니다 — 콘솔에는 아무것도 쓰지 않았습니다)."
+                    f"{target} {bar}마디에 대한 제안이 없습니다 (마디 지도가 없거나 자동 배치 "
+                    "규칙상 이 칸을 바꿀 이유가 없습니다 — 콘솔에는 아무것도 쓰지 않았습니다)."
                 ),
                 commands=[],
             )
