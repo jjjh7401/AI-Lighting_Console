@@ -1337,6 +1337,15 @@ export function buildBeatGridApply(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_apply" });
 }
 
+/** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */
+export function buildBeatGridTimecodeSet(timecodeNumber: number): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_timecode_set",
+    timecode_number: timecodeNumber,
+  });
+}
+
 /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
 export function buildBeatGridPreview(bar: number): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_preview", bar });
