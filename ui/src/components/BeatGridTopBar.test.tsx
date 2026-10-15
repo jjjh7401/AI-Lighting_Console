@@ -271,6 +271,41 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
   });
 });
 
+describe("상단 바 — 1600px 한 줄 정리 (리드 지시)", () => {
+  it("격자 출처 안내(감독 상태)는 줄에 보이지 않고 반영 배지 툴팁으로 간다", () => {
+    const html = renderTopBar({ note: "이 곡의 기본값 없음", onApply: noop, pendingApplyCount: 2 });
+    expect(html).not.toContain('class="beat-grid-note"');
+    expect(html).toContain('<span class="badge" title="이 곡의 기본값 없음">2</span>');
+  });
+
+  it("「—」 배지는 반영 기록 없음 이유 뒤에 안내를 잇는다", () => {
+    const html = renderTopBar({ note: "이 곡의 기본값 없음", onApply: noop, pendingApplyCount: null });
+    expect(html).toContain('title="반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다 · 이 곡의 기본값 없음"');
+  });
+
+  it("배지가 없는 배선 전 상태에서는 안내를 반영 버튼 title 에 싣는다", () => {
+    const html = renderTopBar({ note: "이 곡의 기본값 없음", onApply: noop });
+    expect(html).toContain('title="⇪ 콘솔에 반영 · 이 곡의 기본값 없음"');
+    expect(html).not.toContain('class="badge"');
+  });
+
+  it("자동 배치 버튼은 짧은 라벨 「자동 배치」이고, 전체 이름은 title 에 있다", () => {
+    const html = renderTopBar({ onDraftPropose: noop });
+    expect(html).toContain(">자동 배치</button>");
+    expect(html).toContain('title="자동 배치 제안 — 초안을 보류로 만든다. 「적용」 전까지 격자는 그대로다"');
+  });
+
+  it("타임코드 입력칸은 반영 버튼 바로 앞에 놓이고, 안내는 입력칸 title 로 간다", () => {
+    const html = renderTopBar({ timecodeNumber: null, onTimecodeSubmit: noop, onApply: noop, pendingApplyCount: 1 });
+    const input = html.indexOf('class="beat-grid-timecode-input"');
+    const nextButton = html.indexOf("<button", input);
+    expect(input).toBeGreaterThan(0);
+    expect(html.slice(input, nextButton)).not.toMatch(/<(span|label)/);
+    expect(html.slice(nextButton)).toMatch(/^<button[^>]*title="⇪ 콘솔에 반영"/);
+    expect(html).toContain('title="타임코드 번호를 넣어 주세요 — Enter 로 적기"');
+  });
+});
+
 describe("곡 전체 지도 마크업 (AC-LDBEAT-018)", () => {
   const props = {
     filledRange: { start: 0, end: 9 },

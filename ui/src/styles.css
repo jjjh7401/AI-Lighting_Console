@@ -4258,7 +4258,7 @@ body {
 .beat-grid-topbar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
   white-space: nowrap;
   padding: 6px 8px;
@@ -4274,7 +4274,7 @@ body {
 .beat-grid-pill {
   background: #ffffff14;
   border-radius: 999px;
-  padding: 2px 9px;
+  padding: 2px 8px;
   color: var(--muted);
   font-size: 12.5px;
 }
@@ -4345,7 +4345,7 @@ body {
   color: inherit;
   border: 1px solid #3a3a44;
   border-radius: 7px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   font: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -4385,16 +4385,34 @@ body {
   display: none;
 }
 
+/* 반영 준비 — 타임코드 번호 입력칸 하나. 시안에 없는 칸이라 작게, 안내는 title 로. */
+.beat-grid-topbar .beat-grid-timecode-input {
+  width: 48px;
+  padding: 3px 6px;
+  background: #1a1a20;
+  color: inherit;
+  border: 1px solid #3a3a44;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.beat-grid-topbar .beat-grid-timecode-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데). */
 /* 카드 t570 — 시안 `.play`/`.plab`/`.clk` 그대로(테두리 묶음 + 노란 「플레이」 + 고정폭 시계). */
 .beat-grid-play-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: #ffffff0d;
   border: 1px solid #3a3a44;
   border-radius: 10px;
-  padding: 3px 8px;
+  padding: 3px 6px;
 }
 
 .beat-grid-play-label {
@@ -4544,7 +4562,7 @@ body {
   color: #fff;
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 12px;
-  min-width: 58px;
+  min-width: 52px;
   text-align: center;
 }
 
@@ -4552,6 +4570,11 @@ body {
   cursor: pointer;
   color: var(--muted);
   font-size: 12px;
+  /* 1600px 한 줄 — 긴 음원 파일명은 줄이고 전체 이름은 칸 title(툴팁)로 본다. */
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .beat-grid-locked {

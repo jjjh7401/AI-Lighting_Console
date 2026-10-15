@@ -68,13 +68,13 @@ describe("자동 배치 초안 카드", () => {
 describe("「자동 배치 제안」 버튼", () => {
   it("보류 초안이 없고 제안 핸들러가 있으면 버튼을 보인다", () => {
     const html = plain(renderToStaticMarkup(<BeatGrid grid={emptyGrid()} onDraftPropose={() => {}} />));
-    expect(html).toContain(">자동 배치 제안<");
+    expect(html).toContain(">자동 배치<");
   });
 
   it("보류 초안이 있으면 제안 버튼을 감춘다", () => {
     const html = plain(
       renderToStaticMarkup(<BeatGrid grid={emptyGrid()} pendingDraft={DRAFT} onDraftPropose={() => {}} />),
     );
-    expect(html).not.toContain(">자동 배치 제안<");
+    expect(html).not.toContain(">자동 배치<");
   });
 });
