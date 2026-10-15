@@ -359,6 +359,27 @@ describe("AC-LDBEAT-021(b) — 편집 칸 필드 순서", () => {
     expect(renderToStaticMarkup(<BeatGridMovementRow value="미정" isUnset />)).toContain('data-field="움직임"');
     expect(renderToStaticMarkup(<BeatGridSideRow />)).toContain('data-field="옆빛 L·R"');
   });
+  it("옆빛 L·R 토글이 없으면 「이 구간 왼쪽·오른쪽 따로」는 비활성이다", () => {
+    const html = renderToStaticMarkup(<BeatGridSideRow />);
+    expect(html).toContain("같이(갈라지지 않음)");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>이 구간 왼쪽·오른쪽 따로<\/button>/);
+  });
+  it("옆빛 L·R 토글이 있고 아직 안 갈랐으면 「따로」를 누를 수 있다", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridSideRow lrSplit={{ isSplit: false, onToggle: () => undefined }} />,
+    );
+    expect(html).toContain("같이(갈라지지 않음)");
+    expect(html).toContain(">이 구간 왼쪽·오른쪽 따로</button>");
+    expect(html).not.toContain("disabled");
+  });
+  it("갈라진 상태면 「L·R 다시 합치기」가 보이고 누를 수 있다", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridSideRow lrSplit={{ isSplit: true, onToggle: () => undefined }} />,
+    );
+    expect(html).toContain("따로(왼쪽·오른쪽 갈라짐)");
+    expect(html).toContain(">L·R 다시 합치기</button>");
+    expect(html).not.toContain("disabled");
+  });
   it("움직임 행 — 서버가 미확인으로 가른 칸에만 「⚠ 실기 미확인」(카드 t579, REQ-LDBEAT-010)", () => {
     const flagged = renderToStaticMarkup(
       <BeatGridMovementRow value="circle · Pan+Tilt · 4박" isUnset={false} unverifiedTerms={["circle"]} />,

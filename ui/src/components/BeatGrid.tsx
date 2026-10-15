@@ -125,6 +125,7 @@ import {
   clearLRSplit,
   declareLRSplit,
   lrChildRowsForTrack,
+  lrSplitToggleControl,
   resolveLRSplitViewAfterBarChange,
   type LRSplitDeclarations,
   type LRSplitStage,
@@ -3196,7 +3197,7 @@ export function BeatGrid({
                     />
                   )}
                   {renderEditReply("movement")}
-                  {selectedTrack.layer_role === "side" && <BeatGridSideRow />}
+                  {selectedTrack.layer_role === "side" && <BeatGridSideRow lrSplit={lrSplitToggleControl({ track: selectedTrack, stage: lrStage, segment: trackCueSegments(selectedTrack, maxBar).find((segment) => segment.cue === selectedCue), declarations: lrSplits, update: setLrSplits })} />}
                   {selectedCue?.source_ref && (
                     <div className="beat-grid-cue-field beat-grid-cue-field-source">
                       <span className="beat-grid-cue-field-label">출처</span>
