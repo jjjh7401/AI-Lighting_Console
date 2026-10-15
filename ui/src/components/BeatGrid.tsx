@@ -480,6 +480,8 @@ export interface BeatGridProps {
   grid: BeatGridView | null | undefined;
   /** 빈 화면(격자 없음·트랙 없음)의 「돌아가기」 버튼. 런북 화면으로 나간다. 없으면 버튼을 그리지 않는다. */
   onExit?: () => void;
+  /** 곡 타임라인이 열려 있는지. 격자가 없을 때 「타임라인이 없다」와 「타임라인은 있는데 격자가 없다」를 다른 안내로 가른다. */
+  hasTimeline?: boolean;
   /** 2D 무대 좌표 — 콘솔 접촉 0인 M2는 이 값을 props로만 받는다(살아있는
    * 읽기 경로가 없으면 지어내지 않는다). 비어 있으면 무대 칸은 "무대 좌표
    * 미제공" 안내로 떨어진다. */
@@ -1410,6 +1412,7 @@ const barToXAt = barToX;
 export function BeatGrid({
   grid,
   onExit,
+  hasTimeline = false,
   fixtures = [],
   stageNotes,
   stageGroups = [],
@@ -1884,10 +1887,19 @@ export function BeatGrid({
     return (
       <section className="beat-grid" aria-label="박자 격자">
         <div className="beat-grid-empty-guide">
-          <p className="beat-grid-empty-title">박자 격자가 아직 없습니다.</p>
-          <p className="beat-grid-empty">
-            박자 격자는 곡 타임라인이 있어야 생깁니다. 곡 파일을 첨부해 분석하거나 라이브러리에서 곡을 불러온 뒤 다시 여세요.
-          </p>
+          {hasTimeline ? (
+            <>
+              <p className="beat-grid-empty-title">이 곡에는 아직 박자 격자가 없습니다.</p>
+              <p className="beat-grid-empty">곡 파일을 첨부하고 「마디 지도 분석」을 하면 격자가 만들어집니다.</p>
+            </>
+          ) : (
+            <>
+              <p className="beat-grid-empty-title">박자 격자가 아직 없습니다.</p>
+              <p className="beat-grid-empty">
+                박자 격자는 곡 타임라인이 있어야 생깁니다. 라이브러리에서 곡을 불러온 뒤 다시 여세요.
+              </p>
+            </>
+          )}
           {onExit && (
             <button type="button" className="beat-grid-empty-back" onClick={onExit}>
               런북 화면으로 돌아가기
