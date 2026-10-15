@@ -60,6 +60,7 @@ import yaml
 from server.design.app_movement import app_movement_commands, brightness_value_commands
 from server.design.beat_grid import check_app_movement_axis_conflict, check_evidence_approval
 from server.design.beat_grid_measured import is_movement_measured_open
+from server.design.beat_grid_mib import plan_mib_premoves
 from server.design.cue_fade import store_with_fade
 from server.design.cue_sheet_apply import _tracking_command as _tracking_line
 from server.looks.songcue import _ascii_label, _format_seconds
@@ -253,6 +254,8 @@ class BeatGridEmitResult:
     tracks: tuple[TrackEmitResult, ...]
     blocked_reason: str | None
     timecode_setup_commands: tuple[str, ...] = field(default_factory=tuple)
+    #: 반영 준비(MIB) — 사전이동을 못 넣은 전환의 사유(미리보기에 「MIB 불가 — …」로 보인다).
+    mib_notes: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def commands(self) -> tuple[str, ...]:
@@ -613,6 +616,7 @@ def emit_beat_grid_write_bundle(
     }
 
     track_results: list[TrackEmitResult] = []
+    mib_notes: list[str] = []
     used_timecode_numbers: set[int] = set()
     # 카드 t614 — 타임코드별로 지금까지 실제 배정된 트랙 수(배정 줄의 트랙 순번 k).
     assigned_track_counts: dict[int, int] = {}
@@ -679,6 +683,10 @@ def emit_beat_grid_write_bundle(
 
         raw_cues = track.get("cues") or []
         cues_sorted = sorted(raw_cues, key=lambda c: int(c["bar"]))  # type: ignore[index]
+        # 반영 준비(MIB) — 앞 칸이 꺼져 있고 위치가 바뀌면 어둠 속 사전이동 큐를 칸 사이에 끼운다.
+        premoves, track_mib_notes = plan_mib_premoves(cues_sorted, timing)
+        mib_notes.extend(track_mib_notes)
+        cues_sorted = sorted([*cues_sorted, *premoves], key=lambda c: int(c["bar"]))  # type: ignore[index]
         cue_results: list[CueEmitResult] = []
         recorded = (recorded_cue_numbers or {}).get(group_name) or {}
         # 카드 t616 — 소유 기록에 이름은 있는데 큐가 0개인 트랙은 콘솔에 시퀀스(와 빈 자동
@@ -760,4 +768,5 @@ def emit_beat_grid_write_bundle(
         tracks=tuple(track_results),
         blocked_reason=None,
         timecode_setup_commands=tuple(timecode_setup_commands),
+        mib_notes=tuple(mib_notes),
     )

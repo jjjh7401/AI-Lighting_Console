@@ -91,7 +91,10 @@ def test_cells_without_dimmer_readout_are_excluded_and_the_rest_is_sent(tmp_path
 
     assert event["ok"] is True
     assert [cell["bar"] for cell in event["blocked_cells"]] == [2, 3]
-    assert event["notices"] == ["이 장비는 밝기 정보를 아직 읽지 않았어요 — 2칸 제외"]
+    assert event["notices"] == [
+        "이 장비는 밝기 정보를 아직 읽지 않았어요 — 2칸 제외",
+        "4마디 MIB 불가 — 앞 큐 바로 다음 마디라 어두운 시간이 없습니다",
+    ]
     writes = [line for line in console.executed if line != "SaveShow"]
     assert any(line.endswith("At Preset 1.1") for line in writes)
     assert any(line.endswith("At Preset 1.2") for line in writes)
