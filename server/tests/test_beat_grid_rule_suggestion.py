@@ -1,8 +1,9 @@
-"""자동 배치 규칙 AI 제안 소스 시험 (WT-beatgrid-suggest-real).
+"""자동 배치 규칙 AI 제안 소스 시험 (SPEC-LDBEAT-001 M3 후속).
 
-규칙 소스는 열린 곡의 마디 지도와 격자에서 한 칸을 고른다. 칸 종류는 생성기 라벨을 편집 경로가
-받는 구조화 필드 ``effect_kind`` 로 옮겨 제안하고, 「적용」은 기존 편집 경로가 맡는다. 세션 시험은
-가짜 콘솔로 돌아 콘솔 쓰기가 없음을 함께 확인한다(``FakeConsole.executed == []``).
+규칙 소스는 열린 곡의 마디 지도와 격자에서 한 칸을 고른다. 제안은 칸 종류(effect_kind)와 칸 라벨
+(label)을 함께 담고, 「적용」은 기존 편집 경로가 맡는다. 그래서 적용하면 화면의 막대
+이름표도 바뀐다.
+세션 시험은 가짜 콘솔로 돌아 콘솔 쓰기가 없음을 함께 확인한다(``FakeConsole.executed == []``).
 """
 
 from __future__ import annotations
@@ -64,19 +65,20 @@ def _find_cell(bar_map: dict, label: str) -> tuple[str, int]:
     raise AssertionError(f"라벨 {label!r} 칸이 초안에 없다")
 
 
-def _set_effect(grid: dict, track_name: str, bar: int, effect_kind: str) -> None:
+def _set_cue(
+    grid: dict, track_name: str, bar: int, effect_kind: str | None, label: str = ""
+) -> None:
     for track in grid["tracks"]:
         if track["group_name"] == track_name:
-            track["cues"].append({"bar": bar, "label": "", "effect_kind": effect_kind})
+            track["cues"].append({"bar": bar, "label": label, "effect_kind": effect_kind})
 
 
-def test_drop_start_on_strobe_row_proposes_dimmer_with_drop_reason() -> None:
-    assert generate_arrangement_draft(_bar_map(), _grid()["tracks"])["tracks"]
+def test_drop_start_on_strobe_row_proposes_effect_and_label_with_drop_reason() -> None:
     source = ArrangementRuleSuggestionSource(bar_map_of=_bar_map)
     result = source(_grid(), 17, "STROBE")
     assert result is not None
     changes, rationale = result
-    assert changes == {"effect_kind": "dimmer"}
+    assert changes == {"effect_kind": "dimmer", "label": STROBE_LABEL}
     assert "드롭 시작" in rationale
     assert STROBE_LABEL in rationale
 
@@ -86,29 +88,48 @@ def test_kick_entry_on_blind_row_reads_kick_reason() -> None:
     result = source(_grid(), 9, "BLIND")
     assert result is not None
     changes, rationale = result
-    assert changes == {"effect_kind": "dimmer"}
+    assert changes == {"effect_kind": "dimmer", "label": BLIND_LABEL}
     assert "킥 진입" in rationale
 
 
-def test_rest_cell_with_an_effect_proposes_clearing_it() -> None:
+def test_rest_cell_with_an_effect_proposes_clearing_effect_and_label() -> None:
     bar_map = _bar_map()
     track, bar = _find_cell(bar_map, REST_LABEL)
     grid = _grid()
-    _set_effect(grid, track, bar, "dimmer")
+    _set_cue(grid, track, bar, "dimmer", label=STROBE_LABEL)
     result = ArrangementRuleSuggestionSource(bar_map_of=lambda: bar_map)(grid, bar, track)
     assert result is not None
-    assert result[0] == {"effect_kind": None}
+    assert result[0] == {"effect_kind": None, "label": REST_LABEL}
 
 
 def test_cell_already_matching_the_rule_proposes_nothing() -> None:
     bar_map = _bar_map()
     track, bar = _find_cell(bar_map, STROBE_LABEL)
     grid = _grid()
-    _set_effect(grid, track, bar, "dimmer")
+    _set_cue(grid, track, bar, "dimmer", label=STROBE_LABEL)
     assert ArrangementRuleSuggestionSource(bar_map_of=lambda: bar_map)(grid, bar, track) is None
 
 
-def test_every_rule_label_maps_to_its_effect_kind() -> None:
+def test_matching_effect_but_stale_label_still_proposes_the_label() -> None:
+    """효과 종류가 맞아도 라벨이 옛 글이면 라벨도 맞춘다. 화면에 보이는 것이 바뀌어야 한다."""
+    bar_map = _bar_map()
+    track, bar = _find_cell(bar_map, STROBE_LABEL)
+    grid = _grid()
+    _set_cue(grid, track, bar, "dimmer", label="옛 라벨")
+    result = ArrangementRuleSuggestionSource(bar_map_of=lambda: bar_map)(grid, bar, track)
+    assert result is not None
+    assert result[0] == {"effect_kind": "dimmer", "label": STROBE_LABEL}
+
+
+def test_rest_bar_without_any_cue_proposes_nothing() -> None:
+    """칸이 없고 규칙도 꺼짐이면 꺼짐 칸을 새로 만들지 않는다."""
+    bar_map = _bar_map()
+    track, bar = _find_cell(bar_map, REST_LABEL)
+    source = ArrangementRuleSuggestionSource(bar_map_of=lambda: bar_map)
+    assert source(_grid(), bar, track) is None
+
+
+def test_every_rule_label_maps_to_its_effect_kind_and_label() -> None:
     """생성기가 실제로 고르는 라벨마다 제안 값이 표와 같아야 한다 — 표가 어긋나면 여기서 잡힌다."""
     bar_map = _bar_map()
     draft = generate_arrangement_draft(bar_map, _grid()["tracks"])
@@ -126,7 +147,10 @@ def test_every_rule_label_maps_to_its_effect_kind() -> None:
             if expected is None:
                 assert result is None, where
             else:
-                assert result is not None and result[0] == {"effect_kind": expected}, where
+                assert result is not None and result[0] == {
+                    "effect_kind": expected,
+                    "label": label,
+                }, where
     assert len(seen) >= 4, f"관찰된 라벨이 너무 적다: {sorted(seen)}"
 
 
@@ -164,7 +188,7 @@ def test_session_suggest_uses_the_open_song_bar_map(harness) -> None:
     event = session.beat_grid_suggest(17, "STROBE")
     assert event["type"] == "beat_grid_suggestion"
     assert (event["bar"], event["target"]) == (17, "STROBE")
-    assert event["changes"] == {"effect_kind": "dimmer"}
+    assert event["changes"] == {"effect_kind": "dimmer", "label": STROBE_LABEL}
     assert "드롭 시작" in event["rationale"]
     assert console.executed == []
 
@@ -179,7 +203,8 @@ def test_session_suggest_without_bar_map_says_no_suggestion(tmp_path) -> None:
     assert console.executed == []
 
 
-def test_suggestion_apply_writes_effect_kind_into_grid_only(harness) -> None:
+def test_suggestion_apply_writes_effect_kind_and_label_into_grid_only(harness) -> None:
+    """적용하면 격자의 효과 종류와 라벨이 바뀐다(화면의 이름표). 콘솔은 건드리지 않는다."""
     session, console, store, _sent = harness
     suggestion = session.beat_grid_suggest(17, "STROBE")
     session.beat_grid_suggestion_apply(suggestion["suggestion_id"])
@@ -192,4 +217,5 @@ def test_suggestion_apply_writes_effect_kind_into_grid_only(harness) -> None:
         if cue["bar"] == 17
     )
     assert cue["effect_kind"] == "dimmer"
+    assert cue["label"] == STROBE_LABEL
     assert console.executed == []

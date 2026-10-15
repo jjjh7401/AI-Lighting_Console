@@ -5,8 +5,9 @@
 제안은 기존 보류 흐름(``PendingSuggestionStore``)에 담기고, 「적용」은 기존 편집 경로
 (``apply_beat_grid_edit``)가 맡는다. 이 모듈은 격자와 콘솔에 쓰지 않는다.
 
-라벨 문자열(예: "스트로브 1마디")은 편집 경로가 받는 필드가 아니라서 제안으로 바꾸지 않는다.
-대신 제안 이유(rationale)에 생성기가 고른 라벨을 그대로 적는다.
+제안은 효과 종류(``effect_kind``)와 칸 라벨(``label``)을 함께 담는다. 편집 경로가 두 필드를
+모두 받으므로, 「적용」하면 화면의 막대 이름표도 함께 바뀐다. 제안 이유(rationale)에는 생성기가
+고른 라벨과 그 근거를 적는다.
 """
 
 from __future__ import annotations
@@ -87,19 +88,28 @@ class ArrangementRuleSuggestionSource:
             return None
         label = str(draft_cue["label"])
         wanted = _EFFECT_KIND_FOR_LABEL[label]
-        if wanted == _current_effect_kind(tracks, name, bar):
+        current = _current_cue(tracks, name, bar)
+        if current is None and wanted is None:
+            return None  # 칸이 없고 규칙도 꺼짐이면 새로 만들 이유가 없다
+        current_effect = current.get("effect_kind") if current is not None else None
+        current_label = str(current.get("label") or "") if current is not None else ""
+        if wanted == current_effect and label == current_label:
             return None
-        return {"effect_kind": wanted}, _rationale(bar_map, bar, target, label, wanted)
+        return {"effect_kind": wanted, "label": label}, _rationale(
+            bar_map, bar, target, label, wanted
+        )
 
 
-def _current_effect_kind(tracks: list[Mapping[str, object]], name: str, bar: int) -> object:
-    """격자에 적힌 그 줄·그 마디의 효과 종류. 칸이 없으면 ``None``."""
+def _current_cue(
+    tracks: list[Mapping[str, object]], name: str, bar: int
+) -> Mapping[str, object] | None:
+    """격자에 적힌 그 줄·그 마디의 칸. 없으면 ``None``."""
     for track in tracks:
         if str(track.get("group_name", "")).casefold() != name:
             continue
         for cue in track.get("cues") or []:
             if isinstance(cue, Mapping) and cue.get("bar") == bar:
-                return cue.get("effect_kind")
+                return cue
     return None
 
 
