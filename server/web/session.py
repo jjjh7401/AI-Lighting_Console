@@ -49,6 +49,9 @@ from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.approval_vs_sent import verify_approval_vs_sent
+from server.design.arrange_apply import ArrangementApplyError, apply_arrangement_draft
+from server.design.arrange_draft_store import PendingDraftStore
+from server.design.arrange_generator import generate_arrangement_draft
 from server.design.beat_grid import (
     CELL_HOLD,
     EMPTY_PRESET_HOLD,
@@ -352,6 +355,8 @@ from server.web.messages import (
     MAX_SONG_AUDIO_CHUNK_BASE64_LENGTH,
     answer_delta_event,
     approval_request_event,
+    beat_grid_draft_consumed_event,
+    beat_grid_draft_event,
     beat_grid_drawer_event,
     beat_grid_send_status_event,
     beat_grid_stage_event,
@@ -4190,6 +4195,8 @@ class ChatSession:
         # 이전 연결의 제안은 새 연결에서 보이지 않는다. 이 저장소를 세션 밖으로
         # 빼면 그 경계가 깨진다.
         self._beat_grid_suggestions = PendingSuggestionStore()
+        # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 한 단위의 보류 저장소.
+        self._arrangement_drafts = PendingDraftStore()
         self._beat_grid_suggestion_source: SuggestionSource = (
             beat_grid_suggestion_source
             if beat_grid_suggestion_source is not None
@@ -11195,6 +11202,83 @@ class ChatSession:
             target=suggestion.target,
             changes=suggestion.changes,
             rationale=suggestion.rationale,
+        )
+        self._send(event)
+        return event
+
+    def beat_grid_draft_propose(self) -> dict:
+        """SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 한 단위를 **보류 상태로만** 만든다.
+        마디 지도와 현재 격자의 트랙 구성으로 생성기를 돌린다. 격자와 콘솔은 바뀌지 않는다
+        (제안 단계, 결정④와 같은 원칙). 마디 지도가 없거나 쓸 수 없으면 거절한다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection("곡이 열려 있지 않아 자동 배치를 만들 수 없습니다.")
+        bar_map = read_bar_map(timeline)
+        if bar_map is None:
+            return self._beat_grid_rejection(
+                "마디 지도가 없어 자동 배치를 만들 수 없습니다. 곡 오디오를 먼저 분석하세요."
+            )
+        layout = self._beat_grid_view(timeline)["tracks"]
+        draft = generate_arrangement_draft(bar_map, layout)
+        if draft["note"] is not None or not draft["tracks"]:
+            return self._beat_grid_rejection(draft["note"] or "자동 배치 초안이 비어 있습니다.")
+        draft_id = self._arrangement_drafts.create(draft)
+        event = beat_grid_draft_event(draft_id=draft_id, draft=draft)
+        self._send(event)
+        return event
+
+    def beat_grid_draft_apply(self, draft_id: str) -> dict:
+        """SPEC-LDARRANGE-001 두 번째 묶음 — 감독의 「적용」. 보류 초안을 **한 번만** 꺼내 격자에
+        한꺼번에 반영한다. 칸이 없는 마디에는 칸을 새로 만든다. 되돌리기 기록을 남기므로 되돌릴
+        수 있다. 콘솔에는 쓰지 않는다(콘솔 반영은 별도의 승인 경로)."""
+        draft = self._arrangement_drafts.consume(draft_id)
+        # 있었든 없었든 보낸다. 화면이 보류 목록에서 이 id 를 지운다(없는 id 면 안전한 no-op).
+        self._send(beat_grid_draft_consumed_event(draft_id=draft_id))
+        if draft is None:
+            return self._beat_grid_rejection(
+                f"초안 '{draft_id}'을 찾을 수 없습니다(이미 적용·거절된 초안이거나, "
+                "재연결로 보류 초안이 버려진 경우일 수 있습니다)."
+            )
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_rejection("곡이 열려 있지 않아 초안을 적용할 수 없습니다.")
+        grid = self._beat_grid_view(timeline)
+        try:
+            updated_grid, report = apply_arrangement_draft(grid, draft)
+        except ArrangementApplyError as error:
+            return self._beat_grid_rejection(str(error))
+        self._draft_history.record(timeline)
+        updated_timeline = dict(timeline)
+        updated_timeline["beat_grid"] = updated_grid
+        updated_timeline = self._draft_badge(
+            updated_timeline, depth=self._draft_history.depth, report=report
+        )
+        store.latest = updated_timeline
+        self._send(
+            song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
+        )
+        self._beat_grid_send_status(last_action="edit", ok=True)
+        event = chat_response_event(
+            status="ok",
+            summary="박자 배치 초안 적용",
+            text=f"{' · '.join(report)} (콘솔 무접촉). 콘솔 반영은 별도의 승인 경로입니다.",
+            commands=[],
+        )
+        self._send(event)
+        return event
+
+    def beat_grid_draft_reject(self, draft_id: str) -> dict:
+        """SPEC-LDARRANGE-001 두 번째 묶음 — 감독의 「거절」. 보류 초안을 꺼내 버리고 격자와
+        콘솔은 건드리지 않는다. 보류 목록에서 지우도록 소비 이벤트를 보낸다."""
+        self._arrangement_drafts.consume(draft_id)
+        self._send(beat_grid_draft_consumed_event(draft_id=draft_id))
+        event = chat_response_event(
+            status="ok",
+            summary="박자 배치 초안 거절",
+            text="자동 배치 초안을 거절했습니다 (격자와 콘솔에는 아무것도 쓰지 않았습니다).",
+            commands=[],
         )
         self._send(event)
         return event
