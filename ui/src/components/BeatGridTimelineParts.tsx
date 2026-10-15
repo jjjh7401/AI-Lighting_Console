@@ -2,11 +2,14 @@
 // LDBEAT-001 M9 step 3, 카드 t561, REQ-LDBEAT-020(a)). 정본: design/
 // ldbeat-runbook-ui-proposal-20261008.html `clipsHTML`(`.jt`·`.fw`)·
 // `drawLanes`(`.trow`·`.tm`)·`drawTr`(장면 전환 표).
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+
 import type { BeatGridCue, BeatGridTrack } from "../protocol";
 import { barToX, PX_PER_BAR } from "./BeatGrid";
 import {
   entryFadeInBars,
   entryHasFade,
+  entryWith,
   formatEntryFade,
   jointMarker,
   sceneChangeRows,
@@ -16,6 +19,7 @@ import {
   trimSeconds,
   type FullBeatGridEntry,
 } from "./beatGridTransition";
+import { reduceSeamDrag, SEAM_DROP_HOLD_MS, type SeamDragEvent, type SeamDragState } from "./beatGridSeam";
 import "./beatGridPanels.css";
 
 /** 이음매 하나 + 다음 막대 왼쪽의 페이드 번짐(시안 `.jt` + `.fw`). */
@@ -31,6 +35,8 @@ export function BeatGridJoint({
   pxPerBar = PX_PER_BAR,
   beatsPerBar = null,
   accentBars = [],
+  target,
+  onMoveTrigger,
 }: {
   prev: BeatGridCue;
   cue: BeatGridCue;
@@ -48,13 +54,76 @@ export function BeatGridJoint({
   beatsPerBar?: number | null;
   /** 카드 t567 — 강조(★) 마디(곡 데이터). 위치 끊김 경고의 예외. */
   accentBars?: readonly number[];
+  /** 끌기로 옮긴 트리거 박을 보낼 줄 이름(전환 편집 요청의 target). 없으면 끌 수 없다. */
+  target?: string;
+  /** 끌어서 놓은 트리거 박을 전환 편집 요청으로 보낸다 — 전환 보기가 쓰는 같은 경로. 없으면 끌 수 없다. */
+  onMoveTrigger?: (request: { bar: number; target: string; changes: Record<string, unknown> }) => void;
 }) {
   const marker = jointMarker(prev, cue, sectionStartBars, secondsPerBar ?? null, beatsPerBar, accentBars);
   const fadeBars = entryHasFade(cue.entry) ? (entryFadeInBars(cue.entry, beatsPerBar) ?? 0) : 0;
   // 시안 `.jt` 위치 = 마디 + (트리거 박 - 1) 칸 — 박자표를 모르면 마디 시작에 둔다.
-  const triggerOffset =
-    beatsPerBar !== null && cue.entry.trigger_beat ? ((cue.entry.trigger_beat - 1) / beatsPerBar) * pxPerBar : 0;
+  // 끌기 — 손을 떼기 전에는 끌고 있는 자리를, 놓은 뒤에는 서버가 새 칸을 보낼 때까지 놓은 자리를 보인다.
+  const startBeat = cue.entry.trigger_beat ?? 1;
+  const canDrag = beatsPerBar !== null && target !== undefined && onMoveTrigger !== undefined;
+  const dragRef = useRef<SeamDragState>({ phase: "idle" });
+  const suppressClickRef = useRef(false);
+  const [dragBeat, setDragBeat] = useState<number | null>(null);
+  const [droppedBeat, setDroppedBeat] = useState<number | null>(null);
+  // 새 칸 객체가 오면(서버 응답) 놓은 자리는 저장된 자리가 됐으니 치운다.
+  useEffect(() => {
+    setDroppedBeat(null);
+  }, [cue]);
+  // 응답이 없으면 잠깐 뒤 저장된 자리로 돌아간다.
+  useEffect(() => {
+    if (droppedBeat === null) return undefined;
+    const timer = setTimeout(() => setDroppedBeat(null), SEAM_DROP_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [droppedBeat]);
+  const shownBeat = dragBeat ?? droppedBeat ?? startBeat;
+  // 시안 `.jt` 위치 = 마디 + (트리거 박 - 1) 칸 — 박자표를 모르면 마디 시작에 둔다.
+  const triggerOffset = beatsPerBar !== null ? ((shownBeat - 1) / beatsPerBar) * pxPerBar : 0;
   const left = barToX(cue.bar, pxPerBar) + triggerOffset;
+  // 포인터 이벤트는 끌기 계산(beatGridSeam)으로 넘긴다. 놓을 때만 옮겨진 트리거를 보낸다.
+  const feed = (event: SeamDragEvent) => {
+    const outcome = reduceSeamDrag(dragRef.current, event);
+    dragRef.current = outcome.state;
+    setDragBeat(outcome.state.phase === "dragging" ? outcome.state.beat : null);
+    if (outcome.suppressClick) suppressClickRef.current = true;
+    if (outcome.commitBeat !== null && target !== undefined && onMoveTrigger !== undefined) {
+      setDroppedBeat(outcome.commitBeat);
+      onMoveTrigger({
+        bar: cue.bar,
+        target,
+        changes: { entry: entryWith(cue.entry, { trigger_beat: outcome.commitBeat }) },
+      });
+    }
+  };
+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canDrag || event.button !== 0) return;
+    suppressClickRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    feed({ type: "down", pointerId: event.pointerId, x: event.clientX, startBeat });
+  };
+  const onPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canDrag) return;
+    feed({ type: "move", pointerId: event.pointerId, x: event.clientX, pxPerBar, beatsPerBar });
+  };
+  const onPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canDrag) return;
+    feed({ type: "up", pointerId: event.pointerId, x: event.clientX, pxPerBar, beatsPerBar });
+  };
+  const onPointerCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!canDrag) return;
+    feed({ type: "cancel", pointerId: event.pointerId });
+  };
+  // 끌었으면 뒤따르는 클릭은 편집 창을 열지 않는다.
+  const onClick = () => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    onOpen();
+  };
   const bleedFrom = prevFill ?? (prev.label.trim() === "—" ? "#25252c" : "#d8d8d8");
   return (
     <>
@@ -71,10 +140,16 @@ export function BeatGridJoint({
       )}
       <button
         type="button"
-        className={["beat-grid-joint", ...marker.classes, isOn ? "is-on" : ""].filter(Boolean).join(" ")}
+        className={["beat-grid-joint", ...marker.classes, isOn ? "is-on" : "", dragBeat !== null ? "is-dragging" : ""]
+          .filter(Boolean)
+          .join(" ")}
         style={{ left }}
         title={marker.title}
-        onClick={onOpen}
+        onClick={onClick}
+        onPointerDown={canDrag ? onPointerDown : undefined}
+        onPointerMove={canDrag ? onPointerMove : undefined}
+        onPointerUp={canDrag ? onPointerUp : undefined}
+        onPointerCancel={canDrag ? onPointerCancel : undefined}
       >
         {marker.glyph || "◆"}
       </button>
