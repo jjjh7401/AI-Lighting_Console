@@ -4892,7 +4892,8 @@ body {
 .beat-grid-insp {
   display: flex;
   gap: 10px;
-  flex: 0 0 280px;
+  /* 시안 `.insp` 높이 390px — 무대와 「이 마디 한눈에」 표가 같은 띠를 나눠 쓴다. */
+  flex: 0 0 390px;
   min-height: 0;
 }
 
@@ -4962,12 +4963,17 @@ body {
   align-self: center;
 }
 
+/* 시안 명령창 아래 단축키 안내 줄 — 노란 작은 글씨 한 줄(문구는 한 줄을 넘기지 않는다). */
 .beat-grid-hint-line {
-  padding: 6px 12px;
+  padding: 4px 12px;
   background: #0b0b0e;
-  color: #b9e3a1;
+  color: #ffd84d;
   font-family: ui-monospace, monospace;
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
   border-top: 1px solid #000;
 }
 
@@ -5083,15 +5089,18 @@ body {
 /* t537 레이아웃 교정 — 시안의 `.sidepane`(310px 고정폭, 타임라인 바로
    오른쪽)과 같은 자리·폭. `.beat-grid-mid`의 둘째 칸이라 높이는 그
    줄(`.beat-grid-lanes`와 같은 높이)만큼 자동으로 늘어난다. */
+/* 시안 `.sidepane` — 오른쪽 310px 편집 패널. 바탕 #141419, 왼쪽 검은 구분선. */
 .beat-grid-cue-panel {
   flex: 0 0 310px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  padding: 8px 10px;
-  background: #1a1e28;
+  gap: 4px;
+  border: none;
+  border-left: 2px solid #000;
+  border-radius: 0;
+  padding: 10px 12px;
+  background: #141419;
+  font-size: 12.5px;
   min-width: 260px;
   overflow: auto;
 }
@@ -5101,11 +5110,14 @@ body {
   text-align: center;
 }
 
+/* 시안 `.sidepane h5` — 머리 「BACK · Cue 5 'Back Hold'」 13px 흰색. */
 .beat-grid-cue-panel header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12.5px;
+  margin: 0 0 4px;
+  color: #fff;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -5115,9 +5127,20 @@ body {
   align-items: center;
 }
 
+/* 시안 `.tg.on` — 켜진 「전환」 버튼은 노랑. */
 .beat-grid-transition-toggle.is-on {
-  background: var(--accent);
-  color: #fff;
+  background: #ffd84d;
+  border-color: #ffd84d;
+  color: #111;
+  font-weight: 700;
+}
+
+/* 시안 `.fx` — 머리 아래 두 줄 정보(장비 · 그룹 / Cue · 마디 · 초). */
+.beat-grid-cue-head-meta {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0 0 6px;
 }
 
 .beat-grid-cue-field {
@@ -5155,8 +5178,10 @@ body {
   min-width: 0;
 }
 
+/* 시안 `.ed label` — 이름표 폭 62px, 11.5px. */
 .beat-grid-cue-field-label {
-  min-width: 48px;
+  min-width: 62px;
+  font-size: 11.5px;
   color: var(--muted);
 }
 
@@ -5275,19 +5300,54 @@ body {
   font-size: 11.5px;
 }
 
+/* 시안 `.cmd` — 맨 아래 명령창. 바탕 #0f0f12, 입력칸과 세 버튼이 한 줄. */
 .beat-grid-cmd {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  padding: 8px 12px;
+  background: #0f0f12;
+}
+
+.beat-grid-cmd-label {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .beat-grid-cmd-input {
   flex: 1;
-  background: #1a1d24;
-  border: 1px solid #2a2e37;
+  min-width: 260px;
+  font: inherit;
+  font-size: 13px;
+  background: #2b2b33;
+  border: 1px solid #3a3a44;
   color: var(--text);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 8px;
+  padding: 6px 10px;
 }
+
+/* 시안 `.tbtn` — 「바로 적용(문장)」 · 「AI 제안」 · 「📁 프리셋」. */
+.beat-grid-cmd button {
+  background: #2b2b33;
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 7px;
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.beat-grid-cmd button:hover:not(:disabled) {
+  border-color: #6a6a78;
+}
+
+.beat-grid-cmd button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 
 .beat-grid-probe-list {
   margin: 0;
