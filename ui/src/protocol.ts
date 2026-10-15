@@ -770,6 +770,36 @@ export function joinSongAudioLinkChunks(state: SongAudioLinkAssemblyState): stri
   return state.chunks.join("");
 }
 
+/** SPEC-LDARRANGE-001 — 자동 배치 초안(보류 한 단위). 서버 `beat_grid_draft` 모양이다. 칸은 `bar`·`label` 만 온다. */
+export interface BeatGridDraftCell {
+  bar: number;
+  label: string;
+}
+
+export interface BeatGridDraftTrack {
+  group_name: string;
+  group_no: number | null;
+  group_no_confirmed: boolean;
+  layer_role: string | null;
+  cells: BeatGridDraftCell[];
+}
+
+/** 구간별 배치 결정(4마디 단위). 제안 카드는 쓰지 않고, 나중 표시와 시험을 위해 그대로 받는다. */
+export interface BeatGridDraftWindow {
+  start_bar: number;
+  end_bar: number;
+  lead: string | null;
+  active: string[];
+  drop: boolean;
+}
+
+export interface BeatGridDraft {
+  draft_id: string;
+  bar_range: { start: number; end: number };
+  windows: BeatGridDraftWindow[];
+  tracks: BeatGridDraftTrack[];
+}
+
 export interface BeatGridPendingSuggestion {
   suggestion_id: string;
   bar: number;
@@ -1101,7 +1131,11 @@ export type ServerEvent =
   | { v: 1; type: "beat_grid_suggestion_consumed"; suggestion_id: string }
   // 카드 t563 — 상단 바 콘솔 버튼 셋(반영·미리보기·끄기) + 편집 성공 때의
   // 대기 수 배지 갱신. 공용 한 타입(아래 BeatGridSendStatus).
-  | ({ v: 1; type: "beat_grid_send_status" } & BeatGridSendStatus);
+  | ({ v: 1; type: "beat_grid_send_status" } & BeatGridSendStatus)
+  // SPEC-LDARRANGE-001 — 자동 배치 초안(보류 한 단위). 「적용」·「거절」 때 draft_id 만 되돌려 보낸다.
+  | ({ v: 1; type: "beat_grid_draft" } & BeatGridDraft)
+  // 보류 초안이 소비됐다(적용·거절 공통). 없던 id 도 온다 — 없는 id 를 지우는 건 no-op 이다.
+  | { v: 1; type: "beat_grid_draft_consumed"; draft_id: string };
 
 const SERVER_EVENT_TYPES = new Set([
   "chat_response",
@@ -1234,6 +1268,21 @@ export function buildBeatGridSuggestionReject(suggestionId: string): string {
     type: "beat_grid_suggestion_reject",
     suggestion_id: suggestionId,
   });
+}
+
+/** SPEC-LDARRANGE-001 — 「자동 배치 제안」: 초안을 보류로 만들어 달라는 요청(격자·콘솔은 그대로). */
+export function buildBeatGridDraftPropose(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_draft_propose" });
+}
+
+/** SPEC-LDARRANGE-001 — 「적용」: 보류 초안 한 단위 전체를 적용한다(칸 라벨만 초안 값으로, 되돌리기 기록). */
+export function buildBeatGridDraftApply(draftId: string): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_draft_apply", draft_id: draftId });
+}
+
+/** SPEC-LDARRANGE-001 — 「거절」: 보류 초안을 버린다(격자·콘솔은 그대로). */
+export function buildBeatGridDraftReject(draftId: string): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_draft_reject", draft_id: draftId });
 }
 
 /** 카드 t551 후속(지시 1항) — 프리셋 서랍 열기(mockup `#bLib`). 페이로드
@@ -1772,6 +1821,8 @@ export interface UiState {
   /** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. 소비(적용·
    * 거절)되면 `null`로 돌아간다(`beat_grid_suggestion_consumed`). */
   pendingBeatGridSuggestion: BeatGridPendingSuggestion | null;
+  /** SPEC-LDARRANGE-001 — 보류 중인 자동 배치 초안. 적용·거절·소비 때 `null` 로 돌아간다. */
+  pendingBeatGridDraft: BeatGridDraft | null;
   /** 카드 t563 — 상단 바 콘솔 버튼 셋의 가장 최근 응답. 한 번도 안
    * 왔으면(반영·미리보기를 아직 안 눌렀고 편집도 없었으면) `null` —
    * 배지 숫자를 지어내지 않는다. */
@@ -1792,6 +1843,7 @@ export const initialState: UiState = {
   beatGridDrawer: null,
   beatGridStage: null,
   pendingBeatGridSuggestion: null,
+  pendingBeatGridDraft: null,
   beatGridSendStatus: null,
   songAudioLink: {
     status: null,
@@ -2049,6 +2101,20 @@ export function reduceServerEvent(
       // 덮였으면) 건드리지 않는다. 없는 id를 지우는 건 안전한 no-op이다.
       if (state.pendingBeatGridSuggestion?.suggestion_id !== event.suggestion_id) return state;
       return { ...state, pendingBeatGridSuggestion: null };
+    case "beat_grid_draft":
+      return {
+        ...state,
+        pendingBeatGridDraft: {
+          draft_id: event.draft_id,
+          bar_range: event.bar_range,
+          windows: event.windows,
+          tracks: event.tracks,
+        },
+      };
+    case "beat_grid_draft_consumed":
+      // 보류 초안과 id 가 같을 때만 지운다. 없는 id 는 안전한 no-op 이다.
+      if (state.pendingBeatGridDraft?.draft_id !== event.draft_id) return state;
+      return { ...state, pendingBeatGridDraft: null };
     case "beat_grid_send_status":
       // 최신 응답으로 REPLACE(병합 없음) — 이전 reason/blocked_cells가
       // 새 호출 결과와 섞이면 "지금 왜 막혔는지"를 잘못 말하게 된다.
@@ -2238,7 +2304,7 @@ function clearPendingRequests(state: UiState): UiState {
   if (state.pendingApprovals.length === 0 && state.pendingReviews.length === 0 && !hasSuggestion) {
     return state;
   }
-  return { ...state, pendingApprovals: [], pendingReviews: [], pendingBeatGridSuggestion: null };
+  return { ...state, pendingApprovals: [], pendingReviews: [], pendingBeatGridSuggestion: null, pendingBeatGridDraft: null };
 }
 
 /**

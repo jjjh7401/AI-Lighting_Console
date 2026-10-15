@@ -404,6 +404,9 @@ export default function App() {
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
+    sendBeatGridDraftPropose,
+    sendBeatGridDraftApply,
+    sendBeatGridDraftReject,
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
@@ -1260,6 +1263,10 @@ export default function App() {
             pendingSuggestion={state.pendingBeatGridSuggestion}
             onSuggestionAccept={sendBeatGridSuggestionApply}
             onSuggestionReject={sendBeatGridSuggestionReject}
+            pendingDraft={state.pendingBeatGridDraft}
+            onDraftPropose={sendBeatGridDraftPropose}
+            onDraftApply={sendBeatGridDraftApply}
+            onDraftReject={sendBeatGridDraftReject}
             drawerSections={state.beatGridDrawer}
             onDrawerRequest={sendBeatGridDrawerRequest}
             onPreviewBar={sendBeatGridPreview}

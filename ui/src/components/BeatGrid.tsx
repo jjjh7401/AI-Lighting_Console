@@ -39,6 +39,7 @@ import type {
   BeatGridCue,
   BeatGridDrawerEntry,
   BeatGridDrawerSection,
+  BeatGridDraft,
   BeatGridEmptyPresetCell,
   BeatGridEvidence,
   BeatGridFxRecipe,
@@ -595,6 +596,14 @@ export interface BeatGridProps {
    * 아무 트랙에도 점선 막대가 뜨지 않는다(지금까지와 바이트 동일).
    */
   pendingSuggestion?: BeatGridPendingSuggestion | null;
+  /** SPEC-LDARRANGE-001 — 보류 중인 자동 배치 초안. 있으면 큐 편집 칸이 초안 카드로 바뀐다. */
+  pendingDraft?: BeatGridDraft | null;
+  /** 「자동 배치 제안」 — 서버에 초안을 한 번 요청한다(보류만 만든다). */
+  onDraftPropose?: () => void;
+  /** 초안 「적용」 — draft_id 하나를 되돌려 보내면 서버가 한 단위 전체를 적용한다. */
+  onDraftApply?: (draftId: string) => void;
+  /** 초안 「거절」 — draft_id 하나를 되돌려 보내면 서버가 보류를 버린다(격자·콘솔은 그대로). */
+  onDraftReject?: (draftId: string) => void;
   /** 카드 t551 후속 — mockup `aOk`(수락 → 같은 편집 요청을 보낸다). */
   onSuggestionAccept?: (suggestionId: string) => void;
   /** 카드 t551 후속 — mockup `aNo`(거절 → 격자·콘솔 diff 0). */
@@ -1409,6 +1418,11 @@ function renderPresetOptions(
 /** 카드 t559 — 컴포넌트 안의 확대 반영 `barToX`가 가리는 모듈 함수의 별칭. */
 const barToXAt = barToX;
 
+/** SPEC-LDARRANGE-001 — 초안이 바꿀 칸 수(트랙별 칸의 합). 0이면 「적용」을 막는다. */
+function draftCellCount(draft: BeatGridDraft): number {
+  return draft.tracks.reduce((total, track) => total + track.cells.length, 0);
+}
+
 export function BeatGrid({
   grid,
   onExit,
@@ -1436,6 +1450,10 @@ export function BeatGrid({
   onSentenceEditRequest,
   onSuggestionRequest,
   pendingSuggestion = null,
+  pendingDraft = null,
+  onDraftPropose,
+  onDraftApply,
+  onDraftReject,
   onSuggestionAccept,
   onSuggestionReject,
   drawerSections = null,
@@ -2110,6 +2128,7 @@ export function BeatGrid({
         onApply={onApply}
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
+        onDraftPropose={pendingDraft ? undefined : onDraftPropose}
         playback={{
           playing,
           positionSeconds: playbackSeconds,
@@ -2462,7 +2481,42 @@ export function BeatGrid({
             시안 `.sidepane .ed`) — 프리셋 목록은 서랍이 읽은 카탈로그에서
             온다. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
-          {pendingSuggestion ? (
+          {pendingDraft ? (
+            // SPEC-LDARRANGE-001 — 자동 배치 초안이 보류 중인 동안은 이 칸이 초안 카드가 된다.
+            // 「적용」·「거절」 전까지 격자·콘솔은 바뀌지 않는다. 적용은 칸 라벨만 바꾸고 되돌리기 기록을 남긴다.
+            <div className="beat-grid-ai-suggestion beat-grid-draft" aria-label="자동 배치 초안">
+              <header>
+                <span>자동 배치 초안</span>
+                <span>
+                  {pendingDraft.bar_range.start}~{pendingDraft.bar_range.end}마디
+                </span>
+              </header>
+              <p>
+                줄 {pendingDraft.tracks.length}개 · 칸 {draftCellCount(pendingDraft)}개. 「적용」하면 같은 칸의 라벨이
+                초안 값으로 바뀌고 되돌리기 기록이 남습니다. 콘솔에는 쓰지 않습니다.
+              </p>
+              <ul className="beat-grid-draft-tracks">
+                {pendingDraft.tracks.map((track, index) => (
+                  <li key={`${track.group_name}-${index}`}>
+                    {track.group_name} · {track.cells.length}칸
+                  </li>
+                ))}
+              </ul>
+              <div className="beat-grid-ai-suggestion-actions">
+                <button
+                  type="button"
+                  className="tbtn pri"
+                  disabled={draftCellCount(pendingDraft) === 0}
+                  onClick={() => onDraftApply?.(pendingDraft.draft_id)}
+                >
+                  적용
+                </button>
+                <button type="button" onClick={() => onDraftReject?.(pendingDraft.draft_id)}>
+                  거절
+                </button>
+              </div>
+            </div>
+          ) : pendingSuggestion ? (
             // mockup `#bAi` 핸들러(지시 1항) — AI 제안이 보류 중인 동안은
             // 이 칸이 "AI 제안" 카드로 바뀐다(평소 큐 편집 대신). 「적용」·
             // 「거절」 전까지 격자·콘솔은 바뀌지 않는다(결정④).

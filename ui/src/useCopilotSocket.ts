@@ -16,6 +16,9 @@ import {
   buildBeatGridPreviewOff,
   buildBeatGridConsolePlay,
   buildBeatGridConsoleStop,
+  buildBeatGridDraftApply,
+  buildBeatGridDraftPropose,
+  buildBeatGridDraftReject,
   buildBeatGridSuggest,
   buildBeatGridSuggestionApply,
   buildBeatGridSuggestionReject,
@@ -231,6 +234,9 @@ export interface CopilotSocket {
   /** 카드 t551 후속(지시 1항) — mockup aOk/aNo. */
   sendBeatGridSuggestionApply: (suggestionId: string) => void;
   sendBeatGridSuggestionReject: (suggestionId: string) => void;
+  sendBeatGridDraftPropose: () => void;
+  sendBeatGridDraftApply: (draftId: string) => void;
+  sendBeatGridDraftReject: (draftId: string) => void;
   /** 카드 t551 후속(지시 1항) — mockup #bLib(프리셋 서랍). */
   sendBeatGridDrawerRequest: () => void;
   /** 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그.
@@ -457,6 +463,16 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     (suggestionId: string) => send(buildBeatGridSuggestionReject(suggestionId)),
     [send],
   );
+  // SPEC-LDARRANGE-001 — 자동 배치 초안: 제안(보류 만들기), 적용, 거절.
+  const sendBeatGridDraftPropose = useCallback(() => send(buildBeatGridDraftPropose()), [send]);
+  const sendBeatGridDraftApply = useCallback(
+    (draftId: string) => send(buildBeatGridDraftApply(draftId)),
+    [send],
+  );
+  const sendBeatGridDraftReject = useCallback(
+    (draftId: string) => send(buildBeatGridDraftReject(draftId)),
+    [send],
+  );
   // 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속).
   const sendBeatGridStageRequest = useCallback(() => send(buildBeatGridStageRequest()), [send]);
   // 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크 조회.
@@ -602,6 +618,9 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
     sendBeatGridSuggestionReject,
+    sendBeatGridDraftPropose,
+    sendBeatGridDraftApply,
+    sendBeatGridDraftReject,
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
