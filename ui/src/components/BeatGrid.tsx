@@ -515,6 +515,8 @@ export interface BeatGridProps {
    * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
    * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
   sections?: readonly SongOverviewSectionInput[];
+  /** #726 — 서버 `timeline.accent_bars[]`({bar, kind}). 있으면 ★ 는 이 마디들이다. */
+  accentBars?: readonly { bar: number; kind: string }[] | null;
   /** 카드 t559(M9 step 1·8) — 곡 전체 지도·상단 바가 읽는 곡 메타
    * (`timeline.bpm`·`timeline.bar_count`, 버전 = 초안 상태 라벨). 없으면
    * 지어내지 않고 "—"/표시 범위로 떨어진다. */
@@ -1445,6 +1447,7 @@ export function BeatGrid({
   secondsPerBar = null,
   colorPresetHex,
   sections,
+  accentBars,
   bpm,
   barCount,
   versionLabel = null,
@@ -1956,6 +1959,7 @@ export function BeatGrid({
     barCount,
     secondsPerBar,
     fallbackRange: grid.bar_range,
+    accentBars,
   });
   const pxPerBar = pxPerBarForZoom(overviewZoom, laneView.visibleWidth, overviewModel.totalBars, PX_PER_BAR);
   // 카드 t586 — 눈금(자)에 구간 이름을 다는 데 쓴다: 구간 시작 마디 → 이름.
@@ -2332,7 +2336,9 @@ export function BeatGrid({
                           </span>
                           {/* 카드 t586 — 시안 `.lhead small`: 그룹·장비 범위·대수. */}
                           {(() => {
-                            const summary = trackFixtureSummary(track.group_no, track.group_name, fixtures);
+                            // #726 — 둘째 줄은 서버가 준 `sub_info.text`(콘솔 판독)가 있으면 그것, 없으면 기존 요약.
+                            const summary =
+                              track.sub_info?.text || trackFixtureSummary(track.group_no, track.group_name, fixtures);
                             return summary ? <small className="beat-grid-track-meta">{summary}</small> : null;
                           })()}
                         </span>
