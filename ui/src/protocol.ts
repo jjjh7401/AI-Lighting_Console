@@ -492,6 +492,9 @@ export interface BeatGridCue {
    * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
    * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
   pending_preset_fields?: string[];
+  /** 이 칸이 낼 색 [r,g,b](각 0~100%) — 2D 무대 장비 색(켜진 줄)에 쓴다. 서버가 색을 알 때만 싣는다.
+   * 없으면(`undefined`/`null`) 그 줄의 기본색으로 그린다(리드 결정). */
+  color_rgb?: [number, number, number] | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
