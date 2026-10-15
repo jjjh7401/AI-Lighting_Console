@@ -131,15 +131,26 @@ export function TimelineLibraryView({
 export function TimelineLibrary({
   hasTimeline,
   onLoaded,
+  open: openProp,
+  onOpenChange,
 }: {
   hasTimeline: boolean;
   onLoaded: (timeline: SongTimelineView) => void;
+  /** 펼침 상태를 부모가 쥘 때(런북의 「펼치기」 손잡이) 넘긴다. 없으면 이 컴포넌트가 스스로 쥔다. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   // null = 아직/못 읽음. 마운트 때 한 번 읽어 접힌 라벨이 개수를 말할 수 있게
   // 한다 (카드 t309) — 기본 화면의 감독은 펼치기 전에 "저장본이 있나"를 알아야
   // 여기가 손잡이라는 걸 안다.
   const [items, setItems] = useState<TimelineLibraryItem[] | null>(null);
-  const [open, setOpen] = useState(false);
+  // 펼침 상태는 부모가 쥘 수도 있다(런북의 「펼치기」 손잡이). 넘기지 않으면 스스로 쥔다.
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = openProp ?? innerOpen;
+  const setOpen = (next: boolean) => {
+    if (openProp === undefined) setInnerOpen(next);
+    onOpenChange?.(next);
+  };
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -198,7 +209,7 @@ export function TimelineLibrary({
       busy={busy}
       notice={notice}
       hasTimeline={hasTimeline}
-      onToggleOpen={() => setOpen((value) => !value)}
+      onToggleOpen={() => setOpen(!open)}
       onDraftNameChange={setDraftName}
       onSave={() => void handleSave()}
       onLoad={(id) => void handleLoad(id)}
