@@ -154,8 +154,8 @@ class _Provider:
         raise AssertionError("디자인 인터뷰는 모델을 부르지 않는다")
 
 
-def _drive(tmp_path: Path, *, approve: bool):
-    console = _Console()
+def _drive(tmp_path: Path, *, approve: bool, console=None):
+    console = _Console() if console is None else console
     audit = AuditLog(tmp_path / "audit")
     approval = _Approval(approve)
     gate = SafetyGate(console=console, audit=audit, approval_port=approval)
@@ -225,15 +225,13 @@ class TestTheGateAsksBeforeTheWriteLeaves:
 
 class TestRejectionSendsNothing:
     def test_no_command_of_the_bundle_reaches_the_console(self, tmp_path):
-        # 나가는 유일한 줄은 프로그래머를 비우는 `ClearAll` 이다 — 그 줄은
-        # 쇼파일 오브젝트를 안 건드리며, 전수 조사에서도 비-쓰기로 분류돼 있다
-        # (`_song_finalize` 그 함수 안 1번째 자리). 「부분 반영 없음」의 계측기는
-        # 저장 줄이 하나도 안 나갔다는 것.
+        # 계약(파일 상단 2항): 거절 → 콘솔이 받는 명령 0건. 카드 t497 — 한 줄도
+        # 나가지 않은 거절에는 정리 줄(`ClearAll`)도 보내지 않는다. 이전에는 이 줄을
+        # 예외로 고정해 두었고, 실기(t474 run5)에서 그 예외가 승인 없이 나갔다.
         console, approval, sites, _questions, _audit = _drive(tmp_path, approve=False)
         assert len(approval.requests) == 1
-        assert sites == ["song-design-reviewed-bundle", "song-design-cleanup"]
-        assert console.executed == ["ClearAll"], "저장 줄은 한 건도 나가지 않는다"
-        assert not [line for line in console.executed if line.startswith("Store ")]
+        assert sites == ["song-design-reviewed-bundle"]
+        assert console.executed == [], "저장 줄도 정리 줄도 한 건도 나가지 않는다"
 
 
 class TestTheAuditNamesTheChannel:

@@ -12507,17 +12507,25 @@ class ChatSession:
                 if outcome.status in ("failed", "blocked", "rejected")
             ]
             if executed.result.is_error or store_failures:
+                # 카드 t497 — 정리 줄(ClearAll)은 콘솔에 줄이 **나간 뒤** 실패한 경우에만
+                # 보낸다. 게이트 거절·잠금 차단은 한 줄도 안 나가 프로그래머가 찬 것이
+                # 아니므로, 거기서 보내면 승인 없이 콘솔로 나가는 줄이 된다.
+                reached_console = any(
+                    outcome.status in ("executed_ok", "failed")
+                    for outcome in executed.command_outcomes
+                )
                 # Keep the plan editable, clear the half-filled programmer
                 # (the chain stopped before its own ClearAll), then ask HOW
                 # to proceed instead of just reporting the refusal.
                 self._pending_song_plan = state
-                self._registry.dispatch(
-                    ToolCall(
-                        id="song-design-cleanup",
-                        name="run_commands",
-                        arguments={"commands": ["ClearAll"]},
+                if reached_console:
+                    self._registry.dispatch(
+                        ToolCall(
+                            id="song-design-cleanup",
+                            name="run_commands",
+                            arguments={"commands": ["ClearAll"]},
+                        )
                     )
-                )
                 self._song_send_timeline(state, plan, composition, lifecycle="pending_approval")
                 first_failure = store_failures[0] if store_failures else None
                 detail = (
@@ -12525,13 +12533,17 @@ class ChatSession:
                     if first_failure is not None
                     else str(executed.result.content)
                 )
-                recovered = self._song_recover_sequence(
-                    state,
-                    problem=(
+                if reached_console:
+                    problem = (
                         f"시퀀스 {sequence_no} 저장이 콘솔에서 거부되었습니다({detail}). "
                         "프로그래머는 ClearAll로 정리했습니다."
-                    ),
-                )
+                    )
+                else:
+                    problem = (
+                        f"시퀀스 {sequence_no} 저장이 나가지 않았습니다({detail}). "
+                        "콘솔에는 아무 줄도 보내지 않았습니다."
+                    )
+                recovered = self._song_recover_sequence(state, problem=problem)
                 if isinstance(recovered, InstructionResult):
                     return replace(recovered, command_outcomes=tuple(executed.command_outcomes))
                 plan, composition = recovered
