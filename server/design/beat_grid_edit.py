@@ -54,6 +54,8 @@ __all__ = [
     "BeatGridEditError",
     "apply_beat_grid_edit",
     "apply_beat_grid_edit_range",
+    "format_bar_runs",
+    "skipped_range_bars",
     "load_preset_pool_policy",
     "resolve_track_scope",
     "validate_preset_pool_assignment",
@@ -728,3 +730,27 @@ def apply_beat_grid_edit_range(
         )
         report.extend(bar_report)
     return dict(current), report
+
+
+def skipped_range_bars(
+    grid: Mapping[str, object], *, bar_start: int, bar_end: int, target: str
+) -> list[int]:
+    """문장 범위 편집(``apply_beat_grid_edit_range``)이 건너뛰는 마디 — 범위 안에서
+    ``target`` 트랙에 칸이 없는 마디. 칸 판정은 그 함수와 같다(이미 있는 칸만 고친다)."""
+    tracks = list(grid.get("tracks") or [])
+    scope = resolve_track_scope(tracks, target)
+    cue_bars = {cue.get("bar") for index in scope for cue in (tracks[index].get("cues") or [])}
+    return [bar for bar in range(bar_start, bar_end + 1) if bar not in cue_bars]
+
+
+def format_bar_runs(bars: Sequence[int]) -> str:
+    """마디 목록을 「8마디」·「8~10마디, 12마디」 꼴로 적는다 — 연속한 마디는 한 구간으로."""
+    runs: list[tuple[int, int]] = []
+    for bar in sorted(set(bars)):
+        if runs and bar == runs[-1][1] + 1:
+            runs[-1] = (runs[-1][0], bar)
+        else:
+            runs.append((bar, bar))
+    return ", ".join(
+        f"{first}마디" if first == last else f"{first}~{last}마디" for first, last in runs
+    )
