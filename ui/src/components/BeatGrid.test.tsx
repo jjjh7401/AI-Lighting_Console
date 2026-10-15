@@ -372,16 +372,17 @@ describe("구조화 필드 표시 헬퍼 — 카드 t537 (REQ-LDBEAT-006, 미정
   });
 });
 
-describe("cueColorFill — plan.md M7 (3) (미정은 중립, 임의 색을 지어내지 않는다)", () => {
-  it("color_preset_no가 없으면 중립(미정)", () => {
+describe("cueColorFill — 미정은 시안 기본색(#d8d8d8), 프리셋 색을 지어내지 않는다", () => {
+  it("color_preset_no가 없으면 시안 기본색(미정)", () => {
     const result = cueColorFill(structuredCue(0, { color_preset_no: null }));
     expect(result.isColorUnset).toBe(true);
-    expect(result.background).toBeUndefined();
+    expect(result.background).toBe("#d8d8d8");
   });
 
-  it("color_preset_no는 있지만 아는 색이 없으면 — 역시 중립(지어내지 않음)", () => {
+  it("color_preset_no는 있지만 아는 색이 없으면 — 시안 기본색(지어내지 않음)", () => {
     const result = cueColorFill(structuredCue(0, { color_preset_no: "4.21" }), {});
     expect(result.isColorUnset).toBe(true);
+    expect(result.background).toBe("#d8d8d8");
   });
 
   it("color_preset_no가 실제 색 표에 있으면 그 색을 쓴다", () => {

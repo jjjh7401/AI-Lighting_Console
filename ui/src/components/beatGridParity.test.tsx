@@ -53,11 +53,21 @@ describe("막대 색 — 색 프리셋의 목표 RGB", () => {
     expect(html).toContain("background-color:#994dff");
   });
 
-  it("RGB 를 모르는 번호는 칠하지 않고 중립(해칭)으로 둔다", () => {
+  it("RGB 를 모르는 켜진 칸은 시안 기본색(#d8d8d8)으로 칠한다 — 색을 지어내지 않는다", () => {
     const grid = gridWith([track("WASH-ALL", "wash", [cue(0, "라벤더 워시", { color_preset_no: "4.22" })])]);
     const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={26} />);
-    expect(html).not.toContain("background-color:#");
+    expect(html).toContain("background-color:#d8d8d8");
     expect(html).toContain("is-color-unset");
+  });
+
+  it("꺼진 칸은 색 프리셋이 있어도 칠하지 않는다(빗금 유지)", () => {
+    const grid = gridWith(
+      [track("WASH-ALL", "wash", [cue(0, "—", { color_preset_no: "4.22" })])],
+      { "4.22": { r: 60, g: 30, b: 100 } },
+    );
+    const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={26} />);
+    expect(html).toMatch(/is-off[^>]*>꺼짐/);
+    expect(html).not.toContain("background-color:#");
   });
 });
 

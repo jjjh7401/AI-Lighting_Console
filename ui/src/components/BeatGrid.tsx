@@ -1236,23 +1236,25 @@ export interface BeatGridCueColorFill {
   /** CSS 배경색 문자열 — 있을 때만 inline style로 쓴다. */
   background?: string;
   /** `color_preset_no`가 없거나, 있어도 그 색을 아는 자리(`colorPresetHex`)가
-   * 없을 때 참 — 둘 다 "지어내지 않는다"는 같은 규칙의 다른 경로다
-   * (REQ-LDBEAT-015(f)와 같은 원칙을 렌더링에도 적용, plan.md M7 (3)). */
+   * 없을 때 참 — 이때 `background`는 시안 기본색(`CUE_DEFAULT_FILL`)이다.
+   * 프리셋 색을 지어내지 않는다는 원칙은 그대로다(고정 기본색만 쓴다). */
   isColorUnset: boolean;
 }
 
 /** 막대 채우기 색 — `color_preset_no`가 있고 그 번호의 실제 색(`colorPresetHex`,
  * 콘솔에서 읽은 프리셋 색 — 이 카드 범위에서는 콘솔 접촉 0이라 아직 아무
  * 데이터도 없다)을 알 때만 그 색을 쓴다. 번호가 없거나, 번호는 있지만
- * 색을 모르면(아직 `colorPresetHex`가 없다) **중립**이다 — 임의 색을
- * 지어내 칠하지 않는다(plan.md M7 (3), REQ-LDBEAT-015(f)와 같은 원칙). */
+ * 색을 모르면 **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 프리셋 색을 지어내지
+ * 않고, 기본색은 고정 값이다(`isColorUnset` 참). 꺼진 칸에는 부르지 않는다. */
+export const CUE_DEFAULT_FILL = "#d8d8d8";
+
 export function cueColorFill(
   cue: BeatGridCue,
   colorPresetHex?: Readonly<Record<string, string>>,
 ): BeatGridCueColorFill {
-  if (!cue.color_preset_no) return { isColorUnset: true };
+  if (!cue.color_preset_no) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   const hex = colorPresetHex?.[cue.color_preset_no];
-  if (!hex) return { isColorUnset: true };
+  if (!hex) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   return { background: hex, isColorUnset: false };
 }
 
@@ -2351,11 +2353,10 @@ export function BeatGrid({
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
                             const hasNext = segIndex < segments.length - 1;
-                            // t537 (3) — 막대 채우기 색은 color_preset_no가 실제 색을
-                            // 아는 자리일 때만 쓴다. 지금 LOVE ATTACK 기본값은 §4에
-                            // 프리셋 번호가 없어(REQ-LDBEAT-015(f)) 전부 미정이고,
-                            // 그 경우 임의 색을 지어내지 않고 중립(해칭)으로 보인다.
-                            const colorFill = cueColorFill(segment.cue, presetHex);
+                            // t537 (3) — 켜진 칸의 채우기 색은 color_preset_no가 실제 색을
+                            // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
+                            // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
+                            const colorFill = active ? cueColorFill(segment.cue, presetHex) : { isColorUnset: false };
                             // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
                             // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
                             const isHighlighted =
