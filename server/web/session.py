@@ -10534,14 +10534,18 @@ class ChatSession:
                     "콘솔 무응답 중 하나). 격자는 그대로입니다."
                 ),
             )
+        # 승인 창이 떠 있는 동안(다른 스레드가 답한다) 들어온 편집을 지우지 않도록, 카드 구성 때의
+        # 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다. 그 사이 밝기가 바뀐 칸은 건너뛴다.
+        current = store.latest if store.latest is not None else timeline
         approved = apply_plan_references(
-            grid,
+            self._beat_grid_view(current),
             plan,
             by="supervisor",
             date=datetime.now(UTC).isoformat(),
             source=f"love_attack_presets:{batch.sha256}",
+            planned_from=grid,
         )
-        store.latest = {**timeline, "beat_grid": approved}
+        store.latest = {**current, "beat_grid": approved}
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest)))
         return self._beat_grid_send_status(
             last_action="apply",

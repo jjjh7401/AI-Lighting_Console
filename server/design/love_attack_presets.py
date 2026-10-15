@@ -433,25 +433,39 @@ def apply_plan_references(
     by: str,
     date: str,
     source: str,
+    planned_from: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """**승인 뒤에만** 부른다. 준비된 디머 프리셋을 그 칸의 밝기로 참조시키고, 참조가 바뀐
     칸·필드를 승인으로 적는다. 칸에 이미 있던 승인은 출처를 덧붙여 남긴다(기록 유실 방지).
 
     이 함수는 ``grid`` 를 건드리지 않고 새 사본을 돌려준다. 승인 전에는 호출하지 않는다 —
-    카드가 거절되면 격자는 바이트까지 그대로다."""
+    카드가 거절되면 격자는 바이트까지 그대로다.
+
+    ``planned_from`` — 계획을 세운 때의 격자. 승인 창이 떠 있는 사이 감독이 고친 칸을 지우지
+    않으려고, 승인 뒤 **지금** 격자(``grid``)를 넘기고 계획 시점 격자를 여기 넘긴다. 그 사이
+    밝기가 바뀐(또는 사라진) 칸은 건너뛴다 — 감독의 새 편집이 계획보다 우선이다."""
     updated: dict[str, object] = copy.deepcopy(dict(grid))
     touched: list[tuple[PlanCell, str | None]] = []
     for preset in plan.presets:
         if not preset.ready or preset.kind != "dimmer" or preset.slot is None:
             continue
         for cell in preset.cells:
-            prior = _prior_approval_source(grid, cell)
             cue = _grid_cue(grid, cell)
+            if planned_from is not None:
+                planned_cue = _grid_cue(planned_from, cell)
+                if (
+                    cue is None
+                    or planned_cue is None
+                    or cue.get("brightness") != planned_cue.get("brightness")
+                ):
+                    continue
+            prior = _prior_approval_source(grid, cell)
             evidence = cue.get("evidence") if cue is not None else None
             grade = evidence.get("grade") if isinstance(evidence, Mapping) else None
             # 옛 승인은 옛 번호의 것이라 이 편집에서 비운다(grade 는 보존). 안 비우면 승인 기록이
-            # 새 번호 1.x 를 덮어 "승인됨"으로 거짓 통과한다 — 공유 편집 경로는 디머 기본
-            # 프리셋 번호 변경을 승인 대기로 세지 않는다(디머 효과만 센다).
+            # 새 번호 1.x 를 덮어 "승인됨"으로 거짓 통과한다. 공유 편집 경로도 이제 디머 기본
+            # 프리셋 번호 변경을 승인 대기로 세지만, 여기서는 명시적으로 비운 뒤 아래에서 이
+            # 카드의 승인을 적는다.
             updated, _report = apply_beat_grid_edit(
                 updated,
                 bar=cell.bar,

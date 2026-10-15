@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import copy
+import threading
 
 from server.design.beat_grid import (
     LOVE_ATTACK_TITLE,
@@ -22,7 +23,11 @@ from server.design.love_attack_presets import (
     plan_love_attack_presets,
     save_commands,
 )
-from server.web.session import SongTimelineStore
+from server.safety.audit import AuditLog
+from server.safety.gate import SafetyGate
+from server.web.approval_bridge import ApprovalChannel
+from server.web.session import ChatSession, SongTimelineStore
+from server.web.timeline_library import SongTimelineLibrary
 
 from .test_new_preset_dialog_t589 import (
     _new_session,
@@ -31,6 +36,7 @@ from .test_new_preset_dialog_t589 import (
     _state_tree,
     _timeline_for_apply,
 )
+from .test_safety_gate import FakeConsole
 
 # -- 2026-10-15 콘솔 읽기 결과(읽기 전용)를 옮긴 픽스처 ------------------------------
 # dimmer 풀 1: 1~7 사용 · color 풀 4: 1~10, 32 · position 풀 2: 1~6, 21~30 사용.
@@ -345,3 +351,116 @@ class TestApprovalCardRejected:
         assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.10"
         # 미정 칸은 그대로다.
         assert _cue_of(grid, "BACK", 18)["brightness"] == _cue_of(before, "BACK", 18)["brightness"]
+
+
+# == 승인 카드: 실제 비동기 승인 통로 (ApprovalChannel + 다른 스레드가 답함) ========
+
+
+def _real_channel_session(tmp_path, monkeypatch, *, on_card=None, approve=True):
+    """게이트의 승인 포트가 ``ApprovalChannel`` 인 세션 — 운영 배선과 같다. 카드(승인 요청
+    이벤트)가 뜨면 **다른 스레드**가 (선택적으로 ``on_card`` 를 먼저 돌린 뒤) 답한다."""
+    grid = _love_attack_grid()
+    store = SongTimelineStore()
+    store.latest = _timeline_for_apply(beat_grid=grid)
+    state_tree = {
+        **_state_tree(),
+        "DataPool/PresetPools": _pool_list_payload(
+            {"Dimmer": 1, "Position": 2, "Color": 4, "All 1": 21}
+        ),
+        "DataPool/PresetPools/1": _pool_children_payload(_DIMMER_CHILDREN),
+        "DataPool/PresetPools/2": _pool_children_payload(_POSITION_CHILDREN),
+        "DataPool/PresetPools/4": _pool_children_payload(_COLOR_CHILDREN),
+    }
+    console = FakeConsole(state_tree=state_tree)
+    audit = AuditLog(tmp_path / "audit")
+    channel = ApprovalChannel(timeout_seconds=5.0)
+    gate = SafetyGate(console=console, audit=audit, approval_port=channel)
+    holder: dict = {}
+
+    def send(event):
+        if event.get("type") != "approval_request":
+            return
+
+        def answer():
+            if on_card is not None:
+                on_card(store)
+            channel.resolve(event["request_id"], approved=approve)
+
+        threading.Thread(target=answer).start()
+
+    session = ChatSession(
+        gate=gate,
+        provider=_RefusingProvider(),
+        system_prefix="PREFIX",
+        audit=audit,
+        send_event=send,
+        approval_channel=channel,
+        timeline_store=store,
+        timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+    )
+    holder["session"] = session
+    monkeypatch.setattr(session, "_love_attack_dimmer_attributes", lambda names: dict(_ATTRIBUTES))
+    return session, console, store
+
+
+class _RefusingProvider:
+    def complete(self, *args, **kwargs):  # pragma: no cover - 모델을 부르지 않는다
+        raise AssertionError("이 경로는 모델을 부르지 않는다")
+
+
+class TestApprovalCardRealAsyncChannel:
+    def test_cells_are_repointed_when_a_other_thread_approves_the_card(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, store = _real_channel_session(tmp_path, monkeypatch)
+
+        event = session.love_attack_preset_card()
+
+        assert event["ok"] is True
+        assert console.executed == list(_EXPECTED_SAVE)
+        grid = store.latest["beat_grid"]
+        assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
+        assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
+        assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.10"
+        assert check_evidence_approval(_cue_of(grid, "WASH-ALL", 7)) is None
+
+    def test_an_edit_made_while_the_card_is_open_survives_the_approval(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        def edit_while_waiting(store) -> None:
+            # 카드가 떠 있는 사이 감독이 다른 칸(미정 칸)의 밝기를 고쳤다.
+            latest = copy.deepcopy(store.latest)
+            cue = _cue_of(latest["beat_grid"], "BACK", 18)
+            cue["brightness"] = {"mode": "value", "value_percent": 77, "preset_no": None}
+            store.latest = latest
+
+        session, _console, store = _real_channel_session(
+            tmp_path, monkeypatch, on_card=edit_while_waiting
+        )
+
+        event = session.love_attack_preset_card()
+
+        assert event["ok"] is True
+        grid = store.latest["beat_grid"]
+        assert _cue_of(grid, "BACK", 18)["brightness"]["value_percent"] == 77
+        assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
+
+    def test_a_planned_cell_edited_while_the_card_is_open_is_not_repointed(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        def edit_planned_cell(store) -> None:
+            latest = copy.deepcopy(store.latest)
+            cue = _cue_of(latest["beat_grid"], "WASH-ALL", 7)
+            cue["brightness"] = {"mode": "value", "value_percent": 5, "preset_no": None}
+            store.latest = latest
+
+        session, _console, store = _real_channel_session(
+            tmp_path, monkeypatch, on_card=edit_planned_cell
+        )
+
+        session.love_attack_preset_card()
+
+        grid = store.latest["beat_grid"]
+        assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["value_percent"] == 5
+        assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] is None
+        assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
