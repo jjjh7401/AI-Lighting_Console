@@ -90,7 +90,11 @@ export function colorCell(
 ): GlanceCellValue {
   if (!roleFieldHints(role).includes("색")) return { kind: "text", text: NOT_APPLICABLE };
   if (!cue) return { kind: "text", text: NOT_APPLICABLE };
-  return chipOrUnset(cue.color_preset_no, sections);
+  // 색 네모: 서랍 항목 색(`rgb`)이 우선, 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
+  const value = chipOrUnset(cue.color_preset_no, sections);
+  if (value.kind !== "chip" || value.swatch !== undefined) return value;
+  const cellSwatch = cue.color_rgb ? presetSwatchColor([cue.color_rgb.r, cue.color_rgb.g, cue.color_rgb.b]) : null;
+  return cellSwatch === null ? value : { ...value, swatch: cellSwatch };
 }
 
 /** 움직임 칸 — 무빙 역할에서만(`roleFieldHints`) 효과 프리셋을 보여준다. */

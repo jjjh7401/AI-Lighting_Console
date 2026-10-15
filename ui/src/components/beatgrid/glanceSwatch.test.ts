@@ -62,4 +62,22 @@ describe("colorCell 칩의 색 네모", () => {
     expect(result).toMatchObject({ kind: "chip", presetNo: "4.22", name: "Blue" });
     expect(result).not.toHaveProperty("swatch");
   });
+
+  it("서랍 색이 없으면 칸이 낼 색(color_rgb)을 네모로 쓴다", () => {
+    const result = colorCell(
+      cue({ color_preset_no: "4.22", color_rgb: { r: 0, g: 50, b: 100 } }),
+      "side",
+      COLOR_SECTION,
+    );
+    expect(result).toMatchObject({ kind: "chip", presetNo: "4.22", swatch: "rgb(0, 128, 255)" });
+  });
+
+  it("서랍 색이 있으면 칸 색보다 서랍 색을 쓴다", () => {
+    const result = colorCell(
+      cue({ color_preset_no: "4.21", color_rgb: { r: 0, g: 0, b: 0 } }),
+      "side",
+      COLOR_SECTION,
+    );
+    expect(result).toMatchObject({ kind: "chip", presetNo: "4.21", swatch: "rgb(255, 128, 0)" });
+  });
 });
