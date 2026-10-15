@@ -183,13 +183,6 @@ from server.design.ldrender_gate import (
 from server.design.ldrender_gate import (
     gate_cues_from_commands,
 )
-from server.design.love_attack_presets import (
-    apply_plan_references,
-    card_reason,
-    load_love_attack_annotations,
-    plan_love_attack_presets,
-    save_commands,
-)
 from server.design.phaser_catalog import (  # 카드 t480 — 자리만 옮김
     _PHASER_LABEL_POOL_NAME,
     COLOR_PHASER_SEQUENCE,
@@ -207,6 +200,14 @@ from server.design.preset_names import (
     POOL_UNREAD,
     match_preset_name,
     match_preset_name_across_pools,
+)
+from server.design.preset_plan import (
+    apply_plan_references,
+    build_preset_plan,
+    card_reason,
+    load_preset_annotations,
+    plan_table_markdown,
+    save_commands,
 )
 from server.design.profile import (
     DEFAULT_BPM,
@@ -10453,7 +10454,7 @@ class ChatSession:
 
     # -- SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 저장 승인 카드 ---------
 
-    def _love_attack_dimmer_attributes(
+    def _beat_grid_preset_dimmer_attributes(
         self, group_names: Sequence[str]
     ) -> dict[str, tuple[str, ...]]:
         """그룹마다 디머 속성 이름 — 「⇪ 콘솔에 반영」(`beat_grid_apply`)이 쓰는 판독을
@@ -10468,7 +10469,7 @@ class ChatSession:
         )
         return {group: tuple(attrs) for group, attrs in attributes.items()}
 
-    def love_attack_preset_card(self) -> dict:
+    def beat_grid_preset_plan(self) -> dict:
         """SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 계획을 승인 카드 한 장으로 올린다.
 
         순서: 콘솔 풀 판독(읽기만) → 계획(순수 함수) → 저장 줄 → 승인 카드(게이트).
@@ -10488,14 +10489,14 @@ class ChatSession:
             query, pool_root, "Position", probe_prefix="love-attack-position"
         )
         group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
-        plan = plan_love_attack_presets(
+        plan = build_preset_plan(
             grid,
-            annotations=load_love_attack_annotations(),
+            annotations=load_preset_annotations(timeline.get("song_title")),
             policy=load_preset_pool_policy(),
             dimmer_pool=dimmer_pool,
             color_pool=color_pool,
             position_pool=position_pool,
-            dimmer_attributes=self._love_attack_dimmer_attributes(group_names),
+            dimmer_attributes=self._beat_grid_preset_dimmer_attributes(group_names),
         )
         commands = save_commands(plan)
         ready_count = sum(1 for preset in plan.presets if preset.ready)
@@ -10503,24 +10504,29 @@ class ChatSession:
             return self._beat_grid_send_status(
                 last_action="apply",
                 ok=False,
-                reason=(
-                    "LOVE ATTACK 프리셋: 지금 저장할 디머 프리셋이 없습니다. 나머지는 미정입니다."
-                ),
+                reason=("연출 프리셋: 지금 저장할 디머 프리셋이 없습니다. 나머지는 미정입니다."),
             )
+        # 버튼을 누르면 계획표를 먼저 보이고, 이어서 기존 승인 카드가 뜬다.
+        self._send(
+            chat_response_event(
+                status="ok",
+                summary="연출 프리셋 계획",
+                text=plan_table_markdown(plan),
+                commands=[],
+            )
+        )
         batch = build_write_approval_batch([commands])
         token = bind_session_key(self._session_key)
         try:
             executed = self._dispatch_declared(
                 ToolCall(
-                    id="love-attack-presets",
+                    id="preset-plan",
                     name="run_commands",
                     arguments={"commands": list(commands)},
                 ),
                 risk=BatchRisk(
-                    reason=(
-                        f"LOVE ATTACK 연출 프리셋 저장 — {card_reason(plan)} (구간 단위 1회 승인)"
-                    ),
-                    kind="love_attack_presets",
+                    reason=(f"연출 프리셋 저장 — {card_reason(plan)} (구간 단위 1회 승인)"),
+                    kind="preset_plan",
                 ),
             )
         finally:
@@ -10542,7 +10548,7 @@ class ChatSession:
             plan,
             by="supervisor",
             date=datetime.now(UTC).isoformat(),
-            source=f"love_attack_presets:{batch.sha256}",
+            source=f"preset_plan:{batch.sha256}",
             planned_from=grid,
         )
         store.latest = {**current, "beat_grid": approved}

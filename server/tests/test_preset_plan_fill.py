@@ -1,14 +1,14 @@
 """SPEC-LDRHYTHM-001 stage 2 — 미정 6건 채우기: 기본값 · 「감독이 고칠 값」 · 승인 카드 사유.
 
-계획 함수는 순수 함수다(콘솔 무접촉). 픽스처는 기존 계획 테스트(test_love_attack_presets)와 같다.
+계획 함수는 순수 함수다(콘솔 무접촉). 픽스처는 기존 계획 테스트(test_preset_plan)와 같다.
 """
 
 from __future__ import annotations
 
 from server.design.color_names import resolve_color_name
-from server.design.love_attack_presets import card_reason, save_commands
+from server.design.preset_plan import card_reason, save_commands
 
-from .test_love_attack_presets import _love_attack_grid, _plan, _preset
+from .test_preset_plan import _love_attack_grid, _plan, _preset
 
 
 class TestMultiGroupDimmer:

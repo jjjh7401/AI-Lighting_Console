@@ -17,10 +17,10 @@ from server.design.beat_grid import (
     default_beat_grid,
 )
 from server.design.beat_grid_edit import load_preset_pool_policy
-from server.design.love_attack_presets import (
+from server.design.preset_plan import (
     apply_plan_references,
-    load_love_attack_annotations,
-    plan_love_attack_presets,
+    build_preset_plan,
+    load_preset_annotations,
     save_commands,
 )
 from server.safety.audit import AuditLog
@@ -99,9 +99,9 @@ def _plan(
     position=(2, _POSITION_CHILDREN),
     attributes=None,
 ):
-    return plan_love_attack_presets(
+    return build_preset_plan(
         grid if grid is not None else _love_attack_grid(),
-        annotations=load_love_attack_annotations(),
+        annotations=load_preset_annotations(LOVE_ATTACK_TITLE),
         policy=load_preset_pool_policy(),
         dimmer_pool=dimmer,
         color_pool=color,
@@ -309,7 +309,11 @@ def _love_attack_session(tmp_path, *, decisions, monkeypatch):
     session, console, approval, _audit = _new_session(
         tmp_path, store=store, decisions=decisions, state_tree=state_tree
     )
-    monkeypatch.setattr(session, "_love_attack_dimmer_attributes", lambda names: dict(_ATTRIBUTES))
+    monkeypatch.setattr(
+        session,
+        "_beat_grid_preset_dimmer_attributes",
+        lambda names: dict(_ATTRIBUTES),
+    )
     return session, console, approval, store
 
 
@@ -322,7 +326,7 @@ class TestApprovalCardRejected:
         )
         before = copy.deepcopy(store.latest["beat_grid"])
 
-        event = session.love_attack_preset_card()
+        event = session.beat_grid_preset_plan()
 
         # 카드는 올라갔고, 저장 줄이 그 카드 안에 있다.
         assert len(approval.requests) == 1
@@ -343,7 +347,7 @@ class TestApprovalCardRejected:
         )
         before = copy.deepcopy(store.latest["beat_grid"])
 
-        event = session.love_attack_preset_card()
+        event = session.beat_grid_preset_plan()
 
         assert event["ok"] is True
         # 가짜 콘솔(테스트 전용)에만 저장 줄이 나갔다.
@@ -403,7 +407,11 @@ def _real_channel_session(tmp_path, monkeypatch, *, on_card=None, approve=True):
         timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
     )
     holder["session"] = session
-    monkeypatch.setattr(session, "_love_attack_dimmer_attributes", lambda names: dict(_ATTRIBUTES))
+    monkeypatch.setattr(
+        session,
+        "_beat_grid_preset_dimmer_attributes",
+        lambda names: dict(_ATTRIBUTES),
+    )
     return session, console, store
 
 
@@ -418,7 +426,7 @@ class TestApprovalCardRealAsyncChannel:
     ) -> None:
         session, console, store = _real_channel_session(tmp_path, monkeypatch)
 
-        event = session.love_attack_preset_card()
+        event = session.beat_grid_preset_plan()
 
         assert event["ok"] is True
         assert console.executed == list(_EXPECTED_SAVE)
@@ -442,7 +450,7 @@ class TestApprovalCardRealAsyncChannel:
             tmp_path, monkeypatch, on_card=edit_while_waiting
         )
 
-        event = session.love_attack_preset_card()
+        event = session.beat_grid_preset_plan()
 
         assert event["ok"] is True
         grid = store.latest["beat_grid"]
@@ -462,7 +470,7 @@ class TestApprovalCardRealAsyncChannel:
             tmp_path, monkeypatch, on_card=edit_planned_cell
         )
 
-        session.love_attack_preset_card()
+        session.beat_grid_preset_plan()
 
         grid = store.latest["beat_grid"]
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["value_percent"] == 5

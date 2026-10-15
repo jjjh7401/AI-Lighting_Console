@@ -233,6 +233,9 @@ PANEL_ITEM_SOURCES = ("pin", "auto")
 # "position_preset_no")과는 다른 이름 공간이다 — 서버의
 # `ChatSession.beat_grid_new_preset`이 이 값을 보고 칸 필드로 번역한다.
 BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "color", "effect")
+# beat_grid_apply 의 mode — 기존 「⇪ 콘솔에 반영」(격자 초안 전체)과, 상단 바의
+# 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드). 새 메시지 타입은 만들지 않는다.
+BEAT_GRID_APPLY_MODES = ("apply", "preset_plan")
 
 # Why a catalog section is incomplete. These mirror the rig-context reasons
 # (``server/orchestrator/tools.py``) and stay DISTINCT on the wire: "this path
@@ -906,6 +909,13 @@ def parse_client_message(raw: str) -> dict:
             "cue": cue,
         }
 
+    if message_type == "beat_grid_apply":
+        # 같은 「⇪」 길을 쓰되 mode 로 가른다. mode 가 없으면 기존 「콘솔에 반영」과 같다.
+        mode = message.get("mode", "apply")
+        if mode not in BEAT_GRID_APPLY_MODES:
+            raise ProtocolError(f"beat_grid_apply.mode must be one of {BEAT_GRID_APPLY_MODES}")
+        return {"v": PROTOCOL_VERSION, "type": "beat_grid_apply", "mode": mode}
+
     if message_type in (
         "panel_pin",
         "panel_catalog_request",
@@ -925,7 +935,6 @@ def parse_client_message(raw: str) -> dict:
         # 지금 격자 초안 전체를 쓰고, 끄기는 가장 최근 반영의 모든
         # 시퀀스를 끈다 — 둘 다 번호를 서버가 쥐고 있어 클라이언트가
         # 보낼 것이 없다.
-        "beat_grid_apply",
         "beat_grid_preview_off",
         # 카드 t578 — 「콘솔 같이」 재생·정지도 페이로드가 없다(번호는 소유 기록).
         "beat_grid_console_play",

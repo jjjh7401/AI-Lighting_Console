@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import copy
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,13 +46,13 @@ __all__ = [
     "PlanPreset",
     "apply_plan_references",
     "card_reason",
-    "load_love_attack_annotations",
-    "plan_love_attack_presets",
+    "load_preset_annotations",
+    "build_preset_plan",
     "save_commands",
 ]
 
-#: 계획 주석(칸의 색·방향 대응) — 격자 데이터와 같은 디렉터리.
-_ANNOTATIONS_PATH = Path(__file__).resolve().parent / "beat_grid_data" / "love_attack_presets.yaml"
+#: 곡별 계획 주석 폴더 — 곡 제목 슬러그와 이름이 같은 YAML 이 있으면 그 곡의 색·방향 대응을 읽는다.
+_ANNOTATIONS_DIR = Path(__file__).resolve().parent / "beat_grid_data" / "preset_annotations"
 
 #: 디머 프리셋 콘솔 이름 접두 — 값으로 이름을 짓는다(같은 값 = 같은 이름).
 _DIMMER_NAME_PREFIX = "DIM"
@@ -107,10 +108,20 @@ class LoveAttackPlan:
     supervisor_fixes: tuple[str, ...] = ()
 
 
-def load_love_attack_annotations(path: Path | None = None) -> dict[str, object]:
-    """계획 주석 YAML을 읽는다. 읽기 실패는 숨기지 않고 그대로 올린다."""
-    target = path if path is not None else _ANNOTATIONS_PATH
-    with target.open("r", encoding="utf-8") as handle:
+def _annotations_slug(song_title: object) -> str:
+    """곡 제목 → 주석 파일 이름(영소문자·숫자·밑줄). 한글만 있는 제목은 빈 문자열이다."""
+    return re.sub(r"[^0-9a-z]+", "_", str(song_title or "").casefold()).strip("_")
+
+
+def load_preset_annotations(song_title: object, path: Path | None = None) -> dict[str, object]:
+    """그 곡의 계획 주석 YAML을 읽는다. 주석 파일이 없는 곡이면 빈 주석(디머 계획만)이다 —
+    색·방향을 지어내지 않는다. 읽기 실패는 숨기지 않고 그대로 올린다."""
+    if path is None:
+        slug = _annotations_slug(song_title)
+        if not slug or not (_ANNOTATIONS_DIR / f"{slug}.yaml").exists():
+            return {}
+        path = _ANNOTATIONS_DIR / f"{slug}.yaml"
+    with path.open("r", encoding="utf-8") as handle:
         document = yaml.safe_load(handle)
     return dict(document) if isinstance(document, Mapping) else {}
 
@@ -210,7 +221,7 @@ def _prior_approval_source(grid: Mapping[str, object], cell: PlanCell) -> str | 
     return str(source) if source else None
 
 
-def plan_love_attack_presets(
+def build_preset_plan(
     grid: Mapping[str, object],
     *,
     annotations: Mapping[str, object],
@@ -223,7 +234,7 @@ def plan_love_attack_presets(
     """격자 칸에서 새로 만들 프리셋 계획을 만든다(콘솔 무접촉, 순수 함수).
 
     - 디머: 칸의 ``brightness.value_percent``를 값으로 묶는다(같은 값 = 한 프리셋).
-    - 색·방향: ``annotations``(``love_attack_presets.yaml``)가 칸에 붙인 색·방향만 쓴다.
+    - 색·방향: ``annotations``(``preset_plan.yaml``)가 칸에 붙인 색·방향만 쓴다.
     - 번호: 풀 판독(``dimmer_pool``·``color_pool``·``position_pool``)에서 빈 것만 고른다.
     - 이미 있는 번호는 ``kept``로 세기만 하고 건드리지 않는다.
     - 앱이 기본값을 쓴 항목은 ``supervisor_fixes``(「감독이 고칠 값」)에 모은다.
@@ -521,6 +532,33 @@ def card_reason(plan: LoveAttackPlan) -> str:
     if plan.supervisor_fixes:
         parts.append("감독이 고칠 값: " + " / ".join(plan.supervisor_fixes))
     return " · ".join(parts)
+
+
+def plan_table_markdown(plan: LoveAttackPlan) -> str:
+    """계획표(마크다운) — 만들 프리셋·후보 번호·칸 수·상태를 표로 적고, 아래에 「이 카드 밖」·
+    「미정」·「감독이 고칠 값」을 그대로 싣는다(빈칸 없이)."""
+    lines = ["| 만들 프리셋 | 값 | 후보 번호 | 칸 수 | 상태 |", "|---|---|---|---|---|"]
+    for preset in plan.presets:
+        if preset.ready:
+            status = "저장(이 카드)"
+        elif preset.deferred:
+            status = "이 카드 밖"
+        else:
+            status = "미정"
+        slot = preset.slot or "없음"
+        cells = len(preset.cells)
+        lines.append(f"| {preset.name} | {preset.value} | {slot} | {cells} | {status} |")
+    sections = (
+        ("이 카드 밖", plan.deferred),
+        ("미정(이번 계획에서 제외)", plan.unresolved),
+        ("감독이 고칠 값", plan.supervisor_fixes),
+    )
+    for title, items in sections:
+        if items:
+            lines.append("")
+            lines.append(f"**{title}**")
+            lines.extend(f"- {item}" for item in items)
+    return "\n".join(lines)
 
 
 def apply_plan_references(
