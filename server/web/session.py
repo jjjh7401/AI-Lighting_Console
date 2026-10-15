@@ -10384,7 +10384,14 @@ class ChatSession:
         return unsent_beat_grid_cells(grid, snapshot)
 
     def _beat_grid_refresh_unsent_cells(self, timeline: dict) -> dict:
-        """이 세션의 반영 기록·풀 기억으로 ``derive_beat_grid_fields`` 를 부른다."""
+        """이 세션의 반영 기록·풀 기억으로 ``derive_beat_grid_fields`` 를 부른다.
+
+        격자가 없는 초안에는 곡 기본 격자를 **송신용 사본에만** 붙인다. 저장소의 원본은 그대로
+        둔다(SPEC-LDBARMAP-002 AC-LDBARENTRY-004 (5): 마디 지도 저장은 ``bar_map``·``draft`` 외에
+        바이트가 바뀌면 안 된다). 분석 뒤 박자 배치 화면이 빈 칸 대신 격자(또는 기본값 없음 안내)를
+        보이게 하려는 것이다.
+        """
+        timeline = attach_beat_grid_default(timeline)
         return derive_beat_grid_fields(
             timeline,
             snapshots=self._beat_grid_snapshots,
