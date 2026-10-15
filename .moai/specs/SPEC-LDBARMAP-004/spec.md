@@ -1,10 +1,10 @@
 ---
 id: SPEC-LDBARMAP-004
 title: "마디 지도 저장 — 곡 길이 확인과 원본 기록 (서버)"
-version: "0.1.0"
+version: "0.1.1"
 status: draft
 created: 2026-10-14
-updated: 2026-10-14
+updated: 2026-10-15
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.2 target"
@@ -23,6 +23,7 @@ depends_on: [SPEC-LDBARMAP-002]
 | 일자 | 버전 | 내용 |
 |---|---|---|
 | 2026-10-14 | 0.1.0 | 최초 작성(카드 t649, plan 단계). 입력: 길이 측정 기록 `.moai/reports/t649/measure.md`(측정 기준 커밋 `af2dd7e1`), 감독 결정 2026-10-14 「C + B 길이만」, 선행 SPEC-LDBARMAP-002(`status: completed`), 화면 쪽 SPEC-LDBARMAP-003(브랜치 `WT-barmap-entry-ui`, 아직 머지 전)과의 문구 정렬. 코드 변경 0줄. 요구사항 접두사는 `REQ-LDBARLEN-`, 수락 기준 접두사는 `AC-LDBARLEN-`이다(현재 HEAD와 `WT-barmap-entry-ui`에서 미사용을 확인했다). 허용 오차 수치와 타임라인 길이 출처는 감독이 정할 때까지 비워 두었다(§5 열린 결정). |
+| 2026-10-15 | 0.1.1 | plan 단계 개정(카드 t649). REQ-LDBARLEN-003에서 원본 기록의 자리를 중립으로 바꿨다(자리는 OD-1이 정한다). 전제 P10을 정정하고(시드 항목이라는 예외가 있다) P18을 더했다(정적 추적이며 실행 확인은 아니다). OD-8(저장 성공 문구의 화면 표시)을 더했고, OD-4와 §7에 P18 참조를 달았다. 열린 결정의 선택지는 고르지 않았고 허용 오차 수치는 여전히 없다. 요구사항·수락 기준 번호는 그대로다. |
 
 ## §0. Tier 선택 근거
 
@@ -64,7 +65,7 @@ depends_on: [SPEC-LDBARMAP-002]
 | P7 | 디코드 길이는 탐지 결과로 나가지 않는다. `BeatGridResult`에 길이 필드가 없고, `detect_beat_grid`는 `mono`와 `sample_rate`만 꺼낸다 | `bar_map.py:105-116`, `:229-232` |
 | P8 | 같은 바이트가 특징 추출에서 한 번 더 디코드된다 | `bar_map.py:625-628` |
 | P9 | 조용한 잘림 검사는 선언 길이가 어림값(`length_is_a_guess`)이면 꺼진다 | `bar_map.py:199-202`; 어림 판정 `server/audio/analyze.py:317-341` |
-| P10 | 타임라인의 곡 길이를 채우는 생산자가 현재 코드에 없다. 주석이 이를 명시한다 | `server/web/session.py:1505-1509`(「곡 전체 길이를 아는 생산자가 없다」). `git grep total_duration_ms HEAD -- server/web` 결과 실제 기록 경로는 없다. `server/design/song_plan.py:1024`는 필드 선언과 값 검사(`:1040-1041`)뿐이고, `server/design/sugar_timeline.py:475`는 고정 값 `236_000`을 넣는 샘플 빌더다 |
+| P10 | 설계 흐름이 만드는 초안 타임라인에는 곡 길이(`total_duration_ms`)를 채우는 생산자가 없다. 주석이 이를 명시한다. 이름으로 이 키를 쓰는 비테스트 코드는 여섯 줄뿐이고, 값을 넣는 줄은 샘플 빌더의 고정 값 하나다. **다만 그 값이 초안에 들어오는 길은 있다(P18)** | `server/web/session.py:1505-1509`(「곡 전체 길이를 아는 생산자가 없다」). 설계 흐름의 헤더는 `apply_cue_sheet_view`(`server/design/song_plan.py:1109-1115`)가 `CueSheetViewFields.to_dict()`를 합쳐 만들고, 값이 `None`이면 키를 싣지 않는다(`song_plan.py:1064-1067`). `git grep -n total_duration_ms -- 'server/*.py' ':!server/tests'`는 `song_plan.py:919`·`:1024`·`:1040-1041`(필드 선언과 값 검사), `session.py:1505`(주석), `server/design/sugar_timeline.py:475`(`build_sugar_timeline` 안의 고정 값 `236_000`)만 돌려준다. 이름 검색에는 기록 경로가 없어 보이지만, 항목을 통째로 복사하는 길은 이름에 걸리지 않는다(P18) |
 | P11 | 확정 BPM 상태 `_song_bpm`은 타임라인 `bpm`과 같은 객체다 | `session.py:4297-4301` |
 | P12 | REQ-LDBARENTRY-011 원문: 진입 경로는 콘솔에 쓰거나 읽지 않고, `SongTimelineLibrary`에 저장하지 않고, BPM 확정 상태를 바꾸지 않고, `analyse_song_audio`의 메시지 계약을 바꾸지 않는다 | `.moai/specs/SPEC-LDBARMAP-002/spec.md:112` (HEAD와 `WT-barmap-entry-ui`에서 같은 문장) |
 | P13 | 화면 쪽 정렬 대상: 저장 성공 문구(REQ-LDBARUI-006), 거절 라벨 세 개(REQ-LDBARUI-007), 파일명 시점 한계(E3) | `WT-barmap-entry-ui:.moai/specs/SPEC-LDBARMAP-003/spec.md:79`, `:80`, `:176` |
@@ -72,6 +73,7 @@ depends_on: [SPEC-LDBARMAP-002]
 | P15 | 저장 성공 시 타임라인 전체가 `song_timeline` 프레임으로 나간다 | `session.py:9456`; `server/web/PROTOCOL.md:83` |
 | P16 | 곡 오디오 링크 기록은 `OSError`를 조용히 삼킨다 | `session.py:13787-13789` (`contextlib.suppress(OSError)`) |
 | P17 | 저장 관문의 거절 응답은 이벤트를 반환만 하고 보내지 않는다. 성공은 직접 보낸다 | `session.py:9569-9572` |
+| P18 | **시드 항목의 `total_duration_ms`(236000)는 초안 타임라인으로 흐른다.** 정적 추적이며 실행 확인은 아니다(읽은 트리: HEAD `0c167944`). 조건은 운영자가 라이브러리의 시드 항목을 불러오는 것이다(`POST /api/timelines/{id}/load`). 이 값은 첨부 곡의 길이가 아니라 샘플 문서 한 판의 고정 값이다. 이 키를 읽어 디코드 길이와 비교하는 비테스트 코드는 0줄이다(P10의 검색 결과) | 홉: ① `server/web/serve.py:29`(import), `:450-452`(`SongTimelineLibrary(..., seed=(sugar_library_entry(),))`) → ② `server/design/sugar_timeline.py:486`(`sugar_library_entry`)이 `build_sugar_timeline()`(`:455`)의 결과를 `timeline`에 싣는다. 값 리터럴은 `:475`이고 `build_sugar_timeline` 안에 있다 → ③ `server/web/timeline_library.py:67`(`_load`)과 `:126`(`_seeded`)로 항목 목록에 들어가고, `:76`(`get`)이 사본을 돌려준다 → ④ `server/web/timeline_api.py:58`(`deps.library.get`), `:69`(`dict(entry["timeline"])` 통째 복사이므로 이름 검색에 안 걸린다), `:71`(`deps.store.latest = timeline`) → ⑤ `deps.store`는 `server/web/app.py:1144`에서 `deps.song_timeline_store`이고, 세션도 `app.py:428`로 같은 객체를 받는다(`session.py:4168` `self._timeline_store`) → ⑥ `session.py:3769-3773`(`SongTimelineStore.latest` 세터)는 키를 거르지 않는다 → ⑦ `analyse_bar_map`이 `store.latest`를 읽고(`session.py:9526`, `:9557`), 저장 관문은 `attach_bar_map`(`server/audio/bar_map_store.py:338`의 `dict(timeline)` 사본)으로 다른 키를 그대로 둔다(`session.py:9451`). 라이브러리 읽기 API는 `items()`(`timeline_library.py:71`)와 `get()`(`:76`) 둘이다. 비테스트 호출처: `session.py:11236`(`items()`, 셋리스트 — 읽는 필드는 `sequence_number`·`console_stored`뿐이다, `:11282-11284`), `timeline_api.py:33`(`items()`를 `timeline_entry_summary`로 투영한다 — 그 투영 `timeline_library.py:33-45`에 길이 필드는 없다), `timeline_api.py:58`(`get()`, 위 ④). **미확인(Gap)**: 앱을 띄워 불러오기를 실행하지 않았다. `ui/src`가 이 엔드포인트를 어떻게 부르는지 열지 않았다. 불러온 뒤 `store.latest`를 다시 쓰는 다른 경로(`session.py:8869` 등 10곳)가 이 키를 지우는지 하나씩 읽지 않았다 |
 
 측정 근거(`.moai/reports/t649/measure.md`):
 
@@ -87,7 +89,7 @@ depends_on: [SPEC-LDBARMAP-002]
 |---|---|---|
 | REQ-LDBARLEN-001 | [HARD] **When** 분석이 성공해 저장 관문에 이르면, 서버 **shall** 분석 시작 때 잡은 곡 오디오 객체의 파일명과 sha256을 저장 결과에 기록한다. 분석 도중 새로 올라온 곡의 값을 **shall not** 쓴다. | P2, P3. 분석 중 교체되면 디코드한 바이트와 기록이 어긋난다 |
 | REQ-LDBARLEN-002 | [HARD] **The** 원본 기록 **shall** 마디 지도 사전 안에 들어가지 **shall not** 한다. `bar_map` 사전의 최상위 키 집합(여섯 개)과 `validate_bar_map`의 검사는 바뀌지 **shall not** 한다. 기록의 정확한 위치는 OD-1로 정한다. | P4, P5. 감독 결정: 마디 지도 밖 |
-| REQ-LDBARLEN-003 | **When** 저장이 거절되면(길이 불일치 포함, REQ-LDBARLEN-007), 서버 **shall** 원본 기록을 포함해 타임라인을 한 바이트도 바꾸지 **shall not** 하고, 되돌리기 깊이도 그대로 둔다. | REQ-LDBARENTRY-007(SPEC-LDBARMAP-002 §4.2) 계승 |
+| REQ-LDBARLEN-003 | **When** 저장이 거절되면(길이 불일치 포함, REQ-LDBARLEN-007), 서버 **shall** 기존 타임라인을 한 바이트도 바꾸지 **shall not** 하고, 원본 기록의 상태(없었으면 없는 채로, 있었으면 있던 그대로)도 바꾸지 **shall not** 하며, 되돌리기 깊이도 그대로 둔다. 원본 기록을 어디에 두는지는 OD-1이 정한다. | REQ-LDBARENTRY-007(SPEC-LDBARMAP-002 §4.2) 계승; OD-1 |
 | REQ-LDBARLEN-004 | **When** 저장이 성공하면, 서버 **shall** 응답 `text`의 첫 문장을 「곡 «{파일명}» 마디 지도를 초안에 저장했습니다.」와 **같은 글자**로 쓰고, 이어서 타임라인 제목을 싣는다. 파일명이 비어 있으면 첫 문장은 「마디 지도를 초안에 저장했습니다.」다. 「콘솔 무접촉」과 「라이브러리에 남기려면 별도로 저장」 문장은 남긴다. | P1; SPEC-LDBARMAP-003 REQ-LDBARUI-006(정렬); SPEC-LDBARMAP-002 REQ-LDBARENTRY-011이 약속한 문구 |
 | REQ-LDBARLEN-005 | **When** 분석이 성공해 저장 직전에 이르면, 서버 **shall** 디코드 길이(밀리초)를 타임라인의 곡 길이 정보와 대조한다. 대조 시점은 곡 열쇠 재확인(REQ-LDBARENTRY-009) 뒤다. | P14, P6 |
 | REQ-LDBARLEN-006 | **When** 타임라인에 곡 길이 정보가 없으면, 서버 **shall** 길이 확인을 통과로 처리하고 응답 `text`에 「곡 길이: 확인할 수 없음」이라는 사실을 적는다. 이때 저장은 성공한다. | 감독 결정 3(B 결정) |
@@ -122,7 +124,7 @@ depends_on: [SPEC-LDBARMAP-002]
 - 후보 (a): `마디 지도 저장 거절`. 저장 검사 거절과 같은 종류라 자연스럽다.
 - 후보 (b): `마디 지도 분석 거절`. 분석 결과의 불일치로 읽힌다.
 
-**OD-4. 타임라인 곡 길이의 출처. 가장 중요한 열린 결정이다.** 확인된 사실: 현재 코드에서 타임라인의 곡 길이를 채우는 생산자가 없다(P10). 그러므로 이 경로에서는 REQ-LDBARLEN-006(「확인할 수 없음」 통과)이 **상시 결과**가 될 가능성이 크다. 이 상태에서 REQ-LDBARLEN-007은 실제로 실행되지 않는다. 즉 B 대조는 지금 상태로는 사실상 빈 검사다. 감독이 이를 알고 정해야 한다.
+**OD-4. 타임라인 곡 길이의 출처. 가장 중요한 열린 결정이다.** 확인된 사실: 설계 흐름이 만드는 초안 타임라인에는 곡 길이를 채우는 생산자가 없다(P10). 예외는 시드 항목 하나다. 이 항목을 불러오면 고정 값 236000이 초안에 들어온다(P18). 그러므로 이 경로에서는 REQ-LDBARLEN-006(「확인할 수 없음」 통과)이 **상시 결과**가 될 가능성이 크다. 이 상태에서 REQ-LDBARLEN-007은 실제로 실행되지 않는다. 즉 B 대조는 지금 상태로는 사실상 빈 검사다. 감독이 이를 알고 정해야 한다.
 
 - 선택지 (a): 곡 길이를 채우는 생산 경로를 따로 만든다(이 SPEC 범위 밖. 별도 SPEC 또는 카드).
 - 선택지 (b): 마지막 구간의 끝으로 길이를 유도한다. 현재 불가능하다(P10 주석: 「마지막 구간의 끝을 아무도 안 준다」).
@@ -146,6 +148,12 @@ depends_on: [SPEC-LDBARMAP-002]
 - 길이 확인 결과 세 가지: 「곡 길이: 확인할 수 없음」(확정 요구, REQ-LDBARLEN-006), 통과 문구(제안: 「곡 길이: 대조 통과」), 불일치 문구(제안: 디코드 길이와 타임라인 길이를 함께 적는 한 문장).
 - 타임라인 제목이 없을 때의 문구(제안: 「타임라인 제목: 확인할 수 없음」).
 
+**OD-8. 저장 성공 문구의 화면 표시.** 감독이 정한다. 이 SPEC은 어느 선택지도 고르지 않았다.
+
+- 사실: SPEC-LDBARMAP-003 REQ-LDBARUI-006(브랜치 `WT-barmap-entry-ui`의 `.moai/specs/SPEC-LDBARMAP-003/spec.md:79`, 결과 라벨 표 `:151-158`)은 `마디 지도 저장`일 때 고정된 성공 문장만 보인다(파일명 유무에 따른 두 가지). 서버 `text`를 그대로 보이는 라벨은 거절·불가 세 개뿐이다(REQ-LDBARUI-007, `:80`). 그래서 이 SPEC의 타임라인 제목(REQ-LDBARLEN-004)과 「곡 길이: 확인할 수 없음」(REQ-LDBARLEN-006)은 성공 때 `chat_response.text`로 와이어에는 실리지만 진입 컨트롤의 결과 줄에는 보이지 않는다. REQ-LDBARUI-015는 결과 `chat_response`를 기존 리듀서 처리 그대로 채팅 기록에 남긴다고 하는데, 그 처리가 `text`를 화면에 그리는지는 `ui/src`를 열어 확인하지 않았다. 길이 불일치 거절(REQ-LDBARLEN-007)은 거절 라벨이라 문장이 화면에 보인다.
+- 선택지 (a): SPEC-LDBARMAP-003을 그대로 둔다. 비용: 제목과 길이 확인 결과가 성공 때 컨트롤 줄에 보이지 않는다. 이 SPEC의 수락 기준은 서버 응답 `text` 검사까지만 닿는다. 다른 브랜치의 SPEC·구현·시험은 바뀌지 않는다.
+- 선택지 (b): SPEC-LDBARMAP-003 REQ-LDBARUI-006을 개정해 성공 때도 서버 `text`를 보이게 한다. 비용: 아직 머지 전인 `WT-barmap-entry-ui`의 SPEC, 화면 구현(`ui/src`), 시험을 함께 고쳐야 한다. 문구 고정표(그 SPEC의 §4)와 REQ-LDBARUI-007과의 일관성을 다시 봐야 한다. 이 SPEC은 `ui/src`를 건드리지 않으므로(§8) 개정은 SPEC-LDBARMAP-003 쪽 작업이다. 두 SPEC이 성공 문장의 첫 문장을 같은 글자로 맞추는 현재 방식(REQ-LDBARLEN-004)도 다시 정해야 할 수 있다.
+
 ## §6. Gaps — 확인하지 않은 것
 
 1. 타임라인 저장소(`SongTimelineStore`)가 최상위 키를 재시작 뒤에도 보존하는지 읽지 않았다. OD-1 (a)의 전제다.
@@ -160,7 +168,7 @@ depends_on: [SPEC-LDBARMAP-002]
 
 ## §7. 잔여 위험
 
-- **B 검사의 공허함.** P10이 사실이면 REQ-LDBARLEN-007은 실행되지 않는다. 이 위험은 OD-4를 정하기 전까지 해소되지 않는다. 검사가 실패할 수 없는 상태를 「검사가 있다」로 보고하면 안 된다(완료 보고에 「길이 대조 통과」라고 쓰려면 실제 대조가 실행된 증거가 있어야 한다).
+- **B 검사의 공허함.** 설계 흐름 초안에서는 P10 때문에 REQ-LDBARLEN-007이 실행되지 않는다. 시드 항목을 불러온 초안에서는 고정 값(236000)이 있어 실행될 수 있고, 그 값은 첨부 곡의 길이가 아니다(P18). 이 위험은 OD-4를 정하기 전까지 해소되지 않는다. 검사가 실패할 수 없는 상태를 「검사가 있다」로 보고하면 안 된다(완료 보고에 「길이 대조 통과」라고 쓰려면 실제 대조가 실행된 증거가 있어야 한다).
 - **조용한 잘림.** OD-5가 정해지기 전까지, 어림 플래그가 켜진 파일이 부분 길이로 저장될 수 있다(M3). 이 SPEC은 이 위험을 줄이지 않는다.
 - **타임라인 키 추가의 파급.** OD-1 (a)를 고르면 `song_timeline` 프레임에 새 키가 실린다(P15). 클라이언트나 시험이 키 집합을 고정하고 있으면 깨진다(§6 Gap 2).
 - **SPEC-LDBARMAP-002 약속과의 충돌.** OD-1 (a)는 REQ-LDBARENTRY-010을 개정해야 한다. 개정 없이 구현하면 완료 보고가 거짓이 된다.

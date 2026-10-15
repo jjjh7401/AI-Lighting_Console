@@ -77,10 +77,10 @@
 | 1 | `server/web/session.py` | 저장 경로: 원본 기록 전달, 길이 대조 호출, 성공 문구 조립 (`analyse_bar_map` ~9478, `store_timeline_bar_map` ~9421) | M1, M2, M4 |
 | 2 | `server/audio/bar_map.py` | 디코드 길이를 탐지 결과로 전달 (`detect_beat_grid` ~221, `BeatGridResult` ~105). 잘림 검사 분기는 바꾸지 않는다 | M5 |
 | 3 | `server/audio/bar_map_entry.py` | 합성 결과가 길이를 함께 실어 나르는 자리 (`synthesize_bar_map` ~93) | M5 |
-| 4 | `server/audio/bar_map_store.py` | 원본 기록 키와 읽기 함수. `validate_bar_map`과 `_TOP_LEVEL_KEYS`는 불변 (OD-1 (a)일 때) | M1 |
+| 4 | `server/audio/bar_map_store.py` | OD-1 결정에 따름. 원본 기록의 저장 자리와 읽기 함수가 이 파일에 들어가는지는 선택지에 달렸다. `validate_bar_map`과 `_TOP_LEVEL_KEYS`는 불변 | M1 |
 | 5 | `server/web/PROTOCOL.md` | 26행의 `bar_map_analyse` 성공 문구 설명 갱신 | M4 |
 | 6 | `server/tests/test_session_bar_map_entry.py` | 저장, 거절, 문구, 길이 대조 시험 | M1, M2, M4, M6 |
-| 7 | `server/tests/test_audio_bar_map_store.py` | 원본 기록 키가 최상위 키 집합을 바꾸지 않음을 확인 | M1, M6 |
+| 7 | `server/tests/test_audio_bar_map_store.py` | OD-1 결정에 따름. 원본 기록이 마디 지도 최상위 키 집합(여섯 개)을 바꾸지 않음을 확인. 시험의 자리와 방식은 OD-1이 정한다 | M1, M6 |
 | 8 | `server/tests/` 아래 길이 시험 파일 (기존 파일을 확인한 뒤 정함) | 디코드 길이 값 시험 (AC-006) | M5 |
 
 예상 8개 파일이다. Tier S 상한(5개 미만)을 넘고 Tier L 기준(15개 초과)에는 닿지 않으므로 Tier M이다. OD-1 (b)를 고르면 새 저장 모듈이 생겨 9~10개가 된다. 여전히 Tier M 안이다. 구현 뒤 LOC를 재고, 1000을 넘으면 Tier L로 재판정한다.
@@ -110,7 +110,7 @@ git diff --name-only
 | 원본 기록 (a)가 SPEC-LDBARMAP-002 REQ-LDBARENTRY-010과 충돌한다 | 완료 보고가 약속을 깨고도 성공이라고 쓴다 | (a)를 고르면 REQ-LDBARENTRY-010을 먼저 개정한다 | OD-1 |
 | 타임라인에 새 키가 실려 `song_timeline` 프레임이 달라진다 | 키 집합을 고정한 시험이나 클라이언트가 깨질 수 있다 | 시험 결과로 확인한다. 클라이언트 쪽은 전수 확인하지 않았다 | spec.md §6 Gap 2, OD-1 |
 | 분석 도중 파일이 바뀌어 기록이 어긋난다 | 디코드한 곡과 기록한 파일명이 다르다 | 기록은 분석 시작 때 잡은 객체에서 가져온다 | REQ-LDBARLEN-001, AC-001 |
-| 길이를 헤더 선언값에서 가져온다 | 곡에 따라 최대 48초 틀린다(M2) | REQ-LDBARLEN-009로 금지하고, AC-006이 디코드 값을 확인한다 | REQ-LDBARLEN-009 |
+| 길이를 헤더 선언값에서 가져온다 | 곡에 따라 48초 이상 틀린다. 측정에서 헤더 판독기 셋 모두 Let's Dance에서 +48초 이상이고, 가장 큰 값은 libsndfile 선언값 +49.562초다(M2, measure.md §2 109행) | REQ-LDBARLEN-009로 금지하고, AC-006이 디코드 값을 확인한다 | REQ-LDBARLEN-009 |
 | 분석이 같은 바이트를 두 번 디코드한다 | 두 번째 디코드 결과와 길이가 다를 수 있다 | 길이는 탐지 단계의 디코드 한 번에서만 얻는다 | P8, REQ-LDBARLEN-009 |
 | 요약 라벨을 새로 만든다 | 화면이 새 라벨을 모른다(SPEC-LDBARMAP-003) | REQ-LDBARLEN-011로 금지하고 AC-010이 확인한다 | OD-3 |
 | 문구가 SPEC-LDBARMAP-003과 어긋난다 | 같은 저장 결과가 화면에서 다르게 보인다 | 첫 문장을 같은 글자로 고정한다. 어느 한쪽이 바뀌면 두 SPEC을 함께 개정한다 | REQ-LDBARLEN-004 |
@@ -118,7 +118,7 @@ git diff --name-only
 
 ## §F. 안티패턴
 
-- 디코드 길이를 헤더 선언값으로 바꿔 쓰기. 헤더값은 곡에 따라 최대 48초 틀린다(REQ-LDBARLEN-009 위반).
+- 디코드 길이를 헤더 선언값으로 바꿔 쓰기. 헤더값은 곡에 따라 48초 이상 틀린다(측정: Let's Dance에서 헤더 판독기 셋 모두 +48초 이상, 가장 큰 값은 libsndfile 선언값 +49.562초, measure.md §2 109행). REQ-LDBARLEN-009 위반이다.
 - 「확인할 수 없음」을 실패로 바꾸기. 타임라인에 길이가 없는 것이 지금의 정상 경로라서, 이렇게 하면 저장이 거의 모두 막힌다(REQ-LDBARLEN-006 위반).
 - 측정 산포에서 허용 오차 숫자를 골라 쓰기. 편집판 쌍이 없어서 근거가 없다(OD-2).
 - 원본 기록을 `bar_map` 사전 안에 넣기. `validate_bar_map`이 거절하거나 키 집합이 바뀐다(REQ-LDBARLEN-002 위반).
@@ -128,7 +128,7 @@ git diff --name-only
 
 ## §G. 교차 참조
 
-- `.moai/specs/SPEC-LDBARMAP-004/spec.md` — 요구사항, 열린 결정 OD-1~OD-7, 제외 범위.
+- `.moai/specs/SPEC-LDBARMAP-004/spec.md` — 요구사항, 열린 결정 OD-1~OD-8, 제외 범위.
 - `.moai/specs/SPEC-LDBARMAP-004/acceptance.md` — 수락 기준 AC-LDBARLEN-001~012.
 - `.moai/specs/SPEC-LDBARMAP-002/spec.md` — REQ-LDBARENTRY-007, 009, 010, 011, 012, 013, 016(선행 SPEC).
 - `WT-barmap-entry-ui:.moai/specs/SPEC-LDBARMAP-003/spec.md` — REQ-LDBARUI-006, 007, E3(화면 쪽 정렬 대상).
