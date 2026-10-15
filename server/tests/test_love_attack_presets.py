@@ -80,6 +80,10 @@ _EXPECTED_SAVE = (
     "Store Preset 1.10",
     "Label Preset 1.10 'DIM-60'",
     "ClearAll",
+    "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100",
+    "Store Preset 1.11",
+    "Label Preset 1.11 'DIM-100'",
+    "ClearAll",
 )
 
 
@@ -157,24 +161,26 @@ class TestReadyAndHeldPresets:
             assert preset.hold is None
             assert preset.group_no == group_no
 
-    def test_multi_group_dimmer_is_held_as_undecided(self) -> None:
+    def test_multi_group_dimmer_is_ready_as_one_selection(self) -> None:
         preset = _preset(_plan(), "DIM-100")
-        assert preset.ready is False
-        assert preset.hold is not None and "그룹 5개" in preset.hold
+        assert preset.ready is True
+        assert preset.hold is None
+        assert preset.group_nos == (4, 7, 11, 12, 14)
 
-    def test_color_without_a_project_rgb_is_undecided_and_never_ready(self) -> None:
+    def test_lavender_is_a_palette_rgb_and_stays_out_of_this_card(self) -> None:
         preset = _preset(_plan(), "LAVENDER")
         assert preset.kind == "color"
-        assert preset.value == "RGB 미정"
+        assert preset.value == "RGB 55 35 100"
         assert preset.ready is False
-        assert preset.hold is not None and preset.hold.startswith("RGB 미정")
+        assert preset.deferred is True
+        assert "이 카드 범위 밖" in (preset.hold or "")
 
-    def test_direction_without_stage_coordinates_is_held(self) -> None:
+    def test_floor_is_an_approximate_target_and_stays_out_of_this_card(self) -> None:
         preset = _preset(_plan(), "FLOOR")
         assert preset.kind == "position"
-        assert preset.value == "바닥 쪽"
+        assert "무대 중앙 깊이 바닥" in preset.value
         assert preset.ready is False
-        assert "목표 좌표 미정" in (preset.hold or "")
+        assert preset.deferred is True
         assert len(preset.cells) == 2
 
 
@@ -219,7 +225,7 @@ class TestUndecidedItems:
         assert "5마디 1박 위치 한 칸 올림" in text
         assert "11마디 1박 새 자리" in text
         assert "SCENE 메모 18마디" in text
-        assert "confirmed: false" in text
+        assert "confirmed: false" in "\n".join(plan.supervisor_fixes)
 
     def test_kept_numbers_are_counted_and_not_planned(self) -> None:
         plan = _plan()
@@ -240,7 +246,7 @@ class TestSaveCommands:
         joined = "\n".join(save_commands(_plan()))
         assert "ColorRGB" not in joined
         assert "LAVENDER" not in joined and "FLOOR" not in joined
-        assert "DIM-100" not in joined
+        assert "Label Preset 1.11 'DIM-100'" in joined
 
     def test_planning_never_mutates_the_grid(self) -> None:
         grid = _love_attack_grid()
@@ -266,6 +272,7 @@ class TestReferenceUpdate:
         assert wash["evidence"]["approval"]["by"] == "supervisor"
         back = _cue_of(approved, "BACK", 7)
         assert back["brightness"]["preset_no"] == "1.10"
+        assert _cue_of(approved, "BACK", 18)["brightness"]["preset_no"] == "1.11"
         assert back["effect_preset_no"] == "21.1"
         # 칸에 있던 기존 승인(t543 proposal #6)의 출처는 지우지 않고 덧붙인다.
         assert "proposal-table.md#6" in back["evidence"]["approval"]["source"]
@@ -278,12 +285,9 @@ class TestReferenceUpdate:
             grid, _plan(grid), by="supervisor", date="2026-10-15T00:00:00+00:00", source="x"
         )
         assert grid == before
-        # 100% 칸(미정)과 승인된 위치 2.1 칸은 그대로다.
+        # 100% 칸은 이제 다중 그룹 DIM-100(1.11)을 가리키고, 승인된 위치 2.1 칸은 그대로다.
+        assert _cue_of(approved, "MOVER-U", 18)["brightness"]["preset_no"] == "1.11"
         assert _cue_of(approved, "MOVER-U", 18)["position_preset_no"] == "2.1"
-        assert (
-            _cue_of(approved, "MOVER-U", 18)["brightness"]
-            == _cue_of(before, "MOVER-U", 18)["brightness"]
-        )
 
 
 # == 승인 카드: 거절 · 가짜 승인 (세션 경로) ====================================
@@ -349,8 +353,8 @@ class TestApprovalCardRejected:
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
         assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
         assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.10"
-        # 미정 칸은 그대로다.
-        assert _cue_of(grid, "BACK", 18)["brightness"] == _cue_of(before, "BACK", 18)["brightness"]
+        # 100% 칸(다중 그룹 DIM-100)은 1.11 을 가리킨다.
+        assert _cue_of(grid, "BACK", 18)["brightness"]["preset_no"] == "1.11"
 
 
 # == 승인 카드: 실제 비동기 승인 통로 (ApprovalChannel + 다른 스레드가 답함) ========

@@ -99,6 +99,9 @@ _KO_EN_COLOR_EQUIV: dict[str, str] = {
     # 이미 있는 Lavender 슬롯을 가리키기만 한다.
     "퍼플": "lavender",
     "보라": "lavender",
+    # 카드 SPEC-LDRHYTHM-001 2단계(2026-10-15) — 「라벤더」도 같은 표준 슬롯(Lavender(55,35,100))을
+    # 가리킨다. 값을 새로 짓지 않는다. 감독이 고칠 값: 실기 라벤더가 다르면 슬롯을 따로 정한다.
+    "라벤더": "lavender",
     "핑크": "pink",
     "오렌지": "orange",
     "주황": "orange",

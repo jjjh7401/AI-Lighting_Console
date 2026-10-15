@@ -185,6 +185,7 @@ from server.design.ldrender_gate import (
 )
 from server.design.love_attack_presets import (
     apply_plan_references,
+    card_reason,
     load_love_attack_annotations,
     plan_love_attack_presets,
     save_commands,
@@ -10497,6 +10498,7 @@ class ChatSession:
             dimmer_attributes=self._love_attack_dimmer_attributes(group_names),
         )
         commands = save_commands(plan)
+        ready_count = sum(1 for preset in plan.presets if preset.ready)
         if not commands:
             return self._beat_grid_send_status(
                 last_action="apply",
@@ -10505,7 +10507,6 @@ class ChatSession:
                     "LOVE ATTACK 프리셋: 지금 저장할 디머 프리셋이 없습니다. 나머지는 미정입니다."
                 ),
             )
-        ready_count = sum(1 for preset in plan.presets if preset.ready)
         batch = build_write_approval_batch([commands])
         token = bind_session_key(self._session_key)
         try:
@@ -10517,8 +10518,7 @@ class ChatSession:
                 ),
                 risk=BatchRisk(
                     reason=(
-                        f"LOVE ATTACK 연출 프리셋 저장 — 디머 프리셋 {ready_count}개 "
-                        "(구간 단위 1회 승인)"
+                        f"LOVE ATTACK 연출 프리셋 저장 — {card_reason(plan)} (구간 단위 1회 승인)"
                     ),
                     kind="love_attack_presets",
                 ),
