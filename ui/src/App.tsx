@@ -1249,6 +1249,7 @@ export default function App() {
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
+            accentBars={state.songTimeline.timeline?.accent_bars}
             bpm={state.songTimeline.timeline?.bpm}
             barCount={state.songTimeline.timeline?.bar_count}
             versionLabel={

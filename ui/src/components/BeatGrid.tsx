@@ -116,7 +116,9 @@ import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./be
 import {
   brightnessCell,
   changedFieldsLabel,
+  collapsedFolderSummary,
   colorCell,
+  glanceBarLabel,
   movementCell,
   positionCell,
   transitionCell,
@@ -513,6 +515,8 @@ export interface BeatGridProps {
    * 서버가 `timeline.sections`로 보내는 값이다 — 넘기지 않거나
    * `secondsPerBar`가 없으면 기존 7칸 숫자 띠로 조용히 떨어진다. */
   sections?: readonly SongOverviewSectionInput[];
+  /** #726 — 서버 `timeline.accent_bars[]`({bar, kind}). 있으면 ★ 는 이 마디들이다. */
+  accentBars?: readonly { bar: number; kind: string }[] | null;
   /** 카드 t559(M9 step 1·8) — 곡 전체 지도·상단 바가 읽는 곡 메타
    * (`timeline.bpm`·`timeline.bar_count`, 버전 = 초안 상태 라벨). 없으면
    * 지어내지 않고 "—"/표시 범위로 떨어진다. */
@@ -1444,6 +1448,7 @@ export function BeatGrid({
   secondsPerBar = null,
   colorPresetHex,
   sections,
+  accentBars,
   bpm,
   barCount,
   versionLabel = null,
@@ -1955,6 +1960,7 @@ export function BeatGrid({
     barCount,
     secondsPerBar,
     fallbackRange: grid.bar_range,
+    accentBars,
   });
   const pxPerBar = pxPerBarForZoom(overviewZoom, laneView.visibleWidth, overviewModel.totalBars, PX_PER_BAR);
   // 카드 t586 — 눈금(자)에 구간 이름을 다는 데 쓴다: 구간 시작 마디 → 이름.
@@ -2128,6 +2134,13 @@ export function BeatGrid({
     setDrawerOpen(next);
     if (next) onDrawerRequest?.();
   };
+
+  // 「이 마디 한눈에」 접힌 폴더의 「이 마디 N줄 바뀜」 — 이 마디에서 칸이 새로 시작하는 줄 수.
+  // 곡 표시 범위의 첫 마디는 비교할 앞 칸이 없어 0이다(「바뀐 것」 표시와 같은 기준).
+  const changedRowsAtBar = (tracks: BeatGridTrack[]) =>
+    viewBar === grid.bar_range.start
+      ? 0
+      : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
 
   return (
     <section className="beat-grid" aria-label="박자 격자">
@@ -2324,7 +2337,9 @@ export function BeatGrid({
                           </span>
                           {/* 카드 t586 — 시안 `.lhead small`: 그룹·장비 범위·대수. */}
                           {(() => {
-                            const summary = trackFixtureSummary(track.group_no, track.group_name, fixtures);
+                            // #726 — 둘째 줄은 서버가 준 `sub_info.text`(콘솔 판독)가 있으면 그것, 없으면 기존 요약.
+                            const summary =
+                              track.sub_info?.text || trackFixtureSummary(track.group_no, track.group_name, fixtures);
                             return summary ? <small className="beat-grid-track-meta">{summary}</small> : null;
                           })()}
                         </span>
@@ -3316,7 +3331,7 @@ export function BeatGrid({
               이름은 곡 데이터(overviewModel)에서만 — 없으면 마디만. */}
           <h5 className="beat-grid-glance-title">
             <span>
-              {viewBar}마디 한눈에
+              {glanceBarLabel(viewBar)} 한눈에
               {viewBarSectionLabel ? ` — ${viewBarSectionLabel}` : ""}
             </span>
             <span className="beat-grid-glance-hint">훑어보기 · 누르면 오른쪽에서 고치기</span>
@@ -3356,6 +3371,8 @@ export function BeatGrid({
                       <td colSpan={6}>
                         {isFolderOpen(folder.role) ? "▾" : "▸"} {folder.label}
                         {folder.label !== folder.role && ` · ${folder.role}`}
+                        {!isFolderOpen(folder.role) &&
+                          collapsedFolderSummary(folder.tracks.length, changedRowsAtBar(folder.tracks))}
                       </td>
                     </tr>
                     {isFolderOpen(folder.role) &&
@@ -3430,7 +3447,10 @@ export function BeatGrid({
                           편집 칸이 그 항목에 초점을 두고 연다 — 타임라인
                           막대를 눌렀을 때와 같은 메커니즘이다. 칼럼별 칸을
                           누르면 그 칼럼 이름을 초점으로 함께 올린다. */}
-                      <tr className="beat-grid-glance-row" onClick={() => focus(null)}>
+                      <tr
+                        className={selected?.trackIndex === trackIndex ? "beat-grid-glance-row on" : "beat-grid-glance-row"}
+                        onClick={() => focus(null)}
+                      >
                         <td>
                           <button
                             type="button"

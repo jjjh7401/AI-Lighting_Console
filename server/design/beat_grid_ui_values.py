@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 
+from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
+
 __all__ = [
     "SECTION_KIND_COLORS",
     "accent_bars_from_bar_map",
@@ -196,6 +198,7 @@ def attach_beat_grid_ui_values(
     - ``sections[i].kind``·``color`` — 이름에서 종류를 알아볼 때만.
     - ``sections[i].energy`` — 마디 지도에 마디별 ``energy`` 가 있을 때만.
     - ``accent_bars`` — 마디 지도에 드롭 이벤트가 있을 때만.
+    - ``beat_grid.tracks[i].cues[j].color_rgb`` — ``preset_colors`` 에 그 색 번호가 기록됐을 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
     """
     merged = dict(timeline)
@@ -224,6 +227,9 @@ def attach_beat_grid_ui_values(
     if accents:
         merged["accent_bars"] = accents
     grid = merged.get("beat_grid")
+    if isinstance(grid, Mapping):
+        grid = attach_color_rgb_to_cues(grid)
+        merged["beat_grid"] = grid
     if track_sub_infos and isinstance(grid, Mapping) and isinstance(grid.get("tracks"), list):
         tracks: list[object] = []
         for track in grid["tracks"]:

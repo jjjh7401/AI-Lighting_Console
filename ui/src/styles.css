@@ -4753,6 +4753,7 @@ body {
   font-size: 11px;
 }
 
+/* 시안 `.clip .t` — 이름은 굵게 11px. 둘째 줄(.beat-grid-cue-meta)은 아래에서 굵기를 되돌린다. */
 .beat-grid-cue {
   position: absolute;
   top: 0;
@@ -4760,7 +4761,8 @@ body {
   background: #2b3a52;
   border: 1px solid #3a4a66;
   color: var(--text);
-  font-size: 10.5px;
+  font-size: 11px;
+  font-weight: 700;
   padding: 3px 5px;
   border-radius: 4px;
   cursor: pointer;
@@ -4827,6 +4829,7 @@ body {
 .beat-grid-cue-meta {
   display: block;
   font-size: 10px;
+  font-weight: 400;
   line-height: 10px;
   opacity: 0.92;
   white-space: nowrap;
@@ -4862,14 +4865,14 @@ body {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 3px;
   background: #101014;
-  border: 1.5px solid #6a6a78;
+  border: 1.5px solid #9a98a6;
   color: #fff;
-  font-size: 7px;
-  line-height: 9px;
+  font-size: 8px;
+  line-height: 10px;
   text-align: center;
   cursor: pointer;
   z-index: 2;
@@ -5048,6 +5051,27 @@ body {
 
 .beat-grid-glance-row:hover td {
   background: #20242c;
+}
+
+/* 시안 `tr.on` — 지금 고르고 있는 줄의 행을 한 톤 밝게 강조한다. */
+.beat-grid-glance-row.on td {
+  background: #ffffff12;
+}
+
+/* 시안 「유지」 — 전환이 없는 칸은 흐리게(#555). */
+.beat-grid-glance-dim {
+  color: #555;
+}
+
+/* 칩 앞 색 네모 — 프리셋 색 값이 있을 때만 그린다(서버 rgb). */
+.beat-grid-glance-sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 3px;
+  border: 1px solid #0008;
+  border-radius: 2px;
+  vertical-align: -1px;
 }
 
 .beat-grid-glance-expand-toggle {

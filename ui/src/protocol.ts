@@ -323,6 +323,12 @@ export interface SongTimelineSection {
   fx: string[];
   accents: string[];
   mib: boolean;
+  /** #726 — 구간 종류 색(서버 `attach_beat_grid_ui_values`). 없으면 키가 없다. */
+  color?: string | null;
+  /** #726 — 구간 에너지 0~1. 마디 지도를 분석한 뒤에만 생긴다. 없으면 키가 없다. */
+  energy?: number | null;
+  /** #726 — 구간 종류 이름(이름에서 알아볼 때만). */
+  kind?: string | null;
   /** t472 — 사전이동이 있는 구간에만: 사전이동에 쓸 수 있는 어둠(초), 모르면 null (t471). */
   dark_window_seconds?: number | null;
   /** t472 — 어둠이 모자라 무빙이 켜진 채 움직이는가 (t471, REQ-066). 사전이동 구간에만. */
@@ -474,8 +480,6 @@ export interface BeatGridCue {
   brightness: BeatGridBrightness;
   position_preset_no: string | null;
   color_preset_no: string | null;
-  /** #731 — 칸에 실린 색 [r, g, b] 배열(0~100%). 서버가 색 값을 실어 줄 때만 있다. 없으면 키가 없다. */
-  color_rgb?: readonly [number, number, number] | null;
   effect_preset_no: string | null;
   effect_kind: "position" | "color" | "dimmer" | "mixed" | null;
   entry: BeatGridEntry;
@@ -494,6 +498,10 @@ export interface BeatGridCue {
    * (서버가 이미 가린 판정을 다시 유추하지 않는다). 옛 격자(이 필드가
    * 생기기 전에 저장된 것)는 `undefined`일 수 있다. */
   pending_preset_fields?: string[];
+  /** #731 — 칸에 실린 색 [r, g, b] 배열(0~100%). 서버가 색 값을 실어 줄 때만 있다. 없으면 키가 없다.
+   * 이 칸이 낼 색(RGB, 각 0~100%) — 「이 마디 한눈에」 색 네모와 무대 장비 색에 쓴다. 서버가 색을
+   * 알 때만 싣는다. 없으면(`undefined`/`null`) 네모는 생략하고 무대는 기본색으로 그린다(리드 결정). */
+  color_rgb?: [number, number, number] | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성
@@ -511,12 +519,23 @@ export interface BeatGridSceneMemo {
  * 뿐이고(`server.design.rig.RIG_LAYER_ROLES`), 트랙 식별자는 아니다.
  * `group_no`가 `null`이면 이 콘솔 그룹의 번호가 아직 확인되지 않았다는
  * 뜻이다(`group_no_confirmed`가 그 구분을 명시한다, 지어내지 않음). */
+/** #726 — 트랙 둘째 줄(무대 판독이 만든 그룹 소속). 콘솔을 읽었을 때만 있다. */
+export interface BeatGridTrackSubInfo {
+  text?: string | null;
+  group_no?: number | null;
+  fid_ranges?: string;
+  fixture_count?: number;
+  fixture_types?: string[];
+}
+
 export interface BeatGridTrack {
   group_no: number | null;
   group_no_confirmed: boolean;
   group_name: string;
   layer_role: string | null;
   cues: BeatGridCue[];
+  /** #726 — 줄 머리 둘째 줄(`text`). 없으면 키가 없다. */
+  sub_info?: BeatGridTrackSubInfo | null;
 }
 
 /** t532 — 박자 격자 전체. `timeline["beat_grid"]`에 임베드된다(REQ-LDBEAT-006
@@ -661,6 +680,9 @@ export interface BeatGridDrawerEntry {
   /** 카드 t569 — 설명의 출처. "app" = 앱이 저장한 설명, "show" = 콘솔에서
    * 읽은 쇼 프리셋(설명 없음, 툴팁은 출처만 붙인다). */
   description_source?: PresetDescriptionSource | null;
+  /** 프리셋 색(RGB, 각 0~100%) — 칩 앞 색 네모. 서버가 색 값을 알 때만 싣는다. 없으면(`undefined`/`null`)
+   * 네모를 그리지 않는다(리드 결정: 색 값이 올 때만 그린다). */
+  rgb?: [number, number, number] | null;
 }
 
 export type PresetDescriptionSource = "app" | "show";
@@ -863,6 +885,8 @@ export interface SongTimelineView {
   approval: string;
   director_decisions: SongTimelineDecision[];
   sections: SongTimelineSection[];
+  /** #723·#726 — 강조(★) 마디(마디 지도의 드롭 이벤트). 없으면 키가 없다. */
+  accent_bars?: readonly { bar: number; kind: string }[] | null;
   lint: { rule_id: string; cue_number: number; description: string }[];
   unresolved: { axis: string; section_index: number | null; reason: string }[];
   disabled: { axis: string; section_index: number | null; reason: string }[];
