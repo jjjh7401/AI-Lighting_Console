@@ -2,7 +2,7 @@
 // 않는다 — 그 번호의 막대는 중립(해칭)으로 남는다(REQ-LDBEAT-015(f)와 같은 원칙).
 import { describe, expect, it } from "vitest";
 
-import { presetColorHexMap, presetRgbHex } from "./presetColorHex";
+import { cueRgbHex, presetColorHexMap, presetRgbHex } from "./presetColorHex";
 
 describe("presetRgbHex — 0~100% 를 화면 색으로", () => {
   it("라벤더 시안 값(60·30·100%)은 #994dff 다", () => {
@@ -32,5 +32,18 @@ describe("presetColorHexMap — 모르는 번호는 표에 넣지 않는다", ()
   it("preset_colors 가 없으면 빈 표다", () => {
     expect(presetColorHexMap(undefined)).toEqual({});
     expect(presetColorHexMap(null)).toEqual({});
+  });
+});
+
+describe("cueRgbHex — 칸에 실린 [r,g,b] 배열(0~100%)을 화면 색으로", () => {
+  it("배열 [60,30,100] 은 #994dff 다", () => {
+    expect(cueRgbHex([60, 30, 100])).toBe("#994dff");
+  });
+
+  it("길이가 3이 아니거나 없거나 범위 밖이면 undefined — 지어내지 않는다", () => {
+    expect(cueRgbHex(undefined)).toBeUndefined();
+    expect(cueRgbHex(null)).toBeUndefined();
+    expect(cueRgbHex([60, 30])).toBeUndefined();
+    expect(cueRgbHex([101, 0, 0])).toBeUndefined();
   });
 });
