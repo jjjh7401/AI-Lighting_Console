@@ -21,8 +21,10 @@ import {
   attachmentInputDisabled,
   composerViewState,
   dashPressTargetNo,
+  readBeatGridFullscreenFromStorage,
   readRunbookModeFromStorage,
   targetKindForDashSection,
+  writeBeatGridFullscreenToStorage,
   writeRunbookModeToStorage,
 } from "./App";
 import { DashBoard } from "./components/DashBoard";
@@ -422,6 +424,26 @@ describe("runbook-mode localStorage persistence (T-E)", () => {
   it("never throws when storage is unavailable — degrades to off", () => {
     expect(() => writeRunbookModeToStorage(true)).not.toThrow();
     expect(readRunbookModeFromStorage()).toBe(false);
+  });
+
+  it("박자 배치 전체화면은 기억이 없으면 꺼진 채로 연다", () => {
+    withFakeLocalStorage(() => {
+      expect(readBeatGridFullscreenFromStorage()).toBe(false);
+    });
+  });
+
+  it("박자 배치 전체화면 on → off 를 write/read 로 되돌린다", () => {
+    withFakeLocalStorage(() => {
+      writeBeatGridFullscreenToStorage(true);
+      expect(readBeatGridFullscreenFromStorage()).toBe(true);
+      writeBeatGridFullscreenToStorage(false);
+      expect(readBeatGridFullscreenFromStorage()).toBe(false);
+    });
+  });
+
+  it("박자 배치 전체화면 저장소가 없어도 던지지 않고 꺼진 것으로 본다", () => {
+    expect(() => writeBeatGridFullscreenToStorage(true)).not.toThrow();
+    expect(readBeatGridFullscreenFromStorage()).toBe(false);
   });
 });
 
