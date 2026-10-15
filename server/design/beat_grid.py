@@ -583,6 +583,8 @@ def attach_beat_grid_runtime_extras(
        유추하지 않게 한다(REQ-LDBEAT-015(h-1), M10 4단계).
 
     ``beat_grid`` 키가 없으면 아무것도 하지 않는다(ADDITIVE, no-op)."""
+    from server.design.beat_grid_effect_presets import effect_shape_of_cue
+
     merged = dict(payload)
     grid = merged.get("beat_grid")
     if not isinstance(grid, Mapping):
@@ -605,6 +607,9 @@ def attach_beat_grid_runtime_extras(
                         _PENDING_PRESET_FIELD_LABELS.get(field, field)
                         for field, _value in pending_preset_fields(cue)
                     ]
+                    shape = effect_shape_of_cue(cue, grid)
+                    if shape is not None:
+                        cue["effect_shape"] = shape  # type: ignore[typeddict-unknown-key]
                     normalized_cues.append(cue)
                 track["cues"] = normalized_cues
             normalized_tracks.append(track)
