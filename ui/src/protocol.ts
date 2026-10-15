@@ -474,6 +474,8 @@ export interface BeatGridCue {
   brightness: BeatGridBrightness;
   position_preset_no: string | null;
   color_preset_no: string | null;
+  /** #731 — 칸에 실린 색 [r, g, b] 배열(0~100%). 서버가 색 값을 실어 줄 때만 있다. 없으면 키가 없다. */
+  color_rgb?: readonly [number, number, number] | null;
   effect_preset_no: string | null;
   effect_kind: "position" | "color" | "dimmer" | "mixed" | null;
   entry: BeatGridEntry;

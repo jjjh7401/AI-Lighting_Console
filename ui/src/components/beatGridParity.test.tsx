@@ -107,3 +107,14 @@ describe("개요 — 채운 범위 표시 (시안 「← 채운 범위(0~25)」)
     expect(html).not.toContain("← 채운 범위(0~82)");
   });
 });
+
+describe("막대 색 — 칸에 실린 RGB(color_rgb, #731) 우선", () => {
+  it("color_rgb 가 있으면 색 번호 표 없이도 그 색으로 칠한다", () => {
+    const grid = gridWith([
+      track("WASH-ALL", "wash", [cue(0, "라벤더 워시", { color_rgb: [60, 30, 100] })]),
+    ]);
+    const html = renderToStaticMarkup(<BeatGrid grid={grid} barCount={26} />);
+    expect(html).toContain("background-color:#994dff");
+    expect(html).not.toContain("is-color-unset");
+  });
+});

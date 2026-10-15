@@ -110,7 +110,7 @@ import {
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
 import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
-import { presetColorHexMap } from "./beatgrid/presetColorHex";
+import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
 import {
@@ -1241,17 +1241,18 @@ export interface BeatGridCueColorFill {
   isColorUnset: boolean;
 }
 
-/** 막대 채우기 색 — `color_preset_no`가 있고 그 번호의 실제 색(`colorPresetHex`,
- * 콘솔에서 읽은 프리셋 색 — 이 카드 범위에서는 콘솔 접촉 0이라 아직 아무
- * 데이터도 없다)을 알 때만 그 색을 쓴다. 번호가 없거나, 번호는 있지만
- * 색을 모르면 **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 프리셋 색을 지어내지
- * 않고, 기본색은 고정 값이다(`isColorUnset` 참). 꺼진 칸에는 부르지 않는다. */
+/** 막대 채우기 색 — 칸에 실린 RGB(`cue.color_rgb`, 서버 #731)가 있으면 그 색이 이긴다.
+ * 없으면 `color_preset_no` 의 실제 색(`colorPresetHex`)을 쓴다. 둘 다 모르면
+ * **시안 기본색**(`CUE_DEFAULT_FILL`)이다 — 색을 지어내지 않는다(`isColorUnset` 참).
+ * 꺼진 칸에는 부르지 않는다. */
 export const CUE_DEFAULT_FILL = "#d8d8d8";
 
 export function cueColorFill(
   cue: BeatGridCue,
   colorPresetHex?: Readonly<Record<string, string>>,
 ): BeatGridCueColorFill {
+  const rgbHex = cueRgbHex(cue.color_rgb);
+  if (rgbHex !== undefined) return { background: rgbHex, isColorUnset: false };
   if (!cue.color_preset_no) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
   const hex = colorPresetHex?.[cue.color_preset_no];
   if (!hex) return { background: CUE_DEFAULT_FILL, isColorUnset: true };
