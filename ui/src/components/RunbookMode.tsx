@@ -50,6 +50,8 @@ export interface RunbookModeProps {
   /** Timeline library panel (save/load named versions) — rendered above the
    * timeline when App supplies it; RunbookMode itself stays hook-free. */
   librarySlot?: ReactNode;
+  /** 불러온 곡이 없을 때 「타임라인 라이브러리 펼치기」 버튼이 펼칠 손잡이. 넘기지 않으면 버튼은 그리지 않는다. */
+  onOpenTimelineLibrary?: () => void;
   /** t281 — 큐시트 초안 편집 배선. 전부 선택 prop 이라, 넘기지 않으면
    * 큐시트는 t280 의 읽기 전용 모습 그대로다. */
   onSelectCue?: (cueNumber: number) => void;
@@ -194,6 +196,7 @@ export function RunbookMode({
   timelineIsExample = false,
   onShowTimelineExample,
   librarySlot = null,
+  onOpenTimelineLibrary,
   onSelectCue,
   onUndoDraft,
   onRedoDraft,
@@ -217,6 +220,16 @@ export function RunbookMode({
           ⟳ 새로고침
         </button>
       </header>
+      {timeline === null && (
+        <div className="runbook-library-hint" role="note">
+          <p>불러온 곡이 없습니다. 「타임라인 라이브러리」에서 곡을 불러오세요.</p>
+          {onOpenTimelineLibrary && (
+            <button type="button" className="runbook-library-hint-open" onClick={onOpenTimelineLibrary}>
+              타임라인 라이브러리 펼치기
+            </button>
+          )}
+        </div>
+      )}
       {librarySlot}
       {timeline === null ? (
         <section className="runbook-timeline-pending" aria-label="감독 타임라인 대기">

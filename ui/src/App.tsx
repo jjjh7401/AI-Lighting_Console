@@ -476,6 +476,8 @@ export default function App() {
   // readRunbookModeFromStorage above) so it survives a refresh; the lazy
   // initializer reads it once on mount.
   const [runbookMode, setRunbookMode] = useState(readRunbookModeFromStorage);
+  // 런북의 「타임라인 라이브러리 펼치기」 안내와 라이브러리 패널이 같은 펼침 상태를 쓴다.
+  const [timelineLibraryOpen, setTimelineLibraryOpen] = useState(false);
   // 라이브러리에서 저장본을 불러오면 두 축 뷰가 있는 런북 모드로 옮긴다
   // (카드 t309). 런북 모드에서 불러온 경우엔 이미 켜져 있어 무해하다.
   const loadTimelineFromLibrary = (timeline: SongTimelineView) => {
@@ -992,6 +994,8 @@ export default function App() {
     <TimelineLibrary
       hasTimeline={state.songTimeline.timeline !== null}
       onLoaded={loadTimelineFromLibrary}
+      open={timelineLibraryOpen}
+      onOpenChange={setTimelineLibraryOpen}
     />
   );
 
@@ -1293,6 +1297,7 @@ export default function App() {
               onSaveDraft={() => void saveDraftToLibrary()}
               onApplyDraft={applyDraftToConsole}
               librarySlot={timelineLibrarySlot}
+              onOpenTimelineLibrary={() => setTimelineLibraryOpen(true)}
               onGeneratorSend={sendGeneratorRequest}
               generatorResponding={responding}
               generatorLastAssistantText={lastAssistantText}

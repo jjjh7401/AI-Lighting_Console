@@ -1706,6 +1706,33 @@ body {
 .runbook-timeline-pending span { display: block; margin: 0; }
 .runbook-timeline-pending p { color: #dce7f5; font: 700 11px ui-monospace, monospace; }
 .runbook-timeline-pending span { margin-top: 5px; color: #8293a9; font-size: 12px; }
+.runbook-library-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid #6e9fdd;
+  background: #111720;
+}
+
+.runbook-library-hint p {
+  margin: 0;
+  color: #dce7f5;
+  font: 700 12px "Noto Sans KR", sans-serif;
+}
+
+.runbook-library-hint-open {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid #6e9fdd;
+  background: #315f9f;
+  color: #fff;
+  font: 700 12px "Noto Sans KR", sans-serif;
+  cursor: pointer;
+}
+
 .runbook-timeline-example {
   flex: 0 0 auto;
   padding: 8px 12px;
