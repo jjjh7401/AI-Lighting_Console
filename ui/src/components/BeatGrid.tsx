@@ -483,6 +483,9 @@ export function fixtureDisplayOpacity(
   return cueIsActive(cue.label) ? ACTIVE_FIXTURE_OPACITY : INACTIVE_FIXTURE_OPACITY;
 }
 
+/** 밝기 「값 ▾」 칸의 선택지(시안 `#eM` 값 목록). */
+const BRIGHTNESS_VALUE_CHOICES = [0, 25, 40, 60, 70, 100] as const;
+
 export interface BeatGridProps {
   grid: BeatGridView | null | undefined;
   /** 빈 화면(격자 없음·트랙 없음)의 「돌아가기」 버튼. 런북 화면으로 나간다. 없으면 버튼을 그리지 않는다. */
@@ -2891,6 +2894,16 @@ export function BeatGrid({
                       if (section.unread) return "이 풀을 콘솔에서 읽지 못했습니다.";
                       return null;
                     };
+                    // 밝기 두 칸(리드 결정) — 디머 섹션을 프리셋과 효과로 나눈다. 효과는 첫 칸(디머 프리셋)의
+                    // 「디머 효과」 그룹에만 보인다(두 번 나오지 않게 프리셋 목록에서 뺀다).
+                    const dimmerEffects =
+                      dimmerSection && !dimmerSection.unread
+                        ? dimmerSection.entries.filter((entry) => entry.is_effect_band)
+                        : [];
+                    const dimmerPresetSection: BeatGridDrawerSection | null =
+                      dimmerSection && !dimmerSection.unread
+                        ? { ...dimmerSection, entries: dimmerSection.entries.filter((entry) => !entry.is_effect_band) }
+                        : dimmerSection;
                     return rows.map((row) => {
                       const isBrightnessRow = row.field === "밝기";
                       const isPositionRow = row.field === "위치 프리셋";
@@ -2917,48 +2930,62 @@ export function BeatGrid({
                             // 3항 선택 그대로. 디머 프리셋·디머 효과 목록은
                             // 서랍의 디머 섹션에서 온다(못 읽었으면 고르기가 꺼진다).
                             <span className="beat-grid-cue-field-edit">
+                              {/* 밝기 두 칸(리드 결정): 「디머 프리셋 ▾」 과 「값 ▾」. 고른 칸이 밝기 방식을 정한다.
+                                  프리셋 목록은 「이 곡 프리셋」·「쇼에 이미 있는 프리셋」 묶음과 「+ 새 프리셋」을 그대로 쓴다. */}
                               <select
-                                value={brightnessModeDraft}
-                                aria-label="밝기 모드"
+                                value={
+                                  brightnessModeDraft === "dimmer_preset"
+                                    ? brightnessPresetDraft
+                                    : brightnessModeDraft === "dimmer_effect"
+                                      ? brightnessEffectDraft
+                                      : ""
+                                }
+                                disabled={!dimmerSection || dimmerSection.unread}
+                                aria-label="디머 프리셋"
                                 onChange={(event) => {
-                                  const mode = event.target.value as typeof brightnessModeDraft;
-                                  setBrightnessModeDraft(mode);
+                                  const no = event.target.value;
+                                  if (no === "") return;
+                                  if (dimmerEffects.some((entry) => entry.preset_no === no)) {
+                                    setBrightnessModeDraft("dimmer_effect");
+                                    setBrightnessEffectDraft(no);
+                                  } else {
+                                    setBrightnessModeDraft("dimmer_preset");
+                                    setBrightnessPresetDraft(no);
+                                  }
                                 }}
                               >
-                                <option value="value">값</option>
-                                <option value="dimmer_preset">디머 프리셋</option>
-                                <option value="dimmer_effect">디머 효과</option>
+                                {renderPresetOptions(splitDrawerSectionEntries(dimmerPresetSection), false, brightnessPresetDraft)}
+                                {dimmerEffects.length > 0 && (
+                                  <optgroup label="디머 효과">
+                                    {dimmerEffects.map((entry) => (
+                                      <option key={`fx-${entry.preset_no}`} value={entry.preset_no}>
+                                        {entry.preset_no} {entry.name}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                               </select>
-                              {brightnessModeDraft === "value" && (
-                                <input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={brightnessDraft}
-                                  onChange={(event) => setBrightnessDraft(event.target.value)}
-                                  aria-label="밝기 값(%)"
-                                />
-                              )}
-                              {brightnessModeDraft === "dimmer_preset" && (
-                                <select
-                                  value={brightnessPresetDraft}
-                                  disabled={!dimmerSection || dimmerSection.unread}
-                                  aria-label="디머 프리셋"
-                                  onChange={(event) => setBrightnessPresetDraft(event.target.value)}
-                                >
-                                  {renderPresetOptions(splitDrawerSectionEntries(dimmerSection), false, brightnessPresetDraft)}
-                                </select>
-                              )}
-                              {brightnessModeDraft === "dimmer_effect" && (
-                                <select
-                                  value={brightnessEffectDraft}
-                                  disabled={!dimmerSection || dimmerSection.unread}
-                                  aria-label="디머 효과"
-                                  onChange={(event) => setBrightnessEffectDraft(event.target.value)}
-                                >
-                                  {renderPresetOptions(splitDrawerSectionEffectEntries(dimmerSection), false, brightnessEffectDraft)}
-                                </select>
-                              )}
+                              <select
+                                value={brightnessModeDraft === "value" ? brightnessDraft : ""}
+                                aria-label="밝기 값(%)"
+                                onChange={(event) => {
+                                  setBrightnessModeDraft("value");
+                                  setBrightnessDraft(event.target.value);
+                                }}
+                              >
+                                <option value="" disabled>
+                                  — 값 —
+                                </option>
+                                {brightnessModeDraft === "value" &&
+                                  !BRIGHTNESS_VALUE_CHOICES.some((choice) => String(choice) === brightnessDraft) && (
+                                    <option value={brightnessDraft}>{brightnessDraft}%</option>
+                                  )}
+                                {BRIGHTNESS_VALUE_CHOICES.map((choice) => (
+                                  <option key={choice} value={String(choice)}>
+                                    {choice}%
+                                  </option>
+                                ))}
+                              </select>
                               <button
                                 type="button"
                                 onClick={() => {
