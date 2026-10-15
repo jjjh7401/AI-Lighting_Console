@@ -10478,7 +10478,9 @@ class ChatSession:
         """
         timeline = attach_beat_grid_default(timeline)
         timeline = attach_beat_grid_ui_values(
-            timeline, track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None)
+            timeline,
+            track_sub_infos=getattr(self, "_beat_grid_track_sub_infos", None),
+            pool_slots=getattr(self, "_beat_grid_pool_slots", None),
         )
         return derive_beat_grid_fields(
             timeline,
