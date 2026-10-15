@@ -1237,6 +1237,7 @@ export default function App() {
           <BeatGrid
             grid={state.songTimeline.timeline?.beat_grid ?? null}
             onExit={() => setBeatGridFullscreen(false)}
+            hasTimeline={Boolean(state.songTimeline.timeline)}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
             timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}

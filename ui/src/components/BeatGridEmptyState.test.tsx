@@ -31,6 +31,14 @@ describe("박자 격자 빈 화면", () => {
     expect(html).toContain("런북 화면으로 돌아가기");
   });
 
+  it("타임라인은 있는데 격자가 없으면 분석 안내를 보인다", () => {
+    const html = renderToStaticMarkup(<BeatGrid grid={null} hasTimeline onExit={() => {}} />);
+    expect(html).toContain("이 곡에는 아직 박자 격자가 없습니다.");
+    expect(html).toContain("「마디 지도 분석」을 하면 격자가 만들어집니다");
+    expect(html).not.toContain("곡 타임라인이 있어야 생깁니다");
+    expect(html).toContain("런북 화면으로 돌아가기");
+  });
+
   it("돌아갈 길(onExit)을 주지 않으면 버튼을 그리지 않는다", () => {
     const html = renderToStaticMarkup(<BeatGrid grid={null} />);
     expect(html).toContain("박자 격자가 아직 없습니다.");
