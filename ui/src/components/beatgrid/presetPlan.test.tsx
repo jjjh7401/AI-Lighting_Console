@@ -30,7 +30,10 @@ describe("필요한 프리셋 만들기", () => {
       type: "beat_grid_apply",
       mode: "preset_plan",
     });
-    expect(JSON.parse(buildBeatGridApply())).toEqual({ v: 1, type: "beat_grid_apply" });
+    expect(JSON.parse(buildBeatGridApply())).toEqual({
+      v: 1,
+      type: "beat_grid_apply",
+    });
   });
 
   it("상단 바에 버튼이 보이고, 콜백이 없으면 그리지 않는다", () => {
@@ -42,22 +45,32 @@ describe("필요한 프리셋 만들기", () => {
       barRange: { start: 0, end: 4 },
       onBarChange: () => {},
     };
-    expect(renderToStaticMarkup(<BeatGridTopBar {...props} onPresetPlanRequest={() => {}} />)).toContain(
-      "필요한 프리셋 만들기",
+    expect(
+      renderToStaticMarkup(
+        <BeatGridTopBar {...props} onPresetPlanRequest={() => {}} />,
+      ),
+    ).toContain(">프리셋 계획<");
+    expect(renderToStaticMarkup(<BeatGridTopBar {...props} />)).not.toContain(
+      ">프리셋 계획<",
     );
-    expect(renderToStaticMarkup(<BeatGridTopBar {...props} />)).not.toContain("필요한 프리셋 만들기");
   });
 
   it("계획표 행·종류·표식·제외 항목을 읽고 그린다", () => {
     expect(PRESET_PLAN_SUMMARY).toBe("연출 프리셋 계획");
     const plan = parsePresetPlan(TABLE);
     expect(plan).not.toBeNull();
-    expect(plan?.rows.map((r) => [r.kind, r.slot, r.name, r.cellCount])).toEqual([
+    expect(
+      plan?.rows.map((r) => [r.kind, r.slot, r.name, r.cellCount]),
+    ).toEqual([
       ["dimmer", "5.1", "DIM 40", 3],
       ["color", "6.2", "COL Red", 2],
       ["position", "7.1", "POS Floor", 1],
     ]);
-    expect(plan?.rows.map((r) => r.needsSupervisor)).toEqual([true, false, false]);
+    expect(plan?.rows.map((r) => r.needsSupervisor)).toEqual([
+      true,
+      false,
+      false,
+    ]);
     const html = renderToStaticMarkup(<PresetPlanPanel plan={plan!} />);
     expect(html).toContain("DIM 40");
     expect(html).toContain("디머");

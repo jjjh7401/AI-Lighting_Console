@@ -423,10 +423,10 @@ export function BeatGridTopBar({
         <button
           type="button"
           className="tbtn"
-          title="필요한 프리셋 만들기 — 격자 칸이 쓰는 값으로 만들 프리셋 계획표를 보이고, 승인 카드를 띄운다"
+          title="필요한 프리셋 만들기(프리셋 계획) — 격자 칸이 쓰는 값으로 만들 프리셋 계획표를 보이고, 승인 카드를 띄운다"
           onClick={() => onPresetPlanRequest()}
         >
-          필요한 프리셋 만들기
+          프리셋 계획
         </button>
       )}
       <button

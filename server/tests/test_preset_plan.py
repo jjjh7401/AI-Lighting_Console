@@ -476,3 +476,36 @@ class TestApprovalCardRealAsyncChannel:
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["value_percent"] == 5
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] is None
         assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
+
+
+# == 콘솔을 못 읽을 때: 계획표는 그래도 보인다 (감독 브라우저 확인 1015) ==========
+
+
+class TestPlanTableWithoutConsole:
+    def test_unread_pools_still_send_the_plan_table_but_raise_no_card(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        grid = _love_attack_grid()
+        store = SongTimelineStore()
+        store.latest = _timeline_for_apply(beat_grid=grid)
+        sent: list[dict] = []
+        session, console, approval, _audit = _new_session(
+            tmp_path, store=store, decisions=(True,), state_tree={}, sent=sent
+        )
+        monkeypatch.setattr(session, "_beat_grid_preset_dimmer_attributes", lambda names: {})
+        before = copy.deepcopy(store.latest["beat_grid"])
+
+        event = session.beat_grid_preset_plan()
+
+        tables = [e for e in sent if e.get("summary") == "연출 프리셋 계획"]
+        assert len(tables) == 1
+        text = tables[0]["text"]
+        assert "| 만들 프리셋 |" in text
+        assert "DIM-40" in text
+        assert "콘솔 읽은 뒤 정함" in text
+        assert "감독이 고칠 값" in text
+        # 저장할 것이 없으니 카드·콘솔 송신·격자 변경은 0.
+        assert approval.requests == []
+        assert console.executed == []
+        assert store.latest["beat_grid"] == before
+        assert event["ok"] is False

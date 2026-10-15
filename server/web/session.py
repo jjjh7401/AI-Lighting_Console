@@ -10500,13 +10500,7 @@ class ChatSession:
         )
         commands = save_commands(plan)
         ready_count = sum(1 for preset in plan.presets if preset.ready)
-        if not commands:
-            return self._beat_grid_send_status(
-                last_action="apply",
-                ok=False,
-                reason=("연출 프리셋: 지금 저장할 디머 프리셋이 없습니다. 나머지는 미정입니다."),
-            )
-        # 버튼을 누르면 계획표를 먼저 보이고, 이어서 기존 승인 카드가 뜬다.
+        # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다. 승인 카드는 저장할 것이 있을 때만 뜬다.
         self._send(
             chat_response_event(
                 status="ok",
@@ -10515,6 +10509,15 @@ class ChatSession:
                 commands=[],
             )
         )
+        if not commands:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=False,
+                reason=(
+                    "연출 프리셋: 지금 저장할 디머 프리셋이 없습니다(콘솔 풀을 읽지 못했거나 "
+                    "값이 미정). 계획표만 보입니다. 나머지는 미정입니다."
+                ),
+            )
         batch = build_write_approval_batch([commands])
         token = bind_session_key(self._session_key)
         try:

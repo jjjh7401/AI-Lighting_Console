@@ -545,7 +545,7 @@ def plan_table_markdown(plan: LoveAttackPlan) -> str:
             status = "이 카드 밖"
         else:
             status = "미정"
-        slot = preset.slot or "없음"
+        slot = preset.slot or "콘솔 읽은 뒤 정함"
         cells = len(preset.cells)
         lines.append(f"| {preset.name} | {preset.value} | {slot} | {cells} | {status} |")
     sections = (
