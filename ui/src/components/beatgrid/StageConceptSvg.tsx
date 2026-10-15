@@ -1,26 +1,98 @@
 /** 무대 개념도 — 시안 `drawStage` 의 자리 배치를 그대로 옮긴다.
  *
  * 패치 좌표를 못 읽으면 이 그림을 대신 그린다. 장비 위치는 지어내지 않는다.
- * 뒤(BACK)·옆(SIDE-L/R)·앞(FOH)·워시 면·무빙 두 줄(U/D)·블라인드 자리만 보여 준다.
- * 색과 밝기는 칸 데이터가 있을 때 칠하는 것이라 여기서는 중립 회색이다.
+ * 자리는 줄의 층 역할로 정한다(BACK 원 줄 · BLIND 사각 · U/D 무빙 두 줄 · SIDE-L/R 원 세로줄 ·
+ * WASH 점 · FOH 점). 무빙은 첫 줄이 위(U), 둘째 줄이 아래(D) — 이름 규칙은 쓰지 않는다(리드 결정).
+ * 색은 지금 마디의 그 줄 색(켜짐 = 칸 색, 꺼짐 = #333), 빔은 켜진 무빙만, 고른 줄은 노란 점선 테두리.
+ * 자리를 누르면 그 자리를 맡는 줄을 고른다(줄 편집).
  */
-export function StageConceptSvg({ width, height }: { width: number; height: number }) {
+import type { ReactNode } from "react";
+
+import type { BeatGridTrack } from "../../protocol";
+import { OFF_FIXTURE_COLOR, trackIsLitAt, trackStageColor } from "../BeatGrid";
+
+export type ConceptSlot = "back" | "blind" | "u" | "d" | "side-l" | "side-r" | "wash" | "foh";
+
+export interface ConceptSlotState {
+  slot: ConceptSlot;
+  /** 그 자리를 맡는 줄의 순번(`tracks` 안). 맡는 줄이 없으면 `null`. */
+  trackIndex: number | null;
+  lit: boolean;
+  color: string;
+}
+
+function indexesOfRole(tracks: readonly BeatGridTrack[], role: string): number[] {
+  return tracks.flatMap((track, index) => (track.layer_role === role ? [index] : []));
+}
+
+/** 개념도 자리마다 맡는 줄과 지금 마디의 상태(리드 결정).
+ * - U/D: 무빙 줄의 첫째가 위(U), 둘째가 아래(D).
+ * - BACK·WASH·FOH: 그 층 역할의 첫 줄.
+ * - SIDE-L/R: 측면 줄의 첫째·둘째. 측면 줄이 하나면 양쪽이 그 줄을 따른다.
+ * - BLIND: 무빙이 아닌 효과(effect) 줄의 첫째. */
+export function conceptSlots(tracks: readonly BeatGridTrack[], viewBar: number): ConceptSlotState[] {
+  const movers = indexesOfRole(tracks, "mover");
+  const sides = indexesOfRole(tracks, "side");
+  const picks: Record<ConceptSlot, number | undefined> = {
+    back: indexesOfRole(tracks, "back")[0],
+    blind: indexesOfRole(tracks, "effect")[0],
+    u: movers[0],
+    d: movers[1],
+    "side-l": sides[0],
+    "side-r": sides[1] ?? sides[0],
+    wash: indexesOfRole(tracks, "wash")[0],
+    foh: indexesOfRole(tracks, "key")[0],
+  };
+  return (Object.keys(picks) as ConceptSlot[]).map((slot) => {
+    const trackIndex = picks[slot] ?? null;
+    if (trackIndex === null) return { slot, trackIndex, lit: false, color: OFF_FIXTURE_COLOR };
+    const track = tracks[trackIndex];
+    return {
+      slot,
+      trackIndex,
+      lit: trackIsLitAt(track, viewBar),
+      color: trackStageColor(track, trackIndex, viewBar),
+    };
+  });
+}
+
+export function StageConceptSvg({
+  width,
+  height,
+  tracks = [],
+  viewBar = 0,
+  selectedTrackName = null,
+  onSelectTrack,
+}: {
+  width: number;
+  height: number;
+  /** 줄 목록 — 자리를 맡는 줄의 층 역할·상태·색을 정한다. 없으면 모든 자리가 꺼진 회색이다. */
+  tracks?: readonly BeatGridTrack[];
+  viewBar?: number;
+  selectedTrackName?: string | null;
+  /** 자리를 누르면 그 자리를 맡는 줄을 고른다(줄 편집). */
+  onSelectTrack?: (trackIndex: number) => void;
+}) {
   const W = width;
   const H = height;
   const L0 = 60;
   const R0 = W - 60;
   const SW = R0 - L0;
+  const slots = conceptSlots(tracks, viewBar);
+  const stateOf = (slot: ConceptSlot): ConceptSlotState =>
+    slots.find((s) => s.slot === slot) ?? { slot, trackIndex: null, lit: false, color: OFF_FIXTURE_COLOR };
+  const selectedIndex = selectedTrackName === null ? -1 : tracks.findIndex((t) => t.group_name === selectedTrackName);
   // 시안 `row(n, a, b)` — n개를 a~b 사이에 고르게.
   const row = (n: number, a: number, b: number) =>
     Array.from({ length: n }, (_, i) => a + (b - a) * (n === 1 ? 0.5 : i / (n - 1)));
-  const lamp = (x: number, y: number, r: number, key: string) => (
-    <circle key={key} cx={x} cy={y} r={r} fill="#333" />
+  const lamp = (x: number, y: number, r: number, key: string, fill: string) => (
+    <circle key={key} cx={x} cy={y} r={r} fill={fill} />
   );
-  // 무빙 한 대: 빔 삼각형 + 헤드 사각형(시안 `mv`). 기본 기울기 45 → 길이 ≈ 98.5.
-  const beam = (x: number, y: number, key: string) => (
+  // 무빙 한 대: 켜진 무빙만 빔 삼각형(시안 `mv`). 헤드 사각형은 줄 색(꺼짐 = #333).
+  const movingHead = (x: number, y: number, key: string, color: string, lit: boolean) => (
     <g key={key}>
-      <polygon points={`${x},${y} ${x - 9},${y + 98.5} ${x + 9},${y + 98.5}`} fill="#444" opacity={0.4} />
-      <rect x={x - 5} y={y - 5} width={10} height={10} fill="#333" />
+      {lit && <polygon points={`${x},${y} ${x - 9},${y + 98.5} ${x + 9},${y + 98.5}`} fill={color} opacity={0.4} />}
+      <rect x={x - 5} y={y - 5} width={10} height={10} fill={color} />
     </g>
   );
   const label = (x: number, y: number, text: string, anchor: "start" | "middle" | "end" = "start") => (
@@ -28,20 +100,71 @@ export function StageConceptSvg({ width, height }: { width: number; height: numb
       {text}
     </text>
   );
+  // 자리 하나의 묶음 — 맡는 줄이 있으면 누를 수 있고, 고른 줄이면 노란 점선 테두리를 두른다.
+  const slotGroup = (
+    slot: ConceptSlot,
+    box: { x: number; y: number; width: number; height: number },
+    children: ReactNode,
+  ) => {
+    const state = stateOf(slot);
+    const index = state.trackIndex;
+    const selected = index !== null && index === selectedIndex;
+    const onClick = index !== null && onSelectTrack ? () => onSelectTrack(index) : undefined;
+    return (
+      <g key={`slot-${slot}`} className={`beat-grid-stage-slot${selected ? " on" : ""}`} onClick={onClick}>
+        {children}
+        {selected && (
+          <rect
+            x={box.x}
+            y={box.y}
+            width={box.width}
+            height={box.height}
+            rx={4}
+            fill="none"
+            stroke="#ffd84d"
+            strokeWidth={2}
+            strokeDasharray="5 3"
+          />
+        )}
+      </g>
+    );
+  };
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="beat-grid-stage beat-grid-stage-concept" role="img" aria-label="무대 개념도">
       <rect width={W} height={H} fill="#101014" />
       {/* 워시 면 — 시안 `ZB.wash` 자리 */}
       <rect x={L0} y={70} width={SW} height={170} fill="#1b1b22" stroke="#333" />
-      {row(10, L0 + 22, R0 - 22).flatMap((x, i) => [lamp(x, 226, 5, `wf${i}`), lamp(x, 86, 5, `wb${i}`)])}
-      {row(8, L0 + 60, R0 - 60).map((x, i) => lamp(x, 264, 5, `fo${i}`))}
-      {row(12, L0 + 10, R0 - 10).map((x, i) => lamp(x, 30, 6, `ba${i}`))}
-      {row(6, 92, 212).flatMap((y, i) => [lamp(28, y, 6, `sl${i}`), lamp(W - 28, y, 6, `sr${i}`)])}
-      {row(8, L0 + 30, R0 - 30).map((x, i) => beam(x, 54, `mu${i}`))}
-      {row(8, L0 + 30, R0 - 30).map((x, i) => beam(x, 120, `md${i}`))}
-      {row(6, W / 2 - 110, W / 2 + 110).map((x, i) => (
-        <rect key={`bl${i}`} x={x - 9} y={41} width={18} height={8} fill="#444" />
-      ))}
+      {slotGroup("wash", { x: L0 - 4, y: 66, width: SW + 8, height: 178 }, [
+        ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 226, 5, `wf${i}`, stateOf("wash").color)),
+        ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 86, 5, `wb${i}`, stateOf("wash").color)),
+      ])}
+      {slotGroup("foh", { x: L0 + 30, y: 252, width: SW - 60, height: 24 }, [
+        ...row(8, L0 + 60, R0 - 60).map((x, i) => lamp(x, 264, 5, `fo${i}`, stateOf("foh").color)),
+      ])}
+      {slotGroup("back", { x: L0 - 10, y: 18, width: SW + 20, height: 24 }, [
+        ...row(12, L0 + 10, R0 - 10).map((x, i) => lamp(x, 30, 6, `ba${i}`, stateOf("back").color)),
+      ])}
+      {slotGroup("side-l", { x: 14, y: 84, width: 28, height: 136 }, [
+        ...row(6, 92, 212).map((y, i) => lamp(28, y, 6, `sl${i}`, stateOf("side-l").color)),
+      ])}
+      {slotGroup("side-r", { x: W - 42, y: 84, width: 28, height: 136 }, [
+        ...row(6, 92, 212).map((y, i) => lamp(W - 28, y, 6, `sr${i}`, stateOf("side-r").color)),
+      ])}
+      {slotGroup("u", { x: L0 + 18, y: 44, width: SW - 36, height: 22 }, [
+        ...row(8, L0 + 30, R0 - 30).map((x, i) =>
+          movingHead(x, 54, `mu${i}`, stateOf("u").color, stateOf("u").lit),
+        ),
+      ])}
+      {slotGroup("d", { x: L0 + 18, y: 110, width: SW - 36, height: 22 }, [
+        ...row(8, L0 + 30, R0 - 30).map((x, i) =>
+          movingHead(x, 120, `md${i}`, stateOf("d").color, stateOf("d").lit),
+        ),
+      ])}
+      {slotGroup("blind", { x: W / 2 - 120, y: 33, width: 240, height: 16 }, [
+        ...row(6, W / 2 - 110, W / 2 + 110).map((x, i) => (
+          <rect key={`bl${i}`} x={x - 9} y={41} width={18} height={8} fill={stateOf("blind").color} />
+        )),
+      ])}
       {label(L0 + 44, 284, "FOH")}
       {label(L0 + 6, 250, "WASH")}
       {label(L0, 16, "BACK")}

@@ -40,6 +40,8 @@ export function stageFixturePoints(view: BeatGridStageView | null | undefined): 
     rotx: 0,
     roty: 0,
     rotz: 0,
+    // 팬·틸트 능력(서버가 알 때만). 키가 없으면 그대로 비운다(모름 ≠ 아니오).
+    ...(fixture.pan_tilt === undefined ? {} : { pan_tilt: fixture.pan_tilt }),
     confirmedGroupNames: view.groups
       .filter((group) => group.member_fids.includes(fixture.fid))
       .map((group) => group.group_name),

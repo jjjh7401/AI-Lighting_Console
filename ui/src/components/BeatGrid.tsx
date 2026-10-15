@@ -372,6 +372,8 @@ export interface BeatGridFixturePoint {
   rotx: number;
   roty: number;
   rotz: number;
+  /** 팬·틸트 능력(서버 판독) — 있으면 무빙 모양을 따른다. 없으면(`undefined`) 임시로 층 역할을 쓴다. */
+  pan_tilt?: boolean;
   /** 콘솔 SELECTIONDATA로 **확인된** 소속 그룹 이름 — 이름 추정이 아니라
    * 읽은 값이어야 한다. 없으면(`null`/`undefined`) 미확인이고, 화면은
    * 반드시 회색이다(REQ-LDBEAT-004(f)). 이 값을 채우는 유일한 근거는
@@ -480,9 +482,20 @@ export function fixtureStageColor(
 ): string {
   const index = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
   if (index < 0) return UNCONFIRMED_FIXTURE_COLOR;
-  const cue = cueForBar(tracks[index], viewBar);
-  if (!cue || !cueIsActive(cue.label)) return OFF_FIXTURE_COLOR;
-  return cue.color_rgb ? rgbPercentToCss(cue.color_rgb) : TRACK_COLOR_PALETTE[index % TRACK_COLOR_PALETTE.length];
+  return trackStageColor(tracks[index], index, viewBar);
+}
+
+/** 줄이 지금 마디에서 켜져 있는가 — 칸이 있고 `cueIsActive`. */
+export function trackIsLitAt(track: BeatGridTrack, viewBar: number): boolean {
+  const cue = cueForBar(track, viewBar);
+  return cue !== null && cueIsActive(cue.label);
+}
+
+/** 줄이 지금 마디에서 내는 장비 색 — 켜져 있으면 칸 색(`color_rgb`, 없으면 줄 기본색), 꺼져 있으면 #333. */
+export function trackStageColor(track: BeatGridTrack, trackIndex: number, viewBar: number): string {
+  if (!trackIsLitAt(track, viewBar)) return OFF_FIXTURE_COLOR;
+  const rgb = cueForBar(track, viewBar)?.color_rgb;
+  return rgb ? rgbPercentToCss(rgb) : TRACK_COLOR_PALETTE[trackIndex % TRACK_COLOR_PALETTE.length];
 }
 
 /** REQ-LDBEAT-004(f) 확장(카드 t534, 리드 결정으로 갱신) — 확인된 장비의 불투명은 늘 최대다. 켜짐/꺼짐은
