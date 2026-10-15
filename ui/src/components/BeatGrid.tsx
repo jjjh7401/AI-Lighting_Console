@@ -98,7 +98,7 @@ import {
 } from "./beatgrid/newPresetColor";
 import { GlanceRowDetailCells } from "./beatgrid/GlanceRowDetailCells";
 import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
-import { LRSplitRow } from "./beatgrid/LRSplitRow";
+import { LRSplitBanner, LRSplitRow, lrFollowSpans } from "./beatgrid/LRSplitRow";
 import {
   audioButtonLabel,
   audioSourceId,
@@ -2309,6 +2309,8 @@ export function BeatGrid({
                     // 펼침 상세 줄로 옮겼다. 자식 줄(└ L/R) 자체는 선언된
                     // 구간 전체에 걸쳐 그대로 타임라인에 보인다.
                     const childRows = lrChildRowsForTrack(track, lrSplits, lrStage);
+                    // 시안 `.clip.split` 띠 — 자식 줄이 있을 때만(선언 + 분리 가능 트랙).
+                    const splitRange = childRows.length > 0 ? (lrSplits.get(track.group_name) ?? null) : null;
                     return (
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
@@ -2470,6 +2472,12 @@ export function BeatGrid({
                               AI 제안(보류)
                             </span>
                           )}
+                          {splitRange && (
+                            <LRSplitBanner
+                              left={barToX(splitRange.startBar)}
+                              width={barToX(splitRange.endBar) - barToX(splitRange.startBar) - 2}
+                            />
+                          )}
                         </div>
                       </div>
                       {/* 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언이
@@ -2481,6 +2489,10 @@ export function BeatGrid({
                           child={child}
                           left={barToX(child.startBar)}
                           width={barToX(child.endBar) - barToX(child.startBar) - 2}
+                          follow={{
+                            label: `${track.group_name} 따름`,
+                            spans: lrFollowSpans(child, { start: grid.bar_range.start, end: maxBar + 1 }, barToX),
+                          }}
                           onSelect={() =>
                             selectLRSplitChild(trackIndex, track.group_name, child.side, child.startBar)
                           }
