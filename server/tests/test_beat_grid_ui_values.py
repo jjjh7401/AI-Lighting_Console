@@ -83,6 +83,14 @@ def test_sub_info_attached_to_tracks_by_group_name_case_insensitive() -> None:
         ("Chorus 2", "chorus"),
         ("Outro", "outro"),
         ("Break", "break"),
+        ("마지막 코러스", "final-chorus"),
+        ("Last Chorus", "final-chorus"),
+        ("final chorus", "final-chorus"),
+        ("킥멈춤", "break"),
+        ("덜어냄", "break"),
+        ("간주", "break"),
+        ("끝", "outro"),
+        ("End", "outro"),
     ],
 )
 def test_section_kind_recognises_korean_and_english(label: str, kind: str) -> None:
@@ -90,8 +98,24 @@ def test_section_kind_recognises_korean_and_english(label: str, kind: str) -> No
     assert kind in SECTION_KIND_COLORS
 
 
+def test_palette_matches_mockup_exactly() -> None:
+    assert SECTION_KIND_COLORS == {
+        "intro": "#5b6b8a",
+        "bridge": "#5b6b8a",
+        "verse": "#6d5ba8",
+        "pre-chorus": "#8a6bc4",
+        "chorus": "#c4508a",
+        "final-chorus": "#e0607a",
+        "drop": "#d9774f",
+        "break": "#444",
+        "outro": "#333",
+    }
+
+
 def test_unknown_label_gets_no_color() -> None:
     assert section_kind("뭔지모를구간") is None
+    assert section_kind("드럼") is None
+    assert section_kind("legend") is None
     out = attach_beat_grid_ui_values({"sections": [{"label": "뭔지모를구간", "start_ms": 0}]})
     assert "color" not in out["sections"][0]
 

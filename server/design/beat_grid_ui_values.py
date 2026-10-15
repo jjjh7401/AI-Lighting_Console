@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 
 __all__ = [
@@ -21,30 +22,46 @@ __all__ = [
 
 #: 구간 종류 -> 색. 곡·리그와 무관한 하나의 표(모든 곡이 같은 색을 쓴다).
 SECTION_KIND_COLORS: dict[str, str] = {
-    "intro": "#64748b",
-    "verse": "#3b82f6",
-    "pre-chorus": "#a855f7",
-    "chorus": "#ec4899",
-    "bridge": "#f59e0b",
-    "drop": "#f97316",
-    "build": "#eab308",
-    "break": "#14b8a6",
-    "outro": "#94a3b8",
+    "intro": "#5b6b8a",
+    "bridge": "#5b6b8a",
+    "verse": "#6d5ba8",
+    "pre-chorus": "#8a6bc4",
+    "chorus": "#c4508a",
+    "final-chorus": "#e0607a",
+    "drop": "#d9774f",
+    "break": "#444",
+    "outro": "#333",
 }
 
 #: (종류, 이름에 들어 있으면 그 종류인 낱말들) — 앞에서부터 처음 맞는 종류를 쓴다.
-#: ``pre-chorus`` 가 ``chorus`` 보다 먼저여야 「프리 후렴」이 후렴으로 잡히지 않는다.
+#: ``final-chorus`` 가 ``pre-chorus``·``chorus`` 보다 먼저여야 「마지막 코러스」가 일반 후렴으로
+#: 잡히지 않고, ``pre-chorus`` 가 ``chorus`` 보다 먼저여야 「프리 후렴」이 후렴으로 잡히지 않는다.
 _KIND_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "final-chorus",
+        (
+            "마지막 후렴",
+            "마지막 코러스",
+            "마지막후렴",
+            "마지막코러스",
+            "last chorus",
+            "final chorus",
+        ),
+    ),
     ("pre-chorus", ("프리", "pre-chorus", "prechorus", "pre chorus", "pre-")),
-    ("outro", ("아웃트로", "outro", "엔딩", "ending")),
+    ("outro", ("아웃트로", "outro", "엔딩", "ending", "끝")),
     ("intro", ("인트로", "intro")),
     ("chorus", ("후렴", "코러스", "chorus", "hook", "훅")),
     ("verse", ("벌스", "verse")),
     ("bridge", ("브리지", "bridge")),
     ("drop", ("드롭", "drop")),
-    ("build", ("빌드", "build")),
-    ("break", ("브레이크", "break", "간주", "interlude", "인터루드")),
+    (
+        "break",
+        ("킥멈춤", "킥 멈춤", "덜어냄", "간주", "브레이크", "break", "interlude", "인터루드"),
+    ),
 )
+
+_STANDALONE_END = re.compile(r"\bend\b")
 
 
 def section_kind(label: object) -> str | None:
@@ -55,6 +72,8 @@ def section_kind(label: object) -> str | None:
     for kind, words in _KIND_KEYWORDS:
         if any(word in lowered for word in words):
             return kind
+    if _STANDALONE_END.search(lowered):
+        return "outro"
     return None
 
 
