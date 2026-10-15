@@ -109,7 +109,7 @@ import {
   shouldMarkAudioLinkMissing,
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
-import { CueBarVisual, cueBarVisualClass } from "./beatgrid/cueBarVisual";
+import { CueBarVisual, barNameText, cueBarVisualClass } from "./beatgrid/cueBarVisual";
 import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
@@ -2423,7 +2423,7 @@ export function BeatGrid({
                                   }`}
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
-                                  {active ? segment.cue.label : "꺼짐"}
+                                  {active ? barNameText(segment.cue) : "꺼짐"}
                                   <CueBarVisual cue={segment.cue} />
                                   {(() => {
                                     const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
