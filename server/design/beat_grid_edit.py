@@ -78,6 +78,7 @@ EDITABLE_CUE_FIELD_LABELS: dict[str, str] = {
     "color_preset_no": "색 프리셋",
     "effect_preset_no": "효과 프리셋",
     "effect_kind": "효과 종류",
+    "label": "라벨",
     "entry": "들어올 때",
     "app_movement": "앱 무빙",
     "evidence": "근거 등급",
@@ -415,6 +416,20 @@ def _validate_effect_kind(value: object) -> None:
         )
 
 
+#: 칸 라벨(막대 이름표)의 글자 수 상한. 자동 배치 라벨은 짧다("스트로브 1마디" 같은 것).
+_CUE_LABEL_MAX_CHARS = 40
+
+
+def _validate_label(value: object) -> None:
+    """칸 라벨은 한 줄짜리 글이다. 빈 글, 줄바꿈·조절 문자, 상한을 넘는 글은 거절한다."""
+    if not isinstance(value, str) or not value.strip():
+        raise BeatGridEditError("라벨은 빈 글이 아니어야 합니다 — 예: '스트로브 1마디'.")
+    if not value.isprintable() or len(value) > _CUE_LABEL_MAX_CHARS:
+        raise BeatGridEditError(
+            f"라벨은 한 줄짜리 {_CUE_LABEL_MAX_CHARS}자 이하 글이어야 합니다(받은 글: {value!r})."
+        )
+
+
 _ASCII_LABEL_PATTERN = re.compile(r"[^0-9A-Za-z _.-]")
 
 
@@ -518,6 +533,8 @@ def apply_beat_grid_edit(
         _validate_evidence(changes["evidence"])
     if "app_movement" in changes:
         _validate_app_movement(changes["app_movement"])
+    if "label" in changes:
+        _validate_label(changes["label"])
 
     new_preset_label = changes.get("new_preset_label")
     if "new_preset_label" in changes:
