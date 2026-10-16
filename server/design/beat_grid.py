@@ -260,6 +260,8 @@ class BeatGridCue(TypedDict):
     split: NotRequired[BeatGridCellSplit]
     #: 계획 색(콘솔 퍼센트 RGB, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
     planned_color: NotRequired[list[int]]
+    #: 계획 위치(무빙 기본 위치 이름, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
+    planned_position: NotRequired[str]
 
 
 class BeatGridTrack(TypedDict):
@@ -489,6 +491,11 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
         )
     ):
         cue["planned_color"] = [int(channel) for channel in raw_planned]
+    # 계획 위치(무빙 기본 위치 이름) — 문자열이면 옮긴다.
+    # 콘솔 값이 아니라서 콘솔 묶음에 닿지 않는다.
+    raw_position = raw.get("planned_position")
+    if isinstance(raw_position, str) and raw_position.strip():
+        cue["planned_position"] = raw_position.strip()
     return cue
 
 

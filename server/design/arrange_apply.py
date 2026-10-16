@@ -128,7 +128,11 @@ def apply_arrangement_draft(
                 continue
             if existing["label"] != label:
                 changed_cells += 1
-            cues_by_bar[bar] = {**existing, "label": label}
+            updated_cue = {**existing, "label": label}
+            # 계획 위치는 계획 값이라 기존 칸에도 얹는다. 위치 번호·구조값은 건드리지 않는다.
+            if "planned_position" in draft_cue:
+                updated_cue["planned_position"] = draft_cue["planned_position"]
+            cues_by_bar[bar] = updated_cue
         track["cues"] = [cues_by_bar[bar] for bar in sorted(cues_by_bar)]
 
     reason = validate_beat_grid_tracks(tracks)

@@ -117,6 +117,8 @@ class _CellPlan(NamedTuple):
     kind: str
     #: 계획 색(콘솔 퍼센트 RGB). 쉬는 칸은 None 이다.
     color_rgb: tuple[int, int, int] | None = None
+    #: 계획 위치(기본 위치 이름, 예: ``Center``). 무빙의 켜는 칸에만 있다. 쉬는 칸은 None 이다.
+    position: str | None = None
 
 
 # @MX:NOTE: [AUTO] 마디 지도와 트랙 구성만 받는 순수 함수다. 파일이나 콘솔에 닿지 않는다.

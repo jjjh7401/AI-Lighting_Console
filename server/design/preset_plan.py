@@ -35,6 +35,7 @@ from pathlib import Path
 import yaml
 
 from server.design.app_movement import movement_effect_store_commands
+from server.design.arrange_policy import MOVER_POSITION_LADDER
 from server.design.beat_grid import (
     apply_pending_approval,
     check_evidence_approval,
@@ -97,6 +98,14 @@ _COLOR_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·컬러 �
 #: 색 후보에서 빼는 레이어 역할 — 키(key)와 효과(effect) 장비는 컬러 채널이 없다.
 _NO_COLOR_ROLES = frozenset({"key", "effect"})
 _POSITION_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·장비 좌표를 읽은 뒤 만든다"
+#: 무빙 기본 위치 사다리 이름 → 계획표 말.
+#: 사다리 순서는 바닥 쪽 < 무대 중앙 < 위로 연 자리 < 객석 상단이다.
+_POSITION_LABEL_KO = {
+    "Home": "바닥 쪽",
+    "Center": "무대 중앙",
+    "Ring In": "위로 연 자리",
+    "Audience": "객석 상단",
+}
 
 #: 움직임 효과 프리셋을 저장할 콘솔 풀(판독 이름 「All 1」, 풀 21).
 #: 리드 결정으로 21번대를 쓴다. 번호대는 preset_pools.yaml 에 선언돼 있지 않으니
@@ -167,6 +176,9 @@ class PlanPreset:
     #: 콘솔에 이미 있는 같은 RGB·같은 그룹의 색 번호를 다시 쓴다 — 저장 줄은 없고(``store`` 없음),
     #: 칸은 그 번호를 가리키기만 한다(``saved_presets`` 가 넣고, ``save_commands`` 가 건너뛴다).
     reused: bool = False
+    #: 위치 후보의 조준 기준. 기본 위치 이름(``Home``·``Center``·``Ring In``·``Audience``)이면
+    #: 그 리그 조준값을 쓴다. ``None`` 이면 주석의 바닥 점(「바닥 쪽」) 규칙이다.
+    aim: str | None = None
 
 
 @dataclass(frozen=True)
@@ -785,6 +797,109 @@ def _planned_color_presets(
         )
 
 
+def _planned_position_presets(
+    rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
+    *,
+    grid: Mapping[str, object],
+    position_pool: PoolRead,
+    policy: Mapping[str, object],
+    presets: list[PlanPreset],
+    reserved: list[str],
+    fixes: list[str],
+) -> None:
+    """자동 배치가 무빙 칸에 정한 계획 위치(``planned_position``)를 위치 프리셋 후보로 센다.
+
+    - 키는 (그룹, 위치 이름). 위치 저장도 한 그룹의 장비만 고른다 — 2.31·2.32 처럼 그룹마다 따로다.
+    - 번호가 이미 있는 칸과 살아 있는 위치 후보(주석 바닥 점)가 잡은 칸은 건드리지 않는다.
+    - 후보는 값이 정해진 「이 카드 밖」이다. 저장 줄은 콘솔 판독 뒤 ``preset_plan_store`` 가 붙인다.
+    - 이름은 「이름 그룹」(예: ``CENTER MOVER-U``). 후보마다 「감독이 고칠 값」 한 줄을 싣는다.
+    """
+    taken = {
+        (cell.group_name, cell.bar)
+        for preset in presets
+        if preset.kind == "position" and (preset.deferred or preset.ready)
+        for cell in preset.cells
+    }
+    movers = {
+        str(track.get("group_name"))
+        for track in grid.get("tracks") or []
+        if track.get("layer_role") == "mover"
+    }
+    order: list[tuple[str, str]] = []
+    cells_of: dict[tuple[str, str], list[PlanCell]] = {}
+    for group, _no, _confirmed, cue in rows:
+        look = cue.get("planned_position")
+        bar = cue.get("bar")
+        if not isinstance(look, str) or not isinstance(bar, int) or isinstance(bar, bool):
+            continue
+        if group not in movers or cue.get("position_preset_no") is not None:
+            continue
+        if (group, bar) in taken:
+            continue
+        key = (group, look)
+        if key not in cells_of:
+            cells_of[key] = []
+            order.append(key)
+        cells_of[key].append(PlanCell(group_name=group, bar=bar))
+
+    for group, look in order:
+        cells = tuple(cells_of[(group, look)])
+        name = f"{look.upper()} {group}"
+        value = f"{_POSITION_LABEL_KO.get(look, look)} (계획)"
+        if look not in MOVER_POSITION_LADDER:
+            # 「이 카드 밖」·「미정」 목록은 뒤의 공통 줄이 사유와 함께 싣는다.
+            presets.append(
+                PlanPreset(
+                    kind="position",
+                    value=value,
+                    name=name,
+                    slot=None,
+                    cells=cells,
+                    groups=(group,),
+                    ready=False,
+                    hold="계획 위치 이름이 기본 위치 사다리에 없음",
+                )
+            )
+            continue
+        holds: list[str] = []
+        slot: str | None = None
+        if position_pool is None:
+            holds.append("위치 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
+        else:
+            slot = _reserve_next(
+                position_pool,
+                first_free_base_position_number,
+                policy=policy,
+                grid=grid,
+                reserved=reserved,
+            )
+            if slot is None:
+                holds.append("콘솔 위치 풀에 빈 번호가 없음")
+            else:
+                reserved.append(slot)
+        candidate = not holds
+        if candidate:
+            holds.append(_POSITION_STORE_HOLD)
+            fixes.append(
+                f"{name} — 자동 배치가 무빙 칸에 정한 계획 위치({_POSITION_LABEL_KO[look]}, "
+                f"기본 위치 {look}). 감독이 고칠 값: 실기 조준이 다르면 위치 이름을 고른다."
+            )
+        presets.append(
+            PlanPreset(
+                kind="position",
+                value=value,
+                name=name,
+                slot=slot,
+                cells=cells,
+                groups=(group,),
+                ready=False,
+                hold="; ".join(holds),
+                deferred=candidate,
+                aim=look,
+            )
+        )
+
+
 def build_preset_plan(
     grid: Mapping[str, object],
     *,
@@ -1135,6 +1250,18 @@ def build_preset_plan(
                     deferred=candidate,
                 )
             )
+
+    # -- 자동 배치가 무빙 칸에 정한 계획 위치: 기본 위치 이름마다 그룹별 위치 후보를 센다.
+    # 주석 방향 뒤에 둔다 — 주석 바닥 점이 잡은 칸은 계획 위치가 건드리지 않는다.
+    _planned_position_presets(
+        rows,
+        grid=grid,
+        position_pool=position_pool,
+        policy=policy,
+        presets=presets,
+        reserved=reserved,
+        fixes=fixes,
+    )
 
     # -- 밖으로 나가는 항목: 이 카드 밖(값은 정해짐) · 미정(사유) -----------------------
     for preset in presets:
