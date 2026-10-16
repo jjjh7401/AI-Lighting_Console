@@ -258,6 +258,8 @@ class BeatGridCue(TypedDict):
     evidence: BeatGridEvidence | None
     #: 칸 하나의 왼쪽·오른쪽 따로 색(선택). 없으면 **키 자체가 없다** — `None` 도 싣지 않는다.
     split: NotRequired[BeatGridCellSplit]
+    #: 계획 색(콘솔 퍼센트 RGB, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
+    planned_color: NotRequired[list[int]]
 
 
 class BeatGridTrack(TypedDict):
@@ -475,6 +477,18 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     raw_split = raw.get("split")
     if raw_split is not None:
         cue["split"] = copy.deepcopy(raw_split)  # type: ignore[typeddict-item]
+    # 계획 색(자동 배치 초안이 정한 표시용 색) — 세 채널이 모두 0~100 정수일 때만 옮긴다. 틀리면
+    # 키를 싣지 않는다(None 도 싣지 않는다). 콘솔 값이 아니라서 콘솔 묶음에 닿지 않는다.
+    raw_planned = raw.get("planned_color")
+    if (
+        isinstance(raw_planned, (list, tuple))
+        and len(raw_planned) == 3
+        and all(
+            isinstance(channel, int) and not isinstance(channel, bool) and 0 <= channel <= 100
+            for channel in raw_planned
+        )
+    ):
+        cue["planned_color"] = [int(channel) for channel in raw_planned]
     return cue
 
 

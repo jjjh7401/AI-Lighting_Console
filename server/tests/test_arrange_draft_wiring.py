@@ -129,7 +129,12 @@ class TestApply:
         back = next(
             track for track in store.latest["beat_grid"]["tracks"] if track["group_name"] == "BACK"
         )
-        assert 30 in {cue["bar"] for cue in back["cues"]}
+        # 운영 경로는 구간 생성기다: 구간 시작에만 칸이 선다(옛 생성기는 마디마다 하나라 30 이
+        # 있었다). 구간 시작 31 에 킥 칸이 서고, 구간 안쪽 30 에는 새 칸이 없다.
+        back_bars = {cue["bar"]: cue["label"] for cue in back["cues"]}
+        assert back_bars.get(31) not in (None, "—")
+        assert 30 not in back_bars
+        assert len(back["cues"]) < 40
         assert _sent_of_type(sent, "beat_grid_draft_consumed")[-1]["draft_id"] == draft_id
         assert _sent_of_type(sent, "song_timeline")
         assert console.executed == []
