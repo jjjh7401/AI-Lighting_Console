@@ -303,13 +303,29 @@ def test_planned_color_override_wins_over_the_section_color_and_the_backlight() 
     lit_back = next(
         bar for bar in range(1, BARS + 1) if _state(plain, "BACK", bar)["label"] == PULSE_LABEL
     )
-    colors = {("WASH-ALL", 20): (1, 2, 3), ("BACK", lit_back): (4, 5, 6)}
+    # 워시 줄은 구간마다 한 칸이라 구간 첫 마디의 주석 색만 칸에 닿는다(리드 결정 2026-10-16).
+    section = next(
+        s for s in split_sections(_bar_map(SYNTHETIC_EVENTS)) if s.start_bar <= 20 <= s.end_bar
+    )
+    head = section.start_bar
+    colors = {("WASH-ALL", head): (1, 2, 3), ("BACK", lit_back): (4, 5, 6)}
     draft = _draft(SYNTHETIC_EVENTS, planned_colors=colors)
     wash = _cues(draft, "WASH-ALL")
-    assert wash[20]["planned_color"] == [1, 2, 3]  # 구간 색을 이긴다
-    assert wash[21]["planned_color"] == list(PALETTE.chorus)  # 다음 마디는 구간 색으로 돌아온다
+    assert wash[head]["planned_color"] == [1, 2, 3]  # 구간 색을 이긴다
+    assert not [bar for bar in wash if head < bar <= section.end_bar]  # 구간 안에서 쪼개지 않는다
     assert _cues(draft, "BACK")[lit_back]["planned_color"] == [4, 5, 6]  # 역광 색을 이긴다
-    assert colors == {("WASH-ALL", 20): (1, 2, 3), ("BACK", lit_back): (4, 5, 6)}
+    assert colors == {("WASH-ALL", head): (1, 2, 3), ("BACK", lit_back): (4, 5, 6)}
+
+
+def test_a_mid_section_planned_color_does_not_split_the_wash_line() -> None:
+    section = next(
+        s for s in split_sections(_bar_map(SYNTHETIC_EVENTS)) if s.start_bar <= 20 <= s.end_bar
+    )
+    assert section.start_bar < 20 <= section.end_bar
+    plain = _draft(SYNTHETIC_EVENTS)
+    draft = _draft(SYNTHETIC_EVENTS, planned_colors={("WASH-ALL", 20): (1, 2, 3)})
+    assert _rows(draft, "WASH-ALL") == _rows(plain, "WASH-ALL")
+    assert 20 not in _rows(draft, "WASH-ALL")
 
 
 def test_planned_color_on_a_rest_cell_is_ignored() -> None:
@@ -831,30 +847,23 @@ def test_generator_source_has_no_console_or_file_access() -> None:
 # -- 격자에 반영 -----------------------------------------------------------------------------
 
 
-def test_apply_accepts_a_sparse_draft_and_bars_without_a_row_keep_their_cues() -> None:
+def test_apply_replaces_each_row_inside_the_draft_range_with_its_draft_cells() -> None:
+    # 리드 지시 2026-10-16 — 초안 범위 안의 줄은 초안 칸으로 교체한다. 시드 칸을 남기면 그 사이에
+    # 새 칸이 끼어 칸이 조각난다. 범위 밖의 칸은 그대로다.
     grid = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
     draft = _draft(SYNTHETIC_EVENTS)
     updated, report = apply_arrangement_draft(grid, draft)
     assert any("새로 만들" in line for line in report)
     assert updated["bar_range"] == {"start": 0, "end": BARS}
-    kept = 0
+    first, last = draft["bar_range"]["start"], draft["bar_range"]["end"]
     for draft_track in draft["tracks"]:
         name = draft_track["group_name"]
-        before = {
-            cue["bar"]: cue
-            for cue in next(t for t in grid["tracks"] if t["group_name"] == name)["cues"]
-        }
-        after = {
-            cue["bar"]: cue
-            for cue in next(t for t in updated["tracks"] if t["group_name"] == name)["cues"]
-        }
-        row_bars = {cue["bar"] for cue in draft_track["cues"]}
-        assert set(after) == set(before) | row_bars, "행이 없는 마디에는 새 칸이 생기지 않는다"
-        for bar, cue in before.items():
-            if bar not in row_bars:
-                assert after[bar] == cue, (name, bar)
-                kept += 1
-    assert kept >= 10, "행이 없는 마디의 기존 칸이 충분히 있어야 시험이 의미가 있다"
+        before = next(t for t in grid["tracks"] if t["group_name"] == name)["cues"]
+        after = next(t for t in updated["tracks"] if t["group_name"] == name)["cues"]
+        inside = {cue["bar"] for cue in after if first <= cue["bar"] <= last}
+        assert inside == {cue["bar"] for cue in draft_track["cues"]}, name
+        outside_before = [cue for cue in before if not first <= cue["bar"] <= last]
+        assert [cue for cue in after if not first <= cue["bar"] <= last] == outside_before
 
 
 # -- 실제 LOVE ATTACK ------------------------------------------------------------------------

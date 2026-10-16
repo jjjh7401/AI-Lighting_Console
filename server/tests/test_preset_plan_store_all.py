@@ -204,13 +204,15 @@ class TestColorStore:
         _cue_of(grid, "WASH-ALL", 14)["color_preset_no"] = "4.5"
         _grid, plan = _with_stores(grid)
 
+        # 번호가 있는 칸만 후보에서 빠지고, 나머지 칸은 저장된다(리드 지시 2026-10-16). 한 칸
+        # 때문에 후보 전체를 보류하면 같은 후보의 다른 칸이 전부 번호 없이 남는다.
         lavender = _preset(plan, "LAVENDER")
-        assert lavender.ready is False
-        assert "WASH-ALL 14마디" in (lavender.hold or "")
-        assert "Store Preset 4.33" not in "\n".join(save_commands(plan))
+        assert lavender.ready is True
+        assert ("WASH-ALL", 14) not in {(c.group_name, c.bar) for c in lavender.cells}
+        assert "Store Preset 4.33" in "\n".join(save_commands(plan))
         approved = _approve(grid, plan)
         assert _cue_of(approved, "WASH-ALL", 14)["color_preset_no"] == "4.5"
-        assert _cue_of(approved, "WASH-ALL", 7)["color_preset_no"] is None
+        assert _cue_of(approved, "WASH-ALL", 7)["color_preset_no"] == "4.33"
 
     def test_a_color_spread_over_two_groups_is_held_like_the_t594_path(self) -> None:
         # t594 는 여러 그룹이 같은 색 번호를 쓰는 꼴을 만들지 않는다(실기 선례 없음) — 카드도 같다.

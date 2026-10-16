@@ -32,8 +32,10 @@
   구간 경계는 값이 아니다. 쉬는 연속 마디(「—」)도 구간을 몇 번 넘든 한 칸이다. 모든 줄에 첫
   마디 칸이 있다.
 - 색은 칸의 속성이라 칸 첫 마디의 색을 쓴다. 색이 바뀐다고 칸을 나누는 줄은 워시 줄(역할 wash)
-  뿐이다. 다른 줄의 칸은 구간 색이 바뀌는 마디를 넘어 이어진다. 곡별 주석 색이 놓인 마디는 줄을
-  가리지 않고 칸을 나눈다. 그 마디의 칸이 그 색을 보여야 해서다(앞뒤 마디의 색과 다를 때만).
+  뿐이다. 다른 줄의 칸은 구간 색이 바뀌는 마디를 넘어 이어진다. 곡별 주석 색이 놓인 마디는 칸을
+  나눈다. 그 마디의 칸이 그 색을 보여야 해서다(앞뒤 마디의 색과 다를 때만).
+- 워시 줄은 구간마다 한 칸이다. 구간 첫 마디의 값이 구간 끝까지 가고, 색이 바뀌는 구간 경계에서만
+  나뉜다. 구간 중간 마디의 주석 색은 워시 칸을 쪼개지 않는다(리드 결정 2026-10-16).
 """
 
 from __future__ import annotations
@@ -251,14 +253,32 @@ def generate_segment_draft(
             for bar in pre_hit_bars:
                 plans[str(track["group_name"])][bar] = notice
 
+    # 워시 줄은 구간마다 한 칸이다(리드 결정 2026-10-16). 구간 첫 마디의 값(색 포함)이 구간 끝까지
+    # 가고, 칸은 색이 바뀌는 구간 경계에서만 나뉜다. 구간 중간의 주석 색은 워시 칸을 쪼개지 않는다.
+    section_starts = frozenset(section.start_bar for section in sections)
+    for track in layout:
+        if track.get("layer_role") not in _COLOR_LINE_ROLES:
+            continue
+        name = str(track["group_name"])
+        for section in sections:
+            head = plans[name].get(section.start_bar)
+            if head is None:
+                continue
+            for bar in range(section.start_bar, section.end_bar + 1):
+                if bar in plans[name]:
+                    plans[name][bar] = head
+
     tracks = []
     for track in layout:
         name = str(track["group_name"])
+        annotated = frozenset(bar for track_name, bar in overrides if track_name == name)
+        if track.get("layer_role") in _COLOR_LINE_ROLES:
+            annotated = annotated & section_starts
         runs = _runs(
             plans[name],
             bar_numbers,
             splits_on_color=track.get("layer_role") in _COLOR_LINE_ROLES,
-            annotated=frozenset(bar for track_name, bar in overrides if track_name == name),
+            annotated=annotated,
         )
         tracks.append(
             BeatGridTrack(

@@ -15,7 +15,7 @@ import copy
 import json
 
 from server.audio.bar_map_store import build_bar_map_payload
-from server.design.arrange_apply import apply_arrangement_draft, director_blank_cells
+from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_generator import generate_arrangement_draft
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_measured import canonical_axes
@@ -55,9 +55,7 @@ def _auto_arranged_grid() -> dict:
         for t in grid["tracks"]
     ]
     draft = generate_arrangement_draft(bar_map, layout)
-    applied, _report = apply_arrangement_draft(
-        grid, draft, director_blanks=director_blank_cells(grid)
-    )
+    applied, _report = apply_arrangement_draft(grid, draft)
     return applied
 
 

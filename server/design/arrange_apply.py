@@ -14,7 +14,7 @@ from typing import Any
 from server.design.arrange_generator import ArrangementDraft
 from server.design.beat_grid import normalize_beat_grid_cue, validate_beat_grid_tracks
 
-__all__ = ["ArrangementApplyError", "apply_arrangement_draft"]
+__all__ = ["ArrangementApplyError", "apply_arrangement_draft", "is_director_edited"]
 
 
 class ArrangementApplyError(ValueError):
@@ -37,74 +37,70 @@ def _union_bar_range(
     }
 
 
-_PRESET_KEYS = (
-    "position_preset_no",
-    "color_preset_no",
-    "effect_preset_no",
-    "effect_kind",
-    "app_movement",
-)
+#: 감독이 손으로 고친 칸을 「⇪ 콘솔에 반영」 승인이 남기는 출처 머리말이다.
+_DIRECTOR_APPROVAL_PREFIX = "beat_grid_apply:"
 
 
-def _has_structured_value(cue: Mapping[str, Any]) -> bool:
-    """칸에 구조화 값(밝기·프리셋·진입·움직임) 가운데 하나라도 있는가."""
+_PRESET_KEYS = ("position_preset_no", "color_preset_no", "effect_preset_no")
+
+
+def _has_preset_number(cue: Mapping[str, Any]) -> bool:
     brightness = cue.get("brightness") or {}
-    entry = cue.get("entry") or {}
-    if brightness.get("mode") is not None:
-        return True
-    if any(cue.get(key) is not None for key in _PRESET_KEYS):
-        return True
-    return any(value is not None for value in entry.values())
+    return brightness.get("preset_no") is not None or any(
+        cue.get(key) is not None for key in _PRESET_KEYS
+    )
 
 
-def director_blank_cells(default_grid: Mapping[str, Any]) -> frozenset[tuple[str, int]]:
-    """감독 원본(곡 기본 격자)에서 구조화 값 없이 비워 둔 칸 — (트랙 이름, 마디) 집합이다.
+def is_director_edited(cue: Mapping[str, Any]) -> bool:
+    """감독이 직접 고친 칸인가.
 
-    이 칸은 감독이 비워 둔 것이라 자동 배치가 채우지 않는다. 송신하지 않고 숫자로만 보인다.
+    - 콘솔 반영까지 승인한 손 편집은 ``evidence.approval.source`` 에 ``beat_grid_apply:`` 를
+      남긴다(여러 출처는 `` | `` 로 이어진다).
+    - 아직 승인 전인 손 편집은 프리셋 번호가 있는데 승인 기록이 없다(편집이 낡은 승인을 지운다).
+      초안 칸은 번호를 싣지 않고, 프리셋 계획이 붙인 번호는 ``preset_plan:`` 승인이 함께 남는다.
+
+    프리셋 계획(``preset_plan:``)·시드 근거 표시만 있는 칸은 손 편집이 아니다.
     """
-    blanks: set[tuple[str, int]] = set()
-    for track in default_grid.get("tracks") or []:
-        name = str(track["group_name"])
-        for cue in track.get("cues") or []:
-            if not _has_structured_value(cue):
-                blanks.add((name, int(cue["bar"])))
-    return frozenset(blanks)
+    approval = (cue.get("evidence") or {}).get("approval") or {}
+    source = str(approval.get("source") or "")
+    if not source:
+        return _has_preset_number(cue)
+    return any(part.strip().startswith(_DIRECTOR_APPROVAL_PREFIX) for part in source.split("|"))
 
 
-def _is_placeholder(cue: Mapping[str, Any], track_name: str, director_blanks: frozenset) -> bool:
-    """구조화 값이 하나도 없고 감독 원본의 빈 칸도 아닌 칸 — 이전 적용이 남긴 빈 칸이다.
-
-    사람이 넣은 값이 있는 칸은 건드리지 않는다. 감독이 비워 둔 칸도 건드리지 않는다.
-    나머지 빈 칸은 초안 값으로 채운다.
-    """
-    if (track_name, int(cue["bar"])) in director_blanks:
-        return False
-    return not _has_structured_value(cue)
+def _draft_bounds(draft: ArrangementDraft, draft_cues: list[Mapping[str, Any]]) -> tuple[int, int]:
+    """교체할 마디 범위 — 초안 범위, 없으면 초안 칸의 첫·마지막 마디다."""
+    bar_range = draft.get("bar_range") or {}
+    if "start" in bar_range and "end" in bar_range:
+        return int(bar_range["start"]), int(bar_range["end"])
+    bars = [int(cue["bar"]) for cue in draft_cues]
+    return min(bars), max(bars)
 
 
-# @MX:NOTE: [AUTO] 초안 한 단위를 격자에 한꺼번에 반영한다. 원본 격자는 바꾸지 않는다.
+# @MX:NOTE: [AUTO] 초안 범위의 줄을 초안 칸으로 교체한다. 감독이 고친 칸만 남는다.
 def apply_arrangement_draft(
     grid: Mapping[str, Any],
     draft: ArrangementDraft,
-    *,
-    director_blanks: frozenset = frozenset(),
 ) -> tuple[dict[str, Any], list[str]]:
     """초안 한 단위를 격자에 반영하고, 새 격자와 한국어 보고를 돌려준다.
 
-    - 이름이 같은 트랙이 있으면 그 트랙의 칸을 고치고, 없으면 트랙을 새로 만든다.
-    - 칸이 없는 마디에는 칸을 새로 만든다. 있는 칸은 라벨만 초안 값으로 바꾸고, 밝기·프리셋
-      같은 구조화 필드는 그대로 둔다(사람이 넣은 값을 지우지 않는다).
-    - 구조화 값이 하나도 없는 빈 칸은 초안 값으로 채운다(이전 적용이 남긴 칸). 단 감독 원본의
-      빈 칸(``director_blanks``)은 그대로 둔다.
+    - 이름이 같은 트랙이 있으면 그 트랙을, 없으면 트랙을 새로 만든다.
+    - 초안 범위 안에서 그 줄의 칸을 초안 칸으로 **교체**한다. 손 설계 시드 칸·이전 초안 칸은
+      지운다 — 남겨 두면 그 사이에 새 칸이 끼어 칸이 조각난다. 감독이 고쳐 승인한 칸
+      (``is_director_edited``)만 그대로 두고, 그 마디의 초안 칸은 넣지 않는다.
+    - 범위 밖의 칸은 건드리지 않는다. 같은 초안을 두 번 적용해도 결과가 같다.
     - 격자 데이터 범위(``bar_range``)도 초안 범위까지 넓힌다. 줄이지는 않는다.
     - 결과가 트랙 검증(같은 장비를 겹쳐 잡는 트랙)을 통과하지 못하면 ``ArrangementApplyError``다.
       어떤 경우에도 원본 격자는 바뀌지 않는다.
     """
     tracks = [copy.deepcopy(dict(track)) for track in grid.get("tracks") or []]
     by_name = {str(track["group_name"]): track for track in tracks}
-    created_tracks = created_cells = changed_cells = 0
+    created_tracks = placed_cells = removed_cells = kept_cells = 0
     for draft_track in draft["tracks"]:
         name = str(draft_track["group_name"])
+        draft_cues = list(draft_track["cues"])
+        if not draft_cues:
+            continue
         track = by_name.get(name)
         if track is None:
             track = {
@@ -117,22 +113,28 @@ def apply_arrangement_draft(
             tracks.append(track)
             by_name[name] = track
             created_tracks += 1
-        cues_by_bar = {cue["bar"]: cue for cue in track["cues"]}
-        for draft_cue in draft_track["cues"]:
-            bar = draft_cue["bar"]
-            label = draft_cue["label"]
-            existing = cues_by_bar.get(bar)
-            if existing is None or _is_placeholder(existing, name, director_blanks):
-                cues_by_bar[bar] = normalize_beat_grid_cue(dict(draft_cue))
-                created_cells += 1
+        first, last = _draft_bounds(draft, draft_cues)
+        cues_by_bar: dict[int, Any] = {}
+        for cue in track["cues"]:
+            bar = int(cue["bar"])
+            if first <= bar <= last and not is_director_edited(cue):
+                removed_cells += 1
                 continue
-            if existing["label"] != label:
-                changed_cells += 1
-            updated_cue = {**existing, "label": label}
-            # 계획 위치는 계획 값이라 기존 칸에도 얹는다. 위치 번호·구조값은 건드리지 않는다.
-            if "planned_position" in draft_cue:
-                updated_cue["planned_position"] = draft_cue["planned_position"]
-            cues_by_bar[bar] = updated_cue
+            if first <= bar <= last:
+                kept_cells += 1
+            cues_by_bar[bar] = cue
+        for draft_cue in draft_cues:
+            bar = int(draft_cue["bar"])
+            if bar in cues_by_bar:
+                # 감독 칸은 그대로 두되, 계획 위치는 계획 값이라 얹는다(번호·구조값은 그대로).
+                if first <= bar <= last and "planned_position" in draft_cue:
+                    cues_by_bar[bar] = {
+                        **cues_by_bar[bar],
+                        "planned_position": draft_cue["planned_position"],
+                    }
+                continue
+            cues_by_bar[bar] = normalize_beat_grid_cue(dict(draft_cue))
+            placed_cells += 1
         track["cues"] = [cues_by_bar[bar] for bar in sorted(cues_by_bar)]
 
     reason = validate_beat_grid_tracks(tracks)
@@ -142,7 +144,10 @@ def apply_arrangement_draft(
     updated["tracks"] = tracks
     if draft.get("bar_range"):
         updated["bar_range"] = _union_bar_range(grid.get("bar_range"), draft["bar_range"])
-    report = f"자동 배치 칸 {created_cells}개를 새로 만들고 {changed_cells}개의 라벨을 바꿨습니다"
+    report = (
+        f"자동 배치 칸 {placed_cells}개를 새로 만들고 기존 칸 {removed_cells}개를 지웠습니다"
+        f"(감독이 고친 칸 {kept_cells}개는 그대로)"
+    )
     if created_tracks:
         report += f", 트랙 {created_tracks}개를 새로 만들었습니다"
     return updated, [report]

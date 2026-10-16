@@ -50,7 +50,7 @@ from server.design.beat_grid_cell_split import (
 )
 from server.design.beat_grid_color_presets import color_preset_rgb, record_color_preset_rgb
 from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
-from server.design.beat_grid_measured import canonical_axes, is_movement_measured_open
+from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_presets import (
     app_preset_label,
     first_free_base_color_number,
@@ -588,7 +588,7 @@ def _movement_effect_presets(
     돌려주는 것은 ``(프리셋들, 「미정」 사유들, 「감독이 고칠 값」들)``.
     번호 자리(풀 판독)나 그룹 번호가 없으면 「미정」이다 — 지어내지 않는다.
     저장 줄은 번호와 그룹이 다 정해진 줄에만 붙는다. 번호도 저장 줄이 붙는 줄에만 쓴다.
-    실기 기록으로 이미 열린 움직임은 이 계획에서 빼 둔다(바꾸지 않는다).
+    실기 기록으로 열린 움직임(Tilt 웨이브)도 Pan 과 같이 효과 프리셋 후보다.
     주기가 빈 칸은 같은 줄의 주기 값을 기본으로 빌리고 「감독이 고칠 값」에 적는다.
     """
     buckets: dict[tuple[str, object, tuple[object, ...]], list[PlanCell]] = {}
@@ -605,14 +605,8 @@ def _movement_effect_presets(
             continue
         if not isinstance(bar, int) or isinstance(bar, bool):
             continue
-        # 실기 기록으로 이미 열린 움직임(beat_grid_measured)은 그대로 둔다 — 효과 프리셋으로 바꾸면
-        # 지금 열린 칸이 ④에 새로 막힌다. 바꿀 대상은 (5,7,9)에 막힌 칸뿐이다.
-        if is_movement_measured_open(
-            group_no if isinstance(group_no, int) else None,
-            movement.get("shape"),
-            movement.get("axes") or (),
-        ):
-            continue
+        # 실기 기록으로 열린 움직임(MOVER-D Tilt 웨이브)도 효과 프리셋으로 만든다. 예전엔 ④(효과
+        # 프리셋 리콜)가 미확인이라 바꾸면 새로 막혔지만, ④는 2026-10-16 실기 통과다(리드 지시).
         donor = None
         if _period_of(movement) is None:
             donor = _period_donor(rows, group_name=group_name, bar=bar)
@@ -1487,8 +1481,11 @@ def resolve_preset(
     store: tuple[str, ...] | None,
     hold: str | None = None,
     fixes: Sequence[str] = (),
+    cells: tuple[PlanCell, ...] | None = None,
 ) -> LoveAttackPlan:
     """저장 줄을 기다리던 색·위치 후보(``deferred``) 한 줄을 마무리한 새 계획을 돌려준다.
+
+    ``cells`` 를 주면 후보의 칸을 그 칸들로 줄인다(이미 번호가 있는 칸을 뺄 때).
 
     ``store`` 가 있으면 그 줄을 이 카드가 저장한다(``ready``). 없으면 ``hold`` 를 사유로
     「미정」으로 내린다. 후보였을 때 「이 카드 밖」·「미정」 목록에 있던 사유 문장도 함께 바꾼다 —
@@ -1500,6 +1497,7 @@ def resolve_preset(
         deferred=False,
         hold=None if store is not None else hold,
         store=store,
+        cells=preset.cells if cells is None else cells,
     )
     old_line = _outside_line(preset)
     deferred = [line for line in plan.deferred if line != old_line]

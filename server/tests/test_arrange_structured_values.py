@@ -9,7 +9,7 @@ from __future__ import annotations
 import copy
 
 from server.audio.bar_map_store import build_bar_map_payload
-from server.design.arrange_apply import apply_arrangement_draft, director_blank_cells
+from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_generator import generate_arrangement_draft
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid, normalize_beat_grid_cue
 from server.design.beat_grid_emit import SongTiming, emit_beat_grid_write_bundle
@@ -83,38 +83,27 @@ def test_empty_placeholder_beyond_the_data_range_takes_the_draft_values() -> Non
     assert str(cell["source_ref"]).startswith("arrangement_generator:")
 
 
-def test_director_blank_cells_are_the_empty_cues_of_the_default_grid() -> None:
-    blanks = director_blank_cells(default_beat_grid(LOVE_ATTACK_TITLE))
-    assert len(blanks) == 8
-    assert ("BACK", 11) in blanks
-    assert ("BACK", 18) not in blanks
-
-
-def test_placeholder_the_director_did_not_leave_blank_takes_the_draft_values() -> None:
-    # 격자 데이터 범위 안이어도, 감독 원본의 빈 칸이 아니면 이전 적용이 남긴 빈 칸이다.
+def test_placeholder_left_by_an_earlier_apply_takes_the_draft_values() -> None:
     grid = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
     back = next(t for t in grid["tracks"] if t["group_name"] == "BACK")
     back["cues"] = [c for c in back["cues"] if c["bar"] != 9]
     back["cues"].append(normalize_beat_grid_cue({"bar": 9, "label": "이전 라벨"}))
     back["cues"].sort(key=lambda cue: cue["bar"])
-    blanks = director_blank_cells(default_beat_grid(LOVE_ATTACK_TITLE))
-    updated, _report = apply_arrangement_draft(grid, _draft(), director_blanks=blanks)
+    updated, _report = apply_arrangement_draft(grid, _draft())
     updated_back = next(t for t in updated["tracks"] if t["group_name"] == "BACK")
     cell = next(c for c in updated_back["cues"] if c["bar"] == 9)
     assert isinstance(cell["brightness"]["value_percent"], int)
 
 
-def test_empty_cell_inside_the_data_range_stays_the_directors_blank() -> None:
+def test_seed_blank_cell_inside_the_draft_range_is_replaced() -> None:
+    # 리드 지시 2026-10-16 — 시드 칸(빈 칸 포함)은 초안 칸으로 대체한다. 남기면 조각이 생긴다.
     grid = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
-    back = next(t for t in grid["tracks"] if t["group_name"] == "BACK")
-    before = next(c for c in back["cues"] if c["bar"] == 11)
-    blanks = director_blank_cells(default_beat_grid(LOVE_ATTACK_TITLE))
-    updated, _report = apply_arrangement_draft(grid, _draft(), director_blanks=blanks)
+    draft = _draft()
+    updated, _report = apply_arrangement_draft(grid, draft)
     updated_back = next(t for t in updated["tracks"] if t["group_name"] == "BACK")
-    after = next(c for c in updated_back["cues"] if c["bar"] == 11)
-    assert after["brightness"] == before["brightness"]
-    assert after["entry"] == before["entry"]
-    assert after.get("app_movement") == before.get("app_movement")
+    in_range = [c for c in updated_back["cues"] if c["bar"] >= draft["bar_range"]["start"]]
+    assert 11 in {c["bar"] for c in in_range}
+    assert all(str(c.get("source_ref") or "").startswith("arrangement_") for c in in_range)
 
 
 def test_cells_without_structured_values_are_reported_as_unsent() -> None:

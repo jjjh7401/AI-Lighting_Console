@@ -5,7 +5,7 @@
 
 검증하는 것: 준비된 효과 프리셋은 풀 21의 빈 번호에 저장되고, 승인 뒤 칸이 그 번호를 가리키며,
 그 칸은 ⑤⑦⑨ 대신 ④에 기대게 된다. 주기가 빈 칸은 같은 줄의 주기를 빌리고 「감독이 고칠 값」에
-적는다. 실측으로 열린 칸(MOVER-D Tilt)은 건드리지 않는다.
+적는다. 실측으로 열린 칸(MOVER-D Tilt 웨이브)도 Pan 처럼 효과 프리셋을 받는다(리드 지시 2026-10-16).
 """
 
 from __future__ import annotations
@@ -206,7 +206,11 @@ class TestMovementEffectStoreCommands:
 class TestEffectPresetPlan:
     def test_the_pan_cells_share_one_ready_pool_21_preset(self) -> None:
         # MOVER-U 11 은 주기가 비어 같은 줄의 18마디 주기(박 2)를 빌린다 → 두 칸이 한 프리셋이다.
-        ready = [preset for preset in _effect_presets(_plan(_grid())) if preset.ready]
+        ready = [
+            preset
+            for preset in _effect_presets(_plan(_grid()))
+            if preset.ready and "PAN" in preset.name
+        ]
         assert [preset.name for preset in ready] == ["WAVE PAN 2 BEAT"]
         preset = ready[0]
         assert preset.slot == "21.8"
@@ -249,8 +253,8 @@ class TestEffectPresetPlan:
         )
 
     def test_a_preset_that_cannot_store_takes_no_slot_number(self) -> None:
-        # 같은 줄에 주기가 없어 보류되는 MOVER-U 는 번호를 잡지 않는다. 저장되는 BLIND 줄이
-        # 그 뒤에 와도 첫 빈 번호 21.8 을 받는다.
+        # 같은 줄에 주기가 없어 보류되는 MOVER-U 는 번호를 잡지 않는다. 저장되는 줄은 줄 순서대로
+        # 빈 번호를 받는다 — MOVER-D Tilt 두 줄이 21.8·21.9, 그 뒤 BLIND 가 21.10 이다.
         grid = _grid()
         _clear_mover_u_periods(grid)
         _track(grid, "BLIND")["cues"][0]["app_movement"] = {
@@ -262,16 +266,21 @@ class TestEffectPresetPlan:
         }
         plan = _plan(grid)
         assert _named(plan, "WAVE PAN").slot is None
-        assert _named(plan, "WAVE PAN 4 BEAT").slot == "21.8"
+        assert _named(plan, "WAVE PAN 4 BEAT").slot == "21.10"
 
-    def test_measured_tilt_cells_are_left_as_they_are(self) -> None:
-        # 실기 기록으로 이미 열린 MOVER-D Tilt 칸은 효과 프리셋으로 바꾸지 않는다(④에 새로 막힌다).
+    def test_measured_tilt_wave_cells_get_an_effect_preset_like_pan(self) -> None:
+        # MOVER-D Tilt 웨이브도 효과 프리셋(풀 21)으로 만든다. ④는 실기 통과(리드 지시 1016).
         plan = _plan(_grid())
-        covered = {
-            (cell.group_name, cell.bar) for preset in _effect_presets(plan) for cell in preset.cells
-        }
-        assert ("MOVER-D", 7) not in covered
-        assert ("MOVER-D", 22) not in covered
+        tilt = [
+            preset
+            for preset in _effect_presets(plan)
+            if {(cell.group_name, cell.bar) for cell in preset.cells}
+            & {("MOVER-D", 7), ("MOVER-D", 22)}
+        ]
+        covered = {(cell.group_name, cell.bar) for preset in tilt for cell in preset.cells}
+        assert {("MOVER-D", 7), ("MOVER-D", 22)} <= covered
+        assert all(preset.ready and str(preset.slot).startswith("21.") for preset in tilt)
+        assert all("TILT" in preset.name for preset in tilt)
 
     def test_no_period_anywhere_in_the_line_holds_the_cells(self) -> None:
         grid = _grid()
@@ -303,7 +312,9 @@ class TestEffectPresetPlan:
         assert preset.store is None
         assert preset.slot is None
         assert preset.hold == "그룹 번호가 확인되지 않음: MOVER-U"
-        assert not any("Store Preset 21." in line for line in save_commands(plan))
+        assert not any(
+            "Store Preset 21." in line and "WAVE PAN" in line for line in save_commands(plan)
+        )
 
 
 class TestEffectPresetRoundTrip:
@@ -342,9 +353,12 @@ class TestEffectPresetRoundTrip:
         assert _m1_blocked(_emit(updated, _PASSED_4)) == set()
 
     def test_measured_tilt_cells_still_emit_after_approval(self) -> None:
+        # ④ 통과(실기 2026-10-16)면 효과 번호를 받은 Tilt 칸도 막히지 않는다.
         grid = _grid()
         updated = _approve(grid, _plan(grid))
-        blocked = _m1_blocked(_emit(updated, _LIVE_M1))
+        tilt = [c for c in _track(updated, "MOVER-D")["cues"] if c["bar"] in (7, 22)]
+        assert all(c.get("effect_preset_no") for c in tilt)
+        blocked = _m1_blocked(_emit(updated, _PASSED_4))
         assert ("MOVER-D", 7) not in blocked
         assert ("MOVER-D", 22) not in blocked
 
