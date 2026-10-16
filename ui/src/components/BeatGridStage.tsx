@@ -212,6 +212,8 @@ export function BeatGridStage({
           viewBar={viewBar}
           selectedTrackName={selectedTrackName}
           onSelectTrack={onSelectTrack}
+          motion={motion}
+          presetBook={presetBook}
         />
         {/* 기존 안내(AC-LDBEAT-022)는 그대로 남기고, 그림이 개념도임을 덧붙인다. */}
         <p className="beat-grid-stage-note">

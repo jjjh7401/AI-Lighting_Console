@@ -221,6 +221,33 @@ export function beamPolygonPoints(cx: number, cy: number, panDeg: number, length
   return `${round(cx)},${round(cy)} ${round(ex - dy * halfWidth)},${round(ey + dx * halfWidth)} ${round(ex + dy * halfWidth)},${round(ey - dx * halfWidth)}`;
 }
 
+/** 무빙 한 대의 빔 삼각형 — 칸의 위치·움직임과 재생 시각에서(장비 좌표 무대·개념도 무대가 같이 쓴다).
+ * `distance` 는 장비에서 무대 앞 가장자리까지(reach 1), `index`/`count` 는 같은 줄 안의 순번(위상 엇갈림). */
+export function moverBeamPoints(args: {
+  cue: BeatGridCue | null;
+  x: number;
+  y: number;
+  distance: number;
+  centreX: number;
+  index: number;
+  count: number;
+  halfWidth: number;
+  clock?: { seconds: number; secondsPerBar: number | null | undefined; beatsPerBar: number | null };
+  book?: StagePresetBook;
+}): string {
+  const { cue, x, y, distance, centreX, index, count, halfWidth, clock, book = {} } = args;
+  const motion = clock ? moverMotionOf(cue, clock.beatsPerBar, book) : null;
+  const pose = beamPoseAt(
+    basePoseOf(cue, centrePanDegOf(x, y, centreX, y + distance), book),
+    motion,
+    clock?.seconds ?? 0,
+    clock?.secondsPerBar,
+    phaseOffset(index, count, motion?.phaseSpread ?? true),
+    Math.sign(Math.round(x - centreX)),
+  );
+  return beamPolygonPoints(x, y, pose.panDeg, distance * pose.reach, halfWidth);
+}
+
 /** 장비에서 무대 가운데(`centreX`, 앞 가장자리 `frontY` 쪽)를 보는 팬 각도. */
 export function centrePanDegOf(cx: number, cy: number, centreX: number, frontY: number): number {
   const down = Math.max(1, frontY - cy);
