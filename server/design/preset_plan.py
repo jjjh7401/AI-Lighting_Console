@@ -251,6 +251,14 @@ def build_preset_plan(
     presets: list[PlanPreset] = []
     reserved: list[str] = []
 
+    # -- 밝기 결정: 리드가 정한 칸 밝기(brightness_decisions)
+    brightness_notes: dict[tuple[str, int], str] = {}
+    for entry in annotations.get("brightness_decisions") or []:
+        if not isinstance(entry, Mapping):
+            continue
+        for cell in _annotated_cells(entry.get("cells"), by_cell, unresolved):
+            brightness_notes[(cell.group_name, cell.bar)] = str(entry.get("note") or "").strip()
+
     # -- 디머: 칸의 value_percent 를 값으로 묶는다(첫 등장 순) -------------------
     uses: dict[int, list[tuple[str, object, bool, int]]] = {}
     for group, group_no, confirmed, cue in rows:
@@ -330,6 +338,15 @@ def build_preset_plan(
                 group_nos=group_nos if ready else (),
             )
         )
+        # 밝기 결정이 붙은 칸을 쓰는 디머 줄은 「감독이 고칠 값」으로 드러낸다(줄마다 한 번).
+        for note in _unique(
+            brightness_notes[(cell.group_name, cell.bar)]
+            for cell in cells
+            if (cell.group_name, cell.bar) in brightness_notes
+        ):
+            fixes.append(
+                f"{name} 밝기 {percent}% — {note} 감독이 고칠 값: 실기와 다르면 칸 밝기를 고친다."
+            )
 
     # -- 색: 칸에 붙인 색 이름. RGB 는 주석 → 색 표 순, 없으면 「미정」
     for entry in annotations.get("colors") or []:

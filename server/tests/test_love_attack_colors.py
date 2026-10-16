@@ -122,3 +122,20 @@ def test_the_plan_table_shows_each_color_row():
 
     for name in sorted(_EXPECTED_COLOR_NAMES):
         assert name in table, f"계획표에 {name} 줄이 없다"
+
+
+def test_the_70_percent_dimmer_covers_exactly_the_pink_and_pitch_wash_cells():
+    """리드 결정 2026-10-16 — 18·22마디 워시는 밝기 70 을 받아 한 디머 줄(DIM-70)을 이룬다."""
+    dimmers = {preset.name: preset for preset in _plan().presets if preset.kind == "dimmer"}
+
+    assert {(cell.group_name, cell.bar) for cell in dimmers["DIM-70"].cells} == {
+        ("WASH-ALL", 18),
+        ("WASH-ALL", 22),
+    }
+
+
+def test_the_70_percent_dimmer_is_marked_for_director_review():
+    plan = _plan()
+
+    marked = [fix for fix in plan.supervisor_fixes if "DIM-70" in fix and "감독이 고칠 값" in fix]
+    assert marked, f"DIM-70 이 「감독이 고칠 값」 목록에 없다: {plan.supervisor_fixes}"

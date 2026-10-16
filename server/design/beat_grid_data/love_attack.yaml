@@ -66,14 +66,16 @@ tracks:
         brightness: {mode: value, value_percent: 25}
         source_ref: "reports/effect-arrangement-rules-20261007.md:108"
       # 감독이 고칠 값 — 리드 결정 2026-10-16(PR #752). 색은 preset_annotations 의 PINK 가 준다.
-      # 「70%」는 라벨에만 적었다: 칸 밝기에 넣으면 디머 계획에 DIM-70 줄이 새로 생겨 감독이 정한다.
+      # 밝기 70 — 리드 결정(§4 「핑크 70%」). 그래서 디머 줄 DIM-70 이 생기는 것은 의도된 결과다.
       - bar: 18
         label: "핑크 70% 끊어 바꿈 · 밝기 올림"
+        brightness: {mode: value, value_percent: 70}
         source_ref: "reports/effect-arrangement-rules-20261007.md:109"
       # 감독이 고칠 값 — 리드 결정 2026-10-16(PR #752). 색은 preset_annotations 의 PITCH 가 준다.
-      # 밝기는 §4 가 정하지 않아 비워 뒀다(t555 기본 100% 를 쓸지도 감독이 정한다). 1마디 번짐은 페이드 1마디.
+      # 밝기 70 — 리드 결정(18마디 70에서 1마디 페이드로 이어지는 색 전환). §4 가 숫자를 주지 않아 t555 기본 100 이 아니다.
       - bar: 22
         label: "핑크→피치 1마디 번짐"
+        brightness: {mode: value, value_percent: 70}
         entry: {fade_bars: 1}
         source_ref: "reports/effect-arrangement-rules-20261007.md:110"
   - group_name: BACK

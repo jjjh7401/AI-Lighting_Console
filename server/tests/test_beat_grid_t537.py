@@ -65,7 +65,7 @@ class TestStructuredCueFields:
             ("WASH-ALL", 7),
             ("WASH-ALL", 14),
             # 리드 결정 2026-10-16(PR #752) — SCENE 색 메모(18·22마디)를 워시 칸으로 옮긴 둘.
-            # 출처 행(source_ref)은 있고 밝기는 없다(70%·밝기 배정은 감독 결정).
+            # 출처 행(source_ref)과 밝기 70(리드 결정, 디머 줄 DIM-70)을 가진다.
             ("WASH-ALL", 18),
             ("WASH-ALL", 22),
         }
@@ -105,7 +105,8 @@ class TestStructuredCueFields:
         wash = next(t for t in grid["tracks"] if t["group_name"] == "WASH-ALL")
         by_bar = {c["bar"]: c for c in wash["cues"]}
         # 리드 결정 2026-10-16 — §4 「핑크 70% 끊어 바꿈」(18)·「핑크→피치 1마디 번짐」(22)의
-        # 색 메모를 워시 칸으로 옮겼다(의도한 기준 갱신). 70%는 라벨에만 있다.
+        # 색 메모를 워시 칸으로 옮기고 밝기 70 을 넣었다(의도한 기준 갱신).
+        # 18·22 는 같은 디머 줄 DIM-70 을 이룬다.
 
         assert sorted(by_bar) == [7, 14, 18, 22]
         assert by_bar[7]["brightness"]["value_percent"] == 40
@@ -115,10 +116,10 @@ class TestStructuredCueFields:
         assert by_bar[14]["entry"]["fade_bars"] is None
         assert by_bar[14]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:108"
         assert by_bar[18]["label"] == "핑크 70% 끊어 바꿈 · 밝기 올림"
-        assert by_bar[18]["brightness"]["value_percent"] is None
+        assert by_bar[18]["brightness"]["value_percent"] == 70
         assert by_bar[18]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:109"
         assert by_bar[22]["label"] == "핑크→피치 1마디 번짐"
-        assert by_bar[22]["brightness"]["value_percent"] is None
+        assert by_bar[22]["brightness"]["value_percent"] == 70
         assert by_bar[22]["entry"]["fade_bars"] == 1
         assert by_bar[22]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:110"
 

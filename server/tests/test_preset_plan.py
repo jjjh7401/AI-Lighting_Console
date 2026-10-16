@@ -76,13 +76,17 @@ _EXPECTED_SAVE = (
     "Store Preset 1.9",
     "Label Preset 1.9 'DIM-25'",
     "ClearAll",
-    "Group 4 ; Attribute 'Dimmer' At 60",
+    "Group 10 ; Attribute 'Dimmer' At 70",
     "Store Preset 1.10",
-    "Label Preset 1.10 'DIM-60'",
+    "Label Preset 1.10 'DIM-70'",
+    "ClearAll",
+    "Group 4 ; Attribute 'Dimmer' At 60",
+    "Store Preset 1.11",
+    "Label Preset 1.11 'DIM-60'",
     "ClearAll",
     "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100",
-    "Store Preset 1.11",
-    "Label Preset 1.11 'DIM-100'",
+    "Store Preset 1.12",
+    "Label Preset 1.12 'DIM-100'",
     "ClearAll",
 )
 
@@ -135,11 +139,11 @@ class TestDeDuplication:
     def test_identical_values_become_one_preset_with_every_cell_counted(self) -> None:
         plan = _plan()
         names = [preset.name for preset in plan.presets if preset.kind == "dimmer"]
-        assert names == ["DIM-40", "DIM-25", "DIM-60", "DIM-100"]
+        assert names == ["DIM-40", "DIM-25", "DIM-70", "DIM-60", "DIM-100"]
         assert len(_preset(plan, "DIM-100").cells) == 19
-        # 디머 값으로 세던 칸 22개 = 프리셋 칸 합 (WASH 2 + BACK 60 한 칸 + 100% 19칸).
+        # 디머 값으로 세던 칸 24개 = 프리셋 칸 합 (WASH 4 — 40·25·70 — + BACK 60 한 칸 + 100% 19칸).
         value_cells = sum(len(preset.cells) for preset in plan.presets if preset.kind == "dimmer")
-        assert value_cells == 22
+        assert value_cells == 24
 
     def test_same_value_across_groups_is_one_entry_listing_every_group(self) -> None:
         plan = _plan()
@@ -155,7 +159,7 @@ class TestDeDuplication:
 class TestReadyAndHeldPresets:
     def test_single_group_dimmers_are_ready_and_carry_the_group_number(self) -> None:
         plan = _plan()
-        for name, group_no in (("DIM-40", 10), ("DIM-25", 10), ("DIM-60", 4)):
+        for name, group_no in (("DIM-40", 10), ("DIM-25", 10), ("DIM-70", 10), ("DIM-60", 4)):
             preset = _preset(plan, name)
             assert preset.ready is True
             assert preset.hold is None
@@ -188,7 +192,7 @@ class TestEmptySlots:
     def test_chosen_slots_are_empty_console_numbers_only(self) -> None:
         plan = _plan()
         dimmer_slots = [p.slot for p in plan.presets if p.kind == "dimmer"]
-        assert dimmer_slots == ["1.8", "1.9", "1.10", "1.11"]
+        assert dimmer_slots == ["1.8", "1.9", "1.10", "1.11", "1.12"]
         assert _preset(plan, "LAVENDER").slot == "4.33"
         assert _preset(plan, "FLOOR").slot == "2.31"
 
@@ -208,7 +212,7 @@ class TestEmptySlots:
         more_dimmers = {**_DIMMER_CHILDREN, 8: "X8", 9: "X9", 10: "X10"}
         plan = _plan(dimmer=(1, more_dimmers))
         assert _preset(plan, "DIM-40").slot == "1.11"
-        assert _preset(plan, "DIM-100").slot == "1.14"
+        assert _preset(plan, "DIM-100").slot == "1.15"
 
     def test_unread_dimmer_pool_leaves_every_dimmer_unassigned_and_held(self) -> None:
         plan = _plan(dimmer=None)
@@ -253,7 +257,7 @@ class TestSaveCommands:
         joined = "\n".join(save_commands(_plan()))
         assert "ColorRGB" not in joined
         assert "LAVENDER" not in joined and "FLOOR" not in joined
-        assert "Label Preset 1.11 'DIM-100'" in joined
+        assert "Label Preset 1.12 'DIM-100'" in joined
 
     def test_planning_never_mutates_the_grid(self) -> None:
         grid = _love_attack_grid()
@@ -277,9 +281,11 @@ class TestReferenceUpdate:
         }
         assert check_evidence_approval(wash) is None
         assert wash["evidence"]["approval"]["by"] == "supervisor"
+        # 리드 결정 2026-10-16 — 밝기 70 칸(18·22마디 워시)은 승인되면 DIM-70 번호(1.10)를 가리킨다.
+        assert _cue_of(approved, "WASH-ALL", 18)["brightness"]["preset_no"] == "1.10"
         back = _cue_of(approved, "BACK", 7)
-        assert back["brightness"]["preset_no"] == "1.10"
-        assert _cue_of(approved, "BACK", 18)["brightness"]["preset_no"] == "1.11"
+        assert back["brightness"]["preset_no"] == "1.11"
+        assert _cue_of(approved, "BACK", 18)["brightness"]["preset_no"] == "1.12"
         assert back["effect_preset_no"] == "21.1"
         # 칸에 있던 기존 승인(t543 proposal #6)의 출처는 지우지 않고 덧붙인다.
         assert "proposal-table.md#6" in back["evidence"]["approval"]["source"]
@@ -292,8 +298,8 @@ class TestReferenceUpdate:
             grid, _plan(grid), by="supervisor", date="2026-10-15T00:00:00+00:00", source="x"
         )
         assert grid == before
-        # 100% 칸은 이제 다중 그룹 DIM-100(1.11)을 가리키고, 승인된 위치 2.1 칸은 그대로다.
-        assert _cue_of(approved, "MOVER-U", 18)["brightness"]["preset_no"] == "1.11"
+        # 100% 칸은 이제 다중 그룹 DIM-100(1.12)을 가리키고, 승인된 위치 2.1 칸은 그대로다.
+        assert _cue_of(approved, "MOVER-U", 18)["brightness"]["preset_no"] == "1.12"
         assert _cue_of(approved, "MOVER-U", 18)["position_preset_no"] == "2.1"
 
 
@@ -363,9 +369,10 @@ class TestApprovalCardRejected:
         assert grid != before
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
         assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
-        assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.10"
-        # 100% 칸(다중 그룹 DIM-100)은 1.11 을 가리킨다.
-        assert _cue_of(grid, "BACK", 18)["brightness"]["preset_no"] == "1.11"
+        assert _cue_of(grid, "WASH-ALL", 18)["brightness"]["preset_no"] == "1.10"
+        assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.11"
+        # 100% 칸(다중 그룹 DIM-100)은 1.12 을 가리킨다.
+        assert _cue_of(grid, "BACK", 18)["brightness"]["preset_no"] == "1.12"
 
 
 # == 승인 카드: 실제 비동기 승인 통로 (ApprovalChannel + 다른 스레드가 답함) ========
@@ -440,7 +447,7 @@ class TestApprovalCardRealAsyncChannel:
         grid = store.latest["beat_grid"]
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
         assert _cue_of(grid, "WASH-ALL", 14)["brightness"]["preset_no"] == "1.9"
-        assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.10"
+        assert _cue_of(grid, "BACK", 7)["brightness"]["preset_no"] == "1.11"
         assert check_evidence_approval(_cue_of(grid, "WASH-ALL", 7)) is None
 
     def test_an_edit_made_while_the_card_is_open_survives_the_approval(

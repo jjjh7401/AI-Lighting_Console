@@ -34,7 +34,8 @@ class TestBeatGridApplyMode:
 class TestPlanTableAndSongAnnotations:
     def test_plan_table_lists_presets_and_the_supervisor_marks(self) -> None:
         table = plan_table_markdown(_plan())
-        assert "| DIM-100 | 100% | 1.11 | 19 | 저장(이 카드) |" in table
+        assert "| DIM-100 | 100% | 1.12 | 19 | 저장(이 카드) |" in table
+        assert "| DIM-70 | 70% | 1.10 | 2 | 저장(이 카드) |" in table
         assert "| LAVENDER |" in table
         assert "**이 카드 밖**" in table
         assert "**감독이 고칠 값**" in table
