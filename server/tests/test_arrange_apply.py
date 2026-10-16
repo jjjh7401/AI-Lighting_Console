@@ -47,6 +47,20 @@ def test_creates_cells_for_bars_the_grid_did_not_have() -> None:
     assert 30 in {cue["bar"] for cue in _track(updated, "BACK")["cues"]}
 
 
+def test_applying_widens_the_grid_bar_range_to_the_draft() -> None:
+    # 「채운 범위」와 「N마디~ 아직 배치 안 함」은 bar_range 로 그린다. 칸을 40마디까지 만들고
+    # bar_range 를 기본값 0~25 에 두면 26마디부터 칸이 있는데도 빗금으로 보인다.
+    grid = _grid()
+    assert grid["bar_range"] == {"start": 0, "end": 25}
+    updated, _report = apply_arrangement_draft(grid, _draft())
+    assert updated["bar_range"] == {"start": 0, "end": 40}
+
+
+def test_applying_a_draft_inside_the_range_keeps_the_bar_range() -> None:
+    updated, _report = apply_arrangement_draft(_grid(), _draft(bars=20))
+    assert updated["bar_range"] == {"start": 0, "end": 25}
+
+
 def test_overwrites_the_label_and_keeps_structured_fields() -> None:
     grid = _grid()
     before = next(cue for cue in _track(grid, "BACK")["cues"] if cue["bar"] == 7)
