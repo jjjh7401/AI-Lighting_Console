@@ -10781,7 +10781,13 @@ class ChatSession:
                 f" 송신 직전 확인에 걸려 뺀 프리셋 {len(held)}개: {names}. "
                 "나머지는 다시 승인받아 보냈습니다."
             )
-        return self._beat_grid_send_status(last_action="apply", ok=True, reason=saved)
+        return self._beat_grid_send_status(
+            last_action="apply",
+            ok=True,
+            reason=saved,
+            completed="preset_saved",
+            timecode_suggestion=self._beat_grid_timecode_suggestion(),
+        )
 
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
     #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
@@ -10906,13 +10912,16 @@ class ChatSession:
         approval_vs_sent: Mapping[str, object] | None = None,
         stale_tracks: Sequence[str] = (),
         extra_notices: Sequence[str] = (),
+        completed: str | None = None,
+        timecode_suggestion: int | None = None,
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
         출처로 삼는다(코디네이터 계약 5항 — "단일 출처") — 별도 카운터는
         더 이상 없다. ``stale_tracks``(카드 t572)는 소유권 레코드에는
         있지만 지금 격자에는 없는 트랙 이름 — 지우지 않고 그대로 두되
-        감독에게 알린다."""
+        감독에게 알린다. ``completed``·``timecode_suggestion`` 은 성공한
+        단계가 직접 넘길 때만 이벤트에 실린다(없으면 키 자체가 없다)."""
         unsent = self._beat_grid_current_unsent_cells()
         event = beat_grid_send_status_event(
             pending_apply_count=len(unsent) if unsent is not None else None,
@@ -10925,6 +10934,8 @@ class ChatSession:
             approval_vs_sent=dict(approval_vs_sent) if approval_vs_sent is not None else None,
             stale_tracks=list(stale_tracks),
             notices=[*dimmer_unread_notices(blocked_cells), *extra_notices],
+            completed=completed,
+            timecode_suggestion=timecode_suggestion,
         )
         self._send(event)
         return event
@@ -11570,6 +11581,8 @@ class ChatSession:
                     "approved_not_sent": verdict.approved_not_sent,
                 },
                 stale_tracks=stale_tracks,
+                # 반영 완료 표지도 위 스냅샷과 같은 기준이다 — 승인=송신 대조가 맞을 때만 단다.
+                completed="reflected" if verdict.passed else None,
             )
         finally:
             reset_session_key(token)
@@ -11807,7 +11820,7 @@ class ChatSession:
         self._send(
             song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated_timeline))
         )
-        self._beat_grid_send_status(last_action="edit", ok=True)
+        self._beat_grid_send_status(last_action="edit", ok=True, completed="draft_applied")
         event = chat_response_event(
             status="ok",
             summary="박자 배치 초안 적용",
@@ -12205,6 +12218,24 @@ class ChatSession:
                 if len(free) == count:
                     break
         return free
+
+    def _beat_grid_timecode_suggestion(self) -> int | None:
+        """프리셋 저장이 끝난 뒤 흐름이 이어지도록 타임코드 번호 하나를 **권한다**.
+
+        곡 초안에 타임코드 번호가 이미 있으면 권할 것이 없다(``None``). 없을 때만 콘솔이 비어
+        있다고 **확인한** 첫 슬롯을 읽는다(``_free_timecode_slots`` — 못 읽은 슬롯은 점유로 본다).
+        저장은 이미 성공했으므로 이 권유는 덤이다: 읽다가 예외가 나도 성공을 오류로 바꾸지 않고
+        ``None`` 을 낸다. 콘솔에는 쓰지 않고 번호를 초안에 적지도 않는다
+        (적는 일은 감독의 입력이다)."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None or timeline.get("timecode_number") is not None:
+            return None
+        try:
+            free = self._free_timecode_slots(0, count=1)
+        except Exception:  # noqa: BLE001 - 저장은 이미 성공했다. 권유는 덤이라 실패해도 침묵한다.
+            return None
+        return free[0] if free else None
 
     def _position_preset_pool_children(
         self, *, pool_no: int = POSITION_PRESET_POOL

@@ -49,6 +49,11 @@ def _sent_of_type(sent: list[dict], event_type: str) -> list[dict]:
     return [event for event in sent if event.get("type") == event_type]
 
 
+def _completed_statuses(sent: list[dict]) -> list[dict]:
+    """``beat_grid_send_status`` 중 단계 완료(``completed``)를 실은 것만."""
+    return [e for e in _sent_of_type(sent, "beat_grid_send_status") if "completed" in e]
+
+
 class TestClientMessages:
     def test_propose_is_payload_free_and_is_not_turned_into_a_status_request(self) -> None:
         parsed = parse_client_message(
@@ -137,14 +142,24 @@ class TestApply:
         assert len(back["cues"]) < 40
         assert _sent_of_type(sent, "beat_grid_draft_consumed")[-1]["draft_id"] == draft_id
         assert _sent_of_type(sent, "song_timeline")
+        # 적용 성공은 기존 beat_grid_send_status 한 건으로 「초안 적용 단계 완료」를 알린다.
+        statuses = _sent_of_type(sent, "beat_grid_send_status")
+        assert statuses[-1]["last_action"] == "edit"
+        assert statuses[-1]["ok"] is True
+        assert statuses[-1]["completed"] == "draft_applied"
+        assert "timecode_suggestion" not in statuses[-1]
         assert console.executed == []
 
     def test_a_second_apply_of_the_same_draft_is_refused(self, harness) -> None:
         session, console, store, sent = harness
         draft_id = session.beat_grid_draft_propose()["draft_id"]
         session.beat_grid_draft_apply(draft_id)
+        completed_once = _completed_statuses(sent)
         again = session.beat_grid_draft_apply(draft_id)
         assert "찾을 수 없습니다" in again["text"]
+        # 거절된 재적용은 단계 완료를 한 번 더 알리지 않는다.
+        assert len(completed_once) == 1
+        assert _completed_statuses(sent) == completed_once
 
 
 class TestReject:
@@ -158,3 +173,5 @@ class TestReject:
         assert console.executed == []
         assert _sent_of_type(sent, "beat_grid_draft_consumed")[-1]["draft_id"] == draft_id
         assert "찾을 수 없습니다" in session.beat_grid_draft_apply(draft_id)["text"]
+        # 거절·그 뒤의 실패한 적용 어느 쪽도 「초안 적용」 단계 완료를 알리지 않는다.
+        assert _completed_statuses(sent) == []

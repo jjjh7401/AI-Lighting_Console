@@ -367,6 +367,7 @@ class TestApprovalCardRejected:
         # (b) 칸은 바이트까지 그대로다.
         assert store.latest["beat_grid"] == before
         assert event["ok"] is False
+        assert "completed" not in event  # 거절된 저장은 단계 완료를 알리지 않는다
 
     def test_approved_fake_card_writes_references_only_after_approval(
         self, tmp_path, monkeypatch
@@ -379,6 +380,9 @@ class TestApprovalCardRejected:
         event = session.beat_grid_preset_plan()
 
         assert event["ok"] is True
+        assert event["completed"] == "preset_saved"
+        # 이 곡 초안에는 이미 타임코드 번호(20)가 있어 권할 번호가 없다.
+        assert "timecode_suggestion" not in event
         # 가짜 콘솔(테스트 전용)에만 저장 줄이 나갔다.
         assert console.executed == list(_EXPECTED_SAVE)
         grid = store.latest["beat_grid"]
@@ -459,6 +463,7 @@ class TestApprovalCardRealAsyncChannel:
         event = session.beat_grid_preset_plan()
 
         assert event["ok"] is True
+        assert event["completed"] == "preset_saved"
         assert console.executed == list(_EXPECTED_SAVE)
         grid = store.latest["beat_grid"]
         assert _cue_of(grid, "WASH-ALL", 7)["brightness"]["preset_no"] == "1.8"
@@ -539,3 +544,4 @@ class TestPlanTableWithoutConsole:
         assert console.executed == []
         assert store.latest["beat_grid"] == before
         assert event["ok"] is False
+        assert "completed" not in event

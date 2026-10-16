@@ -233,6 +233,7 @@ class TestFilledSlotDuringApproval:
         for number in (*_DIMMER_NUMBERS, "4.33", "4.35", "4.36", "2.31", "2.32"):
             assert f"Store Preset {number}" in run.console.executed
         assert run.event["ok"] is True
+        assert run.event["completed"] == "preset_saved"  # 빼고 보낸 두 번째 카드도 저장 성공이다
         assert "4.34" in run.event["reason"]
         assert "10개" in run.event["reason"]  # 11개 중 10개를 저장했다
 
@@ -337,6 +338,7 @@ class TestEverySlotFilled:
         assert len(run.approval.requests) == 1  # 남은 프리셋이 없어 두 번째 카드는 없다
         assert run.console.executed == []  # 머리 ClearAll 한 줄도 나가지 않는다
         assert run.event["ok"] is False
+        assert "completed" not in run.event
         reason = run.event["reason"]
         for number in _EVERY_NUMBER:
             assert number in reason, number
@@ -363,6 +365,7 @@ class TestPoolUnreadableOnReread:
         assert "Store Preset 1.8" in run.console.executed
         assert "Store Preset 2.31" in run.console.executed
         assert run.event["ok"] is True
+        assert run.event["completed"] == "preset_saved"
         assert "다시 읽지 못해" in run.event["reason"]
         assert "프리셋 7개" in run.event["reason"]  # 11개 중 7개
         grid = run.store.latest["beat_grid"]
@@ -385,6 +388,7 @@ class TestFilledAgainDuringTheSecondCard:
         assert len(run.approval.requests) == 2  # 세 번째 카드는 올라오지 않는다
         assert run.console.executed == []
         assert run.event["ok"] is False
+        assert "completed" not in run.event
         reason = run.event["reason"]
         assert "4.34" in reason and "1.9" in reason  # 두 번 걸린 프리셋이 모두 적힌다
         assert "아무것도 보내지 않았습니다" in reason
@@ -400,6 +404,7 @@ class TestNothingFilled:
         (card,) = run.cards
         assert run.console.executed == card  # 바뀐 것이 없으면 카드가 통째로 나간다
         assert run.event["ok"] is True
+        assert run.event["completed"] == "preset_saved"
         assert run.event["reason"] == _PLAIN_REASON
         # 승인 뒤 송신 직전에 저장할 프리셋의 풀을 다시 읽었다.
         reread = run.reads[run.reads_at[0] :]
@@ -426,6 +431,7 @@ class TestSecondCardOverTheRealChannel:
 
         assert cards == [1, 2]  # 카드마다 새 요청이 올라가 다른 스레드가 각각 답했다
         assert event["ok"] is True
+        assert event["completed"] == "preset_saved"
         assert console.executed == _without(list(_EXPECTED_SAVE), "1.9")
         assert "1.9 DIM-25" in event["reason"]
         grid = store.latest["beat_grid"]
@@ -440,6 +446,7 @@ class TestFailureTextStaysHonest:
         assert len(run.approval.requests) == 1
         assert run.console.executed == []
         assert run.event["ok"] is False
+        assert "completed" not in run.event
         assert run.event["reason"] == _GENERIC_FAILURE
         assert run.store.latest["beat_grid"] == run.before
 
@@ -461,5 +468,6 @@ class TestFailureTextStaysHonest:
         assert len(run.approval.requests) == 2
         assert "Store Preset 1.8" in run.console.executed
         assert run.event["ok"] is False
+        assert "completed" not in run.event  # 중간에 실패한 송신은 저장 완료가 아니다
         assert run.event["reason"] == _GENERIC_FAILURE
         assert "아무것도 보내지 않았습니다" not in run.event["reason"]
