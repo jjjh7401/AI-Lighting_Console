@@ -72,6 +72,7 @@ import { BeatGridTransitionView } from "./BeatGridTransitionView";
 import { confirmedFixtureRange, fixtureBelongsTo, trackFixtureSummary } from "./beatGridStageModel";
 import {
   cueConsoleCommandLines,
+  entryHasFade,
   parseBeatsPerBar,
   previousCue,
   sceneChangeBars,
@@ -2445,6 +2446,31 @@ export function BeatGrid({
                               {`${tailStart}마디~ 아직 배치 안 함`}
                             </span>
                           )}
+                          {/* 곡의 첫 칸이 페이드로 들어오면 — 앞 칸이 없어 이음매가 그려지지 않던 자리(꺼짐 칸에서 들어옴).
+                              앞은 어둠이라 번짐도 어둠에서 시작한다. 앞 칸 사이 이음매와 달리 MIB·경고는 판정하지 않는다. */}
+                          {visibleSegments.length > 0 &&
+                            visibleSegments[0] === segments[0] &&
+                            entryHasFade(segments[0].cue.entry) && (
+                              <BeatGridJoint
+                                prev={null}
+                                pxPerBar={pxPerBar}
+                                beatsPerBar={beatsPerBar}
+                                target={track.group_name}
+                                onMoveTrigger={onEditRequest ? (request) => requestEdit("transition", request) : undefined}
+                                cue={visibleSegments[0].cue}
+                                nextSegmentWidth={barToX(visibleSegments[0].endBar) - barToX(visibleSegments[0].startBar) - 2}
+                                prevFill={null}
+                                sectionStartBars={sectionStartBars}
+                                accentBars={overviewModel.accentBars}
+                                secondsPerBar={secondsPerBar}
+                                isOn={
+                                  transitionView &&
+                                  selected?.trackIndex === trackIndex &&
+                                  selected.bar === visibleSegments[0].cue.bar
+                                }
+                                onOpen={() => selectCue(trackIndex, visibleSegments[0].cue.bar, true)}
+                              />
+                            )}
                           {visibleSegments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);

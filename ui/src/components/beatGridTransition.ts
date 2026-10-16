@@ -190,9 +190,10 @@ export interface JointMarker {
   title: string;
 }
 
-/** 시안 `clipsHTML`의 `.jt` — MIB 자동이면 M, 경고면 !, 페이드면 ◢. */
+/** 시안 `clipsHTML`의 `.jt` — MIB 자동이면 M, 경고면 !, 페이드면 ◢.
+ * 곡의 첫 칸이면 `prev` 는 null — 앞이 없으니 MIB·경고는 판정하지 않고 페이드만 본다. */
 export function jointMarker(
-  prev: BeatGridCue,
+  prev: BeatGridCue | null,
   cur: BeatGridCue,
   sectionStartBars: readonly number[] | null,
   secondsPerBar: number | null = null,
