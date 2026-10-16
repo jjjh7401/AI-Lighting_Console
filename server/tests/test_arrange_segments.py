@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 
 from server.audio.bar_map import BarFeatures, classify_bar_events, compute_bar_energy
-from server.audio.bar_map_store import build_bar_map_payload
+from server.audio.bar_map_store import attach_rhythm, build_bar_map_payload
 from server.design import arrange_segments
 from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_generator import REST_LABEL, UNCONFIRMED_NOTE
@@ -901,3 +901,165 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     starts = {section.start_bar for section in REAL_SECTIONS}
     assert set(_rows(draft, "WASH-ALL")) <= starts
     assert _rows(draft, "FOH") == [0]
+
+
+# -- 리듬 블록(rhythm): 구간 경계와 구간 등급 ----------------------------------------------------
+
+
+def _rhythm_block(
+    bar_map: dict,
+    sections: list[tuple[int, int, int]],
+    hits: list[tuple[int, int]] | None = None,
+) -> dict:
+    """마디 지도에 맞는 ``rhythm`` 블록. 구간은 (시작, 끝, 등급) 마디, 히트는 (마디, 박)이다."""
+    starts = {bar["bar"]: bar["start_ms"] for bar in bar_map["bars"]}
+    beats = [
+        {
+            "bar": bar["bar"],
+            "beat": index,
+            "t_ms": time_ms,
+            "kick": 0.5,
+            "snare": 0.5,
+            "onset": 0.5,
+            "kick_hit": False,
+            "snare_hit": False,
+        }
+        for bar in bar_map["bars"]
+        for index, time_ms in enumerate(bar["beats_ms"], start=1)
+    ]
+    times = {(item["bar"], item["beat"]): item["t_ms"] for item in beats}
+    return {
+        "beats": beats,
+        "hits": [
+            {"bar": bar, "beat": beat, "t_ms": times[(bar, beat)], "strength": 0.9, "kind": "big"}
+            for bar, beat in (hits or [])
+        ],
+        "sections": [
+            {
+                "start_bar": start,
+                "end_bar": end,
+                "bars": end - start + 1,
+                "start_ms": starts[start],
+                "end_ms": starts[end] + 2000,
+                "d_level": level,
+            }
+            for start, end, level in sections
+        ],
+    }
+
+
+def _rhythm_map(
+    events: list[dict],
+    sections: list[tuple[int, int, int]],
+    hits: list[tuple[int, int]] | None = None,
+) -> dict:
+    bar_map = _bar_map(events)
+    return attach_rhythm(bar_map, _rhythm_block(bar_map, sections, hits))
+
+
+#: 합성 곡에 얹는 리듬 구간. 21 마디의 경계만 합성 곡의 구간 시작에 없다.
+RHYTHM_SECTIONS = [(1, 8, 2), (9, 20, 4), (21, 40, 3)]
+
+
+def _starts(sections: list[SegmentSection]) -> list[int]:
+    return [section.start_bar for section in sections]
+
+
+def test_rhythm_section_starts_are_added_to_the_event_derived_boundaries() -> None:
+    plain = split_sections(_bar_map(SYNTHETIC_EVENTS))
+    with_rhythm = split_sections(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS))
+    assert _starts(plain) == [1, 7, 9, 14, 18, 33, 36, 40]
+    assert _starts(with_rhythm) == [1, 7, 9, 14, 18, 21, 33, 36, 40]
+    # 21 마디에서 후렴(18~32)이 둘로 갈린다. 이벤트가 없는 마디에서 시작하니 벌스다.
+    assert [(s.start_bar, s.end_bar, s.kind) for s in with_rhythm if 18 <= s.start_bar <= 21] == [
+        (18, 20, "chorus"),
+        (21, 32, "verse"),
+    ]
+
+
+def test_rhythm_never_removes_an_event_derived_boundary() -> None:
+    # 리듬 구간이 곡 전체를 한 덩이로 덮어도 이벤트가 만든 경계는 그대로다.
+    one_block = split_sections(_rhythm_map(SYNTHETIC_EVENTS, [(1, 40, 3)]))
+    assert [(s.start_bar, s.end_bar, s.kind) for s in one_block] == [
+        (s.start_bar, s.end_bar, s.kind) for s in SYNTHETIC_SECTIONS
+    ]
+    shifted = split_sections(_rhythm_map(SYNTHETIC_EVENTS, [(1, 12, 1), (13, 25, 2), (26, 40, 3)]))
+    assert set(_starts(shifted)) == set(_starts(SYNTHETIC_SECTIONS)) | {13, 26}
+
+
+def test_a_rhythm_start_that_is_already_a_boundary_adds_nothing() -> None:
+    sections = [(1, 6, 1), (7, 8, 2), (9, 17, 3), (18, 35, 4), (36, 40, 5)]
+    assert _starts(split_sections(_rhythm_map(SYNTHETIC_EVENTS, sections))) == _starts(
+        SYNTHETIC_SECTIONS
+    )
+
+
+def test_without_rhythm_the_boundaries_are_the_event_derived_ones() -> None:
+    assert split_sections(_bar_map(SYNTHETIC_EVENTS)) == SYNTHETIC_SECTIONS
+    assert "rhythm" not in _bar_map(SYNTHETIC_EVENTS)
+
+
+def test_every_bar_is_still_covered_once_after_rhythm_boundaries() -> None:
+    sections = split_sections(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS))
+    covered = [bar for section in sections for bar in range(section.start_bar, section.end_bar + 1)]
+    assert covered == list(range(1, BARS + 1))
+
+
+def test_each_section_carries_the_d_level_of_the_rhythm_section_holding_its_start_bar() -> None:
+    sections = split_sections(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS))
+    assert [(s.start_bar, s.d_level) for s in sections] == [
+        (1, 2),
+        (7, 2),
+        (9, 4),
+        (14, 4),
+        (18, 4),
+        (21, 3),
+        (33, 3),
+        (36, 3),
+        (40, 3),
+    ]
+
+
+def test_a_section_starting_outside_every_rhythm_section_has_no_d_level() -> None:
+    # 리듬 구간이 9~20 마디뿐이다. 거기에 시작 마디가 든 구간만 등급을 가진다.
+    sections = split_sections(_rhythm_map(SYNTHETIC_EVENTS, [(9, 20, 5)]))
+    assert [(s.start_bar, s.d_level) for s in sections] == [
+        (1, None),
+        (7, None),
+        (9, 5),
+        (14, 5),
+        (18, 5),
+        (33, None),
+        (36, None),
+        (40, None),
+    ]
+
+
+def test_without_rhythm_every_section_d_level_is_none() -> None:
+    assert [s.d_level for s in split_sections(_bar_map(SYNTHETIC_EVENTS))] == [None] * 8
+
+
+def test_segment_section_still_builds_from_three_positional_fields() -> None:
+    section = SegmentSection(1, 6, "intro")
+    assert (section.start_bar, section.end_bar, section.kind) == (1, 6, "intro")
+    assert section.d_level is None
+    assert section == (1, 6, "intro", None)
+    assert SegmentSection(1, 6, "intro", 3).d_level == 3
+    assert SegmentSection._fields[-1] == "d_level"
+
+
+def test_d_level_stays_out_of_the_draft_and_does_not_reshape_it() -> None:
+    # 곡 전체를 덮는 리듬 구간 하나는 경계를 더하지 않으니 초안이 리듬 없는 초안과 같다.
+    rhythm_map = _rhythm_map(SYNTHETIC_EVENTS, [(1, 40, 4)])
+    layout = _layout()
+    with_rhythm = generate_segment_draft(rhythm_map, layout)
+    assert with_rhythm == generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), layout)
+    assert "d_level" not in json.dumps(with_rhythm, ensure_ascii=False)
+    assert set(with_rhythm) == {"tracks", "windows", "bar_range", "source", "note"}
+
+
+def test_rhythm_boundaries_reach_the_draft_windows() -> None:
+    draft = generate_segment_draft(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS), _layout())
+    window_starts = {window["start_bar"] for window in draft["windows"]}
+    assert 21 in window_starts
+    assert "d_level" not in json.dumps(draft, ensure_ascii=False)
