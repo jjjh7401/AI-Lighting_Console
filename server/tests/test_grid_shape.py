@@ -471,14 +471,36 @@ def test_cli_writes_the_markdown_table_with_all_six_checks(tmp_path: Path) -> No
     text = out.read_text(encoding="utf-8")
     assert code == 0
     assert "## 판정" in text
-    assert "다름" in text
+    assert "**비슷함**" in text
     for label in ("① 칸 수", "② 칸 길이", "③ 경계 정렬", "④ 박 패턴", "⑤ 강조 위치", "⑥ 색 지정"):
         assert label in text
 
 
-def test_cli_fail_on_different_returns_one_for_the_auto_candidate(tmp_path: Path) -> None:
+def test_cli_fail_on_different_returns_zero_for_the_auto_candidate(tmp_path: Path) -> None:
+    # 운영 경로 자동 배치(구간 생성기)는 손설계 LOVE ATTACK 과 「비슷함」이다.
     code = main(
         ["--timeline", str(SHAPE_TIMELINE), "--out", str(tmp_path / "x.md"), "--fail-on-different"]
+    )
+    assert code == 0
+
+
+def test_cli_fail_on_different_returns_one_for_a_different_candidate(tmp_path: Path) -> None:
+    base = _base()
+    candidate = copy.deepcopy(base)
+    for track in candidate["tracks"]:
+        track["cues"] = [{"bar": bar, "label": REST_LABEL} for bar in range(0, 26)]
+    candidate_path = tmp_path / "candidate.json"
+    candidate_path.write_text(json.dumps(candidate, ensure_ascii=False), encoding="utf-8")
+    code = main(
+        [
+            "--timeline",
+            str(SHAPE_TIMELINE),
+            "--candidate",
+            str(candidate_path),
+            "--out",
+            str(tmp_path / "x.md"),
+            "--fail-on-different",
+        ]
     )
     assert code == 1
 
