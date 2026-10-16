@@ -61,20 +61,73 @@ def test_applying_a_draft_inside_the_range_keeps_the_bar_range() -> None:
     assert updated["bar_range"] == {"start": 0, "end": 25}
 
 
-def test_overwrites_the_label_and_keeps_structured_fields() -> None:
+def _approved(cue: dict, source: str) -> dict:
+    return {
+        **cue,
+        "evidence": {
+            "grade": None,
+            "approval": {"by": "supervisor", "date": "2026-10-16", "source": source},
+        },
+    }
+
+
+def test_replaces_seed_cells_with_the_draft_cell() -> None:
+    # 시드 칸(손 설계 원본)은 초안 칸으로 바뀐다 — 라벨만 바꾸고 남기면 칸이 조각난다.
     grid = _grid()
-    before = next(cue for cue in _track(grid, "BACK")["cues"] if cue["bar"] == 7)
     draft = _draft()
-    draft_label = next(
-        cue["label"]
+    draft_cell = next(
+        cue
         for cue in next(t for t in draft["tracks"] if t["group_name"] == "BACK")["cues"]
         if cue["bar"] == 7
     )
     updated, _report = apply_arrangement_draft(grid, draft)
     after = next(cue for cue in _track(updated, "BACK")["cues"] if cue["bar"] == 7)
-    assert after["label"] == draft_label
-    strip = lambda cue: {key: value for key, value in cue.items() if key != "label"}  # noqa: E731
-    assert strip(after) == strip(before)
+    assert after["source_ref"] == draft_cell["source_ref"]
+    draft_bars = {
+        cue["bar"] for cue in next(t for t in draft["tracks"] if t["group_name"] == "BACK")["cues"]
+    }
+    first = draft["bar_range"]["start"]
+    in_range = {cue["bar"] for cue in _track(updated, "BACK")["cues"] if cue["bar"] >= first}
+    assert in_range == draft_bars
+
+
+def test_keeps_a_director_edited_cell_and_skips_the_draft_cell_there() -> None:
+    grid = _grid()
+    back = _track(grid, "BACK")
+    back["cues"] = [
+        _approved(cue, "beat_grid_apply:abc") if cue["bar"] == 3 else cue for cue in back["cues"]
+    ]
+    kept = copy.deepcopy(next(cue for cue in back["cues"] if cue["bar"] == 3))
+    updated, report = apply_arrangement_draft(grid, _draft())
+    assert next(cue for cue in _track(updated, "BACK")["cues"] if cue["bar"] == 3) == kept
+    assert "감독이 고친 칸 1개" in report[0]
+
+
+def test_preset_plan_approval_alone_is_not_a_director_edit() -> None:
+    grid = _grid()
+    back = _track(grid, "BACK")
+    back["cues"] = [
+        _approved(cue, "preset_plan:abc") if cue["bar"] == 3 else cue for cue in back["cues"]
+    ]
+    updated, _report = apply_arrangement_draft(grid, _draft())
+    cell = next(cue for cue in _track(updated, "BACK")["cues"] if cue["bar"] == 3)
+    assert str(cell["source_ref"]).startswith("arrangement_")
+
+
+def test_applying_the_same_draft_twice_gives_the_same_grid() -> None:
+    draft = _draft()
+    once, _ = apply_arrangement_draft(_grid(), draft)
+    twice, _ = apply_arrangement_draft(once, draft)
+    assert twice == once
+
+
+def test_cells_outside_the_draft_range_are_untouched() -> None:
+    grid = _grid()
+    back = _track(grid, "BACK")
+    outside = {"bar": 60, "label": "범위 밖"}
+    back["cues"].append(outside)
+    updated, _report = apply_arrangement_draft(grid, _draft(bars=40))
+    assert outside in _track(updated, "BACK")["cues"]
 
 
 def test_creates_a_track_the_grid_did_not_have() -> None:

@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_color_presets import color_preset_outcomes, record_color_preset_rgb
@@ -39,7 +40,13 @@ from server.design.beat_grid_position_presets import (
     PointingFrames,
 )
 from server.design.beat_grid_presets import record_app_preset_label
-from server.design.preset_plan import LoveAttackPlan, PlanPreset, _grid_cue, resolve_preset
+from server.design.preset_plan import (
+    LoveAttackPlan,
+    PlanCell,
+    PlanPreset,
+    _grid_cue,
+    resolve_preset,
+)
 from server.spatial.pointing import (
     POSITION_PRESET_POOL,
     SpatialPointingError,
@@ -81,16 +88,22 @@ def store_candidates(plan: LoveAttackPlan, kind: str | None = None) -> tuple[Pla
     )
 
 
-def _occupied_hold(grid: Mapping[str, object], preset: PlanPreset) -> str | None:
-    """후보의 칸 중 이미 그 종류 번호를 가진 칸이 있으면 사유. 있던 번호를 덮어쓰지 않는다."""
-    field, label = _REFERENCE[preset.kind]
-    taken = [
+def _occupied_cells(grid: Mapping[str, object], preset: PlanPreset) -> list[PlanCell]:
+    """후보의 칸 중 이미 그 종류 번호를 가진 칸. 있던 번호를 덮어쓰지 않는다."""
+    field, _label = _REFERENCE[preset.kind]
+    return [
         cell
         for cell in preset.cells
         if (cue := _grid_cue(grid, cell)) is not None and cue.get(field) is not None
     ]
+
+
+def _occupied_hold(grid: Mapping[str, object], preset: PlanPreset) -> str | None:
+    """후보의 칸 중 이미 그 종류 번호를 가진 칸이 있으면 사유. 있던 번호를 덮어쓰지 않는다."""
+    taken = _occupied_cells(grid, preset)
     if not taken:
         return None
+    _field, label = _REFERENCE[preset.kind]
     where = ", ".join(f"{cell.group_name} {cell.bar}마디" for cell in taken)
     return f"{label} 번호가 이미 있는 칸이라 덮어쓰지 않음: {where}"
 
@@ -141,11 +154,16 @@ def attach_color_store(
     ``grid`` 는 계획을 세운 격자다. 후보 번호를 가리키는 **사본**을 만들어 넘기므로 ``grid`` 는
     바뀌지 않는다. 줄을 못 만든 후보는 ``ready`` 가 아니고 사유가 ``hold`` 다(「미정」)."""
     for preset in store_candidates(plan, "color"):
-        hold = _occupied_hold(grid, preset)
-        store = None
-        if hold is None:
-            store, hold = _color_store(grid, preset, members=members, channel_names=channel_names)
-        plan = resolve_preset(plan, preset, store=store, hold=hold)
+        # 이미 번호가 있는 칸(감독이 고친 칸 등)만 빼고 나머지 칸은 저장한다. 한 칸 때문에 후보
+        # 전체를 보류하면, 이 후보에 합쳐진 계획 색 칸이 전부 번호 없이 남는다.
+        taken = _occupied_cells(grid, preset)
+        cells = tuple(cell for cell in preset.cells if cell not in taken)
+        if not cells:
+            plan = resolve_preset(plan, preset, store=None, hold=_occupied_hold(grid, preset))
+            continue
+        narrowed = replace(preset, cells=cells)
+        store, hold = _color_store(grid, narrowed, members=members, channel_names=channel_names)
+        plan = resolve_preset(plan, preset, store=store, hold=hold, cells=cells)
     return plan
 
 

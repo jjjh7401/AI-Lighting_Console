@@ -14,7 +14,7 @@ import copy
 import json
 from pathlib import Path
 
-from server.design.arrange_apply import apply_arrangement_draft, director_blank_cells
+from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_edit import load_preset_pool_policy
@@ -52,14 +52,8 @@ _COLOR_POOL_WITH_LAVENDER = (
 _RGB_CHANNELS = ["Main Module#2_ColorRGB_R", "Main Module#2_ColorRGB_G", "Main Module#2_ColorRGB_B"]
 _DATE = "2026-10-16T00:00:00+00:00"
 
-#: 주석 색이 칸에만 있고 자동 배치 계획 색이 없는 칸(주석 색 경로가 이미 번호를 붙인다).
-_ANNOTATION_ONLY = {
-    ("WASH-ALL", 7),
-    ("WASH-ALL", 14),
-    ("WASH-ALL", 18),
-    ("WASH-ALL", 22),
-    ("BACK", 0),
-}
+#: 주석 색이 칸에만 있고 계획 색이 없는 칸 — 적용이 시드 칸을 초안 칸으로 바꾸므로 없다.
+_ANNOTATION_ONLY: set[tuple[str, int]] = set()
 
 
 def _applied_grid() -> dict:
@@ -69,8 +63,7 @@ def _applied_grid() -> dict:
     planned = annotated_cell_colors(load_preset_annotations(LOVE_ATTACK_TITLE))
     draft = generate_segment_draft(timeline["bar_map"], base["tracks"], planned_colors=planned)
     assert draft["note"] is None, draft["note"]
-    blanks = director_blank_cells(default_beat_grid(LOVE_ATTACK_TITLE))
-    grid, _report = apply_arrangement_draft(base, draft, director_blanks=blanks)
+    grid, _report = apply_arrangement_draft(base, draft)
     return grid
 
 
@@ -166,7 +159,7 @@ class TestPlannedColorCandidates:
         planned = _planned_cells(grid)
         assert planned, "픽스처에 계획 색 칸이 있어야 한다"
         assert planned - numbered == set(), "계획 색이 실린 칸은 전부 번호를 받아야 한다"
-        # 번호가 붙은 칸 중 계획 색이 없는 칸은 주석 색 경로가 이미 붙인 칸뿐이다.
+        # 적용이 시드 칸을 초안 칸으로 바꾸므로 계획 색 없이 번호만 받는 칸은 없다.
         assert numbered - planned == _ANNOTATION_ONLY
 
     def test_the_plan_has_one_color_preset_per_group_and_rgb(self) -> None:
@@ -227,7 +220,8 @@ class TestConsoleNumberReuse:
         assert lavender.reused is True
         assert lavender.ready is True
         assert lavender.store is None
-        assert ("WASH-ALL", 7) in _cells_of(lavender)
+        # 워시 줄은 구간마다 한 칸이라 주석 라벤더 칸은 구간 첫 마디(14)다.
+        assert ("WASH-ALL", 14) in _cells_of(lavender)
         lines = save_commands(plan)
         assert not any("Store Preset 4.33" in line for line in lines)
         updated = _approve(grid, plan)
@@ -251,7 +245,7 @@ class TestConsoleNumberReuse:
         )
         back0["color_preset_no"] = "4.33"  # 다른 그룹(BACK)이 이 번호를 쓰고 있다
         plan = _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER)
-        wash_lavender = next(p for p in _color_presets(plan) if ("WASH-ALL", 7) in _cells_of(p))
+        wash_lavender = next(p for p in _color_presets(plan) if ("WASH-ALL", 14) in _cells_of(p))
         assert wash_lavender.slot != "4.33"
         assert wash_lavender.reused is False
 
@@ -264,7 +258,9 @@ class TestStoreLinesAndCard:
         plan = _with_stores(grid, _plan(grid))
         new = [p for p in _color_presets(plan) if p.deferred or p.ready]
         held = [p for p in _color_presets(plan) if not p.ready and not p.deferred]
-        assert held == []
+        # 칸이 있는 후보는 전부 저장된다. 남는 것은 주석 색이 구간 중간 마디(워시 22마디 PITCH)에
+        # 놓여 칸이 없는 주석뿐이다 — 워시 줄은 구간마다 한 칸이다(리드 결정 2026-10-16).
+        assert [(p.name, p.cells) for p in held] == [("PITCH", ())]
         stores = [line for line in save_commands(plan) if line.startswith("Store Preset 4.")]
         assert len(stores) == len([p for p in new if not p.reused])
 
@@ -329,8 +325,9 @@ class TestTheApprovalCard:
         assert event["ok"] is True
         assert len(approval.requests) == 1  # 카드는 한 장이다
         card = list(approval.requests[0].commands)
-        # 주석 색 4 + 계획 색 13. 키·효과 줄(FOH·BLIND·STROBE)의 프리셋 3개는 세지 않는다.
-        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 17
+        # 주석 색 3 + 계획 색 13. 키·효과 줄(FOH·BLIND·STROBE)의 프리셋 3개는 세지 않는다.
+        # 주석 PITCH(워시 22마디)는 구간 중간이라 칸이 없어 저장하지 않는다(워시는 구간마다 한 칸).
+        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 16
         numbered = _numbered_cells(store.latest["beat_grid"])
         assert _planned_cells(grid) <= numbered
         assert numbered - _planned_cells(grid) == _ANNOTATION_ONLY
