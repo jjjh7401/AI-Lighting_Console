@@ -388,9 +388,27 @@ def unsent_beat_grid_cells(
     unsent = [
         {"group_name": group_name, "bar": bar}
         for group_name, bar in sorted(keys)
-        if current.get((group_name, bar)) != snapshot.get((group_name, bar))
+        if _cell_differs(current.get((group_name, bar)), snapshot.get((group_name, bar)))
     ]
     return unsent
+
+
+def _cell_differs(now: object, then: object) -> bool:
+    """두 시점의 칸 내용이 다른가.
+
+    방향 값(``direction``)은 칸의 진짜 값이라 둘 다 가졌을 때 달라지면 바뀐 칸이다. 하지만
+    한쪽에만 있으면(반영 뒤에 이 키가 생긴 스냅샷과 비교하는 업그레이드) 그 키만 뺀 나머지로
+    비교한다 — 칸의 콘솔 값은 그대로인데 키 하나가 새로 생겼다고 칸마다 미반영으로 세면 미반영
+    칸 수가 한꺼번에 터진다.
+    """
+    if (
+        isinstance(now, dict)
+        and isinstance(then, dict)
+        and ("direction" in now) != ("direction" in then)
+    ):
+        now = {key: value for key, value in now.items() if key != "direction"}
+        then = {key: value for key, value in then.items() if key != "direction"}
+    return now != then
 
 
 # =============================================================================

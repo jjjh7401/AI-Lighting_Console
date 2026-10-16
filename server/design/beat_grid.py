@@ -47,6 +47,7 @@ from server.design.beat_grid_probes import (
     read_m1_probe_results,
     read_m1_probe_results_from_path,
 )
+from server.design.cell_direction import CellDirection, normalize_direction
 from server.design.rig import resolve_layer_role
 
 __all__ = [
@@ -72,6 +73,7 @@ __all__ = [
     "attach_beat_grid_default",
     "attach_beat_grid_runtime_extras",
     "check_app_movement_axis_conflict",
+    "movement_carried_by_effect",
     "check_evidence_approval",
     "classify_scene_cell_assignment",
     "classify_empty_preset",
@@ -263,6 +265,14 @@ class BeatGridCue(TypedDict):
     planned_color: NotRequired[list[int]]
     #: 계획 위치(무빙 기본 위치 이름, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
     planned_position: NotRequired[str]
+    #: 칸의 방향 값(선택, ``cell_direction``) — 자동 배치가 칸마다 한 번 내린 결정. 라벨·미리보기·
+    #: 프리셋 계획이 이 값을 읽는다. 감독이 손으로 만든 칸은 **키 자체가 없다**.
+    direction: NotRequired[CellDirection]
+    #: ``app_movement`` 를 대신 내는 효과 프리셋 번호(선택). 프리셋 계획이 움직임을 효과 프리셋으로
+    #: 저장해 칸에 번호를 붙일 때 같은 번호를 적는다. ``effect_preset_no`` 와 같을 때만 그 효과가
+    #: 움직임을 내므로(``movement_carried_by_effect``) 앱 2단계 움직임은 따로 보내지 않는다.
+    #: 없으면 **키 자체가 없다**.
+    movement_effect_no: NotRequired[str]
 
 
 class BeatGridTrack(TypedDict):
@@ -497,6 +507,14 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     raw_position = raw.get("planned_position")
     if isinstance(raw_position, str) and raw_position.strip():
         cue["planned_position"] = raw_position.strip()
+    # 방향 값 — 모양이 틀린 부분은 버리고 나머지는 둔다(라벨을 읽어 채우지 않는다). 이 함수는
+    # 화이트리스트라 안 옮기면 칸을 읽을 때마다(기본값 로드·서빙 경계·편집 병합) 사라진다.
+    direction = normalize_direction(raw.get("direction"))
+    if direction is not None:
+        cue["direction"] = direction
+    raw_carrier = raw.get("movement_effect_no")
+    if isinstance(raw_carrier, str) and raw_carrier.strip():
+        cue["movement_effect_no"] = raw_carrier.strip()
     return cue
 
 
@@ -694,6 +712,24 @@ def attach_beat_grid_runtime_extras(
 _EFFECT_KINDS_WITH_PAN_TILT_AMBIGUITY: frozenset[str] = frozenset({"position", "mixed"})
 
 
+def movement_carried_by_effect(cue: Mapping[str, object]) -> bool:
+    """이 칸의 움직임(``app_movement``)을 칸의 효과 프리셋이 대신 내는가.
+
+    프리셋 계획이 움직임을 효과 프리셋으로 저장해 번호를 붙이면 칸은 ``app_movement`` 를 그대로
+    둔 채 ``movement_effect_no`` 에 같은 번호를 적는다(화면의 무빙 빔·방향 값이 움직임을 계속
+    읽는다). 그때 움직임은 효과 프리셋 한 번의 리콜로 나가므로 앱 2단계 움직임 줄은 보내지 않고,
+    게이트도 효과 프리셋 항목(④)만 본다. 감독이 효과 번호를 바꾸면 두 번호가 달라져 이 판정이
+    저절로 꺼진다."""
+    movement = cue.get("app_movement")
+    carrier = cue.get("movement_effect_no")
+    return (
+        isinstance(movement, Mapping)
+        and movement.get("shape") is not None
+        and carrier is not None
+        and carrier == cue.get("effect_preset_no")
+    )
+
+
 def check_app_movement_axis_conflict(cue: Mapping[str, object]) -> str | None:
     """REQ-LDBEAT-006(vi-7), AC-LDBEAT-016(t) — 한 칸이 `app_movement`와
     `effect_preset_no`(REQ-006(i-3))를 **같은 축**에 동시에 쓰면 거절한다.
@@ -711,6 +747,9 @@ def check_app_movement_axis_conflict(cue: Mapping[str, object]) -> str | None:
     if not axes:
         return None
     if cue.get("effect_preset_no") is None:
+        return None
+    if movement_carried_by_effect(cue):
+        # 그 효과 프리셋이 이 움직임 자체다 — 두 줄이 아니라 한 줄이라 같은 축을 두 번 쓰지 않는다.
         return None
     effect_kind = cue.get("effect_kind")
     if effect_kind not in _EFFECT_KINDS_WITH_PAN_TILT_AMBIGUITY:

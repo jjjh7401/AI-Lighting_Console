@@ -330,7 +330,10 @@ class TestEffectPresetRoundTrip:
             cue = _cue(updated, "MOVER-U", bar)
             assert cue["effect_preset_no"] == "21.8"
             assert cue["effect_kind"] == "position"
-            assert cue["app_movement"] is None
+            # 움직임은 지우지 않는다 — 화면의 무빙 빔과 방향 값이 읽는다. 대신 이 효과 번호가
+            # 움직임을 대신 낸다는 표식이 붙어 송신은 효과 번호 한 줄만 낸다.
+            assert cue["app_movement"] == _cue(grid, "MOVER-U", bar)["app_movement"]
+            assert cue["movement_effect_no"] == "21.8"
             # 격자 원본은 승인 뒤에도 그대로다(사본을 돌려준다)
             assert _cue(grid, "MOVER-U", bar)["app_movement"] is not None
 

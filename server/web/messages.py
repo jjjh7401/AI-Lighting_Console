@@ -995,17 +995,27 @@ def beat_grid_suggestion_consumed_event(*, suggestion_id: str) -> dict:
     return _event("beat_grid_suggestion_consumed", suggestion_id=suggestion_id)
 
 
+def _draft_cell(cue: dict) -> dict:
+    cell = {"bar": cue["bar"], "label": cue["label"]}
+    if cue.get("direction") is not None:
+        cell["direction"] = cue["direction"]
+    return cell
+
+
 def beat_grid_draft_event(*, draft_id: str, draft: dict) -> dict:
     """SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 한 단위(보류). 화면은 이것을 제안
     카드로 보여 주고, 「적용」이나 「거절」 때 ``draft_id`` 하나만 되돌려 보낸다. 칸마다
-    ``bar``와 ``label``만 싣는다. 구조화 필드는 적용할 때 서버가 정한다."""
+    ``bar``·``label`` 과 칸의 방향 값(``direction``: 밝기·색 이름과 RGB·위치 이름·규칙 종류·
+    움직임·진입 박)을 싣는다. 라벨과 방향 값은 서버가 같은 결정에서 함께 만든 것이라 화면은 값을
+    라벨에서 읽어 내지 않는다. 방향 값이 없는 칸은 ``direction`` 키가 없다. 옛 구조화 필드(밝기·
+    진입·움직임)는 적용할 때 서버가 정한다."""
     tracks = [
         {
             "group_name": track["group_name"],
             "group_no": track["group_no"],
             "group_no_confirmed": track["group_no_confirmed"],
             "layer_role": track["layer_role"],
-            "cells": [{"bar": cue["bar"], "label": cue["label"]} for cue in track["cues"]],
+            "cells": [_draft_cell(cue) for cue in track["cues"]],
         }
         for track in draft["tracks"]
     ]

@@ -92,7 +92,8 @@ class TestServerEvents:
         json.dumps(event, ensure_ascii=False)
         back = next(track for track in event["tracks"] if track["group_name"] == "BACK")
         assert len(back["cells"]) == 8
-        assert set(back["cells"][0]) == {"bar", "label"}
+        # 칸마다 마디·라벨과 그 칸의 방향 값(`direction`)을 싣는다. 옛 구조화 필드는 싣지 않는다.
+        assert set(back["cells"][0]) == {"bar", "label", "direction"}
 
     def test_the_consumed_event_names_the_draft(self) -> None:
         assert beat_grid_draft_consumed_event(draft_id="d-1") == {

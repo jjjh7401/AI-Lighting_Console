@@ -59,6 +59,7 @@ from server.design.beat_grid_presets import (
     record_app_preset_label,
 )
 from server.design.beat_grid_send import build_song_timing_from_bar_map
+from server.design.cell_direction import assign_color_names
 from server.design.color_names import COLOR_PALETTE_SEQUENCE, resolve_color_name
 
 __all__ = [
@@ -331,8 +332,9 @@ def _rgb_key(value: object) -> tuple[int, int, int] | None:
 
 
 def _planned_base_names(annotations: Mapping[str, object]) -> dict[tuple[int, int, int], str]:
-    """계획 색 RGB → 콘솔 영문 이름. 곡 주석의 콘솔 이름을 먼저 쓰고, 없으면
-    표준 팔레트 이름(대문자). 팔레트 밖의 색은 이름이 없다 — 지어내지 않는다."""
+    """계획 색 RGB → 확정된 콘솔 영문 이름. 곡 주석의 콘솔 이름을 먼저 쓰고, 없으면
+    표준 팔레트 이름(대문자). 이 표 밖의 색은 여기서 이름을 정하지 않고
+    ``cell_direction.assign_color_names`` 가 가장 가까운 이름에 번호를 붙여 정한다."""
     names: dict[tuple[int, int, int], str] = {}
     for entry in annotations.get("colors") or []:
         if not isinstance(entry, Mapping):
@@ -605,6 +607,10 @@ def _movement_effect_presets(
             continue
         if not isinstance(bar, int) or isinstance(bar, bool):
             continue
+        # 이미 효과 번호를 받은 칸은 움직임(app_movement)을 그대로 두므로 다시 후보로 세지 않는다 —
+        # 계획을 다시 돌려도 같은 칸에 프리셋이 겹으로 생기지 않는다.
+        if cue.get("effect_preset_no") is not None:
+            continue
         # 실기 기록으로 열린 움직임(MOVER-D Tilt 웨이브)도 효과 프리셋으로 만든다. 예전엔 ④(효과
         # 프리셋 리콜)가 미확인이라 바꾸면 새로 막혔지만, ④는 2026-10-16 실기 통과다(리드 지시).
         donor = None
@@ -745,16 +751,22 @@ def _planned_color_presets(
     - 같은 그룹·같은 RGB 의 주석 색 후보(저장 줄을 기다리거나 재사용)가 있으면 그 후보에
       칸을 보탠다.
     - 콘솔에 같은 RGB·같은 그룹의 색 번호가 있으면 그 번호를 재사용한다(저장 줄 없음).
-    - 나머지는 콘솔 색 풀의 빈 번호에 새 저장 후보를 낸다. 이름은 「팔레트 이름 그룹」.
+    - 나머지는 콘솔 색 풀의 빈 번호에 새 저장 후보를 낸다. 이름은 「색 이름 그룹」. 색 이름은 곡
+      주석의 콘솔 이름 → 칸의 방향 값에 실린 이름 → 팔레트 표 → 가장 가까운 이름(+번호) 순으로
+      정해서 이름이 빈 후보가 없다(``assign_color_names``).
     - 번호가 이미 있는 칸, 칸 쪽 색(split), 살아 있는 주석 색 후보가 잡은 칸은 건드리지 않는다.
     """
     base_names = _planned_base_names(annotations)
+    # 곡 주석 색이 잡은 칸은 그 후보가 지금 저장 줄을 기다리든(색 풀 판독 전이라) 보류 중이든
+    # 주석 색이 이긴다 — 계획 색이 이름을 얻는 이제는 주석 칸에 계획 색 후보가 겹쳐 서면 안 된다.
     taken = {
         (cell.group_name, cell.bar)
         for preset in presets
-        if preset.kind == "color" and (preset.deferred or preset.reused)
+        if preset.kind == "color"
         for cell in preset.cells
     }
+    #: 칸의 방향 값이 이미 들고 있는 색 이름 — 라벨·무대와 프리셋 이름이 같은 이름을 쓰게 한다.
+    direction_names: dict[tuple[int, int, int], str] = {}
     order: list[tuple[str, tuple[int, int, int]]] = []
     cells_of: dict[tuple[str, tuple[int, int, int]], list[PlanCell]] = {}
     # 키(key)·효과(effect) 역할은 컬러 채널이 없는 장비라 색 후보에 아예 세지 않는다.
@@ -774,36 +786,29 @@ def _planned_color_presets(
         rgb = _rgb_key(cue.get("planned_color"))
         if rgb is None:
             continue
+        direction = cue.get("direction")
+        color = direction.get("color") if isinstance(direction, Mapping) else None
+        hinted = color.get("name") if isinstance(color, Mapping) else None
+        if isinstance(hinted, str) and hinted.strip() and _rgb_key(color.get("rgb")) == rgb:
+            direction_names.setdefault(rgb, hinted.strip())
         key = (group, rgb)
         if key not in cells_of:
             cells_of[key] = []
             order.append(key)
         cells_of[key].append(PlanCell(group_name=group, bar=bar))
 
+    # 이 계획이 다루는 색 전부의 이름을 한 번에 정한다 — 이름 없는 색은 없고 색마다 이름이 다르다.
+    color_names = assign_color_names(
+        {rgb for _group, rgb in order},
+        preferred={rgb: base_names[rgb] for _group, rgb in order if rgb in base_names},
+        hints=direction_names,
+    )
+
     for group, rgb in order:
         cells = tuple(cells_of[(group, rgb)])
         channels = " ".join(str(channel) for channel in rgb)
         value = f"RGB {channels}"
-        base = base_names.get(rgb)
-        if base is None:
-            unresolved.append(
-                f"{group} 계획 색 RGB {channels}: 이름이 없어 색 프리셋을 만들지 않는다 "
-                "(주석에 콘솔 이름을 적거나 표준 팔레트 색을 쓴다)"
-            )
-            presets.append(
-                PlanPreset(
-                    kind="color",
-                    value=value,
-                    name="",
-                    slot=None,
-                    cells=cells,
-                    groups=(group,),
-                    ready=False,
-                    hold="계획 색 이름 없음 — 주석·표준 팔레트에 없는 색",
-                )
-            )
-            continue
-        name = f"{base} {group}"
+        name = f"{color_names[rgb]} {group}"
         annotated = next(
             (
                 index
@@ -1574,10 +1579,27 @@ def _reference_changes(preset: PlanPreset) -> dict[str, object]:
             "brightness": {"mode": "dimmer_preset", "value_percent": None, "preset_no": preset.slot}
         }
     if preset.kind == "effect":
-        # 움직임은 저장한 효과 프리셋이 맡는다. 칸의 app_movement 를 비워
-        # 게이트 요구를 (5,7,9)에서 (4)로 옮긴다.
-        return {"effect_preset_no": preset.slot, "effect_kind": "position", "app_movement": None}
+        # 움직임은 저장한 효과 프리셋이 맡는다. 칸의 app_movement 는 지우지 않는다 — 화면의 무빙
+        # 빔과 방향 값이 움직임을 계속 읽어야 한다. 대신 ``movement_effect_no`` 에 같은 번호를
+        # 적어(칸을 고치기 전에 ``_mark_movement_carrier`` 가 적는다) 앱 2단계 줄은 보내지 않고
+        # 게이트 요구를 (5,7,9)에서 (4)로 옮긴다(``beat_grid.movement_carried_by_effect``).
+        return {"effect_preset_no": preset.slot, "effect_kind": "position"}
     return {_REFERENCE_FIELD[preset.kind]: preset.slot}
+
+
+def _mark_movement_carrier(grid: dict[str, object], cell: PlanCell, slot: str | None) -> None:
+    """칸에 「이 효과 번호가 칸의 움직임을 대신 낸다」는 표식(``movement_effect_no``)을 적는다.
+    칸을 효과 번호로 고치는 편집이 같은 칸의 축 충돌 검사(``check_app_movement_axis_conflict``)를
+    거치기 전에 적어 둬야 그 검사가 이 칸을 충돌로 보지 않는다. ``grid`` 는 호출한 쪽이 이미 깊은
+    사본으로 가진 것이다."""
+    if slot is None:
+        return
+    for track in grid.get("tracks") or []:  # type: ignore[union-attr]
+        if str(track.get("group_name")) != cell.group_name:
+            continue
+        for cue in track.get("cues") or []:
+            if cue.get("bar") == cell.bar and (cue.get("app_movement") or {}).get("shape"):
+                cue["movement_effect_no"] = slot
 
 
 def apply_plan_references(
@@ -1617,6 +1639,8 @@ def apply_plan_references(
                 ):
                     continue
             prior = _prior_approval_source(grid, cell)
+            if preset.kind == "effect":
+                _mark_movement_carrier(updated, cell, preset.slot)
             evidence = cue.get("evidence") if cue is not None else None
             grade = evidence.get("grade") if isinstance(evidence, Mapping) else None
             # 옛 승인은 옛 번호의 것이라 이 편집에서 비운다(grade 는 보존). 안 비우면 승인 기록이

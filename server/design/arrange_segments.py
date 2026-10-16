@@ -63,6 +63,7 @@ from server.design.arrange_generator import (
 )
 from server.design.arrange_policy import MOVER_POSITION_LADDER, ArrangementPolicy
 from server.design.beat_grid import BeatGridCue, BeatGridTrack
+from server.design.cell_direction import SEGMENT_WORDS, assign_color_names
 
 __all__ = ["SegmentSection", "generate_segment_draft", "split_sections"]
 
@@ -124,27 +125,18 @@ def _mover_positions(
     return found
 
 
-#: 칸 라벨. 기존 생성기의 이름(「펄스」「체이스」「스트로브」「블라인드」「유지」)이 아니라 기본
-#: 격자(``beat_grid_data/love_attack.yaml``)와 배치 규칙서(``reports/effect-arrangement-rules-
-#: 20261007.md``)에 적힌 말이다. 정지와 쉼은 기존 생성기와 같은 말이라 그대로 쓴다.
-PULSE_LABEL = "킥 1·2·4박"
-CHASE_LABEL = "SIDE-L/R 2·4박 번갈이"
-MOTION_LABEL = "팬 웨이브(한 바퀴 2마디)"
-FOH_LABEL = "FOH 켬"
-WASH_LABEL = "워시"
-BLIND_LABEL = "BLIND 2박"
-STROBE_LABEL = "STROBE 1마디 박마다"
-PRE_HIT_LABEL = "3·4박 전부 비움(예고)"
-
-#: 규칙 종류(``_CellPlan.kind``) → 라벨. 유지(``static``)는 줄 역할이 정한다.
-_LABEL_OF_KIND = {
-    "pulse": PULSE_LABEL,
-    "chase": CHASE_LABEL,
-    "motion": MOTION_LABEL,
-    "blind": BLIND_LABEL,
-    "strobe": STROBE_LABEL,
-}
-_STATIC_LABEL_OF_ROLE = {"key": FOH_LABEL, "wash": WASH_LABEL}
+# 칸 라벨은 방향 값에서 만든다(``cell_direction.direction_label``, 말 표는 ``SEGMENT_WORDS``).
+# 기존 생성기의 이름(「펄스」「체이스」「스트로브」「블라인드」「유지」)이 아니라 기본 격자
+# (``beat_grid_data/love_attack.yaml``)와 배치 규칙서
+# (``reports/effect-arrangement-rules-20261007.md``)에 적힌 말이다. 아래 상수는 그 표의 이름표다.
+PULSE_LABEL = SEGMENT_WORDS["pulse"]
+CHASE_LABEL = SEGMENT_WORDS["chase"]
+MOTION_LABEL = SEGMENT_WORDS["motion"]
+FOH_LABEL = SEGMENT_WORDS["static:key"]
+WASH_LABEL = SEGMENT_WORDS["static:wash"]
+BLIND_LABEL = SEGMENT_WORDS["blind"]
+STROBE_LABEL = SEGMENT_WORDS["strobe"]
+PRE_HIT_LABEL = SEGMENT_WORDS["pre_hit"]
 
 #: 큰 히트 직전에 블라인드 줄을 비우는 예고 칸의 규칙 종류.
 _KIND_PRE_HIT = "pre_hit"
@@ -243,7 +235,7 @@ def generate_segment_draft(
                 )
                 if track.get("layer_role") == "mover" and plan.kind in _MOVER_LIT_KINDS:
                     plan = plan._replace(position=mover_at.get((name, section.start_bar)))
-                plans[name][bar] = _in_segment_words(plan, track.get("layer_role"))
+                plans[name][bar] = plan
 
     # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
     notice = _CellPlan(PRE_HIT_LABEL, settings.rest_percent, None, _KIND_PRE_HIT)
@@ -268,6 +260,10 @@ def generate_segment_draft(
                 if bar in plans[name]:
                     plans[name][bar] = head
 
+    # 색 이름은 이 초안 전체의 색으로 한 번에 정한다 — 같은 색은 어느 칸에서나 같은 이름이다.
+    color_names = assign_color_names(
+        plan.color_rgb for by_bar in plans.values() for plan in by_bar.values() if plan.color_rgb
+    )
     tracks = []
     for track in layout:
         name = str(track["group_name"])
@@ -286,7 +282,12 @@ def generate_segment_draft(
                 group_no_confirmed=bool(track.get("group_no_confirmed", False)),
                 group_name=name,
                 layer_role=track.get("layer_role"),
-                cues=[_segment_cue(bar, plan, settings) for bar, plan in runs],
+                cues=[
+                    _segment_cue(
+                        bar, plan, settings, role=track.get("layer_role"), color_names=color_names
+                    )
+                    for bar, plan in runs
+                ],
             )
         )
     return ArrangementDraft(
@@ -447,16 +448,6 @@ def _emphasis_bar(section: SegmentSection, big_hit_bars: Sequence[int]) -> int:
     )
 
 
-def _in_segment_words(plan: _CellPlan, role: object) -> _CellPlan:
-    """기존 생성기가 정한 칸의 라벨을 기본 격자와 배치 규칙서의 말로 바꾼다. 값은 건드리지 않는다.
-
-    정지·쉼과, 규칙서에 말이 없는 역할(예: 객석)의 유지 칸은 기존 라벨 그대로다.
-    """
-    if plan.kind == "static":
-        return plan._replace(label=_STATIC_LABEL_OF_ROLE.get(str(role), plan.label))
-    return plan._replace(label=_LABEL_OF_KIND.get(plan.kind, plan.label))
-
-
 def _is_blind_line(track: Mapping[str, Any]) -> bool:
     """강조 층 가운데 블라인드 줄인가. 스트로브 줄을 이름으로 가르는 ``_cell_plan`` 과 같다."""
     return track.get("layer_role") == "effect" and "STROBE" not in str(track["group_name"]).upper()
@@ -508,13 +499,18 @@ def _runs(
     return rows
 
 
-def _segment_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> BeatGridCue:
-    """칸 하나를 기존 생성기의 ``_draft_cue`` 로 만들고, 출처 표식만 이 생성기의 것으로 바꾼다."""
-    cue = _draft_cue(bar, plan, settings)
+def _segment_cue(
+    bar: int,
+    plan: _CellPlan,
+    settings: ArrangementPolicy,
+    *,
+    role: object,
+    color_names: Mapping[tuple[int, int, int], str],
+) -> BeatGridCue:
+    """칸 하나를 기존 생성기의 ``_draft_cue`` 로 만든다 — 라벨은 구간 단위 말 표로, 출처 표식은 이
+    생성기의 것으로 한다. 계획 위치는 ``_draft_cue`` 가 방향 값에서 파생한다."""
+    cue = _draft_cue(bar, plan, settings, role=role, words=SEGMENT_WORDS, color_names=color_names)
     cue["source_ref"] = f"{SOURCE}:{plan.kind}"
-    if plan.position is not None:
-        # 계획 위치는 콘솔 값이 아니라 계획 값이다 — 위치 번호는 승인 뒤 계획 경로가 붙인다.
-        cue["planned_position"] = plan.position
     return cue
 
 

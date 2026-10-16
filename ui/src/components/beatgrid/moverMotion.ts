@@ -3,7 +3,8 @@
 // (`playbackClock.ts` 와 같은 경계) — 매 프레임 다시 그리는 것은 `BeatGrid.tsx` 의 재생 루프가
 // `playbackSeconds` 를 갱신하는 것으로 이미 된다.
 //
-// 움직임은 구조화 값에서만 읽는다: 앱 2단계 무빙(`app_movement`)이 먼저, 없으면 효과 번호의
+// 움직임은 구조화 값에서만 읽는다: 앱 2단계 무빙(`app_movement`)이 먼저, 다음은 칸의 방향 값
+// (`direction.movement`), 없으면 효과 번호의
 // 격자 기록(`preset_movements`)·앱 이름(`preset_labels`)·콘솔 이름(`effect_preset_name`) 순서
 // (이름은 서버 `_effect_name` 꼴 「WAVE PAN 2 BEAT」).
 // 라벨 글자는 파싱하지 않는다(REQ-LDBEAT-006(ii-2)). 주기를 모르면 움직이지 않는다(지어내지 않음).
@@ -93,8 +94,9 @@ function motionFrom(
   return { shape: shape as MoverShape, pan, tilt, periodBars, phaseSpread: spread !== false };
 }
 
-/** 칸의 움직임. 근거 순서: ① 칸의 `app_movement` ② 효과 번호의 격자 기록(`preset_movements`
- * 서명) ③ 효과 번호의 앱 이름(`preset_labels`) ④ 콘솔이 준 이름(`effect_preset_name`).
+/** 칸의 움직임. 근거 순서: ① 칸의 `app_movement` ② 칸의 방향 값 `direction.movement` ③ 효과 번호의
+ * 격자 기록(`preset_movements` 서명) ④ 효과 번호의 앱 이름(`preset_labels`) ⑤ 콘솔이 준 이름
+ * (`effect_preset_name`).
  * 라벨 글자는 읽지 않는다. 근거가 없거나 주기·축을 모르면 `null`(빔은 위치 자세로 멈춰 있다). */
 export function moverMotionOf(
   cue: BeatGridCue | null,
@@ -105,6 +107,11 @@ export function moverMotionOf(
   const app = cue.app_movement;
   if (app && app.shape) {
     return motionFrom(app.shape, app.axes, app.period_unit, app.period_value, app.phase_spread, beatsPerBar);
+  }
+  // 칸의 방향 값(자동 배치가 칸마다 낸 결정)이 움직임을 말하면 프리셋 기록보다 먼저 읽는다.
+  const moving = cue.direction?.movement;
+  if (moving && moving.shape) {
+    return motionFrom(moving.shape, moving.axes, moving.period_unit, moving.period_value, moving.phase_spread, beatsPerBar);
   }
   const no = cue.effect_preset_no;
   if (!no) return null;

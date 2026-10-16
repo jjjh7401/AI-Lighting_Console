@@ -93,11 +93,19 @@ class TestAutoArrangedMovementsBecomeEffectPresets:
         assert before, "자동 배치에 무빙 칸이 있어야 한다"
         plan = _plan(grid)
         approved = _approve(grid, plan)
+        numbered = {
+            (track["group_name"], cue["bar"])
+            for track in approved["tracks"]
+            for cue in track["cues"]
+            if cue.get("effect_preset_no")
+        }
+        # 움직임은 효과 번호를 받아도 칸에 남는다(화면이 읽는다) — 번호를 받았는지를 본다.
         left = [
             (g, b)
             for g, b, _m in _moving_cells(approved)
             # 실기 기록으로 이미 열린 칸(MOVER-D Tilt)은 바꾸지 않는다.
             if not (g == "MOVER-D" and tuple(_m.get("axes") or ()) == ("Tilt",))
+            and (g, b) not in numbered
         ]
         assert left == [], f"효과 프리셋으로 안 바뀐 칸: {left}"
         result = _emit(approved, _PASSED_4)

@@ -20,6 +20,7 @@ from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_edit import load_preset_pool_policy
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import PointingFrames
+from server.design.cell_direction import assign_color_names
 from server.design.preset_plan import (
     apply_plan_references,
     build_preset_plan,
@@ -181,15 +182,19 @@ class TestPlannedColorCandidates:
         assert "AMBER MOVER-D" in names
         assert "COOL WHITE WASH-ALL" in names
 
-    def test_a_planned_color_with_no_name_is_held_and_not_guessed(self) -> None:
+    def test_a_planned_color_outside_the_table_takes_the_nearest_name(self) -> None:
+        # 리드 지시: 이름이 없다고 색 프리셋을 막지 않는다. 표 밖의 색은 가장 가까운 이름을 받는다.
         grid = _applied_grid()
         track = next(t for t in grid["tracks"] if t["group_name"] == "MOVER-U")
         cue = next(c for c in track["cues"] if c["bar"] == 14)
         cue["planned_color"] = [1, 2, 3]  # 주석에도 표준 팔레트에도 없는 색
         plan = _plan(grid)
-        live = [p for p in _color_presets(plan) if p.ready or p.deferred or p.reused]
-        assert ("MOVER-U", 14) not in set().union(*(_cells_of(p) for p in live))
-        assert any("계획 색 RGB 1 2 3" in line for line in plan.unresolved), plan.unresolved
+        expected = assign_color_names([(1, 2, 3)])[(1, 2, 3)]
+        mine = [p for p in _color_presets(plan) if ("MOVER-U", 14) in _cells_of(p)]
+        assert [p.name for p in mine] == [f"{expected} MOVER-U"]
+        assert mine[0].deferred or mine[0].ready or mine[0].reused
+        assert not any("계획 색 RGB 1 2 3" in line for line in plan.unresolved), plan.unresolved
+        assert all(p.name for p in _color_presets(plan) if p.split_side is None)
 
     def test_key_and_effect_lines_are_not_counted_as_color_candidates_at_all(self) -> None:
         grid = _applied_grid()

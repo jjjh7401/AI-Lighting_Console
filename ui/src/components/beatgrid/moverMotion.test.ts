@@ -73,6 +73,48 @@ describe("moverMotionOf", () => {
     expect(moverMotionOf(cue({}), 4)).toBeNull();
     expect(moverMotionOf(null, 4)).toBeNull();
   });
+  it("app_movement 가 없으면 방향 값의 movement 를 읽는다(프리셋 기록보다 먼저)", () => {
+    const direction = {
+      brightness_percent: 100,
+      color: null,
+      position: { name: "Center" },
+      effect_kind: "motion" as const,
+      movement: { shape: "wave" as const, axes: ["Pan" as const], period_unit: "bar" as const, period_value: 2, phase_spread: null },
+      entry: { trigger_beat: 1 },
+    };
+    // 효과 번호가 프리셋 기록의 다른 서명을 가리켜도 방향 값이 먼저다.
+    const c = cue({ effect_preset_no: "21.10", direction });
+    expect(moverMotionOf(c, 4, { movements: { "21.10": { group_no: 11, signature: ["circle", ["Tilt"], "bar", 4, false], bpm: 112 } } })).toEqual({
+      shape: "wave",
+      pan: true,
+      tilt: false,
+      periodBars: 2,
+      phaseSpread: true,
+    });
+  });
+  it("app_movement 가 있으면 방향 값보다 그것이 먼저다", () => {
+    const direction = {
+      brightness_percent: 100,
+      color: null,
+      position: null,
+      effect_kind: "motion" as const,
+      movement: { shape: "wave" as const, axes: ["Pan" as const], period_unit: "bar" as const, period_value: 2, phase_spread: null },
+      entry: { trigger_beat: 1 },
+    };
+    const c = cue({ direction, app_movement: { shape: "sweep", axes: ["Tilt"], period_unit: "bar", period_value: 4, phase_spread: false } });
+    expect(moverMotionOf(c, 4)).toMatchObject({ shape: "sweep", tilt: true, pan: false, periodBars: 4 });
+  });
+  it("방향 값에 움직임이 없으면(정지 칸) 움직이지 않는다", () => {
+    const direction = {
+      brightness_percent: 100,
+      color: null,
+      position: null,
+      effect_kind: "hold" as const,
+      movement: null,
+      entry: { trigger_beat: 1 },
+    };
+    expect(moverMotionOf(cue({ direction }), 4)).toBeNull();
+  });
   it("phase_spread false 면 위상을 펼치지 않는다", () => {
     const c = cue({ app_movement: { shape: "sweep", axes: ["Pan"], period_unit: "bar", period_value: 2, phase_spread: false } });
     expect(moverMotionOf(c, 4)?.phaseSpread).toBe(false);
