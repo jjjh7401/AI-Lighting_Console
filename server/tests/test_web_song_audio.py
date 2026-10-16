@@ -39,7 +39,7 @@ from server.web.messages import (
     SongAudioRejectedError,
     parse_client_message,
 )
-from server.web.question import QuestionChannel
+from server.web.question import SUPERSEDED, QuestionChannel
 
 from .conftest import drain_until as _receive_until
 from .conftest import recv_frame
@@ -433,13 +433,13 @@ class _AnsweringChannel:
         self.answer = answer
         self.cards: list = []
 
-    def bind(self, notify, *, session_key=None) -> None:  # pragma: no cover - 배선만
+    def bind(self, notify, *, session_key=None, withdraw=None) -> None:  # pragma: no cover - 배선만
         pass
 
     def unbind(self, *, session_key=None) -> None:  # pragma: no cover - 배선만
         pass
 
-    def ask(self, request, *, session_key=None) -> str:
+    def ask(self, request, *, session_key=None, group=None) -> str:
         self.cards.append(request)
         return self.answer
 
@@ -500,6 +500,16 @@ class TestTheAnalysisPathAlwaysGoesThroughTheCard:
         event = session.analyse_song_audio()
         assert "오디오가 없습니다" in event["message"]
         assert session.song_bpm is None
+
+    def test_a_superseded_card_writes_no_bpm_state(self, tmp_path):
+        """[HARD] 새 분석에 밀려난 옛 카드는 BPM·구간 기록을 쓰지 않는다.
+
+        옛 분석이 밀려난 뒤에도 상태를 쓰면, 새 분석이 확정한 BPM 을 옛 분석의 측정값이 덮는다.
+        """
+        session, channel = self._analysed(tmp_path, SUPERSEDED)
+        assert len(channel.cards) == 1
+        assert session.song_bpm is None
+        assert session.song_analysis is None
 
 
 class TestTheSheetTempoDisagreementIsReportedThroughTheSession:
@@ -760,6 +770,129 @@ class TestTheCardSurvivesAReload:
                     assert frame["type"] != "question_request", frame
                     if frame["type"] == "status":
                         break
+
+    @staticmethod
+    def _frames_until_the_status_reply(ws) -> list[dict]:
+        """재접속한 연결의 첫 프레임들 — ``status_request`` 의 답(두 번째 status)까지.
+
+        서버는 한 연결의 프레임을 보낸 순서대로 준다. 재접속 때 되살린 물음은 이 답보다 앞에 온다.
+        """
+        _send(ws, type="status_request")
+        frames: list[dict] = []
+        statuses = 0
+        for _ in range(40):
+            frame = recv_frame(ws)
+            frames.append(frame)
+            if frame["type"] == "status":
+                statuses += 1
+                if statuses == 2:
+                    return frames
+        raise AssertionError(f"no status reply within 40 frames: {[f['type'] for f in frames]}")
+
+    def test_after_an_answer_only_the_open_card_comes_back_on_reconnect(self, tmp_path):
+        """[HARD] 답한 물음은 다시 오지 않고, 답 없는 물음은 재접속에 정확히 한 장이다.
+
+        실측(2026-10-16, 실콘솔 전 과정): 답한 카드 뒤에 분석을 다시 돌리고 새로고침하면, 답 없는
+        옛 카드가 새 연결마다 되살아났다. 답한 카드 하나와 답 없는 카드 하나가 있을 때 재접속이
+        정확히 그 하나만 되살리는지 잰다.
+        """
+        channel = QuestionChannel(timeout_seconds=30.0)
+        deps = _deps(tmp_path, question_channel=channel)
+        client = TestClient(create_app(deps))
+        with client:
+            with client.websocket_connect("/ws") as ws:
+                recv_frame(ws)  # 최초 status
+                _send(
+                    ws,
+                    type="song_audio_upload",
+                    file_name="track.wav",
+                    mime_type="audio/wav",
+                    content_base64=SMALL_WAV_B64,
+                )
+                _receive_until(ws, "notice")
+                _send(ws, type="song_audio_analyse")
+                answered = _receive_until(ws, "question_request")
+                _send(
+                    ws, type="question_answer", request_id=answered["request_id"], answer="BPM 130"
+                )
+                _receive_until(ws, "notice")  # 확정까지 끝났다
+                _send(ws, type="song_audio_analyse")
+                open_card = _receive_until(ws, "question_request")
+            self._await_disconnect(deps)
+
+            with client.websocket_connect("/ws") as ws2:
+                replayed = self._frames_until_the_status_reply(ws2)
+                asked = [
+                    frame["request_id"] for frame in replayed if frame["type"] == "question_request"
+                ]
+                assert asked == [open_card["request_id"]]
+                _send(
+                    ws2,
+                    type="question_answer",
+                    request_id=open_card["request_id"],
+                    answer="BPM 130",
+                )
+                _receive_until(ws2, "notice")
+
+    def test_a_card_left_open_by_an_earlier_analysis_is_closed_not_stacked(self, tmp_path):
+        """[HARD] 새 분석이 서면 답 없이 남은 옛 카드는 닫히고, 재접속에도 되살아나지 않는다.
+
+        실측(2026-10-16): 연결을 바꿔 가며 분석을 여러 번 돌리고 답하지 않으면 새 연결마다 옛 카드가
+        한 장씩 더 쌓였다(question-1~3). 같은 연결에서는 답을 기다리는 동안 다음 분석이 busy 로
+        거절되므로(app.py), 쌓임은 연결을 바꿀 때 생긴다. 그래서 여기서는 연결을 바꾸며 잰다.
+        """
+        channel = QuestionChannel(timeout_seconds=30.0)
+        deps = _deps(tmp_path, question_channel=channel)
+        client = TestClient(create_app(deps))
+        with client:
+            with client.websocket_connect("/ws") as ws:
+                recv_frame(ws)  # 최초 status
+                _send(
+                    ws,
+                    type="song_audio_upload",
+                    file_name="track.wav",
+                    mime_type="audio/wav",
+                    content_base64=SMALL_WAV_B64,
+                )
+                _receive_until(ws, "notice")
+                _send(ws, type="song_audio_analyse")
+                old_card = _receive_until(ws, "question_request")
+            self._await_disconnect(deps)
+
+            # 두 번째 연결: 옛 카드는 답 없이 남아 있으므로 한 번 되살아난다.
+            with client.websocket_connect("/ws") as ws2:
+                replayed = self._frames_until_the_status_reply(ws2)
+                asked = [
+                    frame["request_id"] for frame in replayed if frame["type"] == "question_request"
+                ]
+                assert asked == [old_card["request_id"]]
+                _send(
+                    ws2,
+                    type="song_audio_upload",
+                    file_name="track.wav",
+                    mime_type="audio/wav",
+                    content_base64=SMALL_WAV_B64,
+                )
+                _receive_until(ws2, "notice")
+                _send(ws2, type="song_audio_analyse")
+                closed = _receive_until(ws2, "question_resolved")
+                assert closed["request_id"] == old_card["request_id"]
+                assert closed["answer"] == SUPERSEDED
+                new_card = _receive_until(ws2, "question_request")
+                assert new_card["request_id"] != old_card["request_id"]
+            self._await_disconnect(deps)
+
+            # 세 번째 연결: 되살아나는 것은 새 카드 한 장뿐이다.
+            with client.websocket_connect("/ws") as ws3:
+                replayed = self._frames_until_the_status_reply(ws3)
+                asked = [
+                    frame["request_id"] for frame in replayed if frame["type"] == "question_request"
+                ]
+                assert asked == [new_card["request_id"]]
+                _send(
+                    ws3, type="question_answer", request_id=new_card["request_id"], answer="BPM 130"
+                )
+                _receive_until(ws3, "notice")
 
 
 # =============================================================================

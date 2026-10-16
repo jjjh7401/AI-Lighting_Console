@@ -43,17 +43,26 @@ UNANSWERED = "__unanswered__"
 #: 답 대신 사용자가 대화로 잇겠다고 고른 경우.
 ANSWER_FREEFORM = "__freeform__"
 
+#: 새 분석이 같은 묶음의 옛 물음을 대체했다 — 거부도 미응답도 아니다. 답을 받은 쪽은 옛 분석의
+#: 결과로 **상태를 쓰지 않는다**(옛 분석이 새 분석의 확정을 덮으면 안 된다).
+SUPERSEDED = "__superseded__"
+
+#: 곡 분석 확인 카드의 묶음 — 같은 묶음의 새 카드가 서면 답 없이 남아 있던 옛 카드는 거둬진다.
+SONG_CONFIRMATION_GROUP = "song-confirmation"
+
 
 class _Pending:
     """답 하나를 기다리는 자리."""
 
-    __slots__ = ("event", "answer", "decided")
+    __slots__ = ("event", "answer", "decided", "group")
 
-    def __init__(self) -> None:
+    def __init__(self, group: str | None = None) -> None:
         self.event = threading.Event()
         #: 못 받은 채 풀리면 이 값이 그대로 나간다 — 거부가 아니라 미응답.
         self.answer = UNANSWERED
         self.decided = False
+        #: 같은 묶음의 새 물음이 서면 이 자리는 :data:`SUPERSEDED` 로 거둬진다.
+        self.group = group
 
 
 @dataclass(frozen=True)
@@ -447,6 +456,8 @@ class QuestionChannel:
         self._requests: dict[str, QuestionRequest] = {}
         #: 연결은 끊겼는데 물음이 걸려 있어 보내는 자리를 세워 둔 세션들.
         self._detached: set[object] = set()
+        #: 거둠 알림(``question_resolved``)을 보내는 자리 — 세션마다, :meth:`bind` 가 준 것.
+        self._withdraw: dict[object, Callable[[str], None]] = {}
         self._lock = threading.Lock()
 
     # -- UI 쪽 (이벤트 루프) -------------------------------------------------
@@ -456,6 +467,7 @@ class QuestionChannel:
         notify: Callable[[str, QuestionRequest], None],
         *,
         session_key: object = DEFAULT_SESSION_KEY,
+        withdraw: Callable[[str], None] | None = None,
     ) -> None:
         """UI 하나를 붙이고, **아직 답을 못 받은 물음을 그대로 다시 보낸다.**
 
@@ -469,6 +481,8 @@ class QuestionChannel:
         """
         with self._lock:
             self._notify[session_key] = notify
+            if withdraw is not None:
+                self._withdraw[session_key] = withdraw
             self._detached.discard(session_key)
             self._sweep_detached()
             # 사전 순서 = 물어본 순서. 카드가 여럿 걸려 있어도 순서가 뒤집히지 않는다.
@@ -509,6 +523,7 @@ class QuestionChannel:
             else:
                 self._detached.discard(session_key)
                 self._notify.pop(session_key, None)
+                self._withdraw.pop(session_key, None)
             self._sweep_detached()
 
     def _sweep_detached(self) -> None:
@@ -531,6 +546,7 @@ class QuestionChannel:
         ]:
             self._detached.discard(key)
             self._notify.pop(key, None)
+            self._withdraw.pop(key, None)
 
     def has_pending(self, *, session_key: object = DEFAULT_SESSION_KEY) -> bool:
         """이 세션에 아직 답을 못 받은 물음이 남아 있는가."""
@@ -552,15 +568,39 @@ class QuestionChannel:
             pending.decided = True
             pending.answer = answer
             pending.event.set()
+            # 답이 정해진 물음은 다시 보내지 않는다 — 재접속 때 되살아나는 길을 여기서 끊는다.
+            self._requests.pop(request_id, None)
         return True
 
     # -- 부르는 쪽 (작업 스레드) ---------------------------------------------
+
+    def _supersede_locked(self, group: str) -> list[str]:
+        """같은 묶음의 답 없는 옛 물음을 거둔다. 거둔 물음의 id 를 돌려준다.
+
+        거둔 자리는 답이 정해진 것으로 표시하고(:data:`SUPERSEDED`) 기다리던 쪽을 깨운다. 옛 분석
+        스레드는 미응답이 아니라 **대체됨**을 받아 상태를 쓰지 않고 끝난다. 거둔 뒤의 답은 이미
+        끝난 물음이라 :meth:`resolve` 가 거절한다.
+
+        호출자가 :attr:`_lock` 을 들고 있어야 한다.
+        """
+        superseded: list[str] = []
+        for request_id, (_key, pending) in list(self._pending.items()):
+            if pending.decided or pending.group != group:
+                continue
+            pending.decided = True
+            pending.answer = SUPERSEDED
+            pending.event.set()
+            self._pending.pop(request_id, None)
+            self._requests.pop(request_id, None)
+            superseded.append(request_id)
+        return superseded
 
     def ask(
         self,
         request: QuestionRequest,
         *,
         session_key: object | None = None,
+        group: str | None = None,
     ) -> str:
         """물음을 띄우고 답을 기다린다 — 못 받으면 :data:`UNANSWERED`.
 
@@ -570,15 +610,25 @@ class QuestionChannel:
         """
         if session_key is None:
             session_key = current_session_key()
-        pending = _Pending()
+        pending = _Pending(group)
         with self._lock:
             notify = self._notify.get(session_key)
             if notify is None:
                 # 볼 사람이 없는 물음은 물음이 아니다. 기다리지 않는다.
                 return UNANSWERED
+            # 같은 묶음의 옛 물음은 이 물음이 서는 순간 거둔다(묶음마다 답 없는 카드는 한 장).
+            superseded = self._supersede_locked(group) if group is not None else []
             request_id = f"{self._id_prefix}-{next(self._counter)}"
             self._pending[request_id] = (session_key, pending)
             self._requests[request_id] = request
+            withdraws = list(self._withdraw.values())
+        for old_id in superseded:
+            # 락 밖에서 보낸다 — 화면이 옛 카드를 닫는 알림이 새 카드보다 먼저 가야 한다.
+            for withdraw in withdraws:
+                try:
+                    withdraw(old_id)
+                except Exception:
+                    continue
         try:
             notify(request_id, request)
         except Exception:

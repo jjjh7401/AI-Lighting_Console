@@ -82,8 +82,8 @@ class _FakeQuestionChannel:
         self.answers = list(answers)
         self.asked: list[QuestionRequest] = []
 
-    def bind(self, notify, *, session_key=None) -> None:  # noqa: ANN001 — test double
-        del notify, session_key
+    def bind(self, notify, *, session_key=None, withdraw=None) -> None:  # noqa: ANN001 — test double
+        del notify, session_key, withdraw
 
     def ask(self, request: QuestionRequest, **_kwargs) -> str:
         self.asked.append(request)
