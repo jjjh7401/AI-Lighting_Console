@@ -94,6 +94,8 @@ _COLOR_PATH_HOLD = "색 저장은 기존 「＋ 새 프리셋」 색 경로(t594
 #: 칸·번호가 다 있는 색·위치 후보의 사유 — 저장 줄은 콘솔 판독을 마친 뒤
 #: `preset_plan_store` 가 붙인다.
 _COLOR_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·컬러 채널을 읽은 뒤 만든다"
+#: 색 후보에서 빼는 레이어 역할 — 키(key)와 효과(effect) 장비는 컬러 채널이 없다.
+_NO_COLOR_ROLES = frozenset({"key", "effect"})
 _POSITION_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·장비 좌표를 읽은 뒤 만든다"
 
 #: 움직임 효과 프리셋을 저장할 콘솔 풀(판독 이름 「All 1」, 풀 21).
@@ -664,9 +666,15 @@ def _planned_color_presets(
     }
     order: list[tuple[str, tuple[int, int, int]]] = []
     cells_of: dict[tuple[str, tuple[int, int, int]], list[PlanCell]] = {}
+    # 키(key)·효과(effect) 역할은 컬러 채널이 없는 장비라 색 후보에 아예 세지 않는다.
+    no_color = {
+        str(track.get("group_name"))
+        for track in grid.get("tracks") or []
+        if track.get("layer_role") in _NO_COLOR_ROLES
+    }
     for group, _no, _confirmed, cue in rows:
         bar = cue.get("bar")
-        if not isinstance(bar, int) or isinstance(bar, bool):
+        if not isinstance(bar, int) or isinstance(bar, bool) or group in no_color:
             continue
         if cue.get("color_preset_no") is not None or (group, bar) in taken:
             continue

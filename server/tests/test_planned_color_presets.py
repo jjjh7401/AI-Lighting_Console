@@ -74,10 +74,27 @@ def _applied_grid() -> dict:
     return grid
 
 
+#: 색 후보에서 빼는 역할 — 키(FOH)·효과(BLIND·STROBE)는 컬러 채널이 없는 장비다(리드 결정).
+_NO_COLOR_ROLES = {"key", "effect"}
+
+
 def _planned_cells(grid: dict) -> set[tuple[str, int]]:
+    """색 후보 범위의 계획 색 칸 — 키·효과 역할 줄은 세지 않는다."""
     return {
         (track["group_name"], cue["bar"])
         for track in grid["tracks"]
+        if track.get("layer_role") not in _NO_COLOR_ROLES
+        for cue in track["cues"]
+        if isinstance(cue.get("planned_color"), list)
+    }
+
+
+def _no_color_cells(grid: dict) -> set[tuple[str, int]]:
+    """키·효과 역할 줄의 계획 색 칸 — 색 후보에 아예 들어가지 않아야 한다."""
+    return {
+        (track["group_name"], cue["bar"])
+        for track in grid["tracks"]
+        if track.get("layer_role") in _NO_COLOR_ROLES
         for cue in track["cues"]
         if isinstance(cue.get("planned_color"), list)
     }
@@ -167,7 +184,7 @@ class TestPlannedColorCandidates:
         assert "LAVENDER" in names
         assert "PINK" in names and "SKY" in names
         # 다른 그룹의 같은 색은 「이름 그룹」, 주석에 없는 드롭·브릿지 색은 표준 팔레트 이름이다.
-        assert "LAVENDER FOH" in names
+        assert "LAVENDER SIDE-ALL" in names
         assert "AMBER MOVER-D" in names
         assert "COOL WHITE WASH-ALL" in names
 
@@ -180,6 +197,23 @@ class TestPlannedColorCandidates:
         live = [p for p in _color_presets(plan) if p.ready or p.deferred or p.reused]
         assert ("MOVER-U", 14) not in set().union(*(_cells_of(p) for p in live))
         assert any("계획 색 RGB 1 2 3" in line for line in plan.unresolved), plan.unresolved
+
+    def test_key_and_effect_lines_are_not_counted_as_color_candidates_at_all(self) -> None:
+        grid = _applied_grid()
+        no_color_groups = {
+            track["group_name"]
+            for track in grid["tracks"]
+            if track.get("layer_role") in _NO_COLOR_ROLES
+        }
+        assert _no_color_cells(grid), "픽스처에 키·효과 줄의 계획 색 칸이 있어야 한다"
+        plan = _with_stores(grid, _plan(grid))
+        updated = _approve(grid, plan)
+        assert not (_no_color_cells(grid) & _numbered_cells(updated))
+        assert not any(
+            group in no_color_groups for preset in _color_presets(plan) for group in preset.groups
+        )
+        covered = set().union(*(_cells_of(p) for p in _color_presets(plan)))
+        assert not (_no_color_cells(grid) & covered)
 
 
 class TestConsoleNumberReuse:
@@ -295,7 +329,8 @@ class TestTheApprovalCard:
         assert event["ok"] is True
         assert len(approval.requests) == 1  # 카드는 한 장이다
         card = list(approval.requests[0].commands)
-        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 20
+        # 주석 색 4 + 계획 색 13. 키·효과 줄(FOH·BLIND·STROBE)의 프리셋 3개는 세지 않는다.
+        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 17
         numbered = _numbered_cells(store.latest["beat_grid"])
         assert _planned_cells(grid) <= numbered
         assert numbered - _planned_cells(grid) == _ANNOTATION_ONLY
