@@ -291,13 +291,14 @@ class BeatGridEmitResult:
 
     @property
     def unsent_notices(self) -> tuple[str, ...]:
-        """반영 결과와 승인 카드에 싣는 안내 한 줄. 빈 칸이 없으면 빈 튜플이다."""
-        cells = self.unsent_cells
-        if not cells:
+        """반영 결과와 승인 카드에 싣는 안내 한 줄. 빈 칸이 없으면 빈 튜플이다.
+
+        칸 이름은 싣지 않고 숫자만 보인다. 감독 원본의 빈 「—」 칸도 같은 방식으로 센다.
+        """
+        count = len(self.unsent_cells)
+        if count == 0:
             return ()
-        listed = ", ".join(f"{name} {bar}마디" for name, bar in cells[:5])
-        more = f" 외 {len(cells) - 5}칸" if len(cells) > 5 else ""
-        return (f"구조화 값이 없어 송신되지 않는 칸 {len(cells)}개: {listed}{more}",)
+        return (f"구조화 값이 없어 송신되지 않는 칸 {count}개",)
 
 
 def _cue_attribute_commands(
