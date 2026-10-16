@@ -19,6 +19,15 @@ import {
 } from "./BeatGrid";
 import { fixtureBelongsTo } from "./beatGridStageModel";
 import { stageGroupZones } from "./beatGridTransition";
+import {
+  basePoseOf,
+  beamPolygonPoints,
+  beamPoseAt,
+  centrePanDegOf,
+  moverMotionOf,
+  phaseOffset,
+  type StagePresetBook,
+} from "./beatgrid/moverMotion";
 import { StageConceptSvg } from "./beatgrid/StageConceptSvg";
 import "./beatGridPanels.css";
 
@@ -31,12 +40,18 @@ const ZONE_PADDING = 8;
 /** 카드 t588 — 시안 `drawStage` 장식의 그림 비율. 리그·곡 값이 아니라 그림
  * 모양 값이다: 빔 반폭 9(시안 `x-9`·`x+9`), 빔 불투명도 100/260(시안 `h/260`, 켜짐
  * 최대), 워시 면 불투명도 40/160(시안 `sh/160` — 앱은 디머 수치를 지어내지 않아
- * 켜짐 한 단계뿐이라 시안 표본 값 40%로 고정). 빔 길이는 장비에서 무대 앞
- * 가장자리까지의 거리 비율이다(시안은 틸트로 정하지만 앱은 틸트를 읽지 않는다). */
+ * 켜짐 한 단계뿐이라 시안 표본 값 40%로 고정). 빔 길이·각도는 칸의 위치 이름과
+ * 움직임에서 계산한다(`beatgrid/moverMotion.ts`, 위치를 모르면 앞 가장자리까지의 절반). */
 const BEAM_HALF_WIDTH = 9;
 const BEAM_OPACITY = 100 / 260;
-const BEAM_REACH = 0.5;
 const WASH_OPACITY = 40 / 160;
+
+/** 재생 시계 — 무빙 빔이 움직임의 위상을 이 시각에서 읽는다. 없으면 빔은 위치 자세로 멈춘다. */
+export interface StageMotionClock {
+  seconds: number;
+  secondsPerBar: number | null | undefined;
+  beatsPerBar: number | null;
+}
 
 export interface StageDecorations {
   /** 시안 `#1b1b22` 무대 바닥 — 읽힌 장비 전체를 감싸는 면. */
@@ -58,6 +73,8 @@ export function stageDecorations(
   viewBar: number,
   frontY: number,
   padding: number,
+  motion?: StageMotionClock,
+  book: StagePresetBook = {},
 ): StageDecorations {
   if (fixtures.length === 0) return { floor: null, washes: [], beams: [] };
   const all = fixtures.map((f) => project(f));
@@ -90,16 +107,30 @@ export function stageDecorations(
     });
   }
   // 켜진 무빙만 빔(리드 결정): 무빙 여부는 장비 능력(`fixtureIsMover`), 켜짐은 소속 줄의 칸.
-  for (const fixture of fixtures) {
-    if (!fixtureIsMover(fixture, tracks)) continue;
-    const trackIndex = tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name));
-    if (trackIndex < 0 || !lit(tracks[trackIndex])) continue;
+  // 빔 각도는 그 칸의 위치(기본 자세)와 움직임(재생 시각의 위상)에서 — `beatgrid/moverMotion.ts`.
+  const centreX = floor.x + floor.width / 2;
+  const movers = fixtures
+    .filter((fixture) => fixtureIsMover(fixture, tracks))
+    .map((fixture) => ({ fixture, trackIndex: tracks.findIndex((track) => fixtureBelongsTo(fixture, track.group_name)) }))
+    .filter(({ trackIndex }) => trackIndex >= 0 && lit(tracks[trackIndex]));
+  for (const { fixture, trackIndex } of movers) {
     const { cx, cy } = project(fixture);
-    const len = Math.max(0, (frontY - cy) * BEAM_REACH);
-    if (len <= 0) continue;
+    const distance = frontY - cy;
+    if (distance <= 0) continue;
+    const cue = cueForBar(tracks[trackIndex], viewBar);
+    const siblings = movers.filter((m) => m.trackIndex === trackIndex).map((m) => m.fixture.fid).sort((a, b) => a - b);
+    const moverMotion = motion ? moverMotionOf(cue, motion.beatsPerBar, book) : null;
+    const pose = beamPoseAt(
+      basePoseOf(cue, centrePanDegOf(cx, cy, centreX, frontY), book),
+      moverMotion,
+      motion?.seconds ?? 0,
+      motion?.secondsPerBar,
+      phaseOffset(siblings.indexOf(fixture.fid), siblings.length, moverMotion?.phaseSpread ?? true),
+      Math.sign(Math.round(cx - centreX)),
+    );
     beams.push({
       key: `beam-${trackIndex}-${fixture.fid}`,
-      points: `${cx},${cy} ${cx - BEAM_HALF_WIDTH},${cy + len} ${cx + BEAM_HALF_WIDTH},${cy + len}`,
+      points: beamPolygonPoints(cx, cy, pose.panDeg, distance * pose.reach, BEAM_HALF_WIDTH),
       fill: trackStageColor(tracks[trackIndex], trackIndex, viewBar),
     });
   }
@@ -142,8 +173,14 @@ export function BeatGridStage({
   selectedTrackName,
   onSelectTrack,
   notes,
+  motion,
+  presetBook,
 }: {
   fixtures: readonly BeatGridFixturePoint[];
+  /** 곡 격자의 프리셋 기록(이름·효과 내용) — 칸에 이름이 없어도 위치·움직임을 읽는다. */
+  presetBook?: StagePresetBook;
+  /** 재생 시계 — 있으면 무빙 빔이 움직인다(재생 루프가 매 프레임 `seconds` 를 갱신한다). */
+  motion?: StageMotionClock;
   tracks: readonly BeatGridTrack[];
   viewBar: number;
   selectedTrackName: string | null;
@@ -195,7 +232,7 @@ export function BeatGridStage({
   const zones = stageGroupZones(fixtures, tracks, project, ZONE_PADDING);
   const selectedKey = selectedTrackName?.toUpperCase() ?? null;
   // 카드 t588 — 시안 장식은 점 아래에 깐다(바닥 → 워시 면 → 빔 → 장비 점).
-  const decor = stageDecorations(fixtures, tracks, project, viewBar, STAGE_H - STAGE_MARGIN, ZONE_PADDING);
+  const decor = stageDecorations(fixtures, tracks, project, viewBar, STAGE_H - STAGE_MARGIN, ZONE_PADDING, motion, presetBook);
 
   return (
     <div className="beat-grid-stage-box" ref={boxRef}>

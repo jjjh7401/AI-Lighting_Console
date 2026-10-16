@@ -321,6 +321,7 @@ _DISPLAY_ONLY_CUE_KEYS = frozenset(
     {
         "position_preset_name",
         "color_preset_name",
+        "effect_preset_name",
         "color_planned",
         "planned_color",
         "planned_position",

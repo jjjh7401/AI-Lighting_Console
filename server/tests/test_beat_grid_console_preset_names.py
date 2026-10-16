@@ -37,6 +37,23 @@ def test_names_attached_from_cached_pools() -> None:
     assert "position_preset_name" not in cues[1]  # 2.9 슬롯 없음
 
 
+def test_effect_preset_name_attached_for_stage_mover_motion() -> None:
+    cues_in = [{"effect_preset_no": "21.2"}, {"effect_preset_no": "21.7"}]
+    grid = {"tracks": [{"group_name": "MOVER", "cues": cues_in}]}
+    cues = _cues(attach_console_preset_names(grid, {21: {2: "WAVE PAN 2 BEAT"}}))
+    assert cues[0]["effect_preset_name"] == "WAVE PAN 2 BEAT"
+    assert "effect_preset_name" not in cues[1]  # 21.7 슬롯 없음
+
+
+def test_effect_preset_name_does_not_make_cells_unsent() -> None:
+    from server.design.beat_grid_send import beat_grid_cell_snapshot, unsent_beat_grid_cells
+
+    grid = {"tracks": [{"group_name": "MOVER", "cues": [{"bar": 1, "effect_preset_no": "21.2"}]}]}
+    snapshot = beat_grid_cell_snapshot(grid)
+    named = attach_console_preset_names(grid, {21: {2: "WAVE PAN 2 BEAT"}})
+    assert unsent_beat_grid_cells(named, snapshot) == []
+
+
 def test_console_offline_pool_unread_omits_silently() -> None:
     cues = _cues(attach_console_preset_names(_grid(), {2: None, 4: None}))
     assert all("position_preset_name" not in c and "color_preset_name" not in c for c in cues[:3])
