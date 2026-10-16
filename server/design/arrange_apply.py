@@ -37,15 +37,65 @@ def _union_bar_range(
     }
 
 
+_PRESET_KEYS = (
+    "position_preset_no",
+    "color_preset_no",
+    "effect_preset_no",
+    "effect_kind",
+    "app_movement",
+)
+
+
+def _has_structured_value(cue: Mapping[str, Any]) -> bool:
+    """칸에 구조화 값(밝기·프리셋·진입·움직임) 가운데 하나라도 있는가."""
+    brightness = cue.get("brightness") or {}
+    entry = cue.get("entry") or {}
+    if brightness.get("mode") is not None:
+        return True
+    if any(cue.get(key) is not None for key in _PRESET_KEYS):
+        return True
+    return any(value is not None for value in entry.values())
+
+
+def director_blank_cells(default_grid: Mapping[str, Any]) -> frozenset[tuple[str, int]]:
+    """감독 원본(곡 기본 격자)에서 구조화 값 없이 비워 둔 칸 — (트랙 이름, 마디) 집합이다.
+
+    이 칸은 감독이 비워 둔 것이라 자동 배치가 채우지 않는다. 송신하지 않고 숫자로만 보인다.
+    """
+    blanks: set[tuple[str, int]] = set()
+    for track in default_grid.get("tracks") or []:
+        name = str(track["group_name"])
+        for cue in track.get("cues") or []:
+            if not _has_structured_value(cue):
+                blanks.add((name, int(cue["bar"])))
+    return frozenset(blanks)
+
+
+def _is_placeholder(cue: Mapping[str, Any], track_name: str, director_blanks: frozenset) -> bool:
+    """구조화 값이 하나도 없고 감독 원본의 빈 칸도 아닌 칸 — 이전 적용이 남긴 빈 칸이다.
+
+    사람이 넣은 값이 있는 칸은 건드리지 않는다. 감독이 비워 둔 칸도 건드리지 않는다.
+    나머지 빈 칸은 초안 값으로 채운다.
+    """
+    if (track_name, int(cue["bar"])) in director_blanks:
+        return False
+    return not _has_structured_value(cue)
+
+
 # @MX:NOTE: [AUTO] 초안 한 단위를 격자에 한꺼번에 반영한다. 원본 격자는 바꾸지 않는다.
 def apply_arrangement_draft(
-    grid: Mapping[str, Any], draft: ArrangementDraft
+    grid: Mapping[str, Any],
+    draft: ArrangementDraft,
+    *,
+    director_blanks: frozenset = frozenset(),
 ) -> tuple[dict[str, Any], list[str]]:
     """초안 한 단위를 격자에 반영하고, 새 격자와 한국어 보고를 돌려준다.
 
     - 이름이 같은 트랙이 있으면 그 트랙의 칸을 고치고, 없으면 트랙을 새로 만든다.
     - 칸이 없는 마디에는 칸을 새로 만든다. 있는 칸은 라벨만 초안 값으로 바꾸고, 밝기·프리셋
       같은 구조화 필드는 그대로 둔다(사람이 넣은 값을 지우지 않는다).
+    - 구조화 값이 하나도 없는 빈 칸은 초안 값으로 채운다(이전 적용이 남긴 칸). 단 감독 원본의
+      빈 칸(``director_blanks``)은 그대로 둔다.
     - 격자 데이터 범위(``bar_range``)도 초안 범위까지 넓힌다. 줄이지는 않는다.
     - 결과가 트랙 검증(같은 장비를 겹쳐 잡는 트랙)을 통과하지 못하면 ``ArrangementApplyError``다.
       어떤 경우에도 원본 격자는 바뀌지 않는다.
@@ -72,7 +122,7 @@ def apply_arrangement_draft(
             bar = draft_cue["bar"]
             label = draft_cue["label"]
             existing = cues_by_bar.get(bar)
-            if existing is None:
+            if existing is None or _is_placeholder(existing, name, director_blanks):
                 cues_by_bar[bar] = normalize_beat_grid_cue(dict(draft_cue))
                 created_cells += 1
                 continue

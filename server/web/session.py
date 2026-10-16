@@ -49,7 +49,11 @@ from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
 from server.design.approval_vs_sent import verify_approval_vs_sent
-from server.design.arrange_apply import ArrangementApplyError, apply_arrangement_draft
+from server.design.arrange_apply import (
+    ArrangementApplyError,
+    apply_arrangement_draft,
+    director_blank_cells,
+)
 from server.design.arrange_draft_store import PendingDraftStore
 from server.design.arrange_generator import generate_arrangement_draft
 from server.design.beat_grid import (
@@ -60,6 +64,7 @@ from server.design.beat_grid import (
     approved_preset_numbers,
     attach_beat_grid_default,
     attach_beat_grid_runtime_extras,
+    default_beat_grid,
     empty_preset_cells,
     pending_preset_approvals,
     preset_pool_no,
@@ -11528,7 +11533,9 @@ class ChatSession:
             return self._beat_grid_rejection("곡이 열려 있지 않아 초안을 적용할 수 없습니다.")
         grid = self._beat_grid_view(timeline)
         try:
-            updated_grid, report = apply_arrangement_draft(grid, draft)
+            song_title = str(timeline.get("song_title") or "")
+            blanks = director_blank_cells(default_beat_grid(song_title))
+            updated_grid, report = apply_arrangement_draft(grid, draft, director_blanks=blanks)
         except ArrangementApplyError as error:
             return self._beat_grid_rejection(str(error))
         self._draft_history.record(timeline)
