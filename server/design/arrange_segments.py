@@ -23,7 +23,8 @@
   교대는 구간 시작부터 세어 ``policy.window_bars`` 마디마다 다시 정하고, 차례는 곡 전체에서
   이어진다.
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
-  STROBE(느린 곡이면 두지 않는다)다.
+  STROBE(느린 곡이면 두지 않는다)다. 마디 지도에 리듬 블록이 있으면 BLIND 마디는 그 구간 안 첫 큰
+  히트(``kind == "big"``)의 마디이고, 구간 안에 큰 히트가 없으면 구간의 첫 마디 그대로다.
 - 예고는 강조가 아니다. 빌드 구간 바로 뒤에서 후렴(마지막 후렴 포함)이 시작하면 그 빌드의 끝
   마디, 곧 큰 히트 직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는
   쉼과 같다).
@@ -175,6 +176,7 @@ def generate_segment_draft(
     overrides = planned_colors or {}
     sections = split_sections(bar_map)
     windows = _plan_windows(sections, layout, settings)
+    big_hit_bars = _big_hit_bars(bar_map)
 
     plans: dict[str, dict[int, _CellPlan]] = {str(track["group_name"]): {} for track in layout}
     for window in windows:
@@ -187,7 +189,8 @@ def generate_segment_draft(
                     track,
                     active=window.active,
                     moving=window.moving,
-                    is_kick=at_start and section.kind in _BLIND_SECTIONS,
+                    is_kick=section.kind in _BLIND_SECTIONS
+                    and bar == _emphasis_bar(section, big_hit_bars),
                     is_drop_start=at_start and section.kind == _SECTION_DROP,
                     settings=settings,
                     section_color=window.color,
@@ -362,6 +365,22 @@ def _plan_windows(
             )
             window_turn += 1
     return windows
+
+
+def _big_hit_bars(bar_map: Mapping[str, Any]) -> list[int]:
+    """리듬 블록의 큰 히트(``kind == "big"``)가 있는 마디, 작은 마디 순. 블록이 없으면 빈 목록."""
+    rhythm = bar_map.get("rhythm")
+    if not rhythm:
+        return []
+    return sorted(int(hit["bar"]) for hit in rhythm["hits"] if hit["kind"] == "big")
+
+
+def _emphasis_bar(section: SegmentSection, big_hit_bars: Sequence[int]) -> int:
+    """블라인드 강조 마디. 구간 안 첫 큰 히트의 마디, 구간 안에 큰 히트가 없으면 구간 시작이다."""
+    return next(
+        (bar for bar in big_hit_bars if section.start_bar <= bar <= section.end_bar),
+        section.start_bar,
+    )
 
 
 def _in_segment_words(plan: _CellPlan, role: object) -> _CellPlan:

@@ -1063,3 +1063,106 @@ def test_rhythm_boundaries_reach_the_draft_windows() -> None:
     window_starts = {window["start_bar"] for window in draft["windows"]}
     assert 21 in window_starts
     assert "d_level" not in json.dumps(draft, ensure_ascii=False)
+
+
+# -- 리듬 블록(rhythm): 큰 히트가 블라인드 강조 마디가 된다 ---------------------------------------
+
+#: 합성 곡을 한 덩이로 덮는 리듬 구간. 구간 경계를 더하지 않아서 큰 히트의 효과만 따로 본다.
+WHOLE_SONG = [(1, 40, 3)]
+
+
+def _hit_draft(
+    hits: list[tuple[int, int]],
+    events: list[dict] | None = None,
+    sections: list[tuple[int, int, int]] | None = None,
+) -> dict:
+    rhythm_map = _rhythm_map(
+        SYNTHETIC_EVENTS if events is None else events,
+        WHOLE_SONG if sections is None else sections,
+        hits,
+    )
+    return generate_segment_draft(rhythm_map, _layout())
+
+
+def test_the_blind_cell_moves_to_the_first_big_hit_inside_a_chorus() -> None:
+    draft = _hit_draft([(11, 1)])  # 후렴 9~13 의 11 마디에 큰 히트
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [11, 18, 40]
+    assert _state(draft, "BLIND", 9)["label"] == REST_LABEL
+    assert _state(draft, "BLIND", 10)["label"] == REST_LABEL
+    assert _state(draft, "BLIND", 12)["label"] == REST_LABEL
+    moved = _cues(draft, "BLIND")[11]
+    assert moved["brightness"]["value_percent"] == ArrangementPolicy().lit_percent
+
+
+def test_the_first_big_hit_wins_and_a_hit_in_the_start_bar_changes_nothing() -> None:
+    # 입력 순서가 아니라 마디가 앞선 히트가 첫 히트다. 한 마디의 두 히트도 그 마디 하나다.
+    draft = _hit_draft([(12, 1), (11, 3), (11, 1), (13, 2)])
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [11, 18, 40]
+    at_start = _hit_draft([(9, 1), (12, 1), (18, 4), (25, 2)])
+    assert _hits(at_start, "BLIND", BLIND_LABEL) == [9, 18, 40]
+
+
+def test_every_blind_section_takes_its_own_first_big_hit() -> None:
+    draft = _hit_draft([(11, 1), (25, 2), (30, 1)])
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [11, 25, 40]
+    # 마지막 후렴(40 마디 한 칸)에 히트가 있어도 시작 마디 그대로다.
+    assert _hits(_hit_draft([(40, 3)]), "BLIND", BLIND_LABEL) == [9, 18, 40]
+
+
+def test_a_blind_section_without_a_big_hit_keeps_its_start_bar() -> None:
+    draft = _hit_draft([(11, 1)])  # 18~32 와 40 에는 히트가 없다
+    blind_bars = _hits(draft, "BLIND", BLIND_LABEL)
+    assert 18 in blind_bars
+    assert 40 in blind_bars
+    assert _hits(_hit_draft([]), "BLIND", BLIND_LABEL) == [9, 18, 40]
+
+
+def test_a_big_hit_in_a_section_that_is_not_blind_changes_nothing() -> None:
+    baseline = generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), _layout())
+    # 도입(5)·벌스(8)·빌드(15)·브릿지(34)·드롭(37) 안의 히트다. 이웃 후렴으로 번지지도 않는다.
+    draft = _hit_draft([(5, 1), (8, 2), (15, 1), (34, 3), (37, 1)])
+    assert draft == baseline
+
+
+def test_a_big_hit_in_the_last_chorus_of_a_long_tail_moves_its_blind_cell() -> None:
+    events = [_ev("drop", 20, 21)]  # 드롭 20~21, 마지막 후렴 22~40
+    draft = _hit_draft([(30, 1)], events=events)
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [30]
+    assert _hits(_hit_draft([], events=events), "BLIND", BLIND_LABEL) == [22]
+
+
+def test_only_the_blind_line_changes_when_the_emphasis_moves() -> None:
+    baseline = generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), _layout())
+    draft = _hit_draft([(11, 1), (25, 2)])
+    assert draft["windows"] == baseline["windows"]
+    assert draft["bar_range"] == baseline["bar_range"]
+    for track, base in zip(draft["tracks"], baseline["tracks"], strict=True):
+        if track["group_name"] == "BLIND":
+            assert track != base
+        else:
+            assert track == base, track["group_name"]
+
+
+def test_the_drop_start_strobe_and_the_pre_hit_notice_stay_where_they_were() -> None:
+    draft = _hit_draft([(11, 1), (25, 2), (38, 1)])
+    assert _hits(draft, "STROBE", STROBE_LABEL) == [36]
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17]
+    # 예고 칸은 빌드 끝 마디(17)에 서고 큰 히트가 18 마디 안에 있어도 움직이지 않는다.
+    on_start = _hit_draft([(18, 1)])
+    assert _hits(on_start, "BLIND", PRE_HIT_LABEL) == [17]
+    assert _hits(on_start, "BLIND", BLIND_LABEL) == [9, 18, 40]
+
+
+def test_a_big_hit_that_sits_after_a_rhythm_boundary_belongs_to_the_section_holding_it() -> None:
+    # 리듬 경계 21 이 후렴(18~32)을 18~20 후렴과 21~32 벌스로 가른다. 25 마디 히트는 벌스 안이라
+    # 후렴의 강조를 끌어가지 못한다.
+    draft = _hit_draft([(25, 1)], sections=RHYTHM_SECTIONS)
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [9, 18, 40]
+    inside = _hit_draft([(20, 1)], sections=RHYTHM_SECTIONS)
+    assert _hits(inside, "BLIND", BLIND_LABEL) == [9, 20, 40]
+
+
+def test_without_a_big_hit_the_draft_equals_the_one_without_rhythm() -> None:
+    baseline = generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), _layout())
+    assert _hit_draft([]) == baseline
+    assert _hits(baseline, "BLIND", BLIND_LABEL) == [9, 18, 40]
