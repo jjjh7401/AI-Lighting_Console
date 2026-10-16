@@ -64,6 +64,7 @@ import {
   newPresetFieldValue,
   unverifiedCellIndex,
   isWriteLocked,
+  writeHoldLabel,
   layerFolderLabel,
   buildBrightnessValueChanges,
   cueReferencesPreset,
@@ -263,6 +264,20 @@ describe("unverifiedCellIndex — REQ-LDBEAT-010/AC-LDBEAT-004, 카드 t579", ()
     // MOVER-D 7마디(t548 D1)도 그래서 미확인으로 보였다. 이제 서버 목록에 없으면 없다.
     const index = unverifiedCellIndex([]);
     expect(index.get(cueEditKey("MOVER-D", 7))).toBeUndefined();
+  });
+});
+
+describe("writeHoldLabel — 카드 apply-safety(D16)", () => {
+  it("says 일부 칸 보류 with the failing-probe and held-cell counts, never 잠김", () => {
+    const probes = buildProbeStatusTable({ 1: "통과", 2: "미확인", 3: "부분" });
+    const label = writeHoldLabel(probes, 4);
+    expect(label).toBe("일부 칸 보류 (프로브 8개 미통과, 칸 4개)");
+    expect(label).not.toContain("잠김");
+  });
+
+  it("shows nothing when every probe passed", () => {
+    const allPass = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, "통과"]));
+    expect(writeHoldLabel(buildProbeStatusTable(allPass), 0)).toBeNull();
   });
 });
 

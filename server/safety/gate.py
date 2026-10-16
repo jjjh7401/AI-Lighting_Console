@@ -279,6 +279,13 @@ class SafetyGate:
         self._audit.log_executed("ping", kind="heartbeat", ok=ok)
         return self.monitor.state
 
+    @property
+    def showfile_backup_attached(self) -> bool:
+        """True when a backup manager is attached — i.e. a risky execution is preceded by one
+        ``SaveShow`` the gate sends itself (rule ③). Callers that publish an approval list
+        declare that line so nothing outside the list is sent."""
+        return self._backup is not None
+
     def use_showfile_backup(
         self,
         *,
