@@ -639,6 +639,9 @@ export interface BeatGridView {
    * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
    * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
   unverified_cells?: BeatGridUnverifiedCell[] | null;
+  /** 카드 apply-safety(D16) — M1 프로브 미통과로 「콘솔에 반영」이 보내지 않을 칸 수.
+   * 서버가 반영과 같은 판정(`blocked_m1_items_for_cue`)으로 센다. 옛 서버 응답이면 `undefined`. */
+  m1_held_cell_count?: number | null;
   /** 카드 t595(REQ-LDBEAT-015(i-1) 「그 칸에 표시」) — 콘솔 풀에 slot 이 없거나
    * 풀을 못 읽은 프리셋 번호를 가리키는 칸. 서버가 이미 읽은 풀(반영 때 판독·
    * 프리셋 서랍 판독)로만 가른 목록이다 — 화면은 번호를 다시 추측하지 않는다.

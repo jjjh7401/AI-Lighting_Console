@@ -135,6 +135,8 @@ export interface BeatGridTopBarProps {
   onApply?: () => void;
   /** 「⇪ 콘솔에 반영」 진행 문구 — 콘솔을 읽는 중·승인 카드를 기다리는 중(카드 apply-latency). */
   applyProgress?: string | null;
+  /** 진행 문구를 누르면 — 승인 대기 중일 때만 주어진다(전체화면 위 승인 카드로 옮긴다). */
+  onApplyProgressClick?: () => void;
   /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
    * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
    * 않는다), 숫자는 그 개수다. */
@@ -204,6 +206,28 @@ function ShortenedLabel({ action }: { action: TopBarAction }) {
   );
 }
 
+/** 「⇪ 반영」 진행 문구. 누를 곳(`onClick`, 승인 대기 중)이 있으면 승인 카드로 가는 버튼이 된다. */
+export function ApplyProgressNote({ text, onClick }: { text: string; onClick?: () => void }) {
+  if (!onClick) {
+    return (
+      <span className="beat-grid-apply-progress" role="status">
+        {text}
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="beat-grid-apply-progress beat-grid-apply-progress-link"
+      role="status"
+      onClick={onClick}
+      title="눌러서 승인 카드로 가기"
+    >
+      {`${text} — 승인 카드 보기`}
+    </button>
+  );
+}
+
 export function BeatGridTopBar({
   songTitle,
   note = null,
@@ -217,6 +241,7 @@ export function BeatGridTopBar({
   onPreviewOff,
   onApply,
   applyProgress,
+  onApplyProgressClick,
 timecodeNumber = null,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -431,11 +456,7 @@ timecodeNumber = null,
             </span>
           )}
         </button>
-        {applyProgress && (
-          <span className="beat-grid-apply-progress" role="status">
-            {applyProgress}
-          </span>
-        )}
+        {applyProgress && <ApplyProgressNote text={applyProgress} onClick={onApplyProgressClick} />}
         {onDraftPropose && (
           <button
             type="button"

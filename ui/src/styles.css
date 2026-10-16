@@ -5585,6 +5585,42 @@ body {
   display: flex;
 }
 
+/* 전체화면 위 승인 카드 — 채팅 열이 숨겨진 동안 대기 승인을 오른쪽 위에 겹쳐 보인다. */
+.beat-grid-approval-overlay {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 70;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--warn);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+.beat-grid-approval-overlay:focus {
+  outline: 2px solid var(--warn);
+}
+.beat-grid-approval-overlay-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--warn);
+}
+.beat-grid-apply-progress-link {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* 카드 t559 — 전체 최대 폭 1640px(화면의 97%), REQ-LDBEAT-016(b)·
    AC-LDBEAT-017(c). 폭은 `min(97vw, 1640px)`로 고정하고 가운데 둔다. */
 .beat-grid-fullscreen-frame .beat-grid {

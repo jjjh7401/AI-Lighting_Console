@@ -22,6 +22,7 @@ import {
 } from "react";
 
 import { ApprovalCard } from "./components/ApprovalCard";
+import { FullscreenApprovalOverlay } from "./components/beatgrid/FullscreenApprovalOverlay";
 import { BarMapEntry } from "./components/BarMapEntry";
 import { barMapEntryReducer, initialBarMapEntryState } from "./components/barMapEntryState";
 import { BeatGrid } from "./components/BeatGrid";
@@ -534,6 +535,8 @@ export default function App() {
   // (아래 toggleRunbookMode는 건드리지 않는다 — 이 상태는 이 전환 전용).
   // paperworkMode와 같은 이유로 세션-휘발성(localStorage 없음).
   const [beatGridFullscreen, setBeatGridFullscreen] = useState(false);
+  // 전체화면 진행 문구(「승인 카드를 기다리는 중」)를 누를 때마다 올려 승인 카드로 옮긴다.
+  const [approvalFocusSeq, setApprovalFocusSeq] = useState(0);
   // 「콘솔 같이」 — ▶ 를 누르면 승인 카드가 뜨고, 감독은 채팅에서 승인하려고 전체화면을 닫는다. 그러면
   // `BeatGrid` 가 사라져 그 뒤에 오는 콘솔 재생 응답을 받아 줄 화면이 없다. 켬/끔·응답 대기·콘솔이
   // 시작된 시각은 `BeatGrid` 밖(여기)의 중계 객체가 쥐고, 다시 열린 화면이 그 시각에서 음원 자리를
@@ -1335,6 +1338,14 @@ export default function App() {
             attachedSongAudioFile={songAudioFile}
             linkedSongAudioFile={linkedSongAudioFile}
             songAudioLinkMissing={songAudioLinkMissing}
+            onApprovalNoteClick={() => setApprovalFocusSeq((seq) => seq + 1)}
+          />
+          {/* 전체화면은 채팅 열을 숨긴다 — 대기 중인 승인 카드를 전체화면 위에 겹쳐 보인다
+              (승인이 화면 뒤에 묻혀 건너뛰어지지 않게, contract item 4). */}
+          <FullscreenApprovalOverlay
+            approvals={state.pendingApprovals}
+            onDecision={sendDecision}
+            focusSignal={approvalFocusSeq}
           />
         </div>
       ) : runbookMode ? (

@@ -49,6 +49,7 @@ from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_ba
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
+from server.design.analysis_timeline import ANALYSIS_SOURCE_KEY, build_analysis_timeline
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.arrange_apply import (
     ArrangementApplyError,
@@ -100,9 +101,11 @@ from server.design.beat_grid_effect_presets import (
     record_effect_preset_recipe,
 )
 from server.design.beat_grid_emit import (
+    M1_GATE_MARK,
     beat_grid_sequence_label,
     beat_grid_timecode_label,
     emit_beat_grid_write_bundle,
+    m1_held_cells,
 )
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import (
@@ -134,6 +137,8 @@ from server.design.beat_grid_probes import (
     read_m1_probe_results_from_path,
 )
 from server.design.beat_grid_send import (
+    APP_SEQUENCE_PREFIX,
+    APP_TIMECODE_PREFIX,
     BeatGridCellKey,
     _owned_sequence_names,
     apply_beat_grid_ownership_reuse,
@@ -142,6 +147,7 @@ from server.design.beat_grid_send import (
     build_song_timing_from_bar_map,
     clear_app_timecode_before_rebuild,
     dimmer_unread_notices,
+    parse_track_target,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
     song_end_seconds_from_bar_map,
@@ -340,6 +346,7 @@ from server.presets.store import preset_store_commands as _preset_store_commands
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import (
+    BACKUP_COMMAND,
     BatchRisk,
     SafetyGate,
     ScreenDecision,
@@ -3342,6 +3349,30 @@ def _preset_slot_list(slots: Sequence[int], pool_no: int = POSITION_PRESET_POOL)
     return ", ".join(f"{pool_no}.{no}" for no in slots)
 
 
+def _beat_grid_target_summary(
+    result: object, timecode_number: int, sequence_numbers: Mapping[str, int]
+) -> str:
+    """카드 apply-safety(D17) — 승인 카드 첫 줄: 「대상: Timecode N 'LDBEAT Timecode N' ·
+    시퀀스 a–b · 큐 K개」. 시퀀스 범위는 이번에 큐를 내는 트랙의 번호, 큐 수는 낸 큐 줄 수."""
+    used: list[int] = []
+    cue_count = 0
+    for track in getattr(result, "tracks", ()):
+        if getattr(track, "blocked_reason", None) is not None:
+            continue
+        cues = [c for c in track.cues if c.cue_number is not None and c.commands]
+        if cues:
+            used.append(track.sequence_number)
+            cue_count += len(cues)
+    if not used:
+        used = list(sequence_numbers.values())
+    low, high = (min(used), max(used)) if used else (0, 0)
+    span = f"{low}" if low == high else f"{low}–{high}"
+    return (
+        f"대상: Timecode {timecode_number} '{beat_grid_timecode_label(timecode_number)}' · "
+        f"시퀀스 {span} · 큐 {cue_count}개"
+    )
+
+
 def _position_creation_text(
     *, timeline_grid: Mapping[str, object], preset_no: str, lines: Sequence[str]
 ) -> str:
@@ -4155,6 +4186,7 @@ def derive_beat_grid_fields(
     # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
     # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
     updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
+    updated_grid["m1_held_cell_count"] = len(m1_held_cells(grid))
     updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
     # 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 효과 틀 목록(출하 라이브러리, 콘솔 0).
     updated_grid["fx_templates"] = effect_template_catalog()
@@ -9690,6 +9722,21 @@ class ChatSession:
             )
             return
 
+        # 새 곡 분석이 확정됐고(같은 오디오) 지금 작업본이 그 분석으로 만든 것이 아니면, 마디 지도를
+        # 옛 작업본에 붙이지 않고 분석 구간·마디 지도·빈 격자로 새 작업본을 만든다(리드 지시
+        # 2026-10-16). 옛 작업본은 라이브러리에 자동 백업하고 되돌리기 기록에도 남긴다.
+        # REQ-LDBARENTRY-011 은 이 경로가 라이브러리를 건드리지 않는다고 적는다. 새 작업본을 열 때의
+        # 자동 백업은 리드 지시(2026-10-16)로 그 예외다 — 확정 분석이 있을 때만 일어난다.
+        record = self._song_analysis
+        if (
+            isinstance(record, ConfirmedSongAnalysis)
+            and record.accepted
+            and record.source_sha256 == audio.sha256
+            and current.get(ANALYSIS_SOURCE_KEY) != record.source_sha256
+        ):
+            self._start_analysis_timeline(current, record, result)
+            return
+
         # @MX:NOTE: [AUTO] 저장 관문은 성공하면 song_timeline 과 성공 chat_response 를 직접
         # 보내고, 거절하면 이벤트를 반환만 하고 보내지 않는다. 그래서 성공 여부는 반환 이벤트의
         # 모양이 아니라 방금 넘긴 페이로드가 읽혀 나오는지로 가른다 — 관문 문구가 바뀌어도
@@ -9698,6 +9745,76 @@ class ChatSession:
         if self.timeline_bar_map() == result:
             return
         self._send(event)
+
+    def _start_analysis_timeline(
+        self,
+        current: Mapping[str, object],
+        record: ConfirmedSongAnalysis,
+        bar_map: Mapping[str, object],
+    ) -> None:
+        """새 분석으로 새 작업본을 연다 — ``analyse_bar_map`` 이 부른다. ``chat_response`` 는
+        정확히 한 개 보낸다(REQ-LDBARENTRY-012). 콘솔에는 아무것도 쓰지 않는다.
+
+        옛 작업본을 라이브러리에 백업하지 못하면(저장 실패) 바꾸지 않는다 — 되돌리기 기록은
+        메모리에만 있어 서버를 다시 띄우면 사라지기 때문이다."""
+        store = self._timeline_store
+        assert store is not None
+
+        def say(summary: str, text: str) -> None:
+            self._send(chat_response_event(status="ok", summary=summary, text=text, commands=[]))
+
+        reason = validate_bar_map(bar_map)
+        if reason is not None:
+            say(
+                _BAR_MAP_ENTRY_REJECTED_SUMMARY,
+                f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다.",
+            )
+            return
+        # 곡 이름은 새로 붙인 오디오(분석 기록)의 파일 이름에서 온다 — 옛 작업본 이름을 이어받지
+        # 않는다(리드 지시 2026-10-16). 파일 이름이 비면 그때만 옛 이름을 쓴다.
+        song_title = Path(record.source_file_name).stem.strip() or str(
+            current.get("song_title") or ""
+        )
+        fresh = build_analysis_timeline(
+            song_title=song_title,
+            sections=record.accepted,
+            bar_map=bar_map,
+            layout=self._beat_grid_view(current)["tracks"],
+            source_sha256=record.source_sha256,
+        )
+        library = self._timeline_library
+        if library is None:
+            backup = (
+                "라이브러리가 없어 이전 작업본을 백업하지 못했습니다 — "
+                "되돌리기로 돌아갈 수 있습니다."
+            )
+        else:
+            try:
+                old_title = str(current.get("song_title") or "") or "작업본"
+                entry = library.auto_save(f"{old_title} 분석 전 백업", dict(current))
+            except (OSError, ValueError) as error:
+                say(
+                    "새 분석 작업본 만들기 실패",
+                    "이전 작업본을 라이브러리에 백업하지 못해 새 작업본으로 바꾸지 않았습니다 "
+                    f"({type(error).__name__}). 마디 지도도 저장하지 않았습니다. "
+                    "콘솔에는 아무것도 쓰지 않았습니다.",
+                )
+                return
+            backup = f"이전 작업본은 라이브러리 「{entry['name']}」에 백업했습니다."
+        self._draft_history.record(dict(current))
+        fresh = self._draft_badge(
+            fresh, depth=self._draft_history.depth, report=("새 분석으로 새 작업본",)
+        )
+        store.latest = fresh
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))
+        bars = fresh["beat_grid"]["bar_range"]
+        rows = len(fresh["beat_grid"]["tracks"])
+        say(
+            "새 분석으로 새 작업본",
+            f"새 분석으로 작업본을 새로 만들었습니다 — 구간 {len(fresh['sections'])}개 · "
+            f"{bars['start']}~{bars['end']}마디 · 빈 격자(줄 {rows}개). "
+            f"{backup} 타임코드는 반영할 때 다시 고릅니다. 콘솔에는 아무것도 쓰지 않았습니다.",
+        )
 
     # -- 카드 t551 — 박자 격자 편집 세 길의 전용 서버 진입점(콘솔 무접촉) ----
     #
@@ -11044,6 +11161,47 @@ class ChatSession:
             last_action="edit", ok=True, reason=f"타임코드 {timecode_number}번을 적었습니다. {note}"
         )
 
+    def _beat_grid_timecode_reusable_sequences(
+        self,
+        wanted: int,
+        group_names: Sequence[str],
+        sequences_section: Mapping[str, object],
+    ) -> tuple[dict[str, int], dict[int, str]]:
+        """카드 apply-safety(D14) — 덮어쓰는 옛 ``LDBEAT Timecode N`` 의 트랙이 가리키던
+        앱 시퀀스 중, 이번 격자의 그룹 이름과 이름까지 같은 것은 (그룹 -> 번호)로 재사용한다.
+        그룹과 짝이 안 맞는 앱 시퀀스는 (번호 -> 이름)으로 따로 돌려준다(같은 승인 카드에서
+        지울 후보). 읽기만 한다 — 이름이 ``LDBEAT `` 접두가 아니거나 콘솔 풀에 없으면 둘 다 제외."""
+        try:
+            names = _owned_sequence_names(sequences_section)
+        except Exception:  # noqa: BLE001 - 못 읽으면 재사용하지 않는다(새 번호 쪽)
+            return {}, {}
+        reusable: dict[str, int] = {}
+        stale: dict[int, str] = {}
+        for item in self._beat_grid_timecode_track_targets(wanted):
+            target = item.get("target") if isinstance(item, Mapping) else item
+            number, _ = parse_track_target(target, names)
+            if number is None or number not in names:
+                continue
+            console_name = names[number]
+            if not (isinstance(console_name, str) and console_name.startswith(APP_SEQUENCE_PREFIX)):
+                continue
+            if console_name.startswith(APP_TIMECODE_PREFIX):
+                continue
+            match = next(
+                (
+                    group
+                    for group in group_names
+                    if group not in reusable
+                    and beat_grid_sequence_label(group, number) == console_name
+                ),
+                None,
+            )
+            if match is not None:
+                reusable[match] = number
+            else:
+                stale[number] = console_name
+        return reusable, stale
+
     def _beat_grid_timecode_track_targets(self, wanted: int) -> list[object]:
         """``<타임코드 풀>/<번호>/1`` 의 Track 들이 가리키는 시퀀스(TARGET) — 읽기만 한다.
         하나라도 못 읽으면 빈 목록(호출자가 거절로 처리)."""
@@ -11170,12 +11328,21 @@ class ChatSession:
             cells.append(result.timecode_event_commands)
         return cells
 
+    def _beat_grid_gate_backup_lines(self) -> tuple[str, ...]:
+        """카드 apply-safety(D15) — 게이트가 위험 묶음 직전에 스스로 보내는 ``SaveShow``
+        (백업 규칙 ③) 한 줄. 승인 카드 목록에 **명시**해, 보낸 줄이 전부 승인 목록 안에 있게 한다.
+        백업 관리자가 없으면 아무것도 보내지 않으므로 빈 튜플이다."""
+        attached = getattr(self._gate, "showfile_backup_attached", False)
+        return (BACKUP_COMMAND,) if attached is True else ()
+
     def _beat_grid_verify_approval_vs_sent(self, batch, *, since: str, until: str):
         """``REQ-LDBEAT-011`` — 승인=송신 바이트 대조. 승인 아티팩트를
         임시 파일 하나에 쓰고, 이 세션의 감사 로그 디렉터리를 「보낸
         기록」소스로 넘긴다 — 새 비교 로직을 짓지 않고
         ``verify_approval_vs_sent``를 그대로 재사용한다(REQ-LDBEAT-011(b))."""
-        approval_text = "".join(f"{line}\n" for line in batch.commands)
+        approval_text = "".join(
+            f"{line}\n" for line in (*self._beat_grid_gate_backup_lines(), *batch.commands)
+        )
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".txt", delete=False, encoding="utf-8"
         ) as handle:
@@ -11278,6 +11445,28 @@ class ChatSession:
                     last_action="apply", ok=False, reason=ownership_reason
                 )
 
+            # 카드 apply-safety(D14) — 타임코드를 먼저 정한다: 앱이 만든 옛 타임코드를 덮어쓰면
+            # 그 트랙이 가리키던 앱 시퀀스('LDBEAT …')를 재사용해 새 번호를 쌓지 않는다.
+            timecode_overwrite_notes: list[str] = []
+            timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
+                timeline.get("timecode_number"),
+                recorded_name=recorded_timecode_name,
+                overwrite_notes=timecode_overwrite_notes,
+            )
+            if timecode_reason is not None:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason=timecode_reason
+                )
+            reused_from_timecode: dict[str, int] = {}
+            stale_app_sequences: dict[int, str] = {}
+            if timecode_overwrite_notes and not owned_sequences:
+                reused_from_timecode, stale_app_sequences = (
+                    self._beat_grid_timecode_reusable_sequences(
+                        timecode_number, group_names, sequences_section
+                    )
+                )
+                owned_sequences = dict(reused_from_timecode)
+
             new_group_names = [name for name in group_names if name not in owned_sequences]
             fresh_sequence_numbers, sequence_reason = pick_sequence_numbers(
                 sequences_section, new_group_names
@@ -11290,16 +11479,6 @@ class ChatSession:
             sequence_numbers.update(fresh_sequence_numbers)
 
             apply_stage("ownership_pick")
-            timecode_overwrite_notes: list[str] = []
-            timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
-                timeline.get("timecode_number"),
-                recorded_name=recorded_timecode_name,
-                overwrite_notes=timecode_overwrite_notes,
-            )
-            if timecode_reason is not None:
-                return self._beat_grid_send_status(
-                    last_action="apply", ok=False, reason=timecode_reason
-                )
             timecode_numbers = {name: timecode_number for name in group_names}
             # 카드 tc-events — 앱이 만든 타임코드를 다시 반영하면(기록이 있거나 덮어쓰기 허용)
             # 지우고 처음부터 다시 만든다: 옛 빈 트랙이 쌓이지 않고, 새 트랙마다 Go+ 이벤트를
@@ -11383,10 +11562,13 @@ class ChatSession:
                     owned_sequences=owned_sequences,
                     owned_timecode=owned_timecode,
                     recorded_cue_numbers=recorded_cue_numbers,
+                    overwrite_all_groups=frozenset(reused_from_timecode),
                 )
 
             if clear_timecode:
-                result = clear_app_timecode_before_rebuild(result, timecode_number)
+                result = clear_app_timecode_before_rebuild(
+                    result, timecode_number, delete_sequences=tuple(sorted(stale_app_sequences))
+                )
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
                 result, recorded_cue_numbers=recorded_cue_numbers
             )
@@ -11409,6 +11591,30 @@ class ChatSession:
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
             # t563 그대로다.
             risk_reason = "박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))"
+            # 카드 apply-safety(D17) — 836줄이 접혀 있어도 대상 타임코드·시퀀스 범위·큐 수를
+            # 카드 맨 앞 줄에서 바로 본다.
+            risk_reason = (
+                _beat_grid_target_summary(result, timecode_number, sequence_numbers)
+                + " · "
+                + risk_reason
+            )
+            if reused_from_timecode:
+                listed = ", ".join(
+                    f"{name} -> 시퀀스 {number}"
+                    for name, number in sorted(reused_from_timecode.items())
+                )
+                risk_reason += (
+                    f" · 옛 타임코드의 앱 시퀀스 {len(reused_from_timecode)}개 재사용"
+                    f"(새 번호 0개): {listed}"
+                )
+            if clear_timecode and stale_app_sequences:
+                listed = ", ".join(
+                    f"{number} '{name}'" for number, name in sorted(stale_app_sequences.items())
+                )
+                risk_reason += (
+                    f" · 이번 격자와 짝이 없는 옛 앱 시퀀스 {len(stale_app_sequences)}개를 지웁니다"
+                    f"(Delete Sequence, 이름이 'LDBEAT ' 로 시작하는 것만): {listed}"
+                )
             for overwrite_note in timecode_overwrite_notes:
                 risk_reason += f" · {overwrite_note}"
             if clear_timecode:
@@ -11431,6 +11637,18 @@ class ChatSession:
                 for cue in track.cues
                 for reason in cue.skipped_fields
             ]
+            # 카드 apply-safety(D16) — M1 프로브 미통과로 보류된 칸 수를 카드에 적는다(보류 칸은
+            # 줄이 0개다 — 반영은 나머지 칸으로 진행한다).
+            held_by_probe = [cell for cell in result.blocked_cells if M1_GATE_MARK in str(cell[2])]
+            if held_by_probe:
+                risk_reason += (
+                    f" · M1 프로브 미통과로 보류된 칸 {len(held_by_probe)}개(콘솔에 보내지 않음)"
+                )
+            if self._beat_grid_gate_backup_lines():
+                risk_reason += (
+                    f" · 실행 직전 안전 백업 {BACKUP_COMMAND} 1회가 먼저 나갑니다"
+                    "(게이트 자동 백업, 이 승인 목록에 포함)"
+                )
             if unsent_entry:
                 listed = ", ".join(
                     f"{name} {bar}마디({reason})" for name, bar, reason in unsent_entry
@@ -11936,6 +12154,17 @@ class ChatSession:
             updated_grid, report = apply_arrangement_draft(grid, draft)
         except ArrangementApplyError as error:
             return self._beat_grid_rejection(str(error))
+        if updated_grid.get("tracks") == grid.get("tracks"):
+            # 바뀐 칸이 0개면 성공처럼 보이게 두지 않는다(리드 지시 2026-10-16) — 상태 이벤트도
+            # 실패로 보내 화면의 「적용 완료」 단계가 켜지지 않게 한다.
+            reason = (
+                "자동 배치를 적용했지만 격자에서 바뀐 칸이 0개입니다 — 이미 같은 배치이거나, "
+                "남겨야 할 감독 칸이 초안 자리를 모두 차지했습니다. "
+                f"({' · '.join(report)})"
+            )
+            event = self._beat_grid_rejection(reason)
+            self._beat_grid_send_status(last_action="edit", ok=False, reason=reason)
+            return event
         self._draft_history.record(timeline)
         updated_timeline = dict(timeline)
         updated_timeline["beat_grid"] = updated_grid

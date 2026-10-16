@@ -626,6 +626,7 @@ def apply_beat_grid_ownership_reuse(
     owned_sequences: Mapping[str, int],
     owned_timecode: int | None,
     recorded_cue_numbers: Mapping[str, Mapping[int, int]],
+    overwrite_all_groups: frozenset[str] = frozenset(),
 ) -> BeatGridEmitResult:
     """재적용 — 소유권 확인을 이미 통과한 (그룹 -> 시퀀스 번호) 묶음과
     (있다면) 소유한 타임코드 번호를 받아, 방금 에미터가 낸 **전체** 번들
@@ -670,7 +671,7 @@ def apply_beat_grid_ownership_reuse(
         recorded = recorded_cue_numbers.get(track.group_name) or {}
         cues = tuple(
             _overwrite_store_cue(cue, sequence_number=track.sequence_number)
-            if cue.bar in recorded
+            if cue.bar in recorded or track.group_name in overwrite_all_groups
             else cue
             for cue in track.cues
         )
@@ -715,7 +716,9 @@ def apply_beat_grid_ownership_reuse(
 
 
 def clear_app_timecode_before_rebuild(
-    result: BeatGridEmitResult, timecode_number: int
+    result: BeatGridEmitResult,
+    timecode_number: int,
+    delete_sequences: Sequence[int] = (),
 ) -> BeatGridEmitResult:
     """카드 tc-events — 앱이 만든 ``LDBEAT Timecode N`` 을 같은 번호로 다시 반영할 때, 옛 트랙
     (콘솔이 덧붙인 빈 ``Track 9`` 따위)이 쌓이지 않도록 그 타임코드를 **먼저 지우고** 새로
@@ -724,7 +727,17 @@ def clear_app_timecode_before_rebuild(
     (``Delete Timecode 70 /NoConfirm`` → ``OK`` + 사후 empty).
 
     이 번호를 다시 만드는 줄(``Store Timecode N``)이 번들에 없으면 지우기만 하게 되므로
-    아무것도 하지 않는다."""
+    아무것도 하지 않는다.
+
+    ``delete_sequences``(카드 apply-safety, D14) — 덮어쓰는 옛 타임코드가 가리키던 앱 시퀀스
+    가운데 이번 격자 그룹과 짝이 안 맞아 재사용하지 못한 것. 타임코드를 지운 **뒤** 같은 번들에서
+    지운다(타임코드가 참조하는 동안 지우지 않는다). 호출자가 ``LDBEAT `` 접두를 확인한
+    번호만 넘긴다.
+
+    # @MX:WARN: [AUTO] ``Delete Sequence <n> /NoConfirm`` 는 ``Delete Timecode N /NoConfirm``
+    #   (t608 v2 실기 선례)과 같은 꼴의 가설 문법이다 — 이 저장소에 실기 선례가 없다.
+    # @MX:REASON: 거절되면 승인 카드가 그 줄을 보이므로 감독이 보고, 이 함수의 줄 모양만 고친다.
+    """
     store_line = f"Store Timecode {timecode_number}"
     if store_line not in result.timecode_setup_commands:
         return result
@@ -732,6 +745,7 @@ def clear_app_timecode_before_rebuild(
         result,
         timecode_setup_commands=(
             f"Delete Timecode {timecode_number} /NoConfirm",
+            *(f"Delete Sequence {number} /NoConfirm" for number in delete_sequences),
             *result.timecode_setup_commands,
         ),
     )
