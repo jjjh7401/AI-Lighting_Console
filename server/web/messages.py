@@ -1689,7 +1689,43 @@ def cue_monitor_event(*, executors: list[dict], history: list[dict]) -> dict:
     return _event("cue_monitor", executors=list(executors), history=list(history))
 
 
+def fill_bar_map_header(timeline: dict) -> dict:
+    """화면 머리말(BPM·마디 수·박자표)이 비었으면 작업본의 마디 지도에서 채운다.
+
+    SPEC-LDRHYTHM-001 재실행 2 N2 — 새 분석 작업본은 머리말 키 없이 ``bar_map`` 만 싣는다
+    (#793 이전에 만든 작업본은 ``bpm`` 도 없다). 같은 음원이면 작업본을 다시 만들지 않으므로
+    상단 바·런북 헤더가 「BPM —」로 남았다. 이미 있는 키는 건드리지 않고, 마디 지도에 값이
+    없으면 채우지 않는다(지어내지 않는다). ``seconds_per_bar`` 는 재생 환산이 읽는 값이라
+    여기서 채우지 않는다 — 표시만 고친다. 라이브러리 불러오기 응답(``timeline_api``)도 같은
+    함수를 거쳐 새 연결 재생과 같은 값을 보낸다(카드 t644)."""
+    bar_map = timeline.get("bar_map")
+    if not isinstance(bar_map, dict):
+        return timeline
+    filled: dict = {}
+    bpm = bar_map.get("bpm")
+    if (
+        "bpm" not in timeline
+        and isinstance(bpm, (int, float))
+        and not isinstance(bpm, bool)
+        and math.isfinite(bpm)
+        and bpm > 0
+    ):
+        filled["bpm"] = float(bpm)
+    bars = bar_map.get("bars")
+    if "bar_count" not in timeline and isinstance(bars, list) and bars:
+        filled["bar_count"] = len(bars)
+    signature = bar_map.get("time_signature")
+    if (
+        "time_signature" not in timeline
+        and isinstance(signature, list)
+        and len(signature) == 2
+        and all(isinstance(part, int) and not isinstance(part, bool) for part in signature)
+    ):
+        filled["time_signature"] = f"{signature[0]}/{signature[1]}"
+    return {**timeline, **filled} if filled else timeline
+
+
 def song_timeline_event(*, timeline: dict) -> dict:
     """Read-only director timeline projection. The payload deliberately carries
     no console commands; execution remains behind the server approval gate."""
-    return _event("song_timeline", timeline=timeline)
+    return _event("song_timeline", timeline=fill_bar_map_header(timeline))

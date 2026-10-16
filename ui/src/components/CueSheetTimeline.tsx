@@ -76,9 +76,21 @@ export function formatBpm(bpm: number | null | undefined): string {
   return String(Math.round(bpm * 100) / 100);
 }
 
-/** Q# 라벨. 정본은 Q010 처럼 세 자리로 적는다. */
+/** Q# 라벨. 정본은 Q010 처럼 세 자리로 적는다.
+ * 새 분석 작업본의 구간은 큐 번호가 없다(큐는 박자 격자 칸마다 생긴다) — 그때는
+ * 「Qundefined」 대신 빈 칸 표시를 쓴다(재실행 2 N3). */
 export function cueLabel(section: SongTimelineSection): string {
-  return `Q${String(section.cue_number).padStart(3, "0")}`;
+  // 타입은 숫자지만 새 분석 작업본의 구간은 이 키가 없다(서버 페이로드 그대로) — 실행 값으로 가른다.
+  const cue: unknown = section.cue_number;
+  if (typeof cue !== "number" || !Number.isFinite(cue)) return `Q${EMPTY_CELL}`;
+  return `Q${String(cue).padStart(3, "0")}`;
+}
+
+/** 머리말의 TC 출처 — 출처가 없으면 반영할 콘솔 타임코드 번호라도 보여 준다. 둘 다 없으면 빈 칸. */
+export function tcSourceText(timeline: Pick<SongTimelineView, "tc_source" | "timecode_number">): string {
+  if (typeof timeline.tc_source === "string" && timeline.tc_source.trim()) return timeline.tc_source;
+  const number = timeline.timecode_number;
+  return typeof number === "number" && Number.isFinite(number) ? `Timecode ${number}` : EMPTY_CELL;
 }
 
 /** 곡 전체 길이. 헤더 메타가 없으면 마지막 구간 끝에서 역산한다. */
@@ -458,7 +470,7 @@ export function CueSheetTimeline({
               ? ""
               : ` · 1마디 ${timeline.seconds_per_bar.toFixed(3)}s`}
           </code>
-          <code>TC_SOURCE: {cell(timeline.tc_source)}</code>
+          <code>TC_SOURCE: {tcSourceText(timeline)}</code>
           <code>{sections.length} cues</code>
           {timeline.tc_origin !== undefined && <span>TC_ORIGIN: {timeline.tc_origin}</span>}
         </div>
