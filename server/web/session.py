@@ -381,6 +381,7 @@ from server.web.messages import (
     progress_event,
     proposal_event,
     question_request_event,
+    question_resolved_event,
     review_request_event,
     song_audio_link_begin_event,
     song_audio_link_chunk_event,
@@ -391,6 +392,8 @@ from server.web.messages import (
 )
 from server.web.preview import build_execution_preview
 from server.web.question import (
+    SONG_CONFIRMATION_GROUP,
+    SUPERSEDED,
     UNANSWERED,
     ConfirmedSongAnalysis,
     ConfirmedSongSection,
@@ -4362,7 +4365,11 @@ class ChatSession:
         if review_channel is not None:
             review_channel.bind(self._notify_review, session_key=self._session_key)
         if question_channel is not None:
-            question_channel.bind(self._notify_question, session_key=self._session_key)
+            question_channel.bind(
+                self._notify_question,
+                session_key=self._session_key,
+                withdraw=self._notify_question_withdrawn,
+            )
         # 리허설 편집: the live CurrentCue read rides the gate's own state
         # port (it also implements query_property — the same adoption
         # build_toolset performs). Tests stub this attribute directly.
@@ -4539,6 +4546,10 @@ class ChatSession:
 
     def _notify_question(self, request_id: str, request: QuestionRequest) -> None:
         self._send(question_request_event(request_id=request_id, request=request))
+
+    def _notify_question_withdrawn(self, request_id: str) -> None:
+        # 새 분석에 밀려 거둬진 물음 — 화면의 카드를 닫는다. 답은 없다(거부도 미응답도 아니다).
+        self._send(question_resolved_event(request_id=request_id, answer=SUPERSEDED))
 
     def _emit_progress(self, *, phase: str, detail: str, seq: int) -> None:
         """오케스트레이터의 진행 한 줄을 이 연결의 이벤트 싱크로 이어 붙인다.
@@ -14314,7 +14325,15 @@ class ChatSession:
             # 볼 사람이 없는 카드는 카드가 아니다. 확정도 없다.
             answer = UNANSWERED
         else:
-            answer = self._question_channel.ask(card, session_key=self._session_key)
+            answer = self._question_channel.ask(
+                card, session_key=self._session_key, group=SONG_CONFIRMATION_GROUP
+            )
+        if answer == SUPERSEDED:
+            # 새 분석이 대체했다 — 이 결과는 BPM·구간 기록에 쓰지 않는다.
+            return self._notify(
+                "새 분석이 이 확인 카드를 대체했습니다 — 이 분석의 결과는 쓰지 않습니다. "
+                "새 카드에 답해 주세요."
+            )
 
         confirmed_bpm = parse_confirmed_bpm(answer, measured_bpm=measured_bpm)
         resolution = resolve_bpm(
