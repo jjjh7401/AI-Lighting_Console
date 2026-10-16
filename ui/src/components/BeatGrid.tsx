@@ -593,6 +593,8 @@ export interface BeatGridProps {
   onApply?: () => void;
   /** 승인 카드가 떠 있는가 — 진행 문구와 거절 알림 숨김에 쓴다(카드 apply-latency). */
   approvalPending?: boolean;
+  /** 「승인 카드를 기다리는 중」 문구를 눌렀을 때 — 전체화면 위 승인 카드로 옮긴다. */
+  onApprovalNoteClick?: () => void;
   /** 「필요한 프리셋 만들기」 — 서버가 계획표(chat_response)를 먼저 보내고 승인 카드를 띄운다. */
   onPresetPlanRequest?: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
@@ -1559,6 +1561,7 @@ export function BeatGrid({
   onPreviewOff,
   onApply,
   approvalPending = false,
+  onApprovalNoteClick,
   onPresetPlanRequest,
   timecodeNumber,
   onTimecodeSubmit,
@@ -2484,6 +2487,7 @@ export function BeatGrid({
         onPreviewOff={onPreviewOff}
         onApply={requestApply}
         applyProgress={applyProgressText}
+        onApplyProgressClick={approvalPending ? onApprovalNoteClick : undefined}
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
