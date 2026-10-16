@@ -198,6 +198,9 @@ class TestEmptySlots:
         occupied |= {f"4.{slot}" for slot in _COLOR_CHILDREN}
         occupied |= {f"2.{slot}" for slot in _POSITION_CHILDREN}
         for preset in plan.presets:
+            # 칸 미정 색은 번호를 잡지 않는다 — 확인할 번호가 없으니 건너뛴다.
+            if preset.slot is None:
+                continue
             assert preset.slot not in occupied, f"{preset.name} 이 점유된 번호 {preset.slot}"
             assert not _in_effect_band(preset.slot), f"{preset.name} 이 효과 번호대 {preset.slot}"
 

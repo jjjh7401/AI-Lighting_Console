@@ -44,4 +44,10 @@ class TestPlanTableAndSongAnnotations:
 
     def test_the_loaded_song_reads_its_own_annotation_file(self) -> None:
         annotations = load_preset_annotations(LOVE_ATTACK_TITLE)
-        assert [entry["console_name"] for entry in annotations["colors"]] == ["LAVENDER"]
+        # 색 줄 네 개 — 2026-10-16 색 채우기(규칙 문서 §3·§4 에서 옮긴 값, 전부 감독이 고칠 값).
+        assert [entry["console_name"] for entry in annotations["colors"]] == [
+            "LAVENDER",
+            "SKY",
+            "PINK",
+            "PITCH",
+        ]
