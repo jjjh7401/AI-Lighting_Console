@@ -73,7 +73,7 @@ def apply_arrangement_draft(
             label = draft_cue["label"]
             existing = cues_by_bar.get(bar)
             if existing is None:
-                cues_by_bar[bar] = normalize_beat_grid_cue({"bar": bar, "label": label})
+                cues_by_bar[bar] = normalize_beat_grid_cue(dict(draft_cue))
                 created_cells += 1
                 continue
             if existing["label"] != label:

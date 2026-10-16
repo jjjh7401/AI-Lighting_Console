@@ -5,7 +5,8 @@
 같은 결과다.
 
 출력 트랙과 칸은 박자 격자의 모양(``BeatGridTrack``·``BeatGridCue``)을 그대로 따른다. 모든
-마디의 모든 칸을 채운다. 쉬는 칸은 명시적 쉼(「—」)이고, 정지·유지 칸은 값이다.
+마디의 모든 칸을 채운다. 쉬는 칸은 명시적 쉼(「—」)이고, 정지·유지 칸은 값이다. 칸의 라벨과
+구조화 값(밝기·진입·움직임)은 같은 규칙 결정(``_cell_plan``)에서 함께 나온다.
 
 - 구간은 마디 4개씩 고정으로 나눈다. 구간마다 주인공 층 하나와 보조 층 하나가 움직이고,
   드롭 구간에서만 셋이 움직인다(규칙 3). 주인공은 펄스 → 체이스 → 움직임 순으로 바뀐다(규칙 4).
@@ -18,11 +19,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Any, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 from server.audio.bar_map_store import validate_bar_map
 from server.design.arrange_policy import ArrangementPolicy
 from server.design.beat_grid import (
+    BeatGridCue,
     BeatGridTrack,
     find_overlapping_group_tracks,
     normalize_beat_grid_cue,
@@ -59,6 +61,13 @@ _MOTION = "motion"
 #: 정적 역할. 리듬을 타지 않고 구간 내내 켜 둔다.
 _STATIC_ROLES = frozenset({"key", "audience", "wash"})
 
+#: 무빙 칸의 움직임 모양과 축. 「팬 웨이브」 규칙값이고 곡 전용 값이 아니다.
+_MOTION_SHAPE = "wave"
+_MOTION_AXES = ("pan",)
+# 밝기·트리거·움직임 주기 같은 숫자는 ``ArrangementPolicy`` 에 든다(REQ-LDARRANGE-004).
+# 펄스·체이스의 패턴은 효과 프리셋의 몫이라 여기서는 밝기만 정한다.
+# 효과·위치·색 번호는 콘솔에서 와야 하므로 지어내지 않는다.
+
 
 class ArrangementWindow(TypedDict):
     """4마디 구간 하나의 배치 결정. 주인공과 움직이는 층을 담는다."""
@@ -82,6 +91,19 @@ class ArrangementDraft(TypedDict):
     source: str
     #: 정상이면 None, 마디 지도가 없거나 쓸 수 없으면 안내 문장.
     note: str | None
+
+
+class _CellPlan(NamedTuple):
+    """칸 하나의 규칙 결정. 라벨과 구조화 값을 한 곳에서 함께 만든다.
+
+    라벨에서 값을 역산하지 않는다.
+    """
+
+    label: str
+    brightness_percent: int
+    movement_shape: str | None
+    #: 어느 규칙 칸인지. 칸의 ``source_ref`` 로 남아 감독이 출처를 본다.
+    kind: str
 
 
 # @MX:NOTE: [AUTO] 마디 지도와 트랙 구성만 받는 순수 함수다. 파일이나 콘솔에 닿지 않는다.
@@ -118,7 +140,7 @@ def generate_arrangement_draft(
 
     voices = _voices(layout)
     movers = [str(track["group_name"]) for track in layout if track.get("layer_role") == "mover"]
-    labels: dict[str, dict[int, str]] = {str(track["group_name"]): {} for track in layout}
+    plans: dict[str, dict[int, _CellPlan]] = {str(track["group_name"]): {} for track in layout}
     windows: list[ArrangementWindow] = []
     motion_turn = 0
     for window_id in sorted({bar // settings.window_bars for bar in bar_numbers}):
@@ -148,13 +170,13 @@ def generate_arrangement_draft(
         for track in layout:
             name = str(track["group_name"])
             for bar in bars_here:
-                labels[name][bar] = _cell_label(
+                plans[name][bar] = _cell_plan(
                     track,
                     active=active,
                     moving=moving,
                     is_kick=bar in kick_bars,
                     is_drop_start=bar in drop_starts,
-                    slow=settings.slow_song,
+                    settings=settings,
                 )
 
     tracks = [
@@ -164,9 +186,7 @@ def generate_arrangement_draft(
             group_name=str(track["group_name"]),
             layer_role=track.get("layer_role"),
             cues=[
-                normalize_beat_grid_cue(
-                    {"bar": bar, "label": labels[str(track["group_name"])][bar]}
-                )
+                _draft_cue(bar, plans[str(track["group_name"])][bar], settings)
                 for bar in bar_numbers
             ],
         )
@@ -202,27 +222,61 @@ def _voices(layout: Sequence[Mapping[str, Any]]) -> list[str]:
     return [voice for voice, role in ordered if role in roles]
 
 
-def _cell_label(
+def _rest_plan(settings: ArrangementPolicy, kind: str = "rest") -> _CellPlan:
+    return _CellPlan(REST_LABEL, settings.rest_percent, None, kind)
+
+
+def _cell_plan(
     track: Mapping[str, Any],
     *,
     active: Sequence[str],
     moving: str | None,
     is_kick: bool,
     is_drop_start: bool,
-    slow: bool,
-) -> str:
+    settings: ArrangementPolicy,
+) -> _CellPlan:
     role = track.get("layer_role")
     name = str(track["group_name"])
+    lit = settings.lit_percent
     if role == "back":
-        return PULSE_LABEL if _PULSE in active else REST_LABEL
+        if _PULSE in active:
+            return _CellPlan(PULSE_LABEL, lit, None, "pulse")
+        return _rest_plan(settings)
     if role == "side":
-        return CHASE_LABEL if _CHASE in active else REST_LABEL
+        if _CHASE in active:
+            return _CellPlan(CHASE_LABEL, lit, None, "chase")
+        return _rest_plan(settings)
     if role == "mover":
-        return MOTION_LABEL if moving == name else HOLD_LABEL
+        if moving == name:
+            return _CellPlan(MOTION_LABEL, lit, _MOTION_SHAPE, "motion")
+        return _CellPlan(HOLD_LABEL, lit, None, "hold")
     if role == "effect":
         if "STROBE" in name.upper():
-            return STROBE_LABEL if is_drop_start and not slow else REST_LABEL
-        return BLIND_LABEL if is_kick else REST_LABEL
+            if is_drop_start and not settings.slow_song:
+                return _CellPlan(STROBE_LABEL, lit, None, "strobe")
+            return _rest_plan(settings)
+        if is_kick:
+            return _CellPlan(BLIND_LABEL, lit, None, "blind")
+        return _rest_plan(settings)
     if role in _STATIC_ROLES:
-        return STATIC_LABEL
-    return REST_LABEL
+        return _CellPlan(STATIC_LABEL, lit, None, "static")
+    return _rest_plan(settings)
+
+
+def _draft_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> BeatGridCue:
+    """규칙 결정 하나를 격자 칸으로 옮긴다. 값은 이 결정에서만 온다."""
+    raw: dict[str, object] = {
+        "bar": bar,
+        "label": plan.label,
+        "brightness": {"mode": "value", "value_percent": plan.brightness_percent},
+        "entry": {"trigger_beat": settings.downbeat_trigger},
+        "source_ref": f"{SOURCE}:{plan.kind}",
+    }
+    if plan.movement_shape is not None:
+        raw["app_movement"] = {
+            "shape": plan.movement_shape,
+            "axes": _MOTION_AXES,
+            "period_unit": "bar",
+            "period_value": settings.motion_period_bars,
+        }
+    return normalize_beat_grid_cue(raw)

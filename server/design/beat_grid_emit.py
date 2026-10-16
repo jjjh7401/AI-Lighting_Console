@@ -275,6 +275,30 @@ class BeatGridEmitResult:
             if cue.blocked_reason is not None
         )
 
+    @property
+    def unsent_cells(self) -> tuple[tuple[str, int], ...]:
+        """(트랙 이름, 마디) — 구조화 값이 비어 있어 사유 없이 줄을 내지 않은 칸.
+
+        거절된 칸(``blocked_cells``)과 다르다. 거절은 사유가 있고, 여기는 값이 없어서 에미터가
+        아무 줄도 내지 않은 칸이다.
+        """
+        return tuple(
+            (track.group_name, cue.bar)
+            for track in self.tracks
+            for cue in track.cues
+            if not cue.commands and cue.blocked_reason is None
+        )
+
+    @property
+    def unsent_notices(self) -> tuple[str, ...]:
+        """반영 결과와 승인 카드에 싣는 안내 한 줄. 빈 칸이 없으면 빈 튜플이다."""
+        cells = self.unsent_cells
+        if not cells:
+            return ()
+        listed = ", ".join(f"{name} {bar}마디" for name, bar in cells[:5])
+        more = f" 외 {len(cells) - 5}칸" if len(cells) > 5 else ""
+        return (f"구조화 값이 없어 송신되지 않는 칸 {len(cells)}개: {listed}{more}",)
+
 
 def _cue_attribute_commands(
     cue: Mapping[str, object],

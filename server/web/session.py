@@ -11028,7 +11028,7 @@ class ChatSession:
                     ok=False,
                     reason=reason,
                     blocked_cells=result.blocked_cells,
-                    extra_notices=result.mib_notes,
+                    extra_notices=[*result.mib_notes, *result.unsent_notices],
                 )
 
             if owned_sequences or owned_timecode is not None:
@@ -11081,6 +11081,9 @@ class ChatSession:
                     f"{name} {bar}마디({reason})" for name, bar, reason in unsent_entry
                 )
                 risk_reason += f" · 보내지 않은 전환 칸 {len(unsent_entry)}개: {listed}"
+            # 구조화 값이 비어 사유 없이 줄을 내지 않은 칸도 승인 전에 보인다(거절 칸과 다르다).
+            if result.unsent_cells:
+                risk_reason += f" · {result.unsent_notices[0]}"
 
             # 카드 t577(REQ-LDBEAT-015(h-2)) — 편집 시점에 거절하지 않고
             # 초안에 받아들인 승인 대기 프리셋 번호를 이 승인 카드가 "새로
@@ -11296,7 +11299,7 @@ class ChatSession:
                 last_action="apply",
                 ok=True,
                 blocked_cells=result.blocked_cells,
-                extra_notices=result.mib_notes,
+                extra_notices=[*result.mib_notes, *result.unsent_notices],
                 approval_vs_sent={
                     "sha256": batch.sha256,
                     "cell_count": batch.cell_count,
