@@ -247,6 +247,9 @@ describe("reduceServerEvent — beat_grid_send_status (카드 t563)", () => {
       reason: null,
       blocked_cells: [],
       approval_vs_sent: null,
+      // 반영 흐름의 선택 필드 둘 — 서버가 키를 싣지 않았으면 리듀서가 `null` 로 맞춘다.
+      completed: null,
+      timecode_suggestion: null,
     });
 
     // 코디네이터 계약(t568과 합의) — 스냅샷이 없으면 대기 수는 null이다
@@ -265,6 +268,36 @@ describe("reduceServerEvent — beat_grid_send_status (카드 t563)", () => {
     );
     expect(second.beatGridSendStatus?.pending_apply_count).toBeNull();
     expect(second.beatGridSendStatus?.last_action).toBe("apply");
+  });
+
+  it("carries the flow-chain fields `completed` and `timecode_suggestion` through — and does not keep them for the next event", () => {
+    const base = {
+      type: "beat_grid_send_status",
+      pending_apply_count: 0,
+      last_action: "apply",
+      ok: true,
+      reason: null,
+      blocked_cells: [],
+      approval_vs_sent: null,
+    };
+
+    const saved = reduceServerEvent(
+      initialState,
+      event({ ...base, completed: "preset_saved", timecode_suggestion: 12 }),
+    );
+    expect(saved.beatGridSendStatus?.completed).toBe("preset_saved");
+    expect(saved.beatGridSendStatus?.timecode_suggestion).toBe(12);
+
+    for (const step of ["draft_applied", "reflected"] as const) {
+      const next = reduceServerEvent(saved, event({ ...base, completed: step }));
+      expect(next.beatGridSendStatus?.completed).toBe(step);
+      expect(next.beatGridSendStatus?.timecode_suggestion).toBeNull();
+    }
+
+    // 다음 응답에 키가 없으면(서버는 null 을 싣지 않는다) 앞 응답의 값이 남지 않는다.
+    const plain = reduceServerEvent(saved, event({ ...base, last_action: "edit" }));
+    expect(plain.beatGridSendStatus?.completed).toBeNull();
+    expect(plain.beatGridSendStatus?.timecode_suggestion).toBeNull();
   });
 });
 

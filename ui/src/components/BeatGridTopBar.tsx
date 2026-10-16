@@ -9,6 +9,13 @@
 // 없으면 버튼이 비활성으로 남고, 그 사실을 title 로 말한다(지어낸 동작 0).
 import { useEffect, useState } from "react";
 
+import {
+  FLOW_STEPS,
+  FLOW_STEP_LABEL,
+  flowNextText,
+  nextFlowStep,
+  type FlowDone,
+} from "./beatgrid/flowChain";
 import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
 
 export interface TopBarAction {
@@ -142,6 +149,11 @@ export interface BeatGridTopBarProps {
    * `onTimecodeSubmit`이 없으면 입력칸은 비활성이고 title 로 그 이유를 말한다. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
+  /** 반영 흐름(프리셋 저장 → 반영 → 콘솔 재생) 띠. 넘기면 상단 바 **아래**에 별도 줄로 그리고(상단 바
+   * 한 줄 배치는 건드리지 않는다), 다음 단계가 「반영」이면 「⇪ 콘솔에 반영」 버튼을 강조한다.
+   * `done` 은 단계별 완료 여부, `timecodeSuggestion` 은 서버가 권한 타임코드 번호(없으면 `null`).
+   * 생략하거나 `null`이면 띠도 강조도 없이 기존과 바이트 동일하다. */
+  flow?: { done: FlowDone; timecodeSuggestion: number | null } | null;
 }
 
 function TimecodeField({
@@ -211,6 +223,7 @@ timecodeNumber = null,
   onDrawerToggle,
   onDraftPropose,
   playback = null,
+  flow = null,
 }: BeatGridTopBarProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -266,177 +279,209 @@ timecodeNumber = null,
   const barSectionSuffix = barSectionLabel ? (
     <span className="beat-grid-topbar-bar-section">{` · ${barSectionLabel}`}</span>
   ) : null;
+  // 반영 흐름 띠 — `flow` 가 있을 때만 쓴다. 다음 단계, 그 단계의 안내 한 줄, 서버가 권한 번호.
+  const nextFlow = flow ? nextFlowStep(flow.done) : null;
+  const flowNextLine = flow ? flowNextText(nextFlow, timecodeNumber, flow.timecodeSuggestion) : null;
+  const flowSuggestion = flow?.timecodeSuggestion ?? null;
 
   return (
-    <header className="beat-grid-topbar">
-      <b className="beat-grid-topbar-mode">런북 모드</b>
-      <span className="beat-grid-pill beat-grid-song">{songTitle || "(곡 미지정)"}</span>
-      {versionLabel && <span className="beat-grid-pill">{versionLabel}</span>}
-      <span className="beat-grid-pill" title={SPEED_MASTER_MANUAL_TITLE}>
-        {/* 카드 t587 — 1450px 이상에서는 긴 안내 대신 짧은 안내를 보인다(한 줄
-            유지). 어느 폭에서도 「콘솔에서 설정」이 눈에 보여야 자동 설정처럼
-            읽히지 않는다(REQ-LDBEAT-014) — 긴 문장은 알약 title. */}
-        {formatTopBarBpm(bpm)}
-        <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
-        <span className="beat-grid-pill-note-short"> · {SPEED_MASTER_MANUAL_SHORT_NOTE}</span>
-      </span>
-      <span className="beat-grid-topbar-spacer" />
-      {/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데).
-          두 번째 스페이서(아래)로 가운데 고정 — `playback`이 없으면(즉
-          생략) 이 블록 전체가 안 나오고 위 스페이서 하나만 남아 기존
-          (카드 t559)과 바이트 동일하다. */}
-      {playback && (
-        <>
-          {/* 시안 순서 그대로(proposal.html `.play`): 플레이 · ⏮ · ⏪ 10초 ·
-              ▶ 재생 · 10초 ⏩ · 시계 · ♪ 음원 · 콘솔 같이. */}
-          <span className="beat-grid-play-cluster">
-            <span className="beat-grid-play-label">플레이</span>
-            <button type="button" className="tbtn" title="처음으로" onClick={playback.onRewindToStart}>
-              ⏮
-            </button>
-            <button type="button" className="tbtn" title="10초 뒤로" onClick={() => playback.onSeek(-10)}>
-              ⏪ 10초
-            </button>
-            <button
-              type="button"
-              className="tbtn pri"
-              title="재생 / 일시정지 (스페이스)"
-              onClick={playback.onTogglePlay}
-            >
-              {playback.playing ? "❚❚ 일시정지" : "▶ 재생"}
-            </button>
-            <button type="button" className="tbtn" title="10초 앞으로" onClick={() => playback.onSeek(10)}>
-              10초 ⏩
-            </button>
-            <span className="beat-grid-clock">{formatPlaybackClock(playback.positionSeconds)}</span>
-            <label
-              className="tbtn beat-grid-audio-label"
-              title={`${playback.audioButtonLabel} — 음원 파일을 불러오면 음악에 맞춰 재생`}
-            >
-              {/* 1450px 이상에서는 「♪ ✓」만 보이고(lbl-short), 파일명은 title 로 옮긴다 — 상단 바 한 줄 유지. */}
-              <span className="lbl-full">♪ {playback.audioButtonLabel}</span>
-              <span className="lbl-short">♪ {playback.audioButtonShortLabel ?? playback.audioButtonLabel}</span>
-              <input
-                type="file"
-                accept="audio/*"
-                hidden
-                onChange={(event) => playback.onSelectAudioFile(event.target.files?.[0] ?? null)}
-              />
-            </label>
-            {playback.onToggleConsoleFollow ? (
+    <>
+      <header className="beat-grid-topbar">
+        <b className="beat-grid-topbar-mode">런북 모드</b>
+        <span className="beat-grid-pill beat-grid-song">{songTitle || "(곡 미지정)"}</span>
+        {versionLabel && <span className="beat-grid-pill">{versionLabel}</span>}
+        <span className="beat-grid-pill" title={SPEED_MASTER_MANUAL_TITLE}>
+          {/* 카드 t587 — 1450px 이상에서는 긴 안내 대신 짧은 안내를 보인다(한 줄
+              유지). 어느 폭에서도 「콘솔에서 설정」이 눈에 보여야 자동 설정처럼
+              읽히지 않는다(REQ-LDBEAT-014) — 긴 문장은 알약 title. */}
+          {formatTopBarBpm(bpm)}
+          <span className="beat-grid-pill-note"> · {SPEED_MASTER_MANUAL_NOTE}</span>
+          <span className="beat-grid-pill-note-short"> · {SPEED_MASTER_MANUAL_SHORT_NOTE}</span>
+        </span>
+        <span className="beat-grid-topbar-spacer" />
+        {/* 카드 t570(REQ-LDBEAT-024(a)) — 플레이 묶음(상단 바 가운데).
+            두 번째 스페이서(아래)로 가운데 고정 — `playback`이 없으면(즉
+            생략) 이 블록 전체가 안 나오고 위 스페이서 하나만 남아 기존
+            (카드 t559)과 바이트 동일하다. */}
+        {playback && (
+          <>
+            {/* 시안 순서 그대로(proposal.html `.play`): 플레이 · ⏮ · ⏪ 10초 ·
+                ▶ 재생 · 10초 ⏩ · 시계 · ♪ 음원 · 콘솔 같이. */}
+            <span className="beat-grid-play-cluster">
+              <span className="beat-grid-play-label">플레이</span>
+              <button type="button" className="tbtn" title="처음으로" onClick={playback.onRewindToStart}>
+                ⏮
+              </button>
+              <button type="button" className="tbtn" title="10초 뒤로" onClick={() => playback.onSeek(-10)}>
+                ⏪ 10초
+              </button>
               <button
                 type="button"
-                className={`tbtn${playback.consoleFollowOn ? " pri" : ""}`}
-                title="켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다"
-                aria-pressed={!!playback.consoleFollowOn}
-                onClick={playback.onToggleConsoleFollow}
+                className="tbtn pri"
+                title="재생 / 일시정지 (스페이스)"
+                onClick={playback.onTogglePlay}
               >
-                {playback.consoleFollowOn ? "콘솔 같이 켬" : "콘솔 같이 끔"}
+                {playback.playing ? "❚❚ 일시정지" : "▶ 재생"}
               </button>
-            ) : (
-              <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
-                콘솔 같이 끔
+              <button type="button" className="tbtn" title="10초 앞으로" onClick={() => playback.onSeek(10)}>
+                10초 ⏩
               </button>
-            )}
-            {playback.consoleFollowError && (
-              <span className="beat-grid-audio-error">{playback.consoleFollowError}</span>
-            )}
-            {playback.audioFailureReason && (
-              <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>
-            )}
-          </span>
-          <span className="beat-grid-topbar-spacer" />
-        </>
-      )}
-      <button
-        type="button"
-        className="tbtn"
-        title="이전 마디 (←)"
-        disabled={currentBar <= barRange.start}
-        onClick={() => onBarChange(stepBar(currentBar, -1, barRange))}
-      >
-        ◀
-      </button>
-      <span className="beat-grid-topbar-bar" title={barTitle}>{currentBar}마디{barSectionSuffix}</span>
-      <button
-        type="button"
-        className="tbtn"
-        title="다음 마디 (→)"
-        disabled={currentBar >= barRange.end}
-        onClick={() => onBarChange(stepBar(currentBar, 1, barRange))}
-      >
-        ▶
-      </button>
-      <button
-        type="button"
-        className="tbtn pri"
-        title={titleFor(preview.full, !!onPreviewBar)}
-        disabled={!onPreviewBar}
-        onClick={() => onPreviewBar?.(currentBar)}
-      >
-        <ShortenedLabel action={preview} />
-      </button>
-      <button
-        type="button"
-        className="tbtn"
-        title={titleFor("■ 끄기", !!onPreviewOff)}
-        disabled={!onPreviewOff}
-        onClick={() => onPreviewOff?.()}
-      >
-        ■ 끄기
-      </button>
-      <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
-      {/* 격자 출처 안내(감독 상태)는 반영 배지 툴팁으로 옮겼다. 배지가 없는 배선 전 상태에서만 버튼 title 에 싣는다. */}
-      <button
-        type="button"
-        className="tbtn"
-        title={
-          pendingApplyCount === undefined
-            ? badgeTitle(titleFor(apply.full, !!onApply), note)
-            : titleFor(apply.full, !!onApply)
-        }
-        disabled={!onApply}
-        onClick={() => onApply?.()}
-      >
-        <ShortenedLabel action={apply} />
-        {typeof pendingApplyCount === "number" && (
-          <span className="badge" title={badgeTitle(null, note)}>
-            {pendingApplyCount}
-          </span>
+              <span className="beat-grid-clock">{formatPlaybackClock(playback.positionSeconds)}</span>
+              <label
+                className="tbtn beat-grid-audio-label"
+                title={`${playback.audioButtonLabel} — 음원 파일을 불러오면 음악에 맞춰 재생`}
+              >
+                {/* 1450px 이상에서는 「♪ ✓」만 보이고(lbl-short), 파일명은 title 로 옮긴다 — 상단 바 한 줄 유지. */}
+                <span className="lbl-full">♪ {playback.audioButtonLabel}</span>
+                <span className="lbl-short">♪ {playback.audioButtonShortLabel ?? playback.audioButtonLabel}</span>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  hidden
+                  onChange={(event) => playback.onSelectAudioFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
+              {playback.onToggleConsoleFollow ? (
+                <button
+                  type="button"
+                  className={`tbtn${playback.consoleFollowOn ? " pri" : ""}`}
+                  title="켜면 ▶ 가 콘솔 타임코드를 처음부터 재생하고, 음원은 실측 지연 뒤 시작합니다"
+                  aria-pressed={!!playback.consoleFollowOn}
+                  onClick={playback.onToggleConsoleFollow}
+                >
+                  {playback.consoleFollowOn ? "콘솔 같이 켬" : "콘솔 같이 끔"}
+                </button>
+              ) : (
+                <button type="button" className="tbtn" title={playback.consoleFollowDisabledReason} disabled>
+                  콘솔 같이 끔
+                </button>
+              )}
+              {playback.consoleFollowError && (
+                <span className="beat-grid-audio-error">{playback.consoleFollowError}</span>
+              )}
+              {playback.audioFailureReason && (
+                <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>
+              )}
+            </span>
+            <span className="beat-grid-topbar-spacer" />
+          </>
         )}
-        {pendingApplyCount === null && (
-          <span
-            className="badge badge-dash"
-            title={badgeTitle("반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다", note)}
-          >
-            —
-          </span>
-        )}
-      </button>
-      {applyProgress && (
-        <span className="beat-grid-apply-progress" role="status">
-          {applyProgress}
-        </span>
-      )}
-      {onDraftPropose && (
         <button
           type="button"
           className="tbtn"
-          title="자동 배치 제안 — 초안을 보류로 만든다. 「적용」 전까지 격자는 그대로다"
-          onClick={() => onDraftPropose()}
+          title="이전 마디 (←)"
+          disabled={currentBar <= barRange.start}
+          onClick={() => onBarChange(stepBar(currentBar, -1, barRange))}
         >
-          자동 배치
+          ◀
         </button>
+        <span className="beat-grid-topbar-bar" title={barTitle}>{currentBar}마디{barSectionSuffix}</span>
+        <button
+          type="button"
+          className="tbtn"
+          title="다음 마디 (→)"
+          disabled={currentBar >= barRange.end}
+          onClick={() => onBarChange(stepBar(currentBar, 1, barRange))}
+        >
+          ▶
+        </button>
+        <button
+          type="button"
+          className="tbtn pri"
+          title={titleFor(preview.full, !!onPreviewBar)}
+          disabled={!onPreviewBar}
+          onClick={() => onPreviewBar?.(currentBar)}
+        >
+          <ShortenedLabel action={preview} />
+        </button>
+        <button
+          type="button"
+          className="tbtn"
+          title={titleFor("■ 끄기", !!onPreviewOff)}
+          disabled={!onPreviewOff}
+          onClick={() => onPreviewOff?.()}
+        >
+          ■ 끄기
+        </button>
+        <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
+        {/* 격자 출처 안내(감독 상태)는 반영 배지 툴팁으로 옮겼다. 배지가 없는 배선 전 상태에서만 버튼 title 에 싣는다. */}
+        <button
+          type="button"
+          className={nextFlow === "reflect" ? "tbtn is-next" : "tbtn"}
+          title={
+            pendingApplyCount === undefined
+              ? badgeTitle(titleFor(apply.full, !!onApply), note)
+              : titleFor(apply.full, !!onApply)
+          }
+          disabled={!onApply}
+          onClick={() => onApply?.()}
+        >
+          <ShortenedLabel action={apply} />
+          {typeof pendingApplyCount === "number" && (
+            <span className="badge" title={badgeTitle(null, note)}>
+              {pendingApplyCount}
+            </span>
+          )}
+          {pendingApplyCount === null && (
+            <span
+              className="badge badge-dash"
+              title={badgeTitle("반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다", note)}
+            >
+              —
+            </span>
+          )}
+        </button>
+        {applyProgress && (
+          <span className="beat-grid-apply-progress" role="status">
+            {applyProgress}
+          </span>
+        )}
+        {onDraftPropose && (
+          <button
+            type="button"
+            className="tbtn"
+            title="자동 배치 제안 — 초안을 보류로 만든다. 「적용」 전까지 격자는 그대로다"
+            onClick={() => onDraftPropose()}
+          >
+            자동 배치
+          </button>
+        )}
+        <button
+          type="button"
+          className="tbtn"
+          title={onDrawerToggle ? drawer.full : drawer.full + " — M3에서 배선"}
+          disabled={!onDrawerToggle}
+          onClick={() => onDrawerToggle?.()}
+        >
+          <ShortenedLabel action={drawer} />
+        </button>
+      </header>
+      {/* 반영 흐름 띠 — 상단 바 안이 아니라 바로 아래 별도 줄이다(상단 바는 넓은 폭에서 한 줄을 지킨다).
+          화면에 보이는 안내일 뿐이다: 승인도 콘솔 송신도 여기서 일어나지 않는다. */}
+      {flow && (
+        <div className="beat-grid-flow-strip" aria-label="반영 흐름">
+          {FLOW_STEPS.map((step) => (
+            <span key={step} aria-current={step === nextFlow ? "step" : undefined}>
+              {(flow.done[step] ? "✓ " : "") + FLOW_STEP_LABEL[step]}
+            </span>
+          ))}
+          {flowNextLine && <span>{flowNextLine}</span>}
+          {timecodeNumber === null &&
+            flowSuggestion !== null &&
+            flow.done.preset &&
+            !flow.done.reflect &&
+            onTimecodeSubmit && (
+              <button
+                type="button"
+                className="tbtn"
+                title={`곡 초안에 타임코드 ${flowSuggestion} 번을 적습니다 — 콘솔에는 아무것도 보내지 않습니다`}
+                onClick={() => onTimecodeSubmit(flowSuggestion)}
+              >
+                {`${flowSuggestion} 번 쓰기`}
+              </button>
+            )}
+        </div>
       )}
-      <button
-        type="button"
-        className="tbtn"
-        title={onDrawerToggle ? drawer.full : drawer.full + " — M3에서 배선"}
-        disabled={!onDrawerToggle}
-        onClick={() => onDrawerToggle?.()}
-      >
-        <ShortenedLabel action={drawer} />
-      </button>
-    </header>
+    </>
   );
 }

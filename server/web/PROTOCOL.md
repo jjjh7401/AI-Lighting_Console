@@ -103,6 +103,22 @@ same change. `AC-SHOWUI-001` is the parity test that holds this.
 - 구현: `server/design/arrange_generator.py`(초안), `server/design/arrange_apply.py`(적용),
   `server/design/arrange_draft_store.py`(보류), `server/web/session.py`(`beat_grid_draft_*`).
 
+### 단계 완료 표시 — `beat_grid_send_status` 의 `completed` · `timecode_suggestion` (additive)
+
+새 메시지 타입은 없다. 기존 `beat_grid_send_status` 이벤트에 선택 필드 둘이 얹힌다. 둘 다 **없으면
+키 자체를 싣지 않는다**(`null` 로 보내지 않는다) — 기능이 없을 때의 이벤트는 예전과 바이트가 같다.
+
+- `completed`: `"draft_applied"` · `"preset_saved"` · `"reflected"` 중 하나. 그 단계가 **성공으로 끝났을
+  때만** 실린다. `draft_applied` 는 배치 초안 「적용」(`beat_grid_draft_apply`), `preset_saved` 는 연출
+  프리셋 저장(`beat_grid_apply` 의 `mode: "preset_plan"`), `reflected` 는 「콘솔에 반영」
+  (`beat_grid_apply` 의 `mode: "apply"`)다 — 승인과 송신이 맞았을 때만 실린다(어긋나면 `ok` 가 참이어도 없다). 거절·실패에는 없고, 미리보기·끄기·콘솔 재생·일반 편집
+  성공에도 없다. `last_action`·`ok` 값은 예전과 같다.
+- `timecode_suggestion`: 1 이상의 정수. `completed: "preset_saved"` 일 때만, 그리고 곡 초안에 타임코드
+  번호가 아직 없고 콘솔이 비어 있다고 **확인한** 슬롯을 찾았을 때만 실린다. 권유일 뿐이다 — 서버는 이
+  번호를 초안에 적지 않는다(적는 일은 `beat_grid_timecode_set` 이다). 콘솔을 못 읽으면 실리지 않는다.
+- 구현: `server/web/messages.py`(`beat_grid_send_status_event`, `BEAT_GRID_COMPLETED_STEPS`),
+  `server/web/session.py`(`_beat_grid_send_status`, `_beat_grid_timecode_suggestion`).
+
 ### 질문 카드 — `question_request` / `question_answer`
 
 답이 **글**인 통로다. 승인(`approval_request`)은 실패하면 거부가 안전하지만, 질문은

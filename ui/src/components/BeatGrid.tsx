@@ -130,7 +130,14 @@ import {
 import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { folderSummarySpans } from "./beatgrid/folderSummary";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
-import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
+import { CONSOLE_FOLLOW_DISABLED_REASON, consoleSyncAudioStartOffsetSeconds } from "./beatgrid/consoleSyncAudio";
+import {
+  CONSOLE_DELAY_MISSING_MESSAGE,
+  CONSOLE_NO_SONG_AUDIO_MESSAGE,
+  consoleAudioPositionSeconds,
+  createConsoleFollowRelay,
+  type ConsoleFollowRelay,
+} from "./beatgrid/consoleFollowRelay";
 import { drawerPoolStatusText, shouldAutoRequestDrawer } from "./beatgrid/cuePanelDrawer";
 import {
   brightnessCell,
@@ -156,6 +163,7 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import { NO_FLOW_DONE, completedStepOf, type FlowDone } from "./beatgrid/flowChain";
 import {
   audioClockSeconds,
   clampPlaybackSeconds,
@@ -597,6 +605,13 @@ export interface BeatGridProps {
   onConsolePlay?: () => void;
   onConsoleStop?: () => void;
   sendStatus?: BeatGridSendStatus | null;
+  /** 「콘솔 같이」 의도와 콘솔 재생 시작 시각을 이 화면 밖(`App`)에서 쥐는 중계 객체. 전체화면을 닫으면 이
+   * 화면이 사라지므로, 닫은 사이에 온 콘솔 재생 응답과 켜 둔 토글이 여기에 남아 다시 열 때 이어진다.
+   * 생략하면 이 화면이 자기 것을 만들어 쓴다(그 경우 응답을 기록해 줄 쪽이 없다). */
+  consoleFollowRelay?: ConsoleFollowRelay;
+  /** `App` 이 응답을 중계 객체에 기록한 뒤 올리는 순번. 자식의 effect 가 부모의 effect 보다 먼저 돌아서,
+   * 응답이 도착한 그 렌더에서는 아직 기록 전이다 — 기록 뒤 이 값이 바뀌어야 이 화면이 다시 확인한다. */
+  consoleFollowSeq?: number;
   /**
    * 카드 t551(M3) — 편집 경로 ①(직접 고르기). UI는 서버 페이로드를 직접
    * 구성하지 않는다(AC-LDBEAT-005) — 이 콜백은 사용자가 고른 필드·값을
@@ -1551,6 +1566,8 @@ export function BeatGrid({
   onConsolePlay,
   onConsoleStop,
   sendStatus = null,
+  consoleFollowRelay,
+  consoleFollowSeq = 0,
   onEditRequest,
   onNewPresetRequest,
   lastServerReply = null,
@@ -1742,11 +1759,17 @@ export function BeatGrid({
   const [pendingPlayIntent, setPendingPlayIntent] = useState(false);
   const [lastPlaybackError, setLastPlaybackError] = useState<string | null>(null);
   // 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」. 켜져 있으면 ▶ 가 먼저 서버에
-  // 타임코드 재생을 요청하고, 성공 응답이 오면 실측 지연 뒤 음원을 0초부터 튼다.
-  // `awaitingConsolePlayRef`는 effect 의존성이 아니라 ref다 — 이전 재생 응답이
-  // 상태에 남아 있어도 ▶ 를 누르는 순간 그것을 새 응답으로 오인하지 않게,
-  // 「새 응답이 도착했을 때」만 판단한다.
-  const [consoleFollow, setConsoleFollow] = useState(false);
+  // 타임코드 재생을 요청하고, 성공 응답이 오면 실측 지연 뒤 음원을 튼다.
+  // 켬/끔·응답 대기·응답 시각은 이 화면 밖의 중계 객체(`relay`, `App` 이 쥔다)에 있다 — 전체화면을
+  // 닫아 이 화면이 사라져도 의도가 남고, 닫은 사이에 온 응답도 기록된다. 이전 응답을 새 응답으로
+  // 오인하지 않는 일은 `relay.pressedAgainst`(▶ 를 누를 때 화면에 있던 응답 객체)가 맡는다.
+  const [ownRelay] = useState(createConsoleFollowRelay);
+  const relay = consoleFollowRelay ?? ownRelay;
+  const [consoleFollow, setConsoleFollowState] = useState(relay.consoleFollow);
+  const setConsoleFollow = (on: boolean) => {
+    relay.consoleFollow = on;
+    setConsoleFollowState(on);
+  };
   const [consoleFollowError, setConsoleFollowError] = useState<string | null>(null);
   // 「⇪ 콘솔에 반영」 진행 표시(카드 apply-latency): 누른 시각, 승인 카드가 뜬 시각, 그리고
   // 누르기 전이나 카드가 뜰 때 화면에 있던 결과(이번 반영의 결과가 아니다). 시계는 진행 문구가
@@ -1788,7 +1811,6 @@ export function BeatGrid({
   const applyFailure = failureNoteVisible(approvalPending, sendStatus, staleSendStatus)
     ? applyFailureNote(sendStatus)
     : null;
-  const awaitingConsolePlayRef = useRef(false);
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const consoleFollowAvailable = !!onConsolePlay && !!onConsoleStop;
   // 카드 t570(REQ-LDBEAT-024(e)) — 편집 칸이 보고 있는 L·R 자식 줄(없으면
@@ -1840,25 +1862,40 @@ export function BeatGrid({
   // 큐잉을 풀어 즉시 시작한다. 일시정지는 `playbackSeconds`를 그대로 둔다
   // (멈춘 자리부터 이어 재생 — AC-LDBEAT-024(d)).
   const togglePlay = () => {
-    // 카드 t578 — 「콘솔 같이」 켬: ❚❚ 는 음원을 멈추고 콘솔 타임코드도 끈다.
-    // ▶ 는 여기서 음원을 틀지 않는다 — 서버 응답(아래 effect)이 지연 뒤 튼다.
+    // 카드 t578 — 「콘솔 같이」 켬: ❚❚ 는 음원을 멈추고 콘솔 타임코드도 끈다. 멈춘 뒤에는 아무것도
+    // 다시 시작하지 않는다 — 걸어 둔 음원 시작 타이머와 콘솔 시작 시각을 지운다.
+    // ▶ 는 여기서 음원을 틀지 않는다 — 서버 응답(아래 `resumeConsoleAudio`)이 지연 뒤 튼다.
     if (consoleFollow && consoleFollowAvailable) {
       if (playing) {
         setPlaying(false);
         audioRef.current?.pause();
         if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+        consoleAudioTimerRef.current = null;
+        relay.responseAtMs = null;
+        relay.audioStarted = false;
         onConsoleStop?.();
         return;
       }
-      if (awaitingConsolePlayRef.current) return;
+      if (relay.awaiting) return;
+      // 새로 누른 ▶ 는 콘솔 타임코드를 처음부터 다시 돌린다 — 앞 실행에 걸어 둔 음원 시작 예약은 거두고
+      // 이번 응답만 따른다(옛 시작 시각으로 음원이 먼저 트는 일이 없게).
+      if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+      consoleAudioTimerRef.current = null;
+      relay.responseAtMs = null;
+      relay.audioStarted = false;
       setConsoleFollowError(null);
-      awaitingConsolePlayRef.current = true;
+      relay.failure = null;
+      relay.awaiting = true;
+      relay.pressedAgainst = sendStatus;
       onConsolePlay?.();
       return;
     }
     if (playing) {
       setPlaying(false);
       audioRef.current?.pause();
+      // 콘솔 같이를 끈 채 멈춰도 멈춘 뒤에는 이어 트는 것이 없어야 한다 — 남은 콘솔 시작 시각을 지운다.
+      relay.responseAtMs = null;
+      relay.audioStarted = false;
       return;
     }
     if (shouldDeferPlayPress(audioStatus)) {
@@ -1946,52 +1983,137 @@ export function BeatGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audioStatus]);
 
-  // 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 재생 응답. 성공이면 콘솔이 Top
-  // 으로 처음에 되감겼으므로 시계를 0초에 두고, 실측 지연
-  // (`console_audio_offset_seconds`) 뒤에 음원과 시계를 0초부터 시작한다. 거절이면
-  // 그 이유를 보이고 음원만 따로 틀지 않는다(`resolveConsolePlayResponse`).
-  useEffect(() => {
-    const decision = resolveConsolePlayResponse(
-      awaitingConsolePlayRef.current,
-      sendStatus,
-      grid?.console_audio_offset_seconds,
-    );
-    if (decision.kind === "none") return;
-    awaitingConsolePlayRef.current = false;
-    if (decision.kind === "fail") {
-      setConsoleFollowError(decision.reason);
+  // 카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 음원 시작. 서버가 콘솔 재생을 받아들인 시각
+  // (`relay.responseAtMs`, 응답이 올 때 `App` 이 기록한다)에서 지금 음원이 있어야 할 자리를 매번 새로
+  // 계산한다 — 타이머·음원 연결·화면 재진입 어느 쪽이 불러도 같은 답이 나온다. 그래서 응답이 이 화면이
+  // 닫힌 사이에 왔어도, 음원이 늦게 연결돼도 맞는 자리에서 튼다. 콘솔은 Top 으로 처음에 되감겼고 음원은
+  // 실측 지연(`console_audio_offset_seconds`) 뒤에 시작해야 맞는다.
+  //   - 아직 지연 안(자리 < 0): 시계를 0초에 두고 그만큼 기다렸다 0초부터 튼다.
+  //   - 지났으면: 그 자리로 옮겨 한 번 튼다(이 화면이 마운트된 동안 한 번만 — `relay.audioStarted`).
+  //   - 음원이 아직 연결되지 않았으면 기다린다 — 아래 연결 effect 가 다시 부른다.
+  // 여기서는 새 콘솔 요청도 승인 호출도 하지 않는다(▶ 는 늘 사람이 누른다).
+  // 타이머와 effect 는 렌더 때 굳은 값이 아니라 아래 ref 로 늘 최신 값을 읽는다 — 옛 렌더의 음원 상태로
+  // 판단하면 이미 연결돼 있어도 재생을 건너뛴다.
+  const audioStatusRef = useRef(audioStatus);
+  audioStatusRef.current = audioStatus;
+  const consoleDelayRef = useRef<number | null>(null);
+  consoleDelayRef.current = consoleSyncAudioStartOffsetSeconds(grid?.console_audio_offset_seconds);
+  const resumeRef = useRef<() => void>(() => {});
+  const resumeConsoleAudio = () => {
+    const responseAt = relay.responseAtMs;
+    if (responseAt === null) return;
+    // 격자가 아직 없으면 지연을 모를 뿐이다 — 기록을 지우지 않고 격자가 올 때를 기다린다.
+    if (!grid) return;
+    const delay = consoleDelayRef.current;
+    if (delay === null) {
+      relay.responseAtMs = null;
+      setConsoleFollowError(CONSOLE_DELAY_MISSING_MESSAGE);
       return;
     }
-    setPlaybackSeconds(0);
-    if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
-    consoleAudioTimerRef.current = setTimeout(() => {
-      consoleAudioTimerRef.current = null;
-      playbackAnchorRef.current = { anchorSeconds: 0, anchorPerfMs: performance.now() };
-      setPlaying(true);
-      resumeFollow();
-      const audio = audioRef.current;
-      if (audioStatus === "connected" && audio) {
-        try {
-          audio.currentTime = 0;
-        } catch {
-          // togglePlay 와 같은 경계(메타데이터 전이면 던진다).
-        }
-        void audio.play().catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : String(error);
-          setLastPlaybackError(`[음원 재생 실패] ${message}`);
-        });
+    const position = consoleAudioPositionSeconds(responseAt, delay, Date.now());
+    if (position < 0) {
+      setPlaybackSeconds(0);
+      if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
+      consoleAudioTimerRef.current = setTimeout(() => {
+        consoleAudioTimerRef.current = null;
+        resumeRef.current();
+      }, -position * 1000);
+      return;
+    }
+    if (relay.audioStarted) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    // 「연결된 음원이 없다」는 안내(아래)는 음원이 연결돼 틀게 되거나 이미 끝난 곡이라 접는 순간 낡은 말이다.
+    const dropNoAudioNote = () =>
+      setConsoleFollowError((message) => (message === CONSOLE_NO_SONG_AUDIO_MESSAGE ? null : message));
+    // 이미 끝난 곡이면 틀지 않고 기록을 거둔다. 길이는 메타데이터가 와야 알 수 있다(그 전엔 NaN).
+    if (Number.isFinite(audio.duration) && position >= audio.duration) {
+      relay.responseAtMs = null;
+      dropNoAudioNote();
+      return;
+    }
+    if (audioStatusRef.current !== "connected") {
+      // 불러오는 중이면 곧 올 음원이다. 연결할 음원이 아예 없을 때만 그렇게 말한다.
+      if (!attachedSongAudioFile && !linkedSongAudioFile && audioStatusRef.current !== "loading") {
+        setConsoleFollowError(CONSOLE_NO_SONG_AUDIO_MESSAGE);
       }
-    }, decision.delaySeconds * 1000);
+      return;
+    }
+    relay.audioStarted = true;
+    dropNoAudioNote();
+    try {
+      audio.currentTime = position;
+    } catch {
+      // togglePlay 와 같은 경계(메타데이터 전이면 던진다).
+    }
+    playbackAnchorRef.current = { anchorSeconds: position, anchorPerfMs: performance.now() };
+    setPlaybackSeconds(position);
+    setPlaying(true);
+    resumeFollow();
+    void audio.play().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setLastPlaybackError(`[음원 재생 실패] ${message}`);
+    });
+  };
+  resumeRef.current = resumeConsoleAudio;
+
+  // 응답이 오거나(`sendStatus`) `App` 이 그 응답을 기록한 뒤(`consoleFollowSeq`) 다시 확인한다. 자식의
+  // effect 가 부모의 effect 보다 먼저 돌아서, 응답이 도착한 그 렌더에서는 아직 기록 전이다 — 순번이
+  // 바뀌는 다음 렌더가 기록된 응답을 본다. 서버가 거절했으면 그 이유를 보인다(음원은 틀지 않는다).
+  useEffect(() => {
+    if (relay.failure) setConsoleFollowError(relay.failure);
+    resumeRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendStatus, consoleFollowSeq]);
+
+  // 음원이 연결되면(`canplay`) 기다리던 시작을 그 자리에서 이어 간다.
+  useEffect(() => {
+    if (audioStatus === "connected") resumeRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioStatus]);
+
+  // 반영 흐름 — 서버가 단계 성공을 알리면(`beat_grid_send_status.completed`) 화면이 다음 단계를
+  // 안내한다. 초안 「적용」 뒤에는 기존 「프리셋 계획 만들기」 요청을 한 번 보낸다(승인 카드는 감독이
+  // 직접 누른다). 그 밖의 단계는 화면 상태만 바꾼다 — 승인 호출도, 반영·콘솔 재생 송신도 여기서
+  // 하지 않는다(▶ 는 늘 사람이 누른다). `seenStatusRef` 는 마운트 전에 이미 있던 응답이 다시 그려질
+  // 때 요청이 되풀이되지 않게 막는다 — 새 응답 객체가 올 때만 한 번 반응한다.
+  const [flowDone, setFlowDone] = useState<FlowDone>(NO_FLOW_DONE);
+  const [timecodeSuggestion, setTimecodeSuggestion] = useState<number | null>(null);
+  const seenStatusRef = useRef(sendStatus);
+  useEffect(() => {
+    if (sendStatus === seenStatusRef.current) return;
+    seenStatusRef.current = sendStatus;
+    if (sendStatus === null) return;
+    const step = completedStepOf(sendStatus);
+    if (step === "draft_applied") {
+      // 새 흐름이 시작된다 — 앞 흐름의 ✓ 와 번호 권유를 지운다.
+      setFlowDone(NO_FLOW_DONE);
+      setTimecodeSuggestion(null);
+      if (onPresetPlanRequest) requestPresetPlan();
+    } else if (step === "preset") {
+      setFlowDone((done) => ({ ...done, preset: true }));
+      setTimecodeSuggestion(sendStatus.timecode_suggestion ?? null);
+    } else if (step === "reflect") {
+      setFlowDone((done) => ({ ...done, reflect: true }));
+      if (consoleFollowAvailable) setConsoleFollow(true);
+    } else if (step === "console") {
+      setFlowDone((done) => ({ ...done, console: true }));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendStatus]);
 
-  // 화면을 떠날 때 걸려 있는 음원 시작 타이머를 지운다.
-  useEffect(
-    () => () => {
+  // 화면이 처음 그려질 때 — 닫혀 있던 사이에 콘솔 재생 응답이 왔다면 이어 간다(전체화면을 닫고 승인한 뒤
+  // 다시 연 경우). 화면을 떠날 때는 걸려 있는 음원 시작 타이머를 지우고 이 마운트의 「시작했다」 표시를
+  // 내린다. 콘솔 시작 시각(`relay.responseAtMs`)은 지우지 않는다 — 다음에 열리는 화면이 이어 받는다.
+  useEffect(() => {
+    resumeRef.current();
+    return () => {
       if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
-    },
-    [],
-  );
+      consoleAudioTimerRef.current = null;
+      relay.audioStarted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 카드 t570(REQ-LDBEAT-024(b)(d)(f)(h)) — 재생 시계 자체. `playing`일
   // 때만 돈다. 매 프레임: 화면 쪽 갱신(갱신 "이번 마디로 바뀌었는지"
@@ -2039,6 +2161,9 @@ export function BeatGrid({
       if (totalSeconds !== null && hasReachedPlaybackEnd(next, totalSeconds)) {
         setPlaying(false);
         audioRef.current?.pause();
+        // 곡이 끝났다 — 다시 열어도 이어 트는 것이 없게 콘솔 시작 시각을 지운다.
+        relay.responseAtMs = null;
+        relay.audioStarted = false;
         return;
       }
       rafRef.current = requestAnimationFrame(tick);
@@ -2364,6 +2489,7 @@ export function BeatGrid({
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
         onDraftPropose={pendingDraft ? undefined : onDraftPropose}
+        flow={{ done: flowDone, timecodeSuggestion }}
         playback={{
           playing,
           positionSeconds: playbackSeconds,
@@ -2377,7 +2503,7 @@ export function BeatGrid({
           consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,
           consoleFollowOn: consoleFollow,
           onToggleConsoleFollow: consoleFollowAvailable
-            ? () => setConsoleFollow((on) => !on)
+            ? () => setConsoleFollow(!relay.consoleFollow)
             : undefined,
           consoleFollowError,
         }}

@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from server.design.beat_grid_send import (
@@ -369,6 +371,28 @@ class TestBeatGridApply:
         assert event["ok"] is True
         assert len(harness["approval"].requests) == 1
 
+    def test_a_successful_apply_marks_the_reflected_step_and_suggests_no_timecode(self, harness):
+        event = harness["session"].beat_grid_apply()
+        assert event["ok"] is True
+        assert event["last_action"] == "apply"
+        assert event["completed"] == "reflected"
+        assert "timecode_suggestion" not in event  # 제안은 프리셋 저장 성공에만 실린다
+
+    def test_an_approval_that_does_not_match_what_was_sent_is_not_marked_reflected(
+        self, harness, monkeypatch
+    ):
+        # 승인=송신 대조가 어긋나면 반영 완료 표지를 달지 않는다.
+        # 스냅샷 갱신과 같은 기준이다(거짓 초록 방지).
+        mismatch = SimpleNamespace(passed=False, sent_not_approved=("stray",), approved_not_sent=())
+        monkeypatch.setattr(
+            harness["session"],
+            "_beat_grid_verify_approval_vs_sent",
+            lambda *args, **kwargs: mismatch,
+        )
+        event = harness["session"].beat_grid_apply()
+        assert event["approval_vs_sent"]["match"] is False
+        assert "completed" not in event
+
     def test_apply_sends_commands_that_match_the_approved_batch(self, harness):
         harness["session"].beat_grid_apply()
         executed_writes = [cmd for cmd in harness["console"].executed if cmd not in ("SaveShow",)]
@@ -383,6 +407,7 @@ class TestBeatGridApply:
         session, console, approval, _audit = _new_session(tmp_path, store=store, decisions=(False,))
         event = session.beat_grid_apply()
         assert event["ok"] is False
+        assert "completed" not in event  # 실패한 반영은 단계 완료를 알리지 않는다
         assert console.executed == []
 
     def test_blocked_emitter_sends_nothing_and_surfaces_the_reason(self, tmp_path):
@@ -396,6 +421,7 @@ class TestBeatGridApply:
         event = session.beat_grid_apply()
         assert console.executed == []
         assert event["ok"] is False
+        assert "completed" not in event
         assert "타이밍" in event["reason"]
         assert len(approval.requests) == 0
 
@@ -462,6 +488,7 @@ class TestApprovalCardPrecedesItsStatus:
         assert statuses, "the apply must end with a status"
         assert cards[0] < statuses[-1]
         assert sent[statuses[-1]]["ok"] is False
+        assert "completed" not in sent[statuses[-1]]
 
     def test_an_approved_card_is_followed_by_the_success_status(self, tmp_path):
         session, sent = self._session(tmp_path, approve=True)
@@ -471,6 +498,7 @@ class TestApprovalCardPrecedesItsStatus:
         assert statuses, "the apply must end with a status"
         assert cards[0] < statuses[-1]
         assert sent[statuses[-1]]["ok"] is True
+        assert sent[statuses[-1]]["completed"] == "reflected"
 
 
 class TestBeatGridPreview:
@@ -499,6 +527,7 @@ class TestBeatGridPreview:
 
         event = session.beat_grid_preview(1)
         assert event["ok"] is True
+        assert "completed" not in event  # 미리보기는 사슬의 단계가 아니다
         assert any("Goto Cue" in c for c in console.executed)
         first_request = approval.requests[-1]
         first_reasons = [reason for item in first_request.items for reason in item.risk_reasons]
@@ -522,6 +551,7 @@ class TestBeatGridPreview:
         console.executed.clear()
         event = session.beat_grid_preview_off()
         assert event["ok"] is True
+        assert "completed" not in event
         assert any("Off Sequence" in c for c in console.executed)
 
 
@@ -549,6 +579,9 @@ class TestBeatGridUnsentCells:
         session.beat_grid_edit(1, "BACK", {"position_preset_no": "2.3"})
         statuses = _status_events(harness["sent"])
         assert statuses[-1]["pending_apply_count"] is None
+        # 일반 편집 성공은 사슬의 단계가 아니다(초안 적용과 같은 last_action "edit" 를 쓰지만).
+        assert statuses[-1]["last_action"] == "edit"
+        assert "completed" not in statuses[-1]
         assert _last_unsent_cells(harness["sent"]) is None
 
     def test_after_a_successful_apply_unsent_cells_is_empty(self, harness):

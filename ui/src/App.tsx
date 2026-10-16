@@ -26,6 +26,7 @@ import { BarMapEntry } from "./components/BarMapEntry";
 import { barMapEntryReducer, initialBarMapEntryState } from "./components/barMapEntryState";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
+import { createConsoleFollowRelay, observeConsoleFollowStatus } from "./components/beatgrid/consoleFollowRelay";
 import { pendingApplyCountOf } from "./components/beatgrid/pendingApplyCount";
 import { buildFileFromSongAudioLink } from "./components/beatgrid/songAudioLink";
 import { LIFECYCLE_LABEL as SONG_TIMELINE_LIFECYCLE_LABEL } from "./components/SongTimeline";
@@ -533,6 +534,19 @@ export default function App() {
   // (아래 toggleRunbookMode는 건드리지 않는다 — 이 상태는 이 전환 전용).
   // paperworkMode와 같은 이유로 세션-휘발성(localStorage 없음).
   const [beatGridFullscreen, setBeatGridFullscreen] = useState(false);
+  // 「콘솔 같이」 — ▶ 를 누르면 승인 카드가 뜨고, 감독은 채팅에서 승인하려고 전체화면을 닫는다. 그러면
+  // `BeatGrid` 가 사라져 그 뒤에 오는 콘솔 재생 응답을 받아 줄 화면이 없다. 켬/끔·응답 대기·콘솔이
+  // 시작된 시각은 `BeatGrid` 밖(여기)의 중계 객체가 쥐고, 다시 열린 화면이 그 시각에서 음원 자리를
+  // 계산해 이어 튼다. 승인도 새 콘솔 요청도 여기서 하지 않는다 — 응답을 기록할 뿐이다.
+  const [consoleFollowRelay] = useState(createConsoleFollowRelay);
+  const [consoleFollowSeq, setConsoleFollowSeq] = useState(0);
+  useEffect(() => {
+    // 자식(`BeatGrid`)의 effect 는 부모의 effect 보다 먼저 돈다 — 응답이 도착한 그 렌더에서 화면은 아직
+    // 기록 전의 중계 객체를 본다. 기록한 뒤 순번을 올려야 화면이 한 번 더 확인한다.
+    if (observeConsoleFollowStatus(consoleFollowRelay, state.beatGridSendStatus, Date.now())) {
+      setConsoleFollowSeq((n) => n + 1);
+    }
+  }, [state.beatGridSendStatus, consoleFollowRelay]);
   // 카드 t565 — 박자 격자 전체화면을 열 때(그리고 곡이 바뀔 때) 2D 무대를 콘솔에서
   // 한 번 읽어 온다(좌표 + 트랙 그룹 소속, 읽기만). 결과는 `state.beatGridStage`.
   const beatGridSongTitle = state.songTimeline.timeline?.beat_grid?.song_title ?? null;
@@ -1307,6 +1321,8 @@ export default function App() {
             onConsolePlay={sendBeatGridConsolePlay}
             onConsoleStop={sendBeatGridConsoleStop}
             sendStatus={state.beatGridSendStatus}
+            consoleFollowRelay={consoleFollowRelay}
+            consoleFollowSeq={consoleFollowSeq}
             onApply={sendBeatGridApply}
             approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}

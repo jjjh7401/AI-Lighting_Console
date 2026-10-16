@@ -131,6 +131,9 @@ class TestBeatGridApplyOverTheWire:
         assert status["last_action"] == "apply"
         assert status["ok"] is True
         assert status["approval_vs_sent"]["match"] is True
+        # 선택 필드는 WebSocket 을 지나도 그대로 실린다(반영 성공 = 흐름 사슬의 마지막 단계).
+        assert status["completed"] == "reflected"
+        assert "timecode_suggestion" not in status
 
 
 class TestBeatGridPreviewOverTheWire:
@@ -141,6 +144,7 @@ class TestBeatGridPreviewOverTheWire:
             status = _drain_until(ws, "beat_grid_send_status")
         assert status["last_action"] == "preview"
         assert status["ok"] is False
+        assert "completed" not in status
 
     def test_preview_after_apply_emits_goto_over_the_wire(self, tmp_path):
         deps = _deps(tmp_path)
