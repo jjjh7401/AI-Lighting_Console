@@ -27,7 +27,8 @@ const NO_MOVEMENT = "＋ 없음";
 /** 칩 = 프리셋 번호(굵게) + 이름. `label` 은 번호와 이름을 한 줄로 이은 글이다(툴팁·시험용). */
 export type GlanceCellValue =
   | { kind: "chip"; presetNo: string; name: string | null; label: string; tooltip: string; swatch?: string }
-  | { kind: "text"; text: string; dim?: boolean };
+  // `swatch` 는 흐린 칸(`dim`)의 계획 색 네모에만 달린다 — 콘솔 색이 아니라서 흐리게 그린다.
+  | { kind: "text"; text: string; dim?: boolean; swatch?: string };
 
 /** 시안 `cellHTML` 처럼 칩 이름 앞의 「LA 」 는 뗀다. */
 function chipName(name: string): string {
@@ -113,7 +114,11 @@ export function colorCell(
   // 색 네모: 색이 둘 이상이면(`color_rgbs`) 반반 나눈 띠가 우선, 그다음 서랍 항목 색(`rgb`),
   // 없으면 칸이 낼 색(`color_rgb`), 둘 다 없으면 네모를 생략한다.
   const value = chipOrUnset(cue.color_preset_no, sections, cue.color_preset_name);
-  if (value.kind !== "chip") return value;
+  if (value.kind !== "chip") {
+    // 콘솔 번호 없이 계획 색만 있는 칸(`color_planned`)은 「—」 대신 흐린 네모를 단다(계획 색은 콘솔 값이 아니다).
+    const planned = cue.color_planned === true ? presetSwatchColor(cue.color_rgb) : null;
+    return planned === null ? value : { ...value, dim: true, swatch: planned };
+  }
   const split = presetSplitSwatch(cue.color_rgbs);
   if (split !== null) return { ...value, swatch: split };
   if (value.swatch !== undefined) return value;

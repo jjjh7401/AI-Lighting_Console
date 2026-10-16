@@ -17,6 +17,7 @@ import pytest
 from server.audio.bar_map import BarFeatures, classify_bar_events, compute_bar_energy
 from server.audio.bar_map_store import build_bar_map_payload
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
+from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.grid_shape import (
     DEFAULT_THRESHOLDS,
     REST_LABEL,
@@ -351,14 +352,36 @@ def test_a_single_perturbation_fails_only_its_own_check(mutate, expected: str) -
 # --- 자동 배치 경로(운영과 같은 순서로 오프라인) ---------------------------------------
 
 
-def test_auto_candidate_has_every_track_and_one_cue_per_bar_of_the_map() -> None:
+def test_auto_candidate_has_every_track_and_cues_only_where_the_value_changes() -> None:
+    # 운영 경로(구간 생성기)와 같은 모양: 값이 바뀌는 마디에만 칸이 있고 첫 마디에는 꼭 있다.
     timeline = _timeline()
     candidate = build_auto_candidate(timeline, _base())
     assert [t["group_name"] for t in candidate["tracks"]] == [
         t["group_name"] for t in _base()["tracks"]
     ]
-    bars = len(timeline["bar_map"]["bars"])
-    assert all(len(track["cues"]) == bars for track in candidate["tracks"])
+    bar_numbers = {entry["bar"] for entry in timeline["bar_map"]["bars"]}
+    for track in candidate["tracks"]:
+        cue_bars = [cue["bar"] for cue in track["cues"]]
+        assert cue_bars == sorted(set(cue_bars))
+        assert set(cue_bars) <= bar_numbers
+        assert cue_bars[0] == min(bar_numbers)
+    # 옛 생성기처럼 마디마다 칸을 내면 이 조건이 깨진다: 값이 이어지는 마디는 칸 하나로 묶인다.
+    assert any(len(track["cues"]) < len(bar_numbers) for track in candidate["tracks"])
+
+
+def test_auto_candidate_paints_the_annotated_cells_with_their_planned_color() -> None:
+    # 운영 경로(beat_grid_draft_propose)는 곡별 주석 색을 건넨다. 자동 후보도 같은 색을 실어야 한다.
+    annotated = annotated_cell_colors(load_preset_annotations(LOVE_ATTACK_TITLE))
+    assert annotated, "LOVE ATTACK 계획 주석에 칸 색이 있어야 이 시험이 의미가 있다"
+    candidate = build_auto_candidate(_timeline(), _base())
+    painted = {
+        (track["group_name"], cue["bar"]): tuple(cue["planned_color"])
+        for track in candidate["tracks"]
+        for cue in track["cues"]
+        if "planned_color" in cue and (track["group_name"], cue["bar"]) in annotated
+    }
+    assert painted, "주석 칸 가운데 계획 색이 실린 칸이 하나도 없다"
+    assert {key: color for key, color in painted.items() if color != annotated[key]} == {}
 
 
 def test_auto_candidate_refuses_a_timeline_without_a_bar_map() -> None:

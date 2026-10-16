@@ -16,6 +16,15 @@ export function GlanceCell({ value }: { value: GlanceCellValue }) {
       </span>
     );
   }
-  if (value.dim) return <span className="beat-grid-glance-dim">{value.text}</span>;
+  if (value.dim) {
+    return (
+      <span className="beat-grid-glance-dim">
+        {value.swatch !== undefined && (
+          <span className="beat-grid-glance-sw" style={{ background: value.swatch }} aria-hidden="true" />
+        )}
+        {value.text}
+      </span>
+    );
+  }
   return <>{value.text}</>;
 }
