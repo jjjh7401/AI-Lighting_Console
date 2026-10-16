@@ -66,6 +66,8 @@ from server.design.cue_sheet_apply import _tracking_command as _tracking_line
 from server.looks.songcue import _ascii_label, _format_seconds
 
 __all__ = [
+    "M1_GATE_MARK",
+    "m1_held_cells",
     "MEASURED_MAX_TIMECODE_TRACKS",
     "BeatGridEmitResult",
     "CueEmitResult",
@@ -187,6 +189,32 @@ def blocked_m1_items_for_cue(
     if is_movement_measured_open(group_no, movement.get("shape"), movement.get("axes") or ()):
         return blocked - _APP_MOVEMENT_ITEMS
     return blocked
+
+
+#: ``blocked_m1_items_for_cue`` 로 막힌 칸의 거절 사유 표지 — 카드·화면이 같은 칸을 센다.
+M1_GATE_MARK = "REQ-LDBEAT-001 게이트"
+
+
+def m1_held_cells(grid: Mapping[str, object]) -> list[tuple[str, int]]:
+    """M1 프로브 미통과로 송신이 보류될 칸 ``(그룹, 마디)`` — 반영의 칸 단위 보류와 같은
+    판정(``blocked_m1_items_for_cue``)이다. 화면 배지의 「칸 K개」 출처. 콘솔 접촉 0."""
+    probes = grid.get("probe_results")
+    probe_results = (
+        {int(k): str(v) for k, v in probes.items()} if isinstance(probes, Mapping) else {}
+    )
+    held: list[tuple[str, int]] = []
+    for track in grid.get("tracks") or []:  # type: ignore[attr-defined]
+        if not isinstance(track, Mapping):
+            continue
+        group_no = track.get("group_no") if track.get("group_no_confirmed") else None
+        for cue in track.get("cues") or []:
+            if not isinstance(cue, Mapping) or not isinstance(cue.get("bar"), int):
+                continue
+            if blocked_m1_items_for_cue(
+                cue, probe_results, group_no=group_no if isinstance(group_no, int) else None
+            ):
+                held.append((str(track.get("group_name")), int(cue["bar"])))
+    return held
 
 
 @dataclass(frozen=True)
@@ -499,7 +527,7 @@ def _emit_cue(
     blocked = blocked_m1_items_for_cue(cue, probe_results, group_no=group_no)
     if blocked:
         listed = ", ".join(str(item) for item in sorted(blocked))
-        reason = f"미확인 항목 {len(blocked)}개({listed}) — REQ-LDBEAT-001 게이트"
+        reason = f"미확인 항목 {len(blocked)}개({listed}) — {M1_GATE_MARK}"
         return CueEmitResult(bar=bar, commands=(), blocked_reason=reason)
 
     axis_conflict = check_app_movement_axis_conflict(cue)
