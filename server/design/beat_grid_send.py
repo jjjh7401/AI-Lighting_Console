@@ -35,6 +35,8 @@ from server.looks.songcue import SequenceNumberError, select_sequence_number
 __all__ = [
     "BeatGridCellKey",
     "apply_beat_grid_ownership_reuse",
+    "clear_app_timecode_before_rebuild",
+    "song_end_seconds_from_bar_map",
     "beat_grid_cell_snapshot",
     "beat_grid_reapply_summary",
     "build_song_timing_from_bar_map",
@@ -684,7 +686,53 @@ def apply_beat_grid_ownership_reuse(
             )
         )
 
-    return replace(result, tracks=tuple(new_tracks), timecode_setup_commands=new_timecode_setup)
+    new_events = () if owned_timecode is not None else result.timecode_event_commands
+    return replace(
+        result,
+        tracks=tuple(new_tracks),
+        timecode_setup_commands=new_timecode_setup,
+        timecode_event_commands=new_events,
+    )
+
+
+def clear_app_timecode_before_rebuild(
+    result: BeatGridEmitResult, timecode_number: int
+) -> BeatGridEmitResult:
+    """카드 tc-events — 앱이 만든 ``LDBEAT Timecode N`` 을 같은 번호로 다시 반영할 때, 옛 트랙
+    (콘솔이 덧붙인 빈 ``Track 9`` 따위)이 쌓이지 않도록 그 타임코드를 **먼저 지우고** 새로
+    만든다. 지우는 줄은 번들 맨 앞(타임코드 설정 첫 줄)에 들어가 승인 카드에 그대로 보이고,
+    대상은 호출자가 앱 소유로 확인한 이 번호 하나뿐이다. 실기 선례: t608 v2 정리
+    (``Delete Timecode 70 /NoConfirm`` → ``OK`` + 사후 empty).
+
+    이 번호를 다시 만드는 줄(``Store Timecode N``)이 번들에 없으면 지우기만 하게 되므로
+    아무것도 하지 않는다."""
+    store_line = f"Store Timecode {timecode_number}"
+    if store_line not in result.timecode_setup_commands:
+        return result
+    return replace(
+        result,
+        timecode_setup_commands=(
+            f"Delete Timecode {timecode_number} /NoConfirm",
+            *result.timecode_setup_commands,
+        ),
+    )
+
+
+def song_end_seconds_from_bar_map(bar_map: Mapping[str, object] | None) -> float | None:
+    """``bar_map`` 의 마지막 마디 끝(곡 기준 초) — 타임코드 ``Duration`` 이다. 마디 길이는
+    박자표·BPM 으로 환산한다(저장 값 아님). 읽지 못하면 ``None`` — 길이를 지어내지 않는다."""
+    timing = build_song_timing_from_bar_map(bar_map)
+    if timing is None or not isinstance(bar_map, Mapping):
+        return None
+    ends: list[float] = []
+    for bar in bar_map.get("bars") or []:
+        if not isinstance(bar, Mapping) or not isinstance(bar.get("bar"), int) or bar["bar"] < 1:
+            continue
+        start_ms = bar.get("start_ms")
+        if isinstance(start_ms, bool) or not isinstance(start_ms, (int, float)):
+            continue
+        ends.append(float(start_ms) / 1000.0 + timing.beats_per_bar * 60.0 / timing.bpm)
+    return max(ends) if ends else None
 
 
 def beat_grid_reapply_summary(

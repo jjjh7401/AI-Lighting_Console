@@ -142,9 +142,11 @@ from server.design.beat_grid_send import (
     beat_grid_cell_snapshot,
     beat_grid_reapply_summary,
     build_song_timing_from_bar_map,
+    clear_app_timecode_before_rebuild,
     dimmer_unread_notices,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
+    song_end_seconds_from_bar_map,
     timecode_overwrite_note,
     unsent_beat_grid_cells,
     verify_owned_sequences,
@@ -11155,6 +11157,8 @@ class ChatSession:
                     cells.append(cue.commands)
             if track.assign_timecode_commands:
                 cells.append(track.assign_timecode_commands)
+        if result.timecode_event_commands:
+            cells.append(result.timecode_event_commands)
         return cells
 
     def _beat_grid_verify_approval_vs_sent(self, batch, *, since: str, until: str):
@@ -11288,7 +11292,11 @@ class ChatSession:
                     last_action="apply", ok=False, reason=timecode_reason
                 )
             timecode_numbers = {name: timecode_number for name in group_names}
-            owned_timecode = timecode_number if recorded_timecode_name is not None else None
+            # 카드 tc-events — 앱이 만든 타임코드를 다시 반영하면(기록이 있거나 덮어쓰기 허용)
+            # 지우고 처음부터 다시 만든다: 옛 빈 트랙이 쌓이지 않고, 새 트랙마다 Go+ 이벤트를
+            # 넣을 수 있다. 그래서 「이미 있는 타임코드 줄 걷어내기」(owned_timecode)는 쓰지 않는다.
+            owned_timecode = None
+            clear_timecode = recorded_timecode_name is not None or bool(timecode_overwrite_notes)
 
             types_root = str(
                 self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
@@ -11333,6 +11341,7 @@ class ChatSession:
                 recorded_cue_numbers=recorded_cue_numbers,
                 dimmer_attribute_reasons=dimmer_reasons,
                 held_cells=approved_held_cells,
+                song_end_seconds=song_end_seconds_from_bar_map(timeline.get("bar_map")),
             )
             apply_stage("bundle")
             # 카드 t615 — 저장되는 큐가 없는 트랙은 맨 Store 줄을 내지 않는다(빈 Cue 1 방지).
@@ -11359,7 +11368,7 @@ class ChatSession:
                     extra_notices=[*result.mib_notes, *result.unsent_notices],
                 )
 
-            if owned_sequences or owned_timecode is not None:
+            if owned_sequences:
                 result = apply_beat_grid_ownership_reuse(
                     result,
                     owned_sequences=owned_sequences,
@@ -11367,6 +11376,8 @@ class ChatSession:
                     recorded_cue_numbers=recorded_cue_numbers,
                 )
 
+            if clear_timecode:
+                result = clear_app_timecode_before_rebuild(result, timecode_number)
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
                 result, recorded_cue_numbers=recorded_cue_numbers
             )
@@ -11391,6 +11402,11 @@ class ChatSession:
             risk_reason = "박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))"
             for overwrite_note in timecode_overwrite_notes:
                 risk_reason += f" · {overwrite_note}"
+            if clear_timecode:
+                risk_reason += (
+                    f" · 기존 Timecode {timecode_number} 을 지우고(Delete Timecode "
+                    f"{timecode_number}) 다시 만듭니다"
+                )
             if preserved_cells:
                 listed = ", ".join(
                     f"{name} {bar}마디({reason})" for name, bar, reason in preserved_cells
