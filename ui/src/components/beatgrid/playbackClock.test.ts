@@ -7,12 +7,15 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  formatPlaybackClock,
-  autoScrollTargetForPlayhead,
+  audioClockSeconds,
   clampPlaybackSeconds,
   elapsedPlaybackSeconds,
+  followPauseEnded,
+  followScrollTarget,
+  formatPlaybackClock,
   hasReachedPlaybackEnd,
   isPlaybackSpaceToggleKey,
+  playheadPixelX,
   runPlaybackFrameUpdate,
 } from "./playbackClock";
 
@@ -64,26 +67,93 @@ describe("isPlaybackSpaceToggleKey — 스페이스바 판정(REQ-LDBEAT-024(a))
   });
 });
 
-describe("autoScrollTargetForPlayhead — 재생 중 자동 스크롤 목표(AC-LDBEAT-024(h))", () => {
-  it("플레이헤드가 이미 보이는 범위 안이면 스크롤하지 않는다(null)", () => {
-    // 마디 10, pxPerBar 10 → x=100. scrollLeft 0~1000 visible.
-    expect(autoScrollTargetForPlayhead(10, 10, 0, 0, 1000)).toBeNull();
+describe("audioClockSeconds — 음원이 실제로 도는 동안은 음원 시간이 시계다", () => {
+  it("재생 중이면 음원의 currentTime 을 그대로 쓴다", () => {
+    expect(audioClockSeconds({ paused: false, currentTime: 12.5, error: null })).toBe(12.5);
   });
 
-  it("범위를 벗어나면 1/3 지점을 목표로 돌려준다(mockup keepVisible)", () => {
-    // x = 100*10=1000, scrollLeft=0, visibleWidth=100 → vw-bw*2=100-20=80, x(1000)>0+80 → 스크롤.
-    const target = autoScrollTargetForPlayhead(100, 10, 0, 0, 100);
-    expect(target).toBe(Math.max(0, 1000 - 100 / 3));
+  it("음원이 없거나 멈췄거나 오류가 나면 null — 호출자는 성능시계로 이어 간다", () => {
+    expect(audioClockSeconds(null)).toBeNull();
+    expect(audioClockSeconds({ paused: true, currentTime: 12.5, error: null })).toBeNull();
+    expect(audioClockSeconds({ paused: false, currentTime: 12.5, error: { code: 4 } })).toBeNull();
   });
 
-  it("보이는 폭이 0 이하이면(아직 측정 전) null", () => {
-    expect(autoScrollTargetForPlayhead(10, 10, 0, 0, 0)).toBeNull();
+  it("값이 유한하지 않으면 null, 음수면 0으로 자른다", () => {
+    expect(audioClockSeconds({ paused: false, currentTime: Number.NaN, error: null })).toBeNull();
+    expect(audioClockSeconds({ paused: false, currentTime: -0.5, error: null })).toBe(0);
+  });
+});
+
+describe("playheadPixelX — 재생 위치(초) → 가로 픽셀(칸과 같은 식, 마디 단위로 끊기지 않음)", () => {
+  it("1마디 = pxPerBar 픽셀, 초는 박 길이(secondsPerBar)로 나눈다", () => {
+    expect(playheadPixelX(0, 2, 42)).toBe(0);
+    expect(playheadPixelX(2, 2, 42)).toBe(42);
+    expect(playheadPixelX(3, 2, 42)).toBe(63); // 1.5마디
   });
 
-  it("목표는 0 밑으로 내려가지 않는다", () => {
-    const target = autoScrollTargetForPlayhead(0, 10, 10, 500, 50);
-    expect(target).not.toBeNull();
-    expect(target as number).toBeGreaterThanOrEqual(0);
+  it("마디 사이 중간 시각도 소수 픽셀로 나온다", () => {
+    const a = playheadPixelX(1, 2, 42) as number;
+    const b = playheadPixelX(1.1, 2, 42) as number;
+    expect(b - a).toBeCloseTo(2.1, 6);
+  });
+
+  it("박 길이를 모르면 null — 지어내지 않는다", () => {
+    expect(playheadPixelX(3, null, 42)).toBeNull();
+    expect(playheadPixelX(3, 0, 42)).toBeNull();
+  });
+});
+
+describe("followScrollTarget — 재생선이 보이는 칸의 1/3 을 넘으면 연속으로 따라간다(AC-LDBEAT-024(h))", () => {
+  it("재생선이 1/3 안쪽에 있으면 스크롤하지 않는다(null)", () => {
+    // 보이는 폭 300 → 1/3 = 100.
+    expect(followScrollTarget(50, 0, 300)).toBeNull();
+    expect(followScrollTarget(99.9, 0, 300)).toBeNull();
+  });
+
+  it("1/3 을 넘으면 재생선이 그 자리에 머물도록 스크롤 목표를 준다", () => {
+    expect(followScrollTarget(150, 0, 300)).toBe(50);
+    expect(followScrollTarget(400, 200, 300)).toBe(300);
+  });
+
+  it("보이는 칸 밖으로 크게 건너뛰면(앞이든 뒤든) 1/3 자리로 바로 옮긴다", () => {
+    expect(followScrollTarget(2000, 0, 300)).toBe(1900);
+    expect(followScrollTarget(50, 500, 300)).toBe(0);
+  });
+
+  it("보이는 폭이 0 이하(아직 측정 전)이면 null", () => {
+    expect(followScrollTarget(500, 0, 0)).toBeNull();
+  });
+
+  it("재생선을 따라가는 동안 스크롤은 재생선 이동량만큼 매 프레임 움직인다(페이지 넘김 없음)", () => {
+    const visible = 300;
+    let scroll = 0;
+    let x = 0;
+    let previousScroll = 0;
+    for (let frame = 0; frame < 400; frame++) {
+      x += 1.5; // 한 프레임에 1.5px 전진
+      const target = followScrollTarget(x, scroll, visible);
+      if (target !== null) scroll = target;
+      // 재생선은 보이는 칸 안에 항상 있다.
+      expect(x - scroll).toBeLessThanOrEqual(visible);
+      expect(x - scroll).toBeGreaterThanOrEqual(0);
+      // 1/3 을 넘은 뒤로는 한 프레임에 1.5px 만큼만 움직인다.
+      if (frame > 200) expect(scroll - previousScroll).toBeCloseTo(1.5, 6);
+      previousScroll = scroll;
+    }
+  });
+});
+
+describe("followPauseEnded — 사용자가 직접 스크롤하면 잠시 따라가기를 멈춘다", () => {
+  it("직접 스크롤한 적이 없으면 멈춤이 끝난 것이다", () => {
+    expect(followPauseEnded(null, 1000)).toBe(true);
+  });
+
+  it("직접 스크롤 뒤 3초가 안 지났으면 아직 멈춤", () => {
+    expect(followPauseEnded(1000, 3999)).toBe(false);
+  });
+
+  it("직접 스크롤 뒤 3초가 지나면 다시 따라간다", () => {
+    expect(followPauseEnded(1000, 4000)).toBe(true);
   });
 });
 

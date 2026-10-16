@@ -139,10 +139,13 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import {
-  autoScrollTargetForPlayhead,
+  audioClockSeconds,
   clampPlaybackSeconds,
   elapsedPlaybackSeconds,
+  followPauseEnded,
+  followScrollTarget,
   hasReachedPlaybackEnd,
+  playheadPixelX,
   runPlaybackFrameUpdate,
 } from "./beatgrid/playbackClock";
 import { formatPresetChipTooltip } from "./beatgrid/presetChipTooltip";
@@ -1673,6 +1676,18 @@ export function BeatGrid({
   const [lrSplitViewedSide, setLrSplitViewedSide] = useState<LRSplitViewedChild | null>(null);
   const rafRef = useRef<number | null>(null);
   const playbackAnchorRef = useRef<{ anchorSeconds: number; anchorPerfMs: number } | null>(null);
+  // 재생선 따라가기 — 재생 중 사용자가 직접 스크롤하면 잠시 멈춘다(`followPauseEnded`: 조용한 시간이
+  // 지나면 다시 따라감). ▶·⏮·지도 클릭은 `resumeFollow`로 곧바로 다시 따라간다.
+  const followPausedRef = useRef(false);
+  const lastManualScrollMsRef = useRef<number | null>(null);
+  const pauseFollowForManualScroll = () => {
+    followPausedRef.current = true;
+    lastManualScrollMsRef.current = performance.now();
+  };
+  const resumeFollow = () => {
+    followPausedRef.current = false;
+    lastManualScrollMsRef.current = null;
+  };
   // 카드 t570 — RAF 틱(아래 effect)이 매 프레임 읽는 "지금 최신 값" 묶음.
   // 그 틱은 effect 의존 배열에 없는 렌더 중 계산값(`pxPerBar`·
   // `laneView.visibleWidth`·지금 고른 칸)을 훅 순서 규칙을 어기지 않고
@@ -1730,6 +1745,7 @@ export function BeatGrid({
     }
     playbackAnchorRef.current = { anchorSeconds: playbackSeconds, anchorPerfMs: performance.now() };
     setPlaying(true);
+    resumeFollow();
     if (audioStatus === "connected" && audioRef.current) {
       try {
         audioRef.current.currentTime = playbackSeconds;
@@ -1750,6 +1766,7 @@ export function BeatGrid({
   // 결과 — 끊김 없이 0초부터). 멈춰 있으면 ▶ 가 그 자리(0초)부터 잇는다.
   const rewindToStart = () => {
     setPlaybackSeconds(0);
+    resumeFollow();
     if (playing) {
       playbackAnchorRef.current = { anchorSeconds: 0, anchorPerfMs: performance.now() };
       if (audioRef.current) {
@@ -1829,6 +1846,7 @@ export function BeatGrid({
       consoleAudioTimerRef.current = null;
       playbackAnchorRef.current = { anchorSeconds: 0, anchorPerfMs: performance.now() };
       setPlaying(true);
+      resumeFollow();
       const audio = audioRef.current;
       if (audioStatus === "connected" && audio) {
         try {
@@ -1865,20 +1883,28 @@ export function BeatGrid({
       const anchor = playbackAnchorRef.current;
       if (!anchor) return;
       const nowMs = performance.now();
-      const next = elapsedPlaybackSeconds(anchor.anchorSeconds, anchor.anchorPerfMs, nowMs);
+      // 음원이 실제로 도는 동안은 음원 시간이 시계다(음원과 재생선이 어긋나지 않는다). 음원이 없거나
+      // 멈췄으면 성능시계로 이어 가고, 그때 앵커를 지금 위치로 옮겨 두어 위치가 튀지 않게 한다.
+      const audioSeconds = audioClockSeconds(audioRef.current);
+      const next = audioSeconds ?? elapsedPlaybackSeconds(anchor.anchorSeconds, anchor.anchorPerfMs, nowMs);
+      if (audioSeconds !== null) playbackAnchorRef.current = { anchorSeconds: audioSeconds, anchorPerfMs: nowMs };
       setPlaybackSeconds(next);
       runPlaybackFrameUpdate(
         () => {
           if (!grid) return;
-          const bar = secondsToBar(next, secondsPerBar, axisEnd);
-          if (bar === null || bar === previousBar) return;
-          previousBar = bar;
           const ctx = livePlaybackContextRef.current;
-          setBarCursor((prev) => ({ bar, anchor: ctx.selected ?? prev?.anchor ?? null }));
-          if (ctx.selected) setSelected({ trackIndex: ctx.selected.trackIndex, bar });
+          const bar = secondsToBar(next, secondsPerBar, axisEnd);
+          if (bar !== null && bar !== previousBar) {
+            previousBar = bar;
+            setBarCursor((prev) => ({ bar, anchor: ctx.selected ?? prev?.anchor ?? null }));
+            if (ctx.selected) setSelected({ trackIndex: ctx.selected.trackIndex, bar });
+          }
+          // 재생선 따라가기는 매 프레임 — 마디 칸이 아니라 초에서 픽셀을 바로 구해 연속으로 흘린다.
+          if (followPausedRef.current && followPauseEnded(lastManualScrollMsRef.current, nowMs)) resumeFollow();
           const el = lanesRef.current;
-          if (el) {
-            const target = autoScrollTargetForPlayhead(bar, ctx.pxPerBar, ctx.rangeStart, el.scrollLeft, ctx.visibleWidth);
+          const x = playheadPixelX(next, secondsPerBar, ctx.pxPerBar);
+          if (el && x !== null && !followPausedRef.current) {
+            const target = followScrollTarget(x, el.scrollLeft, ctx.visibleWidth);
             if (target !== null) el.scrollLeft = target;
           }
         },
@@ -2075,6 +2101,8 @@ export function BeatGrid({
   // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
   const playheadBar = secondsToBar(playbackSeconds, secondsPerBar, maxBar);
+  // 재생선 가로 위치 — 마디 단위가 아니라 초에서 바로 구한 소수 픽셀(칸과 같은 식).
+  const playheadX = playheadPixelX(playbackSeconds, secondsPerBar, pxPerBar);
   const laneContentWidth = barToX(maxBar + 1);
   // 카드 t561 — 전환·장면 전환·편집 칸 머리에 쓰는 값. 구간 경계는 곡 전체
   // 지도와 같은 `overviewModel.sections`(카드 t559)에서 온다(없으면 `null` —
@@ -2154,6 +2182,7 @@ export function BeatGrid({
   // 보기만 옮기고 재생 위치는 그대로 둔다(지어내지 않음).
   const jumpToBar = (bar: number) => {
     const target = Math.max(grid.bar_range.start, Math.min(maxBar, bar));
+    resumeFollow();
     setBarCursor({ bar: target, anchor: selected });
     if (playing) {
       const targetSeconds = barToSeconds(target, secondsPerBar);
@@ -2312,6 +2341,12 @@ export function BeatGrid({
           aria-label="콘솔 그룹 트랙 타임라인"
           ref={lanesRef}
           onScroll={measureLanes}
+          onWheel={pauseFollowForManualScroll}
+          onTouchMove={pauseFollowForManualScroll}
+          onPointerDown={(event) => {
+            // 스크롤바를 잡는 누름만 직접 스크롤로 본다 — 칸을 누르는 것은 따라가기를 멈추지 않는다.
+            if (event.target === event.currentTarget) pauseFollowForManualScroll();
+          }}
         >
           {/* 자(마디 눈금) — 세로 스크롤 중에도 위에 고정(시안 `.ruler`). */}
           <div className="beat-grid-ruler-row">
@@ -2545,10 +2580,10 @@ export function BeatGrid({
                               </span>
                             );
                           })}
-                          {playheadBar !== null && (
+                          {playheadBar !== null && playheadX !== null && (
                             <span
                               className="beat-grid-playhead"
-                              style={{ left: barToX(playheadBar), width: barToX(playheadBar + 1) - barToX(playheadBar) }}
+                              style={{ left: playheadX, width: pxPerBar }}
                               title={`재생 위치 — ${playheadBar}마디`}
                             />
                           )}
