@@ -15,6 +15,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from server.audio.analyze import _FRAME_LENGTH, _HOP_LENGTH, sections_from_rms
 from server.audio.bar_map import (
     _OUTCOME_ADOPT_DOUBLE,
     BarEvent,
@@ -23,13 +24,15 @@ from server.audio.bar_map import (
     BarMapFailure,
     BeatGridFailure,
     BeatGridResult,
+    _decode_mono_audio,
     classify_bar_events,
     compute_bar_energy,
     derive_bars,
     detect_beat_grid,
     extract_bar_features,
 )
-from server.audio.bar_map_store import BarMapStoreError, build_bar_map_payload
+from server.audio.bar_map_store import BarMapStoreError, attach_rhythm, build_bar_map_payload
+from server.audio.rhythm import build_rhythm
 
 __all__ = [
     "KIND_FAILED",
@@ -165,7 +168,7 @@ def _synthesize(
     events = classify(features)
 
     try:
-        return build_bar_map_payload(
+        payload = build_bar_map_payload(
             grid.beat_times_ms,
             first_beat_offset,
             bpm=grid.bpm,
@@ -175,3 +178,26 @@ def _synthesize(
         )
     except BarMapStoreError as error:
         return BarMapEntryFailure(str(error))
+
+    rhythm = _rhythm_block(audio_bytes, payload["bars"], grid.bpm)
+    if rhythm is None:
+        return payload
+    try:
+        return attach_rhythm(payload, rhythm)
+    except BarMapStoreError as error:
+        return BarMapEntryFailure(str(error))
+
+
+def _rhythm_block(audio_bytes: bytes, bars: list, bpm: float) -> dict | None:
+    """곡 소리에서 ``rhythm`` 블록을 만든다. 디코드할 수 없는 입력이면 ``None`` — 그 지도는 키 없이
+    저장된다(레인1: 키가 없으면 현재 경로). 분석 중의 실제 오류는 호출자가 실패로 바꾼다."""
+    decoded = _decode_mono_audio(audio_bytes)
+    if isinstance(decoded, BeatGridFailure):
+        return None
+    import librosa
+    import numpy
+
+    rms = librosa.feature.rms(y=decoded.mono, frame_length=_FRAME_LENGTH, hop_length=_HOP_LENGTH)[0]
+    frame_ms = _HOP_LENGTH * 1000.0 / decoded.sample_rate
+    boundaries_ms, d_candidates = sections_from_rms(numpy, rms, frame_ms, decoded.duration_ms, bpm)
+    return build_rhythm(decoded.mono, decoded.sample_rate, bars, boundaries_ms, d_candidates)
