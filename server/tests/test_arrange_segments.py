@@ -903,7 +903,7 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     assert _rows(draft, "FOH") == [0]
 
 
-# -- 리듬 블록(rhythm): 구간 경계와 구간 등급 ----------------------------------------------------
+# -- 리듬 블록(rhythm): 구간 경계는 그대로, 구간 등급은 메타데이터 -------------------------
 
 
 def _rhythm_block(
@@ -957,7 +957,7 @@ def _rhythm_map(
     return attach_rhythm(bar_map, _rhythm_block(bar_map, sections, hits))
 
 
-#: 합성 곡에 얹는 리듬 구간. 21 마디의 경계만 합성 곡의 구간 시작에 없다.
+#: 합성 곡에 얹는 리듬 구간. 21 마디의 경계만 합성 곡의 구간 시작에 없다(경계로는 쓰이지 않는다).
 RHYTHM_SECTIONS = [(1, 8, 2), (9, 20, 4), (21, 40, 3)]
 
 
@@ -965,33 +965,49 @@ def _starts(sections: list[SegmentSection]) -> list[int]:
     return [section.start_bar for section in sections]
 
 
-def test_rhythm_section_starts_are_added_to_the_event_derived_boundaries() -> None:
+def _triples(sections: list[SegmentSection]) -> list[tuple[int, int, str]]:
+    return [(s.start_bar, s.end_bar, s.kind) for s in sections]
+
+
+def test_rhythm_section_starts_do_not_change_the_event_derived_boundaries() -> None:
     plain = split_sections(_bar_map(SYNTHETIC_EVENTS))
     with_rhythm = split_sections(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS))
     assert _starts(plain) == [1, 7, 9, 14, 18, 33, 36, 40]
-    assert _starts(with_rhythm) == [1, 7, 9, 14, 18, 21, 33, 36, 40]
-    # 21 마디에서 후렴(18~32)이 둘로 갈린다. 이벤트가 없는 마디에서 시작하니 벌스다.
-    assert [(s.start_bar, s.end_bar, s.kind) for s in with_rhythm if 18 <= s.start_bar <= 21] == [
-        (18, 20, "chorus"),
-        (21, 32, "verse"),
-    ]
+    # 리듬 구간 시작 21 은 구간 시작이 되지 않는다. 후렴 18~32 는 그대로 한 구간이다.
+    assert _triples(with_rhythm) == _triples(plain)
+    assert (18, 32, "chorus") in _triples(with_rhythm)
 
 
-def test_rhythm_never_removes_an_event_derived_boundary() -> None:
-    # 리듬 구간이 곡 전체를 한 덩이로 덮어도 이벤트가 만든 경계는 그대로다.
-    one_block = split_sections(_rhythm_map(SYNTHETIC_EVENTS, [(1, 40, 3)]))
-    assert [(s.start_bar, s.end_bar, s.kind) for s in one_block] == [
-        (s.start_bar, s.end_bar, s.kind) for s in SYNTHETIC_SECTIONS
-    ]
-    shifted = split_sections(_rhythm_map(SYNTHETIC_EVENTS, [(1, 12, 1), (13, 25, 2), (26, 40, 3)]))
-    assert set(_starts(shifted)) == set(_starts(SYNTHETIC_SECTIONS)) | {13, 26}
-
-
-def test_a_rhythm_start_that_is_already_a_boundary_adds_nothing() -> None:
-    sections = [(1, 6, 1), (7, 8, 2), (9, 17, 3), (18, 35, 4), (36, 40, 5)]
-    assert _starts(split_sections(_rhythm_map(SYNTHETIC_EVENTS, sections))) == _starts(
+@pytest.mark.parametrize(
+    "rhythm_sections",
+    [
+        RHYTHM_SECTIONS,
+        [(1, 40, 3)],
+        [(1, 12, 1), (13, 25, 2), (26, 40, 3)],
+        [(1, 6, 1), (7, 8, 2), (9, 17, 3), (18, 35, 4), (36, 40, 5)],
+        [(2, 3, 1), (20, 21, 5), (39, 40, 2)],
+    ],
+)
+def test_any_rhythm_layout_gives_the_same_section_triples_as_no_rhythm(
+    rhythm_sections: list[tuple[int, int, int]],
+) -> None:
+    # 리듬 구간이 곡 전체를 덮든, 사건 경계와 겹치든, 사건 한가운데를 가르든 경계 집합은 같다.
+    assert _triples(split_sections(_rhythm_map(SYNTHETIC_EVENTS, rhythm_sections))) == _triples(
         SYNTHETIC_SECTIONS
     )
+
+
+def test_an_event_section_that_a_rhythm_section_cuts_in_the_middle_stays_one_section() -> None:
+    # 후렴 18~32 를 21 마디의 리듬 경계가 가운데서 자른다. 그래도 후렴은 한 구간이다.
+    cut = [(1, 20, 2), (21, 40, 5)]
+    plain = split_sections(_bar_map(SYNTHETIC_EVENTS))
+    with_rhythm = split_sections(_rhythm_map(SYNTHETIC_EVENTS, cut))
+    assert _triples(with_rhythm) == _triples(plain)
+    assert 21 not in _starts(with_rhythm)
+    chorus = [s for s in with_rhythm if s.start_bar == 18]
+    assert [(s.start_bar, s.end_bar, s.kind) for s in chorus] == [(18, 32, "chorus")]
+    # 등급은 시작 마디 18 을 품은 리듬 구간(1~20, 등급 2)에서 온다. 21 마디의 등급 5 가 아니다.
+    assert chorus[0].d_level == 2
 
 
 def test_without_rhythm_the_boundaries_are_the_event_derived_ones() -> None:
@@ -999,7 +1015,7 @@ def test_without_rhythm_the_boundaries_are_the_event_derived_ones() -> None:
     assert "rhythm" not in _bar_map(SYNTHETIC_EVENTS)
 
 
-def test_every_bar_is_still_covered_once_after_rhythm_boundaries() -> None:
+def test_every_bar_is_still_covered_once_with_a_rhythm_block() -> None:
     sections = split_sections(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS))
     covered = [bar for section in sections for bar in range(section.start_bar, section.end_bar + 1)]
     assert covered == list(range(1, BARS + 1))
@@ -1013,7 +1029,6 @@ def test_each_section_carries_the_d_level_of_the_rhythm_section_holding_its_star
         (9, 4),
         (14, 4),
         (18, 4),
-        (21, 3),
         (33, 3),
         (36, 3),
         (40, 3),
@@ -1049,8 +1064,8 @@ def test_segment_section_still_builds_from_three_positional_fields() -> None:
 
 
 def test_d_level_stays_out_of_the_draft_and_does_not_reshape_it() -> None:
-    # 곡 전체를 덮는 리듬 구간 하나는 경계를 더하지 않으니 초안이 리듬 없는 초안과 같다.
-    rhythm_map = _rhythm_map(SYNTHETIC_EVENTS, [(1, 40, 4)])
+    # 리듬 구간은 경계를 바꾸지 않으니 초안이 리듬 없는 초안과 같다.
+    rhythm_map = _rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS)
     layout = _layout()
     with_rhythm = generate_segment_draft(rhythm_map, layout)
     assert with_rhythm == generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), layout)
@@ -1058,16 +1073,18 @@ def test_d_level_stays_out_of_the_draft_and_does_not_reshape_it() -> None:
     assert set(with_rhythm) == {"tracks", "windows", "bar_range", "source", "note"}
 
 
-def test_rhythm_boundaries_reach_the_draft_windows() -> None:
-    draft = generate_segment_draft(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS), _layout())
-    window_starts = {window["start_bar"] for window in draft["windows"]}
-    assert 21 in window_starts
+def test_rhythm_boundaries_do_not_reach_the_draft_windows() -> None:
+    layout = _layout()
+    draft = generate_segment_draft(_rhythm_map(SYNTHETIC_EVENTS, RHYTHM_SECTIONS), layout)
+    plain = generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), layout)
+    assert draft["windows"] == plain["windows"]
+    assert 21 not in {window["start_bar"] for window in draft["windows"]}
     assert "d_level" not in json.dumps(draft, ensure_ascii=False)
 
 
 # -- 리듬 블록(rhythm): 큰 히트가 블라인드 강조 마디가 된다 ---------------------------------------
 
-#: 합성 곡을 한 덩이로 덮는 리듬 구간. 구간 경계를 더하지 않아서 큰 히트의 효과만 따로 본다.
+#: 합성 곡을 한 덩이로 덮는 리듬 구간. 큰 히트의 효과만 따로 본다.
 WHOLE_SONG = [(1, 40, 3)]
 
 
@@ -1153,11 +1170,11 @@ def test_the_drop_start_strobe_and_the_pre_hit_notice_stay_where_they_were() -> 
     assert _hits(on_start, "BLIND", BLIND_LABEL) == [9, 18, 40]
 
 
-def test_a_big_hit_that_sits_after_a_rhythm_boundary_belongs_to_the_section_holding_it() -> None:
-    # 리듬 경계 21 이 후렴(18~32)을 18~20 후렴과 21~32 벌스로 가른다. 25 마디 히트는 벌스 안이라
-    # 후렴의 강조를 끌어가지 못한다.
+def test_a_big_hit_in_a_chorus_that_a_rhythm_section_cuts_belongs_to_that_chorus() -> None:
+    # 리듬 구간 21 은 후렴(18~32)을 가르지 못한다. 25 마디 히트는 같은 후렴 안이라 그 후렴의
+    # 블라인드 마디가 된다. 20 마디 히트도 마찬가지다.
     draft = _hit_draft([(25, 1)], sections=RHYTHM_SECTIONS)
-    assert _hits(draft, "BLIND", BLIND_LABEL) == [9, 18, 40]
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [9, 25, 40]
     inside = _hit_draft([(20, 1)], sections=RHYTHM_SECTIONS)
     assert _hits(inside, "BLIND", BLIND_LABEL) == [9, 20, 40]
 

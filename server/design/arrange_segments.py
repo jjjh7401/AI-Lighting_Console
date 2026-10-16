@@ -8,8 +8,8 @@
 
 - 구간은 첫 마디, 모든 이벤트의 시작 마디, 드롭이 끝난 다음 마디에서 시작한다(마디 지도에 있는
   마디만). 구간은 시작 마디부터 다음 구간 시작의 앞 마디까지이고, 마지막 구간은 마지막 마디까지다.
-  마디 지도에 리듬 블록(``rhythm``)이 있으면 그 리듬 구간의 시작 마디도 구간 시작에 더하고(합집합),
-  구간마다 시작 마디를 품은 리듬 구간의 등급(``d_level``)을 메타데이터로 단다. 초안에는 싣지 않는다.
+  리듬 블록(``rhythm``)은 구간 경계를 바꾸지 않는다. 구간마다 시작 마디를 품은 리듬 구간의
+  등급(``d_level``)을 메타데이터로만 달고, 초안에는 싣지 않는다.
 - 구간 종류는 시작 마디에서 정한다. 위에서부터 먼저 맞는 것을 쓴다: 첫 마디에 이벤트가 없으면
   도입(intro), 드롭이 시작하면 드롭(drop), 드롭이 끝난 다음 마디면 마지막 후렴(last_chorus),
   킥 진입이면 후렴(chorus), 빌드업이면 빌드(build), 브레이크 끝 마디 뒤 2마디 안에 드롭이
@@ -248,9 +248,9 @@ def split_sections(bar_map: Mapping[str, Any]) -> list[SegmentSection]:
     구간은 첫 마디, 모든 이벤트의 시작 마디, 드롭 끝 마디의 다음 마디에서 시작한다. 마디 지도에 없는
     마디(마지막 마디에서 끝나는 드롭의 다음 마디)는 시작이 아니다.
 
-    마디 지도에 ``rhythm`` 블록이 있으면 리듬 구간의 시작 마디도 구간 시작에 더한다(합집합이라
-    기존 시작 마디는 빠지지 않는다). 구간의 ``d_level`` 은 그 시작 마디를 품은 리듬 구간의 등급이다.
-    블록이 없으면 구간 나누기도 ``d_level``(``None``)도 예전과 같다.
+    마디 지도에 ``rhythm`` 블록이 있어도 구간 경계는 바뀌지 않는다(사건 경계만 쓴다). 블록이 있든
+    없든 경계 집합이 같다. 구간의 ``d_level`` 은 그 시작 마디를 품은 리듬 구간의 등급이며
+    메타데이터일 뿐이다. 블록이 없으면 ``d_level`` 은 ``None`` 이다.
     """
     bar_numbers = sorted(int(entry["bar"]) for entry in bar_map["bars"])
     events = [
@@ -261,7 +261,6 @@ def split_sections(bar_map: Mapping[str, Any]) -> list[SegmentSection]:
     starts = {bar_numbers[0]}
     starts.update(event.start_bar for event in events)
     starts.update(event.end_bar + 1 for event in events if event.kind == _DROP)
-    starts.update(start for start, _end, _level in rhythm_sections)
     ordered = sorted(starts & set(bar_numbers))
     ends = [start - 1 for start in ordered[1:]] + [bar_numbers[-1]]
     return [
