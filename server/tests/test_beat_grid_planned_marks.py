@@ -123,8 +123,9 @@ class TestPlannedNames:
     def test_the_floor_cells_get_the_planned_position_name_name(self) -> None:
         out = _attached(default_beat_grid(LOVE_ATTACK_TITLE))
 
-        assert _cue(out, "MOVER-U", 0)["planned_position_name"] == "FLOOR"
-        assert _cue(out, "MOVER-D", 0)["planned_position_name"] == "FLOOR"
+        # 위치 프리셋은 그룹마다 따로 저장하므로 계획 이름도 「콘솔 이름 + 그룹」이다.
+        assert _cue(out, "MOVER-U", 0)["planned_position_name"] == "FLOOR MOVER-U"
+        assert _cue(out, "MOVER-D", 0)["planned_position_name"] == "FLOOR MOVER-D"
         assert "planned_position_name" not in _cue(out, "MOVER-U", 7)
 
     def test_a_position_number_suppresses_the_planned_position_name_name(self) -> None:

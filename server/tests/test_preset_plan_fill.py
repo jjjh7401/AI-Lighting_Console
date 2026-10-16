@@ -56,26 +56,25 @@ class TestDefaultDimmerAttribute:
         assert not any("기본 'Dimmer'" in fix for fix in plan.supervisor_fixes)
 
 
-class TestColorAndPositionStayOnTheirOwnPaths:
-    def test_lavender_keeps_the_palette_rgb_marked_and_out_of_this_card(self) -> None:
+class TestColorAndPositionWaitForTheirStoreLines:
+    def test_lavender_keeps_the_palette_rgb_marked_and_waits_for_its_store_line(self) -> None:
         plan = _plan()
         preset = _preset(plan, "LAVENDER")
         assert preset.value == "RGB 55 35 100"
         assert preset.ready is False
         assert preset.deferred is True
         assert any("LAVENDER RGB 55 35 100" in fix for fix in plan.supervisor_fixes)
-        assert any(
-            line.startswith("LAVENDER") and "이 카드 범위 밖" in line for line in plan.deferred
-        )
+        assert any(line.startswith("LAVENDER") and "저장 줄 미정" in line for line in plan.deferred)
         assert not any("LAVENDER" in line for line in plan.unresolved)
 
-    def test_floor_keeps_its_approximate_target_marked_and_out_of_this_card(self) -> None:
+    def test_floor_keeps_its_approximate_target_marked_and_waits_per_group(self) -> None:
         plan = _plan()
-        preset = _preset(plan, "FLOOR")
-        assert "무대 중앙 깊이 바닥" in preset.value
-        assert preset.deferred is True
+        for name in ("FLOOR MOVER-U", "FLOOR MOVER-D"):
+            preset = _preset(plan, name)
+            assert "무대 중앙 깊이 바닥" in preset.value
+            assert preset.deferred is True
+            assert any(line.startswith(name) and "저장 줄 미정" in line for line in plan.deferred)
         assert any("바닥 쪽 목표" in fix for fix in plan.supervisor_fixes)
-        assert any(line.startswith("FLOOR") for line in plan.deferred)
         assert not any("FLOOR" in line for line in plan.unresolved)
 
     def test_color_table_resolves_lavender_to_the_palette_slot(self) -> None:
@@ -86,7 +85,8 @@ class TestColorAndPositionStayOnTheirOwnPaths:
 class TestCardReason:
     def test_card_reason_shows_saved_deferred_undecided_and_supervisor_marks(self) -> None:
         reason = card_reason(_plan())
-        assert reason.startswith("디머 프리셋 5개 저장")
+        # 저장 줄이 붙기 전의 계획이라 저장은 디머 다섯뿐이다(색·위치는 「이 카드 밖」 후보).
+        assert reason.startswith("프리셋 5개(디머 5) 저장")
         assert "DIM-100(100%)" in reason
         assert "이 카드 밖(저장 안 함):" in reason
         assert "미정(이번 계획에서 제외):" in reason
