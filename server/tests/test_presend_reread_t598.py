@@ -38,7 +38,7 @@ def _apply(tmp_path, during_approval):
     store = SongTimelineStore()
     store.latest = timeline
     session, console, approval, _audit = _new_session(tmp_path, store=store, state_tree=tree)
-    session._beat_grid_group_members = lambda names: {
+    session._beat_grid_group_members = lambda names, **_: {
         n: _MEMBERS[n] for n in names if n in _MEMBERS
     }
     session._beat_grid_pointing_frames = lambda: _FRAMES

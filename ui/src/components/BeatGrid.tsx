@@ -154,6 +154,7 @@ import {
   type LRSplitStage,
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
+import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
 import {
   audioClockSeconds,
   clampPlaybackSeconds,
@@ -581,6 +582,8 @@ export interface BeatGridProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
+  /** 승인 카드가 떠 있는가 — 진행 문구와 거절 알림 숨김에 쓴다(카드 apply-latency). */
+  approvalPending?: boolean;
   /** 「필요한 프리셋 만들기」 — 서버가 계획표(chat_response)를 먼저 보내고 승인 카드를 띄운다. */
   onPresetPlanRequest?: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
@@ -1539,6 +1542,7 @@ export function BeatGrid({
   onPreviewBar,
   onPreviewOff,
   onApply,
+  approvalPending = false,
   onPresetPlanRequest,
   timecodeNumber,
   onTimecodeSubmit,
@@ -1729,6 +1733,46 @@ export function BeatGrid({
   // 「새 응답이 도착했을 때」만 판단한다.
   const [consoleFollow, setConsoleFollow] = useState(false);
   const [consoleFollowError, setConsoleFollowError] = useState<string | null>(null);
+  // 「⇪ 콘솔에 반영」 진행 표시(카드 apply-latency): 누른 시각, 승인 카드가 뜬 시각, 그리고
+  // 누르기 전이나 카드가 뜰 때 화면에 있던 결과(이번 반영의 결과가 아니다). 시계는 진행 문구가
+  // 보일 때만 돈다.
+  const [applyRunStartMs, setApplyRunStartMs] = useState<number | null>(null);
+  const [approvalSinceMs, setApprovalSinceMs] = useState<number | null>(null);
+  const [staleSendStatus, setStaleSendStatus] = useState<BeatGridSendStatus | null>(null);
+  const [applyNowMs, setApplyNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (approvalPending) {
+      setApprovalSinceMs((since) => since ?? Date.now());
+      setStaleSendStatus(sendStatus);
+    } else {
+      // 결정이 났거나 새 결과가 왔다 — 진행 문구를 거두고, 이후 결과는 이번 반영의 결과로 본다.
+      setApprovalSinceMs(null);
+      setApplyRunStartMs(null);
+    }
+  }, [approvalPending, sendStatus]);
+  useEffect(() => {
+    if (applyRunStartMs === null && approvalSinceMs === null) return;
+    const timer = window.setInterval(() => setApplyNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [applyRunStartMs, approvalSinceMs]);
+  const requestApply = onApply
+    ? () => {
+        const now = Date.now();
+        setApplyNowMs(now);
+        setApplyRunStartMs(now);
+        // 누르기 전에 화면에 있던 결과는 이번 반영의 결과가 아니다 — 새 결과가 올 때까지 숨긴다.
+        setStaleSendStatus(sendStatus);
+        onApply();
+      }
+    : undefined;
+  const applyProgressText = applyProgressNote(
+    approvalPending ? approvalSinceMs : applyRunStartMs,
+    applyNowMs,
+    approvalPending,
+  );
+  const applyFailure = failureNoteVisible(approvalPending, sendStatus, staleSendStatus)
+    ? applyFailureNote(sendStatus)
+    : null;
   const awaitingConsolePlayRef = useRef(false);
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const consoleFollowAvailable = !!onConsolePlay && !!onConsoleStop;
@@ -2298,7 +2342,8 @@ export function BeatGrid({
         onBarChange={jumpToBar}
         onPreviewBar={onPreviewBar}
         onPreviewOff={onPreviewOff}
-        onApply={onApply}
+        onApply={requestApply}
+        applyProgress={applyProgressText}
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
@@ -2324,9 +2369,9 @@ export function BeatGrid({
       />
       {presetPlan && <PresetPlanPanel plan={presetPlan} onClose={() => setPresetPlanPending(null)} />}
       {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
-      {applyFailureNote(sendStatus) && (
+      {applyFailure && (
         <p className="beat-grid-apply-fail" role="status">
-          {applyFailureNote(sendStatus)}
+          {applyFailure}
         </p>
       )}
 

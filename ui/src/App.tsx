@@ -1283,6 +1283,7 @@ export default function App() {
             onConsoleStop={sendBeatGridConsoleStop}
             sendStatus={state.beatGridSendStatus}
             onApply={sendBeatGridApply}
+            approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}
             timecodeNumber={state.songTimeline.timeline?.timecode_number ?? null}
             onTimecodeSubmit={sendBeatGridTimecodeSet}

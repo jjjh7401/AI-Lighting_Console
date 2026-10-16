@@ -645,7 +645,9 @@ def _apply_session(
     store = SongTimelineStore()
     store.latest = timeline
     session, console, approval, _audit = _new_session(tmp_path, store=store, state_tree=tree)
-    session._beat_grid_group_members = lambda names: {n: members[n] for n in names if n in members}
+    session._beat_grid_group_members = lambda names, **_: {
+        n: members[n] for n in names if n in members
+    }
     session._beat_grid_color_channel_names = lambda fids: dict(channels)
     status = session.beat_grid_apply()
     return status, store, approval, console
@@ -876,7 +878,7 @@ class TestPresendRereadCoversColor:
             timeline_store=store,
             timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
         )
-        session._beat_grid_group_members = lambda names: {
+        session._beat_grid_group_members = lambda names, **_: {
             n: _MEMBERS[n] for n in names if n in _MEMBERS
         }
         session._beat_grid_color_channel_names = lambda fids: dict(_CHANNELS)

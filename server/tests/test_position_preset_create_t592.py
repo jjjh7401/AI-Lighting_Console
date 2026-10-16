@@ -369,7 +369,7 @@ def _apply(tmp_path, cue: dict, *, pool2: list[int] | None, grid_extra=_RECIPE, 
     store = SongTimelineStore()
     store.latest = timeline
     session, console, approval, _audit = _new_session(tmp_path, store=store, state_tree=tree)
-    session._beat_grid_group_members = lambda names: {
+    session._beat_grid_group_members = lambda names, **_: {
         n: _MEMBERS[n] for n in names if n in _MEMBERS
     }
     session._beat_grid_pointing_frames = lambda: frames
@@ -435,7 +435,7 @@ class TestApplyCreatesThePreset:
         session, console, _approval, _audit = _new_session(
             tmp_path, store=store, state_tree=tree, decisions=(False,)
         )
-        session._beat_grid_group_members = lambda names: {"BACK": [101, 102]}
+        session._beat_grid_group_members = lambda names, **_: {"BACK": [101, 102]}
         session._beat_grid_pointing_frames = lambda: _FRAMES
         status = session.beat_grid_apply()
         assert status["ok"] is False

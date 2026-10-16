@@ -126,6 +126,8 @@ export interface BeatGridTopBarProps {
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
+  /** 「⇪ 콘솔에 반영」 진행 문구 — 콘솔을 읽는 중·승인 카드를 기다리는 중(카드 apply-latency). */
+  applyProgress?: string | null;
   /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
    * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
    * 않는다), 숫자는 그 개수다. */
@@ -202,7 +204,8 @@ export function BeatGridTopBar({
   onPreviewBar,
   onPreviewOff,
   onApply,
-  timecodeNumber = null,
+  applyProgress,
+timecodeNumber = null,
   onTimecodeSubmit,
   pendingApplyCount,
   onDrawerToggle,
@@ -410,6 +413,11 @@ export function BeatGridTopBar({
           </span>
         )}
       </button>
+      {applyProgress && (
+        <span className="beat-grid-apply-progress" role="status">
+          {applyProgress}
+        </span>
+      )}
       {onDraftPropose && (
         <button
           type="button"

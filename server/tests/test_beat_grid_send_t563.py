@@ -407,6 +407,72 @@ class TestBeatGridApply:
         assert status_before["approval_vs_sent"]["match"] is True
 
 
+class TestApprovalCardPrecedesItsStatus:
+    """③ 순서 — 승인 카드는 그 반영의 결과 상태보다 먼저 나가야 한다.
+
+    게이트의 승인 포트로 실제 승인 채널(``ApprovalChannel``)을 쓴다. 송신 함수가 카드를
+    받는 바로 그 자리에서 결정을 넣으므로(``resolve`` 는 대기 전에 와도 된다) 승인 창을
+    실제로 열지 않고도 송신 순서를 잰다. 콘솔은 가짜 콘솔만 쓴다.
+    """
+
+    def _session(self, tmp_path, *, approve: bool):
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        sent: list[dict] = []
+        channel = ApprovalChannel(timeout_seconds=1.0)
+
+        def send_and_answer(event: dict) -> None:
+            sent.append(event)
+            if event.get("type") == "approval_request":
+                channel.resolve(event["request_id"], approved=approve)
+
+        audit = AuditLog(tmp_path / "audit")
+        gate = SafetyGate(
+            console=FakeConsole(state_tree=_state_tree()),
+            audit=audit,
+            approval_port=channel,
+        )
+        session = ChatSession(
+            gate=gate,
+            provider=RefusingProvider(),
+            system_prefix="PREFIX",
+            audit=audit,
+            send_event=send_and_answer,
+            approval_channel=channel,
+            timeline_store=store,
+            timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+        )
+        return session, sent
+
+    @staticmethod
+    def _apply_positions(sent: list[dict]) -> tuple[list[int], list[int]]:
+        cards = [i for i, e in enumerate(sent) if e.get("type") == "approval_request"]
+        statuses = [
+            i
+            for i, e in enumerate(sent)
+            if e.get("type") == "beat_grid_send_status" and e.get("last_action") == "apply"
+        ]
+        return cards, statuses
+
+    def test_a_declined_card_goes_out_before_the_rejection_status(self, tmp_path):
+        session, sent = self._session(tmp_path, approve=False)
+        session.beat_grid_apply()
+        cards, statuses = self._apply_positions(sent)
+        assert len(cards) == 1
+        assert statuses, "the apply must end with a status"
+        assert cards[0] < statuses[-1]
+        assert sent[statuses[-1]]["ok"] is False
+
+    def test_an_approved_card_is_followed_by_the_success_status(self, tmp_path):
+        session, sent = self._session(tmp_path, approve=True)
+        session.beat_grid_apply()
+        cards, statuses = self._apply_positions(sent)
+        assert len(cards) == 1
+        assert statuses, "the apply must end with a status"
+        assert cards[0] < statuses[-1]
+        assert sent[statuses[-1]]["ok"] is True
+
+
 class TestBeatGridPreview:
     def test_preview_before_any_apply_is_refused(self, harness):
         event = harness["session"].beat_grid_preview(1)
