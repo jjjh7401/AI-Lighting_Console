@@ -233,6 +233,7 @@ from server.design.rig_capability_read import (
     notice_for as rig_capability_notice,
 )
 from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
+from server.design.rig_read_cache import KIND_MEMBERS, RigReadCache
 
 # 카드 t441 — 아래 다섯은 (재수출 전용, 이 파일 안에서는 안 쓴다 —
 # `as <같은 이름>` 은 ruff 가 인식하는 명시 재수출 표시다. 값·동작은
@@ -4392,6 +4393,9 @@ class ChatSession:
         # 카드 t565 — 박자 격자 2D 무대 판독(좌표 + 그룹 소속)도 같은 감사 포트를
         # 탄다(읽기 세 가지만 쓴다). 테스트는 이 속성을 직접 스텁한다.
         self._stage_port = gate.state_port
+        # 카드 rig-cache — 기종·모드·채널 배치(정적)와 장비 판독·그룹 소속(짧은 수명)을
+        # 세션 안에서 재사용한다. 첫 반영만 전부 읽고 두 번째부터는 거의 읽지 않는다.
+        self._rig_read_cache = RigReadCache()
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -4889,7 +4893,9 @@ class ChatSession:
         port = getattr(self, "_rig_capability_port", None)
         if port is None:
             return DesignRigRead()
-        return read_design_rig(port, fixture_types_root=_FIXTURE_TYPES_ROOT)
+        return read_design_rig(
+            port, fixture_types_root=_FIXTURE_TYPES_ROOT, cache=self._rig_read_cache
+        )
 
     def _try_pointing_coordinates(
         self, call_id: str
@@ -9803,6 +9809,13 @@ class ChatSession:
                 groups_path=groups_path,
                 track_names=track_names,
             )
+        if track_names and fixtures_path and groups_path:
+            # 무대 읽기가 방금 소속을 새로 읽었다 — 캐시를 이 값으로 갈아 끼운다.
+            fresh = self._group_members_from_payload(payload, track_names)
+            if len(fresh) == len({name.upper() for name in track_names}):
+                self._rig_read_cache.put(KIND_MEMBERS, self._group_members_key(track_names), fresh)
+            else:
+                self._rig_read_cache.invalidate(KIND_MEMBERS)
         self._beat_grid_attach_group_sub_info(payload)
         self._beat_grid_attach_pan_tilt(payload)
         event = beat_grid_stage_event(**payload)
@@ -9864,7 +9877,15 @@ class ChatSession:
         fixtures_path = self._rig_paths.get("fixtures")
         if not fixtures_path:
             return self._rig_capability_port
-        return FixtureSnapshotPort(self._rig_capability_port, fixture_root=str(fixtures_path))
+        return FixtureSnapshotPort(
+            self._rig_capability_port,
+            fixture_root=str(fixtures_path),
+            cache=self._rig_read_cache,
+        )
+
+    def invalidate_rig_read_cache(self) -> None:
+        """리그 판독 캐시를 전부 비운다 — 콘솔 재연결·패치/그룹을 고친 직후·명시적 새로고침에서."""
+        self._rig_read_cache.invalidate()
 
     def _beat_grid_group_members(
         self, group_names: list[str], *, port: object | None = None
@@ -9877,6 +9898,10 @@ class ChatSession:
         groups_path = self._rig_paths.get("groups")
         if not fixtures_path or not groups_path or not group_names:
             return {}
+        cache_key = self._group_members_key(group_names)
+        cached = self._rig_read_cache.get(KIND_MEMBERS, cache_key)
+        if cached is not None:
+            return {name: list(fids) for name, fids in cached.items()}
         try:
             payload = read_beat_grid_stage(
                 port if port is not None else self._stage_port,
@@ -9886,6 +9911,20 @@ class ChatSession:
             )
         except Exception:  # noqa: BLE001 — 소속을 모르면 리그 전체 규칙으로 되돌아간다
             return {}
+        members = self._group_members_from_payload(payload, group_names)
+        # 전수로 읽힌 소속만 저장한다 — 못 읽은 그룹이 하나라도 있으면 다음 반영이 다시 읽는다.
+        if len(members) == len({name.upper() for name in group_names}):
+            self._rig_read_cache.put(KIND_MEMBERS, cache_key, members)
+        return members
+
+    @staticmethod
+    def _group_members_key(group_names: Sequence[str]) -> tuple[str, ...]:
+        return tuple(sorted({name.upper() for name in group_names}))
+
+    @staticmethod
+    def _group_members_from_payload(
+        payload: dict, group_names: Sequence[str]
+    ) -> dict[str, list[int]]:
         by_upper = {name.upper(): name for name in group_names}
         members: dict[str, list[int]] = {}
         for group in payload.get("groups") or []:
@@ -10521,7 +10560,9 @@ class ChatSession:
         types_root = str(
             self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
         )
-        rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
+        rig_read = read_design_rig(
+            self._rig_capability_port, fixture_types_root=types_root, cache=self._rig_read_cache
+        )
         attributes, _reasons = resolve_group_dimmer_attributes(
             rig_read, names, self._beat_grid_group_members(names)
         )
@@ -11023,7 +11064,9 @@ class ChatSession:
             # 속성을 함께 쓰므로, 장비마다 질의 한 번으로 받아 두고 뒤의 읽기는 그 값으로 답한다.
             apply_stage("timecode")
             snapshot = self._beat_grid_fixture_snapshot()
-            rig_read = read_design_rig(snapshot, fixture_types_root=types_root)
+            rig_read = read_design_rig(
+                snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
+            )
             apply_stage("rig")
             # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
             # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.

@@ -41,6 +41,7 @@ from server.design.capability_join import (
     read_rig_capabilities,
 )
 from server.design.capability_verdict import patch_records
+from server.design.rig_read_cache import RigReadCache
 from server.prechk.inventory import COMPLETE, read_inventory
 from server.prechk.mode_read import read_fixture_type_names
 from server.vwx.patchplan import read_existing_fids
@@ -91,6 +92,7 @@ def read_design_rig(
     *,
     fixture_types_root: str,
     budget: int = 256,
+    cache: RigReadCache | None = None,
 ) -> DesignRigRead:
     """콘솔에서 리그 능력을 읽어 ``build_rig_profile(patch=...)`` 재료로 만든다.
 
@@ -149,6 +151,7 @@ def read_design_rig(
         fixtures=refs,
         type_names=type_names,
         budget=budget,
+        cache=cache,
     )
 
     gap = ""
