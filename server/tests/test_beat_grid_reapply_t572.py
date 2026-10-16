@@ -217,8 +217,10 @@ class TestReapplyFlows:
         executed = _non_cue_store_lines(console.executed)
         # 맨 Store Sequence 줄(큐 없는 것)만 금지 — 큐 저장 줄 ``Store Sequence N Cue M`` 은 남는다.
         assert not any(c.startswith("Store Sequence ") and " Cue " not in c for c in executed)
-        assert not any(c.startswith("Store Timecode ") for c in executed)
-        assert not any(c.startswith("Assign Sequence ") for c in executed)
+        # 카드 tc-events — 앱이 만든 타임코드는 지우고 처음부터 다시 만든다(옛 빈 트랙이 쌓이지
+        # 않게). 시퀀스는 기록된 번호를 그대로 재사용한다.
+        assert executed.index("Delete Timecode 20 /NoConfirm") < executed.index("Store Timecode 20")
+        assert any(c.startswith("Assign Sequence 1 At Timecode 20.1.") for c in executed)
         assert any("/Overwrite" in c for c in executed)
         assert any(
             c == f"Set Sequence {FIRST_SEQUENCE_NUMBER} Property 'Name' '{OWNED_SEQUENCE_NAME}'"
@@ -286,9 +288,10 @@ class TestReapplyFlows:
         # 새 트랙(FRONT)은 전부(Store Sequence + Assign) 그대로 낸다.
         assert any("Store Sequence 2" in c for c in executed)
         assert any("Assign Sequence 2 At Timecode 20" in c for c in executed)
-        # 소유 트랙(BACK)은 여전히 재사용 경로다.
+        # 소유 트랙(BACK)은 시퀀스 재사용 경로다. 타임코드는 지우고 다시 만드니 배정도 다시 낸다.
         assert "Store Sequence 1" not in executed
-        assert not any("Assign Sequence 1 At Timecode 20" in c for c in executed)
+        assert "Delete Timecode 20 /NoConfirm" in executed
+        assert any("Assign Sequence 1 At Timecode 20" in c for c in executed)
         record = store.beat_grid_allocation(_song_key())
         assert record["tracks"]["FRONT"]["sequence_number"] == 2
 

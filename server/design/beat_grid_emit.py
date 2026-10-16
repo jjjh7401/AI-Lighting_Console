@@ -231,6 +231,9 @@ class CueEmitResult:
     #: 카드 t576 — 이 칸의 ``entry`` 중 보내지 않은 칸과 그 이유(실기 미확인·콘솔
     #: 값이 아님). 칸 자체는 나가고, 이 필드들만 빠진다.
     skipped_fields: tuple[str, ...] = ()
+    #: 이 큐의 TrigTime(곡 기준 절대 ms) — 타임코드 트랙의 ``Go+`` 이벤트 시각이다. 큐를
+    #: 저장하지 않는 칸은 ``None``.
+    trigger_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -254,6 +257,9 @@ class BeatGridEmitResult:
     tracks: tuple[TrackEmitResult, ...]
     blocked_reason: str | None
     timecode_setup_commands: tuple[str, ...] = field(default_factory=tuple)
+    #: 카드 tc-events — 타임코드 트랙마다 ``CmdSubTrack`` 을 만들고 큐 TrigTime 마다 ``Go+``
+    #: 이벤트를 넣는 줄(t520 실기 레시피). 트랙 배정 줄이 모두 나간 **뒤에** 붙는다.
+    timecode_event_commands: tuple[str, ...] = field(default_factory=tuple)
     #: 반영 준비(MIB) — 사전이동을 못 넣은 전환의 사유(미리보기에 「MIB 불가 — …」로 보인다).
     mib_notes: tuple[str, ...] = field(default_factory=tuple)
 
@@ -262,7 +268,7 @@ class BeatGridEmitResult:
         if self.blocked_reason is not None:
             return ()
         track_commands = tuple(line for track in self.tracks for line in track.commands)
-        return self.timecode_setup_commands + track_commands
+        return self.timecode_setup_commands + track_commands + self.timecode_event_commands
 
     @property
     def blocked_cells(self) -> tuple[tuple[str, int, str], ...]:
@@ -560,6 +566,7 @@ def _emit_cue(
         blocked_reason=None,
         cue_number=cue_number,
         skipped_fields=entry_plan.skipped_fields,
+        trigger_ms=trigger_ms,
     )
 
 
@@ -593,6 +600,7 @@ def emit_beat_grid_write_bundle(
     recorded_cue_numbers: Mapping[str, Mapping[int, int]] | None = None,
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
     held_cells: Mapping[tuple[str, int], str] | None = None,
+    song_end_seconds: float | None = None,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
@@ -613,7 +621,12 @@ def emit_beat_grid_write_bundle(
 
     카드 t600 — ``held_cells``((트랙 이름, 마디) -> 사유)는 호출자가 콘솔 풀을
     읽어 송신 보류로 가른 칸이다(빈 프리셋·풀 못 읽음, REQ-LDBEAT-015(i-1)). 승인된
-    칸이라도 커맨드 0줄로 막고 큐 번호를 쓰지 않는다(거절된 칸과 같다)."""
+    칸이라도 커맨드 0줄로 막고 큐 번호를 쓰지 않는다(거절된 칸과 같다).
+
+    카드 tc-events — ``song_end_seconds``(마지막 마디 끝, 곡 기준 초)가 있으면 타임코드의
+    ``Duration`` 으로 쓴다(``AutoStop 0``). 그리고 배정된 트랙마다 ``CmdSubTrack`` 을 만들고
+    큐 TrigTime 마다 ``Go+`` 이벤트를 넣는다 — 이 이벤트가 없으면 ``Go Timecode`` 는 아무것도
+    재생하지 않는다(실기 판별: tc4-play-probe, 레시피 t520)."""
     if (
         timing is None
         or timing.bpm is None
@@ -645,6 +658,8 @@ def emit_beat_grid_write_bundle(
     used_timecode_numbers: set[int] = set()
     # 카드 t614 — 타임코드별로 지금까지 실제 배정된 트랙 수(배정 줄의 트랙 순번 k).
     assigned_track_counts: dict[int, int] = {}
+    # 카드 tc-events — 타임코드별 (트랙 순번 k, 이벤트 ms 목록).
+    event_tracks: dict[int, list[tuple[int, list[int]]]] = {}
 
     for track in tracks:
         group_name = str(track["group_name"])
@@ -767,6 +782,14 @@ def emit_beat_grid_write_bundle(
             assign_timecode_commands = (
                 f"Assign Sequence {sequence_number} At Timecode {timecode_number}.1.{track_index}",
             )
+            event_ms = sorted(
+                {
+                    cue_result.trigger_ms
+                    for cue_result in cue_results
+                    if cue_result.trigger_ms is not None
+                }
+            )
+            event_tracks.setdefault(timecode_number, []).append((track_index, event_ms))
 
         track_results.append(
             TrackEmitResult(
@@ -785,13 +808,41 @@ def emit_beat_grid_write_bundle(
         name = beat_grid_timecode_label(timecode_number)
         timecode_setup_commands.append(f"Store Timecode {timecode_number}")
         timecode_setup_commands.append(f"Set Timecode {timecode_number} Property 'Name' '{name}'")
+        if song_end_seconds is not None and song_end_seconds > 0:
+            # 카드 tc-events — 길이가 0 이면 이벤트가 있어도 재생되지 않는다(실기 tc4 판별).
+            timecode_setup_commands.append(
+                f"Set Timecode {timecode_number} Property 'Duration' "
+                f"{_format_seconds(round(song_end_seconds * 1000))} 'AutoStop' 0"
+            )
         # 카드 t614 — 트랙 주소 ``N.1.k`` 의 트랙 그룹 1 을 배정 줄보다 먼저 만든다
         #   (실기 선례 t520: ``Store Timecode 24.1`` → ``Assign … 24.1.1`` / ``24.1.2``).
         timecode_setup_commands.append(f"Store Timecode {timecode_number}.1")
+
+    # 카드 tc-events — t520 실기 레시피: 트랙마다 CmdSubTrack 을 먼저 모두 만든 뒤, 트랙별로
+    # ``cd`` 로 들어가 ``Store Property 'Time' T 'AbsTime' T 'Token' 'Go+'`` 를 큐마다 한 줄씩 넣고
+    # ``cd root`` 로 나온다.
+    timecode_event_commands: list[str] = []
+    for timecode_number in sorted(event_tracks):
+        entries = event_tracks[timecode_number]
+        for track_index, _ in entries:
+            timecode_event_commands.append(
+                f"Store Type 'CmdSubTrack' Timecode {timecode_number}.1.{track_index}.1"
+            )
+        for track_index, event_ms in entries:
+            if not event_ms:
+                continue
+            timecode_event_commands.append(f"cd Timecode {timecode_number}.1.{track_index}.1.1")
+            for ms in event_ms:
+                seconds = _format_seconds(ms)
+                timecode_event_commands.append(
+                    f"Store Property 'Time' {seconds} 'AbsTime' {seconds} 'Token' 'Go+'"
+                )
+            timecode_event_commands.append("cd root")
 
     return BeatGridEmitResult(
         tracks=tuple(track_results),
         blocked_reason=None,
         timecode_setup_commands=tuple(timecode_setup_commands),
+        timecode_event_commands=tuple(timecode_event_commands),
         mib_notes=tuple(mib_notes),
     )
