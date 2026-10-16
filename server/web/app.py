@@ -60,6 +60,7 @@ from server.web.messages import (
     busy_event,
     chat_response_event,
     error_event,
+    notice_event,
     parse_client_message,
     question_resolved_event,
     review_resolved_event,
@@ -497,6 +498,33 @@ def create_app(deps: WebDeps) -> FastAPI:
             task.add_done_callback(panel_tasks.discard)
             return task
 
+        # 읽기 전용 요청(서랍·무대·오디오 링크)의 진행 중 작업. 종류마다 하나만 돈다.
+        # **수신 루프 안에서 await 하지 않는다** — 무대 판독은 장비 수만큼 콘솔을 왕복해
+        # 40초가 넘고, 그동안 같은 연결의 다음 메시지(서랍 열기 등)가 처리되지 않았다.
+        read_tasks: dict[str, asyncio.Task] = {}
+
+        def spawn_read(kind: str, fn, *args) -> None:
+            running = read_tasks.get(kind)
+            if running is not None and not running.done():
+                return  # 같은 읽기가 이미 도는 중 — 그 응답이 온다
+
+            async def run() -> None:
+                try:
+                    await asyncio.to_thread(fn, *args)
+                except Exception:
+                    _LOG.warning("읽기 요청 %s 이(가) 예외로 끝났습니다", kind, exc_info=True)
+                    await _safe_send(
+                        live_target(),
+                        notice_event(
+                            f"읽기 요청을 끝내지 못했습니다({kind}) — 다시 시도해 주세요."
+                        ),
+                    )
+
+            task = asyncio.create_task(run())
+            read_tasks[kind] = task
+            panel_tasks.add(task)
+            task.add_done_callback(panel_tasks.discard)
+
         async def run_bar_map_analysis(first_beat_offset: int) -> None:
             """마디 지도 분석 한 건을 작업 스레드에서 돌린다(SPEC-LDBARMAP-002 M3).
 
@@ -662,10 +690,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # 카드 t551 후속(지시 1항) — 프리셋 서랍. 콘솔 풀을 여러
                     # 번 왕복해 읽으므로(최대 세 풀 × 페이지) busy-guard
                     # 아래 스레드로 돌린다(다른 beat_grid_* 분기와 같은 패턴).
-                    if current_task is not None and not current_task.done():
-                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
-                        continue
-                    await asyncio.to_thread(session.beat_grid_preset_drawer)
+                    spawn_read("beat_grid_drawer", session.beat_grid_preset_drawer)
                 elif message_type == "beat_grid_new_preset":
                     # 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기".
                     # 번호를 고르기 전에 콘솔 풀 하나를 읽으므로(드로워와
@@ -734,11 +759,8 @@ def create_app(deps: WebDeps) -> FastAPI:
                         )
                 elif message_type == "beat_grid_stage_request":
                     # 카드 t565 — 2D 무대 판독(좌표 + 그룹 소속). 장비 수만큼
-                    # 콘솔을 왕복하므로 서랍과 같이 busy-guard 아래 스레드로.
-                    if current_task is not None and not current_task.done():
-                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
-                        continue
-                    await asyncio.to_thread(session.beat_grid_stage)
+                    # 콘솔을 왕복하므로 수신 루프를 막지 않는 읽기 작업으로 돌린다.
+                    spawn_read("beat_grid_stage", session.beat_grid_stage)
                 elif message_type == "song_audio_link_request":
                     # 카드 t571(REQ-LDBEAT-024(c) 후속) — 저장된 오디오 링크
                     # 조회는 디스크 읽기만(콘솔 무접촉)이라 콘솔 왕복인 위
@@ -746,10 +768,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # 스레드 패턴을 쓴다 — 큰 파일은 여러 프레임(분할
                     # 트리오)으로 나가므로 이벤트 루프를 막지 않는 것이
                     # 똑같이 맞다.
-                    if current_task is not None and not current_task.done():
-                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
-                        continue
-                    await asyncio.to_thread(session.request_song_audio_link)
+                    spawn_read("song_audio_link", session.request_song_audio_link)
                 elif message_type == "vectorworks_export_upload":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
