@@ -341,6 +341,17 @@ def _mp3_length_is_a_bitrate_guess(payload: bytes) -> bool:
     return False
 
 
+def sections_from_rms(numpy, rms, frame_ms, duration_ms, bpm):
+    """RMS 곡선에서 구간 경계와 D 등급을 함께 낸다.
+
+    ``analyze`` 와 마디 지도 합성(``rhythm``)이 같은 식을 쓰도록 한 곳에 둔다 — 따로
+    계산하면 같은 곡에서 구간이 어긋난다.
+    """
+    boundaries_ms = _boundaries_from_rms(numpy, rms, frame_ms, duration_ms, bpm=bpm)
+    d_candidates = _grade_sections(numpy, rms, frame_ms, boundaries_ms, duration_ms)
+    return boundaries_ms, d_candidates
+
+
 def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
     """오디오 바이트열 하나를 재서 여섯 축을 돌려준다.
 
@@ -414,8 +425,7 @@ def analyze(audio_bytes: bytes) -> AnalysisResult | AnalysisFailure:
     frame_ms = _HOP_LENGTH * 1000.0 / sample_rate
     # BPM 을 경계 판정에 넘긴다 — 구간 하한은 초가 아니라 마디다(t411). BPM 은 위에서
     # 이미 나왔으므로 새 계산이 아니라 이미 있는 값을 잇는 것이다.
-    boundaries_ms = _boundaries_from_rms(numpy, rms, frame_ms, duration_ms, bpm=bpm)
-    d_candidates = _grade_sections(numpy, rms, frame_ms, boundaries_ms, duration_ms)
+    boundaries_ms, d_candidates = sections_from_rms(numpy, rms, frame_ms, duration_ms, bpm)
 
     return AnalysisResult(
         bpm=bpm,

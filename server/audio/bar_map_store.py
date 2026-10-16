@@ -58,6 +58,14 @@ _BAR_KEYS = frozenset({"bar", "start_ms", "beats_ms"})
 #: 마디 항목의 선택 키 — 곡 안에서 정규화한 에너지(0~1). 없는 지도(옛 저장분)도 유효하다.
 _BAR_OPTIONAL_KEYS = frozenset({"energy"})
 _EVENT_KEYS = frozenset({"kind", "start_bar", "end_bar", "start_beat", "grade"})
+#: 마디 지도의 선택 최상위 키 — 리듬 특징(rhythm.py). 없는 지도(옛 저장분)도 유효하다.
+_TOP_LEVEL_OPTIONAL_KEYS = frozenset({"rhythm"})
+_RHYTHM_KEYS = frozenset({"beats", "hits", "sections"})
+_RHYTHM_BEAT_KEYS = frozenset(
+    {"bar", "beat", "t_ms", "kick", "snare", "onset", "kick_hit", "snare_hit"}
+)
+_RHYTHM_HIT_KEYS = frozenset({"bar", "beat", "t_ms", "strength", "kind"})
+_RHYTHM_SECTION_KEYS = frozenset({"start_bar", "end_bar", "bars", "start_ms", "end_ms", "d_level"})
 
 
 class BarMapStoreError(ValueError):
@@ -180,7 +188,7 @@ def validate_bar_map(payload: object) -> str | None:
     if not isinstance(payload, Mapping):
         return "마디 지도는 사전이어야 합니다."
 
-    extra = set(payload.keys()) - _TOP_LEVEL_KEYS
+    extra = set(payload.keys()) - _TOP_LEVEL_KEYS - _TOP_LEVEL_OPTIONAL_KEYS
     if extra:
         return f"마디 지도에 알 수 없는 필드가 있습니다: {sorted(extra)}"
     missing = _TOP_LEVEL_KEYS - set(payload.keys())
@@ -229,7 +237,111 @@ def validate_bar_map(payload: object) -> str | None:
 
     events = payload["events"]
     bar_numbers = {bar["bar"] for bar in bars}
-    return _validate_events(events, numerator=numerator, bar_numbers=bar_numbers)
+    reason = _validate_events(events, numerator=numerator, bar_numbers=bar_numbers)
+    if reason is not None:
+        return reason
+    if "rhythm" in payload:
+        return _validate_rhythm(payload["rhythm"], bars)
+    return None
+
+
+def attach_rhythm(payload: Mapping[str, object], rhythm: Mapping[str, object]) -> dict:
+    """마디 지도 사전에 ``rhythm`` 블록을 붙이고 저장 스키마로 다시 검증한다(선택 키)."""
+    merged = {**payload, "rhythm": dict(rhythm)}
+    problem = validate_bar_map(merged)
+    if problem is not None:
+        raise BarMapStoreError(problem)
+    return merged
+
+
+def _is_unit_number(value: object) -> bool:
+    """0~1 사이의 실수(또는 정수)다. bool 과 NaN·무한대는 아니다."""
+    return (
+        isinstance(value, int | float)
+        and not isinstance(value, bool)
+        and 0.0 <= float(value) <= 1.0
+    )
+
+
+def _validate_rhythm(rhythm: object, bars: list) -> str | None:
+    """``rhythm`` 블록 검증. 박은 마디 지도의 ``beats_ms`` 와 한 개씩 시각까지 맞아야 하고,
+    히트와 구간은 그 박과 마디에 묶여야 한다. 점수는 0~1, 문턱 판정은 bool 이다."""
+    if not isinstance(rhythm, Mapping):
+        return "rhythm 은 사전이어야 합니다."
+    if set(rhythm.keys()) != _RHYTHM_KEYS:
+        return f"rhythm 필드가 맞지 않습니다: {sorted(rhythm.keys())}"
+    beats = rhythm["beats"]
+    hits = rhythm["hits"]
+    sections = rhythm["sections"]
+    if not isinstance(beats, list) or not isinstance(hits, list) or not isinstance(sections, list):
+        return "rhythm.beats·hits·sections 는 목록이어야 합니다."
+
+    beat_times = {bar["bar"]: list(bar["beats_ms"]) for bar in bars}
+    bar_starts = {bar["bar"]: bar["start_ms"] for bar in bars}
+    expected = sum(len(times) for times in beat_times.values())
+    if len(beats) != expected:
+        return f"rhythm.beats 는 마디 지도의 박 수({expected})와 같아야 합니다: {len(beats)}"
+
+    seen: dict[tuple[int, int], int] = {}
+    previous_ms = -1
+    for item in beats:
+        if not isinstance(item, Mapping) or set(item.keys()) != _RHYTHM_BEAT_KEYS:
+            return "rhythm.beats 항목 필드가 맞지 않습니다."
+        bar_no, beat_no, t_ms = item["bar"], item["beat"], item["t_ms"]
+        if not _is_plain_int(bar_no) or bar_no not in beat_times:
+            return f"rhythm.beats 의 마디 번호가 마디 지도에 없습니다: {bar_no!r}"
+        if not _is_plain_int(beat_no) or not (1 <= beat_no <= len(beat_times[bar_no])):
+            return f"rhythm.beats 의 박 번호가 마디 {bar_no} 범위를 벗어났습니다: {beat_no!r}"
+        if not _is_plain_int(t_ms) or t_ms != beat_times[bar_no][beat_no - 1]:
+            return f"rhythm.beats 의 t_ms 가 박 시각과 다릅니다(마디 {bar_no} 박 {beat_no})"
+        if t_ms <= previous_ms:
+            return "rhythm.beats 는 시간 순서여야 합니다."
+        previous_ms = t_ms
+        for name in ("kick", "snare", "onset"):
+            if not _is_unit_number(item[name]):
+                return f"rhythm.beats.{name} 은 0~1 사이 숫자여야 합니다: {item[name]!r}"
+        for name in ("kick_hit", "snare_hit"):
+            if not isinstance(item[name], bool):
+                return f"rhythm.beats.{name} 은 bool 이어야 합니다: {item[name]!r}"
+        seen[(bar_no, beat_no)] = t_ms
+
+    for item in hits:
+        if not isinstance(item, Mapping) or set(item.keys()) != _RHYTHM_HIT_KEYS:
+            return "rhythm.hits 항목 필드가 맞지 않습니다."
+        bar_no, beat_no = item["bar"], item["beat"]
+        if (
+            not (_is_plain_int(bar_no) and _is_plain_int(beat_no))
+            or seen.get((bar_no, beat_no)) != item["t_ms"]
+        ):
+            return f"rhythm.hits 가 박에 묶이지 않습니다: 마디 {bar_no!r} 박 {beat_no!r}"
+        if item["kind"] != "big":
+            return f'rhythm.hits.kind 는 "big" 이어야 합니다: {item["kind"]!r}'
+        if not _is_unit_number(item["strength"]):
+            return f"rhythm.hits.strength 는 0~1 사이 숫자여야 합니다: {item['strength']!r}"
+
+    previous_end = -1
+    for item in sections:
+        if not isinstance(item, Mapping) or set(item.keys()) != _RHYTHM_SECTION_KEYS:
+            return "rhythm.sections 항목 필드가 맞지 않습니다."
+        start_bar, end_bar = item["start_bar"], item["end_bar"]
+        if not (_is_plain_int(start_bar) and _is_plain_int(end_bar)):
+            return f"rhythm.sections 의 마디 번호는 정수여야 합니다: {start_bar!r}~{end_bar!r}"
+        if start_bar not in beat_times or end_bar not in beat_times or start_bar > end_bar:
+            return f"rhythm.sections 의 마디 범위가 맞지 않습니다: {start_bar}~{end_bar}"
+        if start_bar <= previous_end:
+            return "rhythm.sections 는 겹치지 않아야 합니다."
+        if not _is_plain_int(item["bars"]) or item["bars"] != end_bar - start_bar + 1:
+            return (
+                f"rhythm.sections.bars 는 끝 마디 - 시작 마디 + 1 이어야 합니다: {item['bars']!r}"
+            )
+        if not _is_plain_int(item["start_ms"]) or item["start_ms"] != bar_starts[start_bar]:
+            return f"rhythm.sections.start_ms 가 마디 {start_bar} 시작과 다릅니다"
+        if not _is_plain_int(item["end_ms"]) or item["end_ms"] < item["start_ms"]:
+            return f"rhythm.sections.end_ms 가 시작보다 앞입니다: {item['end_ms']!r}"
+        if not _is_plain_int(item["d_level"]) or not (1 <= item["d_level"] <= 5):
+            return f"rhythm.sections.d_level 은 1~5 정수여야 합니다: {item['d_level']!r}"
+        previous_end = end_bar
+    return None
 
 
 def _validate_bars(bars: object, *, numerator: int) -> str | None:
