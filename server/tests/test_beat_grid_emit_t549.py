@@ -485,7 +485,10 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
             ("MOVER-U", 11),
             ("MOVER-U", 18),
         }
-        assert expected_effect_blocked <= blocked
+        # 2026-10-16 대체: ④ 가 실기로 「통과」(progress.md ④ 줄, live/p4_b/) 되어
+        # 효과 프리셋 칸은 더 이상 ④ 때문에 막히지 않는다.
+        assert not (expected_effect_blocked & blocked)
+        assert expected_effect_blocked <= allowed_with_content
         assert expected_app_movement_blocked <= blocked
         assert ("MOVER-D", 7) not in blocked
         assert ("MOVER-D", 22) not in blocked
@@ -534,3 +537,42 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
         assert all(
             str(MEASURED_MAX_TIMECODE_TRACKS) in track.blocked_reason for track in result.tracks
         )
+
+
+class TestGate4PassedOnRealConsole:
+    """2026-10-16 — 항목 ④(효과 프리셋 리콜) 실기 통과가 progress.md 에 기록됐고,
+    게이트가 그 줄을 읽어 효과 프리셋 칸을 열어 준다."""
+
+    def test_row_4_parses_as_passed_from_the_real_progress_md(self) -> None:
+        from server.design.beat_grid_probes import read_m1_probe_results_from_path
+
+        probe_results = read_m1_probe_results_from_path(default_progress_md_path())
+        assert probe_results[4].startswith("통과")
+        assert "좌우로 움직이고 불은 들어오지 않아" in probe_results[4]
+        # 나머지 항목은 건드리지 않았다.
+        assert probe_results[2] == "미확인"
+        assert probe_results[5] == "움직임 없음"
+
+    def test_effect_cells_are_no_longer_blocked_by_item_4(self) -> None:
+        from server.design.beat_grid import LOVE_ATTACK_TITLE
+        from server.design.beat_grid_probes import read_m1_probe_results_from_path
+
+        probe_results = read_m1_probe_results_from_path(default_progress_md_path())
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        effect_cells = {
+            ("BACK", 3), ("BACK", 7), ("BACK", 18), ("BACK", 22),
+            ("SIDE-ALL", 11), ("SIDE-ALL", 14),
+            ("MOVER-U", 11), ("MOVER-U", 14), ("MOVER-U", 18),
+            ("MOVER-D", 14),
+        }  # fmt: skip
+        seen = set()
+        for track in grid["tracks"]:
+            for cue in track["cues"]:
+                key = (track["group_name"], cue["bar"])
+                if key in effect_cells:
+                    seen.add(key)
+                    blocked = blocked_m1_items_for_cue(
+                        cue, probe_results, group_no=track.get("group_no")
+                    )
+                    assert 4 not in blocked, key
+        assert seen == effect_cells

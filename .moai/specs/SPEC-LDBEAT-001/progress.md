@@ -47,7 +47,7 @@ _<run-phase 대기 — manager-develop 착수 전까지 비어 있음>_
 | ① 타임코드 트랙 ≥3(목표 6) | **통과(구조)** | TC 30 에 시퀀스 트랙 6개(228→233) | `live/p1/` · `live/p1_readback.txt` |
 | ② Goto 2번 이후·여러 시퀀스 동시 | **미확인** | 줄은 전부 OK. CURRENTCUE 는 켜짐 증거가 아니고(아래 정정) 눈 미확인 | `live/p2_on/` · `live/p2_readback.txt` |
 | ③ 프리셋 수정 전파 | **부분** | v2 `Attribute 'Color' At Preset` 거절 → v3 `At Preset` 받음. 프리셋 4.302 크기 2068→1852(수정 먹음), 큐 300.1 4292→4296(참조 가설). 무대 전파는 재생 줄이 없어 미측정 | `live/p3_a/` · `p3_b/` · `p3_c/` · `p3_before_edit.txt` · `p3_after_edit.txt` |
-| ④ 효과 프리셋의 SM15·Measure | **미확인** | 감독 「다 같이 깜빡임」. 박자 속도는 번갈아가 없어 눈으로 못 가림 | `live/p4_a/` · `p4_held_readback.txt` · `p4_off/` |
+| ④ 효과 프리셋의 SM15·Measure | **통과** — 좌우로 움직이고 불은 들어오지 않아 (2026-10-16 실기, Group 11 At Preset 21.9; 번갈아/한꺼번에 여부는 감독 원문에 없음) | 효과 프리셋 21.8 `WAVE PAN 2 BAR`·21.9 `WAVE PAN 2 BEAT` 를 프리셋 계획 카드(PR #775)로 저장한 뒤 `Group 11 At Preset 21.9` 호출. 디머는 큐의 DIM 프리셋 몫이라 불이 안 들어오는 게 맞다. 이전 시도(감독 「다 같이 깜빡임」)는 `live/p4_a/` | `live/p4_b/` · `live/p4_a/` · `p4_held_readback.txt` · `p4_off/` |
 | ⑤ 위치 프리셋 위 상대값(원) | **움직임 없음** | 감독 「멈춰 있음」 | `live/p5_a/` · `p5_readback.txt` · `p5_off/` |
 | ⑥ 타임코드 중간 재생 | **미확인 — 문법 불명** | `Goto Time 5 Timecode 31` → User Canceled Command, CURSOR 0.00 | `live/p6_a/` · `p6_after_goto.txt` |
 | ⑦ 큐에 선택 + Step 2 | **부분(결과 기록)** | 큐1 「다 같이 깜빡임, ④보다 느림」(번갈아 아님) · 큐2 「두 그룹 다 깜빡임」 | `live/p7_a/` · `p7_b/` · `p7_c/` |
