@@ -907,8 +907,11 @@ export function emptyPresetCellIndex(
  * 반영이 아니거나 성공이면 `null`. 승인 창 사이 콘솔에서 번호가 채워져 송신을 통째로
  * 멈춘 경우처럼, 감독이 「다시 반영」해야 하는지를 격자 화면에서 바로 본다. */
 export function applyFailureNote(status: BeatGridSendStatus | null | undefined): string | null {
-  if (!status || status.last_action !== "apply" || status.ok || !status.reason) return null;
-  return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
+  if (!status || status.ok || !status.reason) return null;
+  if (status.last_action === "apply") return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
+  // 격자 편집 실패(자동 배치 적용이 바꾼 칸 0개 등) — 채팅에만 두면 전체화면에서 성공처럼 보인다.
+  if (status.last_action === "edit") return `⚠ 격자에 적용 안 됨 — ${status.reason}`;
+  return null;
 }
 
 export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {

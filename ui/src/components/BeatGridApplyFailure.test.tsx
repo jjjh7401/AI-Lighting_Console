@@ -49,6 +49,19 @@ describe("applyFailureNote", () => {
     expect(applyFailureNote(null)).toBeNull();
   });
 
+  it("격자 적용 실패(자동 배치가 바꾼 칸 0개)도 실패 줄로 보인다", () => {
+    const reason = "자동 배치를 적용했지만 격자에서 바뀐 칸이 0개입니다";
+    expect(applyFailureNote(status({ last_action: "edit", reason }))).toBe(
+      `⚠ 격자에 적용 안 됨 — ${reason}`,
+    );
+    expect(applyFailureNote(status({ last_action: "edit", ok: true, reason }))).toBeNull();
+  });
+
+  it("서버 문구(session.py)에 「바뀐 칸이 0개」가 실제로 있다", () => {
+    const source = readFileSync(resolve(__dirname, "../../../server/web/session.py"), "utf8");
+    expect(source).toContain("격자에서 바뀐 칸이 0개입니다");
+  });
+
   it("서버 문구(session.py)에 「다시 반영하세요」가 실제로 있다", () => {
     const source = readFileSync(resolve(__dirname, "../../../server/web/session.py"), "utf8");
     expect(source).toContain("채워져, 덮어쓰지");
@@ -62,6 +75,17 @@ describe("BeatGrid — 반영 실패 사유 줄", () => {
     expect(html).toContain("beat-grid-apply-fail");
     expect(html).toContain("2.71");
     expect(html).toContain("다시 반영하세요");
+  });
+
+  it("자동 배치 적용 0칸 실패도 격자 화면에 줄이 보인다", () => {
+    const html = renderToStaticMarkup(
+      <BeatGrid
+        grid={GRID}
+        sendStatus={status({ last_action: "edit", reason: "바뀐 칸이 0개입니다" })}
+      />,
+    );
+    expect(html).toContain("beat-grid-apply-fail");
+    expect(html).toContain("격자에 적용 안 됨");
   });
 
   it("성공 상태면 줄이 없다", () => {

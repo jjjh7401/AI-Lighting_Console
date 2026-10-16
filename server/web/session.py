@@ -9739,7 +9739,11 @@ class ChatSession:
                 f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다.",
             )
             return
-        song_title = str(current.get("song_title") or "") or Path(record.source_file_name).stem
+        # 곡 이름은 새로 붙인 오디오(분석 기록)의 파일 이름에서 온다 — 옛 작업본 이름을 이어받지
+        # 않는다(리드 지시 2026-10-16). 파일 이름이 비면 그때만 옛 이름을 쓴다.
+        song_title = Path(record.source_file_name).stem.strip() or str(
+            current.get("song_title") or ""
+        )
         fresh = build_analysis_timeline(
             song_title=song_title,
             sections=record.accepted,
@@ -9755,7 +9759,8 @@ class ChatSession:
             )
         else:
             try:
-                entry = library.auto_save(f"{song_title or '작업본'} 분석 전 백업", dict(current))
+                old_title = str(current.get("song_title") or "") or "작업본"
+                entry = library.auto_save(f"{old_title} 분석 전 백업", dict(current))
             except (OSError, ValueError) as error:
                 say(
                     "새 분석 작업본 만들기 실패",

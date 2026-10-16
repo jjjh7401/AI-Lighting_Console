@@ -60,7 +60,7 @@ def _old_timeline() -> dict:
     """옛 작업본 — 손 설계 격자(칸 있음)·옛 구간 11개·타임코드 4."""
     fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
     return {
-        "song_title": LOVE_ATTACK_TITLE,
+        "song_title": "OLD TITLE",
         "sequence_number": 54,
         "timecode_number": 4,
         "sections": fixture["sections"],
@@ -96,7 +96,9 @@ def _session(tmp_path, monkeypatch):
         timeline_store=store,
         timeline_library=library,
     )
-    session.upload_song_audio("love.wav", "audio/wav", base64.b64encode(b"RIFF....").decode())
+    session.upload_song_audio(
+        "LOVE ATTACK.wav", "audio/wav", base64.b64encode(b"RIFF....").decode()
+    )
     audio = session._song_audio
     bpm = resolve_bpm(measured_bpm=112.0, sheet_bpm=None, fx_rate=None, beats_per_cycle=None)
     session._song_analysis = ConfirmedSongAnalysis(
@@ -136,6 +138,9 @@ def test_a_confirmed_new_analysis_starts_a_fresh_timeline(tmp_path, monkeypatch)
     assert [s["label"] for s in fresh["sections"]] == [label for label, *_ in _SECTIONS]
     assert [s["start_ms"] for s in fresh["sections"]] == [start for _l, start, *_ in _SECTIONS]
     assert fresh["bar_map"] == _bar_map()
+    # 곡 이름은 새로 붙인 오디오 파일 이름이다 — 옛 작업본 이름(OLD TITLE)을 이어받지 않는다.
+    assert fresh["song_title"] == LOVE_ATTACK_TITLE
+    assert fresh["beat_grid"]["song_title"] == LOVE_ATTACK_TITLE
     assert _cells(fresh) == 0
     assert [t["group_name"] for t in fresh["beat_grid"]["tracks"]] == [
         t["group_name"] for t in old["beat_grid"]["tracks"]
@@ -144,7 +149,7 @@ def test_a_confirmed_new_analysis_starts_a_fresh_timeline(tmp_path, monkeypatch)
     assert fresh[ANALYSIS_SOURCE_KEY] == session._song_audio.sha256
     # 옛 작업본은 라이브러리에 그대로 백업되고, 되돌리기로도 돌아갈 수 있다.
     [backup] = library.items()
-    assert backup["name"].startswith("LOVE ATTACK 분석 전 백업")
+    assert backup["name"].startswith("OLD TITLE 분석 전 백업")
     assert backup["timeline"] == old
     assert session._draft_history.depth == 1
     assert [frame["type"] for frame in sent].count("chat_response") == 1
