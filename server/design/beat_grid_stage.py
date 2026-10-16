@@ -29,6 +29,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from server.design.fixture_snapshot import FixtureSnapshotPort
 from server.orchestrator.tools import SPATIAL_PROPERTY_QUERY_CAP, read_spatial_fixtures
 from server.rig.paging import paged_children
 
@@ -147,6 +148,11 @@ def _finish(entries: list[object], total: int | None, reason: str | None) -> Gro
     return GroupSelectionRead(sf_indexes=parsed, complete=reason is None, reason=reason)
 
 
+#: 무대 판독이 장비마다 묻는 속성 — 좌표와 FID.
+#: SUBFIXTUREINDEX 는 소속 그룹이 있을 때만 더한다(``read_beat_grid_stage``).
+_STAGE_FIXTURE_PROPERTIES: tuple[str, ...] = ("FID", "posx", "posy", "posz")
+
+
 def _read_subfixture_indexes(
     port: StageReadPort, fixtures_path: str, slots: Mapping[int, int]
 ) -> tuple[dict[int, int], list[str]]:
@@ -231,28 +237,18 @@ def read_beat_grid_stage(
     ``unread`` 에 그대로 적는다(앱은 그 이유를 무대 칸 안내로 보인다).
     """
     unread: list[str] = []
-    slots: dict[int, int] = {}
-    try:
-        reply = read_spatial_fixtures(
-            port, port, fixtures_path, SPATIAL_PROPERTY_QUERY_CAP, slot_sink=slots
-        )
-    except Exception as error:  # noqa: BLE001
-        return {"fixtures": [], "groups": [], "unread": [f"장비 좌표 판독 실패: {error}"]}
-    fixtures, partial = _fixture_records(reply)
-    if partial:
-        unread.append(partial)
-
-    wanted = {}
+    wanted: dict[str, str] = {}
     for name in track_names:
         wanted.setdefault(name.upper(), name)
+    # 그룹 목록을 먼저 본다 — 소속을 읽을 그룹이 있을 때만 장비 질의에 SUBFIXTUREINDEX 를 싣는다.
+    listing_failure: str | None = None
+    children: list[dict] = []
+    truncated = False
     try:
         first = port.query_state(groups_path)
         children, truncated = paged_children(port, groups_path, first)
     except Exception as error:  # noqa: BLE001
-        unread.append(f"콘솔 그룹 목록 판독 실패: {error}")
-        return {"fixtures": fixtures, "groups": [], "unread": unread}
-    if truncated:
-        unread.append("콘솔 그룹 목록이 잘려 일부 그룹을 못 봤을 수 있음")
+        listing_failure = f"콘솔 그룹 목록 판독 실패: {error}"
 
     found: list[tuple[int, str]] = []
     for child in children:
@@ -263,18 +259,49 @@ def read_beat_grid_stage(
         if name.upper() in wanted:
             found.append((slot, name))
     found_keys = {name.upper() for _, name in found}
+
+    # 장비마다 질의 한 번으로 좌표를 받는다(소속 그룹이 있으면 SUBFIXTUREINDEX 도).
+    # 뒤의 소속 읽기는 이 묶음이 준 값으로 답한다 — 이 읽기 안에서만 산다.
+    # 이미 스냅샷이면(반영 안에서 온 것) 그 이름 묶음을 그대로 쓴다.
+    if isinstance(port, FixtureSnapshotPort) or not fixtures_path:
+        reads = port
+    else:
+        names = _STAGE_FIXTURE_PROPERTIES
+        if found:
+            names = (*names, SUBFIXTURE_INDEX_PROPERTY)
+        reads = FixtureSnapshotPort(port, fixture_root=fixtures_path, names=names)
+
+    slots: dict[int, int] = {}
+    try:
+        reply = read_spatial_fixtures(
+            reads,
+            reads,
+            fixtures_path,
+            SPATIAL_PROPERTY_QUERY_CAP,
+            slot_sink=slots,
+        )
+    except Exception as error:  # noqa: BLE001
+        return {"fixtures": [], "groups": [], "unread": [f"장비 좌표 판독 실패: {error}"]}
+    fixtures, partial = _fixture_records(reply)
+    if partial:
+        unread.append(partial)
+    if listing_failure is not None:
+        unread.append(listing_failure)
+        return {"fixtures": fixtures, "groups": [], "unread": unread}
+    if truncated:
+        unread.append("콘솔 그룹 목록이 잘려 일부 그룹을 못 봤을 수 있음")
     for key, original in wanted.items():
         if key not in found_keys:
             unread.append(f"콘솔에 '{original}' 그룹이 없음 — 소속을 지어내지 않음")
     if not found:
         return {"fixtures": fixtures, "groups": [], "unread": unread}
 
-    by_sf, sf_failures = _read_subfixture_indexes(port, fixtures_path, slots)
+    by_sf, sf_failures = _read_subfixture_indexes(reads, fixtures_path, slots)
     unread.extend(sf_failures)
 
     groups: list[dict[str, object]] = []
     for slot, name in found:
-        selection = read_group_selection(port, f"{groups_path}/{slot}")
+        selection = read_group_selection(reads, f"{groups_path}/{slot}")
         member_fids: list[int] = []
         unmatched: list[int] = []
         for sf in selection.sf_indexes:

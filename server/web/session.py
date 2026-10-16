@@ -166,6 +166,7 @@ from server.design.cue_sheet_edit import (
     apply_cue_sheet_edit,
     parse_cue_sheet_edit_request,
 )
+from server.design.fixture_snapshot import FixtureSnapshotPort
 from server.design.interview import (
     Q1_CONCEPT,
     Q2_PALETTE,
@@ -9831,17 +9832,28 @@ class ChatSession:
                 infos[str(group.get("group_name", "")).upper()] = info
         self._beat_grid_track_sub_infos = infos
 
-    def _beat_grid_group_members(self, group_names: list[str]) -> dict[str, list[int]]:
+    def _beat_grid_fixture_snapshot(self) -> object:
+        """이번 반영 안에서만 쓰는 장비 판독 재사용 포트(``FixtureSnapshotPort``). 장비 경로가
+        없으면 원래 상태 포트를 그대로 준다(읽기는 같고, 묻는 횟수만 줄어든다)."""
+        fixtures_path = self._rig_paths.get("fixtures")
+        if not fixtures_path:
+            return self._rig_capability_port
+        return FixtureSnapshotPort(self._rig_capability_port, fixture_root=str(fixtures_path))
+
+    def _beat_grid_group_members(
+        self, group_names: list[str], *, port: object | None = None
+    ) -> dict[str, list[int]]:
         """카드 t573 — 트랙 이름 -> 소속 fid. 무대 칸과 같은 판독을 재사용하고
         (콘솔 읽기만), **전수로 읽힌** 그룹만 싣는다. 경로가 없거나 판독이
-        실패하면 빈 표 — 그때 디머 속성은 리그 전체 규칙으로 되돌아간다."""
+        실패하면 빈 표 — 그때 디머 속성은 리그 전체 규칙으로 되돌아간다.
+        ``port`` 를 주면 그 포트로 읽는다(반영 안의 장비 판독 재사용 포트)."""
         fixtures_path = self._rig_paths.get("fixtures")
         groups_path = self._rig_paths.get("groups")
         if not fixtures_path or not groups_path or not group_names:
             return {}
         try:
             payload = read_beat_grid_stage(
-                self._stage_port,
+                port if port is not None else self._stage_port,
                 fixtures_path=fixtures_path,
                 groups_path=groups_path,
                 track_names=group_names,
@@ -10977,11 +10989,14 @@ class ChatSession:
             types_root = str(
                 self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
             )
-            rig_read = read_design_rig(self._rig_capability_port, fixture_types_root=types_root)
+            # 이번 반영 안에서 장비 판독을 한 번만 묻는다 — 리그 판독과 무대 소속 판독이 같은 장비
+            # 속성을 함께 쓰므로, 장비마다 질의 한 번으로 받아 두고 뒤의 읽기는 그 값으로 답한다.
+            snapshot = self._beat_grid_fixture_snapshot()
+            rig_read = read_design_rig(snapshot, fixture_types_root=types_root)
             # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
             # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.
             dimmer_attributes, dimmer_reasons = resolve_group_dimmer_attributes(
-                rig_read, group_names, self._beat_grid_group_members(group_names)
+                rig_read, group_names, self._beat_grid_group_members(group_names, port=snapshot)
             )
 
             probe_results = grid.get("probe_results") or {}

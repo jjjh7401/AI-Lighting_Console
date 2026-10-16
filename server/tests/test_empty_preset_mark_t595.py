@@ -328,7 +328,7 @@ class TestApplyThatCreatesClearsTheMark:
         session, _console, approval, _audit = _new_session(
             tmp_path, store=store, state_tree=tree, sent=sent
         )
-        session._beat_grid_group_members = lambda names: {
+        session._beat_grid_group_members = lambda names, **_: {
             n: _MEMBERS[n] for n in names if n in _MEMBERS
         }
         session._beat_grid_pointing_frames = lambda: _FRAMES
