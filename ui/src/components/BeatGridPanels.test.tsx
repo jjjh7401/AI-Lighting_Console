@@ -270,6 +270,25 @@ describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
     expect(html).toContain("beat-grid-fade-bleed");
     expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
   });
+  it("1마디 페이드 이음매는 앞 칸 색이 1마디 폭으로 번진다(앞 칸 색 → 투명)", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridJoint
+        prev={cue(0)}
+        cue={cue(4, { entry: { fade_bars: 1, mib_mode: null } })}
+        nextSegmentWidth={900}
+        prevFill="#f0b4c8"
+        sectionStartBars={null}
+        secondsPerBar={2.14}
+        isOn={false}
+        onOpen={() => undefined}
+        pxPerBar={300}
+        beatsPerBar={4}
+      />,
+    );
+    expect(html).toMatch(/beat-grid-fade-bleed[^>]*width:300px/);
+    expect(html).toContain("linear-gradient(90deg, #f0b4c8, transparent)");
+    expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
+  });
   it("3줄 이상 바뀌는 마디에 알약", () => {
     const html = renderToStaticMarkup(
       <BeatGridSceneRow bars={[{ bar: 8, count: 3 }]} activeBar={null} width={500} onSelect={() => undefined} />,
