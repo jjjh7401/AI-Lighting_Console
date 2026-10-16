@@ -5,9 +5,10 @@
 ``_song_color_value_lines``(M2 의 베이스라인 + 이 카드의 역할별 배정 통합)를
 직접 겨눈다.
 
-층→색 배정(spec.md §3.2 [HARD], 감독 결정 3): `back`+`mover` = 지배색
-(`palette[0]`, 베이스라인이 이미 낸다 — 델타 불필요), `side`+`wash` = 보조색
-(`palette[1]`), `key` = 표준 팔레트의 웜화이트(새 RGB 금지). `color_usage=
+층→색 배정(spec.md §3.2 [HARD], 감독 결정 3): `back` = 지배색
+(`palette[0]`, 베이스라인이 이미 낸다 — 델타 불필요), `side`+`wash`+`mover` = 보조색
+(`palette[1]`; 무빙은 무대 색을 따라 그룹마다 한 줄), `key` = 표준 팔레트의
+웜화이트(새 RGB 금지). `color_usage=
 single`(REQ-006)일 때 보조색이 지배색과 같아지면 델타 줄을 내지 않는다
 (REQ-004 "네 그룹을 하나로 합친 선택에 동일 색 한 줄만" — 값-비교 생략으로
 자연히 처리, 새 분기 없음).
@@ -54,19 +55,26 @@ assert _BLUE is not None and _AMBER is not None and _WARM_WHITE is not None
 
 
 class TestRoleColorValueLines:
-    """REQ-LDRENDER-004 — back+mover=지배색(델타 없음)·side+wash=보조색·
+    """REQ-LDRENDER-004 — back=지배색(델타 없음)·side+wash+mover=보조색·
     key=웜화이트."""
 
-    def test_side_and_wash_get_the_accent_colour_back_and_mover_get_nothing(self) -> None:
-        """back/mover 는 베이스라인이 이미 지배색이라 델타 줄이 없다."""
+    def test_side_wash_and_mover_get_the_accent_colour_back_gets_nothing(self) -> None:
+        """back 은 베이스라인이 이미 지배색이라 델타 줄이 없다. 무빙은 무대(WASH) 색을 따른다."""
         lines = _role_color_value_lines(_ColorOnlyCue(), _LAYER_MAPPING, ("blue", "amber"), _BLUE)
         assert set(lines) == {
             _group_color_apply_command(7, _AMBER),  # side
             _group_color_apply_command(10, _AMBER),  # wash
+            _group_color_apply_command(13, _AMBER),  # mover
             _group_color_apply_command(2, _WARM_WHITE),  # key
         }
         assert "Group 4" not in " ".join(lines), "back 은 베이스라인과 같은 값 — 델타 금지"
-        assert "Group 13" not in " ".join(lines), "mover 은 베이스라인과 같은 값 — 델타 금지"
+
+    def test_every_mover_group_gets_the_accent_colour(self) -> None:
+        """무빙 그룹은 여럿일 수 있다(MOVER-U/MOVER-D) — 한 그룹만 받으면 다른 무빙이 빠진다."""
+        mapping = (*_LAYER_MAPPING, {"role": "mover", "group_no": 12, "group_name": "MOVER-D"})
+        lines = _role_color_value_lines(_ColorOnlyCue(), mapping, ("blue", "amber"), _BLUE)
+        assert _group_color_apply_command(13, _AMBER) in lines
+        assert _group_color_apply_command(12, _AMBER) in lines
 
     def test_effect_role_never_receives_a_colour_delta_line(self) -> None:
         """R3(REQ-LDRENDER-007) HARD 불변식 — effect 역할 그룹은 색 포함 어떤
@@ -112,6 +120,7 @@ class TestRoleColorValueLines:
         assert lines == (
             _group_color_apply_command(7, _AMBER),
             _group_color_apply_command(10, _AMBER),
+            _group_color_apply_command(13, _AMBER),  # mover — 무대 색을 따른다
         )
 
     def test_an_unresolvable_accent_name_emits_no_accent_delta_but_key_still_fires(self) -> None:
@@ -124,10 +133,13 @@ class TestRoleColorValueLines:
 
     def test_a_role_missing_from_the_layer_mapping_is_simply_omitted(self) -> None:
         """side/wash 가 층 매핑에 없으면(리그에 그 그룹이 없는 경우) 줄을 안
-        낸다 — 0 을 지어내지 않는다."""
+        낸다 — 0 을 지어내지 않는다. 무빙 매핑은 남아 있으므로 무빙 줄은 나간다."""
         mapping = tuple(e for e in _LAYER_MAPPING if e["role"] not in {"side", "wash"})
         lines = _role_color_value_lines(_ColorOnlyCue(), mapping, ("blue", "amber"), _BLUE)
-        assert lines == (_group_color_apply_command(2, _WARM_WHITE),)
+        assert lines == (
+            _group_color_apply_command(13, _AMBER),  # mover
+            _group_color_apply_command(2, _WARM_WHITE),  # key
+        )
 
     def test_empty_layer_mapping_emits_nothing(self) -> None:
         """단일 레이어 리그(AC-003 과 같은 경계) — 역할 배정 줄이 전혀 없다."""
@@ -188,8 +200,9 @@ class TestSongColorValueLinesIntegration:
         )
         assert _group_color_apply_command(7, _AMBER) in lines
         assert _group_color_apply_command(10, _AMBER) in lines
+        assert _group_color_apply_command(13, _AMBER) in lines  # mover
         assert _group_color_apply_command(2, _WARM_WHITE) in lines
-        assert len(lines) == 4
+        assert len(lines) == 5
 
     def test_no_layer_mapping_is_byte_identical_to_before_m4(self) -> None:
         """레거시 호출부 호환 — `layer_mapping=()`(기본값)이면 베이스라인
