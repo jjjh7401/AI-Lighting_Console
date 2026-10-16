@@ -132,6 +132,11 @@ def apply_arrangement_draft(
                         **cues_by_bar[bar],
                         "planned_position": draft_cue["planned_position"],
                     }
+                    # 방향 값을 가진 감독 칸은 방향 값의 위치도 같이 간다(둘이 어긋나지 않게).
+                    direction = cues_by_bar[bar].get("direction")
+                    new_position = (draft_cue.get("direction") or {}).get("position")
+                    if isinstance(direction, dict) and new_position is not None:
+                        cues_by_bar[bar]["direction"] = {**direction, "position": new_position}
                 continue
             cues_by_bar[bar] = normalize_beat_grid_cue(dict(draft_cue))
             placed_cells += 1

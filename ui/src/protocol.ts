@@ -449,6 +449,29 @@ export interface BeatGridAppMovement {
   phase_spread: boolean | null;
 }
 
+/** 칸의 방향 값(서버 `cell_direction`) — 자동 배치가 칸마다 한 번 내린 구조화 결정. 라벨·무대 미리보기·
+ * 프리셋 계획·콘솔 송신이 모두 이 값에서 나온다. 화면은 라벨 글자를 읽어 값을 만들지 않고 이 값을 읽는다.
+ * `effect_kind` 는 규칙 종류이고 칸의 `effect_kind`(콘솔 효과 종류)와 다르다. `movement` 는 앱 움직임
+ * (`app_movement`)과 같은 모양이다. 감독이 손으로 만든 칸은 방향 값이 없다. */
+export interface BeatGridCueDirection {
+  brightness_percent: number | null;
+  color: { name: string | null; rgb: [number, number, number] | null } | null;
+  position: { name: string | null } | null;
+  effect_kind:
+    | "pulse"
+    | "chase"
+    | "motion"
+    | "hold"
+    | "blind"
+    | "strobe"
+    | "static"
+    | "rest"
+    | "pre_hit"
+    | null;
+  movement: BeatGridAppMovement | null;
+  entry: { trigger_beat: number | null };
+}
+
 /** t548 — REQ-LDBEAT-015(g). 감독의 레인 제안표 명시 승인. 셋 다
  * 채워져야(by/date/source) 승인 예외가 성립한다(REQ-LDBEAT-006(vii-3)). */
 export interface BeatGridEvidenceApproval {
@@ -502,6 +525,12 @@ export interface BeatGridCue {
   source_ref: string | null;
   /** 카드 t548, REQ-LDBEAT-006(vi) — 앱 2단계 무빙. 없으면 `null`. */
   app_movement: BeatGridAppMovement | null;
+  /** 칸의 방향 값(자동 배치가 칸마다 낸 결정). 감독이 손으로 만든 칸은 키가 없다. 무대 미리보기는
+   * `app_movement` 다음으로 이 값의 `movement` 를 읽는다. */
+  direction?: BeatGridCueDirection;
+  /** `app_movement` 를 대신 내는 효과 프리셋 번호. `effect_preset_no` 와 같을 때 그 효과 프리셋이 움직임을
+   * 낸다(서버는 앱 2단계 줄을 따로 보내지 않는다). 없으면 키가 없다. */
+  movement_effect_no?: string;
   /** 칸의 구조화 효과 모양(펄스·체이스·웨이브·스윕). 서버 `effect_shape_of_cue`가
    * 효과 레시피·`app_movement`에서만 파생한다(라벨 글자는 쓰지 않는다). 모양이 없는
    * 칸은 키가 없다. 막대 아이콘은 이 값을 먼저 읽고, 없으면 `app_movement.shape`를 본다. */
@@ -525,6 +554,9 @@ export interface BeatGridCue {
   position_preset_name?: string | null;
   /** 콘솔이 준 색 프리셋 이름(서버 PR #741). 쓰임은 `position_preset_name`과 같다. */
   color_preset_name?: string | null;
+  /** 콘솔이 준 효과 프리셋 이름(예: 「WAVE PAN 2 BEAT」). 쓰임은 `position_preset_name`과 같다 — 2D 무대가
+   * 무빙 빔 움직임을 이 이름에서 읽는다(`beatgrid/moverMotion.ts`). 풀을 못 읽었으면 키가 없다. */
+  effect_preset_name?: string | null;
   /** 색이 둘 이상인 색 프리셋의 RGB 목록(각 0~100%, `color_rgb`와 같은 단위). 둘 이상이면 색 네모를
    * 가로로 나눠 그린다. 서버가 아직 안 보내면 키가 없다. */
   color_rgbs?: [number, number, number][] | null;
@@ -627,6 +659,18 @@ export interface BeatGridView {
    * 0~100%. 서버 `beat_grid_color_presets.color_preset_rgb` 가 읽는 바로 그 키다.
    * 없거나 옛 서버면 `undefined` — 그 번호의 막대는 중립(해칭)으로 남는다. */
   preset_colors?: Readonly<Record<string, BeatGridPresetRgb | null | undefined>> | null;
+  /** 앱이 만든 프리셋의 콘솔 이름(`{"21.10": "WAVE PAN 2 BAR", "2.33": "CENTER MOVER-U"}`) —
+   * 서버 `beat_grid_presets.app_preset_label` 이 읽는 그 키다. 2D 무대가 위치·움직임을 읽는다. */
+  preset_labels?: Readonly<Record<string, string | null | undefined>> | null;
+  /** 앱이 만든 효과 프리셋의 내용(`server/design/preset_plan` `preset_movements`). `signature` 는
+   * `[모양, 축들, 주기 단위, 주기 수, 위상 펼침]` — 2D 무대가 무빙 빔 움직임을 이 값에서 읽는다. */
+  preset_movements?: Readonly<Record<string, BeatGridPresetMovement | null | undefined>> | null;
+}
+
+export interface BeatGridPresetMovement {
+  group_no?: number | null;
+  signature?: readonly unknown[] | null;
+  bpm?: number | null;
 }
 
 /** 색 프리셋 목표 RGB. 세 채널 모두 0~100%(서버 `_percent` 와 같은 범위). */
@@ -848,10 +892,12 @@ export function joinSongAudioLinkChunks(state: SongAudioLinkAssemblyState): stri
   return state.chunks.join("");
 }
 
-/** SPEC-LDARRANGE-001 — 자동 배치 초안(보류 한 단위). 서버 `beat_grid_draft` 모양이다. 칸은 `bar`·`label` 만 온다. */
+/** SPEC-LDARRANGE-001 — 자동 배치 초안(보류 한 단위). 서버 `beat_grid_draft` 모양이다. 칸은 `bar`·`label` 과
+ * 방향 값(`direction`, 서버가 같은 결정에서 함께 만든다)이 온다. 방향 값이 없는 칸은 키가 없다. */
 export interface BeatGridDraftCell {
   bar: number;
   label: string;
+  direction?: BeatGridCueDirection;
 }
 
 export interface BeatGridDraftTrack {

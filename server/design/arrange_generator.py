@@ -33,6 +33,12 @@ from server.design.beat_grid import (
     find_overlapping_group_tracks,
     normalize_beat_grid_cue,
 )
+from server.design.cell_direction import (
+    BASIC_WORDS,
+    assign_color_names,
+    build_direction,
+    direction_label,
+)
 from server.design.rig import RIG_LAYER_ROLES
 
 __all__ = [
@@ -41,17 +47,20 @@ __all__ = [
     "generate_arrangement_draft",
 ]
 
+# 칸 이름은 방향 값에서 만든다(``cell_direction.direction_label``). 아래 상수는 그 말 표
+# (``BASIC_WORDS``)의 이름표일 뿐 말을 따로 들지 않는다 — 규칙 제안
+# (``beat_grid_suggestion_rules``)이 이 이름으로 칸을 알아본다.
 #: 칸이 쉰다는 명시적 표식(AC-LDARRANGE-002).
-REST_LABEL = "—"
+REST_LABEL = BASIC_WORDS["rest"]
 #: 무빙이 제자리에 서 있는 칸(움직이지 않음).
-HOLD_LABEL = "정지"
+HOLD_LABEL = BASIC_WORDS["hold"]
 #: 얼굴 빛·워시처럼 구간 내내 켜 두는 칸.
-STATIC_LABEL = "유지"
-PULSE_LABEL = "펄스 1·2·4박"
-CHASE_LABEL = "체이스 2·4박"
-MOTION_LABEL = "팬 웨이브 2마디"
-BLIND_LABEL = "블라인드 2박"
-STROBE_LABEL = "스트로브 1마디"
+STATIC_LABEL = BASIC_WORDS["static"]
+PULSE_LABEL = BASIC_WORDS["pulse"]
+CHASE_LABEL = BASIC_WORDS["chase"]
+MOTION_LABEL = BASIC_WORDS["motion"]
+BLIND_LABEL = BASIC_WORDS["blind"]
+STROBE_LABEL = BASIC_WORDS["strobe"]
 
 #: 마디 지도가 없을 때 화면에 보일 안내(AC-LDARRANGE-015).
 UNCONFIRMED_NOTE = "마디 지도 미확정"
@@ -226,6 +235,10 @@ def generate_arrangement_draft(
                     override=overrides.get((name, bar)),
                 )
 
+    # 색 이름은 이 초안 전체의 색으로 한 번에 정한다 — 같은 색은 어느 칸에서나 같은 이름이다.
+    color_names = assign_color_names(
+        plan.color_rgb for by_bar in plans.values() for plan in by_bar.values() if plan.color_rgb
+    )
     tracks = [
         BeatGridTrack(
             group_no=track.get("group_no"),
@@ -233,7 +246,13 @@ def generate_arrangement_draft(
             group_name=str(track["group_name"]),
             layer_role=track.get("layer_role"),
             cues=[
-                _draft_cue(bar, plans[str(track["group_name"])][bar], settings)
+                _draft_cue(
+                    bar,
+                    plans[str(track["group_name"])][bar],
+                    settings,
+                    role=track.get("layer_role"),
+                    color_names=color_names,
+                )
                 for bar in bar_numbers
             ],
         )
@@ -389,22 +408,57 @@ def _section_color(section: str, turn: int, settings: ArrangementPolicy) -> tupl
     return palette.verse
 
 
-def _draft_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> BeatGridCue:
-    """규칙 결정 하나를 격자 칸으로 옮긴다. 값은 이 결정에서만 온다."""
-    raw: dict[str, object] = {
-        "bar": bar,
-        "label": plan.label,
-        "brightness": {"mode": "value", "value_percent": plan.brightness_percent},
-        "entry": {"trigger_beat": settings.downbeat_trigger},
-        "source_ref": f"{SOURCE}:{plan.kind}",
-    }
-    if plan.movement_shape is not None:
-        raw["app_movement"] = {
+def _draft_cue(
+    bar: int,
+    plan: _CellPlan,
+    settings: ArrangementPolicy,
+    *,
+    role: object = None,
+    words: Mapping[str, str] = BASIC_WORDS,
+    color_names: Mapping[tuple[int, int, int], str] | None = None,
+) -> BeatGridCue:
+    """규칙 결정 하나를 격자 칸으로 옮긴다. 값은 이 결정에서만 온다.
+
+    결정에서 방향 값(``direction``)을 한 번 만들고, 라벨과 옛 필드(밝기·진입·움직임·계획 색·계획
+    위치)는 전부 그 방향 값에서 파생한다 — 같은 자리에서 같은 결정으로 나오므로 서로 어긋날 수 없다.
+    ``words`` 는 라벨 말 표(기존 생성기 말이 기본, 구간 단위 생성기는 구간 말을 넘긴다),
+    ``color_names`` 는 초안 전체에서 정한 RGB → 이름이다(없으면 이 칸의 색만으로 정한다).
+    """
+    movement = (
+        None
+        if plan.movement_shape is None
+        else {
             "shape": plan.movement_shape,
-            "axes": _MOTION_AXES,
+            "axes": list(_MOTION_AXES),
             "period_unit": "bar",
             "period_value": settings.motion_period_bars,
+            "phase_spread": None,
         }
-    if plan.color_rgb is not None:
-        raw["planned_color"] = [int(channel) for channel in plan.color_rgb]
+    )
+    rgb = plan.color_rgb
+    names = color_names if color_names is not None else assign_color_names([rgb] if rgb else [])
+    direction = build_direction(
+        brightness_percent=plan.brightness_percent,
+        kind=plan.kind,
+        rgb=rgb,
+        color_name=names.get(rgb) if rgb else None,
+        position=plan.position,
+        movement=movement,
+        trigger_beat=settings.downbeat_trigger,
+    )
+    raw: dict[str, object] = {
+        "bar": bar,
+        "label": direction_label(direction, role, words=words) or plan.label,
+        "brightness": {"mode": "value", "value_percent": direction["brightness_percent"]},
+        "entry": {"trigger_beat": direction["entry"]["trigger_beat"]},
+        "source_ref": f"{SOURCE}:{plan.kind}",
+        "direction": direction,
+    }
+    if direction["movement"] is not None:
+        raw["app_movement"] = dict(direction["movement"])
+    if direction["color"] is not None:
+        raw["planned_color"] = list(direction["color"]["rgb"] or ())
+    if direction["position"] is not None:
+        # 계획 위치는 콘솔 값이 아니라 계획 값이다 — 위치 번호는 승인 뒤 계획 경로가 붙인다.
+        raw["planned_position"] = direction["position"]["name"]
     return normalize_beat_grid_cue(raw)

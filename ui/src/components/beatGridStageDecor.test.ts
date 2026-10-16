@@ -64,6 +64,52 @@ describe("stageDecorations — 시안 drawStage 장식 (카드 t588)", () => {
     expect(decor.beams[0].points).toBe("80,40 71,95 89,95");
   });
 
+  it("재생 시계가 있으면 움직임 칸의 빔이 시각마다 돌고, 장비마다 위상이 엇갈린다", () => {
+    const moving: BeatGridTrack = {
+      ...track("QQQ", "mover", "웨이브"),
+      cues: [
+        {
+          ...cue(0, "웨이브"),
+          app_movement: { shape: "wave", axes: ["Pan"], period_unit: "bar", period_value: 1, phase_spread: true },
+        },
+      ],
+    };
+    const at = (seconds: number) =>
+      stageDecorations(points, [moving], project, 0, FRONT_Y, 0, { seconds, secondsPerBar: 2, beatsPerBar: 4 }).beams.map(
+        (b) => b.points,
+      );
+    const still = "80,40 71,95 89,95";
+    expect(at(0)[0]).toBe(still); // 위상 0 → 곧은 빔
+    // 끝 두 점의 가운데 x 에서 장비 x 를 뺀 값 — + 면 화면 오른쪽으로 돈 빔.
+    const swing = (pts: string) => {
+      const [[x0], [x1], [x2]] = pts.split(" ").map((p) => p.split(",").map(Number));
+      return (x1 + x2) / 2 - x0;
+    };
+    // 1/4 바퀴 뒤: 첫 장비는 오른쪽, 반 바퀴 엇갈린 둘째 장비는 왼쪽.
+    expect(swing(at(0.5)[0])).toBeGreaterThan(10);
+    expect(swing(at(0.5)[1])).toBeLessThan(-10);
+    // 시계가 없으면 움직이지 않는다.
+    expect(stageDecorations(points, [moving], project, 0, FRONT_Y, 0).beams[0].points).toBe(still);
+  });
+
+  it("실서버 재현: app_movement 없이 effect_preset_no 21.10 만 있는 칸도 격자 기록으로 움직인다", () => {
+    // 리드 실측(47010, 12.9초 · 0.5초 간격 두 캡처가 바이트 동일)의 칸 모양 — 라벨은 읽지 않는다.
+    const waveCell: BeatGridTrack = {
+      ...track("QQQ", "mover", "팬 웨이브(한 바퀴 2마디)"),
+      cues: [{ ...cue(4, "팬 웨이브(한 바퀴 2마디)"), effect_preset_no: "21.10", position_preset_no: "2.33" }],
+    };
+    const book = {
+      labels: { "21.10": "WAVE PAN 2 BAR", "2.33": "CENTER MOVER-U" },
+      movements: { "21.10": { group_no: 11, signature: ["wave", ["Pan"], "bar", 2, false] } },
+    };
+    const clock = (seconds: number) => ({ seconds, secondsPerBar: 60 / 112 * 4, beatsPerBar: 4 });
+    const at = (seconds: number) =>
+      stageDecorations(points, [waveCell], project, 5, FRONT_Y, 0, clock(seconds), book).beams.map((b) => b.points);
+    expect(at(12.9)).toHaveLength(2);
+    expect(at(13.4)[0]).not.toBe(at(12.9)[0]);
+    expect(at(13.4)[1]).not.toBe(at(12.9)[1]);
+  });
+
   it("역할이 다른 줄(그룹 이름과 무관)은 장식하지 않는다", () => {
     const decor = stageDecorations(points, [track("QQQ", "back", "켜짐")], project, 0, FRONT_Y, 0);
     expect(decor.washes).toEqual([]);

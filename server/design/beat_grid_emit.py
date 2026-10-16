@@ -58,7 +58,11 @@ from pathlib import Path
 import yaml
 
 from server.design.app_movement import app_movement_commands, brightness_value_commands
-from server.design.beat_grid import check_app_movement_axis_conflict, check_evidence_approval
+from server.design.beat_grid import (
+    check_app_movement_axis_conflict,
+    check_evidence_approval,
+    movement_carried_by_effect,
+)
 from server.design.beat_grid_measured import is_movement_measured_open
 from server.design.beat_grid_mib import plan_mib_premoves
 from server.design.cue_fade import store_with_fade
@@ -150,7 +154,12 @@ def required_m1_items_for_cue(cue: Mapping[str, object]) -> frozenset[int]:
     if cue.get("effect_preset_no") is not None:
         items.add(_EFFECT_PRESET_RECALL_ITEM)
     movement = cue.get("app_movement")
-    if isinstance(movement, Mapping) and movement.get("shape") is not None:
+    # 효과 프리셋이 움직임을 대신 내는 칸은 앱 2단계 줄을 보내지 않으므로 ⑤⑦⑨ 에 기대지 않는다.
+    if (
+        isinstance(movement, Mapping)
+        and movement.get("shape") is not None
+        and not movement_carried_by_effect(cue)
+    ):
         items.update(_APP_MOVEMENT_ITEMS)
     return frozenset(items)
 
@@ -352,7 +361,13 @@ def _cue_attribute_commands(
 
     movement = cue.get("app_movement")
     position_preset_no = cue.get("position_preset_no")
-    has_movement = isinstance(movement, Mapping) and movement.get("shape") is not None
+    # 효과 프리셋이 움직임을 대신 내는 칸(``movement_carried_by_effect``)은 아래 효과 번호 리콜
+    # 한 줄이 움직임이다 — 앱 2단계 줄을 또 보내면 같은 움직임이 두 번 나간다.
+    has_movement = (
+        isinstance(movement, Mapping)
+        and movement.get("shape") is not None
+        and not movement_carried_by_effect(cue)
+    )
     if has_movement:
         move_commands, reason = app_movement_commands(
             movement,  # type: ignore[arg-type]

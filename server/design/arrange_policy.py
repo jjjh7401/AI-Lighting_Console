@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-__all__ = ["MOVER_POSITION_LADDER", "ArrangementPalette", "ArrangementPolicy"]
+from server.design.color_names import COLOR_PALETTE_SEQUENCE
+
+__all__ = [
+    "ARRANGEMENT_COLOR_NAMES",
+    "MOVER_POSITION_LADDER",
+    "ArrangementPalette",
+    "ArrangementPolicy",
+]
 
 _Rgb = tuple[int, int, int]
 
@@ -17,6 +24,19 @@ _Rgb = tuple[int, int, int]
 #: (``server/spatial/pointing.py`` ``BASIC_POSITION_SEQUENCE``)의 이름이고, 리그에서 조준값을 그대로
 #: 읽는다(지어낸 좌표가 없다). 상대 이동(「한 칸 올림」「새 자리」)은 사다리에서 한 칸씩만 옮긴다.
 MOVER_POSITION_LADDER: tuple[str, ...] = ("Home", "Center", "Ring In", "Audience")
+
+
+#: 배치 팔레트가 낼 수 있는 모든 RGB 의 콘솔 영문 이름(대문자·ASCII) — 이름의 단일 출처다.
+#: 표준 팔레트 10색은 ``COLOR_PALETTE_SEQUENCE`` 의 이름을 그대로 쓰고(값을 새로 짓지 않는다),
+#: 표준 팔레트에 없는 두 색은 곡 주석(``preset_annotations/love_attack.yaml``)의 콘솔 이름과
+#: 같다. 팔레트 색을 바꾸면 이 표에도 이름을 더해야 한다(시험이 팔레트 전체가 이름을 가졌는지
+#: 본다). 표 밖의 RGB(주석 색 등)는 ``cell_direction.assign_color_names`` 가 가장 가까운 이름에
+#: 번호를 붙여 정한다.
+ARRANGEMENT_COLOR_NAMES: dict[tuple[int, int, int], str] = {
+    **{rgb: name.upper() for name, rgb in COLOR_PALETTE_SEQUENCE},
+    (100, 50, 75): "PINK",
+    (40, 65, 95): "SKY",
+}
 
 
 def _check_rgb(name: str, rgb: object) -> None:

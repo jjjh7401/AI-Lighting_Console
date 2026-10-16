@@ -9,7 +9,12 @@
 import type { ReactNode } from "react";
 
 import type { BeatGridTrack } from "../../protocol";
-import { OFF_FIXTURE_COLOR, trackIsLitAt, trackStageColor } from "../BeatGrid";
+import { OFF_FIXTURE_COLOR, cueForBar, trackIsLitAt, trackStageColor } from "../BeatGrid";
+import { moverBeamPoints, type StagePresetBook } from "./moverMotion";
+
+/** 개념도 무빙 빔이 위치 이름을 모를 때(reach 0.5) 시안 길이 98.5 가 되도록 잡은 앞 가장자리 거리. */
+const CONCEPT_BEAM_DISTANCE = 197;
+const CONCEPT_MOVERS_PER_ROW = 8;
 
 export type ConceptSlot = "back" | "blind" | "u" | "d" | "side-l" | "side-r" | "wash" | "foh";
 
@@ -63,7 +68,13 @@ export function StageConceptSvg({
   viewBar = 0,
   selectedTrackName = null,
   onSelectTrack,
+  motion,
+  presetBook,
 }: {
+  /** 재생 시계 — 있으면 무빙 빔이 칸의 움직임대로 돈다(장비 좌표 무대와 같은 계산). */
+  motion?: { seconds: number; secondsPerBar: number | null | undefined; beatsPerBar: number | null };
+  /** 곡 격자의 프리셋 기록(이름·효과 내용). */
+  presetBook?: StagePresetBook;
   width: number;
   height: number;
   /** 줄 목록 — 자리를 맡는 줄의 층 역할·상태·색을 정한다. 없으면 모든 자리가 꺼진 회색이다. */
@@ -89,12 +100,29 @@ export function StageConceptSvg({
     <circle key={key} cx={x} cy={y} r={r} fill={fill} />
   );
   // 무빙 한 대: 켜진 무빙만 빔 삼각형(시안 `mv`). 헤드 사각형은 줄 색(꺼짐 = #333).
-  const movingHead = (x: number, y: number, key: string, color: string, lit: boolean) => (
-    <g key={key}>
-      {lit && <polygon points={`${x},${y} ${x - 9},${y + 98.5} ${x + 9},${y + 98.5}`} fill={color} opacity={0.4} />}
-      <rect x={x - 5} y={y - 5} width={10} height={10} fill={color} />
-    </g>
-  );
+  // 빔 각도·길이는 그 줄 지금 칸의 위치·움직임과 재생 시각에서(`moverBeamPoints`).
+  const movingHead = (slot: "u" | "d", x: number, y: number, index: number) => {
+    const state = stateOf(slot);
+    const track = state.trackIndex === null ? null : tracks[state.trackIndex];
+    const points = moverBeamPoints({
+      cue: track ? cueForBar(track, viewBar) : null,
+      x,
+      y,
+      distance: CONCEPT_BEAM_DISTANCE,
+      centreX: W / 2,
+      index,
+      count: CONCEPT_MOVERS_PER_ROW,
+      halfWidth: 9,
+      clock: motion,
+      book: presetBook,
+    });
+    return (
+      <g key={`m${slot}${index}`}>
+        {state.lit && <polygon className="beat-grid-stage-beam" points={points} fill={state.color} opacity={0.4} />}
+        <rect className="beat-grid-stage-mover" x={x - 5} y={y - 5} width={10} height={10} fill={state.color} />
+      </g>
+    );
+  };
   const label = (x: number, y: number, text: string, anchor: "start" | "middle" | "end" = "start") => (
     <text key={`${text}-${x}-${y}`} x={x} y={y} fontSize={10} fill="#8a889a" textAnchor={anchor}>
       {text}
@@ -151,14 +179,10 @@ export function StageConceptSvg({
         ...row(6, 92, 212).map((y, i) => lamp(W - 28, y, 6, `sr${i}`, stateOf("side-r").color)),
       ])}
       {slotGroup("u", { x: L0 + 18, y: 44, width: SW - 36, height: 22 }, [
-        ...row(8, L0 + 30, R0 - 30).map((x, i) =>
-          movingHead(x, 54, `mu${i}`, stateOf("u").color, stateOf("u").lit),
-        ),
+        ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("u", x, 54, i)),
       ])}
       {slotGroup("d", { x: L0 + 18, y: 110, width: SW - 36, height: 22 }, [
-        ...row(8, L0 + 30, R0 - 30).map((x, i) =>
-          movingHead(x, 120, `md${i}`, stateOf("d").color, stateOf("d").lit),
-        ),
+        ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("d", x, 120, i)),
       ])}
       {slotGroup("blind", { x: W / 2 - 120, y: 33, width: 240, height: 16 }, [
         ...row(6, W / 2 - 110, W / 2 + 110).map((x, i) => (

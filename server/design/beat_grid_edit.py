@@ -43,6 +43,7 @@ from server.design.beat_grid import (
     normalize_beat_grid_cue,
 )
 from server.design.beat_grid_unverified import unverified_movement_terms
+from server.design.cell_direction import sync_direction_with_edit
 from server.design.cue_sheet_edit import MIB_MODES, TRACKING_VALUES
 from server.spatial.position_fx import POSITION_FX_EFFECTS
 
@@ -556,6 +557,9 @@ def apply_beat_grid_edit(
         existing = _find_cue(track, bar)
         base = dict(existing) if existing is not None else {"bar": bar}
         merged_raw = {**base, **{k: v for k, v in changes.items() if k != "new_preset_label"}}
+        # 방향 값을 가진 칸(자동 배치 칸)은 편집이 바꾼 밝기·진입·움직임을 방향 값도 따라가게 한다.
+        if isinstance(base.get("direction"), dict):
+            merged_raw["direction"] = sync_direction_with_edit(base["direction"], changes)
         merged = normalize_beat_grid_cue(merged_raw)
         # 새 프리셋 번호의 승인(REQ-LDBEAT-015(f)(g))은 이번 changes 에 함께 온
         # evidence.approval 만 인정한다 — 칸에 이미 있던 승인(예: t555 밝기
