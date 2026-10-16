@@ -49,6 +49,7 @@ from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_ba
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
+from server.design.analysis_timeline import ANALYSIS_SOURCE_KEY, build_analysis_timeline
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.arrange_apply import (
     ArrangementApplyError,
@@ -9690,6 +9691,21 @@ class ChatSession:
             )
             return
 
+        # 새 곡 분석이 확정됐고(같은 오디오) 지금 작업본이 그 분석으로 만든 것이 아니면, 마디 지도를
+        # 옛 작업본에 붙이지 않고 분석 구간·마디 지도·빈 격자로 새 작업본을 만든다(리드 지시
+        # 2026-10-16). 옛 작업본은 라이브러리에 자동 백업하고 되돌리기 기록에도 남긴다.
+        # REQ-LDBARENTRY-011 은 이 경로가 라이브러리를 건드리지 않는다고 적는다. 새 작업본을 열 때의
+        # 자동 백업은 리드 지시(2026-10-16)로 그 예외다 — 확정 분석이 있을 때만 일어난다.
+        record = self._song_analysis
+        if (
+            isinstance(record, ConfirmedSongAnalysis)
+            and record.accepted
+            and record.source_sha256 == audio.sha256
+            and current.get(ANALYSIS_SOURCE_KEY) != record.source_sha256
+        ):
+            self._start_analysis_timeline(current, record, result)
+            return
+
         # @MX:NOTE: [AUTO] 저장 관문은 성공하면 song_timeline 과 성공 chat_response 를 직접
         # 보내고, 거절하면 이벤트를 반환만 하고 보내지 않는다. 그래서 성공 여부는 반환 이벤트의
         # 모양이 아니라 방금 넘긴 페이로드가 읽혀 나오는지로 가른다 — 관문 문구가 바뀌어도
@@ -9698,6 +9714,71 @@ class ChatSession:
         if self.timeline_bar_map() == result:
             return
         self._send(event)
+
+    def _start_analysis_timeline(
+        self,
+        current: Mapping[str, object],
+        record: ConfirmedSongAnalysis,
+        bar_map: Mapping[str, object],
+    ) -> None:
+        """새 분석으로 새 작업본을 연다 — ``analyse_bar_map`` 이 부른다. ``chat_response`` 는
+        정확히 한 개 보낸다(REQ-LDBARENTRY-012). 콘솔에는 아무것도 쓰지 않는다.
+
+        옛 작업본을 라이브러리에 백업하지 못하면(저장 실패) 바꾸지 않는다 — 되돌리기 기록은
+        메모리에만 있어 서버를 다시 띄우면 사라지기 때문이다."""
+        store = self._timeline_store
+        assert store is not None
+
+        def say(summary: str, text: str) -> None:
+            self._send(chat_response_event(status="ok", summary=summary, text=text, commands=[]))
+
+        reason = validate_bar_map(bar_map)
+        if reason is not None:
+            say(
+                _BAR_MAP_ENTRY_REJECTED_SUMMARY,
+                f"마디 지도를 저장하지 않았습니다 — {reason} 콘솔에는 아무것도 쓰지 않았습니다.",
+            )
+            return
+        song_title = str(current.get("song_title") or "") or Path(record.source_file_name).stem
+        fresh = build_analysis_timeline(
+            song_title=song_title,
+            sections=record.accepted,
+            bar_map=bar_map,
+            layout=self._beat_grid_view(current)["tracks"],
+            source_sha256=record.source_sha256,
+        )
+        library = self._timeline_library
+        if library is None:
+            backup = (
+                "라이브러리가 없어 이전 작업본을 백업하지 못했습니다 — "
+                "되돌리기로 돌아갈 수 있습니다."
+            )
+        else:
+            try:
+                entry = library.auto_save(f"{song_title or '작업본'} 분석 전 백업", dict(current))
+            except (OSError, ValueError) as error:
+                say(
+                    "새 분석 작업본 만들기 실패",
+                    "이전 작업본을 라이브러리에 백업하지 못해 새 작업본으로 바꾸지 않았습니다 "
+                    f"({type(error).__name__}). 마디 지도도 저장하지 않았습니다. "
+                    "콘솔에는 아무것도 쓰지 않았습니다.",
+                )
+                return
+            backup = f"이전 작업본은 라이브러리 「{entry['name']}」에 백업했습니다."
+        self._draft_history.record(dict(current))
+        fresh = self._draft_badge(
+            fresh, depth=self._draft_history.depth, report=("새 분석으로 새 작업본",)
+        )
+        store.latest = fresh
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))
+        bars = fresh["beat_grid"]["bar_range"]
+        rows = len(fresh["beat_grid"]["tracks"])
+        say(
+            "새 분석으로 새 작업본",
+            f"새 분석으로 작업본을 새로 만들었습니다 — 구간 {len(fresh['sections'])}개 · "
+            f"{bars['start']}~{bars['end']}마디 · 빈 격자(줄 {rows}개). "
+            f"{backup} 타임코드는 반영할 때 다시 고릅니다. 콘솔에는 아무것도 쓰지 않았습니다.",
+        )
 
     # -- 카드 t551 — 박자 격자 편집 세 길의 전용 서버 진입점(콘솔 무접촉) ----
     #
@@ -11936,6 +12017,17 @@ class ChatSession:
             updated_grid, report = apply_arrangement_draft(grid, draft)
         except ArrangementApplyError as error:
             return self._beat_grid_rejection(str(error))
+        if updated_grid.get("tracks") == grid.get("tracks"):
+            # 바뀐 칸이 0개면 성공처럼 보이게 두지 않는다(리드 지시 2026-10-16) — 상태 이벤트도
+            # 실패로 보내 화면의 「적용 완료」 단계가 켜지지 않게 한다.
+            reason = (
+                "자동 배치를 적용했지만 격자에서 바뀐 칸이 0개입니다 — 이미 같은 배치이거나, "
+                "남겨야 할 감독 칸이 초안 자리를 모두 차지했습니다. "
+                f"({' · '.join(report)})"
+            )
+            event = self._beat_grid_rejection(reason)
+            self._beat_grid_send_status(last_action="edit", ok=False, reason=reason)
+            return event
         self._draft_history.record(timeline)
         updated_timeline = dict(timeline)
         updated_timeline["beat_grid"] = updated_grid
