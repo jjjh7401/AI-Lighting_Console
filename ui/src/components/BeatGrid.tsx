@@ -112,7 +112,13 @@ import {
   shouldMarkAudioLinkMissing,
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
-import { CueBarVisual, barNameText, cueBarVisualClass } from "./beatgrid/cueBarVisual";
+import {
+  CueBarVisual,
+  barNameText,
+  cueBarVisualClass,
+  cuePlannedClassName,
+  cuePlannedTitleSuffix,
+} from "./beatgrid/cueBarVisual";
 import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { folderSummarySpans } from "./beatgrid/folderSummary";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
@@ -2526,6 +2532,9 @@ export function BeatGrid({
                             // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
                             // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
                             const colorFill = active ? cueColorFill(segment.cue, presetHex) : { isColorUnset: false };
+                            // 계획 색(리드 결정, 콘솔에 아직 없음) — 점선 테두리 클래스와 제목 글.
+                            const plannedClass = cuePlannedClassName(segment.cue, active);
+                            const plannedTitle = cuePlannedTitleSuffix(segment.cue, active);
                             // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
                             // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
                             const isHighlighted =
@@ -2553,7 +2562,7 @@ export function BeatGrid({
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
                                   }${isHighlighted ? " is-preset-highlighted" : ""}${
                                     displayState === "edited" ? " is-edited" : ""
-                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}${cueBarVisualClass(segment.cue)}`}
+                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}${plannedClass}${cueBarVisualClass(segment.cue)}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -2561,7 +2570,7 @@ export function BeatGrid({
                                   }}
                                   title={`${segment.startBar}~${segment.endBar - 1}마디${
                                     colorFill.isColorUnset && active ? " · 색 미정" : ""
-                                  }`}
+                                  }${plannedTitle}`}
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
                                   {active ? barNameText(segment.cue) : "꺼짐"}

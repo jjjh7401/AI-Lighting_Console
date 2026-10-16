@@ -13,6 +13,7 @@ from collections.abc import Iterable, Mapping, Sequence
 
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
+from server.design.beat_grid_planned import attach_planned_marks
 
 __all__ = [
     "SECTION_KIND_COLORS",
@@ -255,6 +256,10 @@ def attach_beat_grid_ui_values(
     - ``sections[i].energy`` — 마디 지도에 마디별 ``energy`` 가 있을 때만.
     - ``accent_bars`` — 마디 지도에 드롭 이벤트가 있을 때만.
     - ``beat_grid.tracks[i].cues[j].color_rgb`` — ``preset_colors`` 에 그 색 번호가 기록됐을 때만.
+    - ``beat_grid.tracks[i].cues[j].color_rgb`` + ``color_planned`` — 곡별 계획 주석의 계획 색이고
+      칸에 콘솔 색 번호가 없을 때만(``beat_grid_planned.attach_planned_marks``).
+    - ``beat_grid.tracks[i].cues[j].planned_dimmer_name`` / ``planned_position_name`` —
+      곡별 계획 주석의 계획 이름이고 칸에 콘솔 번호가 없을 때만.
     - ``beat_grid.tracks[i].cues[j].position_preset_name`` / ``color_preset_name`` — 세션이 이미
       완전 판독해 기억한 콘솔 풀(``pool_slots``)에 그 번호의 이름이 있을 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
@@ -289,6 +294,8 @@ def attach_beat_grid_ui_values(
     grid = merged.get("beat_grid")
     if isinstance(grid, Mapping):
         grid = attach_color_rgb_to_cues(grid)
+        # 계획 표시(화면 전용) — beat_grid_planned 참고.
+        grid = attach_planned_marks(grid, merged.get("song_title"))
         if pool_slots:
             grid = attach_console_preset_names(grid, pool_slots)
         merged["beat_grid"] = grid

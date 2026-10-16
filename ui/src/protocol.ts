@@ -514,6 +514,13 @@ export interface BeatGridCue {
   /** 색이 둘 이상인 색 프리셋의 RGB 목록(각 0~100%, `color_rgb`와 같은 단위). 둘 이상이면 색 네모를
    * 가로로 나눠 그린다. 서버가 아직 안 보내면 키가 없다. */
   color_rgbs?: [number, number, number][] | null;
+  /** 계획 색(리드 결정, 콘솔에 아직 없음) — 칸에 색 프리셋 번호가 없고 곡별 계획 주석의 색이 있을 때만 `true`.
+   * 이때 `color_rgb` 는 콘솔 값이 아니라 계획 색이다. 막대는 점선 테두리와 제목 글로 구분한다. */
+  color_planned?: boolean | null;
+  /** 계획 디머 이름(예: "DIM-70") — 칸에 디머 프리셋 번호가 없을 때만. 둘째 줄에 흐리게 보인다. */
+  planned_dimmer_name?: string | null;
+  /** 계획 위치 이름(예: "FLOOR") — 칸에 위치 프리셋 번호가 없을 때만. 둘째 줄에 흐리게 보인다. */
+  planned_position_name?: string | null;
 }
 
 /** t537 ② 리드 추가 지시(2026-10-10) — §4 SCENE 열 값은 역할·효과 혼성

@@ -307,9 +307,19 @@ def build_song_timing_from_bar_map(bar_map: Mapping[str, object] | None) -> Song
     )
 
 
-#: 화면 표시용으로만 붙는 칸 키(콘솔 이름) — 콘솔 풀을 읽는 시점에 따라 나타나고 사라지므로
-#: 「반영 이후 바뀐 칸」 비교에 넣지 않는다(넣으면 풀을 읽는 것만으로 미반영 칸이 생긴다).
-_DISPLAY_ONLY_CUE_KEYS = frozenset({"position_preset_name", "color_preset_name"})
+#: 화면 표시용으로만 붙는 칸 키(콘솔 이름·계획 이름).
+#: 콘솔 풀을 읽는 시점에 따라 나타나거나 사라지고, 콘솔에 아직 없는 계획 값이라
+#: 「반영 이후 바뀐 칸」 비교에 넣지 않는다. 넣으면 풀을 읽거나 계획을 세우는 것만으로
+#: 미반영 칸이 생긴다. 계획 색(`color_planned`)의 `color_rgb` 도 같은 이유로 뺀다.
+_DISPLAY_ONLY_CUE_KEYS = frozenset(
+    {
+        "position_preset_name",
+        "color_preset_name",
+        "color_planned",
+        "planned_dimmer_name",
+        "planned_position_name",
+    }
+)
 
 
 def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey, object]:
@@ -328,9 +338,12 @@ def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey,
                 continue
             bar = cue.get("bar")
             if isinstance(bar, int) and not isinstance(bar, bool):
-                snapshot[(group_name, bar)] = {
+                body = {
                     key: value for key, value in cue.items() if key not in _DISPLAY_ONLY_CUE_KEYS
                 }
+                if cue.get("color_planned"):
+                    body.pop("color_rgb", None)  # 계획 색은 콘솔 색이 아니라서 비교에서 뺀다
+                snapshot[(group_name, bar)] = body
     return snapshot
 
 
