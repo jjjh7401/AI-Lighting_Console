@@ -16,7 +16,9 @@
 // 같은 경계). 선언 구간이 시작하는 자리라 "여기서 갈라짐"을 항상
 // 보인다(이 줄 자체가 그 구간 전체를 담당하므로 마디별 반복 없이
 // 한 번만).
+import type { CellSplitChildRow } from "./cellSplit";
 import type { LRChildRow } from "./lrSplit";
+import { cueRgbHex } from "./presetColorHex";
 
 /** 「SIDE-ALL 따름」 점선 칸 — 자식 줄 밖(선언 구간 앞·뒤)에서 부모를 따른다는 표시(시안 `.clip.follow`). */
 export interface LRFollowCells {
@@ -65,6 +67,50 @@ export function LRSplitRow({ child, left, width, onSelect, follow }: LRSplitRowP
         >
           <small className="beat-grid-split-start-marker">여기서 갈라짐</small> {child.label}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/** 칸 색을 아직 정하지 않은 쪽의 칸 글. */
+export const CELL_SPLIT_COLOR_UNSET = "색 미정";
+
+export interface LRSplitCellRowProps {
+  row: CellSplitChildRow;
+  /** 마디 → 가로 좌표(px). 부모 줄과 같은 눈금(`BeatGrid.tsx` 의 `barToX`). */
+  toX: (bar: number) => number;
+}
+
+/** 칸 데이터(서버 `cue.split`)가 만든 자식 줄 하나(└ L / └ R). 선언 기반 `LRSplitRow` 와 같은 줄 모양·
+ * 클래스를 쓰지만 칸이 하나가 아니라 나뉜 칸마다 하나씩이다. 표시 전용이다 — 누를 수 없고(`onSelect` 없음),
+ * 선언 구간 밖의 「따름」 칸도 없다(칸 데이터가 이 줄의 전부다). 칸 바탕은 그 쪽의 `color_rgb`, 글은 색 이름
+ * (정하지 않았으면 「색 미정」)이다. 색을 못 풀었으면 바탕은 자식 칸 기본색 그대로다 — 색을 지어내지 않는다.
+ * 대수(`memberCount`)는 칸 데이터에 없으므로 쓰지 않는다. */
+export function LRSplitCellRow({ row, toX }: LRSplitCellRowProps) {
+  return (
+    <div className="beat-grid-track beat-grid-track-child" role="row">
+      <span className="beat-grid-track-label beat-grid-track-label-child">└ {row.label}</span>
+      <div className="beat-grid-track-cues">
+        {row.cells.map((cell) => {
+          const name = cell.color?.trim() ? cell.color : CELL_SPLIT_COLOR_UNSET;
+          const fill = cueRgbHex(cell.color_rgb);
+          return (
+            <span
+              key={cell.startBar}
+              className="beat-grid-cue beat-grid-cue-split-child"
+              style={{
+                left: toX(cell.startBar),
+                width: toX(cell.endBar) - toX(cell.startBar) - 2,
+                ...(fill ? { backgroundColor: fill } : {}),
+              }}
+              title={`${cell.startBar}~${cell.endBar - 1}마디 — ${row.label} · ${name}${
+                cell.color && !fill ? " (RGB 미정)" : ""
+              }`}
+            >
+              {name}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

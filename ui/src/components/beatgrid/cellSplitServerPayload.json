@@ -1,0 +1,199 @@
+{
+ "song_title": "Cell Split Fixture",
+ "beat_grid": {
+  "song_title": "Cell Split Fixture",
+  "bar_range": {
+   "start": 0,
+   "end": 25
+  },
+  "tracks": [
+   {
+    "group_no": 21,
+    "group_no_confirmed": true,
+    "group_name": "SIDE-ALL",
+    "layer_role": "side",
+    "cues": [
+     {
+      "bar": 0,
+      "label": "앞박 1회",
+      "brightness": {
+       "mode": null,
+       "value_percent": null,
+       "preset_no": null
+      },
+      "position_preset_no": null,
+      "color_preset_no": null,
+      "effect_preset_no": null,
+      "effect_kind": null,
+      "entry": {
+       "fade_bars": null,
+       "mib_mode": null,
+       "fade_beats": null,
+       "trigger_beat": null,
+       "delay_beats": null,
+       "position_late_beats": null,
+       "tracking": null
+      },
+      "source_ref": null,
+      "app_movement": null,
+      "evidence": null,
+      "pending_preset_fields": []
+     },
+     {
+      "bar": 7,
+      "label": "왼쪽 오른쪽 따로",
+      "brightness": {
+       "mode": "value",
+       "value_percent": 70,
+       "preset_no": null
+      },
+      "position_preset_no": null,
+      "color_preset_no": null,
+      "effect_preset_no": null,
+      "effect_kind": null,
+      "entry": {
+       "fade_bars": null,
+       "mib_mode": null,
+       "fade_beats": null,
+       "trigger_beat": null,
+       "delay_beats": null,
+       "position_late_beats": null,
+       "tracking": null
+      },
+      "source_ref": null,
+      "app_movement": null,
+      "evidence": null,
+      "split": {
+       "left": {
+        "color": "Red",
+        "color_rgb": [
+         100,
+         0,
+         0
+        ]
+       },
+       "right": {
+        "color": "Blue",
+        "color_rgb": [
+         5,
+         20,
+         100
+        ]
+       }
+      },
+      "pending_preset_fields": []
+     },
+     {
+      "bar": 14,
+      "label": "다시 합침",
+      "brightness": {
+       "mode": null,
+       "value_percent": null,
+       "preset_no": null
+      },
+      "position_preset_no": null,
+      "color_preset_no": null,
+      "effect_preset_no": null,
+      "effect_kind": null,
+      "entry": {
+       "fade_bars": null,
+       "mib_mode": null,
+       "fade_beats": null,
+       "trigger_beat": null,
+       "delay_beats": null,
+       "position_late_beats": null,
+       "tracking": null
+      },
+      "source_ref": null,
+      "app_movement": null,
+      "evidence": null,
+      "pending_preset_fields": []
+     }
+    ]
+   },
+   {
+    "group_no": 22,
+    "group_no_confirmed": true,
+    "group_name": "FRONT-ALL",
+    "layer_role": null,
+    "cues": [
+     {
+      "bar": 0,
+      "label": "앞빛 켬",
+      "brightness": {
+       "mode": null,
+       "value_percent": null,
+       "preset_no": null
+      },
+      "position_preset_no": null,
+      "color_preset_no": null,
+      "effect_preset_no": null,
+      "effect_kind": null,
+      "entry": {
+       "fade_bars": null,
+       "mib_mode": null,
+       "fade_beats": null,
+       "trigger_beat": null,
+       "delay_beats": null,
+       "position_late_beats": null,
+       "tracking": null
+      },
+      "source_ref": null,
+      "app_movement": null,
+      "evidence": null,
+      "pending_preset_fields": []
+     }
+    ]
+   }
+  ],
+  "scene_memos": [],
+  "probe_results": {
+   "1": "미확인",
+   "2": "미확인",
+   "3": "미확인",
+   "4": "미확인",
+   "5": "미확인",
+   "6": "미확인",
+   "7": "미확인",
+   "8": "미확인",
+   "9": "미확인"
+  },
+  "source": "custom",
+  "note": null,
+  "unverified_cells": [],
+  "movement_vocabulary": {
+   "shapes": [
+    {
+     "name": "sweep",
+     "unverified": false
+    },
+    {
+     "name": "flyout",
+     "unverified": false
+    },
+    {
+     "name": "circle",
+     "unverified": true
+    },
+    {
+     "name": "ballyhoo",
+     "unverified": true
+    },
+    {
+     "name": "wave",
+     "unverified": false
+    }
+   ],
+   "axes": [
+    "Pan",
+    "Tilt"
+   ],
+   "period_units": [
+    "bar",
+    "beat"
+   ],
+   "phase_spread_unverified": true
+  },
+  "console_audio_offset_seconds": 3.002
+ }
+}

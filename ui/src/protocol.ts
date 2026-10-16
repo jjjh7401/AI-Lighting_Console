@@ -465,6 +465,20 @@ export interface BeatGridEvidence {
   approval: BeatGridEvidenceApproval | null;
 }
 
+/** 칸 하나의 왼쪽 또는 오른쪽 한 쪽 — 서버 `attach_cell_split_to_cues`가 칸에 실은 값. `color`는 표준
+ * 팔레트 색 이름이고 정하지 않았으면 `null`이다. `color_rgb`는 그 이름을 푼 RGB(각 0~100%)이고, 이름이
+ * 없거나 표에 없어 못 풀면 `null`이다 — 화면은 RGB를 지어내지 않는다. */
+export interface BeatGridCueSplitSide {
+  color: string | null;
+  color_rgb?: [number, number, number] | null;
+}
+
+/** 칸 하나가 왼쪽(L)·오른쪽(R)을 따로 가질 때의 두 쪽. 키는 정확히 이 둘이다. */
+export interface BeatGridCueSplit {
+  left: BeatGridCueSplitSide;
+  right: BeatGridCueSplitSide;
+}
+
 /** t532/t537/t548 (SPEC-LDBEAT-001 M2/M7/M8) — 박자 격자 칸 하나. 카드
  * t537(감독 결정 "전체 화면 + 속성별 값")이 단일 `label` 서술 문자열을
  * 속성별 구조화 필드 다섯 종(`brightness`·`position_preset_no`·
@@ -514,6 +528,9 @@ export interface BeatGridCue {
   /** 색이 둘 이상인 색 프리셋의 RGB 목록(각 0~100%, `color_rgb`와 같은 단위). 둘 이상이면 색 네모를
    * 가로로 나눠 그린다. 서버가 아직 안 보내면 키가 없다. */
   color_rgbs?: [number, number, number][] | null;
+  /** 이 칸이 왼쪽·오른쪽을 따로 가질 때만 있는 두 쪽의 색(서버 `split`). 없으면 키가 없다. 있으면 타임라인이
+   * 이 칸의 부모 막대를 띠로 대신하고 L·R 두 줄에 쪽마다 칸을 그린다(`beatgrid/cellSplit.ts`). */
+  split?: BeatGridCueSplit | null;
   /** 계획 색(리드 결정, 콘솔에 아직 없음) — 칸에 색 프리셋 번호가 없고 곡별 계획 주석의 색이 있을 때만 `true`.
    * 이때 `color_rgb` 는 콘솔 값이 아니라 계획 색이다. 막대는 점선 테두리와 제목 글로 구분한다. */
   color_planned?: boolean | null;

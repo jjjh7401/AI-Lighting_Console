@@ -322,6 +322,24 @@ _DISPLAY_ONLY_CUE_KEYS = frozenset(
 )
 
 
+def _comparable_cue(cue: Mapping[str, object]) -> dict[str, object]:
+    """비교용 칸 사본 — 서빙 때만 붙는 표시값을 뺀다. 칸 하나의 왼쪽·오른쪽 색(``split``)은 쪽마다
+    ``color_rgb`` 가 저장 값 ``color`` 에서 서빙 경계가 푼 파생값이라, 스냅샷(저장 모양)과 지금(서빙
+    모양)이 달라 보이지 않게 뺀다. ``split`` 이 없는 칸은 표시용 이름 키만 빠지는 예전 그대로다."""
+    comparable = {key: value for key, value in cue.items() if key not in _DISPLAY_ONLY_CUE_KEYS}
+    split = comparable.get("split")
+    if isinstance(split, Mapping):
+        comparable["split"] = {
+            side: (
+                {key: value for key, value in body.items() if key != "color_rgb"}
+                if isinstance(body, Mapping)
+                else body
+            )
+            for side, body in split.items()
+        }
+    return comparable
+
+
 def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey, object]:
     """``grid``(``BeatGridView``)의 칸을 ``(group_name, bar) -> 칸 사전``으로
     평평하게 편다 — 트랙 순서·칸 순서와 무관하게 **내용**만으로 두 시점을
@@ -338,9 +356,7 @@ def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey,
                 continue
             bar = cue.get("bar")
             if isinstance(bar, int) and not isinstance(bar, bool):
-                body = {
-                    key: value for key, value in cue.items() if key not in _DISPLAY_ONLY_CUE_KEYS
-                }
+                body = _comparable_cue(cue)
                 if cue.get("color_planned"):
                     body.pop("color_rgb", None)  # 계획 색은 콘솔 색이 아니라서 비교에서 뺀다
                 snapshot[(group_name, bar)] = body
