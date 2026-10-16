@@ -81,6 +81,13 @@ _BEAT_TOKENS: tuple[tuple[str, str], ...] = (
 )
 #: 박이 없는 상태 라벨. 박 키워드가 없을 때만 본다.
 _STATE_WORDS: tuple[str, ...] = ("정지", "유지")
+#: 마디 지도 사건 이름 → 표시 문구. 분석 불일치 표시에 쓴다(예: 킥 진입 4마디).
+_EVENT_TEXT: dict[str, str] = {
+    "kick_entry": "킥 진입",
+    "build": "빌드업",
+    "break": "브레이크",
+    "drop": "드롭",
+}
 
 GAP_PHRASE = "③ 프레이즈 경계는 타임라인에 없어 구간 경계만으로 쟀습니다."
 GAP_PALETTE = "⑥ 색은 칸 필드와 곡의 색 주석(preset_annotations)을 합쳐 쟀습니다."
@@ -155,6 +162,8 @@ class Context:
     drop_bars: frozenset[int]
     #: 색 주석이 정한 (줄 이름, 마디) 쌍.
     color_cells: frozenset[tuple[str, int]]
+    #: 마디 지도 사건이 덮는 (마디, 사건 이름) 쌍. 분석 불일치 표시에 쓴다.
+    event_bars: frozenset[tuple[int, str]] = frozenset()
 
     @property
     def hit_bars(self) -> frozenset[int]:
@@ -344,6 +353,24 @@ def accent_hits(
     return len(positions), near
 
 
+def off_hit_bars(cells: Sequence[Cell], hit_bars: frozenset[int], *, tolerance: int) -> list[int]:
+    """큰 히트 ±tolerance 마디 밖에 있는 강조 위치(쉼이 아닌 칸)의 시작 마디들."""
+    return sorted(
+        cell.start
+        for cell in cells
+        if cell.label.strip() not in ("", REST_LABEL)
+        and not any(abs(cell.start - hit) <= tolerance for hit in hit_bars)
+    )
+
+
+def miss_annotation(bar: int, event_bars: frozenset[tuple[int, str]]) -> str:
+    """큰 히트 밖 강조 칸의 표시 문구. 같은 마디에 마디 지도 사건이 있으면 그 이름을 붙인다."""
+    name = next((_EVENT_TEXT[kind] for kind in _EVENT_TEXT if (bar, kind) in event_bars), None)
+    if name is None:
+        return f"{bar}마디 분석 불일치(큰 히트 아님)"
+    return f"{bar}마디 분석 불일치({name}, 큰 히트 아님)"
+
+
 def build_context(timeline: Mapping[str, Any], annotations: Mapping[str, Any]) -> Context:
     """타임라인(구간·마디 지도)과 색 주석으로 비교 맥락을 만든다."""
     sections = [
@@ -358,11 +385,16 @@ def build_context(timeline: Mapping[str, Any], annotations: Mapping[str, Any]) -
         if str(section.get("label") or "").startswith("후렴")
     )
     drop: set[int] = set()
+    events: set[tuple[int, str]] = set()
     bar_map = timeline.get("bar_map")
     if isinstance(bar_map, Mapping):
         for event in bar_map.get("events") or []:
-            if event.get("kind") == "drop":
-                drop.update(range(int(event["start_bar"]), int(event["end_bar"]) + 1))
+            kind = event.get("kind")
+            bars = range(int(event["start_bar"]), int(event["end_bar"]) + 1)
+            if kind == "drop":
+                drop.update(bars)
+            if kind in _EVENT_TEXT:
+                events.update((bar, str(kind)) for bar in bars)
     colors = {
         (str(cell["group_name"]), int(cell["bar"]))
         for entry in annotations.get("colors") or []
@@ -373,6 +405,7 @@ def build_context(timeline: Mapping[str, Any], annotations: Mapping[str, Any]) -
         chorus_bars=chorus,
         drop_bars=frozenset(drop),
         color_cells=frozenset(colors),
+        event_bars=frozenset(events),
     )
 
 
@@ -585,6 +618,9 @@ def compare_grids(
         cand_n, cand_hits = accent_hits(
             cand_cells[name], context.hit_bars, tolerance=thresholds.accent_tolerance
         )
+        misses = off_hit_bars(
+            cand_cells[name], context.hit_bars, tolerance=thresholds.accent_tolerance
+        )
         checks.append(
             Check(
                 key="accent",
@@ -597,6 +633,7 @@ def compare_grids(
                 base=_hits_text(base_hits, base_n),
                 candidate=_hits_text(cand_hits, cand_n),
                 passed=cand_n == 0 or cand_hits / cand_n >= thresholds.accent_share,
+                detail="; ".join(miss_annotation(bar, context.event_bars) for bar in misses),
             )
         )
 

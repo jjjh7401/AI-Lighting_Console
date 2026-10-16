@@ -31,6 +31,8 @@ from server.design.grid_shape import (
     count_passes,
     length_bin,
     main,
+    miss_annotation,
+    off_hit_bars,
     pattern_category,
     render_markdown,
     total_variation,
@@ -445,3 +447,54 @@ def test_table_cells_escape_pipes_so_every_row_keeps_its_columns() -> None:
     assert {len(_cells(row)) for row in criteria} == {7}
     assert {len(_cells(row)) for row in track} == {8}
     assert "\\|후보 − 기본\\|" in text
+
+
+def test_off_hit_positions_are_marked_with_their_bar_and_event_kind() -> None:
+    """큰 히트 밖의 강조 칸은 마디와 마디 지도 사건을 적는다. 판정 계산은 그대로다."""
+    base = _base()
+    candidate = copy.deepcopy(base)
+    _track(candidate, "BLIND")["cues"].append(
+        {"bar": 4, "label": "BLIND 2박", "brightness": {"mode": "value", "value_percent": 100}}
+    )
+    report = compare_grids(base, candidate, _context())
+    blind = next(c for c in report.checks if c.key == "accent" and c.track == "BLIND")
+    assert blind.passed is False
+    assert blind.detail == "4마디 분석 불일치(킥 진입, 큰 히트 아님)"
+
+
+def test_an_off_hit_mark_without_an_event_says_only_that_it_is_not_a_big_hit() -> None:
+    base = _base()
+    report = compare_grids(base, _move_blind_hit(base), _context())
+    blind = next(c for c in report.checks if c.key == "accent" and c.track == "BLIND")
+    assert blind.detail == "10마디 분석 불일치(큰 히트 아님)"
+
+
+def test_a_clean_accent_track_has_no_mark() -> None:
+    base = _base()
+    report = compare_grids(base, copy.deepcopy(base), _context())
+    assert all(c.detail == "" for c in report.checks if c.key == "accent")
+
+
+def test_off_hit_bars_list_only_non_rest_cells_outside_the_hits() -> None:
+    cells = [
+        Cell("BLIND", 4, 1, "BLIND 2박"),
+        Cell("BLIND", 17, 1, "17마디 3·4박 전부 비움(예고)"),
+        Cell("BLIND", 18, 1, "18마디 1박 BLIND 100% 2박"),
+        Cell("BLIND", 30, 1, REST_LABEL),
+    ]
+    assert off_hit_bars(cells, frozenset({18}), tolerance=1) == [4]
+
+
+def test_the_mark_names_the_event_kind_at_its_bar_when_there_is_one() -> None:
+    kick = miss_annotation(4, frozenset({(4, "kick_entry")}))
+    assert kick == "4마디 분석 불일치(킥 진입, 큰 히트 아님)"
+    build = miss_annotation(15, frozenset({(15, "build")}))
+    assert build == "15마디 분석 불일치(빌드업, 큰 히트 아님)"
+    assert miss_annotation(10, frozenset()) == "10마디 분석 불일치(큰 히트 아님)"
+
+
+def test_context_keeps_the_event_kind_of_each_bar_from_the_map() -> None:
+    context = _context()
+    assert (4, "kick_entry") in context.event_bars
+    assert (15, "build") in context.event_bars
+    assert (65, "drop") in context.event_bars
