@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import math
 import statistics
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -728,25 +728,43 @@ def compute_bar_energy(features: Sequence[BarFeatures]) -> dict[int, float]:
     return {bar: round((value - low) / (high - low), 3) for bar, value in raw.items()}
 
 
+#: 같은 종류 사건의 최소 간격(마디). 이 안에서 같은 종류가 다시 나오면 흔들림으로 보고,
+#: 처음 마디만 남긴다. 4마디는 프레이즈 한 덩이라는 일반 규칙이다(곡 고유 값이 아니다).
+EVENT_MIN_GAP_BARS = 4
+
+
+def _settle_bars(bars: Iterable[int]) -> list[int]:
+    """같은 종류 사건의 마디를 오름차순으로 정리한다. 앞에서 살린 마디와
+    EVENT_MIN_GAP_BARS 미만으로 붙은 마디는 흔들림이라 버린다."""
+    kept: list[int] = []
+    for bar in sorted(bars):
+        if not kept or bar - kept[-1] >= EVENT_MIN_GAP_BARS:
+            kept.append(bar)
+    return kept
+
+
 def classify_bar_events(features: Sequence[BarFeatures]) -> list[BarEvent]:
     """마디별 특징 → 네 종류 변화 이벤트(REQ-LDBARMAP-008).
 
     순수 함수 — librosa 를 쓰지 않는다. 특징이 비어 있으면 빈 목록을 돌려준다
     (예외를 내보내지 않는다). 입력은 ``extract_bar_features`` 가 실제 오디오에서
     재거나, 시험이 합성해 직접 넘긴다.
+
+    킥 진입과 브레이크는 같은 종류끼리 ``EVENT_MIN_GAP_BARS`` 안에서 다시 나온 것을 흔들림으로 보고
+    첫 마디만 남긴다. 빌드업은 살아남은 킥 진입 앞에서만 세운다.
     """
     by_bar = {f.bar: f for f in features}
     if not by_bar:
         return []
 
-    kick_bars = sorted(
+    kick_bars = _settle_bars(
         bar for bar, f in by_bar.items() if f.low_band_norm >= _KICK_ENTRY_LOW_BAND_RATIO
     )
     # 온셋 중앙값은 ``onset_count`` 를 실제로 잰 마디만으로 계산한다 — None을
     # "0개"로 섞으면 중앙값이 왜곡된다(카드 t535, _BREAK_DIP_LOW_BAND_RATIO 주석 참조).
     measured_onsets = [f.onset_count for f in by_bar.values() if f.onset_count is not None]
     median_onset = statistics.median(measured_onsets) if measured_onsets else None
-    break_bars = sorted(
+    break_bars = _settle_bars(
         bar
         for bar, f in by_bar.items()
         if f.low_band_norm <= _BREAK_LOW_BAND_RATIO
