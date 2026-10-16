@@ -56,7 +56,7 @@ from server.design.arrange_apply import (
     director_blank_cells,
 )
 from server.design.arrange_draft_store import PendingDraftStore
-from server.design.arrange_generator import generate_arrangement_draft
+from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import (
     CELL_HOLD,
     EMPTY_PRESET_HOLD,
@@ -11706,7 +11706,7 @@ class ChatSession:
         layout = self._beat_grid_view(timeline)["tracks"]
         # 곡별 계획 주석의 칸 색을 읽어 건넨다(생성기는 파일을 읽지 않는다). 주석이 없으면 빈 사전.
         planned_colors = annotated_cell_colors(load_preset_annotations(timeline.get("song_title")))
-        draft = generate_arrangement_draft(bar_map, layout, planned_colors=planned_colors)
+        draft = generate_segment_draft(bar_map, layout, planned_colors=planned_colors)
         if draft["note"] is not None or not draft["tracks"]:
             return self._beat_grid_rejection(draft["note"] or "자동 배치 초안이 비어 있습니다.")
         draft_id = self._arrangement_drafts.create(draft)
