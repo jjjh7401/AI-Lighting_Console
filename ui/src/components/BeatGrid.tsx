@@ -3765,6 +3765,7 @@ export function BeatGrid({
           {/* 카드 t561 — 선택 테두리·그룹 이름표·장비 영역 클릭(REQ-LDBEAT-022). */}
           <BeatGridStage
             notes={stageNotes}
+            motion={{ seconds: playbackSeconds, secondsPerBar, beatsPerBar }}
             fixtures={fixtures}
             tracks={grid.tracks}
             viewBar={viewBar}

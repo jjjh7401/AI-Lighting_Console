@@ -64,6 +64,34 @@ describe("stageDecorations — 시안 drawStage 장식 (카드 t588)", () => {
     expect(decor.beams[0].points).toBe("80,40 71,95 89,95");
   });
 
+  it("재생 시계가 있으면 움직임 칸의 빔이 시각마다 돌고, 장비마다 위상이 엇갈린다", () => {
+    const moving: BeatGridTrack = {
+      ...track("QQQ", "mover", "웨이브"),
+      cues: [
+        {
+          ...cue(0, "웨이브"),
+          app_movement: { shape: "wave", axes: ["Pan"], period_unit: "bar", period_value: 1, phase_spread: true },
+        },
+      ],
+    };
+    const at = (seconds: number) =>
+      stageDecorations(points, [moving], project, 0, FRONT_Y, 0, { seconds, secondsPerBar: 2, beatsPerBar: 4 }).beams.map(
+        (b) => b.points,
+      );
+    const still = "80,40 71,95 89,95";
+    expect(at(0)[0]).toBe(still); // 위상 0 → 곧은 빔
+    // 끝 두 점의 가운데 x 에서 장비 x 를 뺀 값 — + 면 화면 오른쪽으로 돈 빔.
+    const swing = (pts: string) => {
+      const [[x0], [x1], [x2]] = pts.split(" ").map((p) => p.split(",").map(Number));
+      return (x1 + x2) / 2 - x0;
+    };
+    // 1/4 바퀴 뒤: 첫 장비는 오른쪽, 반 바퀴 엇갈린 둘째 장비는 왼쪽.
+    expect(swing(at(0.5)[0])).toBeGreaterThan(10);
+    expect(swing(at(0.5)[1])).toBeLessThan(-10);
+    // 시계가 없으면 움직이지 않는다.
+    expect(stageDecorations(points, [moving], project, 0, FRONT_Y, 0).beams[0].points).toBe(still);
+  });
+
   it("역할이 다른 줄(그룹 이름과 무관)은 장식하지 않는다", () => {
     const decor = stageDecorations(points, [track("QQQ", "back", "켜짐")], project, 0, FRONT_Y, 0);
     expect(decor.washes).toEqual([]);

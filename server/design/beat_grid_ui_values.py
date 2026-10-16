@@ -195,6 +195,8 @@ def _section_energies(
 _NAME_FIELDS = (
     ("position_preset_no", "position_preset_name"),
     ("color_preset_no", "color_preset_name"),
+    # 2D 무대 무빙 빔이 움직임을 이 이름(「WAVE PAN 2 BEAT」)에서 읽는다.
+    ("effect_preset_no", "effect_preset_name"),
 )
 
 

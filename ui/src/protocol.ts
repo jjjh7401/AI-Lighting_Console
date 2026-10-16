@@ -525,6 +525,9 @@ export interface BeatGridCue {
   position_preset_name?: string | null;
   /** 콘솔이 준 색 프리셋 이름(서버 PR #741). 쓰임은 `position_preset_name`과 같다. */
   color_preset_name?: string | null;
+  /** 콘솔이 준 효과 프리셋 이름(예: 「WAVE PAN 2 BEAT」). 쓰임은 `position_preset_name`과 같다 — 2D 무대가
+   * 무빙 빔 움직임을 이 이름에서 읽는다(`beatgrid/moverMotion.ts`). 풀을 못 읽었으면 키가 없다. */
+  effect_preset_name?: string | null;
   /** 색이 둘 이상인 색 프리셋의 RGB 목록(각 0~100%, `color_rgb`와 같은 단위). 둘 이상이면 색 네모를
    * 가로로 나눠 그린다. 서버가 아직 안 보내면 키가 없다. */
   color_rgbs?: [number, number, number][] | null;
