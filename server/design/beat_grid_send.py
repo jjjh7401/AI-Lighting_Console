@@ -426,6 +426,55 @@ APP_SEQUENCE_PREFIX = "LDBEAT "
 _TRAILING_NUMBER = re.compile(r"(\d+)\s*$")
 
 
+_SEQUENCE_WORD = re.compile(r"Sequences?[\s/.:_-]*(\d+)", re.IGNORECASE)
+_DOTTED_HANDLE = re.compile(r"^\d+(?:\.\d+)+$")
+
+
+def parse_track_target(
+    value: object, sequence_names: Mapping[int, str | None]
+) -> tuple[int | None, str | None]:
+    """트랙 TARGET 한 값 -> ``(시퀀스 번호, 이름)``. 알 수 없으면 둘 다 ``None``.
+
+    받는 꼴: 정수 · ``Sequence N`` · ``N`` · 시퀀스 이름 문자열 ·
+    ``DataPool/Sequences/N`` 같은 객체 경로 · ``13.1.6.16`` 핸들(마지막 마디가 N) ·
+    ``{"no"/"i": N, "name": ...}`` 매핑."""
+    if isinstance(value, bool):
+        return None, None
+    if isinstance(value, int):
+        return value, sequence_names.get(value)
+    if isinstance(value, Mapping):
+        for key in ("no", "i", "index", "number"):
+            inner = value.get(key)
+            if isinstance(inner, int) and not isinstance(inner, bool):
+                return inner, sequence_names.get(inner) or (
+                    value["name"] if isinstance(value.get("name"), str) else None
+                )
+        name = value.get("name")
+        return (None, name) if isinstance(name, str) else (None, None)
+    if not isinstance(value, str):
+        return None, None
+    text = value.strip()
+    if not text:
+        return None, None
+    if text.isdigit():
+        return int(text), sequence_names.get(int(text))
+    for number, name in sequence_names.items():
+        if name is not None and name == text:
+            return number, name
+    if _DOTTED_HANDLE.match(text):
+        number = int(text.rsplit(".", 1)[1])
+        return number, sequence_names.get(number)
+    word = _SEQUENCE_WORD.search(text)
+    if word is not None:
+        number = int(word.group(1))
+        return number, sequence_names.get(number)
+    match = _TRAILING_NUMBER.search(text)
+    if match is not None and int(match.group(1)) in sequence_names:
+        number = int(match.group(1))
+        return number, sequence_names[number]
+    return None, text
+
+
 def timecode_overwrite_note(
     wanted: int,
     occupant: str,
@@ -436,28 +485,26 @@ def timecode_overwrite_note(
 
     ``(승인 카드 위험 줄, None)`` 이면 허용, ``(None, 사유)`` 이면 이전처럼 거절.
     허용 조건은 둘이 함께여야 한다 — 타임코드 이름이 ``LDBEAT Timecode`` 로
-    시작하고, 그 트랙이 가리키는 시퀀스가 **전부** 앱 소유(``LDBEAT `` 접두)이며
-    하나 이상 있다. 트랙 목표를 못 읽거나 해석하지 못하면 거절한다(읽지 못한 것을
-    앱 소유로 추정하지 않는다)."""
+    시작하고, 그 트랙이 가리키는 시퀀스가 **전부** 앱 소유(``LDBEAT`` 접두)이며
+    하나 이상 있다. 항목은 TARGET 값 자체이거나 ``{"target": 값, "track_name": 이름}``
+    — TARGET 을 읽지 못한 트랙(``target`` 이 ``None``)은 트랙 이름이 앱 시퀀스
+    이름(``LDBEAT ``)일 때만 앱 소유로 본다(트랙 이름도 아니면 거절)."""
     if not occupant.startswith(APP_TIMECODE_PREFIX):
         return None, None
     if not track_targets:
         return None, (
             f"Timecode {wanted}의 트랙이 가리키는 시퀀스를 확인하지 못해 덮어쓰기를 거절합니다."
         )
-    for target in track_targets:
-        number: int | None = None
-        name: str | None = None
-        if isinstance(target, int) and not isinstance(target, bool):
-            number = target
-        elif isinstance(target, str):
-            match = _TRAILING_NUMBER.search(target)
-            if match is not None and int(match.group(1)) in sequence_names:
-                number = int(match.group(1))
-            else:
-                name = target.strip()
-        if number is not None:
-            name = sequence_names.get(number)
+    for item in track_targets:
+        track_name: str | None = None
+        target = item
+        if isinstance(item, Mapping) and "target" in item:
+            target = item.get("target")
+            raw_name = item.get("track_name")
+            track_name = raw_name.strip() if isinstance(raw_name, str) else None
+        _, name = parse_track_target(target, sequence_names) if target is not None else (None, None)
+        if name is None and track_name is not None:
+            name = track_name
         if not isinstance(name, str) or not name.startswith(APP_SEQUENCE_PREFIX):
             return None, (
                 f"Timecode {wanted}이 앱 소유가 아닌 시퀀스({target!r})를 가리키고 있어 "
