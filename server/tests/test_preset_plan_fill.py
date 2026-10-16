@@ -23,8 +23,8 @@ class TestMultiGroupDimmer:
     def test_dim_100_saves_as_one_multi_group_selection(self) -> None:
         lines = save_commands(_plan())
         assert "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100" in lines
-        assert "Store Preset 1.11" in lines
-        assert "Label Preset 1.11 'DIM-100'" in lines
+        assert "Store Preset 1.12" in lines
+        assert "Label Preset 1.12 'DIM-100'" in lines
 
     def test_a_group_without_a_confirmed_number_holds_dim_100(self) -> None:
         grid = _love_attack_grid()
@@ -86,7 +86,7 @@ class TestColorAndPositionStayOnTheirOwnPaths:
 class TestCardReason:
     def test_card_reason_shows_saved_deferred_undecided_and_supervisor_marks(self) -> None:
         reason = card_reason(_plan())
-        assert reason.startswith("디머 프리셋 4개 저장")
+        assert reason.startswith("디머 프리셋 5개 저장")
         assert "DIM-100(100%)" in reason
         assert "이 카드 밖(저장 안 함):" in reason
         assert "미정(이번 계획에서 제외):" in reason
@@ -96,7 +96,9 @@ class TestCardReason:
         reason = card_reason(_plan())
         assert "5마디 1박 위치 한 칸 올림" in reason
         assert "11마디 1박 새 자리" in reason
-        assert "SCENE 메모 18마디" in reason
+        assert "SCENE 메모 0마디" in reason
+        # 리드 결정 2026-10-16 — 색 메모 18·22마디는 WASH-ALL 칸으로 옮겨져 카드 사유에서 빠졌다.
+        assert "SCENE 메모 18마디" not in reason
         assert "이번 계획에서 제외" in reason
 
     def test_unconfirmed_preset_pool_is_a_supervisor_mark_not_a_silent_line(self) -> None:

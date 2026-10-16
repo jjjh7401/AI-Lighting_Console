@@ -251,6 +251,14 @@ def build_preset_plan(
     presets: list[PlanPreset] = []
     reserved: list[str] = []
 
+    # -- 밝기 결정: 리드가 정한 칸 밝기(brightness_decisions)
+    brightness_notes: dict[tuple[str, int], str] = {}
+    for entry in annotations.get("brightness_decisions") or []:
+        if not isinstance(entry, Mapping):
+            continue
+        for cell in _annotated_cells(entry.get("cells"), by_cell, unresolved):
+            brightness_notes[(cell.group_name, cell.bar)] = str(entry.get("note") or "").strip()
+
     # -- 디머: 칸의 value_percent 를 값으로 묶는다(첫 등장 순) -------------------
     uses: dict[int, list[tuple[str, object, bool, int]]] = {}
     for group, group_no, confirmed, cue in rows:
@@ -330,6 +338,15 @@ def build_preset_plan(
                 group_nos=group_nos if ready else (),
             )
         )
+        # 밝기 결정이 붙은 칸을 쓰는 디머 줄은 「감독이 고칠 값」으로 드러낸다(줄마다 한 번).
+        for note in _unique(
+            brightness_notes[(cell.group_name, cell.bar)]
+            for cell in cells
+            if (cell.group_name, cell.bar) in brightness_notes
+        ):
+            fixes.append(
+                f"{name} 밝기 {percent}% — {note} 감독이 고칠 값: 실기와 다르면 칸 밝기를 고친다."
+            )
 
     # -- 색: 칸에 붙인 색 이름. RGB 는 주석 → 색 표 순, 없으면 「미정」
     for entry in annotations.get("colors") or []:
@@ -337,14 +354,23 @@ def build_preset_plan(
             continue
         cells = _annotated_cells(entry.get("cells"), by_cell, unresolved)
         groups = _unique(cell.group_name for cell in cells)
-        slot = _reserve_next(
-            color_pool, first_free_base_color_number, policy=policy, grid=grid, reserved=reserved
-        )
+        # 칸이 없는 색은 번호를 잡지 않는다 — 쓰지 않을 빈 번호를 점유하지 않으려고.
+        slot = None
+        if cells:
+            slot = _reserve_next(
+                color_pool,
+                first_free_base_color_number,
+                policy=policy,
+                grid=grid,
+                reserved=reserved,
+            )
         if slot is not None:
             reserved.append(slot)
         name = str(entry.get("console_name") or "")
         label = str(entry.get("name") or "")
         holds = []
+        if not cells:
+            holds.append("칸 미정 — 이 색을 쓸 격자 칸이 주석에 없다(감독이 칸 배정을 정한다)")
         if color_pool is None:
             holds.append("색 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
         rgb = entry.get("rgb")
@@ -372,6 +398,12 @@ def build_preset_plan(
             fixes.append(
                 f"{name} RGB {channels}: 「{label}」 표준 슬롯 기본값. "
                 "감독이 고칠 값: 실기 색이 다르면 색 표에서 바꾼다."
+            )
+        elif entry.get("director_tunable") is True:
+            # 앱이 고른 기본값은 「감독이 고칠 값」으로 드러낸다(주석에 적은 값이어도).
+            fixes.append(
+                f"{name} RGB {channels}: 「{label}」 앱이 고른 기본값. "
+                "감독이 고칠 값: 실기 색이 다르면 주석 파일의 rgb 를 고친다."
             )
         presets.append(
             PlanPreset(
