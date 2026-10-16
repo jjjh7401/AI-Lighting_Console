@@ -45,6 +45,7 @@ from server.spatial.pointing import (
     SpatialPointingError,
     aim_pan_tilt,
     aimed_commands,
+    basic_position_presets,
     position_preset_store_commands,
 )
 
@@ -148,7 +149,43 @@ def attach_color_store(
     return plan
 
 
-def _floor_store(
+def _aim_store(
+    number: str,
+    name: str,
+    *,
+    aim: str,
+    fids: Sequence[int],
+    frames: PointingFrames,
+) -> tuple[tuple[str, ...] | None, str | None]:
+    """계획 위치(기본 위치 이름 ``aim``)의 저장 줄. 장비 좌표 전체로 세운 기본 위치 10종
+    (``basic_position_presets``)에서 그 이름의 조준값만 쓴다 — 콘솔 포지션 메뉴와 같은 기준이다.
+    그룹 장비 전부가 그 룩을 조준해야 하고, 한 대라도 빠지면 프리셋을 만들지 않는다."""
+    try:
+        looks = {
+            label: (aims, skipped)
+            for label, aims, skipped in basic_position_presets(sorted(frames.positions.items()))
+        }
+    except SpatialPointingError:
+        return None, "기본 위치 조준 표를 세우지 못함(장비 좌표를 다시 읽는다)"
+    if aim not in looks:
+        return None, f"기본 위치 「{aim}」이 조준 표에 없음"
+    look_aims, look_skipped = looks[aim]
+    aimed = {fid: (pan, tilt) for fid, pan, tilt in look_aims}
+    # 몸체 기울임으로 조준에서 뺀 장비는 좌표 표에 남아 있어도 조준하지 않는다(바닥점 경로와 같다).
+    tilted = set(frames.rotation_skipped)
+    unaimable = [fid for fid in fids if fid in look_skipped or fid in tilted or fid not in aimed]
+    if unaimable:
+        return None, f"{POSITION_UNAIMABLE}(FID {', '.join(map(str, unaimable))})"
+    slot = int(number.partition(".")[2])
+    bundle = (
+        *aimed_commands([(fid, *aimed[fid]) for fid in fids]),
+        *position_preset_store_commands(slot, name),
+        "ClearAll",
+    )
+    return bundle, None
+
+
+def _position_store(
     grid: Mapping[str, object],
     preset: PlanPreset,
     *,
@@ -197,6 +234,8 @@ def _floor_store(
             )
     if frames is None or any(fid not in frames.positions for fid in fids):
         return None, POSITION_COORDS_UNREAD
+    if preset.aim is not None:
+        return _aim_store(number, preset.name, aim=preset.aim, fids=fids, frames=frames)
     # 무대 기준틀 cy — 읽은 장비 전체의 y 평균(lxseq.position_derive._stage_frame 과 같은 정의).
     # 몸체 기울임으로 읽기에서 빠진 장비는 평균에도 못 든다.
     cy = sum(position[1] for position in frames.positions.values()) / len(frames.positions)
@@ -243,16 +282,18 @@ def attach_floor_position_store(
 ) -> LoveAttackPlan:
     """위치 후보(그룹마다 한 줄)마다 저장 줄을 붙인 새 계획. 장비마다 「x 유지 · y=cy · z=0」
     바닥점을 조준하는 줄 → ``Store Preset`` → ``Label Preset`` → ``ClearAll`` 이다(기존 위치
-    경로 t592 와 같은 꼴).
+    경로 t592 와 같은 꼴). 계획 위치(``aim`` 이 있는 후보)는 바닥점 대신 기본 위치 10종의
+    조준값을 쓴다.
 
-    줄을 붙인 후보마다 「감독이 고칠 값」을 한 줄 남긴다 — 바닥점은 좌표 표가 아닌 근사값이다.
+    줄을 붙인 바닥점 후보마다 「감독이 고칠 값」을 한 줄 남긴다 — 바닥점은 좌표 표가
+    아닌 근사값이다. 계획 위치는 빌드 때 이미 그 줄을 실었으므로 여기서 또 싣지 않는다.
     그룹 소속 · 장비 좌표를 못 읽었거나 조준할 수 없는 장비가 있으면 줄을 만들지 않고 사유를
     ``hold`` 로 남긴다(일부 장비만 조준한 프리셋을 만들지 않는다)."""
     for preset in store_candidates(plan, "position"):
         hold = _occupied_hold(grid, preset)
         store = None
         if hold is None:
-            store, hold = _floor_store(grid, preset, members=members, frames=frames)
-        fixes = (_floor_note(preset),) if store is not None else ()
+            store, hold = _position_store(grid, preset, members=members, frames=frames)
+        fixes = (_floor_note(preset),) if store is not None and preset.aim is None else ()
         plan = resolve_preset(plan, preset, store=store, hold=hold, fixes=fixes)
     return plan
