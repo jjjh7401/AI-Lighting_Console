@@ -3752,6 +3752,9 @@ def summarize_outcomes(status: str, views: Sequence[dict]) -> str:
     return " ".join(parts)
 
 
+_DEFAULT_TRACK_NAME = re.compile(r"Track \d+")  # 콘솔이 새 트랙에 붙이는 기본 이름
+
+
 class SongTimelineStore:
     """Process-wide LAST director-timeline payload (runbook UI). Song-timeline
     events are otherwise push-only within one WebSocket session — the app
@@ -11056,6 +11059,15 @@ class ChatSession:
                         track_name = read.get("v")
                 if value is None and child.get("class") is None and track_name is None:
                     continue  # 속성이 없는 자식(Marker) — 트랙이 아니다
+                if (
+                    value is None
+                    and isinstance(track_name, str)
+                    and _DEFAULT_TRACK_NAME.fullmatch(track_name.strip())
+                ):
+                    # 실측(onPC 2.4.2, t-tc4): 콘솔이 만들어 둔 빈 트랙('Track 9')은 NAME 만
+                    # 읽히고 TARGET 은 "property not readable" 이다 — 가리키는 시퀀스가 없으니
+                    # 덮어써서 잃을 것이 없다. 이름이 콘솔 기본 이름일 때만 건너뛴다.
+                    continue
                 targets.append({"target": value, "track_name": track_name})
         except Exception:  # noqa: BLE001 - 못 읽으면 거절 쪽으로
             return []
