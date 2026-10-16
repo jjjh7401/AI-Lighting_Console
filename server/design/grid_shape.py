@@ -5,7 +5,7 @@ SPEC-LDRHYTHM-001 검증 도구. 격자 두 개를 받아 줄(트랙)마다 여�
 (출력은 표준 출력이나 --out 한 곳), 콘솔과 통신하지 않는다. 같은 입력이면 같은 출력이다.
 
 지표 (줄마다 재고, 전체로 합쳐 판정한다)
-  ① count      칸 수 — 줄마다 기본과의 차이를 본다
+  ① count      칸 수 — 쉼·꺼짐·예고 칸을 뺀 수가 기본과 일치율 50% 이상이면 같다
   ② length     칸 길이 분포 — 1·2·4·8마디·16마디 이상, 그리고 3·5·7 같은 값은 「기타」
   ③ alignment  칸 시작 마디가 구간 경계와 맞는 비율 (곡에 프레이즈 경계가 없어 구간 경계만 쓴다)
   ④ pattern    박 패턴 종류 분포 — 칸 라벨의 키워드로 나눈다. 못 나눈 칸은 「기타」
@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
@@ -109,8 +108,9 @@ class ShapeCheckError(ValueError):
 class Thresholds:
     """판정 기준(제안값). 기본 격자 한 곡으로 교정했다."""
 
-    #: ① 줄별 칸 수 허용 비율. 허용 폭은 max(1, floor(기본 칸 수 × 이 값)).
-    count_share: float = 0.25
+    #: ① 줄별 칸 수 일치율 하한. |후보 − 기본| ≤ 이 값 × 기본.
+    #: 쉼·꺼짐·예고 칸은 세지 않는다.
+    count_share: float = 0.5
     #: ② 전체 칸 길이 분포 거리(0~1, 전체 변위의 절반) 상한.
     length_tv: float = 0.25
     #: ③ 전체 경계 정렬률은 기본보다 이만큼까지만 낮아질 수 있다.
@@ -139,6 +139,8 @@ class Cell:
     length: int
     label: str
     colored: bool = False
+    #: 줄의 칸으로 세는가. 쉼·꺼짐·예고 칸은 False 다(① 칸 수에서 뺀다).
+    counted: bool = True
 
 
 @dataclass(frozen=True)
@@ -233,6 +235,26 @@ def length_bin(length: int) -> str:
     return OTHER
 
 
+def is_silent(cue: Mapping[str, Any]) -> bool:
+    """쉼(라벨 「—」)이나 꺼짐(라벨에 「꺼짐」, 또는 밝기 0%)인 칸인가. 줄의 행으로 세지 않는다."""
+    label = str(cue.get("label") or "").strip()
+    if label == REST_LABEL or "꺼짐" in label:
+        return True
+    value = (cue.get("brightness") or {}).get("value_percent")
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value == 0
+
+
+def is_advance(cue: Mapping[str, Any]) -> bool:
+    """큰 히트 직전에 비우는 예고 칸인가(라벨에 「예고」 또는 「비움」)."""
+    label = str(cue.get("label") or "")
+    return "예고" in label or "비움" in label
+
+
+def count_passes(base_count: int, cand_count: int, share: float) -> bool:
+    """① 칸 수: 일치율이 share 이상이면 같은 종류다 — |후보 − 기본| ≤ share × 기본."""
+    return abs(cand_count - base_count) <= share * base_count
+
+
 def total_variation(p: Mapping[str, float], q: Mapping[str, float]) -> float:
     """두 분포의 거리(전체 변위의 절반). 같으면 0, 겹치는 항목이 없으면 1."""
     keys = set(p) | set(q)
@@ -278,6 +300,7 @@ def cells_for_track(
                 length=span_end - bar,
                 label=str(cue.get("label") or ""),
                 colored=colored,
+                counted=not (is_silent(cue) or is_advance(cue)),
             )
         )
     return cells
@@ -468,19 +491,20 @@ def compare_grids(
     all_cand = [cell for name in names for cell in cand_cells[name]]
     checks: list[Check] = []
 
-    # ① 칸 수 — 줄마다
+    # ① 칸 수 — 줄마다, 쉼·꺼짐·예고 칸을 뺀 수로 일치율을 본다
     for name in names:
-        base_n, cand_n = len(base_cells[name]), len(cand_cells[name])
-        tolerance = max(1, math.floor(thresholds.count_share * base_n))
+        base_n = sum(cell.counted for cell in base_cells[name])
+        cand_n = sum(cell.counted for cell in cand_cells[name])
         checks.append(
             Check(
                 key="count",
                 scope="줄별",
                 track=name,
-                rule=f"허용 ±{tolerance}칸",
+                rule=f"|후보 − 기본| ≤ {thresholds.count_share:g} × 기본",
                 base=str(base_n),
                 candidate=str(cand_n),
-                passed=abs(cand_n - base_n) <= tolerance,
+                passed=count_passes(base_n, cand_n, thresholds.count_share),
+                detail=f"전체 {len(base_cells[name])}→{len(cand_cells[name])}칸",
             )
         )
 
@@ -613,8 +637,8 @@ def compare_grids(
             TrackRow(
                 name=name,
                 role=roles.get(name, ""),
-                base_count=len(base_row),
-                cand_count=len(cand_row),
+                base_count=sum(cell.counted for cell in base_row),
+                cand_count=sum(cell.counted for cell in cand_row),
                 base_length=_top_text(
                     shares_of(Counter(length_bin(cell.length) for cell in base_row)), limit=3
                 ),
@@ -678,8 +702,9 @@ def render_markdown(report: ShapeReport, *, inputs: Mapping[str, str]) -> str:
         "",
         "## 줄별 비교",
         "",
-        "| 줄 | 역할 | ① 칸 수 (기본→후보) | ② 칸 길이 (상위) | ③ 경계 정렬 (기본→후보) "
-        "| ④ 박 패턴 (상위) | ⑤ 강조 위치 (큰 히트 안) | ⑥ 색 지정 (기본→후보) |",
+        "| 줄 | 역할 | ① 칸 수 (쉼·예고 제외, 기본→후보) | ② 칸 길이 (상위) "
+        "| ③ 경계 정렬 (기본→후보) | ④ 박 패턴 (상위) | ⑤ 강조 위치 (큰 히트 안) "
+        "| ⑥ 색 지정 (기본→후보) |",
         "|---|---|---|---|---|---|---|---|",
     ]
     for row in report.rows:

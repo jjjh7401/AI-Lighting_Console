@@ -17,6 +17,7 @@ from server.audio.bar_map import BarFeatures, classify_bar_events, compute_bar_e
 from server.audio.bar_map_store import build_bar_map_payload
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.grid_shape import (
+    DEFAULT_THRESHOLDS,
     REST_LABEL,
     Cell,
     ShapeCheckError,
@@ -26,6 +27,7 @@ from server.design.grid_shape import (
     build_context,
     cells_for_track,
     compare_grids,
+    count_passes,
     length_bin,
     main,
     pattern_category,
@@ -147,6 +149,41 @@ def test_accent_hits_skip_rests_and_allow_a_one_bar_lead_in() -> None:
     assert accent_hits(cells, hits, tolerance=1) == (3, 2)
 
 
+@pytest.mark.parametrize(
+    ("base", "candidate", "passes"),
+    [
+        (7, 5, True),
+        (7, 4, True),
+        (7, 10, True),
+        (7, 3, False),
+        (7, 11, False),
+        (1, 1, True),
+        (1, 2, False),
+        (0, 0, True),
+        (0, 1, False),
+        (26, 7, False),
+    ],
+)
+def test_count_rule_is_a_fifty_percent_agreement_band(
+    base: int, candidate: int, passes: bool
+) -> None:
+    """① 칸 수는 일치율 50% 이상이면 같은 종류다(양쪽 방향 모두)."""
+    assert count_passes(base, candidate, DEFAULT_THRESHOLDS.count_share) is passes
+
+
+def test_rests_off_cells_and_advance_blanks_are_not_counted() -> None:
+    cues = [
+        {"bar": 0, "label": "—"},
+        {"bar": 2, "label": "17마디 3·4박 전부 비움(예고)"},
+        {"bar": 4, "label": "블라인드 2박", "brightness": {"mode": "value", "value_percent": 0}},
+        {"bar": 6, "label": "꺼짐"},
+        {"bar": 8, "label": "펄스 1·2·4박", "brightness": {"mode": "value", "value_percent": 100}},
+    ]
+    cells = cells_for_track(cues, (0, 25), track_name="T", color_cells=frozenset())
+    # 쉼(—), 예고(비움), 밝기 0%, 「꺼짐」 라벨은 줄의 칸으로 세지 않는다.
+    assert [cell.counted for cell in cells] == [False, False, False, False, True]
+
+
 def test_context_reads_chorus_starts_drop_bars_and_colour_cells_from_the_fixture() -> None:
     context = _context()
     assert context.section_starts == frozenset({0, 7, 14, 18, 33, 42, 46, 61, 63, 67, 82})
@@ -195,6 +232,23 @@ def test_identical_grid_is_similar_to_itself() -> None:
     assert report.failing == ()
 
 
+def test_base_counts_exclude_rests_and_advance_blanks() -> None:
+    """정답지의 ① 칸 수는 쉼·꺼짐·예고를 뺀 수다. SIDE-ALL 은 쉼 다섯 칸을 뺀 둘이다."""
+    base = _base()
+    report = compare_grids(base, copy.deepcopy(base), _context())
+    counted = {row.name: row.base_count for row in report.rows}
+    assert counted == {
+        "FOH": 1,
+        "WASH-ALL": 4,
+        "BACK": 5,
+        "SIDE-ALL": 2,
+        "MOVER-U": 7,
+        "MOVER-D": 7,
+        "BLIND": 1,
+        "STROBE": 0,
+    }
+
+
 def test_an_all_one_bar_grid_fails_count_length_and_alignment() -> None:
     base = _base()
     start, end = base["bar_range"]["start"], base["bar_range"]["end"]
@@ -227,8 +281,11 @@ def _shift_non_aligned(grid: dict) -> dict:
 
 
 def _relabel_non_rest(grid: dict) -> dict:
+    """비강조 줄의 박 라벨을 모두 바꾼다. 강조 줄(예고 칸 포함)은 건드리지 않는다."""
     out = copy.deepcopy(grid)
     for track in out["tracks"]:
+        if track.get("layer_role") == "effect":
+            continue
         for cue in track["cues"]:
             if cue.get("label") not in (None, "", REST_LABEL):
                 cue["label"] = "확인 라벨"
@@ -250,11 +307,18 @@ def _color_back_cells(grid: dict) -> dict:
     return out
 
 
-def _add_rest_cues_to_back(grid: dict) -> dict:
+def _add_counted_cues_to_back(grid: dict) -> dict:
+    """BACK 줄에 세는 칸을 다섯 개 더한다. 기본 5칸의 50%(2.5칸)를 넘는 차이다."""
     out = copy.deepcopy(grid)
     cues = _track(out, "BACK")["cues"]
-    for bar in (1, 2, 9):
-        cues.append({"bar": bar, "label": REST_LABEL})
+    for bar in (1, 2, 9, 12, 13):
+        cues.append(
+            {
+                "bar": bar,
+                "label": "펄스 1·2·4박",
+                "brightness": {"mode": "value", "value_percent": 100},
+            }
+        )
     return out
 
 
@@ -266,7 +330,7 @@ def _add_rest_cues_to_back(grid: dict) -> dict:
         (_relabel_non_rest, "pattern"),
         (_move_blind_hit, "accent"),
         (_color_back_cells, "color"),
-        (_add_rest_cues_to_back, "count"),
+        (_add_counted_cues_to_back, "count"),
     ],
     ids=["alignment", "length", "pattern", "accent", "color", "count"],
 )
