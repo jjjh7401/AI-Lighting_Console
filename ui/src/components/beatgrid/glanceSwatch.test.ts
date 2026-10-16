@@ -151,10 +151,12 @@ describe("colorCell 계획 색 — 프리셋 번호 없이 계획 색만 있는 
     expect(colorCell(cue({ color_rgb: [40, 65, 95] }), "side", COLOR_SECTION)).toEqual({ kind: "text", text: "—" });
   });
 
-  it("역할이 색을 안 쓰면(무빙) 계획 색도 그리지 않는다", () => {
+  it("무빙도 색을 쓰므로(#774) 계획 색을 흐린 네모로 단다", () => {
     expect(colorCell(cue({ color_rgb: [40, 65, 95], color_planned: true }), "mover", null)).toEqual({
       kind: "text",
       text: "—",
+      dim: true,
+      swatch: "rgb(102, 166, 242)",
     });
   });
 });
