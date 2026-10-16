@@ -3766,6 +3766,7 @@ export function BeatGrid({
           <BeatGridStage
             notes={stageNotes}
             motion={{ seconds: playbackSeconds, secondsPerBar, beatsPerBar }}
+            presetBook={{ labels: grid.preset_labels, movements: grid.preset_movements }}
             fixtures={fixtures}
             tracks={grid.tracks}
             viewBar={viewBar}

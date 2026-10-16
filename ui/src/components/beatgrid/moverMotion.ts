@@ -3,10 +3,11 @@
 // (`playbackClock.ts` 와 같은 경계) — 매 프레임 다시 그리는 것은 `BeatGrid.tsx` 의 재생 루프가
 // `playbackSeconds` 를 갱신하는 것으로 이미 된다.
 //
-// 움직임은 칸의 구조화 필드에서만 읽는다: 앱 2단계 무빙(`app_movement`)이 먼저, 없으면 콘솔이
-// 준 효과 프리셋 이름(`effect_preset_name`, 서버 `_effect_name` 꼴 「WAVE PAN 2 BEAT」).
+// 움직임은 구조화 값에서만 읽는다: 앱 2단계 무빙(`app_movement`)이 먼저, 없으면 효과 번호의
+// 격자 기록(`preset_movements`)·앱 이름(`preset_labels`)·콘솔 이름(`effect_preset_name`) 순서
+// (이름은 서버 `_effect_name` 꼴 「WAVE PAN 2 BEAT」).
 // 라벨 글자는 파싱하지 않는다(REQ-LDBEAT-006(ii-2)). 주기를 모르면 움직이지 않는다(지어내지 않음).
-import type { BeatGridAppMovement, BeatGridCue } from "../../protocol";
+import type { BeatGridAppMovement, BeatGridCue, BeatGridPresetMovement } from "../../protocol";
 
 export type MoverShape = NonNullable<BeatGridAppMovement["shape"]>;
 
@@ -64,34 +65,94 @@ export function parseEffectPresetName(
   };
 }
 
-/** 칸의 움직임. 움직임이 없거나 주기·축을 모르면 `null`(빔은 위치 자세로 멈춰 있다). */
-export function moverMotionOf(cue: BeatGridCue | null, beatsPerBar: number | null): MoverMotion | null {
+/** 곡 격자의 프리셋 기록 — 칸에 이름이 안 실려도(서버가 풀을 못 읽었어도) 앱이 만든 프리셋의
+ * 이름·내용은 격자에 남아 있다(`preset_labels`·`preset_movements`). */
+export interface StagePresetBook {
+  labels?: Readonly<Record<string, string | null | undefined>> | null;
+  movements?: Readonly<Record<string, BeatGridPresetMovement | null | undefined>> | null;
+}
+
+function motionFrom(
+  shape: unknown,
+  axes: readonly unknown[],
+  unit: unknown,
+  value: unknown,
+  spread: unknown,
+  beatsPerBar: number | null,
+): MoverMotion | null {
+  if (typeof shape !== "string" || !SHAPES.includes(shape as MoverShape)) return null;
+  const upper = axes.map((axis) => String(axis).toUpperCase());
+  const pan = upper.includes("PAN");
+  const tilt = upper.includes("TILT");
+  const periodBars = periodBarsOf(
+    unit === "beat" || unit === "bar" ? unit : null,
+    typeof value === "number" ? value : null,
+    beatsPerBar,
+  );
+  if (periodBars === null || (!pan && !tilt)) return null;
+  return { shape: shape as MoverShape, pan, tilt, periodBars, phaseSpread: spread !== false };
+}
+
+/** 칸의 움직임. 근거 순서: ① 칸의 `app_movement` ② 효과 번호의 격자 기록(`preset_movements`
+ * 서명) ③ 효과 번호의 앱 이름(`preset_labels`) ④ 콘솔이 준 이름(`effect_preset_name`).
+ * 라벨 글자는 읽지 않는다. 근거가 없거나 주기·축을 모르면 `null`(빔은 위치 자세로 멈춰 있다). */
+export function moverMotionOf(
+  cue: BeatGridCue | null,
+  beatsPerBar: number | null,
+  book: StagePresetBook = {},
+): MoverMotion | null {
   if (!cue) return null;
   const app = cue.app_movement;
   if (app && app.shape) {
-    const periodBars = periodBarsOf(app.period_unit, app.period_value, beatsPerBar);
-    const pan = app.axes.includes("Pan");
-    const tilt = app.axes.includes("Tilt");
-    if (periodBars === null || (!pan && !tilt)) return null;
-    return { shape: app.shape, pan, tilt, periodBars, phaseSpread: app.phase_spread !== false };
+    return motionFrom(app.shape, app.axes, app.period_unit, app.period_value, app.phase_spread, beatsPerBar);
   }
-  const parsed = parseEffectPresetName(cue.effect_preset_name);
-  if (!parsed) return null;
-  const periodBars = periodBarsOf(parsed.unit, parsed.value, beatsPerBar);
-  if (periodBars === null) return null;
-  return { shape: parsed.shape, pan: parsed.pan, tilt: parsed.tilt, periodBars, phaseSpread: true };
+  const no = cue.effect_preset_no;
+  if (!no) return null;
+  const signature = book.movements?.[no]?.signature;
+  if (Array.isArray(signature) && signature.length >= 4) {
+    const [shape, axes, unit, value, spread] = signature;
+    const motion = motionFrom(shape, Array.isArray(axes) ? axes : [], unit, value, spread, beatsPerBar);
+    if (motion) return motion;
+  }
+  for (const name of [book.labels?.[no], cue.effect_preset_name]) {
+    const parsed = parseEffectPresetName(name);
+    if (!parsed) continue;
+    const periodBars = periodBarsOf(parsed.unit, parsed.value, beatsPerBar);
+    if (periodBars !== null) return { shape: parsed.shape, pan: parsed.pan, tilt: parsed.tilt, periodBars, phaseSpread: true };
+  }
+  return null;
+}
+
+/** 위치 이름 안의 기본 위치 낱말. 이름은 「CENTER MOVER-U」·「2.33 CENTER MOVER-U」·「LA Home」처럼
+ * 번호·그룹이 붙어 오므로 낱말 단위로 찾는다. FLOOR 는 서버 기본 위치 Home(「바닥 쪽」)과 같다. */
+const POSITION_WORDS: readonly [RegExp, "home" | "center" | "ring" | "audience"][] = [
+  [/\bRING\s*IN\b/, "ring"],
+  [/\bAUDIENCE\b/, "audience"],
+  [/\bCENT(?:ER|RE)\b/, "center"],
+  [/\b(?:HOME|FLOOR)\b/, "home"],
+];
+
+export function positionWordOf(name: string | null | undefined): "home" | "center" | "ring" | "audience" | null {
+  if (!name) return null;
+  const upper = name.toUpperCase();
+  for (const [pattern, word] of POSITION_WORDS) if (pattern.test(upper)) return word;
+  return null;
 }
 
 /** 위치 이름 → 기본 자세. 앱 기본 위치 어휘(서버 `preset_plan` 의 Home·Center·Ring In·Audience)만
- * 안다. 콘솔 이름(`position_preset_name`)이 먼저, 없으면 계획 위치(`planned_position_name`).
- * `centrePanDeg` 는 이 장비에서 무대 가운데를 보는 팬 각도(Center 에만 쓴다). */
-export function basePoseOf(cue: BeatGridCue | null, centrePanDeg: number): BeamPose {
-  const raw = cue?.position_preset_name ?? cue?.planned_position_name ?? "";
-  const name = raw.replace(/^\s*LA\s+/i, "").trim().toLowerCase();
-  if (name === "home") return { panDeg: 0, reach: 0.15 };
-  if (name === "center" || name === "centre") return { panDeg: centrePanDeg, reach: DEFAULT_REACH };
-  if (name === "ring in") return { panDeg: 0, reach: 0.25 };
-  if (name === "audience") return { panDeg: 0, reach: 1 };
+ * 안다. 이름 근거 순서: 콘솔 이름(`position_preset_name`) → 위치 번호의 앱 이름(`preset_labels`) →
+ * 계획 위치(`planned_position_name`). `centrePanDeg` 는 무대 가운데를 보는 팬 각도(Center 에만). */
+export function basePoseOf(cue: BeatGridCue | null, centrePanDeg: number, book: StagePresetBook = {}): BeamPose {
+  const names = [
+    cue?.position_preset_name,
+    cue?.position_preset_no ? book.labels?.[cue.position_preset_no] : null,
+    cue?.planned_position_name,
+  ];
+  const word = names.map(positionWordOf).find((w) => w !== null) ?? null;
+  if (word === "home") return { panDeg: 0, reach: 0.15 };
+  if (word === "center") return { panDeg: centrePanDeg, reach: DEFAULT_REACH };
+  if (word === "ring") return { panDeg: 0, reach: 0.25 };
+  if (word === "audience") return { panDeg: 0, reach: 1 };
   return { panDeg: 0, reach: DEFAULT_REACH };
 }
 

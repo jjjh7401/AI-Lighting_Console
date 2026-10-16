@@ -10,6 +10,7 @@ import {
   moverMotionOf,
   parseEffectPresetName,
   phaseOffset,
+  positionWordOf,
 } from "./moverMotion";
 
 function cue(extra: Partial<BeatGridCue>): BeatGridCue {
@@ -78,6 +79,63 @@ describe("moverMotionOf", () => {
   });
 });
 
+// 실서버 격자 모양(2026-10-16 저장본에서 읽은 키) — #782 이후 웨이브 칸은 app_movement 가 비고
+// effect_preset_no 만 남는다. 내용은 격자의 preset_movements·preset_labels 에 있다.
+const book = {
+  labels: {
+    "21.10": "WAVE PAN 2 BAR",
+    "21.11": "WAVE PAN 2 BEAT",
+    "2.31": "FLOOR MOVER-U",
+    "2.33": "CENTER MOVER-U",
+    "2.34": "RING IN MOVER-U",
+    "2.35": "AUDIENCE MOVER-U",
+  },
+  movements: { "21.10": { group_no: 11, signature: ["wave", ["Pan"], "bar", 2, false], bpm: 112 } },
+};
+
+describe("moverMotionOf — 격자 기록(서버 이름 없이)", () => {
+  it("effect_preset_no 만 있는 칸은 preset_movements 서명에서 읽는다", () => {
+    expect(moverMotionOf(cue({ effect_preset_no: "21.10", label: "팬 웨이브(한 바퀴 2마디)" }), 4, book)).toEqual({
+      shape: "wave",
+      pan: true,
+      tilt: false,
+      periodBars: 2,
+      phaseSpread: false,
+    });
+  });
+  it("서명이 없으면 preset_labels 이름에서 읽는다", () => {
+    expect(moverMotionOf(cue({ effect_preset_no: "21.11" }), 4, book)).toMatchObject({ shape: "wave", periodBars: 0.5 });
+  });
+  it("기록도 이름도 없는 번호는 라벨 글이 웨이브라도 움직이지 않는다(라벨 파싱 금지)", () => {
+    expect(moverMotionOf(cue({ effect_preset_no: "21.5", label: "팬 웨이브(한 바퀴 2마디)" }), 4, book)).toBeNull();
+  });
+  it("app_movement 가 있으면 그것이 먼저", () => {
+    const c = cue({
+      effect_preset_no: "21.10",
+      app_movement: { shape: "wave", axes: ["Tilt"], period_unit: "bar", period_value: 1, phase_spread: true },
+    });
+    expect(moverMotionOf(c, 4, book)).toMatchObject({ tilt: true, pan: false, periodBars: 1 });
+  });
+});
+
+describe("positionWordOf — 번호·이름·그룹 꼴", () => {
+  it("낱말 단위로 기본 위치를 찾는다", () => {
+    expect(positionWordOf("2.33 CENTER MOVER-U")).toBe("center");
+    expect(positionWordOf("CENTER MOVER-U")).toBe("center");
+    expect(positionWordOf("RING IN MOVER-D")).toBe("ring");
+    expect(positionWordOf("LA Audience")).toBe("audience");
+    expect(positionWordOf("FLOOR MOVER-U")).toBe("home");
+    expect(positionWordOf("CENTERLINE")).toBeNull();
+    expect(positionWordOf(null)).toBeNull();
+  });
+  it("칸에 이름이 없으면 위치 번호의 격자 이름으로 자세를 정한다", () => {
+    expect(basePoseOf(cue({ position_preset_no: "2.33" }), 12, book)).toEqual({ panDeg: 12, reach: 0.5 });
+    expect(basePoseOf(cue({ position_preset_no: "2.35" }), 12, book).reach).toBe(1);
+    expect(basePoseOf(cue({ position_preset_no: "2.31" }), 12, book).reach).toBe(0.15);
+    expect(basePoseOf(cue({ position_preset_name: "2.34 RING IN MOVER-U" }), 12).reach).toBe(0.25);
+  });
+});
+
 describe("basePoseOf", () => {
   it("기본 위치 이름 → 자세", () => {
     expect(basePoseOf(cue({ position_preset_name: "Home" }), 20)).toEqual({ panDeg: 0, reach: 0.15 });
@@ -87,7 +145,7 @@ describe("basePoseOf", () => {
   });
   it("콘솔 이름이 계획 이름보다 먼저, 모르면 기본", () => {
     expect(basePoseOf(cue({ position_preset_name: "Home", planned_position_name: "Audience" }), 0).reach).toBe(0.15);
-    expect(basePoseOf(cue({ position_preset_name: "FLOOR 3" }), 0)).toEqual({ panDeg: 0, reach: 0.5 });
+    expect(basePoseOf(cue({ position_preset_name: "SPOT 3" }), 0)).toEqual({ panDeg: 0, reach: 0.5 });
     expect(basePoseOf(null, 0)).toEqual({ panDeg: 0, reach: 0.5 });
   });
 });

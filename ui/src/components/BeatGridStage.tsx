@@ -26,6 +26,7 @@ import {
   centrePanDegOf,
   moverMotionOf,
   phaseOffset,
+  type StagePresetBook,
 } from "./beatgrid/moverMotion";
 import { StageConceptSvg } from "./beatgrid/StageConceptSvg";
 import "./beatGridPanels.css";
@@ -73,6 +74,7 @@ export function stageDecorations(
   frontY: number,
   padding: number,
   motion?: StageMotionClock,
+  book: StagePresetBook = {},
 ): StageDecorations {
   if (fixtures.length === 0) return { floor: null, washes: [], beams: [] };
   const all = fixtures.map((f) => project(f));
@@ -117,9 +119,9 @@ export function stageDecorations(
     if (distance <= 0) continue;
     const cue = cueForBar(tracks[trackIndex], viewBar);
     const siblings = movers.filter((m) => m.trackIndex === trackIndex).map((m) => m.fixture.fid).sort((a, b) => a - b);
-    const moverMotion = motion ? moverMotionOf(cue, motion.beatsPerBar) : null;
+    const moverMotion = motion ? moverMotionOf(cue, motion.beatsPerBar, book) : null;
     const pose = beamPoseAt(
-      basePoseOf(cue, centrePanDegOf(cx, cy, centreX, frontY)),
+      basePoseOf(cue, centrePanDegOf(cx, cy, centreX, frontY), book),
       moverMotion,
       motion?.seconds ?? 0,
       motion?.secondsPerBar,
@@ -172,8 +174,11 @@ export function BeatGridStage({
   onSelectTrack,
   notes,
   motion,
+  presetBook,
 }: {
   fixtures: readonly BeatGridFixturePoint[];
+  /** 곡 격자의 프리셋 기록(이름·효과 내용) — 칸에 이름이 없어도 위치·움직임을 읽는다. */
+  presetBook?: StagePresetBook;
   /** 재생 시계 — 있으면 무빙 빔이 움직인다(재생 루프가 매 프레임 `seconds` 를 갱신한다). */
   motion?: StageMotionClock;
   tracks: readonly BeatGridTrack[];
@@ -227,7 +232,7 @@ export function BeatGridStage({
   const zones = stageGroupZones(fixtures, tracks, project, ZONE_PADDING);
   const selectedKey = selectedTrackName?.toUpperCase() ?? null;
   // 카드 t588 — 시안 장식은 점 아래에 깐다(바닥 → 워시 면 → 빔 → 장비 점).
-  const decor = stageDecorations(fixtures, tracks, project, viewBar, STAGE_H - STAGE_MARGIN, ZONE_PADDING, motion);
+  const decor = stageDecorations(fixtures, tracks, project, viewBar, STAGE_H - STAGE_MARGIN, ZONE_PADDING, motion, presetBook);
 
   return (
     <div className="beat-grid-stage-box" ref={boxRef}>

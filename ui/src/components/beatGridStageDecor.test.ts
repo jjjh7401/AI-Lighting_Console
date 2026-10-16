@@ -92,6 +92,24 @@ describe("stageDecorations — 시안 drawStage 장식 (카드 t588)", () => {
     expect(stageDecorations(points, [moving], project, 0, FRONT_Y, 0).beams[0].points).toBe(still);
   });
 
+  it("실서버 재현: app_movement 없이 effect_preset_no 21.10 만 있는 칸도 격자 기록으로 움직인다", () => {
+    // 리드 실측(47010, 12.9초 · 0.5초 간격 두 캡처가 바이트 동일)의 칸 모양 — 라벨은 읽지 않는다.
+    const waveCell: BeatGridTrack = {
+      ...track("QQQ", "mover", "팬 웨이브(한 바퀴 2마디)"),
+      cues: [{ ...cue(4, "팬 웨이브(한 바퀴 2마디)"), effect_preset_no: "21.10", position_preset_no: "2.33" }],
+    };
+    const book = {
+      labels: { "21.10": "WAVE PAN 2 BAR", "2.33": "CENTER MOVER-U" },
+      movements: { "21.10": { group_no: 11, signature: ["wave", ["Pan"], "bar", 2, false] } },
+    };
+    const clock = (seconds: number) => ({ seconds, secondsPerBar: 60 / 112 * 4, beatsPerBar: 4 });
+    const at = (seconds: number) =>
+      stageDecorations(points, [waveCell], project, 5, FRONT_Y, 0, clock(seconds), book).beams.map((b) => b.points);
+    expect(at(12.9)).toHaveLength(2);
+    expect(at(13.4)[0]).not.toBe(at(12.9)[0]);
+    expect(at(13.4)[1]).not.toBe(at(12.9)[1]);
+  });
+
   it("역할이 다른 줄(그룹 이름과 무관)은 장식하지 않는다", () => {
     const decor = stageDecorations(points, [track("QQQ", "back", "켜짐")], project, 0, FRONT_Y, 0);
     expect(decor.washes).toEqual([]);

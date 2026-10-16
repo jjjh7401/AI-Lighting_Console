@@ -627,6 +627,18 @@ export interface BeatGridView {
    * 0~100%. 서버 `beat_grid_color_presets.color_preset_rgb` 가 읽는 바로 그 키다.
    * 없거나 옛 서버면 `undefined` — 그 번호의 막대는 중립(해칭)으로 남는다. */
   preset_colors?: Readonly<Record<string, BeatGridPresetRgb | null | undefined>> | null;
+  /** 앱이 만든 프리셋의 콘솔 이름(`{"21.10": "WAVE PAN 2 BAR", "2.33": "CENTER MOVER-U"}`) —
+   * 서버 `beat_grid_presets.app_preset_label` 이 읽는 그 키다. 2D 무대가 위치·움직임을 읽는다. */
+  preset_labels?: Readonly<Record<string, string | null | undefined>> | null;
+  /** 앱이 만든 효과 프리셋의 내용(`server/design/preset_plan` `preset_movements`). `signature` 는
+   * `[모양, 축들, 주기 단위, 주기 수, 위상 펼침]` — 2D 무대가 무빙 빔 움직임을 이 값에서 읽는다. */
+  preset_movements?: Readonly<Record<string, BeatGridPresetMovement | null | undefined>> | null;
+}
+
+export interface BeatGridPresetMovement {
+  group_no?: number | null;
+  signature?: readonly unknown[] | null;
+  bpm?: number | null;
 }
 
 /** 색 프리셋 목표 RGB. 세 채널 모두 0~100%(서버 `_percent` 와 같은 범위). */
