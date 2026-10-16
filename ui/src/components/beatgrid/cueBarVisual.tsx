@@ -3,9 +3,15 @@
  *
  * 세 요소 모두 구조화 필드만 본다. 칸의 `label` 글자를 파싱해 값을 역산하지
  * 않고(protocol.ts `BeatGridCue` — REQ-LDBEAT-006(ii-2)), 없는 값은 그리지
- * 않는다. 그래서 아래 함수들은 "그릴 것이 없음"을 `null`로 돌려준다. */
+ * 않는다. 그래서 아래 함수들은 "그릴 것이 없음"을 `null`로 돌려준다.
+ *
+ * 계획 표시(리드 결정 2026-10-16, 콘솔에 아직 없음) — 계획 색 칸은 색을 칠하되 점선 테두리와
+ * 제목 글로 구분하고, 콘솔 번호가 없는 디머·위치 자리는 계획 이름을 흐리게 보인다. */
+import { Fragment } from "react";
+
 import type { BeatGridCue } from "../../protocol";
 import { presetDisplayName } from "./glanceCells";
+import { cueRgbHex } from "./presetColorHex";
 
 /** 아래쪽 흰 밝기 선의 너비(%). 값 모드(`value`)의 `value_percent`만 쓴다.
  * 디머 프리셋은 퍼센트가 아니라서 선을 긋지 않는다. */
@@ -45,10 +51,34 @@ export function barShortText(cue: BeatGridCue): { position: string | null; brigh
   return { position, brightness };
 }
 
-/** 두 번째 줄에 올릴 글자(위치 · 밝기). 둘 다 없으면 빈 문자열. */
-export function cueBarMetaText(cue: BeatGridCue): string {
+/** 둘째 줄 한 조각. `planned` 가 참이면 콘솔 번호가 없어 계획 이름을 흐리게 보인다. */
+export interface CueMetaPart {
+  text: string;
+  planned: boolean;
+}
+
+/** 둘째 줄 조각 — 위치(번호와 이름, 번호가 없으면 계획 이름) · 밝기(값 또는 디머 번호) ·
+ * 계획 디머 이름. 값이 없는 조각은 빠지고, 계획 이름은 콘솔 번호가 없을 때만 나온다. */
+export function cueBarMetaParts(cue: BeatGridCue): CueMetaPart[] {
   const { position, brightness } = barShortText(cue);
-  return [position, brightness].filter((part): part is string => part !== null).join(" · ");
+  const parts: CueMetaPart[] = [];
+  if (position !== null) {
+    parts.push({ text: position, planned: false });
+  } else if (cue.planned_position_name && !cue.position_preset_no) {
+    parts.push({ text: `위치 ${cue.planned_position_name}`, planned: true });
+  }
+  if (brightness !== null) parts.push({ text: brightness, planned: false });
+  if (cue.planned_dimmer_name && !cue.brightness.preset_no) {
+    parts.push({ text: cue.planned_dimmer_name, planned: true });
+  }
+  return parts;
+}
+
+/** 두 번째 줄에 올릴 글자(위치 · 밝기 · 계획 이름). 조각이 하나도 없으면 빈 문자열. */
+export function cueBarMetaText(cue: BeatGridCue): string {
+  return cueBarMetaParts(cue)
+    .map((part) => part.text)
+    .join(" · ");
 }
 
 /** 모양 아이콘이나 두 번째 줄이 있을 때만 붙는 modifier 클래스. 버튼 레이아웃
@@ -57,6 +87,24 @@ export function cueBarVisualClass(cue: BeatGridCue): string {
   return `${effectShapeIcon(cue) !== null ? " has-cue-shape" : ""}${
     cueBarMetaText(cue) !== "" ? " has-cue-meta" : ""
   }`;
+}
+
+/** 계획 색 표시(리드 결정, 콘솔에 아직 없음) — `color_planned` 이고 `color_rgb` 가 유효한 색일 때만 참. */
+export function isCuePlannedColor(cue: BeatGridCue): boolean {
+  return cue.color_planned === true && cueRgbHex(cue.color_rgb) !== undefined;
+}
+
+/** 계획 색 칸의 제목 글 — 콘솔에 아직 없는 색임을 알린다. */
+export const CUE_PLANNED_COLOR_TITLE = "계획 색 — 아직 콘솔에 없음";
+
+/** 켜진 계획 색 칸의 modifier 클래스(점선 테두리). 꺼진 칸·콘솔 색 칸에는 붙지 않는다. */
+export function cuePlannedClassName(cue: BeatGridCue, active: boolean): string {
+  return active && isCuePlannedColor(cue) ? " is-color-planned" : "";
+}
+
+/** 켜진 계획 색 칸의 제목 글 덧붙임 — 「· 계획 색 — 아직 콘솔에 없음」. 해당 없으면 빈 문자열. */
+export function cuePlannedTitleSuffix(cue: BeatGridCue, active: boolean): string {
+  return active && isCuePlannedColor(cue) ? ` · ${CUE_PLANNED_COLOR_TITLE}` : "";
 }
 
 /** 둘째 줄에 쓰는 밝기 글자의 원래 값 — 값 모드는 「40%」, 디머 프리셋은 번호. 없으면 `null`. */
@@ -93,7 +141,7 @@ const SHAPE_PATH: Record<CueShapeIcon, string> = {
 export function CueBarVisual({ cue }: { cue: BeatGridCue }) {
   const linePercent = brightnessLinePercent(cue);
   const shape = effectShapeIcon(cue);
-  const meta = cueBarMetaText(cue);
+  const parts = cueBarMetaParts(cue);
   return (
     <>
       {linePercent !== null && (
@@ -112,7 +160,22 @@ export function CueBarVisual({ cue }: { cue: BeatGridCue }) {
           <path d={SHAPE_PATH[shape]} fill="none" stroke="#fff" strokeWidth={1.5} />
         </svg>
       )}
-      {meta !== "" && <span className="beat-grid-cue-meta">{meta}</span>}
+      {parts.length > 0 && (
+        <span className="beat-grid-cue-meta">
+          {parts.map((part, index) => (
+            <Fragment key={`${index}:${part.text}`}>
+              {index > 0 && " · "}
+              {part.planned ? (
+                <span className="is-planned-name" title="계획 이름 — 아직 콘솔에 없음">
+                  {part.text}
+                </span>
+              ) : (
+                part.text
+              )}
+            </Fragment>
+          ))}
+        </span>
+      )}
     </>
   );
 }

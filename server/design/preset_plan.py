@@ -93,6 +93,7 @@ class PlanPreset:
     attributes: tuple[str, ...] = ()  # 디머만 — 저장 줄의 디머 속성 이름
     group_nos: tuple[int, ...] = ()  # 디머만 — 저장 선택 ``Group a + b`` 의 번호(확인된 것)
     deferred: bool = False  # 값은 정해졌고 저장은 이 카드 밖(색 t594 · 위치 t592)으로 간다
+    rgb: tuple[float, ...] | None = None  # 계획 RGB(0~100%), 화면이 쓴다
 
 
 @dataclass(frozen=True)
@@ -416,6 +417,7 @@ def build_preset_plan(
                 ready=False,
                 hold="; ".join(holds),
                 deferred=True,
+                rgb=tuple(rgb),
             )
         )
 
