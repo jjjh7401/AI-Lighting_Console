@@ -171,21 +171,30 @@ class TestReadyAndHeldPresets:
         assert preset.hold is None
         assert preset.group_nos == (4, 7, 11, 12, 14)
 
-    def test_lavender_is_a_palette_rgb_and_stays_out_of_this_card(self) -> None:
+    def test_lavender_is_a_palette_rgb_candidate_that_waits_for_its_store_line(self) -> None:
+        # 계획(순수 함수)은 콘솔을 읽지 않는다 — 색은 값만 정해진 후보이고, 저장 줄은 콘솔 판독 뒤
+        # `preset_plan_store` 가 붙인다(test_preset_plan_store_all).
         preset = _preset(_plan(), "LAVENDER")
         assert preset.kind == "color"
         assert preset.value == "RGB 55 35 100"
         assert preset.ready is False
         assert preset.deferred is True
-        assert "이 카드 범위 밖" in (preset.hold or "")
+        assert preset.store is None
+        assert "저장 줄 미정" in (preset.hold or "")
 
-    def test_floor_is_an_approximate_target_and_stays_out_of_this_card(self) -> None:
-        preset = _preset(_plan(), "FLOOR")
-        assert preset.kind == "position"
-        assert "무대 중앙 깊이 바닥" in preset.value
-        assert preset.ready is False
-        assert preset.deferred is True
-        assert len(preset.cells) == 2
+    def test_floor_is_one_approximate_candidate_per_group(self) -> None:
+        # 위치는 그룹마다 따로 저장한다 — 방향 하나(FLOOR)가 칸을 쓰는 그룹 수만큼의 줄이 된다.
+        plan = _plan()
+        assert "FLOOR" not in [preset.name for preset in plan.presets]
+        for name, group in (("FLOOR MOVER-U", "MOVER-U"), ("FLOOR MOVER-D", "MOVER-D")):
+            preset = _preset(plan, name)
+            assert preset.kind == "position"
+            assert "무대 중앙 깊이 바닥" in preset.value
+            assert preset.ready is False
+            assert preset.deferred is True
+            assert preset.store is None
+            assert preset.groups == (group,)
+            assert [(cell.group_name, cell.bar) for cell in preset.cells] == [(group, 0)]
 
 
 class TestEmptySlots:
@@ -194,7 +203,9 @@ class TestEmptySlots:
         dimmer_slots = [p.slot for p in plan.presets if p.kind == "dimmer"]
         assert dimmer_slots == ["1.8", "1.9", "1.10", "1.11", "1.12"]
         assert _preset(plan, "LAVENDER").slot == "4.33"
-        assert _preset(plan, "FLOOR").slot == "2.31"
+        # 위치는 그룹마다 번호를 따로 잡는다.
+        assert _preset(plan, "FLOOR MOVER-U").slot == "2.31"
+        assert _preset(plan, "FLOOR MOVER-D").slot == "2.32"
 
     def test_no_chosen_slot_is_occupied_or_in_an_effect_band(self) -> None:
         plan = _plan()
@@ -253,7 +264,9 @@ class TestSaveCommands:
     def test_only_ready_dimmers_are_saved_with_exact_text(self) -> None:
         assert save_commands(_plan()) == _EXPECTED_SAVE
 
-    def test_no_color_or_position_text_reaches_the_card(self) -> None:
+    def test_color_and_position_candidates_without_store_lines_stay_off_the_card(self) -> None:
+        # 저장 줄(`PlanPreset.store`)은 콘솔 판독 뒤에 붙는다. 붙기 전의 후보는 카드에
+        # 실리지 않는다.
         joined = "\n".join(save_commands(_plan()))
         assert "ColorRGB" not in joined
         assert "LAVENDER" not in joined and "FLOOR" not in joined
@@ -307,6 +320,9 @@ class TestReferenceUpdate:
 
 
 def _love_attack_session(tmp_path, *, decisions, monkeypatch):
+    # 장비 판독(그룹 소속 · 컬러 채널 · 좌표)은 일부러 가짜로 채우지 않는다 — 가짜 콘솔은 그것을 못
+    # 읽으므로 색·위치 후보는 저장 줄 없이 「미정」으로 남고 카드는 디머 줄만 싣는다. 장비 판독이
+    # 되는 쪽은 test_preset_plan_store_all 이 잰다.
     grid = _love_attack_grid()
     store = SongTimelineStore()
     store.latest = _timeline_for_apply(beat_grid=grid)

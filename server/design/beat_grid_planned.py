@@ -3,7 +3,8 @@
 계획 값은 곡별 계획 주석(``preset_annotations``)과 계획표(``preset_plan``)가 정한다. 칸에 콘솔
 색 프리셋 번호가 없으면 계획 색을 ``color_rgb``(0~100%)로 싣고 ``color_planned: true`` 를 붙인다.
 디머·위치 프리셋 번호가 없으면 계획 이름만 싣는다
-(``planned_dimmer_name`` · ``planned_position_name``, 예: DIM-70 · FLOOR).
+(``planned_dimmer_name`` · ``planned_position_name``, 예: DIM-70 · 「콘솔 이름 + 그룹」 — 위치
+프리셋은 그룹마다 따로 저장하므로 이름에 그룹이 붙는다).
 화면은 이 키들을 점선 테두리·흐린 글자로 그려서 콘솔 값과 구분한다.
 
 원본 격자는 바뀌지 않는다 — 화면에 보낼 사본에만 붙는다. 「반영 이후 바뀐 칸」 비교

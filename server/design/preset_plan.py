@@ -10,10 +10,13 @@
 승인 카드에 실을 저장 줄은 `save_commands`가 만들고, 칸의 번호 참조는 승인 **뒤에만**
 `apply_plan_references`가 적는다 — 카드가 거절되면 격자는 바이트까지 그대로다.
 
-저장 범위(이 단계): 기본 디머 프리셋만. 같은 값을 여러 그룹이 쓰면 프리셋은 하나이고, 저장은
-그룹 한 선택(``Group 4 + 7 …``)으로 한 번에 한다. 색과 위치는 값이 정해져도 기존 경로
-(t594 · t592)로 가므로 이 카드에 싣지 않고 「이 카드 밖」으로 사유와 함께 남긴다. 앱이 기본값을
-쓴 항목은 「감독이 고칠 값」으로 모아 승인 카드에 보인다 — 콘솔의 값은 덮어쓰지 않는다.
+저장 범위: 기본 디머 프리셋은 `save_commands` 가 속성으로 직접 만든다. 같은 값을 여러 그룹이 쓰면
+프리셋은 하나이고, 저장은 그룹 한 선택(``Group 4 + 7 …``)으로 한 번에 한다. 색과 위치는 값이
+정해지면 후보(``deferred``)로 남고, 콘솔 판독(그룹 소속 · 컬러 채널 · 장비 좌표)을 마친 뒤
+`preset_plan_store` 가 기존 색(t594)·위치(t592) 경로의 조각으로 저장 줄(``PlanPreset.store``)을
+붙인다 — 줄이 붙은 항목만 이 카드에 실리고, 못 붙인 항목은 사유와 함께 「미정」으로 남는다. 위치는
+그룹마다 따로 저장한다(방향 하나가 그 방향을 쓰는 그룹 수만큼의 프리셋이 된다). 앱이 기본값을 쓴
+항목은 「감독이 고칠 값」으로 모아 승인 카드에 보인다 — 콘솔의 값은 덮어쓰지 않는다.
 
 칸 하나의 왼쪽·오른쪽 따로 색(``split``): 색이 정해진 쪽마다 색 후보 한 줄을 낸다
 (``PlanPreset.split_side``). 콘솔 이름은 감독이 정하므로 이름은 비워 두고, 저장 줄도 칸 참조도
@@ -26,7 +29,7 @@ from __future__ import annotations
 import copy
 import re
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import yaml
@@ -42,11 +45,13 @@ from server.design.beat_grid_cell_split import (
     cell_split_side_rgb,
     validate_cell_split,
 )
+from server.design.beat_grid_color_presets import record_color_preset_rgb
 from server.design.beat_grid_edit import apply_beat_grid_edit
 from server.design.beat_grid_presets import (
     first_free_base_color_number,
     first_free_base_dimmer_number,
     first_free_base_position_number,
+    record_app_preset_label,
 )
 from server.design.color_names import resolve_color_name
 
@@ -58,7 +63,10 @@ __all__ = [
     "card_reason",
     "load_preset_annotations",
     "build_preset_plan",
+    "resolve_preset",
     "save_commands",
+    "saved_presets",
+    "saved_summary",
 ]
 
 #: 곡별 계획 주석 폴더 — 곡 제목 슬러그와 이름이 같은 YAML 이 있으면 그 곡의 색·방향 대응을 읽는다.
@@ -76,8 +84,20 @@ _SPLIT_NAME_HOLD = "콘솔 이름 미정 — 칸 색 이름은 감독이 정한�
 #: 칸 하나의 쪽 이름 — 데이터 키 left·right 를 사유 문장에서 사람이 읽는 말로 바꾼다.
 _SPLIT_SIDE_LABEL = {"left": "왼쪽", "right": "오른쪽"}
 
-#: 색 값이 정해진 줄의 보류 사유 — 색 저장은 이 카드가 아니라 기존 색 경로(t594)로 간다.
+#: 칸 하나의 왼쪽·오른쪽 색 후보의 보류 사유 — 이름을 감독이 정할 때까지 이 카드는 저장 줄을
+#: 만들지 않고, 색 저장은 기존 색 경로(t594)로 간다.
 _COLOR_PATH_HOLD = "색 저장은 기존 「＋ 새 프리셋」 색 경로(t594)로 만든다 — 이 카드 범위 밖"
+
+#: 칸·번호가 다 있는 색·위치 후보의 사유 — 저장 줄은 콘솔 판독을 마친 뒤
+#: `preset_plan_store` 가 붙인다.
+_COLOR_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·컬러 채널을 읽은 뒤 만든다"
+_POSITION_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·장비 좌표를 읽은 뒤 만든다"
+
+#: 프리셋 종류의 화면 이름 — 저장 개수 요약(``saved_summary``)이 쓴다.
+_KIND_LABEL = {"dimmer": "디머", "color": "색", "position": "위치"}
+
+#: 저장한 색·위치 프리셋을 칸에서 가리키는 필드.
+_REFERENCE_FIELD = {"color": "color_preset_no", "position": "position_preset_no"}
 
 #: 풀 판독 결과 — ``(풀 번호, {슬롯: 이름 또는 None})``. 못 읽었으면 ``None``.
 PoolRead = tuple[int, Mapping[int, object]] | None
@@ -96,8 +116,8 @@ class PlanPreset:
     """계획표의 프리셋 한 줄.
 
     ``slot``은 이 계획이 고른 **후보** 번호다(콘솔 풀에서 빈 것). ``ready``가 참이면 이 카드가
-    저장 줄을 만든다. 거짓이면 ``hold``가 사유다 — ``deferred``가 참이면 값은 정해졌고 저장은
-    이 카드 밖의 경로로 간다(「이 카드 밖」), 거짓이면 「미정」이다."""
+    저장 줄을 싣는다. 거짓이면 ``hold``가 사유다 — ``deferred``가 참이면 값은 정해졌고 저장 줄만
+    아직 없다(「이 카드 밖」), 거짓이면 「미정」이다."""
 
     kind: str  # "dimmer" | "color" | "position"
     value: str  # 사람이 읽는 값: "40%" · "RGB 55 35 100" · "바닥 쪽 (대략: …)"
@@ -111,11 +131,18 @@ class PlanPreset:
     group_no: int | None = None  # 디머만 — 그룹이 하나일 때 그 번호(확인된 것)
     attributes: tuple[str, ...] = ()  # 디머만 — 저장 줄의 디머 속성 이름
     group_nos: tuple[int, ...] = ()  # 디머만 — 저장 선택 ``Group a + b`` 의 번호(확인된 것)
-    deferred: bool = False  # 값은 정해졌고 저장은 이 카드 밖(색 t594 · 위치 t592)으로 간다
+    #: 값은 정해졌고 저장 줄만 아직 없다. 색·위치는 콘솔 판독 뒤 `preset_plan_store` 가 줄을
+    #: 붙이거나 사유와 함께 「미정」으로 내리고(``resolve_preset``), 칸 쪽 색 후보는 기존 색
+    #: 경로(t594)로 간다.
+    deferred: bool = False
     #: 칸 하나의 왼쪽·오른쪽 따로 색 후보면 그 쪽(``"left"`` | ``"right"``), 아니면 ``None``.
     #: 값이 있으면 이 줄은 저장 줄도 칸 번호 참조도 만들지 않는다(이름은 감독이 정한다).
     split_side: str | None = None
     rgb: tuple[float, ...] | None = None  # 계획 RGB(0~100%), 화면이 쓴다
+    #: 이 카드가 보낼 저장 줄 — 색·위치만(`preset_plan_store` 가 콘솔 판독 뒤 붙인다). 디머는
+    #: 속성으로 `save_commands` 가 직접 만든다. ``None`` 인 색·위치는 ``ready`` 여도 카드에
+    #: 실리지 않는다.
+    store: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -125,7 +152,7 @@ class LoveAttackPlan:
     unresolved: tuple[str, ...]
     #: 격자에 이미 있는 고정 번호와 그 칸 수 — 계획은 이것을 건드리지 않는다.
     kept: tuple[tuple[str, int], ...]
-    #: 「이 카드 밖」 목록 — 값은 정해졌고 저장은 기존 경로로 간다(사유 문장).
+    #: 「이 카드 밖」 목록 — 값은 정해졌고 저장 줄만 아직 없다(사유 문장).
     deferred: tuple[str, ...] = ()
     #: 「감독이 고칠 값」 목록 — 앱이 기본값을 쓴 항목(무엇을 · 왜 · 어디서 고칠지).
     supervisor_fixes: tuple[str, ...] = ()
@@ -178,6 +205,14 @@ def _preset_label(preset: PlanPreset) -> str:
         return preset.name
     cell = preset.cells[0]
     return f"{cell.group_name} {cell.bar}마디 {_SPLIT_SIDE_LABEL[preset.split_side]} 칸"
+
+
+def _outside_line(preset: PlanPreset) -> str:
+    """저장하지 않는 줄이 「이 카드 밖」·「미정」 목록에 싣는 사유 문장 한 줄."""
+    return (
+        f"{_preset_label(preset)} {preset.value}(칸 {len(preset.cells)}개, 후보 "
+        f"{preset.slot or '없음'}): {preset.hold}"
+    )
 
 
 def _dimmer_value_lines(
@@ -428,7 +463,11 @@ def build_preset_plan(
             )
             continue
         channels = " ".join(str(channel) for channel in rgb)
-        holds.append(_COLOR_PATH_HOLD)
+        # 칸·번호가 다 있으면 저장 후보다 — 저장 줄은 콘솔 판독 뒤 `preset_plan_store` 가 붙인다.
+        # 하나라도 비면 그 사유가 보류 이유이고 「미정」이다.
+        candidate = not holds
+        if candidate:
+            holds.append(_COLOR_STORE_HOLD)
         if from_palette:
             fixes.append(
                 f"{name} RGB {channels}: 「{label}」 표준 슬롯 기본값. "
@@ -450,7 +489,7 @@ def build_preset_plan(
                 groups=groups,
                 ready=False,
                 hold="; ".join(holds),
-                deferred=True,
+                deferred=candidate,
                 rgb=tuple(rgb),
             )
         )
@@ -504,62 +543,70 @@ def build_preset_plan(
             )
 
     # -- 위치: 방향마다 대략 목표(target)가 있으면 값으로 싣는다. 없으면 「미정」 --------
+    # 위치 프리셋은 **그룹마다 따로** 저장한다 — 방향 하나가 그 방향을 쓰는 그룹 수만큼의 줄이 되고,
+    # 번호도 줄마다 따로 잡는다. 이름은 「콘솔 이름 + 그룹 이름」이라 줄마다 다르다.
     for entry in annotations.get("directions") or []:
         if not isinstance(entry, Mapping):
             continue
         cells = _annotated_cells(entry.get("cells"), by_cell, unresolved)
-        groups = _unique(cell.group_name for cell in cells)
-        slot = _reserve_next(
-            position_pool,
-            first_free_base_position_number,
-            policy=policy,
-            grid=grid,
-            reserved=reserved,
-        )
-        if slot is not None:
-            reserved.append(slot)
-        holds = []
-        if position_pool is None:
-            holds.append("위치 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
         label = str(entry.get("name") or "")
+        console_name = str(entry.get("console_name") or "")
         target_text = str(entry.get("target") or "").strip()
+        value = f"{label} (대략: {target_text})" if target_text else label
         if target_text:
-            value = f"{label} (대략: {target_text})"
-            holds.append("위치 프리셋은 기존 위치 경로(t592)로 만든다 — 이 카드 범위 밖")
             fixes.append(
                 f"{label} 목표 — 대략값 {target_text}. "
                 "감독이 고칠 값: 콘솔에서 위치를 맞춘다(앱은 덮어쓰지 않음)."
             )
-        else:
-            value = label
-            holds.append(
-                "목표 좌표 미정 — 프로젝트에 방향→좌표 표가 없어 위치 프리셋을 만들 수 없음"
+        # 칸이 하나도 없는 방향은 자리표시 한 줄만 낸다(그룹 이름이 빈 줄 — 번호를 잡지 않는다).
+        for group in _unique(cell.group_name for cell in cells) or ("",):
+            group_cells = tuple(cell for cell in cells if cell.group_name == group)
+            slot = None
+            if group_cells:
+                slot = _reserve_next(
+                    position_pool,
+                    first_free_base_position_number,
+                    policy=policy,
+                    grid=grid,
+                    reserved=reserved,
+                )
+            if slot is not None:
+                reserved.append(slot)
+            holds = []
+            if not group_cells:
+                holds.append(
+                    "칸 미정 — 이 방향을 쓸 격자 칸이 주석에 없다(감독이 칸 배정을 정한다)"
+                )
+            if position_pool is None:
+                holds.append("위치 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
+            if not target_text:
+                holds.append(
+                    "목표 좌표 미정 — 프로젝트에 방향→좌표 표가 없어 위치 프리셋을 만들 수 없음"
+                )
+            # 칸·번호·목표가 다 있으면 저장 후보다 — 저장 줄은 콘솔 판독 뒤
+            # `preset_plan_store` 가 붙인다.
+            candidate = not holds
+            if candidate:
+                holds.append(_POSITION_STORE_HOLD)
+            presets.append(
+                PlanPreset(
+                    kind="position",
+                    value=value,
+                    name=f"{console_name} {group}".strip(),
+                    slot=slot,
+                    cells=group_cells,
+                    groups=(group,) if group else (),
+                    ready=False,
+                    hold="; ".join(holds),
+                    deferred=candidate,
+                )
             )
-        if len(groups) > 1:
-            holds.append("위치 프리셋은 그룹마다 따로 저장해야 함")
-        presets.append(
-            PlanPreset(
-                kind="position",
-                value=value,
-                name=str(entry.get("console_name") or ""),
-                slot=slot,
-                cells=cells,
-                groups=groups,
-                ready=False,
-                hold="; ".join(holds),
-                deferred=bool(target_text),
-            )
-        )
 
     # -- 밖으로 나가는 항목: 이 카드 밖(값은 정해짐) · 미정(사유) -----------------------
     for preset in presets:
         if preset.ready:
             continue
-        line = (
-            f"{_preset_label(preset)} {preset.value}(칸 {len(preset.cells)}개, 후보 "
-            f"{preset.slot or '없음'}): {preset.hold}"
-        )
-        (deferred_lines if preset.deferred else unresolved).append(line)
+        (deferred_lines if preset.deferred else unresolved).append(_outside_line(preset))
     for entry in annotations.get("relative_position_cells") or []:
         if not isinstance(entry, Mapping):
             continue
@@ -610,27 +657,100 @@ def build_preset_plan(
     )
 
 
-def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
-    """승인 카드에 실을 저장 줄. **준비된 기본 디머 프리셋만** 싣는다.
+def saved_presets(plan: LoveAttackPlan) -> tuple[PlanPreset, ...]:
+    """이 카드가 저장하는 프리셋 — 준비됐고(``ready``) 칸 쪽 색 후보가 아니며, 색·위치는 저장 줄이
+    붙은 것. 저장 줄 · 칸 참조 · 사유 문장이 모두 이 목록 하나를 따른다(셋이 어긋나지 않게)."""
+    return tuple(
+        preset
+        for preset in plan.presets
+        if preset.ready
+        and preset.split_side is None
+        and preset.slot is not None
+        and (preset.kind == "dimmer" or preset.store is not None)
+    )
 
-    묶음 꼴은 색 레시피(t594)와 같다 — ClearAll → 선택+값 → Store Preset → Label Preset
-    → ClearAll. 그룹이 여럿이면 선택은 ``Group 4 + 7 + …`` 한 줄이다. 첫 묶음 앞에만 ClearAll 을
-    한 번 두고, 묶음마다 ClearAll 로 닫는다."""
-    lines: list[str] = []
-    for preset in plan.presets:
-        if preset.split_side is not None:
-            continue  # 칸 하나의 왼쪽·오른쪽 색 후보 — 이름을 감독이 정할 때까지 저장 줄이 없다.
-        if not preset.ready or preset.kind != "dimmer":
-            continue
-        assert preset.group_nos and preset.value_percent is not None
-        assert preset.slot is not None
-        if not lines:
-            lines.append("ClearAll")
-        lines.extend(_dimmer_value_lines(preset.group_nos, preset.value_percent, preset.attributes))
-        lines.append(f"Store Preset {preset.slot}")
-        lines.append(f"Label Preset {preset.slot} '{preset.name}'")
+
+def saved_summary(plan: LoveAttackPlan) -> str:
+    """저장 개수 한 줄 — ``프리셋 11개(디머 5 · 색 4 · 위치 2)``. 0개인 종류는 뺀다."""
+    saved = saved_presets(plan)
+    counts = [
+        (label, sum(1 for preset in saved if preset.kind == kind))
+        for kind, label in _KIND_LABEL.items()
+    ]
+    detail = " · ".join(f"{label} {count}" for label, count in counts if count)
+    return f"프리셋 {len(saved)}개" + (f"({detail})" if detail else "")
+
+
+def _append_bundle(lines: list[str], bundle: Sequence[str]) -> None:
+    """저장 묶음을 카드 줄에 잇는다. 첫 묶음 앞에 ClearAll 을 한 번 두고, 앞 줄이 이미 ClearAll 이면
+    묶음 머리의 ClearAll(색 레시피 t594 꼴)은 겹치므로 뺀다 — 묶음 모양 자체는 그대로다."""
+    if not lines:
         lines.append("ClearAll")
+    start = 1 if bundle[0] == "ClearAll" and lines[-1] == "ClearAll" else 0
+    lines.extend(bundle[start:])
+
+
+def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
+    """승인 카드에 실을 저장 줄. 준비된 기본 디머 프리셋과, 저장 줄이 붙은 색·위치 프리셋을 계획
+    순서대로 싣는다(``saved_presets``).
+
+    디머 묶음 꼴은 색 레시피(t594)와 같다 — ClearAll → 선택+값 → Store Preset → Label Preset
+    → ClearAll. 그룹이 여럿이면 선택은 ``Group 4 + 7 + …`` 한 줄이다. 색·위치 묶음은
+    ``PlanPreset.store`` 그대로다. 첫 묶음 앞에만 ClearAll 을 한 번 두고, 묶음마다 ClearAll 로
+    닫는다."""
+    lines: list[str] = []
+    for preset in saved_presets(plan):
+        if preset.kind == "dimmer":
+            assert preset.group_nos and preset.value_percent is not None
+            bundle: Sequence[str] = (
+                *_dimmer_value_lines(preset.group_nos, preset.value_percent, preset.attributes),
+                f"Store Preset {preset.slot}",
+                f"Label Preset {preset.slot} '{preset.name}'",
+                "ClearAll",
+            )
+        else:
+            assert preset.store is not None
+            bundle = preset.store
+        _append_bundle(lines, bundle)
     return tuple(lines)
+
+
+def resolve_preset(
+    plan: LoveAttackPlan,
+    preset: PlanPreset,
+    *,
+    store: tuple[str, ...] | None,
+    hold: str | None = None,
+    fixes: Sequence[str] = (),
+) -> LoveAttackPlan:
+    """저장 줄을 기다리던 색·위치 후보(``deferred``) 한 줄을 마무리한 새 계획을 돌려준다.
+
+    ``store`` 가 있으면 그 줄을 이 카드가 저장한다(``ready``). 없으면 ``hold`` 를 사유로
+    「미정」으로 내린다. 후보였을 때 「이 카드 밖」·「미정」 목록에 있던 사유 문장도 함께 바꾼다 —
+    카드가 저장한다면서 같은 프리셋을 「이 카드 밖」에 적지 않게. ``fixes`` 는 「감독이 고칠 값」
+    끝에 붙는다."""
+    resolved = replace(
+        preset,
+        ready=store is not None,
+        deferred=False,
+        hold=None if store is not None else hold,
+        store=store,
+    )
+    old_line = _outside_line(preset)
+    deferred = [line for line in plan.deferred if line != old_line]
+    unresolved = [line for line in plan.unresolved if line != old_line]
+    if not resolved.ready:
+        unresolved.append(_outside_line(resolved))
+    index = next((i for i, item in enumerate(plan.presets) if item is preset), -1)
+    if index < 0:
+        raise ValueError("이 계획에 없는 프리셋이다.")
+    return replace(
+        plan,
+        presets=(*plan.presets[:index], resolved, *plan.presets[index + 1 :]),
+        unresolved=tuple(unresolved),
+        deferred=tuple(deferred),
+        supervisor_fixes=(*plan.supervisor_fixes, *fixes),
+    )
 
 
 def card_reason(plan: LoveAttackPlan) -> str:
@@ -638,8 +758,8 @@ def card_reason(plan: LoveAttackPlan) -> str:
 
     빈칸을 두지 않는다. 값이 정해진 항목은 「이 카드 밖」에, 정해지지 않은 항목은 「미정」에
     사유와 함께 적힌다."""
-    saved = [preset for preset in plan.presets if preset.ready and preset.split_side is None]
-    head = f"디머 프리셋 {len(saved)}개 저장"
+    saved = saved_presets(plan)
+    head = f"{saved_summary(plan)} 저장"
     if saved:
         head += ": " + ", ".join(f"{preset.name}({preset.value})" for preset in saved)
     parts = [head]
@@ -682,6 +802,15 @@ def plan_table_markdown(plan: LoveAttackPlan) -> str:
     return "\n".join(lines)
 
 
+def _reference_changes(preset: PlanPreset) -> dict[str, object]:
+    """저장한 프리셋을 칸이 가리키게 하는 편집 — 디머는 밝기, 색·위치는 그 번호 필드."""
+    if preset.kind == "dimmer":
+        return {
+            "brightness": {"mode": "dimmer_preset", "value_percent": None, "preset_no": preset.slot}
+        }
+    return {_REFERENCE_FIELD[preset.kind]: preset.slot}
+
+
 def apply_plan_references(
     grid: Mapping[str, object],
     plan: LoveAttackPlan,
@@ -691,22 +820,22 @@ def apply_plan_references(
     source: str,
     planned_from: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
-    """**승인 뒤에만** 부른다. 준비된 디머 프리셋을 그 칸의 밝기로 참조시키고, 참조가 바뀐
-    칸·필드를 승인으로 적는다. 칸에 이미 있던 승인은 출처를 덧붙여 남긴다(기록 유실 방지).
+    """**승인 뒤에만** 부른다. 저장한 프리셋(디머 · 색 · 위치, ``saved_presets``)을 그 칸에서
+    참조시키고, 참조가 바뀐 칸·필드를 승인으로 적는다. 색은 RGB 를, 색·위치는 콘솔 이름을 격자에
+    남긴다(칸의 ``color_rgb`` 는 여기서 파생된다). 칸에 이미 있던 승인은 출처를 덧붙여 남긴다
+    (기록 유실 방지).
 
     이 함수는 ``grid`` 를 건드리지 않고 새 사본을 돌려준다. 승인 전에는 호출하지 않는다 —
     카드가 거절되면 격자는 바이트까지 그대로다.
 
     ``planned_from`` — 계획을 세운 때의 격자. 승인 창이 떠 있는 사이 감독이 고친 칸을 지우지
     않으려고, 승인 뒤 **지금** 격자(``grid``)를 넘기고 계획 시점 격자를 여기 넘긴다. 그 사이
-    밝기가 바뀐(또는 사라진) 칸은 건너뛴다 — 감독의 새 편집이 계획보다 우선이다."""
+    이 편집이 바꿀 필드(디머는 밝기, 색·위치는 그 번호 필드)가 바뀐(또는 사라진) 칸은 건너뛴다 —
+    감독의 새 편집이 계획보다 우선이다."""
     updated: dict[str, object] = copy.deepcopy(dict(grid))
-    touched: list[tuple[PlanCell, str | None]] = []
-    for preset in plan.presets:
-        if preset.split_side is not None:
-            continue  # 칸 하나의 왼쪽·오른쪽 색 후보 — 칸의 번호 참조를 쓰지 않는다.
-        if not preset.ready or preset.kind != "dimmer" or preset.slot is None:
-            continue
+    touched: dict[PlanCell, str | None] = {}
+    for preset in saved_presets(plan):
+        changes = _reference_changes(preset)
         for cell in preset.cells:
             cue = _grid_cue(grid, cell)
             if planned_from is not None:
@@ -714,7 +843,7 @@ def apply_plan_references(
                 if (
                     cue is None
                     or planned_cue is None
-                    or cue.get("brightness") != planned_cue.get("brightness")
+                    or any(cue.get(field) != planned_cue.get(field) for field in changes)
                 ):
                     continue
             prior = _prior_approval_source(grid, cell)
@@ -728,18 +857,18 @@ def apply_plan_references(
                 updated,
                 bar=cell.bar,
                 target=cell.group_name,
-                changes={
-                    "brightness": {
-                        "mode": "dimmer_preset",
-                        "value_percent": None,
-                        "preset_no": preset.slot,
-                    },
-                    "evidence": {"grade": grade, "approval": None},
-                },
+                changes={**changes, "evidence": {"grade": grade, "approval": None}},
             )
-            touched.append((cell, prior))
+            touched.setdefault(cell, prior)
+        # 콘솔에는 이미 이 프리셋이 있다 — 칸이 하나도 안 바뀌어도 값·이름은 격자에 남긴다.
+        if preset.kind == "color":
+            assert preset.rgb is not None and preset.slot is not None
+            updated = record_color_preset_rgb(updated, preset.slot, preset.rgb)
+        if preset.kind != "dimmer":
+            assert preset.slot is not None
+            updated = record_app_preset_label(updated, preset.slot, preset.name)
     pending = pending_preset_approvals(updated)
-    for cell, prior in touched:
+    for cell, prior in touched.items():
         entries = [
             entry
             for entry in pending

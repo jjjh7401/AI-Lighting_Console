@@ -202,12 +202,19 @@ from server.design.preset_names import (
     match_preset_name_across_pools,
 )
 from server.design.preset_plan import (
+    LoveAttackPlan,
     apply_plan_references,
     build_preset_plan,
     card_reason,
     load_preset_annotations,
     plan_table_markdown,
     save_commands,
+    saved_summary,
+)
+from server.design.preset_plan_store import (
+    attach_color_store,
+    attach_floor_position_store,
+    store_candidates,
 )
 from server.design.profile import (
     DEFAULT_BPM,
@@ -10489,13 +10496,44 @@ class ChatSession:
         )
         return {group: tuple(attrs) for group, attrs in attributes.items()}
 
+    def _beat_grid_preset_plan_stores(
+        self, plan: LoveAttackPlan, grid: Mapping[str, object]
+    ) -> LoveAttackPlan:
+        """색·위치 후보에 저장 줄을 붙인다. 그룹 소속 · 컬러 채널 · 장비 좌표를 콘솔에서
+        **읽기만** 한다(쓰기 없음) — 후보가 없으면 콘솔을 읽지 않는다. 줄을 못 만든 후보는
+        사유와 함께 「미정」이 된다(`preset_plan_store`). ``grid`` 는 계획을 세운 격자다."""
+        candidates = store_candidates(plan)
+        if not candidates:
+            return plan
+        members = self._beat_grid_group_members(
+            sorted({group for preset in candidates for group in preset.groups})
+        )
+        color_fids = sorted(
+            {
+                fid
+                for preset in candidates
+                if preset.kind == "color"
+                for group in preset.groups
+                for fid in members.get(group, ())
+            }
+        )
+        channel_names = self._beat_grid_color_channel_names(color_fids)
+        frames = (
+            self._beat_grid_pointing_frames()
+            if any(preset.kind == "position" for preset in candidates)
+            else None
+        )
+        plan = attach_color_store(plan, grid, members=members, channel_names=channel_names)
+        return attach_floor_position_store(plan, grid, members=members, frames=frames)
+
     def beat_grid_preset_plan(self) -> dict:
         """SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 계획을 승인 카드 한 장으로 올린다.
 
-        순서: 콘솔 풀 판독(읽기만) → 계획(순수 함수) → 저장 줄 → 승인 카드(게이트).
-        승인이 **통과한 뒤에만** 칸의 번호 참조와 승인 기록을 적는다. 거절·차단·무응답이면
-        격자는 바이트까지 그대로다. 이 메서드는 UI 메시지에 연결돼 있지 않다 — 실제 저장은
-        감독이 「실행」이라고 한 뒤의 별도 호출이다."""
+        순서: 콘솔 풀 판독(읽기만) → 계획(순수 함수) → 색·위치의 그룹·장비 판독(읽기만)과
+        저장 줄 → 승인 카드(게이트). 디머 · 색 · 위치 프리셋을 카드 한 장 · 승인 한 번으로
+        저장한다. 승인이 **통과한 뒤에만** 칸의 번호 참조와 승인 기록을 적는다. 거절·차단·
+        무응답이면 격자는 바이트까지 그대로다. 이 메서드는 UI 메시지에 연결돼 있지 않다 —
+        실제 저장은 감독이 「실행」이라고 한 뒤의 별도 호출이다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -10518,8 +10556,8 @@ class ChatSession:
             position_pool=position_pool,
             dimmer_attributes=self._beat_grid_preset_dimmer_attributes(group_names),
         )
+        plan = self._beat_grid_preset_plan_stores(plan, grid)
         commands = save_commands(plan)
-        ready_count = sum(1 for preset in plan.presets if preset.ready)
         # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다.
         # 승인 카드는 저장할 것이 있을 때만 뜬다.
         self._send(
@@ -10535,7 +10573,7 @@ class ChatSession:
                 last_action="apply",
                 ok=False,
                 reason=(
-                    "연출 프리셋: 지금 저장할 디머 프리셋이 없습니다(콘솔 풀을 읽지 못했거나 "
+                    "연출 프리셋: 지금 저장할 프리셋이 없습니다(콘솔 풀을 읽지 못했거나 "
                     "값이 미정). 계획표만 보입니다. 나머지는 미정입니다."
                 ),
             )
@@ -10565,7 +10603,8 @@ class ChatSession:
                 ),
             )
         # 승인 창이 떠 있는 동안(다른 스레드가 답한다) 들어온 편집을 지우지 않도록, 카드 구성 때의
-        # 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다. 그 사이 밝기가 바뀐 칸은 건너뛴다.
+        # 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다. 그 사이 이 카드가 고칠 필드(밝기 ·
+        # 색 번호 · 위치 번호)가 바뀐 칸은 건너뛴다.
         current = store.latest if store.latest is not None else timeline
         approved = apply_plan_references(
             self._beat_grid_view(current),
@@ -10580,7 +10619,7 @@ class ChatSession:
         return self._beat_grid_send_status(
             last_action="apply",
             ok=True,
-            reason=f"LOVE ATTACK 디머 프리셋 {ready_count}개를 저장하고 칸에 번호를 적었습니다.",
+            reason=f"연출 {saved_summary(plan)}를 저장하고 칸에 번호를 적었습니다.",
         )
 
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·

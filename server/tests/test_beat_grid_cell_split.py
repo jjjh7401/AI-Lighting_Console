@@ -413,7 +413,7 @@ class TestSplitCandidatesAreNeverSavedOrReferenced:
         )
         assert save_commands(forced) == ()
         assert apply_plan_references(grid, forced, by="s", date="d", source="s") == grid
-        assert card_reason(forced).startswith("디머 프리셋 0개 저장")
+        assert card_reason(forced).startswith("프리셋 0개 저장")
 
     def test_dimmer_lines_and_references_do_not_change_when_a_split_cell_is_added(self) -> None:
         dimmer = (1, {1: "기존"})
@@ -446,7 +446,7 @@ class TestSplitCandidatesAreNeverSavedOrReferenced:
         reason = f"{GROUP} 7마디 왼쪽 칸 RGB 100 0 0(칸 1개, 후보 {preset.slot}): {_NAME_HOLD}"
         assert f"- {reason}" in table
         assert f"- {GROUP} 7마디 오른쪽 칸 색 미정 — 감독이 정한다" in table
-        assert card_reason(plan).startswith("디머 프리셋 0개 저장")
+        assert card_reason(plan).startswith("프리셋 0개 저장")
 
     def test_table_rows_of_a_plan_without_split_keep_their_old_shape(self) -> None:
         # 이름이 없는 줄이라도 쪽 후보가 아니면 예전처럼 빈 칸이다(줄표는 쪽 후보에만).
