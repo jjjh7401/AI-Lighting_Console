@@ -104,6 +104,7 @@ import { LRSplitGlanceRow } from "./beatgrid/LRSplitGlanceRow";
 import { LRSplitBanner, LRSplitRow, lrFollowSpans, lrParentCellsReplaced } from "./beatgrid/LRSplitRow";
 import {
   audioButtonLabel,
+  audioButtonShortLabel,
   audioSourceId,
   formatAudioConnectFailureReason,
   resolvePlayIntentOnReady,
@@ -2302,6 +2303,7 @@ export function BeatGrid({
           onRewindToStart: rewindToStart,
           onSeek: seek,
           audioButtonLabel: audioButtonLabel(audioStatus, audioName),
+          audioButtonShortLabel: audioButtonShortLabel(audioStatus, audioName),
           onSelectAudioFile: onSelectAudio,
           audioFailureReason,
           consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,

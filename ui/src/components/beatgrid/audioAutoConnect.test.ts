@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   audioButtonLabel,
+  audioButtonShortLabel,
   audioSourceId,
   formatAudioConnectFailureReason,
   resolvePlayIntentOnReady,
@@ -55,6 +56,23 @@ describe("shouldAutoConnectAudio — 런북 뷰를 열 때 자동 연결할지(A
     expect(shouldAutoConnectAudio({ status: "missing", connectedSourceId: null }, "a.mp3:10")).toBe(
       true,
     );
+  });
+});
+
+describe("audioButtonShortLabel — 1450px 이상의 짧은 ♪ 문구(한 줄 유지)", () => {
+  it("연결되면 체크(✓)만 보이고 파일명은 짧은 문구에 없다(title 로 본다)", () => {
+    expect(audioButtonShortLabel("connected", "LOVE ATTACK.mp3")).toBe("✓");
+  });
+
+  it("연결 중·없음·실패 상태는 원래 문구가 이미 짧아 그대로다", () => {
+    expect(audioButtonShortLabel("loading", "LOVE ATTACK.mp3")).toBe("불러오는 중…");
+    expect(audioButtonShortLabel("missing", null)).toBe("음원 없음");
+    expect(audioButtonShortLabel("idle", null)).toBe("음원");
+    expect(audioButtonShortLabel("failed", "x.mp3")).toBe("음원");
+  });
+
+  it("파일명이 없는 연결 상태는 긴 문구와 같은 기본 안내로 떨어진다", () => {
+    expect(audioButtonShortLabel("connected", null)).toBe(audioButtonLabel("connected", null));
   });
 });
 

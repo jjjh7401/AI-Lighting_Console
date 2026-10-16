@@ -54,6 +54,13 @@ export function audioButtonLabel(status: AudioConnectStatus, audioName: string |
   return "음원";
 }
 
+/** ♪ 버튼 짧은 문구 — 1450px 이상에서만 보인다(상단 바가 한 줄을 지키려고). 연결되면 체크(✓)만
+ * 보이고 파일명은 버튼 title 로 본다. 그 밖의 상태는 원래 문구가 이미 짧아 그대로 쓴다. */
+export function audioButtonShortLabel(status: AudioConnectStatus, audioName: string | null): string {
+  if (status === "connected" && audioName) return "✓";
+  return audioButtonLabel(status, audioName);
+}
+
 /** 카드 t571 — 서버가 "이 곡엔 저장된 링크가 없다"고 답했을 때
  * (`songAudioLinkMissing`) `"missing"` 상태로 넘어가야 하는가. `"idle"`일
  * 때만 — 이미 다른 전이(연결 시도/연결/실패) 중이면 덮어쓰지 않는다. 이
