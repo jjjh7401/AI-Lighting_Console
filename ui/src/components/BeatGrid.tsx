@@ -72,6 +72,7 @@ import { BeatGridTransitionView } from "./BeatGridTransitionView";
 import { confirmedFixtureRange, fixtureBelongsTo, trackFixtureSummary } from "./beatGridStageModel";
 import {
   cueConsoleCommandLines,
+  entryHasFade,
   parseBeatsPerBar,
   previousCue,
   sceneChangeBars,
@@ -111,7 +112,13 @@ import {
   shouldMarkAudioLinkMissing,
   type AudioConnectStatus,
 } from "./beatgrid/audioAutoConnect";
-import { CueBarVisual, barNameText, cueBarVisualClass } from "./beatgrid/cueBarVisual";
+import {
+  CueBarVisual,
+  barNameText,
+  cueBarVisualClass,
+  cuePlannedClassName,
+  cuePlannedTitleSuffix,
+} from "./beatgrid/cueBarVisual";
 import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { folderSummarySpans } from "./beatgrid/folderSummary";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
@@ -666,6 +673,9 @@ export interface BeatGridProps {
   drawerSections?: BeatGridDrawerSection[] | null;
   /** 카드 t551 후속 — mockup `#bLib`(서랍 열기, 매번 최신 판독 요청). */
   onDrawerRequest?: () => void;
+  /** 서버가 「다른 일 처리 중」으로 거절한(`busy`) 누적 횟수 — 서랍·프리셋 계획 요청이
+   * 거절됐는지 알아채 「불러오는 중」/무반응으로 두지 않는다. */
+  busyCount?: number;
   /** 카드 t560(REQ-LDBEAT-019(a)) — 이번 세션에 고친 칸의 키 집합
    * (`cueEditKey(groupName, bar)` 꼴). 이 컴포넌트는 이 Set을 만들지
    * 않는다 — 실제 편집 적용 지점(`onEditRequest` 호출부, 편집 칸 소관)이
@@ -1476,6 +1486,32 @@ function draftCellCount(draft: BeatGridDraft): number {
   return draft.tracks.reduce((total, track) => total + track.cells.length, 0);
 }
 
+/** 서랍 요청에 이 시간 안에 답이 없으면 「불러오는 중」 대신 재시도를 보인다. */
+const DRAWER_REPLY_TIMEOUT_MS = 15000;
+
+/** 서랍 읽기 상태 — 받았으면 loaded, 요청 뒤 `busy` 거절이 오면 busy, 시간 초과면 timeout. */
+export type DrawerLoadState = "loaded" | "loading" | "busy" | "timeout";
+
+export function drawerLoadState(
+  sections: BeatGridDrawerSection[] | null,
+  ask: { busyAt: number } | null,
+  busyCount: number,
+  timedOut: boolean,
+): DrawerLoadState {
+  if (sections !== null) return "loaded";
+  if (ask !== null && busyCount > ask.busyAt) return "busy";
+  return timedOut ? "timeout" : "loading";
+}
+
+/** 「프리셋 계획 만들기」 요청 뒤 계획표 없이 `busy` 거절만 왔는가 — 무반응으로 두지 않는다. */
+export function presetPlanRefusedBusy(
+  pending: { busyAt: number } | null,
+  planShown: boolean,
+  busyCount: number,
+): boolean {
+  return pending !== null && !planShown && busyCount > pending.busyAt;
+}
+
 export function BeatGrid({
   grid,
   onExit,
@@ -1515,6 +1551,7 @@ export function BeatGrid({
   onSuggestionReject,
   drawerSections = null,
   onDrawerRequest,
+  busyCount = 0,
   editedCueKeys,
   onGlanceFocusRequest,
   timeSignature,
@@ -1529,9 +1566,9 @@ export function BeatGrid({
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
   // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
-  const [presetPlanPending, setPresetPlanPending] = useState<{ sinceSeq: number } | null>(null);
+  const [presetPlanPending, setPresetPlanPending] = useState<{ sinceSeq: number; busyAt: number } | null>(null);
   const requestPresetPlan = () => {
-    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1 });
+    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount });
     onPresetPlanRequest?.();
   };
   const presetPlan =
@@ -1541,6 +1578,23 @@ export function BeatGrid({
     lastServerReply.seq > presetPlanPending.sinceSeq
       ? parsePresetPlan(lastServerReply.text)
       : null;
+  // 서랍 요청이 거절(busy)되거나 시간 안에 답이 없으면 「불러오는 중」을 풀고 재시도를 보인다.
+  const [drawerAsk, setDrawerAsk] = useState<{ busyAt: number } | null>(null);
+  const [drawerTimedOut, setDrawerTimedOut] = useState(false);
+  const requestDrawer = () => {
+    setDrawerAsk({ busyAt: busyCount });
+    setDrawerTimedOut(false);
+    onDrawerRequest?.();
+  };
+  const drawerState = drawerLoadState(drawerSections, drawerAsk, busyCount, drawerTimedOut);
+  const drawerBusyRefused = drawerState === "busy";
+  const drawerFailed = drawerState === "busy" || drawerState === "timeout";
+  useEffect(() => {
+    if (drawerSections !== null || drawerAsk === null) return;
+    const timer = window.setTimeout(() => setDrawerTimedOut(true), DRAWER_REPLY_TIMEOUT_MS);
+    return () => window.clearTimeout(timer);
+  }, [drawerSections, drawerAsk]);
+  const presetPlanBusyRefused = presetPlanRefusedBusy(presetPlanPending, presetPlan !== null, busyCount);
   const [transitionView, setTransitionView] = useState(false);
   // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
   // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
@@ -2211,7 +2265,7 @@ export function BeatGrid({
   const toggleDrawer = () => {
     const next = !drawerOpen;
     setDrawerOpen(next);
-    if (next) onDrawerRequest?.();
+    if (next) requestDrawer();
   };
 
   // 「이 마디 한눈에」 접힌 폴더의 「이 마디 N줄 바뀜」 — 이 마디에서 칸이 새로 시작하는 줄 수.
@@ -2480,6 +2534,31 @@ export function BeatGrid({
                               {`${tailStart}마디~ 아직 배치 안 함`}
                             </span>
                           )}
+                          {/* 곡의 첫 칸이 페이드로 들어오면 — 앞 칸이 없어 이음매가 그려지지 않던 자리(꺼짐 칸에서 들어옴).
+                              앞은 어둠이라 번짐도 어둠에서 시작한다. 앞 칸 사이 이음매와 달리 MIB·경고는 판정하지 않는다. */}
+                          {visibleSegments.length > 0 &&
+                            visibleSegments[0] === segments[0] &&
+                            entryHasFade(segments[0].cue.entry) && (
+                              <BeatGridJoint
+                                prev={null}
+                                pxPerBar={pxPerBar}
+                                beatsPerBar={beatsPerBar}
+                                target={track.group_name}
+                                onMoveTrigger={onEditRequest ? (request) => requestEdit("transition", request) : undefined}
+                                cue={visibleSegments[0].cue}
+                                nextSegmentWidth={barToX(visibleSegments[0].endBar) - barToX(visibleSegments[0].startBar) - 2}
+                                prevFill={null}
+                                sectionStartBars={sectionStartBars}
+                                accentBars={overviewModel.accentBars}
+                                secondsPerBar={secondsPerBar}
+                                isOn={
+                                  transitionView &&
+                                  selected?.trackIndex === trackIndex &&
+                                  selected.bar === visibleSegments[0].cue.bar
+                                }
+                                onOpen={() => selectCue(trackIndex, visibleSegments[0].cue.bar, true)}
+                              />
+                            )}
                           {visibleSegments.map((segment, segIndex) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             const active = cueIsActive(segment.cue.label);
@@ -2488,6 +2567,9 @@ export function BeatGrid({
                             // 아는 자리면 그 색, 모르면 시안 기본색(#d8d8d8)이다(프리셋 색을
                             // 지어내지 않는다). 꺼진 칸은 색을 칠하지 않고 빗금(.is-off)으로 둔다.
                             const colorFill = active ? cueColorFill(segment.cue, presetHex) : { isColorUnset: false };
+                            // 계획 색(리드 결정, 콘솔에 아직 없음) — 점선 테두리 클래스와 제목 글.
+                            const plannedClass = cuePlannedClassName(segment.cue, active);
+                            const plannedTitle = cuePlannedTitleSuffix(segment.cue, active);
                             // 카드 t551 후속(지시 1항) — 프리셋 서랍에서 고른 항목을
                             // "누르면 쓰는 막대가 노랗게"(mockup `drawDrawer()` 안내).
                             const isHighlighted =
@@ -2515,7 +2597,7 @@ export function BeatGrid({
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
                                   }${isHighlighted ? " is-preset-highlighted" : ""}${
                                     displayState === "edited" ? " is-edited" : ""
-                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}${cueBarVisualClass(segment.cue)}`}
+                                  }${displayState === "ai-suggestion" ? " is-ai-suggestion" : ""}${plannedClass}${cueBarVisualClass(segment.cue)}`}
                                   style={{
                                     left: barToX(segment.startBar),
                                     width: barToX(segment.endBar) - barToX(segment.startBar) - 2,
@@ -2523,7 +2605,7 @@ export function BeatGrid({
                                   }}
                                   title={`${segment.startBar}~${segment.endBar - 1}마디${
                                     colorFill.isColorUnset && active ? " · 색 미정" : ""
-                                  }`}
+                                  }${plannedTitle}`}
                                   onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
                                 >
                                   {active ? barNameText(segment.cue) : "꺼짐"}
@@ -3709,7 +3791,7 @@ export function BeatGrid({
           onClick={() => {
             const next = !drawerOpen;
             setDrawerOpen(next);
-            if (next) onDrawerRequest?.();
+            if (next) requestDrawer();
           }}
         >
           📁 프리셋
@@ -3739,7 +3821,21 @@ export function BeatGrid({
           </h4>
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
           {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlan} />}
-          {drawerSections === null ? (
+          {presetPlanBusyRefused && (
+            <p className="beat-grid-drawer-unread" role="alert">
+              지금 서버가 다른 일을 처리하는 중이라 프리셋 계획 요청이 처리되지 않았습니다 — 끝난 뒤 다시 눌러 주세요.
+            </p>
+          )}
+          {drawerSections === null && drawerFailed ? (
+            <p className="beat-grid-drawer-unread" role="alert">
+              {drawerBusyRefused
+                ? "서버가 다른 일을 처리하는 중이라 서랍을 못 읽었습니다."
+                : "서랍을 읽는 데 시간이 걸리고 있습니다."}{" "}
+              <button type="button" onClick={requestDrawer}>
+                다시 시도
+              </button>
+            </p>
+          ) : drawerSections === null ? (
             <p className="beat-grid-drawer-loading">불러오는 중…</p>
           ) : (
             drawerSections.map((section) => (

@@ -21,6 +21,23 @@ def _pushed_grids(sent: list[dict]) -> list[dict]:
     ]
 
 
+#: 계획 표시(화면 전용) — 콘솔에 아직 없는 계획 색·계획 이름. 구조 비교에서는 뺀다.
+_PLANNED_DISPLAY_KEYS = ("color_planned", "planned_dimmer_name", "planned_position_name")
+
+
+def _without_planned_marks(tracks: list[dict]) -> list[dict]:
+    stripped = []
+    for track in tracks:
+        cues = []
+        for cue in track["cues"]:
+            body = {key: value for key, value in cue.items() if key not in _PLANNED_DISPLAY_KEYS}
+            if cue.get("color_planned"):
+                body.pop("color_rgb", None)
+            cues.append(body)
+        stripped.append({**track, "cues": cues})
+    return stripped
+
+
 def test_analysed_draft_without_a_grid_pushes_the_default_note(tmp_path) -> None:
     store = SongTimelineStore()
     store.latest = {"song_title": "Maroon 5 — Sugar", "sequence_number": 0}
@@ -45,8 +62,12 @@ def test_analysed_love_attack_draft_pushes_its_registered_tracks(tmp_path) -> No
     session.store_timeline_bar_map(_valid_payload())
 
     [grid] = _pushed_grids(sent)[-1:]
-    assert grid["tracks"] == default_beat_grid("LOVE ATTACK")["tracks"]
+    # 계획 표시(화면 전용 색·이름)를 뺀 구조는 곡 기본 격자와 같다 — 트랙 구조는 그대로 송신된다.
+    assert _without_planned_marks(grid["tracks"]) == default_beat_grid("LOVE ATTACK")["tracks"]
     assert grid["tracks"], "LOVE ATTACK 기본 격자에 트랙이 있어야 한다"
+    # 계획 표시는 화면 송신 프레임에 붙는다. 저장소 원본에는 붙지 않는다.
+    wash = next(track for track in grid["tracks"] if track["group_name"] == "WASH-ALL")
+    assert next(cue for cue in wash["cues"] if cue["bar"] == 18)["color_planned"] is True
     assert "beat_grid" not in store.latest
 
 
