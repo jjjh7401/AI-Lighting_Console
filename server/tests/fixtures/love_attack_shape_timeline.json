@@ -1,0 +1,1076 @@
+{
+  "_source_note": "LOVE ATTACK 형태 비교용 타임라인 파생본. sections 는 server/design/love_attack_timeline.py 의 build_love_attack_timeline() 에서, bar_map 은 love_attack_bar_features_real.json 과 love_attack_beat_grid.json 을 server/audio/bar_map.py 의 classify_bar_events 와 server/audio/bar_map_store.py 의 build_bar_map_payload 로 묶어 만든 것이다. 재생성 검사: test_grid_shape.py.",
+  "bar_map": {
+    "bars": [
+      {
+        "bar": 0,
+        "beats_ms": [
+          964
+        ],
+        "start_ms": 964
+      },
+      {
+        "bar": 1,
+        "beats_ms": [
+          1498,
+          2043,
+          2577,
+          3111
+        ],
+        "energy": 0.0,
+        "start_ms": 1498
+      },
+      {
+        "bar": 2,
+        "beats_ms": [
+          3657,
+          4203,
+          4725,
+          5259
+        ],
+        "energy": 0.071,
+        "start_ms": 3657
+      },
+      {
+        "bar": 3,
+        "beats_ms": [
+          5782,
+          6455,
+          6861,
+          7372
+        ],
+        "energy": 0.282,
+        "start_ms": 5782
+      },
+      {
+        "bar": 4,
+        "beats_ms": [
+          7918,
+          8452,
+          8986,
+          9532
+        ],
+        "energy": 0.617,
+        "start_ms": 7918
+      },
+      {
+        "bar": 5,
+        "beats_ms": [
+          10066,
+          10739,
+          11146,
+          11680
+        ],
+        "energy": 0.269,
+        "start_ms": 10066
+      },
+      {
+        "bar": 6,
+        "beats_ms": [
+          12214,
+          12748,
+          13293,
+          13827
+        ],
+        "energy": 0.271,
+        "start_ms": 12214
+      },
+      {
+        "bar": 7,
+        "beats_ms": [
+          14362,
+          14907,
+          15430,
+          15975
+        ],
+        "energy": 0.235,
+        "start_ms": 14362
+      },
+      {
+        "bar": 8,
+        "beats_ms": [
+          16498,
+          17043,
+          17578,
+          18112
+        ],
+        "energy": 0.251,
+        "start_ms": 16498
+      },
+      {
+        "bar": 9,
+        "beats_ms": [
+          18646,
+          19180,
+          19714,
+          20248
+        ],
+        "energy": 0.279,
+        "start_ms": 18646
+      },
+      {
+        "bar": 10,
+        "beats_ms": [
+          20793,
+          21328,
+          21862,
+          22407
+        ],
+        "energy": 0.269,
+        "start_ms": 20793
+      },
+      {
+        "bar": 11,
+        "beats_ms": [
+          22930,
+          23475,
+          24009,
+          24543
+        ],
+        "energy": 0.245,
+        "start_ms": 22930
+      },
+      {
+        "bar": 12,
+        "beats_ms": [
+          25078,
+          25623,
+          26157,
+          26691
+        ],
+        "energy": 0.226,
+        "start_ms": 25078
+      },
+      {
+        "bar": 13,
+        "beats_ms": [
+          27225,
+          27759,
+          28294,
+          28816
+        ],
+        "energy": 0.222,
+        "start_ms": 27225
+      },
+      {
+        "bar": 14,
+        "beats_ms": [
+          29350,
+          29907,
+          30441,
+          30975
+        ],
+        "energy": 0.179,
+        "start_ms": 29350
+      },
+      {
+        "bar": 15,
+        "beats_ms": [
+          31509,
+          32044,
+          32578,
+          33112
+        ],
+        "energy": 0.192,
+        "start_ms": 31509
+      },
+      {
+        "bar": 16,
+        "beats_ms": [
+          33646,
+          34191,
+          34725,
+          35260
+        ],
+        "energy": 0.25,
+        "start_ms": 33646
+      },
+      {
+        "bar": 17,
+        "beats_ms": [
+          35794,
+          36328,
+          36850,
+          37373
+        ],
+        "energy": 0.282,
+        "start_ms": 35794
+      },
+      {
+        "bar": 18,
+        "beats_ms": [
+          37895,
+          38464,
+          39010,
+          39544
+        ],
+        "energy": 0.93,
+        "start_ms": 37895
+      },
+      {
+        "bar": 19,
+        "beats_ms": [
+          40078,
+          40612,
+          41146,
+          41691
+        ],
+        "energy": 0.345,
+        "start_ms": 40078
+      },
+      {
+        "bar": 20,
+        "beats_ms": [
+          42225,
+          42760,
+          43294,
+          43828
+        ],
+        "energy": 0.258,
+        "start_ms": 42225
+      },
+      {
+        "bar": 21,
+        "beats_ms": [
+          44362,
+          44896,
+          45441,
+          45976
+        ],
+        "energy": 0.231,
+        "start_ms": 44362
+      },
+      {
+        "bar": 22,
+        "beats_ms": [
+          46510,
+          47009,
+          47578,
+          48123
+        ],
+        "energy": 0.318,
+        "start_ms": 46510
+      },
+      {
+        "bar": 23,
+        "beats_ms": [
+          48646,
+          49191,
+          49714,
+          50260
+        ],
+        "energy": 0.279,
+        "start_ms": 48646
+      },
+      {
+        "bar": 24,
+        "beats_ms": [
+          50794,
+          51328,
+          51862,
+          52407
+        ],
+        "energy": 0.315,
+        "start_ms": 50794
+      },
+      {
+        "bar": 25,
+        "beats_ms": [
+          52941,
+          53476,
+          53998,
+          54544
+        ],
+        "energy": 0.269,
+        "start_ms": 52941
+      },
+      {
+        "bar": 26,
+        "beats_ms": [
+          55078,
+          55612,
+          56157,
+          56692
+        ],
+        "energy": 0.306,
+        "start_ms": 55078
+      },
+      {
+        "bar": 27,
+        "beats_ms": [
+          57226,
+          57760,
+          58294,
+          58828
+        ],
+        "energy": 0.3,
+        "start_ms": 57226
+      },
+      {
+        "bar": 28,
+        "beats_ms": [
+          59362,
+          59896,
+          60430,
+          60976
+        ],
+        "energy": 0.281,
+        "start_ms": 59362
+      },
+      {
+        "bar": 29,
+        "beats_ms": [
+          61498,
+          62044,
+          62578,
+          63112
+        ],
+        "energy": 0.292,
+        "start_ms": 61498
+      },
+      {
+        "bar": 30,
+        "beats_ms": [
+          63658,
+          64192,
+          64726,
+          65260
+        ],
+        "energy": 0.347,
+        "start_ms": 63658
+      },
+      {
+        "bar": 31,
+        "beats_ms": [
+          65794,
+          66328,
+          66862,
+          67396
+        ],
+        "energy": 0.33,
+        "start_ms": 65794
+      },
+      {
+        "bar": 32,
+        "beats_ms": [
+          67930,
+          68476,
+          69010,
+          69532
+        ],
+        "energy": 0.226,
+        "start_ms": 67930
+      },
+      {
+        "bar": 33,
+        "beats_ms": [
+          70055,
+          70612,
+          71146,
+          71680
+        ],
+        "energy": 0.147,
+        "start_ms": 70055
+      },
+      {
+        "bar": 34,
+        "beats_ms": [
+          72214,
+          72760,
+          73294,
+          73828
+        ],
+        "energy": 0.201,
+        "start_ms": 72214
+      },
+      {
+        "bar": 35,
+        "beats_ms": [
+          74362,
+          74896,
+          75430,
+          75964
+        ],
+        "energy": 0.348,
+        "start_ms": 74362
+      },
+      {
+        "bar": 36,
+        "beats_ms": [
+          76498,
+          77044,
+          77578,
+          78112
+        ],
+        "energy": 0.349,
+        "start_ms": 76498
+      },
+      {
+        "bar": 37,
+        "beats_ms": [
+          78646,
+          79180,
+          79668,
+          80260
+        ],
+        "energy": 0.213,
+        "start_ms": 78646
+      },
+      {
+        "bar": 38,
+        "beats_ms": [
+          80794,
+          81328,
+          81874,
+          82396
+        ],
+        "energy": 0.386,
+        "start_ms": 80794
+      },
+      {
+        "bar": 39,
+        "beats_ms": [
+          82942,
+          83476,
+          84010,
+          84544
+        ],
+        "energy": 0.169,
+        "start_ms": 82942
+      },
+      {
+        "bar": 40,
+        "beats_ms": [
+          85078,
+          85612,
+          86146,
+          86692
+        ],
+        "energy": 0.413,
+        "start_ms": 85078
+      },
+      {
+        "bar": 41,
+        "beats_ms": [
+          87226,
+          87760,
+          88294,
+          88828
+        ],
+        "energy": 0.17,
+        "start_ms": 87226
+      },
+      {
+        "bar": 42,
+        "beats_ms": [
+          89374,
+          89908,
+          90442,
+          90964
+        ],
+        "energy": 0.117,
+        "start_ms": 89374
+      },
+      {
+        "bar": 43,
+        "beats_ms": [
+          91510,
+          92044,
+          92578,
+          93124
+        ],
+        "energy": 0.103,
+        "start_ms": 91510
+      },
+      {
+        "bar": 44,
+        "beats_ms": [
+          93658,
+          94192,
+          94726,
+          95260
+        ],
+        "energy": 0.348,
+        "start_ms": 93658
+      },
+      {
+        "bar": 45,
+        "beats_ms": [
+          95794,
+          96328,
+          96839,
+          97396
+        ],
+        "energy": 0.277,
+        "start_ms": 95794
+      },
+      {
+        "bar": 46,
+        "beats_ms": [
+          97930,
+          98476,
+          99010,
+          99544
+        ],
+        "energy": 1.0,
+        "start_ms": 97930
+      },
+      {
+        "bar": 47,
+        "beats_ms": [
+          100078,
+          100612,
+          101146,
+          101692
+        ],
+        "energy": 0.335,
+        "start_ms": 100078
+      },
+      {
+        "bar": 48,
+        "beats_ms": [
+          102226,
+          102760,
+          103294,
+          103828
+        ],
+        "energy": 0.324,
+        "start_ms": 102226
+      },
+      {
+        "bar": 49,
+        "beats_ms": [
+          104362,
+          104896,
+          105442,
+          105976
+        ],
+        "energy": 0.263,
+        "start_ms": 104362
+      },
+      {
+        "bar": 50,
+        "beats_ms": [
+          106510,
+          107021,
+          107578,
+          108112
+        ],
+        "energy": 0.306,
+        "start_ms": 106510
+      },
+      {
+        "bar": 51,
+        "beats_ms": [
+          108646,
+          109192,
+          109714,
+          110260
+        ],
+        "energy": 0.269,
+        "start_ms": 108646
+      },
+      {
+        "bar": 52,
+        "beats_ms": [
+          110794,
+          111328,
+          111862,
+          112408
+        ],
+        "energy": 0.291,
+        "start_ms": 110794
+      },
+      {
+        "bar": 53,
+        "beats_ms": [
+          112942,
+          113476,
+          113998,
+          114544
+        ],
+        "energy": 0.279,
+        "start_ms": 112942
+      },
+      {
+        "bar": 54,
+        "beats_ms": [
+          115078,
+          115612,
+          116158,
+          116692
+        ],
+        "energy": 0.305,
+        "start_ms": 115078
+      },
+      {
+        "bar": 55,
+        "beats_ms": [
+          117226,
+          117760,
+          118294,
+          118828
+        ],
+        "energy": 0.3,
+        "start_ms": 117226
+      },
+      {
+        "bar": 56,
+        "beats_ms": [
+          119362,
+          119873,
+          120430,
+          120976
+        ],
+        "energy": 0.362,
+        "start_ms": 119362
+      },
+      {
+        "bar": 57,
+        "beats_ms": [
+          121510,
+          122044,
+          122578,
+          123112
+        ],
+        "energy": 0.293,
+        "start_ms": 121510
+      },
+      {
+        "bar": 58,
+        "beats_ms": [
+          123646,
+          124192,
+          124726,
+          125260
+        ],
+        "energy": 0.342,
+        "start_ms": 123646
+      },
+      {
+        "bar": 59,
+        "beats_ms": [
+          125794,
+          126328,
+          126862,
+          127396
+        ],
+        "energy": 0.333,
+        "start_ms": 125794
+      },
+      {
+        "bar": 60,
+        "beats_ms": [
+          127919,
+          128476,
+          129010,
+          129533
+        ],
+        "energy": 0.217,
+        "start_ms": 127919
+      },
+      {
+        "bar": 61,
+        "beats_ms": [
+          130055,
+          130612,
+          131146,
+          131669
+        ],
+        "energy": 0.158,
+        "start_ms": 130055
+      },
+      {
+        "bar": 62,
+        "beats_ms": [
+          132214,
+          132760,
+          133294,
+          133828
+        ],
+        "energy": 0.14,
+        "start_ms": 132214
+      },
+      {
+        "bar": 63,
+        "beats_ms": [
+          134362,
+          134896,
+          135430,
+          135964
+        ],
+        "energy": 0.349,
+        "start_ms": 134362
+      },
+      {
+        "bar": 64,
+        "beats_ms": [
+          136499,
+          137044,
+          137567,
+          138112
+        ],
+        "energy": 0.43,
+        "start_ms": 136499
+      },
+      {
+        "bar": 65,
+        "beats_ms": [
+          138646,
+          139180,
+          139714,
+          140249
+        ],
+        "energy": 0.355,
+        "start_ms": 138646
+      },
+      {
+        "bar": 66,
+        "beats_ms": [
+          140783,
+          141328,
+          141851,
+          142396
+        ],
+        "energy": 0.37,
+        "start_ms": 140783
+      },
+      {
+        "bar": 67,
+        "beats_ms": [
+          142907,
+          143453,
+          143999,
+          144544
+        ],
+        "energy": 0.179,
+        "start_ms": 142907
+      },
+      {
+        "bar": 68,
+        "beats_ms": [
+          145078,
+          145612,
+          146146,
+          146680
+        ],
+        "energy": 0.599,
+        "start_ms": 145078
+      },
+      {
+        "bar": 69,
+        "beats_ms": [
+          147215,
+          147760,
+          148294,
+          148828
+        ],
+        "energy": 0.212,
+        "start_ms": 147215
+      },
+      {
+        "bar": 70,
+        "beats_ms": [
+          149362,
+          149896,
+          150442,
+          150976
+        ],
+        "energy": 0.228,
+        "start_ms": 149362
+      },
+      {
+        "bar": 71,
+        "beats_ms": [
+          151510,
+          152033,
+          152578,
+          153112
+        ],
+        "energy": 0.275,
+        "start_ms": 151510
+      },
+      {
+        "bar": 72,
+        "beats_ms": [
+          153646,
+          154180,
+          154715,
+          155260
+        ],
+        "energy": 0.325,
+        "start_ms": 153646
+      },
+      {
+        "bar": 73,
+        "beats_ms": [
+          155794,
+          156328,
+          156862,
+          157408
+        ],
+        "energy": 0.276,
+        "start_ms": 155794
+      },
+      {
+        "bar": 74,
+        "beats_ms": [
+          157942,
+          158476,
+          158999,
+          159544
+        ],
+        "energy": 0.215,
+        "start_ms": 157942
+      },
+      {
+        "bar": 75,
+        "beats_ms": [
+          160078,
+          160612,
+          161146,
+          161692
+        ],
+        "energy": 0.308,
+        "start_ms": 160078
+      },
+      {
+        "bar": 76,
+        "beats_ms": [
+          162226,
+          162760,
+          163294,
+          163828
+        ],
+        "energy": 0.376,
+        "start_ms": 162226
+      },
+      {
+        "bar": 77,
+        "beats_ms": [
+          164362,
+          164908,
+          165431,
+          165976
+        ],
+        "energy": 0.386,
+        "start_ms": 164362
+      },
+      {
+        "bar": 78,
+        "beats_ms": [
+          166510,
+          167044,
+          167578,
+          168112
+        ],
+        "energy": 0.321,
+        "start_ms": 166510
+      },
+      {
+        "bar": 79,
+        "beats_ms": [
+          168647,
+          169192,
+          169726,
+          170260
+        ],
+        "energy": 0.376,
+        "start_ms": 168647
+      },
+      {
+        "bar": 80,
+        "beats_ms": [
+          170794,
+          171328,
+          171862,
+          172397
+        ],
+        "energy": 0.363,
+        "start_ms": 170794
+      },
+      {
+        "bar": 81,
+        "beats_ms": [
+          172931,
+          173476,
+          174010,
+          174533
+        ],
+        "energy": 0.206,
+        "start_ms": 172931
+      },
+      {
+        "bar": 82,
+        "beats_ms": [
+          175055
+        ],
+        "energy": 0.062,
+        "start_ms": 175055
+      }
+    ],
+    "bpm": 112.00191993244025,
+    "events": [
+      {
+        "end_bar": 4,
+        "grade": "measured",
+        "kind": "kick_entry",
+        "start_bar": 4,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 17,
+        "grade": "measured",
+        "kind": "build",
+        "start_bar": 14,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 18,
+        "grade": "measured",
+        "kind": "kick_entry",
+        "start_bar": 18,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 33,
+        "grade": "measured",
+        "kind": "break",
+        "start_bar": 33,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 45,
+        "grade": "measured",
+        "kind": "build",
+        "start_bar": 42,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 46,
+        "grade": "measured",
+        "kind": "kick_entry",
+        "start_bar": 46,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 61,
+        "grade": "measured",
+        "kind": "break",
+        "start_bar": 61,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 66,
+        "grade": "estimated",
+        "kind": "drop",
+        "start_bar": 63,
+        "start_beat": 1
+      },
+      {
+        "end_bar": 82,
+        "grade": "measured",
+        "kind": "break",
+        "start_bar": 82,
+        "start_beat": 1
+      }
+    ],
+    "first_beat_offset": 1,
+    "schema_version": 1,
+    "time_signature": [
+      4,
+      4
+    ]
+  },
+  "sections": [
+    {
+      "bar_count": 7,
+      "bar_start": 0,
+      "end_ms": 14362,
+      "index": 1,
+      "label": "인트로",
+      "start_ms": 964
+    },
+    {
+      "bar_count": 7,
+      "bar_start": 7,
+      "end_ms": 29350,
+      "index": 2,
+      "label": "벌스 1",
+      "start_ms": 14362
+    },
+    {
+      "bar_count": 4,
+      "bar_start": 14,
+      "end_ms": 37895,
+      "index": 3,
+      "label": "프리 1",
+      "start_ms": 29350
+    },
+    {
+      "bar_count": 15,
+      "bar_start": 18,
+      "end_ms": 70055,
+      "index": 4,
+      "label": "후렴 1",
+      "start_ms": 37895
+    },
+    {
+      "bar_count": 9,
+      "bar_start": 33,
+      "end_ms": 89374,
+      "index": 5,
+      "label": "벌스 2",
+      "start_ms": 70055
+    },
+    {
+      "bar_count": 4,
+      "bar_start": 42,
+      "end_ms": 97930,
+      "index": 6,
+      "label": "프리 2",
+      "start_ms": 89374
+    },
+    {
+      "bar_count": 15,
+      "bar_start": 46,
+      "end_ms": 130055,
+      "index": 7,
+      "label": "후렴 2",
+      "start_ms": 97930
+    },
+    {
+      "bar_count": 2,
+      "bar_start": 61,
+      "end_ms": 134362,
+      "index": 8,
+      "label": "브리지",
+      "start_ms": 130055
+    },
+    {
+      "bar_count": 4,
+      "bar_start": 63,
+      "end_ms": 142907,
+      "index": 9,
+      "label": "드롭",
+      "start_ms": 134362
+    },
+    {
+      "bar_count": 15,
+      "bar_start": 67,
+      "end_ms": 175055,
+      "index": 10,
+      "label": "후렴 3",
+      "start_ms": 142907
+    },
+    {
+      "bar_count": null,
+      "bar_start": 82,
+      "end_ms": null,
+      "index": 11,
+      "label": "아웃트로",
+      "start_ms": 175055
+    }
+  ],
+  "song_title": "LOVE ATTACK"
+}
