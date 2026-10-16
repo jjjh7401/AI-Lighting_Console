@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple, TypedDict
 
@@ -162,6 +163,7 @@ def generate_arrangement_draft(
         int(entry["bar"]): float(entry["energy"]) for entry in bar_map["bars"] if "energy" in entry
     }
     overrides = planned_colors or {}
+    relative_energy = _relative_energies(bar_numbers, energy, settings.window_bars)
 
     voices = _voices(layout)
     movers = [str(track["group_name"]) for track in layout if track.get("layer_role") == "mover"]
@@ -169,7 +171,7 @@ def generate_arrangement_draft(
     windows: list[ArrangementWindow] = []
     motion_turn = 0
     last_drop_end = max((end for _start, end in drop_ranges), default=None)
-    after_last_drop = 0
+    last_chorus_turn = 0
     for window_id in sorted({bar // settings.window_bars for bar in bar_numbers}):
         bars_here = [bar for bar in bar_numbers if bar // settings.window_bars == window_id]
         start, end = bars_here[0], bars_here[-1]
@@ -192,13 +194,13 @@ def generate_arrangement_draft(
             break_ranges=break_ranges,
             last_drop_end=last_drop_end,
             has_kick=any(bar in kick_bars for bar in bars_here),
-            energies=[energy[bar] for bar in bars_here if bar in energy],
+            relative_energy=relative_energy.get(window_id),
             settings=settings,
         )
-        # 마지막 후렴 돌림의 차례 = 이 구간보다 앞서 마지막 드롭 뒤에서 시작한 구간 수.
-        section_color = _section_color(section, after_last_drop, settings)
-        if _after(start, last_drop_end):
-            after_last_drop += 1
+        # 마지막 후렴 돌림의 차례 = 이 구간보다 앞선 마지막 후렴 구간의 수. 브릿지는 세지 않는다.
+        section_color = _section_color(section, last_chorus_turn, settings)
+        if section == _SECTION_LAST_CHORUS:
+            last_chorus_turn += 1
         windows.append(
             ArrangementWindow(
                 start_bar=start,
@@ -310,6 +312,33 @@ def _cell_plan(
     return _rest_plan(settings)
 
 
+# @MX:NOTE: [AUTO] 후렴은 절대 에너지가 아니라 곡 안 상대 위치로 가른다. LOVE ATTACK 은 4마디 구간
+# 평균이 전부 0.710~1.000 이라 절대 기준(0.6)이면 벌스가 하나도 없었다.
+def _relative_energies(
+    bar_numbers: Sequence[int], energy: Mapping[int, float], window_bars: int
+) -> dict[int, float]:
+    """구간(``bar // window_bars``)마다 곡 안 상대 에너지 위치(0~1)를 돌려준다.
+
+    구간 평균은 에너지가 있는 마디만으로 잰다(없는 마디는 0 으로 세지 않고 뺀다). 평균이 가장 낮은
+    구간이 0, 가장 높은 구간이 1이다. 에너지가 있는 구간이 없거나 구간 평균이 모두 같으면(평평한
+    곡) 위치를 정할 수 없어 빈 사전이다. 에너지가 한 마디도 없는 구간도 사전에 없다. 호출한 쪽은
+    ``get`` 으로 읽고, 없으면(None) 에너지로는 후렴이 되지 않는다.
+    """
+    by_window: dict[int, list[float]] = {}
+    for bar in bar_numbers:
+        if bar in energy:
+            by_window.setdefault(bar // window_bars, []).append(energy[bar])
+    means = {window_id: sum(values) / len(values) for window_id, values in by_window.items()}
+    if not means:
+        return {}
+    low, high = min(means.values()), max(means.values())
+    # 같은 값이 깔린 곡도 3마디·4마디 구간의 부동소수 평균은 미세하게 달라진다(0.1 →
+    # 0.10000000000000002). 정확한 같음(==)으로는 평평함을 가를 수 없어 오차 범위 안이면 평평하다.
+    if math.isclose(high, low):
+        return {}
+    return {window_id: (mean - low) / (high - low) for window_id, mean in means.items()}
+
+
 def _section_kind(
     start: int,
     end: int,
@@ -318,14 +347,15 @@ def _section_kind(
     break_ranges: Sequence[tuple[int, int]],
     last_drop_end: int | None,
     has_kick: bool,
-    energies: Sequence[float],
+    relative_energy: float | None,
     settings: ArrangementPolicy,
 ) -> str:
     """4마디 구간 하나의 종류를 돌려준다.
 
     위에서부터 먼저 맞는 것을 쓴다: 드롭과 겹침 → 브릿지(``break`` 와 겹침) → 마지막 드롭 뒤 →
-    킥 진입이 있거나 마디 에너지 평균이 기준 이상이면 후렴 → 나머지는 벌스. 마디 지도에는
-    구간 이름이 없어서 이것은 어림이다. 에너지가 없는 마디는 평균에서 뺀다.
+    킥 진입이 있거나 곡 안 상대 에너지(``relative_energy``, 가장 조용한 구간 0 ~ 가장 큰 구간 1)가
+    기준(``chorus_energy_cut``)보다 크면 후렴 → 나머지는 벌스. 마디 지도에는 구간 이름이 없어서
+    이것은 어림이다. 상대 에너지가 None(에너지 없음·평평한 곡)이면 에너지로는 후렴이 되지 않는다.
     """
     if any(start <= drop_end and drop_start <= end for drop_start, drop_end in drop_ranges):
         return _SECTION_DROP
@@ -333,7 +363,7 @@ def _section_kind(
         return _SECTION_BRIDGE
     if _after(start, last_drop_end):
         return _SECTION_LAST_CHORUS
-    if has_kick or (energies and sum(energies) / len(energies) >= settings.chorus_energy):
+    if has_kick or (relative_energy is not None and relative_energy > settings.chorus_energy_cut):
         return _SECTION_CHORUS
     return _SECTION_VERSE
 

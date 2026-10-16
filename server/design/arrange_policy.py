@@ -75,8 +75,10 @@ class ArrangementPolicy:
     - ``downbeat_trigger``: 펄스·강조가 맞는 박(1 = 마디의 첫 박, 규칙 9).
     - ``motion_period_bars``: 무빙 칸의 팬 웨이브 주기(규칙값 2마디).
     - ``palette``: 구간 종류별 계획 색. 콘솔에 보내지 않는 표시용 값이다.
-    - ``chorus_energy``: 킥 진입이 없는 구간이라도 마디 에너지 평균이 이 값 이상이면 후렴으로
-      본다(0~1). 마디 지도에 구간 이름이 없어서 정한 어림값이라 감독이 고친다.
+    - ``chorus_energy_cut``: 킥 진입이 없는 구간의 후렴 기준(0~1). 곡 안에서 가장 조용한 구간을
+      0, 가장 큰 구간을 1로 둔 그 구간의 위치가 이 값보다 크면 후렴으로 본다(같으면 벌스).
+      절대 에너지 값으로 가르면 전 구간이 크게 나오는 곡에서 벌스가 사라져서 곡 안 상대 위치로
+      본다. 마디 지도에 구간 이름이 없어서 정한 어림값이라 감독이 고친다.
     """
 
     slow_song: bool = False
@@ -88,7 +90,7 @@ class ArrangementPolicy:
     downbeat_trigger: int = 1
     motion_period_bars: int = 2
     palette: ArrangementPalette = field(default_factory=ArrangementPalette)
-    chorus_energy: float = 0.6
+    chorus_energy_cut: float = 0.5
 
     def __post_init__(self) -> None:
         if self.window_bars < 1:
@@ -101,5 +103,5 @@ class ArrangementPolicy:
             raise ValueError("트리거 박은 1 이상이어야 합니다.")
         if self.motion_period_bars < 1:
             raise ValueError("움직임 주기는 1마디 이상이어야 합니다.")
-        if isinstance(self.chorus_energy, bool) or not 0 <= self.chorus_energy <= 1:
-            raise ValueError("후렴 에너지 기준은 0~1 사이여야 합니다.")
+        if isinstance(self.chorus_energy_cut, bool) or not 0 <= self.chorus_energy_cut <= 1:
+            raise ValueError("후렴 에너지 기준(곡 안 상대 위치)은 0~1 사이여야 합니다.")
