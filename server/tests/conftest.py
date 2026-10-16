@@ -250,13 +250,3 @@ def fire_status_listeners(deps) -> int:
     for notify in listeners:
         notify()
     return len(listeners)
-
-
-@pytest.fixture(autouse=True)
-def _open_beat_grid_write_lock(request, monkeypatch):
-    """Autouse — 「콘솔에 반영」의 쓰기 잠김 거절(카드 apply-safety, D16)은 진행표(progress.md)
-    9항목이 전부 「통과」일 때만 열린다. 옛 반영 시험들은 칸 단위 M1 차단을 재려는 것이라
-    잠금 판정만 연다. 잠금 자체를 재는 모듈은 모듈 전역 ``REAL_WRITE_LOCK = True`` 로 끈다."""
-    if getattr(request.module, "REAL_WRITE_LOCK", False):
-        return
-    monkeypatch.setattr("server.web.session.beat_grid_write_lock_reason", lambda _results: None)

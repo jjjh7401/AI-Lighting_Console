@@ -381,6 +381,17 @@ export function isWriteLocked(probes: readonly { status: ProbeStatus }[]): boole
   return probes.some((probe) => !probe.status.startsWith("통과"));
 }
 
+/** 카드 apply-safety(D16) — 「쓰기 잠김」은 반영 전체를 막는 뜻이 아니다. 반영은 진행하고
+ * 미통과 프로브에 기대는 칸만 보내지 않는다. 배지는 그 뜻 그대로 보인다. 미통과가 없으면 `null`. */
+export function writeHoldLabel(
+  probes: readonly { status: ProbeStatus }[],
+  heldCellCount: number | null | undefined,
+): string | null {
+  const failing = probes.filter((probe) => !probe.status.startsWith("통과")).length;
+  if (failing === 0) return null;
+  return `일부 칸 보류 (프로브 ${failing}개 미통과, 칸 ${heldCellCount ?? 0}개)`;
+}
+
 /** t537 — 프로브 상태(progress.md 판정 칸의 자유 문자열) → CSS 클래스
  * 접미사. "통과"로 시작하면 pass, 정확히 "미확인"이면 pending(판정 근거
  * 없음), 그 밖(부분/움직임 없음/문법 불명 등 — 아직 쓰기를 열 수 없는
@@ -2186,7 +2197,7 @@ export function BeatGrid({
     () => buildProbeStatusTable(probeResults ?? grid?.probe_results),
     [probeResults, grid],
   );
-  const writeLocked = isWriteLocked(probes);
+  const writeHoldText = writeHoldLabel(probes, grid?.m1_held_cell_count);
   // 카드 t559(M9 step 1·8) — 곡 전체 지도 확대 단계 + 상단 바 마디 이동.
   // `barCursor`는 ◀▶·지도 클릭으로 고른 마디다 — 그 뒤 칸을 새로 누르면
   // (`selected`가 바뀌면) 저절로 무효가 되어 칸 선택이 다시 기준이 된다.
@@ -2574,9 +2585,12 @@ export function BeatGrid({
             </span>
           )}
         </span>
-        {writeLocked && (
-          <span className="beat-grid-locked" title="M1 프로브 9항목 중 미확인 항목이 있어 쓰기가 잠겨 있습니다">
-            ⚠ 쓰기 잠김
+        {writeHoldText && (
+          <span
+            className="beat-grid-locked"
+            title="M1 프로브 9항목 중 통과하지 않은 항목에 기대는 칸만 콘솔에 보내지 않습니다. 나머지 칸은 반영됩니다"
+          >
+            ⚠ {writeHoldText}
           </span>
         )}
       </div>

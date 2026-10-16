@@ -102,9 +102,11 @@ from server.design.beat_grid_effect_presets import (
     record_effect_preset_recipe,
 )
 from server.design.beat_grid_emit import (
+    M1_GATE_MARK,
     beat_grid_sequence_label,
     beat_grid_timecode_label,
     emit_beat_grid_write_bundle,
+    m1_held_cells,
 )
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import (
@@ -132,7 +134,6 @@ from server.design.beat_grid_presets import (
     resolve_preset_name,
 )
 from server.design.beat_grid_probes import (
-    beat_grid_write_lock_reason,
     default_progress_md_path,
     read_m1_probe_results_from_path,
 )
@@ -4186,6 +4187,7 @@ def derive_beat_grid_fields(
     # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
     # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
     updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
+    updated_grid["m1_held_cell_count"] = len(m1_held_cells(grid))
     updated_grid["movement_vocabulary"] = movement_vocabulary(grid.get("probe_results") or {})
     # 카드 t603 — 「＋ 새 프리셋 만들기」 창이 고를 효과 틀 목록(출하 라이브러리, 콘솔 0).
     updated_grid["fx_templates"] = effect_template_catalog()
@@ -11422,14 +11424,6 @@ class ChatSession:
             # ``probe_results`` 는 마지막으로 격자를 서빙·저장한 때의 판정이라, 그 뒤에 표가
             # 「통과」로 바뀌어도 낡은 「미확인」이 게이트를 막았다.
             probe_results = read_m1_probe_results_from_path(default_progress_md_path())
-            # 카드 apply-safety(D16) — 화면이 「⚠ 쓰기 잠김」을 띄우는 조건(9항목 중 하나라도
-            # 「통과」로 시작하지 않음)과 같은 판정이다. 잠겨 있으면 일부 칸만 나가지 않고
-            # 반영 자체를 하지 않는다 — 콘솔 접촉 0건.
-            lock_reason = beat_grid_write_lock_reason(probe_results)
-            if lock_reason is not None:
-                return self._beat_grid_send_status(
-                    last_action="apply", ok=False, reason=lock_reason
-                )
             # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
             # 넘겨 기록된 마디는 같은 번호를 쓰게 한다(막힌 칸이 있어도 뒤 칸
             # 번호가 당겨지지 않는다). JSON 키는 문자열이라 정수로 되돌린다.
@@ -11559,6 +11553,13 @@ class ChatSession:
                 for cue in track.cues
                 for reason in cue.skipped_fields
             ]
+            # 카드 apply-safety(D16) — M1 프로브 미통과로 보류된 칸 수를 카드에 적는다(보류 칸은
+            # 줄이 0개다 — 반영은 나머지 칸으로 진행한다).
+            held_by_probe = [cell for cell in result.blocked_cells if M1_GATE_MARK in str(cell[2])]
+            if held_by_probe:
+                risk_reason += (
+                    f" · M1 프로브 미통과로 보류된 칸 {len(held_by_probe)}개(콘솔에 보내지 않음)"
+                )
             if self._beat_grid_gate_backup_lines():
                 risk_reason += (
                     f" · 실행 직전 안전 백업 {BACKUP_COMMAND} 1회가 먼저 나갑니다"

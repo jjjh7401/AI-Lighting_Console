@@ -6,9 +6,6 @@ D17 승인 카드 첫 줄에 대상 타임코드가 없음. 콘솔 접촉 0건(`
 
 from __future__ import annotations
 
-import pytest
-
-from server.design.beat_grid_probes import beat_grid_write_lock_reason
 from server.web.session import SongTimelineStore
 
 from .test_beat_grid_reapply_t572 import (
@@ -149,45 +146,60 @@ def _progress(tmp_path, statuses: dict[int, str]):
     return path
 
 
-@pytest.fixture
-def real_lock(monkeypatch):
-    monkeypatch.setattr(
-        "server.web.session.beat_grid_write_lock_reason", beat_grid_write_lock_reason
-    )
+def _two_cue_timeline() -> dict:
+    """1마디는 ①만 필요한 위치 칸(통과), 2마디는 ⑨ 의존 움직임 칸(⑨ 미통과 -> 보류)."""
+    timeline = _timeline()
+    evidence = {"approval": {"by": "supervisor", "date": "2026-10-16", "source": "t"}}
+    timeline["beat_grid"]["tracks"][0]["cues"] = [
+        {"bar": 1, "position_preset_no": "1.1", "evidence": evidence},
+        {
+            "bar": 2,
+            "position_preset_no": "1.1",
+            "app_movement": {"shape": "circle", "axes": ["pan"]},
+            "evidence": evidence,
+        },
+    ]
+    return timeline
 
 
-def test_d16_pure_reason_matches_the_ui_rule() -> None:
-    assert beat_grid_write_lock_reason({i: "통과" for i in range(1, 10)}) is None
-    assert beat_grid_write_lock_reason({i: "통과(구조)" for i in range(1, 10)}) is None
-    reason = beat_grid_write_lock_reason({**{i: "통과" for i in range(1, 10)}, 5: "움직임 없음"})
-    assert reason is not None and "쓰기 잠김" in reason and "5번" in reason
-    assert "9번" in (beat_grid_write_lock_reason({}) or "")  # 누락 = 미확인
-
-
-def test_d16_apply_refuses_without_touching_the_console_while_locked(
-    tmp_path, monkeypatch, real_lock
-) -> None:
+def test_d16_apply_proceeds_and_only_probe_dependent_cells_are_held(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         "server.web.session.default_progress_md_path",
-        lambda: _progress(tmp_path, {4: "미확인", 5: "부분"}),
+        lambda: _progress(tmp_path, {9: "미확인", 5: "움직임 없음"}),
     )
-    session, console, approval = _session(tmp_path, _empty_pool_state_tree(), {})
+    store = SongTimelineStore()
+    store.latest = _two_cue_timeline()
+    session, console, approval, _audit = _new_session(
+        tmp_path, store=store, state_tree=_empty_pool_state_tree()
+    )
 
     event = session.beat_grid_apply()
 
-    assert event["ok"] is False
-    assert "쓰기 잠김" in event["reason"] and "4번" in event["reason"]
-    assert console.executed == [] and approval.requests == []
+    assert event["ok"] is True, event
+    assert console.executed  # 전체 거절이 아니다
+    blocked = event["blocked_cells"]
+    assert len(blocked) == 1 and blocked[0]["bar"] == 2 and blocked[0]["group_name"] == "BACK"
+    assert any("M1 프로브 미통과로 보류된 칸 1개" in r for r in _reasons(approval))
 
 
-def test_d16_apply_goes_through_when_every_probe_passed(tmp_path, monkeypatch, real_lock) -> None:
+def test_d16_no_held_line_when_every_probe_passed(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
         "server.web.session.default_progress_md_path", lambda: _progress(tmp_path, {})
     )
-    session, console, _approval = _session(tmp_path, _empty_pool_state_tree(), {})
+    session, _console, approval = _session(tmp_path, _empty_pool_state_tree(), {})
 
     assert session.beat_grid_apply()["ok"] is True
-    assert console.executed
+    assert not any("보류된 칸" in r for r in _reasons(approval))
+
+
+def test_d16_grid_view_counts_held_cells_for_the_badge() -> None:
+    from server.design.beat_grid_emit import m1_held_cells
+
+    grid = _two_cue_timeline()["beat_grid"]
+    grid["probe_results"] = {i: "통과" for i in range(1, 10)} | {9: "미확인"}
+    assert m1_held_cells(grid) == [("BACK", 2)]
+    grid["probe_results"] = {i: "통과" for i in range(1, 10)}
+    assert m1_held_cells(grid) == []
 
 
 # --- D17 ----------------------------------------------------------------------
