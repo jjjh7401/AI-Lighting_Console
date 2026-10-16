@@ -55,23 +55,57 @@ export function isPlaybackSpaceToggleKey(event: {
   return event.code === "Space" || event.key === " " || event.key === "Spacebar";
 }
 
-/** 재생 중 플레이헤드가 보이는 범위를 벗어나면 스크롤할 새 `scrollLeft`
- * (px). 이미 보이면 `null`(스크롤 안 함) — mockup `keepVisible()`의
- * "범위 밖이면 1/3 지점으로" 재구현(AC-LDBEAT-024(h)). `visibleWidth`가
- * 아직 측정 전(0 이하)이면 `null`. */
-export function autoScrollTargetForPlayhead(
-  playheadBar: number,
+/** 음원 시계 입력 — `HTMLAudioElement` 에서 필요한 세 값만 받는다(시험에서 흉내 내기 쉽게).
+ * `error` 는 `MediaError | null` 이다. */
+export interface AudioClockSource {
+  paused: boolean;
+  currentTime: number;
+  error: object | null;
+}
+
+/** 음원 시계 — 음원이 실제로 도는 동안은 그 `currentTime`(초)이 재생 위치다.
+ * 음원이 없거나, 멈췄거나, 오류가 났으면 `null`: 호출자는 성능시계로 이어 간다
+ * (음원 없이 시계만으로 가는 경로). */
+export function audioClockSeconds(audio: AudioClockSource | null): number | null {
+  if (audio === null || audio.paused || audio.error !== null) return null;
+  if (!Number.isFinite(audio.currentTime)) return null;
+  return Math.max(0, audio.currentTime);
+}
+
+/** 재생 위치(초) → 가로 픽셀. 격자 칸과 같은 식(마디 = 초 ÷ 박 길이, 픽셀 = 마디 × pxPerBar)을
+ * 쓰므로 칸 위에 정확히 놓인다. 마디 단위로 끊기지 않고 소수 픽셀로 흐른다.
+ * 박 길이를 모르면 `null`(지어내지 않음). */
+export function playheadPixelX(
+  seconds: number,
+  secondsPerBar: number | null | undefined,
   pxPerBar: number,
-  rangeStart: number,
-  scrollLeft: number,
-  visibleWidth: number,
 ): number | null {
-  if (visibleWidth <= 0) return null;
-  const x = (playheadBar - rangeStart) * pxPerBar;
-  if (x < scrollLeft || x > scrollLeft + visibleWidth - pxPerBar * 2) {
-    return Math.max(0, x - visibleWidth / 3);
-  }
-  return null;
+  if (!secondsPerBar || !Number.isFinite(secondsPerBar)) return null;
+  return (seconds / secondsPerBar) * pxPerBar;
+}
+
+/** 재생선 따라가기의 새 `scrollLeft`(px) — mockup `keepVisible()`의 "1/3 지점" 규칙을
+ * 연속으로 돌린다(AC-LDBEAT-024(h)). 재생선이 보이는 폭의 1/3 을 넘으면 그 자리에 머물도록
+ * 스크롤 목표를 준다(매 프레임 호출하면 격자가 재생선을 따라 흐른다). 재생선이 1/3 안쪽이면
+ * `null`(움직이지 않음). 보이는 칸 밖이면(크게 건너뛰었거나 뒤로 되감음) 1/3 자리로 바로 옮긴다.
+ * 보이는 폭이 0 이하(아직 측정 전)면 `null`. 목표는 0 밑으로 내려가지 않는다. */
+export function followScrollTarget(playheadX: number, scrollLeft: number, visibleWidth: number): number | null {
+  if (!(visibleWidth > 0)) return null;
+  const anchor = visibleWidth / 3;
+  const offset = playheadX - scrollLeft;
+  const outside = offset < 0 || offset > visibleWidth;
+  if (!outside && offset < anchor) return null;
+  return Math.max(0, playheadX - anchor);
+}
+
+/** 사용자가 재생 중 직접 스크롤하면 따라가기를 잠시 멈춘다. 마지막 직접 스크롤 뒤 이만큼(ms)
+ * 조용하면 다시 따라간다. 멈춘 동안에도 ▶·⏮·지도 클릭은 곧바로 다시 따라가게 한다. */
+export const FOLLOW_RESUME_QUIET_MS = 3000;
+
+/** 멈춤이 끝났는가 — 직접 스크롤 기록이 없거나(`null`) 마지막 직접 스크롤 뒤 조용한 시간이
+ * `FOLLOW_RESUME_QUIET_MS` 이상이면 참. */
+export function followPauseEnded(lastManualScrollMs: number | null, nowMs: number): boolean {
+  return lastManualScrollMs === null || nowMs - lastManualScrollMs >= FOLLOW_RESUME_QUIET_MS;
 }
 
 /** REQ-LDBEAT-024(f) — 재생 루프 한 프레임의 화면 갱신을 감싼다. `update`가

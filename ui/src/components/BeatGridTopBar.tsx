@@ -93,6 +93,8 @@ export interface BeatGridTopBarPlaybackProps {
   onSeek: (deltaSeconds: number) => void;
   /** `audioAutoConnect.audioButtonLabel`의 결과 그대로("✓ <파일명>" 등). */
   audioButtonLabel: string;
+  /** 1450px 이상에서 보이는 짧은 ♪ 문구(`audioAutoConnect.audioButtonShortLabel`). 없으면 긴 문구를 그대로 쓴다. */
+  audioButtonShortLabel?: string;
   onSelectAudioFile: (file: File | null) => void;
   /** AC-LDBEAT-024(c) — 연결 실패 이유. 없으면 칸 자체가 없다. */
   audioFailureReason?: string | null;
@@ -308,7 +310,9 @@ export function BeatGridTopBar({
               className="tbtn beat-grid-audio-label"
               title={`${playback.audioButtonLabel} — 음원 파일을 불러오면 음악에 맞춰 재생`}
             >
-              ♪ {playback.audioButtonLabel}
+              {/* 1450px 이상에서는 「♪ ✓」만 보이고(lbl-short), 파일명은 title 로 옮긴다 — 상단 바 한 줄 유지. */}
+              <span className="lbl-full">♪ {playback.audioButtonLabel}</span>
+              <span className="lbl-short">♪ {playback.audioButtonShortLabel ?? playback.audioButtonLabel}</span>
               <input
                 type="file"
                 accept="audio/*"

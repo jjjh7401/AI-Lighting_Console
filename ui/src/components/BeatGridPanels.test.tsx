@@ -220,6 +220,28 @@ describe("AC-LDBEAT-020(c) — 콘솔 명령 버튼", () => {
   });
 });
 
+describe("재생 — 음원 시계·재생선 연속 이동·따라가기 배선(BeatGrid.tsx)", () => {
+  it("재생 틱은 음원 시계를 먼저 읽고, 음원이 없으면 성능시계로 이어 간다", () => {
+    expect(SOURCE).toMatch(/const audioSeconds = audioClockSeconds\(audioRef\.current\)/);
+    expect(SOURCE).toMatch(/const next = audioSeconds \?\? elapsedPlaybackSeconds\(/);
+  });
+  it("재생선은 마디가 아니라 초에서 구한 소수 픽셀로 놓이고 한 마디 폭을 덮는다", () => {
+    expect(SOURCE).toMatch(/const playheadX = playheadPixelX\(playbackSeconds, secondsPerBar, pxPerBar\)/);
+    expect(SOURCE).toMatch(/style=\{\{ left: playheadX, width: pxPerBar \}\}/);
+  });
+  it("따라가기는 매 프레임 연속 목표로 가고, 직접 스크롤 신호(휠·터치·스크롤바)에 멈춘다", () => {
+    expect(SOURCE).toMatch(/const target = followScrollTarget\(x, el\.scrollLeft, ctx\.visibleWidth\)/);
+    expect(SOURCE).toMatch(/onWheel=\{pauseFollowForManualScroll\}/);
+    expect(SOURCE).toMatch(/onTouchMove=\{pauseFollowForManualScroll\}/);
+    expect(SOURCE).toMatch(/if \(event\.target === event\.currentTarget\) pauseFollowForManualScroll\(\)/);
+  });
+  it("▶·⏮·지도 클릭은 따라가기를 곧바로 다시 켠다", () => {
+    expect(SOURCE).toMatch(/setPlaying\(true\);\s*resumeFollow\(\);/);
+    expect(SOURCE).toMatch(/const rewindToStart = \(\) => \{\s*setPlaybackSeconds\(0\);\s*resumeFollow\(\);/);
+    expect(SOURCE).toMatch(/const jumpToBar = \(bar: number\) => \{[\s\S]*?resumeFollow\(\);/);
+  });
+});
+
 describe("곡 첫 칸 페이드 들어옴 이음매 — 앞 칸 없는 조인트(LOVE ATTACK 7마디 워시 2마디 번짐 꼴)", () => {
   const joint = (next: BeatGridCue, prev: BeatGridCue | null = null) =>
     renderToStaticMarkup(

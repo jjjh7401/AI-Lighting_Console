@@ -231,6 +231,13 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
+  it("음원이 연결되면 긴 문구와 짧은 ✓ 를 둘 다 두고(폭으로 고른다), 파일명은 title 에 남는다", () => {
+    const html = renderTopBar({ playback: { ...playback, audioButtonShortLabel: "✓" } });
+    expect(html).toContain('<span class="lbl-full">♪ ✓ LOVE ATTACK.mp3</span>');
+    expect(html).toContain('<span class="lbl-short">♪ ✓</span>');
+    expect(html).toMatch(/title="✓ LOVE ATTACK\.mp3 — 음원 파일을 불러오면/);
+  });
+
   it("재생 중이면 ▶ 대신 ❚❚ 일시정지를 보인다", () => {
     const html = renderTopBar({ playback: { ...playback, playing: true } });
     expect(html).toContain("❚❚ 일시정지");
