@@ -133,6 +133,7 @@ from server.design.beat_grid_presets import (
 )
 from server.design.beat_grid_send import (
     BeatGridCellKey,
+    _owned_sequence_names,
     apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
     beat_grid_reapply_summary,
@@ -140,6 +141,7 @@ from server.design.beat_grid_send import (
     dimmer_unread_notices,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
+    timecode_overwrite_note,
     unsent_beat_grid_cells,
     verify_owned_sequences,
 )
@@ -10989,8 +10991,37 @@ class ChatSession:
             last_action="edit", ok=True, reason=f"타임코드 {timecode_number}번을 적었습니다. {note}"
         )
 
+    def _beat_grid_timecode_track_targets(self, wanted: int) -> list[object]:
+        """``<타임코드 풀>/<번호>/1`` 의 Track 들이 가리키는 시퀀스(TARGET) — 읽기만 한다.
+        하나라도 못 읽으면 빈 목록(호출자가 거절로 처리)."""
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        base = f"{pool}/{wanted}/1"
+        port = self._rig_capability_port
+        try:
+            node = port.query_state(base)
+            children = [c for c in (node.get("children") or ()) if isinstance(c, dict)]
+            targets: list[object] = []
+            for child in children:
+                if child.get("class") != "Track":
+                    continue
+                reads = port.query_properties(f"{base}/{child.get('i')}", ("TARGET",))
+                value = None
+                for read in reads.get("reads") or ():
+                    if isinstance(read, Mapping) and read.get("ok") and read.get("n") == "TARGET":
+                        value = read.get("v")
+                if value is None:
+                    return []
+                targets.append(value)
+        except Exception:  # noqa: BLE001 - 못 읽으면 거절 쪽으로
+            return []
+        return targets
+
     def _resolve_beat_grid_timecode_number(
-        self, wanted: object, *, recorded_name: str | None = None
+        self,
+        wanted: object,
+        *,
+        recorded_name: str | None = None,
+        overwrite_notes: list[str] | None = None,
     ) -> tuple[int | None, str | None]:
         """director 가 격자에 적어 둔 타임코드 번호 하나(``timeline
         ["timecode_number"]``)의 점유 여부 — ``timecode_slot_verdict``의
@@ -11014,6 +11045,19 @@ class ChatSession:
                     f"Timecode {wanted}의 콘솔 이름('{occupant}')이 기록된 이름"
                     f"('{recorded_name}')과 달라 재적용을 거절합니다."
                 )
+            if overwrite_notes is not None and occupant.startswith("LDBEAT Timecode"):
+                try:
+                    names = _owned_sequence_names(self._beat_grid_sequences_section())
+                except Exception:  # noqa: BLE001
+                    names = {}
+                note, why = timecode_overwrite_note(
+                    wanted, occupant, self._beat_grid_timecode_track_targets(wanted), names
+                )
+                if note is not None:
+                    overwrite_notes.append(note)
+                    return wanted, None
+                if why is not None:
+                    return None, why
             return None, f"Timecode {wanted}은 이미 '{occupant}'이(가) 쓰고 있어 반영을 거절합니다."
         if not axes.timecode_go:
             return None, (
@@ -11166,8 +11210,11 @@ class ChatSession:
             sequence_numbers.update(fresh_sequence_numbers)
 
             apply_stage("ownership_pick")
+            timecode_overwrite_notes: list[str] = []
             timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
-                timeline.get("timecode_number"), recorded_name=recorded_timecode_name
+                timeline.get("timecode_number"),
+                recorded_name=recorded_timecode_name,
+                overwrite_notes=timecode_overwrite_notes,
             )
             if timecode_reason is not None:
                 return self._beat_grid_send_status(
@@ -11272,6 +11319,8 @@ class ChatSession:
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
             # t563 그대로다.
             risk_reason = "박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))"
+            for overwrite_note in timecode_overwrite_notes:
+                risk_reason += f" · {overwrite_note}"
             if preserved_cells:
                 listed = ", ".join(
                     f"{name} {bar}마디({reason})" for name, bar, reason in preserved_cells

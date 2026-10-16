@@ -23,6 +23,7 @@ section``·``design_rig``·``bar_map``을 호출자가 이미 읽어 넘긴다).
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
@@ -40,6 +41,7 @@ __all__ = [
     "dimmer_unread_notices",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
+    "timecode_overwrite_note",
     "resolve_group_dimmer_attributes",
     "unsent_beat_grid_cells",
     "verify_owned_sequences",
@@ -414,6 +416,54 @@ def _owned_sequence_names(sequences_section: Mapping[str, object]) -> dict[int, 
         name = entry.get("name")
         names[number] = name if isinstance(name, str) else None
     return names
+
+
+#: 앱이 만든 타임코드·시퀀스 이름 접두사 — ``beat_grid_timecode_label`` /
+#: ``beat_grid_sequence_label`` 이 콘솔에 적는 이름의 앞부분이다.
+APP_TIMECODE_PREFIX = "LDBEAT Timecode"
+APP_SEQUENCE_PREFIX = "LDBEAT "
+
+_TRAILING_NUMBER = re.compile(r"(\d+)\s*$")
+
+
+def timecode_overwrite_note(
+    wanted: int,
+    occupant: str,
+    track_targets: Sequence[object],
+    sequence_names: Mapping[int, str | None],
+) -> tuple[str | None, str | None]:
+    """앱이 만든 타임코드를 같은 번호로 다시 반영해도 되는지(덮어쓰기 허용 규칙).
+
+    ``(승인 카드 위험 줄, None)`` 이면 허용, ``(None, 사유)`` 이면 이전처럼 거절.
+    허용 조건은 둘이 함께여야 한다 — 타임코드 이름이 ``LDBEAT Timecode`` 로
+    시작하고, 그 트랙이 가리키는 시퀀스가 **전부** 앱 소유(``LDBEAT `` 접두)이며
+    하나 이상 있다. 트랙 목표를 못 읽거나 해석하지 못하면 거절한다(읽지 못한 것을
+    앱 소유로 추정하지 않는다)."""
+    if not occupant.startswith(APP_TIMECODE_PREFIX):
+        return None, None
+    if not track_targets:
+        return None, (
+            f"Timecode {wanted}의 트랙이 가리키는 시퀀스를 확인하지 못해 덮어쓰기를 거절합니다."
+        )
+    for target in track_targets:
+        number: int | None = None
+        name: str | None = None
+        if isinstance(target, int) and not isinstance(target, bool):
+            number = target
+        elif isinstance(target, str):
+            match = _TRAILING_NUMBER.search(target)
+            if match is not None and int(match.group(1)) in sequence_names:
+                number = int(match.group(1))
+            else:
+                name = target.strip()
+        if number is not None:
+            name = sequence_names.get(number)
+        if not isinstance(name, str) or not name.startswith(APP_SEQUENCE_PREFIX):
+            return None, (
+                f"Timecode {wanted}이 앱 소유가 아닌 시퀀스({target!r})를 가리키고 있어 "
+                "반영을 거절합니다."
+            )
+    return f"기존 {occupant} 을 덮어씁니다", None
 
 
 def verify_owned_sequences(
