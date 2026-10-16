@@ -115,6 +115,7 @@ class PlanPreset:
     #: 칸 하나의 왼쪽·오른쪽 따로 색 후보면 그 쪽(``"left"`` | ``"right"``), 아니면 ``None``.
     #: 값이 있으면 이 줄은 저장 줄도 칸 번호 참조도 만들지 않는다(이름은 감독이 정한다).
     split_side: str | None = None
+    rgb: tuple[float, ...] | None = None  # 계획 RGB(0~100%), 화면이 쓴다
 
 
 @dataclass(frozen=True)
@@ -450,6 +451,7 @@ def build_preset_plan(
                 ready=False,
                 hold="; ".join(holds),
                 deferred=True,
+                rgb=tuple(rgb),
             )
         )
 

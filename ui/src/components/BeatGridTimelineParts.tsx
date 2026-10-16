@@ -38,7 +38,8 @@ export function BeatGridJoint({
   target,
   onMoveTrigger,
 }: {
-  prev: BeatGridCue;
+  /** 앞 칸 — 곡(트랙)의 첫 칸이 페이드로 들어오는 이음매면 `null`(앞은 어둠). */
+  prev: BeatGridCue | null;
   cue: BeatGridCue;
   /** 다음 막대의 화면 폭(번짐이 막대를 넘지 않게). */
   nextSegmentWidth: number;
@@ -124,7 +125,8 @@ export function BeatGridJoint({
     }
     onOpen();
   };
-  const bleedFrom = prevFill ?? (prev.label.trim() === "—" ? "#25252c" : "#d8d8d8");
+  // 앞 칸이 없으면(곡의 첫 칸) 어둠에서 번진다 — 「꺼짐」 칸과 같은 어두운 색.
+  const bleedFrom = prevFill ?? (prev === null || prev.label.trim() === "—" ? "#25252c" : "#d8d8d8");
   return (
     <>
       {fadeBars > 0 && (

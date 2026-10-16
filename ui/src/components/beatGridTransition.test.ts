@@ -207,6 +207,14 @@ describe("jointMarker — 이음매 표시(M · ! · ◢)", () => {
   it("아무것도 없으면 빈 이음매", () => {
     expect(jointMarker(cue(0), cue(4), null).glyph).toBe("");
   });
+  it("곡의 첫 칸(앞 칸 없음)이 페이드로 들어오면 ◢ — MIB·경고는 앞 칸이 있어야 판정한다", () => {
+    const m = jointMarker(null, cue(7, { entry: { fade_bars: 2, mib_mode: null } }), null);
+    expect(m.glyph).toBe("◢");
+    expect(m.classes).toEqual(["is-fade"]);
+  });
+  it("곡의 첫 칸에 페이드가 없으면 빈 이음매", () => {
+    expect(jointMarker(null, cue(7), null).glyph).toBe("");
+  });
   it("카드 t567 — ★ 마디의 켜진 채 위치 끊김은 ! 가 아니다", () => {
     const lit = cue(0, { position_preset_no: "2.1" });
     const m = jointMarker(lit, cue(4, { position_preset_no: "2.2", entry: { fade_bars: 0, mib_mode: null } }), null, null, null, [4]);

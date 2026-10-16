@@ -4835,6 +4835,17 @@ body {
   text-shadow: none;
 }
 
+/* 계획 색(리드 결정 2026-10-16) — 콘솔에 아직 없는 색. 색은 칠하되 테두리를 점선으로 해 콘솔 색과 구분한다. */
+.beat-grid-cue.is-color-planned {
+  border-style: dashed;
+  border-color: #111;
+}
+
+/* 계획 이름(디머·위치 프리셋 번호가 없을 때) — 둘째 줄에서 흐리게 보인다. */
+.beat-grid-cue-meta .is-planned-name {
+  opacity: 0.55;
+}
+
 .beat-grid-cue.is-selected {
   border-color: var(--accent);
   background: #2d3a52;

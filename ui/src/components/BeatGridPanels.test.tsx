@@ -220,6 +220,39 @@ describe("AC-LDBEAT-020(c) — 콘솔 명령 버튼", () => {
   });
 });
 
+describe("곡 첫 칸 페이드 들어옴 이음매 — 앞 칸 없는 조인트(LOVE ATTACK 7마디 워시 2마디 번짐 꼴)", () => {
+  const joint = (next: BeatGridCue, prev: BeatGridCue | null = null) =>
+    renderToStaticMarkup(
+      <BeatGridJoint
+        prev={prev}
+        cue={next}
+        nextSegmentWidth={600}
+        prevFill={null}
+        sectionStartBars={null}
+        secondsPerBar={2.14}
+        isOn={false}
+        onOpen={() => undefined}
+        pxPerBar={300}
+        beatsPerBar={4}
+      />,
+    );
+  it("첫 칸 페이드는 ◢ 와 어둠에서 시작하는 번짐(2마디 = 600px)으로 그려진다", () => {
+    const html = joint(cue(7, { label: "라벤더 워시 40%", entry: { fade_bars: 2, mib_mode: null } }));
+    expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
+    expect(html).toMatch(/beat-grid-fade-bleed[^>]*width:600px/);
+    expect(html).toContain("linear-gradient(90deg, #25252c, transparent)");
+  });
+  it("MIB 칸(어둠 칸 뒤에서 위치가 바뀜)은 보라 M 이음매다", () => {
+    const dark = cue(4, { label: "—", position_preset_no: "2.1" });
+    const html = joint(cue(8, { position_preset_no: "2.2" }), dark);
+    expect(html).toMatch(/class="beat-grid-joint is-mib"[^>]*>M</);
+  });
+  it("BeatGrid 는 첫 칸에 페이드가 있을 때만 앞 칸 없는 이음매를 그린다", () => {
+    expect(SOURCE).toMatch(/<BeatGridJoint\s+prev=\{null\}\s+pxPerBar=/);
+    expect(SOURCE).toMatch(/visibleSegments\[0\] === segments\[0\] &&\s*entryHasFade\(segments\[0\]\.cue\.entry\)/);
+  });
+});
+
 describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
   it("페이드가 있는 이음매는 ◢ 와 번짐", () => {
     const html = renderToStaticMarkup(
@@ -235,6 +268,25 @@ describe("AC-LDBEAT-020(a) — 이음매와 장면 전환 알약", () => {
       />,
     );
     expect(html).toContain("beat-grid-fade-bleed");
+    expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
+  });
+  it("1마디 페이드 이음매는 앞 칸 색이 1마디 폭으로 번진다(앞 칸 색 → 투명)", () => {
+    const html = renderToStaticMarkup(
+      <BeatGridJoint
+        prev={cue(0)}
+        cue={cue(4, { entry: { fade_bars: 1, mib_mode: null } })}
+        nextSegmentWidth={900}
+        prevFill="#f0b4c8"
+        sectionStartBars={null}
+        secondsPerBar={2.14}
+        isOn={false}
+        onOpen={() => undefined}
+        pxPerBar={300}
+        beatsPerBar={4}
+      />,
+    );
+    expect(html).toMatch(/beat-grid-fade-bleed[^>]*width:300px/);
+    expect(html).toContain("linear-gradient(90deg, #f0b4c8, transparent)");
     expect(html).toMatch(/class="beat-grid-joint is-fade"[^>]*>◢</);
   });
   it("3줄 이상 바뀌는 마디에 알약", () => {

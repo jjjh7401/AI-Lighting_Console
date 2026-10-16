@@ -14,6 +14,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_cell_split import attach_cell_split_to_cues
 from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
+from server.design.beat_grid_planned import attach_planned_marks
 
 __all__ = [
     "SECTION_KIND_COLORS",
@@ -259,6 +260,10 @@ def attach_beat_grid_ui_values(
     - ``beat_grid.tracks[i].cues[j].split.{left,right}.color_rgb`` — 칸에 ``split``(왼쪽·오른쪽 따로
       색)이 있을 때만, 쪽마다 색 이름을 푼 RGB(못 풀면 ``None``). ``split`` 이 없으면 키도 없다.
       모양이 틀린 ``split`` 은 조용히 버리지 않고 ``ValueError``(그룹·마디를 말한다)로 올린다.
+    - ``beat_grid.tracks[i].cues[j].color_rgb`` + ``color_planned`` — 곡별 계획 주석의 계획 색이고
+      칸에 콘솔 색 번호가 없을 때만(``beat_grid_planned.attach_planned_marks``).
+    - ``beat_grid.tracks[i].cues[j].planned_dimmer_name`` / ``planned_position_name`` —
+      곡별 계획 주석의 계획 이름이고 칸에 콘솔 번호가 없을 때만.
     - ``beat_grid.tracks[i].cues[j].position_preset_name`` / ``color_preset_name`` — 세션이 이미
       완전 판독해 기억한 콘솔 풀(``pool_slots``)에 그 번호의 이름이 있을 때만.
     - ``beat_grid.tracks[i].sub_info`` — ``track_sub_infos``(그룹 이름 대문자 -> 정보)에 있을 때만.
@@ -294,6 +299,8 @@ def attach_beat_grid_ui_values(
     if isinstance(grid, Mapping):
         grid = attach_color_rgb_to_cues(grid)
         grid = attach_cell_split_to_cues(grid)
+        # 계획 표시(화면 전용) — beat_grid_planned 참고.
+        grid = attach_planned_marks(grid, merged.get("song_title"))
         if pool_slots:
             grid = attach_console_preset_names(grid, pool_slots)
         merged["beat_grid"] = grid
