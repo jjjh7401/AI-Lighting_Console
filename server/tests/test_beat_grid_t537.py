@@ -64,6 +64,10 @@ class TestStructuredCueFields:
             # 카드 t543 — 역할 매칭(감독 결정 2026-10-10)으로 옮긴 워시 칸 둘.
             ("WASH-ALL", 7),
             ("WASH-ALL", 14),
+            # 리드 결정 2026-10-16(PR #752) — SCENE 색 메모(18·22마디)를 워시 칸으로 옮긴 둘.
+            # 출처 행(source_ref)은 있고 밝기는 없다(70%·밝기 배정은 감독 결정).
+            ("WASH-ALL", 18),
+            ("WASH-ALL", 22),
         }
         # 카드 t543 — FOH bar 7 「FOH 켬」은 §4 출처 행은 있지만 밝기 숫자가 없다.
         foh_on = ("FOH", 7)
@@ -92,21 +96,31 @@ class TestStructuredCueFields:
                     assert cue["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
                     continue
                 assert cue["source_ref"] is None
-        assert checked == 33  # FOH 1 + WASH-ALL 2 + 7+7+7+7+2+0
+        # 리드 결정 2026-10-16 — 워시 칸 +2(18·22). 의도한 기준 갱신.
+        assert checked == 35  # FOH 1 + WASH-ALL 4 + 7+7+7+7+2+0
 
     def test_wash_cells_carry_section_4_values(self) -> None:
         # 카드 t543 — §4 「라벤더 워시 40%(2마디 번짐)」·「워시 25% 덜어냄」.
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
         wash = next(t for t in grid["tracks"] if t["group_name"] == "WASH-ALL")
         by_bar = {c["bar"]: c for c in wash["cues"]}
+        # 리드 결정 2026-10-16 — §4 「핑크 70% 끊어 바꿈」(18)·「핑크→피치 1마디 번짐」(22)의
+        # 색 메모를 워시 칸으로 옮겼다(의도한 기준 갱신). 70%는 라벨에만 있다.
 
-        assert sorted(by_bar) == [7, 14]
+        assert sorted(by_bar) == [7, 14, 18, 22]
         assert by_bar[7]["brightness"]["value_percent"] == 40
         assert by_bar[7]["entry"]["fade_bars"] == 2
         assert by_bar[7]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:106"
         assert by_bar[14]["brightness"]["value_percent"] == 25
         assert by_bar[14]["entry"]["fade_bars"] is None
         assert by_bar[14]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:108"
+        assert by_bar[18]["label"] == "핑크 70% 끊어 바꿈 · 밝기 올림"
+        assert by_bar[18]["brightness"]["value_percent"] is None
+        assert by_bar[18]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:109"
+        assert by_bar[22]["label"] == "핑크→피치 1마디 번짐"
+        assert by_bar[22]["brightness"]["value_percent"] is None
+        assert by_bar[22]["entry"]["fade_bars"] == 1
+        assert by_bar[22]["source_ref"] == "reports/effect-arrangement-rules-20261007.md:110"
 
     def test_only_the_supervisor_approved_preset_numbers_are_filled(self) -> None:
         # REQ-LDBEAT-015(f) — §4에는 프리셋 번호가 0개다. 채워진 번호는 카드
@@ -154,16 +168,19 @@ class TestStructuredCueFields:
                 if b["mode"] == "value":
                     assert b["preset_no"] is None
 
-    def test_entry_fade_bars_is_none_except_the_wash_cell_that_states_one(self) -> None:
+    def test_entry_fade_bars_is_none_except_the_wash_cells_that_state_one(self) -> None:
         # §4의 마디 단위 페이드 힌트는 전부 SCENE 열에만 있다 — 그중 트랙으로
-        # 옮겨진 것은 WASH-ALL bar 7 「2마디 번짐」 하나뿐(카드 t543).
+        # 옮겨진 것은 WASH-ALL bar 7 「2마디 번짐」(카드 t543)과 bar 22 「1마디
+        # 번짐」(리드 결정 2026-10-16) 둘뿐이다.
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        stated = {("WASH-ALL", 7): 2, ("WASH-ALL", 22): 1}
 
         for track in grid["tracks"]:
             for cue in track["cues"]:
                 assert cue["entry"]["mib_mode"] is None
-                if (track["group_name"], cue["bar"]) == ("WASH-ALL", 7):
-                    assert cue["entry"]["fade_bars"] == 2
+                key = (track["group_name"], cue["bar"])
+                if key in stated:
+                    assert cue["entry"]["fade_bars"] == stated[key]
                     continue
                 assert cue["entry"]["fade_bars"] is None
 
@@ -251,13 +268,14 @@ class TestSceneMemos:
     """리드 추가 지시(2026-10-10) — SCENE 열 값은 역할·효과 혼성 트랙으로
     지어내지 않고 메모로 떨어진다. 겹침 검증 로직과는 독립이다."""
 
-    def test_the_four_unassigned_scene_values_stay_memos(self) -> None:
+    def test_the_two_unassigned_scene_values_stay_memos(self) -> None:
         # 카드 t543 — bar 7·14 는 FOH·WASH-ALL 트랙으로 옮겨져 메모에서 빠졌다.
+        # 리드 결정 2026-10-16 — bar 18·22 색 메모도 WASH-ALL 칸으로 옮겨져 빠졌다.
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
 
-        assert len(grid["scene_memos"]) == 4
+        assert len(grid["scene_memos"]) == 2
         bars = sorted(memo["bar"] for memo in grid["scene_memos"])
-        assert bars == [0, 11, 18, 22]
+        assert bars == [0, 11]
 
     def test_each_memo_carries_the_verbatim_section_4_text_and_source_line(self) -> None:
         grid = default_beat_grid(LOVE_ATTACK_TITLE)
@@ -352,18 +370,25 @@ class TestSceneCellAssignmentRule:
             22: [verdict()],  # 「핑크→피치」 — 부르지 않는다
         }
 
+        # 리드 결정 2026-10-16 — 색 메모(18·22)는 워시 줄이 받는 게 기본이다. 세 조건
+        # 판정은 여전히 「메모」라서, 이 두 자리는 판정 결과와 다르다는 예외로 이름을 적는다.
+        color_memo_to_wash = {18, 22}
+        assert all(v == "memo" for bar in color_memo_to_wash for v in cell_parts[bar])
+
         assert cell_parts[7] == ["track", "track"]
         assert cell_parts[14] == ["track"]
         expected_memo_bars = sorted(
-            bar for bar, parts in cell_parts.items() if all(v == "memo" for v in parts)
+            bar
+            for bar, parts in cell_parts.items()
+            if bar not in color_memo_to_wash and all(v == "memo" for v in parts)
         )
-        assert expected_memo_bars == [0, 11, 18, 22]
+        assert expected_memo_bars == [0, 11]
         assert sorted(memo["bar"] for memo in grid["scene_memos"]) == expected_memo_bars
 
         # 옮겨진 부분은 YAML 의 해당 트랙에 실제로 있다.
         by_name = {t["group_name"]: [c["bar"] for c in t["cues"]] for t in grid["tracks"]}
         assert by_name["FOH"] == [7]
-        assert by_name["WASH-ALL"] == [7, 14]
+        assert by_name["WASH-ALL"] == [7, 14, 18, 22]
 
     def test_role_match_requires_exactly_one_track_with_that_role(self) -> None:
         # 규칙 확장(감독 결정 2026-10-10) — 역할 이름을 부르는 칸은 그 역할의

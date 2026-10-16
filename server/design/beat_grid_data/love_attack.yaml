@@ -65,6 +65,17 @@ tracks:
         label: "워시 25% 덜어냄"
         brightness: {mode: value, value_percent: 25}
         source_ref: "reports/effect-arrangement-rules-20261007.md:108"
+      # 감독이 고칠 값 — 리드 결정 2026-10-16(PR #752). 색은 preset_annotations 의 PINK 가 준다.
+      # 「70%」는 라벨에만 적었다: 칸 밝기에 넣으면 디머 계획에 DIM-70 줄이 새로 생겨 감독이 정한다.
+      - bar: 18
+        label: "핑크 70% 끊어 바꿈 · 밝기 올림"
+        source_ref: "reports/effect-arrangement-rules-20261007.md:109"
+      # 감독이 고칠 값 — 리드 결정 2026-10-16(PR #752). 색은 preset_annotations 의 PITCH 가 준다.
+      # 밝기는 §4 가 정하지 않아 비워 뒀다(t555 기본 100% 를 쓸지도 감독이 정한다). 1마디 번짐은 페이드 1마디.
+      - bar: 22
+        label: "핑크→피치 1마디 번짐"
+        entry: {fade_bars: 1}
+        source_ref: "reports/effect-arrangement-rules-20261007.md:110"
   - group_name: BACK
     group_no: 4
     group_no_confirmed: true
@@ -347,16 +358,18 @@ tracks:
 # 덜어냄」은 규칙 확장(감독 결정 2026-10-10 — 칸이 층 역할을 부르고 그 역할의
 # 확인된 트랙이 정확히 하나면 그 트랙으로)으로 WASH-ALL 트랙에 옮겼다. 그래서
 # bar 7·14 메모가 빠지고 넷이 남는다.
+#
+# 리드 결정 2026-10-16(PR #752, 색 채우기) — SCENE 색 메모는 워시 줄이 받는 게 기본이다.
+# bar 18 「핑크 70% 끊어 바꿈 · 밝기 올림」과 bar 22 「22마디 핑크→피치 1마디 번짐」은
+# WASH-ALL 트랙의 새 칸으로 옮겨 메모에서 뺐다(원문은 칸 라벨에 그대로 둔다). 칸 배정 세 조건
+# 판정(classify_scene_cell_assignment)은 바꾸지 않았다 — 색 메모 예외는 시험
+# (test_beat_grid_t537.py)에 이름으로 적었다. bar 0 「BACK 차가운 실루엣 30%」와 bar 11
+# 「틴트 한 단계」는 여전히 메모다. bar 0 의 BACK 펄스 칸에는 하늘(SKY) 색만 더했다(색은
+# preset_annotations 쪽에 산다).
 scene_memos:
   - bar: 0
-    text: "배정 미정 — SCENE 원값 「BACK 차가운 실루엣 30%」"
+    text: "배정 미정(밝기 30%만) — SCENE 원값 「BACK 차가운 실루엣 30%」 · 색 하늘(SKY)은 이 마디 BACK 펄스 칸에 붙였다"
     source_ref: "reports/effect-arrangement-rules-20261007.md:104"
   - bar: 11
     text: "배정 미정 — SCENE 원값 「틴트 한 단계」"
     source_ref: "reports/effect-arrangement-rules-20261007.md:107"
-  - bar: 18
-    text: "배정 미정 — SCENE 원값 「핑크 70% 끊어 바꿈 · 밝기 올림」"
-    source_ref: "reports/effect-arrangement-rules-20261007.md:109"
-  - bar: 22
-    text: "배정 미정 — SCENE 원값 「22마디 핑크→피치 1마디 번짐」"
-    source_ref: "reports/effect-arrangement-rules-20261007.md:110"

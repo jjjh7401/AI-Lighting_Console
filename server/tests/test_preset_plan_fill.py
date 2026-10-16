@@ -96,7 +96,9 @@ class TestCardReason:
         reason = card_reason(_plan())
         assert "5마디 1박 위치 한 칸 올림" in reason
         assert "11마디 1박 새 자리" in reason
-        assert "SCENE 메모 18마디" in reason
+        assert "SCENE 메모 0마디" in reason
+        # 리드 결정 2026-10-16 — 색 메모 18·22마디는 WASH-ALL 칸으로 옮겨져 카드 사유에서 빠졌다.
+        assert "SCENE 메모 18마디" not in reason
         assert "이번 계획에서 제외" in reason
 
     def test_unconfirmed_preset_pool_is_a_supervisor_mark_not_a_silent_line(self) -> None:

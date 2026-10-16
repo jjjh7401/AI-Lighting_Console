@@ -227,7 +227,11 @@ class TestUndecidedItems:
         text = "\n".join(plan.unresolved)
         assert "5마디 1박 위치 한 칸 올림" in text
         assert "11마디 1박 새 자리" in text
-        assert "SCENE 메모 18마디" in text
+        assert "SCENE 메모 0마디" in text
+        assert "SCENE 메모 11마디" in text
+        # 리드 결정 2026-10-16 — 색 메모 18·22마디는 WASH-ALL 칸으로 옮겨져 미정 목록에서 빠졌다.
+        assert "SCENE 메모 18마디" not in text
+        assert "SCENE 메모 22마디" not in text
         assert "confirmed: false" in "\n".join(plan.supervisor_fixes)
 
     def test_kept_numbers_are_counted_and_not_planned(self) -> None:
