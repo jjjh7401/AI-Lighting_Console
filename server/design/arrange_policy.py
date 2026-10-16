@@ -9,9 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-__all__ = ["ArrangementPalette", "ArrangementPolicy"]
+__all__ = ["MOVER_POSITION_LADDER", "ArrangementPalette", "ArrangementPolicy"]
 
 _Rgb = tuple[int, int, int]
+
+#: 무빙 기본 위치 사다리 — 낮은 곳에서 높은 곳 순서. 이름은 기본 위치 10종
+#: (``server/spatial/pointing.py`` ``BASIC_POSITION_SEQUENCE``)의 이름이고, 리그에서 조준값을 그대로
+#: 읽는다(지어낸 좌표가 없다). 상대 이동(「한 칸 올림」「새 자리」)은 사다리에서 한 칸씩만 옮긴다.
+MOVER_POSITION_LADDER: tuple[str, ...] = ("Home", "Center", "Ring In", "Audience")
 
 
 def _check_rgb(name: str, rgb: object) -> None:

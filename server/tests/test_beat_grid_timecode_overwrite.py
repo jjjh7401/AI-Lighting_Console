@@ -102,3 +102,123 @@ def test_empty_timecode_behaves_as_before(tmp_path) -> None:
     event = session.beat_grid_apply()
     assert event["ok"] is True, event
     assert not any(OVERWRITE_LINE in r for i in approval.requests[0].items for r in i.risk_reasons)
+
+
+# --- TARGET 해석 폭 (SPEC-LDRHYTHM-001) -----------------------------------------
+
+_NAMES = {16: "LDBEAT BACK", 17: "LDBEAT LEAD", 6: "Foreign"}
+
+
+def test_parse_track_target_accepts_every_form() -> None:
+    from server.design.beat_grid_send import parse_track_target
+
+    cases = [
+        (16, 16),
+        ("Sequence 16", 16),
+        ("16", 16),
+        ("LDBEAT BACK", 16),
+        ("DataPool/Sequences/16", 16),
+        ("ShowData/DataPools/Default/Sequences/16", 16),
+        ("13.1.6.16", 16),
+        ({"no": 16}, 16),
+        ("Sequence 16 'LDBEAT BACK'", 16),
+    ]
+    for value, number in cases:
+        assert parse_track_target(value, _NAMES)[0] == number, value
+    assert parse_track_target(None, _NAMES) == (None, None)
+    assert parse_track_target("Foreign", _NAMES) == (6, "Foreign")
+
+
+def test_note_accepts_all_target_forms_and_rejects_foreign() -> None:
+    for value in (16, "Sequence 16", "DataPool/Sequences/16", "13.1.6.16", "LDBEAT BACK"):
+        note, why = timecode_overwrite_note(4, "LDBEAT Timecode 4", [value], _NAMES)
+        assert note is not None and why is None, value
+    note, _ = timecode_overwrite_note(4, "LDBEAT Timecode 4", ["Sequences/6"], _NAMES)
+    assert note is None
+
+
+def test_unreadable_target_falls_back_to_track_name() -> None:
+    ok = {"target": None, "track_name": "LDBEAT BACK"}
+    assert timecode_overwrite_note(4, "LDBEAT Timecode 4", [ok], _NAMES)[0] is not None
+    bad = {"target": None, "track_name": "Someone"}
+    assert timecode_overwrite_note(4, "LDBEAT Timecode 4", [bad], _NAMES)[0] is None
+    none = {"target": None, "track_name": None}
+    assert timecode_overwrite_note(4, "LDBEAT Timecode 4", [none], _NAMES)[0] is None
+
+
+def test_persisted_allocation_is_trusted_without_reading_target(tmp_path) -> None:
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "Someone Else")])
+    session, console, approval = _apply(tmp_path, tree, {})
+    store = session._timeline_store
+    store.set_beat_grid_allocation(
+        ("other", "song"),
+        {"timecode_number": TIMECODE_NUMBER, "timecode_name": f"LDBEAT Timecode {TIMECODE_NUMBER}"},
+    )
+    event = session.beat_grid_apply()
+    assert event["ok"] is True, event
+    assert any(OVERWRITE_LINE in r for i in approval.requests[0].items for r in i.risk_reasons)
+
+
+def test_path_form_target_through_session(tmp_path) -> None:
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "LDBEAT BACK")])
+    session, _console, _approval = _apply(
+        tmp_path, tree, {TARGET_PATH: "ShowData/DataPools/Default/Sequences/5"}
+    )
+    assert session.beat_grid_apply()["ok"] is True
+
+
+def test_real_console_shape_with_empty_default_track(tmp_path) -> None:
+    """실측(onPC 2.4.2): Marker + 앱 트랙 + 콘솔이 만든 빈 'Track 9'(TARGET 읽기 불가)."""
+    base = f"DataPool/Timecodes/{TIMECODE_NUMBER}/1"
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "LDBEAT BACK"), (6, "LDBEAT FOH")])
+    tree[base] = {
+        "children": [
+            {"class": "MarkerTrack", "i": 1, "name": "Marker"},
+            {"class": "Track", "i": 2, "name": "<LDBEAT FOH#3>"},
+            {"class": "Track", "i": 3, "name": "<LDBEAT BACK#3>"},
+            {"class": "Track", "i": 4, "name": "Track 9"},
+        ],
+        "node": {"childCount": 4},
+    }
+    session, _console, _approval = _apply(tmp_path, tree, {})
+    shapes = {
+        f"{base}/1": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Marker"},
+        ],
+        f"{base}/2": [
+            {"n": "TARGET", "ok": True, "t": "userdata", "v": "Sequence 6"},
+            {"n": "NAME", "ok": True, "t": "string", "v": "<LDBEAT FOH#3>"},
+        ],
+        f"{base}/3": [
+            {"n": "TARGET", "ok": True, "t": "userdata", "v": "Sequence 5"},
+            {"n": "NAME", "ok": True, "t": "string", "v": "<LDBEAT BACK#3>"},
+        ],
+        f"{base}/4": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Track 9"},
+        ],
+    }
+    session._rig_capability_port.query_properties = lambda path, names, **_k: {
+        "reads": shapes[path]
+    }
+    targets = session._beat_grid_timecode_track_targets(TIMECODE_NUMBER)
+    assert [t["target"] for t in targets] == ["Sequence 6", "Sequence 5"]
+    assert session.beat_grid_apply()["ok"] is True
+
+
+def test_unreadable_target_on_named_foreign_track_still_refused(tmp_path) -> None:
+    base = f"DataPool/Timecodes/{TIMECODE_NUMBER}/1"
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "LDBEAT BACK")])
+    tree[base] = {
+        "children": [{"class": "Track", "i": 2, "name": "Someone's Track"}],
+        "node": {"childCount": 1},
+    }
+    session, _console, _approval = _apply(tmp_path, tree, {})
+    session._rig_capability_port.query_properties = lambda path, names, **_k: {
+        "reads": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Someone's Track"},
+        ]
+    }
+    assert session.beat_grid_apply()["ok"] is False

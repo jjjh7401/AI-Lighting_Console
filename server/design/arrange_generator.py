@@ -74,7 +74,7 @@ _STATIC_ROLES = frozenset({"key", "audience", "wash"})
 
 #: 무빙 칸의 움직임 모양과 축. 「팬 웨이브」 규칙값이고 곡 전용 값이 아니다.
 _MOTION_SHAPE = "wave"
-_MOTION_AXES = ("pan",)
+_MOTION_AXES = ("Pan",)
 # 밝기·트리거·움직임 주기 같은 숫자는 ``ArrangementPolicy`` 에 든다(REQ-LDARRANGE-004).
 # 펄스·체이스의 패턴은 효과 프리셋의 몫이라 여기서는 밝기만 정한다.
 # 효과·위치·색 번호는 콘솔에서 와야 하므로 지어내지 않는다.
@@ -117,6 +117,8 @@ class _CellPlan(NamedTuple):
     kind: str
     #: 계획 색(콘솔 퍼센트 RGB). 쉬는 칸은 None 이다.
     color_rgb: tuple[int, int, int] | None = None
+    #: 계획 위치(기본 위치 이름, 예: ``Center``). 무빙의 켜는 칸에만 있다. 쉬는 칸은 None 이다.
+    position: str | None = None
 
 
 # @MX:NOTE: [AUTO] 마디 지도와 트랙 구성만 받는 순수 함수다. 파일이나 콘솔에 닿지 않는다.

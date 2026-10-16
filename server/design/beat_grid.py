@@ -42,6 +42,7 @@ from typing import Literal, NotRequired, TypedDict
 import yaml
 
 from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
+from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_probes import (
     read_m1_probe_results,
     read_m1_probe_results_from_path,
@@ -260,6 +261,8 @@ class BeatGridCue(TypedDict):
     split: NotRequired[BeatGridCellSplit]
     #: 계획 색(콘솔 퍼센트 RGB, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
     planned_color: NotRequired[list[int]]
+    #: 계획 위치(무빙 기본 위치 이름, 선택) — 콘솔에 보내지 않는다. 없으면 **키 자체가 없다**.
+    planned_position: NotRequired[str]
 
 
 class BeatGridTrack(TypedDict):
@@ -423,7 +426,7 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     if isinstance(raw_app_movement, Mapping):
         app_movement = BeatGridAppMovement(
             shape=raw_app_movement.get("shape"),  # type: ignore[typeddict-item]
-            axes=tuple(raw_app_movement.get("axes") or ()),  # type: ignore[arg-type]
+            axes=canonical_axes(raw_app_movement.get("axes") or ()),
             period_unit=raw_app_movement.get("period_unit"),  # type: ignore[typeddict-item]
             period_value=raw_app_movement.get("period_value"),  # type: ignore[typeddict-item]
             phase_spread=raw_app_movement.get("phase_spread"),  # type: ignore[typeddict-item]
@@ -489,6 +492,11 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
         )
     ):
         cue["planned_color"] = [int(channel) for channel in raw_planned]
+    # 계획 위치(무빙 기본 위치 이름) — 문자열이면 옮긴다.
+    # 콘솔 값이 아니라서 콘솔 묶음에 닿지 않는다.
+    raw_position = raw.get("planned_position")
+    if isinstance(raw_position, str) and raw_position.strip():
+        cue["planned_position"] = raw_position.strip()
     return cue
 
 
@@ -699,7 +707,7 @@ def check_app_movement_axis_conflict(cue: Mapping[str, object]) -> str | None:
     movement = cue.get("app_movement")
     if not isinstance(movement, Mapping):
         return None
-    axes = set(movement.get("axes") or ())
+    axes = set(canonical_axes(movement.get("axes") or ()))
     if not axes:
         return None
     if cue.get("effect_preset_no") is None:
@@ -760,7 +768,7 @@ def pan_only_vertical_base_warning(cue: Mapping[str, object]) -> str | None:
     movement = cue.get("app_movement")
     if not isinstance(movement, Mapping):
         return None
-    axes = set(movement.get("axes") or ())
+    axes = set(canonical_axes(movement.get("axes") or ()))
     if axes != {"Pan"}:
         return None
     if cue.get("position_preset_no") is not None:

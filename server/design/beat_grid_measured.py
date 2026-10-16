@@ -76,6 +76,16 @@ def _load_entries() -> tuple[MeasuredMovement, ...]:
 MEASURED_MOVEMENTS: tuple[MeasuredMovement, ...] = _load_entries()
 
 
+_AXIS_SPELLING = {"pan": "Pan", "tilt": "Tilt"}
+
+
+def canonical_axes(axes: Sequence[str] | frozenset[str]) -> tuple[str, ...]:
+    """축 이름 철자를 콘솔 철자(``Pan``·``Tilt``)로 맞춘다. 자동 배치 초안이 한때 소문자
+    ``pan`` 을 적었고, 그 격자는 저장돼 있다 — 철자만 다른 같은 축이 실기 기록 대조·프리셋
+    계획·송신에서 따로 취급되지 않게 한다. 모르는 이름은 그대로 둔다(지어내지 않는다)."""
+    return tuple(_AXIS_SPELLING.get(str(axis).strip().casefold(), str(axis)) for axis in axes)
+
+
 def is_movement_measured_open(
     group_no: int | None, shape: object, axes: Sequence[str] | frozenset[str]
 ) -> bool:
@@ -85,7 +95,7 @@ def is_movement_measured_open(
     (부분 적용 0건, 느슨하게 풀지 않는다)."""
     if group_no is None:
         return False
-    axes_frozen = frozenset(axes)
+    axes_frozen = frozenset(canonical_axes(axes))
     for entry in MEASURED_MOVEMENTS:
         if entry.group_no == group_no and entry.shape == shape and entry.axes == axes_frozen:
             return entry.base_condition == _OPEN_BASE_CONDITION

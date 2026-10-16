@@ -59,7 +59,7 @@ from server.design.arrange_generator import (
     _section_color,
     _voices,
 )
-from server.design.arrange_policy import ArrangementPolicy
+from server.design.arrange_policy import MOVER_POSITION_LADDER, ArrangementPolicy
 from server.design.beat_grid import BeatGridCue, BeatGridTrack
 
 __all__ = ["SegmentSection", "generate_segment_draft", "split_sections"]
@@ -79,6 +79,48 @@ _SECTION_BUILD = "build"
 
 #: 구간의 첫 마디에 블라인드(BLIND)를 두는 구간 종류. 드롭은 스트로브(STROBE)가 맡는다.
 _BLIND_SECTIONS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS})
+
+#: 구간 종류 → (위 무빙 U, 아래 무빙 D) 목표 위치(사다리 이름). 배치 규칙서 무빙 위치 행: 인트로는
+#: 둘 다 바닥 쪽에 정지, 벌스는 위 무빙을 세우고 아래 무빙은 바닥 쪽에 정지(규칙 6), 빌드·브릿지는
+#: 무대 중앙, 코러스·마지막 코러스·드롭은 두 무빙이 다른 자리에서 함께 연다(규칙 5).
+_MOVER_TARGET_OF_KIND: dict[str, tuple[str, str]] = {
+    _SECTION_INTRO: ("Home", "Home"),
+    _SECTION_VERSE: ("Center", "Home"),
+    _SECTION_BUILD: ("Center", "Center"),
+    _SECTION_BRIDGE: ("Center", "Center"),
+    _SECTION_CHORUS: ("Audience", "Ring In"),
+    _SECTION_LAST_CHORUS: ("Audience", "Ring In"),
+    _SECTION_DROP: ("Audience", "Ring In"),
+}
+#: 무빙 켜는 칸의 규칙 종류 — 이 칸에만 계획 위치를 싣는다.
+_MOVER_LIT_KINDS = frozenset({"motion", "hold"})
+
+
+def _mover_positions(
+    sections: Sequence[SegmentSection], layout: Sequence[Mapping[str, Any]]
+) -> dict[tuple[str, int], str]:
+    """무빙 줄마다 구간(시작 마디)의 계획 위치 이름을 돌려준다. 키는 (줄 이름, 구간 시작 마디).
+
+    구간의 목표를 따르되, 구간이 바뀔 때마다 사다리에서 한 칸씩만 옮긴다 — 상대 이동(「한 칸 올림」
+    「새 자리」)을 앞 칸 위치에서 한 단계 옮긴 절대 위치로 바꾼 것이다. 위치는 구간 경계에서만
+    바뀐다(규칙 2). 위 무빙은 이름이 ``-U`` 로 끝나는 줄, 나머지 무빙은 아래 무빙(D) 목표를 받는다.
+    """
+    found: dict[tuple[str, int], str] = {}
+    for track in layout:
+        if track.get("layer_role") != "mover":
+            continue
+        name = str(track["group_name"])
+        upper = name.upper().endswith("-U")
+        current: int | None = None
+        for section in sections:
+            target = _MOVER_TARGET_OF_KIND.get(section.kind)
+            if target is None:
+                continue
+            goal = MOVER_POSITION_LADDER.index(target[0] if upper else target[1])
+            current = goal if current is None else current + max(-1, min(1, goal - current))
+            found[(name, section.start_bar)] = MOVER_POSITION_LADDER[current]
+    return found
+
 
 #: 칸 라벨. 기존 생성기의 이름(「펄스」「체이스」「스트로브」「블라인드」「유지」)이 아니라 기본
 #: 격자(``beat_grid_data/love_attack.yaml``)와 배치 규칙서(``reports/effect-arrangement-rules-
@@ -177,6 +219,7 @@ def generate_segment_draft(
     sections = split_sections(bar_map)
     windows = _plan_windows(sections, layout, settings)
     big_hit_bars = _big_hit_bars(bar_map)
+    mover_at = _mover_positions(sections, layout)
 
     plans: dict[str, dict[int, _CellPlan]] = {str(track["group_name"]): {} for track in layout}
     for window in windows:
@@ -196,6 +239,8 @@ def generate_segment_draft(
                     section_color=window.color,
                     override=overrides.get((name, bar)),
                 )
+                if track.get("layer_role") == "mover" and plan.kind in _MOVER_LIT_KINDS:
+                    plan = plan._replace(position=mover_at.get((name, section.start_bar)))
                 plans[name][bar] = _in_segment_words(plan, track.get("layer_role"))
 
     # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
@@ -447,6 +492,9 @@ def _segment_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> Beat
     """칸 하나를 기존 생성기의 ``_draft_cue`` 로 만들고, 출처 표식만 이 생성기의 것으로 바꾼다."""
     cue = _draft_cue(bar, plan, settings)
     cue["source_ref"] = f"{SOURCE}:{plan.kind}"
+    if plan.position is not None:
+        # 계획 위치는 콘솔 값이 아니라 계획 값이다 — 위치 번호는 승인 뒤 계획 경로가 붙인다.
+        cue["planned_position"] = plan.position
     return cue
 
 
