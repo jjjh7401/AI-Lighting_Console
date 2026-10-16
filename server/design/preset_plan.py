@@ -34,6 +34,7 @@ from pathlib import Path
 
 import yaml
 
+from server.design.app_movement import movement_effect_store_commands
 from server.design.beat_grid import (
     apply_pending_approval,
     check_evidence_approval,
@@ -46,13 +47,15 @@ from server.design.beat_grid_cell_split import (
     validate_cell_split,
 )
 from server.design.beat_grid_color_presets import record_color_preset_rgb
-from server.design.beat_grid_edit import apply_beat_grid_edit
+from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
+from server.design.beat_grid_measured import is_movement_measured_open
 from server.design.beat_grid_presets import (
     first_free_base_color_number,
     first_free_base_dimmer_number,
     first_free_base_position_number,
     record_app_preset_label,
 )
+from server.design.beat_grid_send import build_song_timing_from_bar_map
 from server.design.color_names import resolve_color_name
 
 __all__ = [
@@ -93,11 +96,27 @@ _COLOR_PATH_HOLD = "색 저장은 기존 「＋ 새 프리셋」 색 경로(t594
 _COLOR_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·컬러 채널을 읽은 뒤 만든다"
 _POSITION_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·장비 좌표를 읽은 뒤 만든다"
 
-#: 프리셋 종류의 화면 이름 — 저장 개수 요약(``saved_summary``)이 쓴다.
-_KIND_LABEL = {"dimmer": "디머", "color": "색", "position": "위치"}
+#: 움직임 효과 프리셋을 저장할 콘솔 풀(판독 이름 「All 1」, 풀 21).
+#: 리드 결정으로 21번대를 쓴다. 번호대는 preset_pools.yaml 에 선언돼 있지 않으니
+#: 「감독이 고칠 값」으로 싣는다.
+#: 빈 번호는 콘솔 판독에서 고른다(있는 번호는 덮지 않는다).
+MOVEMENT_EFFECT_POOL_NAME = "All 1"
 
-#: 저장한 색·위치 프리셋을 칸에서 가리키는 필드.
-_REFERENCE_FIELD = {"color": "color_preset_no", "position": "position_preset_no"}
+#: 효과 프리셋 값의 화면 이름 — 모양 어휘를 사람이 읽는 말로.
+_EFFECT_SHAPE_LABEL = {"wave": "웨이브"}
+
+#: 효과 풀을 콘솔에서 읽지 못해 빈 번호를 정하지 못했을 때의 사유.
+_EFFECT_POOL_HOLD = "효과 풀을 콘솔에서 읽지 못해 빈 번호를 정하지 못함"
+
+#: 프리셋 종류의 화면 이름 — 저장 개수 요약(``saved_summary``)이 쓴다.
+_KIND_LABEL = {"dimmer": "디머", "color": "색", "position": "위치", "effect": "효과"}
+
+#: 저장한 색·위치·효과 프리셋을 칸에서 가리키는 필드.
+_REFERENCE_FIELD = {
+    "color": "color_preset_no",
+    "position": "position_preset_no",
+    "effect": "effect_preset_no",
+}
 
 #: 풀 판독 결과 — ``(풀 번호, {슬롯: 이름 또는 None})``. 못 읽었으면 ``None``.
 PoolRead = tuple[int, Mapping[int, object]] | None
@@ -119,7 +138,7 @@ class PlanPreset:
     저장 줄을 싣는다. 거짓이면 ``hold``가 사유다 — ``deferred``가 참이면 값은 정해졌고 저장 줄만
     아직 없다(「이 카드 밖」), 거짓이면 「미정」이다."""
 
-    kind: str  # "dimmer" | "color" | "position"
+    kind: str  # "dimmer" | "color" | "position" | "effect"
     value: str  # 사람이 읽는 값: "40%" · "RGB 55 35 100" · "바닥 쪽 (대략: …)"
     name: str  # 콘솔 이름(영문·숫자·공백·_.-)
     slot: str | None  # 후보 "pool.slot"; 풀을 못 읽으면 None
@@ -288,6 +307,267 @@ def _prior_approval_source(grid: Mapping[str, object], cell: PlanCell) -> str | 
     return str(source) if source else None
 
 
+def _effect_signature(movement: Mapping[str, object]) -> tuple[object, ...]:
+    """같은 움직임 값을 한 프리셋으로 묶는 키 — 모양·축·주기·위상 펼침."""
+    axes = tuple(sorted(str(axis) for axis in (movement.get("axes") or ())))
+    return (
+        movement.get("shape"),
+        axes,
+        movement.get("period_unit"),
+        movement.get("period_value"),
+        bool(movement.get("phase_spread")),
+    )
+
+
+def _period_of(movement: Mapping[str, object]) -> tuple[str, int] | None:
+    """움직임 주기 — (단위, 수). 단위가 박·마디가 아니거나 수가 양의 정수가 아니면 None."""
+    unit = movement.get("period_unit")
+    value = movement.get("period_value")
+    if unit not in ("beat", "bar"):
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        return None
+    return str(unit), value
+
+
+def _period_words(period: tuple[str, int]) -> str:
+    """주기 한 쌍을 계획표 말로 — ``("beat", 2)`` 는 「박 2」."""
+    unit, value = period
+    return f"{'박' if unit == 'beat' else '마디'} {value}"
+
+
+def _period_donor(
+    rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
+    *,
+    group_name: str,
+    bar: int,
+) -> tuple[int, tuple[str, int]] | None:
+    """주기가 빈 칸의 기본값 출처 — 같은 줄(그룹)에서 주기가 온전한 움직임 칸.
+
+    앞쪽(마디가 작은 쪽)에서 가장 가까운 칸을 쓰고, 앞쪽에 없으면 가장 가까운 칸을 쓴다.
+    돌려주는 것은 ``(그 칸의 마디, (주기 단위, 수))``. 같은 줄에 그런 칸이 없으면 None.
+    """
+    found: list[tuple[int, tuple[str, int]]] = []
+    for other_group, _no, _confirmed, other in rows:
+        other_bar = other.get("bar")
+        movement = other.get("app_movement")
+        if other_group != group_name or other_bar == bar:
+            continue
+        if not isinstance(other_bar, int) or isinstance(other_bar, bool):
+            continue
+        if not isinstance(movement, Mapping):
+            continue
+        period = _period_of(movement)
+        if period is not None:
+            found.append((other_bar, period))
+    if not found:
+        return None
+    before = [entry for entry in found if entry[0] < bar]
+    if before:
+        return max(before, key=lambda entry: entry[0])
+    return min(found, key=lambda entry: abs(entry[0] - bar))
+
+
+def _effect_name(movement: Mapping[str, object]) -> str:
+    """효과 프리셋 콘솔 이름 — ASCII 대문자. 예: ``WAVE PAN 2 BEAT``. 주기가 없으면 모양·축만."""
+    shape = str(movement.get("shape") or "").upper()
+    axes = "+".join(str(axis).upper() for axis in (movement.get("axes") or ()))
+    period = _period_of(movement)
+    if period is None:
+        return f"{shape} {axes}"
+    unit, value = period
+    return f"{shape} {axes} {value} {unit.upper()}"
+
+
+def _effect_value(movement: Mapping[str, object]) -> str:
+    """계획표 값 칸 — 「효과 · 웨이브 · Pan · 박 2」. 화면은 이 머리말로 효과 줄을 알아본다.
+    주기가 없으면 「주기 미정」(지어내지 않는다)."""
+    shape = str(movement.get("shape") or "")
+    axes = "·".join(str(axis) for axis in (movement.get("axes") or ()))
+    shape_word = _EFFECT_SHAPE_LABEL.get(shape, shape)
+    period = _period_of(movement)
+    period_text = "주기 미정" if period is None else _period_words(period)
+    return f"효과 · {shape_word} · {axes} · {period_text}"
+
+
+def _beats_per_cycle(movement: Mapping[str, object], beats_per_bar: int | None) -> float | None:
+    """주기 한 바퀴의 박 수 — 박 단위면 그대로, 마디 단위면 박자표 분자를 곱한다. 모르면 None."""
+    value = movement.get("period_value")
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        return None
+    if movement.get("period_unit") == "beat":
+        return float(value)
+    if movement.get("period_unit") == "bar" and beats_per_bar:
+        return float(value * beats_per_bar)
+    return None
+
+
+def effect_plan_timing(timeline: object) -> tuple[float | None, int | None]:
+    """움직임 효과 프리셋의 BPM·마디당 박 수 — 곡 데이터에서만 읽는다(지어내지 않는다).
+
+    BPM 은 에미터와 같은 출처(``bar_map`` 의 타이밍)다. 못 읽으면 None 이고, 그러면 그 줄은
+    「미정」으로 남는다.
+    """
+    bar_map = timeline.get("bar_map") if isinstance(timeline, Mapping) else None
+    timing = build_song_timing_from_bar_map(bar_map if isinstance(bar_map, Mapping) else None)
+    bpm = timing.bpm if timing is not None else None
+    return bpm, beats_per_bar_from_timeline(timeline)
+
+
+def _first_free_effect_slot(effect_pool: PoolRead, reserved: set[str]) -> tuple[int, int] | None:
+    """효과 풀에서 빈 번호 하나. 콘솔 판독에 키가 없는 번호여야 한다(이름이 없어도
+    있으면 찬 것). 격자·이번 계획이 이미 쓰는 번호는 뺀다. 가장 작은 번호(1부터).
+    풀을 못 읽었으면 None."""
+    if effect_pool is None:
+        return None
+    pool_no, children = effect_pool
+    number = 1
+    while f"{pool_no}.{number}" in reserved or number in children:
+        number += 1
+    return pool_no, number
+
+
+def _movement_effect_presets(
+    rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
+    *,
+    effect_pool: PoolRead,
+    bpm: float | None,
+    beats_per_bar: int | None,
+    reserved: set[str],
+) -> tuple[tuple[PlanPreset, ...], tuple[str, ...], tuple[str, ...]]:
+    """칸의 ``app_movement`` 마다 효과 프리셋 한 줄 — 같은 그룹·같은 움직임은 한 프리셋이다.
+
+    돌려주는 것은 ``(프리셋들, 「미정」 사유들, 「감독이 고칠 값」들)``.
+    번호 자리(풀 판독)나 그룹 번호가 없으면 「미정」이다 — 지어내지 않는다.
+    저장 줄은 번호와 그룹이 다 정해진 줄에만 붙는다. 번호도 저장 줄이 붙는 줄에만 쓴다.
+    실기 기록으로 이미 열린 움직임은 이 계획에서 빼 둔다(바꾸지 않는다).
+    주기가 빈 칸은 같은 줄의 주기 값을 기본으로 빌리고 「감독이 고칠 값」에 적는다.
+    """
+    buckets: dict[tuple[str, object, tuple[object, ...]], list[PlanCell]] = {}
+    movements: dict[tuple[str, object, tuple[object, ...]], Mapping[str, object]] = {}
+    confirmed_of: dict[tuple[str, object, tuple[object, ...]], bool] = {}
+    # 주기가 빈 칸이 같은 줄의 주기 값을 빌린 기록 — 키 → [(칸 마디, 출처 마디, (단위, 수))]
+    defaults: dict[
+        tuple[str, object, tuple[object, ...]], list[tuple[int, int, tuple[str, int]]]
+    ] = {}
+    for group_name, group_no, confirmed, cue in rows:
+        movement = cue.get("app_movement")
+        bar = cue.get("bar")
+        if not isinstance(movement, Mapping) or movement.get("shape") is None:
+            continue
+        if not isinstance(bar, int) or isinstance(bar, bool):
+            continue
+        # 실기 기록으로 이미 열린 움직임(beat_grid_measured)은 그대로 둔다 — 효과 프리셋으로 바꾸면
+        # 지금 열린 칸이 ④에 새로 막힌다. 바꿀 대상은 (5,7,9)에 막힌 칸뿐이다.
+        if is_movement_measured_open(
+            group_no if isinstance(group_no, int) else None,
+            movement.get("shape"),
+            movement.get("axes") or (),
+        ):
+            continue
+        donor = None
+        if _period_of(movement) is None:
+            donor = _period_donor(rows, group_name=group_name, bar=bar)
+            if donor is not None:
+                movement = {**movement, "period_unit": donor[1][0], "period_value": donor[1][1]}
+        key = (group_name, group_no, _effect_signature(movement))
+        buckets.setdefault(key, []).append(PlanCell(group_name=group_name, bar=bar))
+        movements.setdefault(key, movement)
+        confirmed_of[key] = bool(confirmed) and confirmed_of.get(key, True)
+        if donor is not None:
+            defaults.setdefault(key, []).append((bar, donor[0], donor[1]))
+
+    presets: list[PlanPreset] = []
+    unresolved: list[str] = []
+    fixes: list[str] = []
+    for key, cells in buckets.items():
+        group_name, group_no, _signature = key
+        movement = movements[key]
+        name = _effect_name(movement)
+        placement = _first_free_effect_slot(effect_pool, reserved)
+        bundle: tuple[str, ...] | None = None
+        reason: str | None = None
+        # 그룹 번호는 확인된 것만 쓴다(디머와 같은 규칙). 확인 안 됐으면 저장 줄을 붙이지 않는다.
+        if not isinstance(group_no, int) or isinstance(group_no, bool) or not confirmed_of[key]:
+            reason = f"그룹 번호가 확인되지 않음: {group_name}"
+        elif _period_of(movement) is None:
+            reason = "칸에 움직임 주기(박 또는 마디 수)가 없다 — 감독이 고칠 값"
+        elif placement is None:
+            reason = _EFFECT_POOL_HOLD
+        else:
+            bundle, reason = movement_effect_store_commands(
+                movement,
+                group_no=group_no,
+                preset_pool=placement[0],
+                preset=placement[1],
+                label=name,
+                bpm=bpm,
+                beats_per_bar=beats_per_bar,
+            )
+        # 번호는 저장 줄이 붙는 줄에만 쓴다 — 못 붙는 줄이 번호를 먼저 잡으면 다음 줄 번호가 밀린다.
+        slot: str | None = None
+        if bundle is not None and reason is None and placement is not None:
+            slot = f"{placement[0]}.{placement[1]}"
+            reserved.add(slot)
+        ready = slot is not None
+        presets.append(
+            PlanPreset(
+                kind="effect",
+                value=_effect_value(movement),
+                name=name,
+                slot=slot,
+                cells=tuple(cells),
+                groups=(group_name,),
+                ready=ready,
+                hold=None if ready else (reason or _EFFECT_POOL_HOLD),
+                store=bundle if ready else None,
+            )
+        )
+        if not ready:
+            unresolved.append(
+                f"{group_name} 움직임 효과 프리셋({name}): {reason or _EFFECT_POOL_HOLD}"
+            )
+
+    if presets:
+        pool_text = (
+            f"풀 {effect_pool[0]}({MOVEMENT_EFFECT_POOL_NAME})"
+            if effect_pool is not None
+            else f"풀 {MOVEMENT_EFFECT_POOL_NAME}"
+        )
+        fixes.append(
+            f"효과 프리셋 번호대 — {pool_text}은 preset_pools.yaml 에 선언돼 있지 않다. "
+            "빈 번호는 콘솔 판독으로 골랐다. 감독이 고칠 값: 번호대 선언 여부와 번호"
+        )
+        # 빌린 주기는 줄 머리를 프리셋 이름으로 해서 그 줄에 붙인다.
+        for key, borrowed in defaults.items():
+            for cell_bar, donor_bar, period in borrowed:
+                fixes.append(
+                    f"{_effect_name(movements[key])} — {key[0]} {cell_bar}마디: "
+                    f"움직임 주기가 칸에 없어 {donor_bar}마디의 주기({_period_words(period)})를 "
+                    "기본으로 썼다. 감독이 고칠 값: 주기 단위·수"
+                )
+        for key in buckets:
+            movement = movements[key]
+            cycle = _beats_per_cycle(movement, beats_per_bar)
+            if bpm is not None and cycle:
+                fixes.append(
+                    f"움직임 속도 — {_effect_name(movement)}: 박 {cycle:g} 주기를 "
+                    f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님). "
+                    "감독이 고칠 값: 속도 기준"
+                )
+            if movement.get("phase_spread") is None:
+                fixes.append(
+                    f"위상 펼침 — {_effect_name(movement)}: 칸에 값이 없어 펼치지 않는다. "
+                    "감독이 고칠 값: 위상 펼침 여부"
+                )
+        fixes.append(
+            "실콘솔 판정 — 효과 프리셋을 쓰는 칸은 M1 ④ 프로브가 「통과」해야 "
+            "풀린다(④ = 효과 프리셋 SM15·Measure). "
+            "프리셋을 만든 것만으로는 풀리지 않는다."
+        )
+    return tuple(presets), tuple(unresolved), tuple(fixes)
+
+
 def build_preset_plan(
     grid: Mapping[str, object],
     *,
@@ -297,6 +577,9 @@ def build_preset_plan(
     color_pool: PoolRead,
     position_pool: PoolRead,
     dimmer_attributes: Mapping[str, Sequence[str]],
+    effect_pool: PoolRead = None,
+    bpm: float | None = None,
+    beats_per_bar: int | None = None,
 ) -> LoveAttackPlan:
     """격자 칸에서 새로 만들 프리셋 계획을 만든다(콘솔 무접촉, 순수 함수).
 
@@ -648,6 +931,17 @@ def build_preset_plan(
         for number in numbers:
             kept_counts[number] = kept_counts.get(number, 0) + 1
 
+    effect_presets, effect_unresolved, effect_fixes = _movement_effect_presets(
+        rows,
+        effect_pool=effect_pool,
+        bpm=bpm,
+        beats_per_bar=beats_per_bar,
+        reserved={*kept_counts, *(preset.slot for preset in presets if preset.slot), *reserved},
+    )
+    presets.extend(effect_presets)
+    unresolved.extend(effect_unresolved)
+    fixes.extend(effect_fixes)
+
     return LoveAttackPlan(
         presets=tuple(presets),
         unresolved=tuple(unresolved),
@@ -808,6 +1102,10 @@ def _reference_changes(preset: PlanPreset) -> dict[str, object]:
         return {
             "brightness": {"mode": "dimmer_preset", "value_percent": None, "preset_no": preset.slot}
         }
+    if preset.kind == "effect":
+        # 움직임은 저장한 효과 프리셋이 맡는다. 칸의 app_movement 를 비워
+        # 게이트 요구를 (5,7,9)에서 (4)로 옮긴다.
+        return {"effect_preset_no": preset.slot, "effect_kind": "position", "app_movement": None}
     return {_REFERENCE_FIELD[preset.kind]: preset.slot}
 
 

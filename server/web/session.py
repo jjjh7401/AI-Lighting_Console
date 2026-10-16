@@ -210,11 +210,13 @@ from server.design.preset_names import (
     match_preset_name_across_pools,
 )
 from server.design.preset_plan import (
+    MOVEMENT_EFFECT_POOL_NAME,
     LoveAttackPlan,
     PlanPreset,
     apply_plan_references,
     build_preset_plan,
     card_reason,
+    effect_plan_timing,
     load_preset_annotations,
     plan_table_markdown,
     resolve_preset,
@@ -10645,6 +10647,12 @@ class ChatSession:
         position_pool = read_named_pool(
             query, pool_root, "Position", probe_prefix="love-attack-position"
         )
+        # 움직임 효과 프리셋은 「All 1」 풀(풀 21)에 저장한다 — 빈 번호는 이 판독에서 고른다.
+        effect_pool = read_named_pool(
+            query, pool_root, MOVEMENT_EFFECT_POOL_NAME, probe_prefix="love-attack-effect"
+        )
+        # BPM·마디당 박 수는 곡 데이터(bar_map)에서만 읽는다 — 못 읽으면 효과 줄은 「미정」이다.
+        bpm, beats_per_bar = effect_plan_timing(timeline)
         group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
         plan = build_preset_plan(
             grid,
@@ -10654,6 +10662,9 @@ class ChatSession:
             color_pool=color_pool,
             position_pool=position_pool,
             dimmer_attributes=self._beat_grid_preset_dimmer_attributes(group_names),
+            effect_pool=effect_pool,
+            bpm=bpm,
+            beats_per_bar=beats_per_bar,
         )
         plan = self._beat_grid_preset_plan_stores(plan, grid)
         commands = save_commands(plan)

@@ -6,7 +6,7 @@
 
 export const PRESET_PLAN_SUMMARY = "연출 프리셋 계획";
 
-export type PresetPlanKind = "dimmer" | "color" | "position";
+export type PresetPlanKind = "dimmer" | "color" | "position" | "effect";
 
 export interface PresetPlanRow {
   kind: PresetPlanKind;
@@ -32,9 +32,12 @@ export const PRESET_PLAN_KIND_LABEL: Record<PresetPlanKind, string> = {
   dimmer: "디머",
   color: "색",
   position: "위치",
+  effect: "효과",
 };
 
 function kindOf(value: string): PresetPlanKind {
+  // 효과 줄은 값 칸이 「효과 · …」로 시작한다(preset_plan._effect_value).
+  if (value.startsWith("효과")) return "effect";
   if (/%\s*$/.test(value)) return "dimmer";
   if (/^RGB\b/i.test(value)) return "color";
   return "position";

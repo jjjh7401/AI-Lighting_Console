@@ -35,6 +35,7 @@ __all__ = [
     "app_movement_commands",
     "brightness_value_commands",
     "dimmer_attribute_names",
+    "movement_effect_store_commands",
 ]
 
 #: MA3 Dimmer 속성 패밀리 — "Dimmer"·"Dimmer2"처럼 접두 "Dimmer" 뒤에 숫자만
@@ -138,3 +139,42 @@ def app_movement_commands(
     phase_spread = bool(movement.get("phase_spread"))
     commands.extend(relative_wave_lines(axes, speed_bpm, phase_spread=phase_spread))
     return tuple(commands), None
+
+
+def movement_effect_store_commands(
+    movement: Mapping[str, object] | None,
+    *,
+    group_no: int,
+    preset_pool: int,
+    preset: int,
+    label: str,
+    bpm: float | None,
+    beats_per_bar: int | None,
+) -> tuple[tuple[str, ...], str | None]:
+    """한 칸의 ``app_movement`` 를 콘솔 효과 프리셋(Phaser) 저장 묶음으로 낸다.
+
+    상대 웨이브 줄은 :func:`app_movement_commands` 와 같다(같은 검증·같은 순서). 그 뒤에
+    ``Store Preset <풀>.<번호> '<이름>' /Universal`` 과 ``Label Preset`` 줄을 붙여 닫는다.
+    기준 위치 리콜은 이 묶음에 넣지 않는다 — 칸이 자기 위치 프리셋을 따로 리콜한다. 거절은
+    사유 문장 하나이고, 그때 부분 묶음은 내지 않는다(app_movement_commands 와 같은 규율)."""
+    name = label.strip()
+    if not name or "'" in name or '"' in name:
+        return (), "효과 프리셋 이름이 비었거나 따옴표를 담고 있습니다"
+    body, reason = app_movement_commands(
+        movement,
+        group_no=group_no,
+        position_preset_no=None,
+        bpm=bpm,
+        beats_per_bar=beats_per_bar,
+    )
+    if reason is not None:
+        return (), reason
+    if not body:
+        return (), "이 칸에 app_movement 가 없어 효과 프리셋으로 만들 것이 없습니다"
+    return (
+        "ClearAll",
+        *body,
+        f"Store Preset {preset_pool}.{preset} '{name}' /Universal",
+        f"Label Preset {preset_pool}.{preset} '{name}'",
+        "ClearAll",
+    ), None
