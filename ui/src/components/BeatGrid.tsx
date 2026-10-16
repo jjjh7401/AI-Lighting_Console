@@ -156,6 +156,7 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import { NO_FLOW_DONE, completedStepOf, type FlowDone } from "./beatgrid/flowChain";
 import {
   audioClockSeconds,
   clampPlaybackSeconds,
@@ -1985,6 +1986,36 @@ export function BeatGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendStatus]);
 
+  // 반영 흐름 — 서버가 단계 성공을 알리면(`beat_grid_send_status.completed`) 화면이 다음 단계를
+  // 안내한다. 초안 「적용」 뒤에는 기존 「프리셋 계획 만들기」 요청을 한 번 보낸다(승인 카드는 감독이
+  // 직접 누른다). 그 밖의 단계는 화면 상태만 바꾼다 — 승인 호출도, 반영·콘솔 재생 송신도 여기서
+  // 하지 않는다(▶ 는 늘 사람이 누른다). `seenStatusRef` 는 마운트 전에 이미 있던 응답이 다시 그려질
+  // 때 요청이 되풀이되지 않게 막는다 — 새 응답 객체가 올 때만 한 번 반응한다.
+  const [flowDone, setFlowDone] = useState<FlowDone>(NO_FLOW_DONE);
+  const [timecodeSuggestion, setTimecodeSuggestion] = useState<number | null>(null);
+  const seenStatusRef = useRef(sendStatus);
+  useEffect(() => {
+    if (sendStatus === seenStatusRef.current) return;
+    seenStatusRef.current = sendStatus;
+    if (sendStatus === null) return;
+    const step = completedStepOf(sendStatus);
+    if (step === "draft_applied") {
+      // 새 흐름이 시작된다 — 앞 흐름의 ✓ 와 번호 권유를 지운다.
+      setFlowDone(NO_FLOW_DONE);
+      setTimecodeSuggestion(null);
+      if (onPresetPlanRequest) requestPresetPlan();
+    } else if (step === "preset") {
+      setFlowDone((done) => ({ ...done, preset: true }));
+      setTimecodeSuggestion(sendStatus.timecode_suggestion ?? null);
+    } else if (step === "reflect") {
+      setFlowDone((done) => ({ ...done, reflect: true }));
+      if (consoleFollowAvailable) setConsoleFollow(true);
+    } else if (step === "console") {
+      setFlowDone((done) => ({ ...done, console: true }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendStatus]);
+
   // 화면을 떠날 때 걸려 있는 음원 시작 타이머를 지운다.
   useEffect(
     () => () => {
@@ -2364,6 +2395,7 @@ export function BeatGrid({
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
         onDraftPropose={pendingDraft ? undefined : onDraftPropose}
+        flow={{ done: flowDone, timecodeSuggestion }}
         playback={{
           playing,
           positionSeconds: playbackSeconds,
