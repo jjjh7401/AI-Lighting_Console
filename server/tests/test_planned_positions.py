@@ -43,28 +43,11 @@ SHAPE_TIMELINE = Path(__file__).resolve().parent / "fixtures" / "love_attack_sha
 _POSITION_POOL = (2, _POSITION_CHILDREN)
 _MOVER_GROUPS = ("MOVER-U", "MOVER-D")
 #: 구간이 바뀔 때마다 옮긴 위치 순서(같은 이름이 이어지면 하나로 본다). 규칙서의 해석이다.
+#: 무빙은 어둠 속 사전이동(MIB)이 가능한 곳에서만 옮긴다 — 후렴·드롭을 비우거나 앞 위치의 켜는
+#: 칸이 남지 않으면 그 구간에서는 앞 위치에 머문다. 그래서 켜진 채 옮기는 칸이 없다.
 _PINNED_LOOKS = {
-    "MOVER-U": [
-        "Home",
-        "Center",
-        "Ring In",
-        "Center",
-        "Ring In",
-        "Center",
-        "Ring In",
-        "Audience",
-        "Ring In",
-    ],
-    "MOVER-D": [
-        "Home",
-        "Center",
-        "Ring In",
-        "Center",
-        "Ring In",
-        "Center",
-        "Ring In",
-        "Center",
-    ],
+    "MOVER-U": ["Home", "Center", "Ring In"],
+    "MOVER-D": ["Home", "Center", "Ring In"],
 }
 
 
@@ -182,7 +165,8 @@ class TestApplyKeepsStructuredValues:
 
         cue = _cue(grid, "MOVER-U", 4)
         assert cue["position_preset_no"] == "2.31"
-        assert cue["planned_position"] == "Center"
+        # 4마디(벌스 첫머리)는 앞에 어둠을 둘 자리가 없어 도입 위치(Home)에 머문다.
+        assert cue["planned_position"] == "Home"
 
 
 class TestPlanPositionCandidates:

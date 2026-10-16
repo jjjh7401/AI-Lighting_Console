@@ -12,16 +12,21 @@
   등급(``d_level``)을 메타데이터로만 달고, 초안에는 싣지 않는다.
 - 구간 종류는 시작 마디에서 정한다. 위에서부터 먼저 맞는 것을 쓴다: 첫 마디에 이벤트가 없으면
   도입(intro), 드롭이 시작하면 드롭(drop), 드롭이 끝난 다음 마디면 마지막 후렴(last_chorus),
-  킥 진입이면 후렴(chorus), 빌드업이면 빌드(build), 브레이크 끝 마디 뒤 2마디 안에 드롭이
+  킥 진입이면 후렴(chorus) — 단 도입 뒤 곧바로 오는 곡의 첫 사건인 킥(같은 마디에 빌드 없음)은
+  비트가 들어오는 벌스(verse)다 —, 빌드업이면 빌드(build), 브레이크 끝 마디 뒤 2마디 안에 드롭이
   시작하면 브릿지(bridge), 그 밖은 벌스(verse)다. 마디 에너지로는 구간 종류를 정하지 않는다.
 - 구간 색은 ``policy.palette`` 에서 온다. 드롭·후렴·브릿지는 각자의 색이고, 도입·벌스·빌드는
   벌스 색이다(빌드에는 팔레트 항목이 없어 벌스 색을 빌려 쓴다). 마지막 후렴은 앞선 마지막 후렴
   구간의 수만큼 색 목록을 돈다. 역광(BACK) 칸은 어느 구간에서나 역광 색이고, 곡별 주석 색
   (``planned_colors``)은 둘보다 앞선다.
 - 칸 안의 규칙(밝기·움직임)은 기존 생성기의 ``_cell_plan`` 을 그대로 쓴다. 라벨만 기본 격자
-  (``love_attack.yaml``)와 배치 규칙서의 말로 바꾼다(BACK 펄스는 「킥 1·2·4박」이다). 주인공
-  교대는 구간 시작부터 세어 ``policy.window_bars`` 마디마다 다시 정하고, 차례는 곡 전체에서
-  이어진다.
+  (``love_attack.yaml``)와 배치 규칙서의 말로 바꾼다(BACK 펄스는 「킥 1·2·4박」이다). 같은 종류
+  구간은 같은 처리다: 켜는 리듬 층은 구간 종류가 정하고(``_LEAD_OF_KIND``) 구간 안에서 돌리지
+  않는다. 창(``policy.window_bars`` 마디, 구간 시작부터 세고 짧은 끝 창은 앞 창에 붙임)마다
+  바뀌는 것은 움직이는 무빙뿐이고 그 차례는 구간마다 처음부터 센다. BACK·SIDE·무빙의 켜는 칸은
+  값이 같아도 창 시작마다 새 칸이다.
+- 무빙이 위치를 바꾸기 전에는 어둠 속 사전이동(MIB)이 가능한 길이만큼 쉼 칸을 둔다(마디 시각으로
+  잼). 후렴·드롭 안이나 앞 위치가 남지 않아 쉼을 둘 수 없으면 그 구간에서는 위치를 바꾸지 않는다.
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
   STROBE(느린 곡이면 두지 않는다)다. 마디 지도에 리듬 블록이 있으면 BLIND 마디는 그 구간 안 첫 큰
   히트(``kind == "big"``)의 마디이고, 구간 안에 큰 히트가 없으면 구간의 첫 마디 그대로다.
@@ -45,7 +50,9 @@ from typing import Any, NamedTuple
 
 from server.audio.bar_map_store import validate_bar_map
 from server.design.arrange_generator import (
+    _CHASE,
     _MOTION,
+    _PULSE,
     _SECTION_BRIDGE,
     _SECTION_CHORUS,
     _SECTION_DROP,
@@ -58,11 +65,13 @@ from server.design.arrange_generator import (
     _CellPlan,
     _check_layout,
     _draft_cue,
+    _rest_plan,
     _section_color,
     _voices,
 )
 from server.design.arrange_policy import MOVER_POSITION_LADDER, ArrangementPolicy
 from server.design.beat_grid import BeatGridCue, BeatGridTrack
+from server.design.beat_grid_mib import MIB_MIN_DARK_SECONDS
 from server.design.cell_direction import SEGMENT_WORDS, assign_color_names
 
 __all__ = ["SegmentSection", "generate_segment_draft", "split_sections"]
@@ -82,6 +91,8 @@ _SECTION_BUILD = "build"
 
 #: 구간의 첫 마디에 블라인드(BLIND)를 두는 구간 종류. 드롭은 스트로브(STROBE)가 맡는다.
 _BLIND_SECTIONS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS})
+#: 무빙을 사전이동 쉼으로 비우지 않는 구간 종류 — 곡의 큰 순간이라 빛이 가장 꽉 차야 한다.
+_HIT_KINDS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS, _SECTION_DROP})
 
 #: 구간 종류 → (위 무빙 U, 아래 무빙 D) 목표 위치(사다리 이름). 배치 규칙서 무빙 위치 행: 인트로는
 #: 둘 다 바닥 쪽에 정지, 벌스는 위 무빙을 세우고 아래 무빙은 바닥 쪽에 정지(규칙 6), 빌드·브릿지는
@@ -94,6 +105,18 @@ _MOVER_TARGET_OF_KIND: dict[str, tuple[str, str]] = {
     _SECTION_CHORUS: ("Audience", "Ring In"),
     _SECTION_LAST_CHORUS: ("Audience", "Ring In"),
     _SECTION_DROP: ("Audience", "Ring In"),
+}
+#: 구간 종류 → 주인공 리듬 층(``_voices`` 순서: 펄스 → 체이스 → 움직임). 켜는 층은 주인공부터
+#: 상한 수만큼이고 구간 안에서 창마다 돌리지 않는다 — 기본 격자도 구간 종류마다 켜는 층 조합이
+#: 고정이다(후렴·벌스·도입은 움직임+펄스, 빌드·브릿지는 체이스+움직임). 마지막 후렴은 후렴과 같다.
+_LEAD_OF_KIND: dict[str, str] = {
+    _SECTION_INTRO: _MOTION,
+    _SECTION_VERSE: _MOTION,
+    _SECTION_BUILD: _CHASE,
+    _SECTION_CHORUS: _MOTION,
+    _SECTION_LAST_CHORUS: _MOTION,
+    _SECTION_BRIDGE: _CHASE,
+    _SECTION_DROP: _PULSE,
 }
 #: 무빙 켜는 칸의 규칙 종류 — 이 칸에만 계획 위치를 싣는다.
 _MOVER_LIT_KINDS = frozenset({"motion", "hold"})
@@ -143,6 +166,9 @@ _KIND_PRE_HIT = "pre_hit"
 #: 색이 바뀌는 마디에서 칸을 나누는 줄의 역할. 워시는 색이 곧 그 줄의 내용이다. 다른 줄의 칸은
 #: 색이 바뀌어도 이어진다(기본 격자도 색 주석이 워시 줄과 BACK 0마디뿐이다).
 _COLOR_LINE_ROLES = frozenset({"wash"})
+#: 켜는 칸을 창(프레이즈) 시작마다 새로 세우는 리듬 층의 역할. 기본 격자도 같은 「킥 1·2·4박」을
+#: 4마디마다 다시 찍는다. 쉬는 칸은 나누지 않는다.
+_PHRASE_ROLES = frozenset({"back", "side", "mover"})
 
 # @MX:DEBT: 브릿지 판정의 「브레이크 뒤 2마디 안」이 곡별 정책이 아니라 모듈 상수다
 # @MX:CEILING: 이 값 하나. 곡마다 다르게 둘 수 없다(REQ-LDARRANGE-004 는 규칙 값을 곡별로 둔다)
@@ -237,6 +263,25 @@ def generate_segment_draft(
                     plan = plan._replace(position=mover_at.get((name, section.start_bar)))
                 plans[name][bar] = plan
 
+    bar_ms = {int(entry["bar"]): int(entry["start_ms"]) for entry in bar_map["bars"]}
+    hit_bars = frozenset(
+        bar
+        for section in sections
+        if section.kind in _HIT_KINDS
+        for bar in range(section.start_bar, section.end_bar + 1)
+    )
+    for track in layout:
+        if track.get("layer_role") == "mover":
+            _darken_before_moves(
+                plans[str(track["group_name"])],
+                bar_numbers,
+                bar_ms,
+                settings,
+                keep_lit=hit_bars,
+                section_starts=frozenset(section.start_bar for section in sections),
+                phrase_starts=frozenset(window.start_bar for window in windows),
+            )
+
     # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
     notice = _CellPlan(PRE_HIT_LABEL, settings.rest_percent, None, _KIND_PRE_HIT)
     pre_hit_bars = _pre_hit_bars(sections)
@@ -248,6 +293,7 @@ def generate_segment_draft(
     # 워시 줄은 구간마다 한 칸이다(리드 결정 2026-10-16). 구간 첫 마디의 값(색 포함)이 구간 끝까지
     # 가고, 칸은 색이 바뀌는 구간 경계에서만 나뉜다. 구간 중간의 주석 색은 워시 칸을 쪼개지 않는다.
     section_starts = frozenset(section.start_bar for section in sections)
+    phrase_starts = frozenset(window.start_bar for window in windows)
     for track in layout:
         if track.get("layer_role") not in _COLOR_LINE_ROLES:
             continue
@@ -275,6 +321,9 @@ def generate_segment_draft(
             bar_numbers,
             splits_on_color=track.get("layer_role") in _COLOR_LINE_ROLES,
             annotated=annotated,
+            phrase_starts=phrase_starts
+            if track.get("layer_role") in _PHRASE_ROLES
+            else frozenset(),
         )
         tracks.append(
             BeatGridTrack(
@@ -370,6 +419,14 @@ def _section_kind(start: int, first_bar: int, events: Sequence[_Event]) -> str:
     if any(event.kind == _DROP and event.end_bar + 1 == start for event in events):
         return _SECTION_LAST_CHORUS
     if _KICK_ENTRY in kinds:
+        # 도입 뒤 곧바로 들어오는 킥(곡의 첫 사건, 같은 마디에 빌드 없음)은 비트가 들어오는
+        # 벌스다. 후렴은 빌드·브레이크 같은 앞 사건을 거친 뒤 들어오는 킥이다.
+        if (
+            start > first_bar
+            and _BUILD not in kinds
+            and start == min(event.start_bar for event in events)
+        ):
+            return _SECTION_VERSE
         return _SECTION_CHORUS
     if _BUILD in kinds:
         return _SECTION_BUILD
@@ -393,26 +450,33 @@ def _plan_windows(
 ) -> list[_Window]:
     """구간을 구간 시작부터 ``window_bars`` 마디씩 창으로 쪼개 창마다 주인공·움직이는 층을 정한다.
 
-    주인공 차례(``window_turn``)와 움직이는 무빙의 차례(``motion_turn``)는 구간이 바뀌어도
-    처음으로 돌아가지 않고 곡 전체에서 이어진다. 움직이는 층의 수는 드롭 구간이면 드롭 상한,
-    아니면 보통 상한이다.
+    같은 종류 구간은 같은 처리를 받는다. 주인공은 구간 종류가 정하고(``_LEAD_OF_KIND``) 구간 안
+    에서 돌리지 않는다. 창마다 바뀌는 것은 움직이는 무빙뿐이고, 그 차례는 구간마다 처음부터 센다.
+    그래서 후렴 1·2·3 은 같은 창 순서에서 같은 층이 켜지고 같은 무빙이 움직인다. 켜는 층의 수는
+    드롭 구간이면 드롭 상한, 아니면 보통 상한이다. 창 길이에 못 미치는 끝 창은 앞 창에 붙인다.
     """
     voices = _voices(layout)
     movers = [str(track["group_name"]) for track in layout if track.get("layer_role") == "mover"]
     windows: list[_Window] = []
-    window_turn = motion_turn = last_chorus_turn = 0
+    last_chorus_turn = 0
     for section in sections:
         # 마지막 후렴 돌림의 차례 = 이 구간보다 앞선 마지막 후렴 구간의 수.
         color = _section_color(section.kind, last_chorus_turn, settings)
         if section.kind == _SECTION_LAST_CHORUS:
             last_chorus_turn += 1
         cap = settings.drop_layer_cap if section.kind == _SECTION_DROP else settings.base_layer_cap
-        for start in range(section.start_bar, section.end_bar + 1, settings.window_bars):
-            lead_index = window_turn % len(voices) if voices else 0
-            active = [
-                voices[(lead_index + offset) % len(voices)]
-                for offset in range(min(cap, len(voices)))
-            ]
+        lead = _LEAD_OF_KIND.get(section.kind)
+        lead_index = voices.index(lead) if lead in voices else 0
+        active = [
+            voices[(lead_index + offset) % len(voices)] for offset in range(min(cap, len(voices)))
+        ]
+        motion_turn = 0
+        # 창 길이에 못 미치는 끝 창은 따로 세우지 않고 앞 창에 붙인다
+        # (구간 끝 2마디짜리 칸을 막는다).
+        starts = list(range(section.start_bar, section.end_bar + 1, settings.window_bars))
+        if len(starts) > 1 and section.end_bar - starts[-1] + 1 < settings.window_bars:
+            starts.pop()
+        for start, after in zip(starts, [*starts[1:], section.end_bar + 1], strict=True):
             moving: str | None = None
             if _MOTION in active:
                 moving = movers[motion_turn % len(movers)]
@@ -422,13 +486,12 @@ def _plan_windows(
                     section=section,
                     color=color,
                     start_bar=start,
-                    end_bar=min(start + settings.window_bars - 1, section.end_bar),
+                    end_bar=after - 1,
                     lead=voices[lead_index] if voices else None,
-                    active=active,
+                    active=list(active),
                     moving=moving,
                 )
             )
-            window_turn += 1
     return windows
 
 
@@ -446,6 +509,107 @@ def _emphasis_bar(section: SegmentSection, big_hit_bars: Sequence[int]) -> int:
         (bar for bar in big_hit_bars if section.start_bar <= bar <= section.end_bar),
         section.start_bar,
     )
+
+
+# @MX:NOTE: [AUTO] 반영 단계 MIB(``beat_grid_mib.plan_mib_premoves``)와 같은 기준이다 — 사전이동은
+# 쉼 칸 다음 마디에 서고, 그때부터 위치가 바뀌는 칸까지 ``MIB_MIN_DARK_SECONDS`` 이상 어두워야 한다.
+def _darken_before_moves(
+    by_bar: dict[int, _CellPlan],
+    bar_numbers: Sequence[int],
+    bar_ms: Mapping[int, int],
+    settings: ArrangementPolicy,
+    *,
+    keep_lit: frozenset[int],
+    section_starts: frozenset[int],
+    phrase_starts: frozenset[int],
+) -> None:
+    """무빙 줄에서 위치가 바뀌는 칸 앞을 쉼으로 비워 어둠 속 사전이동(MIB)이 가능하게 한다.
+
+    쉼은 사전이동 뒤 어두운 시간이 이동+정착 시간 이상이 되는 가장 짧은 길이다(마디 길이는 곡의
+    마디 시각에서 잰다). 앞 위치의 켜는 칸이 한 마디도 남지 않거나 쉼이 ``keep_lit`` 마디(후렴·
+    드롭)에 걸리면 비우지 않고, 위치도 바꾸지 않는다 — 다음 위치가 나올 때까지 앞 위치에 머문다.
+    그래서 무빙이 켜진 채 위치를 옮기는 칸이 없다.
+    """
+    # 사전이동 쉼은 보통 쉼과 같은 칸이다(칸 값 모양은 그대로).
+    # 반영 단계가 쉼 뒤 위치 변화로 알아본다.
+    dark = _rest_plan(settings)
+    need_ms = MIB_MIN_DARK_SECONDS * 1000
+    index_of = {bar: index for index, bar in enumerate(bar_numbers)}
+    position: str | None = None
+    position_start = bar_numbers[0]
+    for bar in bar_numbers:
+        here = by_bar[bar].position
+        if here is None:
+            continue
+        if position is not None and here != position:
+            # 쉼 첫 마디 s: 사전이동 마디(s 다음 마디)부터 이 마디까지가
+            # need_ms 이상인 가장 뒤 마디.
+            start = next(
+                (
+                    candidate
+                    for candidate in reversed(bar_numbers[: index_of[bar] - 1])
+                    if bar_ms[bar] - bar_ms[bar_numbers[index_of[candidate] + 1]] >= need_ms
+                ),
+                None,
+            )
+            # 쉼 앞에 창 길이보다 짧은 켜는 자투리가 남으면 쉼을 그 창 시작으로 당긴다.
+            snap = max(
+                (p for p in phrase_starts if start is not None and position_start < p <= start),
+                default=None,
+            )
+            if snap is not None and start is not None and start - snap < settings.window_bars:
+                start = snap
+            span = [] if start is None else bar_numbers[index_of[start] : index_of[bar]]
+            head = _dark_head(bar, bar_numbers, bar_ms, need_ms, section_starts)
+            if span and span[0] > position_start and keep_lit.isdisjoint(span):
+                for dark_bar in span:
+                    by_bar[dark_bar] = dark
+            elif head and keep_lit.isdisjoint(head) and _before(bar, bar_numbers) in keep_lit:
+                # 후렴·드롭이 꽉 찬 채 끝나서 앞에 쉼을 둘 수 없으면, 새 구간 첫머리를 어둡게 해
+                # 그 안에서 옮긴다.
+                for dark_bar in head:
+                    by_bar[dark_bar] = dark
+            else:
+                # 어둠을 만들 수 없으면 이 구간에서는 옮기지 않고 앞 위치에 머문다. 다음 구간은 다시
+                # 제 목표 위치로 가려 한다.
+                for later in bar_numbers[index_of[bar] :]:
+                    if later != bar and later in section_starts:
+                        break
+                    if by_bar[later].position == here:
+                        by_bar[later] = by_bar[later]._replace(position=position)
+                here = position
+        if here != position:
+            position, position_start = here, bar
+
+
+def _before(bar: int, bar_numbers: Sequence[int]) -> int | None:
+    """``bar`` 바로 앞 마디. 첫 마디면 None."""
+    index = bar_numbers.index(bar)
+    return bar_numbers[index - 1] if index > 0 else None
+
+
+def _dark_head(
+    bar: int,
+    bar_numbers: Sequence[int],
+    bar_ms: Mapping[int, int],
+    need_ms: float,
+    section_starts: frozenset[int],
+) -> list[int]:
+    """``bar`` 에서 시작하는 구간 첫머리의 사전이동 쉼 마디들. 같은 구간에 켜는 마디가 남아야 한다.
+
+    쉼 뒤 첫 켜는 마디 e 는 사전이동 마디(``bar`` 다음 마디)부터 ``need_ms`` 이상 지난 가장 이른
+    마디다. e 가 없거나 다음 구간에 들어가면 빈 목록이다.
+    """
+    index = bar_numbers.index(bar)
+    if index + 1 >= len(bar_numbers):
+        return []
+    premove_ms = bar_ms[bar_numbers[index + 1]]
+    for later in bar_numbers[index + 1 :]:
+        if later in section_starts:
+            return []
+        if bar_ms[later] - premove_ms >= need_ms:
+            return list(bar_numbers[index : bar_numbers.index(later)])
+    return []
 
 
 def _is_blind_line(track: Mapping[str, Any]) -> bool:
@@ -473,6 +637,7 @@ def _runs(
     *,
     splits_on_color: bool,
     annotated: frozenset[int],
+    phrase_starts: frozenset[int] = frozenset(),
 ) -> list[tuple[int, _CellPlan]]:
     """마디별 계획을 값이 같은 연속 마디로 묶어 (첫 마디, 그 마디의 계획) 목록으로 돌려준다.
 
@@ -484,11 +649,13 @@ def _runs(
     ``splits_on_color`` 인 줄(워시 줄)과, 그 마디나 앞 마디가 곡별 주석 색(``annotated``)을 가진
     경우다. 주석 색은 그 마디의 칸이 보여 줘야 해서 줄을 가리지 않는다. 앞뒤와 색이 같으면 나누지
     않는다(역광 줄에 역광 색을 주석으로 한 번 더 적어도 칸은 늘지 않는다).
+
+    ``phrase_starts`` 의 마디에서는 켜는 칸이 값이 같아도 새로 선다(쉬는 칸은 이어진다).
     """
     rows: list[tuple[int, _CellPlan]] = []
     for index, bar in enumerate(bar_numbers):
         plan = plans[bar]
-        if index > 0:
+        if index > 0 and not (bar in phrase_starts and plan.brightness_percent > 0):
             before_bar = bar_numbers[index - 1]
             before = plans[before_bar]
             same_values = plan._replace(color_rgb=None) == before._replace(color_rgb=None)

@@ -116,25 +116,97 @@ def test_cells_end_at_next_cue_and_are_clipped_to_the_window() -> None:
 
 
 def test_a_cell_is_colored_by_an_annotation_inside_its_span_or_by_its_own_field() -> None:
-    plain = [{"bar": 7, "label": "a"}, {"bar": 14, "label": "b"}]
-    # 주석 9 는 첫 칸(7~13) 안에 든다 — 둘째 칸은 주석도 필드도 없다.
+    # 줄의 첫 색은 시작 상태라 세지 않는다. 앞에 색이 있는 줄에서 새로 색을 정하는 칸만 센다.
+    plain = [
+        {"bar": 3, "label": "a", "color_preset_no": "1"},
+        {"bar": 7, "label": "a"},
+        {"bar": 14, "label": "b"},
+    ]
+    # 주석 9 는 둘째 칸(7~13) 안에 든다 — 셋째 칸은 주석도 필드도 없다.
     by_annotation = cells_for_track(
         plain, (0, 25), track_name="WASH", color_cells=frozenset({("WASH", 9)})
     )
-    assert [cell.colored for cell in by_annotation] == [True, False]
-    # 주석 20 은 둘째 칸(14~25) 안에 든다.
+    assert [cell.colored for cell in by_annotation] == [False, True, False]
+    # 주석 20 은 셋째 칸(14~25) 안에 든다.
     by_later_annotation = cells_for_track(
         plain, (0, 25), track_name="WASH", color_cells=frozenset({("WASH", 20)})
     )
-    assert [cell.colored for cell in by_later_annotation] == [False, True]
-    # 칸 필드의 색 번호도 칸을 색이 정해진 칸으로 센다.
+    assert [cell.colored for cell in by_later_annotation] == [False, False, True]
+    # 칸 필드의 색 번호가 앞 색과 다르면 색을 정한 칸이다.
     by_field = cells_for_track(
-        [{"bar": 7, "label": "a"}, {"bar": 14, "label": "b", "color_preset_no": "3"}],
+        [*plain[:2], {"bar": 14, "label": "b", "color_preset_no": "3"}],
         (0, 25),
         track_name="WASH",
         color_cells=frozenset(),
     )
-    assert [cell.colored for cell in by_field] == [False, True]
+    assert [cell.colored for cell in by_field] == [False, False, True]
+
+
+def test_a_color_number_counts_only_where_the_color_changes() -> None:
+    # 프리셋 계획은 켜는 칸마다 색 번호를 붙인다. 같은 번호가 이어지거나 쉼 뒤에 같은 번호로 다시
+    # 켜지면 색을 새로 정한 것이 아니다. 줄의 첫 번호도 시작 상태라 세지 않는다.
+    cues = [
+        {"bar": 0, "label": "a", "color_preset_no": "4.1"},
+        {"bar": 4, "label": "a", "color_preset_no": "4.1"},
+        {"bar": 8, "label": "—"},
+        {"bar": 12, "label": "a", "color_preset_no": "4.1"},
+        {"bar": 16, "label": "a", "color_preset_no": "4.2"},
+    ]
+    cells = cells_for_track(cues, (0, 25), track_name="BACK", color_cells=frozenset())
+    assert [cell.colored for cell in cells] == [False, False, False, False, True]
+
+
+def test_a_planned_color_counts_like_the_color_number_it_becomes() -> None:
+    # 프리셋 계획은 계획 색을 색 번호로 바꿀 뿐이다. 번호가 붙기 전과 뒤의 ⑥ 이 같아야 한다.
+    planned = [
+        {"bar": 0, "label": "a", "planned_color": [1, 2, 3]},
+        {"bar": 4, "label": "a", "planned_color": [1, 2, 3]},
+        {"bar": 8, "label": "a", "planned_color": [9, 9, 9]},
+    ]
+    numbered = [
+        {
+            **cue,
+            "color_preset_no": {(1, 2, 3): "4.1", (9, 9, 9): "4.2"}[tuple(cue["planned_color"])],
+        }
+        for cue in planned
+    ]
+    for cues in (planned, numbered):
+        cells = cells_for_track(cues, (0, 25), track_name="MOVER-U", color_cells=frozenset())
+        assert [cell.colored for cell in cells] == [False, False, True]
+
+
+def test_a_mover_rest_before_a_position_change_is_a_pre_move_cell() -> None:
+    # 무빙 줄에서 쉼 뒤 켜는 칸의 위치가 쉼 앞 켜는 칸과 다르면 그 쉼은 사전이동(MIB) 칸이다.
+    cues = [
+        {"bar": 0, "label": "정지", "planned_position": "Home"},
+        {"bar": 4, "label": "—"},
+        {"bar": 8, "label": "정지", "planned_position": "Center"},
+        {"bar": 12, "label": "—"},
+        {"bar": 16, "label": "정지", "position_preset_no": "Center"},
+    ]
+    cells = cells_for_track(
+        cues, (0, 25), track_name="MOVER-U", color_cells=frozenset(), mover=True
+    )
+    assert [cell.pre_move for cell in cells] == [False, True, False, False, False]
+    # 무빙이 아닌 줄의 쉼은 사전이동 칸이 아니다.
+    other = cells_for_track(cues, (0, 25), track_name="BACK", color_cells=frozenset())
+    assert not any(cell.pre_move for cell in other)
+
+
+def test_pre_move_cells_are_left_out_of_the_beat_pattern_on_both_sides() -> None:
+    # 손설계엔 사전이동 쉼 개념이 없다. 그 칸만 다른 두 격자는 ④ 박 패턴 거리가 0 이다.
+    def grid(with_pre_move: bool) -> dict:
+        cues = [{"bar": 0, "label": "정지", "planned_position": "Home"}]
+        if with_pre_move:
+            cues.append({"bar": 4, "label": "—"})
+        cues.append({"bar": 8, "label": "팬 웨이브", "planned_position": "Center"})
+        return {"tracks": [{"group_name": "MOVER-U", "layer_role": "mover", "cues": cues}]}
+
+    context = build_context({"sections": [{"label": "벌스", "bar_start": 0}]}, {})
+    report = compare_grids(grid(False), grid(True), context, window=(0, 15))
+    pattern = next(check for check in report.checks if check.key == "pattern")
+    assert pattern.passed is True
+    assert pattern.detail == "거리 0.000"
 
 
 def test_alignment_share_counts_cell_starts_on_boundary_bars() -> None:
@@ -310,9 +382,10 @@ def _move_blind_hit(grid: dict) -> dict:
 
 
 def _color_back_cells(grid: dict) -> dict:
+    """BACK 칸마다 색을 번갈아 바꾼다(같은 번호를 늘어놓는 것은 색을 바꾼 것이 아니다)."""
     out = copy.deepcopy(grid)
-    for cue in _track(out, "BACK")["cues"]:
-        cue["color_preset_no"] = "1"
+    for index, cue in enumerate(_track(out, "BACK")["cues"]):
+        cue["color_preset_no"] = str(index % 2 + 1)
     return out
 
 

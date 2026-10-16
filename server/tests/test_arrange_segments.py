@@ -24,14 +24,17 @@ from pathlib import Path
 import pytest
 
 from server.audio.bar_map import BarFeatures, classify_bar_events, compute_bar_energy
-from server.audio.bar_map_store import attach_rhythm, build_bar_map_payload
+from server.audio.bar_map_store import attach_rhythm, build_bar_map_payload, read_bar_map
 from server.design import arrange_segments
 from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_generator import REST_LABEL, UNCONFIRMED_NOTE
 from server.design.arrange_policy import ArrangementPalette, ArrangementPolicy
 from server.design.arrange_segments import SegmentSection, generate_segment_draft, split_sections
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
-from server.design.grid_shape import pattern_category
+from server.design.beat_grid_mib import MIB_MIN_DARK_SECONDS, plan_mib_premoves
+from server.design.beat_grid_planned import annotated_cell_colors
+from server.design.grid_shape import _layout_item, build_context, compare_grids, pattern_category
+from server.design.preset_plan import load_preset_annotations
 
 BARS = 40
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -88,7 +91,7 @@ REAL_EVENTS = [
 ]
 REAL_SECTIONS = [
     SegmentSection(0, 3, "intro"),
-    SegmentSection(4, 13, "chorus"),
+    SegmentSection(4, 13, "verse"),
     SegmentSection(14, 17, "build"),
     SegmentSection(18, 32, "chorus"),
     SegmentSection(33, 41, "verse"),
@@ -343,52 +346,58 @@ def test_a_constant_lane_over_a_seven_bar_verse_has_exactly_one_row() -> None:
     events = [_ev("kick_entry", 3), _ev("break", 8), _ev("kick_entry", 15)]
     assert SegmentSection(8, 14, "verse") in split_sections(_bar_map(events))
     draft = _draft(events)
-    # 워시 줄은 색이 바뀌는 구간 경계에서만 칸을 나눈다. 7마디 벌스는 한 칸이다.
+    # 워시 줄은 색이 바뀌는 구간 경계에서만 칸을 나눈다. 7마디 벌스 안에는 칸이 새로 서지 않는다.
+    # 도입 뒤 곧바로 들어온 3마디 킥도 벌스라서 1~14마디가 같은 벌스 색 한 칸이다.
     wash = _rows(draft, "WASH-ALL")
-    assert [bar for bar in wash if 8 <= bar <= 14] == [8]
-    assert wash == [1, 3, 8, 15]
+    assert [bar for bar in wash if 8 < bar <= 14] == []
+    assert wash == [1, 15]
     # 얼굴 빛은 구간 색이 바뀌어도 값이 같아서 곡 전체가 한 칸이다.
     assert _rows(draft, "FOH") == [1]
 
 
-def test_a_four_bar_alternating_lane_has_a_row_only_where_its_plan_changes() -> None:
-    # 이벤트가 없으면 1~40 마디가 도입 한 구간이고 4마디 창이 열 개다. 주인공은 펄스 → 체이스 →
-    # 움직임 순으로 돌고 보통 구간은 둘이 움직이니, 펄스 층(BACK)은 창 0·2·3·5·6·8·9 에서 켜진다.
+def test_a_lit_rhythm_lane_gets_a_new_cell_at_every_phrase() -> None:
+    # 이벤트가 없으면 1~40 마디가 도입 한 구간이고 4마디 창이 열 개다. 켜는 층은 구간 종류가 정하고
+    # 창마다 돌리지 않는다(도입: 움직임 + 펄스). 펄스 층(BACK)은 내내 켜져 있고, 값이 같아도
+    # 창(프레이즈) 시작마다 새 칸이 선다 — 기본 격자도 같은 「킥 1·2·4박」을 4마디마다 다시 찍는다.
     draft = _draft([])
     back = _cues(draft, "BACK")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
-        (1, PULSE_LABEL),
-        (5, REST_LABEL),
-        (9, PULSE_LABEL),  # 창 2·3 이 이어져 8 마디 한 칸
-        (17, REST_LABEL),
-        (21, PULSE_LABEL),
-        (29, REST_LABEL),
-        (33, PULSE_LABEL),
+        (bar, PULSE_LABEL) for bar in range(1, BARS + 1, 4)
     ]
+    # 쉬는 줄은 창을 몇 번 넘어도 한 칸이다.
+    assert _rows(draft, "SIDE-ALL") == [1]
 
 
 def test_back_lane_over_the_synthetic_song_is_the_hand_derived_run_list() -> None:
-    # 창이 구간 시작부터 4마디씩이고(1-4, 5-6, 7-8, 9-12, 13, 14-17, …) 주인공 순서가 곡 전체에서
-    # 이어질 때 펄스 층이 켜진 연속 구간이다. 구간 경계를 넘어 이어지는 칸은 한 칸으로 묶인다.
+    # 창은 구간 시작부터 4마디씩이고 창 길이에 못 미치는 끝 창은 앞 창에 붙는다(1-6, 7-8, 9-13,
+    # 14-17, 18-21, 22-25, 26-32, …). 펄스는 빌드·브릿지(체이스 + 움직임)에서만 쉰다.
     back = _cues(_draft(SYNTHETIC_EVENTS), "BACK")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
         (1, PULSE_LABEL),
-        (5, REST_LABEL),
         (7, PULSE_LABEL),
-        (13, REST_LABEL),
-        (14, PULSE_LABEL),
-        (22, REST_LABEL),
+        (9, PULSE_LABEL),
+        (14, REST_LABEL),
+        (18, PULSE_LABEL),
+        (22, PULSE_LABEL),
         (26, PULSE_LABEL),
         (33, REST_LABEL),
         (36, PULSE_LABEL),
+        (40, PULSE_LABEL),
     ]
 
 
 @pytest.mark.parametrize("events", [[], SYNTHETIC_EVENTS])
-def test_no_two_consecutive_rows_of_a_track_share_the_same_plan(events: list[dict]) -> None:
-    for track in _draft(events)["tracks"]:
-        signatures = [_signature(cue) for cue in track["cues"]]
-        assert all(left != right for left, right in zip(signatures, signatures[1:], strict=False))
+def test_two_consecutive_rows_share_a_plan_only_at_a_phrase_start_of_a_lit_cell(
+    events: list[dict],
+) -> None:
+    draft = _draft(events)
+    phrases = {window["start_bar"] for window in draft["windows"]}
+    for track in draft["tracks"]:
+        for left, right in zip(track["cues"], track["cues"][1:], strict=False):
+            if _signature(left) == _signature(right):
+                assert right["bar"] in phrases, (track["group_name"], right["bar"])
+                assert right["label"] != REST_LABEL
+                assert track["layer_role"] in ("back", "side", "mover")
 
 
 def test_every_track_has_a_row_at_the_first_bar_and_a_rest_run_is_one_row() -> None:
@@ -442,8 +451,8 @@ def test_a_rest_run_across_sections_and_windows_is_a_single_row() -> None:
 
 def test_rests_stay_rows_instead_of_disappearing_from_the_draft() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
-    assert _cues(draft, "BACK")[5]["label"] == REST_LABEL
-    assert _cues(draft, "SIDE-ALL")[7]["label"] == REST_LABEL
+    assert _cues(draft, "BACK")[14]["label"] == REST_LABEL
+    assert _cues(draft, "SIDE-ALL")[18]["label"] == REST_LABEL
     assert _cues(draft, "STROBE")[1]["label"] == REST_LABEL
 
 
@@ -452,12 +461,15 @@ def test_rests_stay_rows_instead_of_disappearing_from_the_draft() -> None:
 
 def test_color_alone_never_splits_a_run_off_the_wash_line() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
+    phrases = {window["start_bar"] for window in draft["windows"]}
     for track in draft["tracks"]:
         if track["layer_role"] == "wash":
             continue
         name = track["group_name"]
-        values = [_values(cue) for cue in track["cues"]]
-        assert all(left != right for left, right in zip(values, values[1:], strict=False)), name
+        for left, right in zip(track["cues"], track["cues"][1:], strict=False):
+            # 값이 같은 이웃 칸은 켜는 칸이 프레이즈 시작에서 새로 선 것뿐이다(색 때문이 아니다).
+            if _values(left) == _values(right):
+                assert right["bar"] in phrases and right["label"] != REST_LABEL, name
 
 
 def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
@@ -466,11 +478,11 @@ def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
     foh = _cues(draft, "FOH")
     assert sorted(foh) == [1]
     assert foh[1]["planned_color"] == list(PALETTE.key)
-    # 체이스 칸 30~40 은 후렴·브릿지·드롭·마지막 후렴을 지나는 한 칸이다. 색은 30 마디(후렴) 색이다.
+    # 체이스 칸 33~35(브릿지)와 36~39(드롭)는 값이 같아도 프레이즈마다 새 칸이고,
+    # 칸마다 그 구간 색이다.
     side = _cues(draft, "SIDE-ALL")
-    assert 30 in side
-    assert not any(31 <= bar <= 40 for bar in side)
-    assert side[30]["planned_color"] == list(PALETTE.chorus)
+    assert side[33]["planned_color"] == list(PALETTE.bridge)
+    assert side[36]["planned_color"] == list(PALETTE.drop)
 
 
 def test_the_wash_line_splits_where_its_planned_color_changes() -> None:
@@ -559,18 +571,17 @@ def test_builds_breaks_verses_and_intros_get_no_accent() -> None:
 
 
 def test_windows_are_four_bar_blocks_counted_from_each_section_start() -> None:
+    # 창 길이에 못 미치는 끝 창(1~6 의 5~6, 9~13 의 13, 26~32 의 30~32)은 앞 창에 붙는다. 구간이
+    # 창 하나보다 짧으면(7~8, 40) 그 구간이 곧 창 하나다.
     windows = _draft(SYNTHETIC_EVENTS)["windows"]
     assert [(window["start_bar"], window["end_bar"]) for window in windows] == [
-        (1, 4),
-        (5, 6),
+        (1, 6),
         (7, 8),
-        (9, 12),
-        (13, 13),
+        (9, 13),
         (14, 17),
         (18, 21),
         (22, 25),
-        (26, 29),
-        (30, 32),
+        (26, 32),
         (33, 35),
         (36, 39),
         (40, 40),
@@ -581,12 +592,38 @@ def test_windows_are_four_bar_blocks_counted_from_each_section_start() -> None:
 def test_window_bars_come_from_the_policy() -> None:
     draft = _draft([], policy=ArrangementPolicy(window_bars=8))
     back = _cues(draft, "BACK")
-    assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
-        (1, PULSE_LABEL),
-        (9, REST_LABEL),
-        (17, PULSE_LABEL),
-        (33, REST_LABEL),
+    assert sorted(back) == [1, 9, 17, 25, 33]
+    assert {cue["label"] for cue in back.values()} == {PULSE_LABEL}
+
+
+def test_same_kind_sections_get_the_same_layers_and_the_same_moving_mover() -> None:
+    # 후렴(9~13, 18~32)과 마지막 후렴(40)은 같은 처리다: 켜는 층이 같고
+    # 첫 창에서 같은 무빙이 움직인다.
+    draft = _draft(SYNTHETIC_EVENTS)
+    firsts = {}
+    for window in draft["windows"]:
+        firsts.setdefault(window["start_bar"], window)
+    chorus_starts = [9, 18, 40]
+    assert len({tuple(firsts[bar]["active"]) for bar in chorus_starts}) == 1
+    assert {_state(draft, "MOVER-U", bar)["label"] for bar in chorus_starts} == {MOTION_LABEL}
+    assert {_state(draft, "MOVER-D", bar)["label"] for bar in chorus_starts} == {HOLD_LABEL}
+    # 켜는 층은 구간 안에서 창마다 돌지 않는다.
+    assert firsts[22]["active"] == firsts[18]["active"] == firsts[26]["active"]
+
+
+def test_a_kick_straight_out_of_the_intro_is_a_verse() -> None:
+    # 곡의 첫 사건이 도입 뒤 킥 진입이면 비트가 들어오는 벌스다. 블라인드 강조가 서지 않는다.
+    sections = split_sections(
+        _bar_map([_ev("kick_entry", 5), _ev("build", 12, 15), _ev("kick_entry", 16)])
+    )
+    assert [(section.start_bar, section.kind) for section in sections] == [
+        (1, "intro"),
+        (5, "verse"),
+        (12, "build"),
+        (16, "chorus"),
     ]
+    draft = _draft([_ev("kick_entry", 5), _ev("build", 12, 15), _ev("kick_entry", 16)])
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [16]
 
 
 def test_rhythmic_tracks_per_bar_stay_within_the_layer_caps() -> None:
@@ -609,17 +646,16 @@ def test_rhythmic_tracks_per_bar_stay_within_the_layer_caps() -> None:
 
 
 def test_motion_alternates_between_the_two_movers_and_the_other_holds() -> None:
-    draft = _draft(SYNTHETIC_EVENTS)
+    # 움직이는 무빙은 구간 안에서 창마다 번갈고, 구간마다 위 무빙(U)부터 다시 센다. 사전이동(MIB)
+    # 쉼 칸이 있는 마디는 그 무빙이 쉬므로 뺀다.
+    draft = _draft([])
     turns = []
     for window in draft["windows"]:
-        if "motion" not in window["active"]:
-            continue
         upper = _state(draft, "MOVER-U", window["start_bar"])["label"]
         lower = _state(draft, "MOVER-D", window["start_bar"])["label"]
         assert {upper, lower} == {MOTION_LABEL, HOLD_LABEL}
         turns.append("U" if upper == MOTION_LABEL else "D")
-    assert len(turns) >= 4
-    assert all(left != right for left, right in zip(turns, turns[1:], strict=False))
+    assert turns == ["U", "D"] * 5
 
 
 def test_layout_without_rhythm_tracks_has_no_lead() -> None:
@@ -690,7 +726,8 @@ def test_labels_use_the_default_grid_and_rules_document_vocabulary() -> None:
     assert labels["WASH-ALL"] == {WASH_LABEL}
     assert labels["BACK"] == {PULSE_LABEL, REST_LABEL}
     assert labels["SIDE-ALL"] == {CHASE_LABEL, REST_LABEL}
-    assert labels["MOVER-U"] == labels["MOVER-D"] == {MOTION_LABEL, HOLD_LABEL}
+    # 무빙은 위치를 바꾸기 전에 사전이동(MIB) 쉼 칸을 둔다.
+    assert labels["MOVER-U"] == labels["MOVER-D"] == {MOTION_LABEL, HOLD_LABEL, REST_LABEL}
     assert labels["BLIND"] == {BLIND_LABEL, PRE_HIT_LABEL, REST_LABEL}
     assert labels["STROBE"] == {STROBE_LABEL, REST_LABEL}
 
@@ -901,11 +938,12 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     assert split_sections(bar_map) == REAL_SECTIONS
     draft = generate_segment_draft(bar_map, _layout())
     assert draft["bar_range"] == {"start": 0, "end": 82}
-    assert _hits(draft, "BLIND", BLIND_LABEL) == [4, 18, 46, 67]
+    # 4마디 킥은 도입 뒤 곧바로 들어오는 벌스라 강조가 없다(기본 격자도 4마디에 BLIND 가 없다).
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [18, 46, 67]
     assert _hits(draft, "STROBE", STROBE_LABEL) == [63]
     # 예고는 빌드(14~17·42~45) 끝 마디에만 있고, 강조 마디는 그대로다.
     assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17, 45]
-    assert _rows(draft, "BLIND") == [0, 4, 5, 17, 18, 19, 45, 46, 47, 67, 68]
+    assert _rows(draft, "BLIND") == [0, 17, 18, 19, 45, 46, 47, 67, 68]
     # 워시 줄의 칸은 색이 바뀌는 구간 경계에서만 생긴다. 얼굴 빛은 곡 전체가 한 칸이다.
     starts = {section.start_bar for section in REAL_SECTIONS}
     assert set(_rows(draft, "WASH-ALL")) <= starts
@@ -1192,3 +1230,112 @@ def test_without_a_big_hit_the_draft_equals_the_one_without_rhythm() -> None:
     baseline = generate_segment_draft(_bar_map(SYNTHETIC_EVENTS), _layout())
     assert _hit_draft([]) == baseline
     assert _hits(baseline, "BLIND", BLIND_LABEL) == [9, 18, 40]
+
+
+# -- 이동 전 어둠(MIB) ------------------------------------------------------------------------
+
+
+class _Clock:
+    """마디 지도의 마디 시작 시각(초)을 주는 시계 — 반영 단계 MIB 계획기에 넣는다."""
+
+    def __init__(self, bar_map: dict) -> None:
+        self._seconds = {bar["bar"]: bar["start_ms"] / 1000 for bar in bar_map["bars"]}
+
+    def bar_start_seconds(self, bar: int) -> float | None:
+        return self._seconds.get(bar)
+
+
+def _mib(bar_map: dict) -> tuple[int, list[str]]:
+    """초안의 무빙 줄을 반영 단계 MIB 계획기(``plan_mib_premoves``)에 넣는다.
+
+    돌려주는 값은 (사전이동 수, 불가 사유 목록)이다.
+    """
+    draft = generate_segment_draft(bar_map, _layout())
+    premoves = 0
+    notes: list[str] = []
+    for track in draft["tracks"]:
+        if track["layer_role"] != "mover":
+            continue
+        # 계획 위치 이름을 위치 번호 자리에 넣는다
+        # — 계획 단계가 이름마다 번호 하나를 붙이는 것과 같다.
+        cues = [{**cue, "position_preset_no": cue.get("planned_position")} for cue in track["cues"]]
+        made, why = plan_mib_premoves(cues, _Clock(bar_map))
+        premoves += len(made)
+        notes += why
+    return premoves, notes
+
+
+@pytest.mark.parametrize("song", ["real", "synthetic"])
+def test_every_mover_position_change_can_premove_in_the_dark(song: str) -> None:
+    # 무빙이 위치를 바꾸는 칸 앞에는 사전이동이 가능한 쉼이 있다. 쉼을 둘 수 없으면 그 구간에서는
+    # 위치를 바꾸지 않는다. 그래서 반영 단계 MIB 계획기가 「불가」를 하나도 내지 않는다(main 은 실제
+    # 곡에서 15건이었다).
+    bar_map = _real_love_attack() if song == "real" else _bar_map(SYNTHETIC_EVENTS)
+    premoves, notes = _mib(bar_map)
+    assert notes == []
+    assert premoves >= 2
+
+
+def test_movers_are_never_darkened_inside_a_chorus_or_a_drop() -> None:
+    bar_map = _real_love_attack()
+    draft = generate_segment_draft(bar_map, _layout())
+    hits = [s for s in split_sections(bar_map) if s.kind in ("chorus", "last_chorus", "drop")]
+    for name in ("MOVER-U", "MOVER-D"):
+        for section in hits:
+            for bar in range(section.start_bar, section.end_bar + 1):
+                assert _state(draft, name, bar)["label"] != REST_LABEL, (name, bar)
+
+
+@pytest.mark.parametrize("bpm", [90.0, 120.0, 160.0])
+def test_the_pre_move_rest_is_long_enough_for_the_move_at_the_song_tempo(bpm: float) -> None:
+    # 쉼 길이는 곡의 마디 시각에서 잰다(마디 수 상수가 아니다).
+    beat_ms = 60000 / bpm
+    bar_map = build_bar_map_payload(
+        [round(index * beat_ms) for index in range(BARS * 4)], 0, bpm=bpm, events=SYNTHETIC_EVENTS
+    )
+    seconds = {bar["bar"]: bar["start_ms"] / 1000 for bar in bar_map["bars"]}
+    draft = generate_segment_draft(bar_map, _layout())
+    rests = 0
+    for track in draft["tracks"]:
+        if track["layer_role"] != "mover":
+            continue
+        cues = track["cues"]
+        for rest, after in zip(cues, cues[1:], strict=False):
+            if rest["label"] == REST_LABEL and after["label"] != REST_LABEL:
+                rests += 1
+                dark = seconds[after["bar"]] - seconds[rest["bar"] + 1]
+                assert dark >= MIB_MIN_DARK_SECONDS, (track["group_name"], rest["bar"])
+    assert rests >= 1
+
+
+def test_the_app_path_love_attack_draft_is_similar_to_the_hand_grid() -> None:
+    # 운영 경로(구간 생성기 → 빈 골격에 적용)로 만든 LOVE ATTACK 격자가 판정기에서 「비슷함」이다.
+    # 콘솔 프리셋 계획이 계획 색을 색 번호로 바꾼 뒤에도 같다
+    # (⑥ 은 번호의 유무가 아니라 바뀜을 센다).
+    with (FIXTURES_DIR / "love_attack_shape_timeline.json").open(encoding="utf-8") as handle:
+        timeline = json.load(handle)
+    base = default_beat_grid(LOVE_ATTACK_TITLE)
+    annotations = load_preset_annotations(LOVE_ATTACK_TITLE)
+    layout = [_layout_item(track) for track in base["tracks"]]
+    draft = generate_segment_draft(
+        read_bar_map(timeline), layout, planned_colors=annotated_cell_colors(annotations)
+    )
+    skeleton = {
+        "song_title": base["song_title"],
+        "bar_range": dict(base["bar_range"]),
+        "tracks": [{**item, "cues": []} for item in layout],
+        "scene_memos": [],
+        "source": "skeleton",
+    }
+    candidate, _ = apply_arrangement_draft(skeleton, draft)
+    numbered = copy.deepcopy(candidate)
+    numbers: dict = {}
+    for track in numbered["tracks"]:
+        for cue in track["cues"]:
+            if cue.get("planned_color") and cue["label"] != REST_LABEL:
+                key = (track["group_name"], tuple(cue["planned_color"]))
+                cue["color_preset_no"] = numbers.setdefault(key, f"4.{len(numbers) + 1}")
+    context = build_context(timeline, annotations)
+    for grid in (candidate, numbered):
+        report = compare_grids(base, grid, context)
+        assert report.verdict == "비슷함", report.failing

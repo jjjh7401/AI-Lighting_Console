@@ -149,6 +149,8 @@ class Cell:
     colored: bool = False
     #: 줄의 칸으로 세는가. 쉼·꺼짐·예고 칸은 False 다(① 칸 수에서 뺀다).
     counted: bool = True
+    #: 무빙이 위치를 바꾸기 전에 비운 사전이동(MIB) 쉼 칸인가. ④ 박 패턴에서 뺀다.
+    pre_move: bool = False
 
 
 @dataclass(frozen=True)
@@ -284,25 +286,55 @@ def cells_for_track(
     *,
     track_name: str,
     color_cells: frozenset[tuple[str, int]],
+    mover: bool = False,
 ) -> list[Cell]:
-    """한 줄의 칸 목록. 칸은 다음 칸 시작에서 끝나고, 비교 범위 끝(포함)에서 잘린다."""
+    """한 줄의 칸 목록. 칸은 다음 칸 시작에서 끝나고, 비교 범위 끝(포함)에서 잘린다.
+
+    색 지정(⑥)은 색 번호가 「있는」 칸이 아니라 앞 칸과 색 번호가 「달라지는」 칸이다. 프리셋 계획은
+    켜는 칸마다 색 번호를 붙이지만 감독은 색을 바꾸는 칸에만 번호를 적는다. 쉼 칸은 앞 색을 지우지
+    않는다. 줄의 첫 색(번호·나눔·주석 가운데 처음)은 시작 상태라 세지 않는다. 무빙
+    줄(``mover``)에서 쉼 칸 뒤 켜는 칸의 위치가 쉼 앞 켜는 칸의 위치와 다르면 그 쉼은
+    사전이동(MIB) 칸이다(``pre_move``).
+    """
     start, end = window
     end_exclusive = end + 1
     ordered = sorted(cues, key=lambda cue: int(cue["bar"]))
     bars = [int(cue["bar"]) for cue in ordered]
     annotation_bars = [bar for name, bar in color_cells if name == track_name]
     cells: list[Cell] = []
+    color_before: object = None
+    has_color = False
+    position_before: object = None
     for index, cue in enumerate(ordered):
         bar = bars[index]
-        if not start <= bar <= end:
-            continue
+        color_no = _color_of(cue)
+        changes_color = color_no is not None and color_no != color_before
+        if color_no is not None:
+            color_before = color_no
+        after = ordered[index + 1] if index + 1 < len(ordered) else None
+        pre_move = (
+            mover
+            and is_silent(cue)
+            and after is not None
+            and not is_silent(after)
+            and position_before is not None
+            and _position_of(after) not in (None, position_before)
+        )
+        if not is_silent(cue) and _position_of(cue) is not None:
+            position_before = _position_of(cue)
         next_bar = bars[index + 1] if index + 1 < len(bars) else end_exclusive
         span_end = min(next_bar, end_exclusive)
-        colored = (
-            cue.get("color_preset_no") is not None
+        sets_color = (
+            changes_color
             or bool(cue.get("split"))
             or any(bar <= annotated < span_end for annotated in annotation_bars)
         )
+        # 줄의 첫 색은 시작 상태라 「지정」으로 세지 않는다
+        # (손설계는 대부분의 줄에 첫 색을 적지 않는다).
+        colored = sets_color and has_color
+        has_color = has_color or sets_color
+        if not start <= bar <= end:
+            continue
         cells.append(
             Cell(
                 track=track_name,
@@ -311,9 +343,24 @@ def cells_for_track(
                 label=str(cue.get("label") or ""),
                 colored=colored,
                 counted=not (is_silent(cue) or is_advance(cue)),
+                pre_move=pre_move,
             )
         )
     return cells
+
+
+def _color_of(cue: Mapping[str, Any]) -> object:
+    """칸의 색 — 콘솔 색 번호, 없으면 계획 색. 계획은 계획 색을 번호로 바꿀 뿐이라 ⑥ 이 같아야 한다.
+    쉼 칸은 색이 없다."""
+    if is_silent(cue):
+        return None
+    planned = cue.get("planned_color")
+    return cue.get("color_preset_no") or (tuple(planned) if planned else None)
+
+
+def _position_of(cue: Mapping[str, Any]) -> object:
+    """칸의 위치 — 콘솔 위치 번호, 없으면 계획 위치 이름. 둘 다 없으면 None."""
+    return cue.get("position_preset_no") or cue.get("planned_position")
 
 
 def grid_cells(
@@ -328,6 +375,7 @@ def grid_cells(
             window,
             track_name=str(track["group_name"]),
             color_cells=color_cells,
+            mover=track.get("layer_role") == "mover",
         )
         for track in grid.get("tracks") or []
     }
@@ -461,6 +509,11 @@ def _accent_text(cells: Sequence[Cell], hit_bars: frozenset[int], tolerance: int
     return _hits_text(near, positions)
 
 
+def _pattern_shares(cells: Sequence[Cell]) -> dict[str, float]:
+    """④ 박 패턴 분포. 무빙 사전이동(MIB) 쉼 칸(``pre_move``)은 세지 않는다."""
+    return shares_of(Counter(pattern_category(cell.label) for cell in cells if not cell.pre_move))
+
+
 def _color_share(cells: Sequence[Cell]) -> float | None:
     if not cells:
         return None
@@ -589,9 +642,9 @@ def compare_grids(
         )
     )
 
-    # ④ 박 패턴 분포 — 전체
-    base_pattern = shares_of(Counter(pattern_category(cell.label) for cell in all_base))
-    cand_pattern = shares_of(Counter(pattern_category(cell.label) for cell in all_cand))
+    # ④ 박 패턴 분포 — 전체. 무빙 사전이동(MIB) 쉼 칸은 양쪽 모두 뺀다(손설계엔 그 개념이 없다).
+    base_pattern = _pattern_shares(all_base)
+    cand_pattern = _pattern_shares(all_cand)
     pattern_tv = total_variation(base_pattern, cand_pattern) if all_base and all_cand else None
     if not all_base:
         pattern_passed: bool | None = None
@@ -688,12 +741,8 @@ def compare_grids(
                 ),
                 base_alignment=_pct(alignment_share(base_row, context.section_starts)),
                 cand_alignment=_pct(alignment_share(cand_row, context.section_starts)),
-                base_pattern=_top_text(
-                    shares_of(Counter(pattern_category(cell.label) for cell in base_row)), limit=2
-                ),
-                cand_pattern=_top_text(
-                    shares_of(Counter(pattern_category(cell.label) for cell in cand_row)), limit=2
-                ),
+                base_pattern=_top_text(_pattern_shares(base_row), limit=2),
+                cand_pattern=_top_text(_pattern_shares(cand_row), limit=2),
                 base_accent=(
                     _accent_text(base_row, context.hit_bars, thresholds.accent_tolerance)
                     if is_accent
