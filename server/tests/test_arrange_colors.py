@@ -5,12 +5,18 @@
 역광 역할(BACK) > 구간 색이다. 쉬는 칸(「—」)에는 색이 없다.
 
 합성 마디 지도(4/4, 박 500밀리초, 40마디)와 LOVE ATTACK 기본 격자의 트랙 구성으로 잡는다.
+
+후렴 판정은 곡 안의 상대 에너지로 한다(가장 조용한 구간 0, 가장 큰 구간 1). 절대 기준이면
+LOVE ATTACK 의 모든 구간이 후렴이 되어 벌스가 하나도 없었다. 그 회귀는 실제 마디 음량 픽스처
+시험이 지킨다.
 """
 
 from __future__ import annotations
 
 import copy
 import dataclasses
+import json
+from pathlib import Path
 
 import pytest
 
@@ -24,9 +30,12 @@ from server.design.beat_grid_send import beat_grid_cell_snapshot, unsent_beat_gr
 from server.design.preset_plan import load_preset_annotations
 
 BARS = 40
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+REAL_BAR_FEATURES = FIXTURES_DIR / "love_attack_bar_features_real.json"
 PALETTE = ArrangementPalette()
 KICK_AT_5 = [{"kind": "kick_entry", "start_bar": 5, "end_bar": 5, "start_beat": 1}]
 KICK_AT_9 = [{"kind": "kick_entry", "start_bar": 9, "end_bar": 9, "start_beat": 1}]
+KICK_AT_13 = [{"kind": "kick_entry", "start_bar": 13, "end_bar": 13, "start_beat": 1}]
 DROP_17_18 = [{"kind": "drop", "start_bar": 17, "end_bar": 18, "start_beat": 1}]
 BREAK_25_26 = [{"kind": "break", "start_bar": 25, "end_bar": 26, "start_beat": 1}]
 
@@ -122,19 +131,73 @@ def test_drop_beats_break_when_a_window_has_both() -> None:
     assert _wash(_draft(events), 17) == list(PALETTE.drop)
 
 
-def test_high_mean_energy_makes_a_chorus_window_without_a_kick_entry() -> None:
-    energy = {bar: 0.9 for bar in range(8, 12)} | {bar: 0.2 for bar in range(12, 16)}
+def test_a_clearly_louder_window_becomes_a_chorus_without_a_kick_entry() -> None:
+    # 두 구간 모두 옛 절대 기준(0.6)을 넘는다. 곡 안에서 상대적으로 큰 쪽만 후렴이다.
+    energy = {bar: 0.95 for bar in range(8, 12)} | {bar: 0.75 for bar in range(12, 16)}
     draft = _draft(energy=energy)
     assert _wash(draft, 9) == list(PALETTE.chorus)
     assert _wash(draft, 13) == list(PALETTE.verse)
 
 
-def test_energy_threshold_is_the_policy_chorus_energy_and_missing_bars_are_ignored() -> None:
-    # 8~11 마디 중 두 마디만 에너지가 있고 평균은 0.5 다. 없는 마디를 0 으로 세면 0.25 로 떨어진다.
-    energy = {8: 0.5, 9: 0.5}
-    assert _wash(_draft(energy=energy), 9) == list(PALETTE.verse)
-    lowered = ArrangementPolicy(chorus_energy=0.5)
-    assert _wash(_draft(energy=energy, policy=lowered), 9) == list(PALETTE.chorus)
+def test_a_quieter_window_stays_a_verse_but_a_kick_entry_still_makes_it_a_chorus() -> None:
+    energy = {bar: 0.9 for bar in range(8, 12)} | {bar: 0.2 for bar in range(12, 16)}
+    assert _wash(_draft(energy=energy), 13) == list(PALETTE.verse)
+    # 가장 조용한 구간(위치 0)이라도 킥 진입이 있으면 후렴이다.
+    assert _wash(_draft(KICK_AT_13, energy=energy), 13) == list(PALETTE.chorus)
+
+
+def test_bars_without_energy_are_ignored_not_counted_as_zero() -> None:
+    # 8~11 마디는 두 마디만 에너지(0.8)가 있고 12~15 마디는 모두 0.4 다. 없는 마디를 0 으로 세면
+    # 앞 구간 평균이 0.4 로 떨어져 두 구간이 같아지고(평평한 곡) 후렴이 사라진다.
+    energy = {8: 0.8, 9: 0.8} | {bar: 0.4 for bar in range(12, 16)}
+    draft = _draft(energy=energy)
+    assert _wash(draft, 9) == list(PALETTE.chorus)
+    assert _wash(draft, 13) == list(PALETTE.verse)
+    # 에너지가 한 마디도 없는 구간은 곡 안 위치를 정할 수 없어 벌스다.
+    assert _wash(draft, 2) == list(PALETTE.verse)
+
+
+@pytest.mark.parametrize("level", [0.1, 0.7, 1.0])
+def test_a_flat_song_has_no_energy_based_chorus_and_does_not_divide_by_zero(level: float) -> None:
+    # 0.1 과 0.7 은 3마디 구간과 4마디 구간의 평균이 부동소수 오차로 미세하게 달라진다.
+    # 그래도 평평한 곡이라 어느 구간도 후렴이 되면 안 된다.
+    energy = {bar: level for bar in range(1, BARS + 1)}
+    draft = _draft(energy=energy)
+    assert {tuple(_wash(draft, bar)) for bar in range(1, BARS + 1)} == {PALETTE.verse}
+
+
+def test_the_cut_is_the_policy_chorus_energy_cut_and_a_window_at_the_cut_is_a_verse() -> None:
+    # 세 구간의 에너지가 0.25 / 0.5 / 0.75 라 가운데 구간의 상대 위치는 정확히 0.5 다.
+    energy = (
+        {bar: 0.25 for bar in range(8, 12)}
+        | {bar: 0.5 for bar in range(12, 16)}
+        | {bar: 0.75 for bar in range(16, 20)}
+    )
+    assert _wash(_draft(energy=energy), 13) == list(PALETTE.verse)  # 0.5 는 기준 0.5 를 넘지 않는다
+    lowered = _draft(energy=energy, policy=ArrangementPolicy(chorus_energy_cut=0.4))
+    assert _wash(lowered, 13) == list(PALETTE.chorus)
+    assert _wash(lowered, 9) == list(PALETTE.verse)  # 가장 조용한 구간(위치 0)은 기준을 낮춰도 벌스
+    raised = _draft(energy=energy, policy=ArrangementPolicy(chorus_energy_cut=0.9))
+    assert _wash(raised, 17) == list(PALETTE.chorus)
+    assert _wash(raised, 13) == list(PALETTE.verse)
+
+
+def test_real_love_attack_bar_energies_give_both_verse_and_chorus_windows() -> None:
+    """실제 LOVE ATTACK 마디 음량으로 초안을 만들면 벌스 구간과 후렴 구간이 둘 다 나온다.
+
+    옛 절대 기준(0.6)에서는 4마디 구간 평균이 전부 0.710 ~ 1.000 이라 모든 구간이 후렴이었다.
+    """
+    with REAL_BAR_FEATURES.open(encoding="utf-8") as handle:
+        fixture = json.load(handle)
+    rows = fixture["bar_features"]
+    # 마디 지도의 에너지는 0~1 이라 1.0 을 넘는 음량은 1.0 으로 자른다.
+    energy = {int(row["bar"]): min(1.0, float(row["volume_norm"])) for row in rows}
+    offset = int(fixture["first_beat_offset"])
+    beats = [index * 500 for index in range(offset + 4 * len(rows))]
+    bar_map = build_bar_map_payload(beats, offset, bpm=120.0, events=[], bar_energy=energy)
+    draft = generate_arrangement_draft(bar_map, _layout())
+    colors = {tuple(cue["planned_color"]) for cue in _cues(draft, "WASH-ALL").values()}
+    assert {PALETTE.verse, PALETTE.chorus} <= colors
 
 
 # -- c. 마지막 드롭 뒤 돌림 ------------------------------------------------------------------
@@ -147,6 +210,15 @@ def test_windows_after_the_last_drop_cycle_through_the_last_chorus_colors() -> N
     assert after[:3] == cycle
     assert after[3] == cycle[0]
     assert len({tuple(color) for color in after}) >= 2
+
+
+def test_a_bridge_after_the_last_drop_does_not_use_up_a_last_chorus_color() -> None:
+    # 25~26 마디 브레이크가 든 구간(24~27)은 브릿지라 마지막 후렴이 아니다. 돌림 차례를 쓰지 않는다.
+    draft = _draft(DROP_17_18 + BREAK_25_26)
+    cycle = [list(color) for color in PALETTE.last_chorus]
+    assert _wash(draft, 20) == cycle[0]
+    assert _wash(draft, 25) == list(PALETTE.bridge)
+    assert [_wash(draft, bar) for bar in (28, 32, 36)] == [cycle[1], cycle[2], cycle[0]]
 
 
 def test_windows_before_the_last_drop_do_not_use_the_last_chorus_cycle() -> None:
@@ -209,7 +281,7 @@ def test_the_default_palette_values_are_the_director_agreed_ones() -> None:
     assert PALETTE.bridge == (85, 95, 100)
     assert PALETTE.backlight == (40, 65, 95)
     assert PALETTE.last_chorus == ((100, 50, 75), (55, 35, 100), (100, 55, 5))
-    assert ArrangementPolicy().chorus_energy == 0.6
+    assert ArrangementPolicy().chorus_energy_cut == 0.5
 
 
 def test_palette_and_policy_reject_bad_values() -> None:
@@ -222,9 +294,13 @@ def test_palette_and_policy_reject_bad_values() -> None:
     with pytest.raises(ValueError):
         ArrangementPalette(last_chorus=())
     with pytest.raises(ValueError):
-        ArrangementPolicy(chorus_energy=1.1)
+        ArrangementPolicy(chorus_energy_cut=1.1)
     with pytest.raises(ValueError):
-        ArrangementPolicy(chorus_energy=-0.1)
+        ArrangementPolicy(chorus_energy_cut=-0.1)
+    with pytest.raises(ValueError):
+        ArrangementPolicy(chorus_energy_cut=True)  # bool 은 숫자로 치지 않는다
+    assert ArrangementPolicy(chorus_energy_cut=0.0).chorus_energy_cut == 0.0
+    assert ArrangementPolicy(chorus_energy_cut=1.0).chorus_energy_cut == 1.0
     assert dataclasses.is_dataclass(PALETTE)
 
 
