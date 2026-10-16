@@ -1883,6 +1883,9 @@ export interface UiState {
    * 요청 전에는 `null`(서랍을 열어도 아직 못 받은 상태 — 지어낸 목록
    * 0건, mockup 데모 `P` 객체가 아니라 서버의 실제 판독 결과). */
   beatGridDrawer: BeatGridDrawerSection[] | null;
+  /** `busy` 거절을 받은 횟수. 서랍·프리셋 계획 같은 읽기/요청이 「서버가 다른 일 중」으로
+   * 거절됐는지 알아채는 용도 — 채팅 항목은 박자 격자 전체화면에서 보이지 않는다. */
+  busyCount: number;
   /** 카드 t565 — 마지막으로 받은 2D 무대. `null` 이면 아직 안 받음. */
   beatGridStage: BeatGridStageView | null;
   /** 카드 t551 후속(지시 1항) — AI 제안(경로 ③) 보류 카드. 소비(적용·
@@ -1908,6 +1911,7 @@ export const initialState: UiState = {
   status: null,
   songTimeline: { timeline: null, stale: false },
   beatGridDrawer: null,
+  busyCount: 0,
   beatGridStage: null,
   pendingBeatGridSuggestion: null,
   pendingBeatGridDraft: null,
@@ -2086,7 +2090,11 @@ export function reduceServerEvent(
       };
     }
     case "busy":
-      return { ...state, entries: [...state.entries, { kind: "busy", message: event.message }] };
+      return {
+        ...state,
+        busyCount: state.busyCount + 1,
+        entries: [...state.entries, { kind: "busy", message: event.message }],
+      };
     case "notice":
       return { ...state, entries: [...state.entries, { kind: "notice", message: event.message }] };
     case "panel_catalog":
