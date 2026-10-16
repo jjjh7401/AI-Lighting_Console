@@ -55,6 +55,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from server.design.rig_read_cache import KIND_MODE_CAPS, KIND_TYPE_MODES, RigReadCache
 from server.prechk.capability_read import (
     AxisRange,
     BulkPropertyReader,
@@ -203,6 +204,7 @@ def read_rig_capabilities(
     fixtures: Sequence[FixtureTypeRef],
     type_names: Mapping[int, str] | None = None,
     budget: int = 256,
+    cache: RigReadCache | None = None,
 ) -> RigCapabilities:
     """fid 목록을 각자의 타입·모드·조정 가능한 축으로 조인한다. **읽기 전용.**
 
@@ -216,6 +218,10 @@ def read_rig_capabilities(
     ``budget`` 은 (타입, 모드) 한 쌍당 왕복 상한이며 ``read_mode_capabilities`` 로
     그대로 넘어간다. 상한에 닿은 판독은 축 목록이 잘린 채로 오고, 그 사실은
     ``gaps`` 를 거쳐 :attr:`RigCapabilities.incomplete` 에 나타난다.
+
+    ``cache`` 를 주면 기종 모드 목록과 (기종, 모드) 능력을 세션 단위로 재사용한다. **전수로
+    읽힌 것만** 저장하고(부분·실패는 다음 반영이 다시 읽는다), 키에 기종·모드 이름을 넣어
+    같은 슬롯의 다른 이름은 적중하지 않는다.
     """
     result = RigCapabilities()
 
@@ -242,10 +248,22 @@ def read_rig_capabilities(
             result.unread[fid] = UNREAD_MODE_UNPARSED
             continue
         if type_name not in type_reads:
-            type_reads[type_name] = read_type_mode_widths(
-                reader, properties, root=root, type_name=type_name
-            )
-            result.mode_reads += 1
+            cached_type = cache.get(KIND_TYPE_MODES, (root, slot, type_name)) if cache else None
+            if cached_type is not None:
+                type_reads[type_name] = cached_type
+            else:
+                fresh_type = read_type_mode_widths(
+                    reader, properties, root=root, type_name=type_name
+                )
+                type_reads[type_name] = fresh_type
+                result.mode_reads += 1
+                if (
+                    cache is not None
+                    and fresh_type.attempted
+                    and fresh_type.type_found
+                    and all(mode.width is not None for mode in fresh_type.modes)
+                ):
+                    cache.put(KIND_TYPE_MODES, (root, slot, type_name), fresh_type)
         resolved[fid] = (slot, type_name, parsed.slot, parsed.name)
         refs.append(FixtureModeRef(slot=fid, type_name=type_name, mode_raw=fixture.mode_raw))
 
@@ -267,16 +285,21 @@ def read_rig_capabilities(
         key = (type_slot, mode_slot)
         caps = mode_caps.get(key)
         if caps is None:
-            caps = read_mode_capabilities(
-                reader,
-                properties,
-                root=root,
-                type_slot=type_slot,
-                mode_slot=mode_slot,
-                budget=budget,
-            )
+            cache_key = (root, type_slot, type_name, mode_slot, mode_name, budget)
+            caps = cache.get(KIND_MODE_CAPS, cache_key) if cache else None
+            if caps is None:
+                caps = read_mode_capabilities(
+                    reader,
+                    properties,
+                    root=root,
+                    type_slot=type_slot,
+                    mode_slot=mode_slot,
+                    budget=budget,
+                )
+                result.capability_reads += 1
+                if cache is not None and caps.attempted and caps.mode_found and not caps.gaps:
+                    cache.put(KIND_MODE_CAPS, cache_key, caps)
             mode_caps[key] = caps
-            result.capability_reads += 1
         if not caps.mode_found:
             result.unread[fid] = f"{UNREAD_CAPABILITY_UNREAD}: {caps.detail or '사유 없음'}"
             continue
