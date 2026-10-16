@@ -31,6 +31,7 @@ import math
 import os
 import re
 import tempfile
+import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
@@ -363,6 +364,7 @@ from server.spatial.vocabulary import (
     match_explicit_layout,
     parse_ring_layout,
 )
+from server.web.apply_timing import apply_stage, current_clock, timed_apply
 from server.web.approval_bridge import ApprovalChannel
 from server.web.cue_monitor import parse_current_cue_index
 from server.web.korean_errors import classify_exception
@@ -4541,11 +4543,19 @@ class ChatSession:
         )
 
     def _notify_approval(self, request_id: str, request: ApprovalRequest) -> None:
-        self._send(
-            approval_request_event(
-                request_id=request_id, request=self._with_approval_advisories(request)
-            )
+        started = time.perf_counter()
+        event = approval_request_event(
+            request_id=request_id, request=self._with_approval_advisories(request)
         )
+        built = time.perf_counter()
+        self._send(event)
+        clock = current_clock()
+        if clock is not None:
+            clock.card(
+                items=len(event["items"]),
+                build_ms=(built - started) * 1000,
+                send_ms=(time.perf_counter() - built) * 1000,
+            )
 
     def _notify_review(self, request_id: str, request: ReviewRequest) -> None:
         self._send(review_request_event(request_id=request_id, request=request))
@@ -10895,6 +10905,7 @@ class ChatSession:
             with contextlib.suppress(OSError):
                 Path(handle.name).unlink()
 
+    @timed_apply
     def beat_grid_apply(self) -> dict:
         """상단 바 「⇪ 콘솔에 반영」 — 격자의 미반영 편집을 **구간 단위
         1개** 승인으로 콘솔에 쓴다(REQ-LDBEAT-012(a), 칸마다 따로 승인받지
@@ -10967,12 +10978,14 @@ class ChatSession:
         # ``current_session_key()``가 ``DEFAULT_SESSION_KEY``로 떨어져
         # 이 연결에 바인딩된 ``_notify_approval``을 못 찾고, 승인 요청이
         # 카드 0장으로 조용히 거절된다(이 카드 실측으로 잡은 결함).
+        apply_stage("pools_plan")
         token = bind_session_key(self._session_key)
         try:
             timing = build_song_timing_from_bar_map(timeline.get("bar_map"))
 
             sequences_section = self._beat_grid_sequences_section()
 
+            apply_stage("sequences")
             owned_sequences, ownership_reason = verify_owned_sequences(
                 sequences_section, owned_tracks_record
             )
@@ -10992,6 +11005,7 @@ class ChatSession:
             sequence_numbers = dict(owned_sequences)
             sequence_numbers.update(fresh_sequence_numbers)
 
+            apply_stage("ownership_pick")
             timecode_number, timecode_reason = self._resolve_beat_grid_timecode_number(
                 timeline.get("timecode_number"), recorded_name=recorded_timecode_name
             )
@@ -11007,14 +11021,17 @@ class ChatSession:
             )
             # 이번 반영 안에서 장비 판독을 한 번만 묻는다 — 리그 판독과 무대 소속 판독이 같은 장비
             # 속성을 함께 쓰므로, 장비마다 질의 한 번으로 받아 두고 뒤의 읽기는 그 값으로 답한다.
+            apply_stage("timecode")
             snapshot = self._beat_grid_fixture_snapshot()
             rig_read = read_design_rig(snapshot, fixture_types_root=types_root)
+            apply_stage("rig")
             # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
             # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.
             dimmer_attributes, dimmer_reasons = resolve_group_dimmer_attributes(
                 rig_read, group_names, self._beat_grid_group_members(group_names, port=snapshot)
             )
 
+            apply_stage("dimmer_groups")
             probe_results = grid.get("probe_results") or {}
             # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
             # 넘겨 기록된 마디는 같은 번호를 쓰게 한다(막힌 칸이 있어도 뒤 칸
@@ -11038,6 +11055,7 @@ class ChatSession:
                 dimmer_attribute_reasons=dimmer_reasons,
                 held_cells=approved_held_cells,
             )
+            apply_stage("bundle")
             # 카드 t615 — 저장되는 큐가 없는 트랙은 맨 Store 줄을 내지 않는다(빈 Cue 1 방지).
             # 그래서 줄이 하나도 없어도 만들기 줄(새 프리셋 생성)이 있으면 승인 카드를 올린다.
             # 만들기 줄도 없고 줄도 없으면 보낼 내용이 없으므로 거절한다.
@@ -11207,6 +11225,7 @@ class ChatSession:
                 recheck=_presend_recheck if position_plan.creations else None,
             )
             since = datetime.now(UTC).isoformat()
+            apply_stage("precheck")
             executed = self._dispatch_declared(
                 ToolCall(
                     id="beat-grid-apply",
@@ -11215,6 +11234,7 @@ class ChatSession:
                 ),
                 risk=risk,
             )
+            apply_stage("gate_return")
             until = datetime.now(UTC).isoformat()
             if executed.result.is_error and presend_reasons:
                 return self._beat_grid_send_status(

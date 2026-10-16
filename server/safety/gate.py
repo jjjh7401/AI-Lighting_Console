@@ -35,6 +35,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 from server.director.programmer_arbiter import ProgrammerArbiter, TargetBusyError
+from server.observability.console_tally import counted_read
 from server.orchestrator.ports import ExecutionResult
 from server.safety.approval import (
     ApprovalItem,
@@ -1013,6 +1014,7 @@ class SafetyGate:
         if len(self._unconfirmed) > _MAX_UNCONFIRMED:
             self._unconfirmed.popitem(last=False)
 
+    @counted_read
     def _query_state(self, path: str, *, offset: int = 0) -> dict:
         # Audited even on failure: a timed-out query still SENT one OSC
         # request, and the 1:1 send↔audit reconciliation must not lose it.
@@ -1029,6 +1031,7 @@ class SafetyGate:
         self._audit.log_executed(path, kind="state_query", ok=True)
         return payload
 
+    @counted_read
     def _query_property(self, path: str, property_name: str) -> dict:
         # Audited on the same 1:1 send↔audit rule as _query_state: a property
         # read is one OSC send, and a timeout still sent it.
@@ -1041,6 +1044,7 @@ class SafetyGate:
         self._audit.log_executed(subject, kind="property_query", ok=True)
         return payload
 
+    @counted_read
     def _enumerate_fields(self, path: str, *, offset: int = 0) -> dict:
         # Audited on the same 1:1 send↔audit rule as _query_property: an
         # introspection request is one OSC send, and a timeout still sent it.
@@ -1058,6 +1062,7 @@ class SafetyGate:
         self._audit.log_executed(subject, kind="introspect_query", ok=True)
         return payload
 
+    @counted_read
     def _query_properties(
         self, path: str, property_names: Sequence[str], *, offset: int | None = None
     ) -> dict:
