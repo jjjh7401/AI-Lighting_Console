@@ -5,6 +5,8 @@
 디머·위치 프리셋 번호가 없으면 계획 이름만 싣는다
 (``planned_dimmer_name`` · ``planned_position_name``, 예: DIM-70 · 「콘솔 이름 + 그룹」 — 위치
 프리셋은 그룹마다 따로 저장하므로 이름에 그룹이 붙는다).
+무빙 칸은 계획표에 색이 없어도 그 마디의 무대(WASH) 색을 받는다.
+무빙 색은 무대 시퀀스가 정한다(규칙서 SCENE).
 화면은 이 키들을 점선 테두리·흐린 글자로 그려서 콘솔 값과 구분한다.
 
 원본 격자는 바뀌지 않는다 — 화면에 보낼 사본에만 붙는다. 「반영 이후 바뀐 칸」 비교
@@ -52,6 +54,59 @@ def _planned_names(
     return colors, dimmers, positions
 
 
+def _role_tracks(tracks: list[object], role: str) -> list[tuple[str, list[object]]]:
+    """역할이 ``role`` 인 트랙을 (그룹 이름, 칸 목록) 쌍으로 고른다. 모양이 틀린 트랙은 건너뛴다."""
+    picked: list[tuple[str, list[object]]] = []
+    for track in tracks:
+        if not isinstance(track, Mapping) or track.get("layer_role") != role:
+            continue
+        cues = track.get("cues")
+        if isinstance(cues, list):
+            picked.append((str(track.get("group_name")), cues))
+    return picked
+
+
+def _bar_of(cue: object) -> int | None:
+    """칸의 마디 번호(정수). 마디가 없거나 정수가 아니면 ``None``."""
+    bar = cue.get("bar") if isinstance(cue, Mapping) else None
+    return bar if isinstance(bar, int) and not isinstance(bar, bool) else None
+
+
+def _scene_colors_by_bar(
+    tracks: list[object], colors: Mapping[_CellKey, set[tuple[float, ...]]]
+) -> dict[int, set[tuple[float, ...]]]:
+    """무대(WASH) 칸의 계획 색을 마디마다 모은다 — 무빙 색이 따를 「무대 색」이다."""
+    scene: dict[int, set[tuple[float, ...]]] = {}
+    for group, cues in _role_tracks(tracks, "wash"):
+        for cue in cues:
+            bar = _bar_of(cue)
+            if bar is not None and (group, bar) in colors:
+                scene.setdefault(bar, set()).update(colors[(group, bar)])
+    return scene
+
+
+def _mover_colors(
+    tracks: list[object], colors: Mapping[_CellKey, set[tuple[float, ...]]]
+) -> dict[_CellKey, set[tuple[float, ...]]]:
+    """무빙 칸이 받을 계획 색 — 그 마디에 효력이 있는 무대 색.
+
+    규칙서 SCENE 행: 「무빙 기본 위치·색」은 무대 시퀀스가 정하고, 색은 구간 경계에서만 바뀐다.
+    그래서 가장 가까운 앞 마디(같은 마디 포함)의 무대 색을 쓴다. 그 무대 색이 둘 이상이면
+    어느 색인지 지어내지 않는다.
+    """
+    scene = _scene_colors_by_bar(tracks, colors)
+    result: dict[_CellKey, set[tuple[float, ...]]] = {}
+    for group, cues in _role_tracks(tracks, "mover"):
+        for cue in cues:
+            bar = _bar_of(cue)
+            if bar is None:
+                continue
+            earlier = [b for b in scene if b <= bar]
+            if earlier and len(scene[max(earlier)]) == 1:
+                result[(group, bar)] = set(scene[max(earlier)])
+    return result
+
+
 def _marks_for_cue(
     cue: Mapping[str, object],
     key: _CellKey,
@@ -95,6 +150,8 @@ def attach_planned_marks(grid: Mapping[str, object], song_title: object) -> dict
         dimmer_attributes={},
     )
     colors, dimmers, positions = _planned_names(plan)
+    # 무빙 칸은 계획표에 색이 없어도 무대 색을 받는다. 계획표가 색을 정한 칸은 그 색이 이긴다.
+    colors = {**_mover_colors(tracks, colors), **colors}
     new_tracks: list[object] = []
     for track in tracks:
         if not isinstance(track, Mapping) or not isinstance(track.get("cues"), list):
