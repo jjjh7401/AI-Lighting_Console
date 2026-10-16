@@ -165,3 +165,60 @@ def test_path_form_target_through_session(tmp_path) -> None:
         tmp_path, tree, {TARGET_PATH: "ShowData/DataPools/Default/Sequences/5"}
     )
     assert session.beat_grid_apply()["ok"] is True
+
+
+def test_real_console_shape_with_empty_default_track(tmp_path) -> None:
+    """실측(onPC 2.4.2): Marker + 앱 트랙 + 콘솔이 만든 빈 'Track 9'(TARGET 읽기 불가)."""
+    base = f"DataPool/Timecodes/{TIMECODE_NUMBER}/1"
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "LDBEAT BACK"), (6, "LDBEAT FOH")])
+    tree[base] = {
+        "children": [
+            {"class": "MarkerTrack", "i": 1, "name": "Marker"},
+            {"class": "Track", "i": 2, "name": "<LDBEAT FOH#3>"},
+            {"class": "Track", "i": 3, "name": "<LDBEAT BACK#3>"},
+            {"class": "Track", "i": 4, "name": "Track 9"},
+        ],
+        "node": {"childCount": 4},
+    }
+    session, _console, _approval = _apply(tmp_path, tree, {})
+    shapes = {
+        f"{base}/1": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Marker"},
+        ],
+        f"{base}/2": [
+            {"n": "TARGET", "ok": True, "t": "userdata", "v": "Sequence 6"},
+            {"n": "NAME", "ok": True, "t": "string", "v": "<LDBEAT FOH#3>"},
+        ],
+        f"{base}/3": [
+            {"n": "TARGET", "ok": True, "t": "userdata", "v": "Sequence 5"},
+            {"n": "NAME", "ok": True, "t": "string", "v": "<LDBEAT BACK#3>"},
+        ],
+        f"{base}/4": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Track 9"},
+        ],
+    }
+    session._rig_capability_port.query_properties = lambda path, names, **_k: {
+        "reads": shapes[path]
+    }
+    targets = session._beat_grid_timecode_track_targets(TIMECODE_NUMBER)
+    assert [t["target"] for t in targets] == ["Sequence 6", "Sequence 5"]
+    assert session.beat_grid_apply()["ok"] is True
+
+
+def test_unreadable_target_on_named_foreign_track_still_refused(tmp_path) -> None:
+    base = f"DataPool/Timecodes/{TIMECODE_NUMBER}/1"
+    tree = _tree(f"LDBEAT Timecode {TIMECODE_NUMBER}", [(5, "LDBEAT BACK")])
+    tree[base] = {
+        "children": [{"class": "Track", "i": 2, "name": "Someone's Track"}],
+        "node": {"childCount": 1},
+    }
+    session, _console, _approval = _apply(tmp_path, tree, {})
+    session._rig_capability_port.query_properties = lambda path, names, **_k: {
+        "reads": [
+            {"e": "property not readable: TARGET", "n": "TARGET", "ok": False},
+            {"n": "NAME", "ok": True, "t": "string", "v": "Someone's Track"},
+        ]
+    }
+    assert session.beat_grid_apply()["ok"] is False
