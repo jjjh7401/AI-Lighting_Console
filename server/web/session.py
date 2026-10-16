@@ -3847,6 +3847,15 @@ class SongTimelineStore:
         없다(딕셔너리가 아니다)."""
         return json.dumps(list(song_key), ensure_ascii=False)
 
+    def beat_grid_allocation_owns_timecode(self, number: int, name: str) -> bool:
+        """어느 곡이든 이 앱의 반영 기록이 ``number`` 번 타임코드를 ``name`` 으로 적고 있는가."""
+        return any(
+            isinstance(record, dict)
+            and record.get("timecode_number") == number
+            and record.get("timecode_name") == name
+            for record in self._beat_grid_allocations.values()
+        )
+
     def beat_grid_allocation(self, song_key: tuple[object, object]) -> dict | None:
         return self._beat_grid_allocations.get(self._beat_grid_allocation_key(song_key))
 
@@ -11032,16 +11041,22 @@ class ChatSession:
             children = [c for c in (node.get("children") or ()) if isinstance(c, dict)]
             targets: list[object] = []
             for child in children:
-                if child.get("class") != "Track":
+                # 첫 자식은 Marker — class 가 비어 오는 응답기도 있어 Marker 만 건너뛴다.
+                if child.get("class") not in (None, "Track"):
                     continue
-                reads = port.query_properties(f"{base}/{child.get('i')}", ("TARGET",))
+                reads = port.query_properties(f"{base}/{child.get('i')}", ("TARGET", "NAME"))
                 value = None
+                track_name = None
                 for read in reads.get("reads") or ():
-                    if isinstance(read, Mapping) and read.get("ok") and read.get("n") == "TARGET":
+                    if not (isinstance(read, Mapping) and read.get("ok")):
+                        continue
+                    if read.get("n") == "TARGET":
                         value = read.get("v")
-                if value is None:
-                    return []
-                targets.append(value)
+                    elif read.get("n") == "NAME":
+                        track_name = read.get("v")
+                if value is None and child.get("class") is None and track_name is None:
+                    continue  # 속성이 없는 자식(Marker) — 트랙이 아니다
+                targets.append({"target": value, "track_name": track_name})
         except Exception:  # noqa: BLE001 - 못 읽으면 거절 쪽으로
             return []
         return targets
@@ -11075,6 +11090,16 @@ class ChatSession:
                     f"Timecode {wanted}의 콘솔 이름('{occupant}')이 기록된 이름"
                     f"('{recorded_name}')과 달라 재적용을 거절합니다."
                 )
+            if (
+                overwrite_notes is not None
+                and occupant.startswith("LDBEAT Timecode")
+                and self._timeline_store is not None
+                and self._timeline_store.beat_grid_allocation_owns_timecode(wanted, occupant)
+            ):
+                # 이 앱이 저장해 둔 반영 기록이 같은 번호·같은 이름을 적고 있다 — TARGET 을
+                # 읽지 않고 신뢰한다(기록은 앱이 직접 쓴 것).
+                overwrite_notes.append(f"기존 {occupant} 을 덮어씁니다")
+                return wanted, None
             if overwrite_notes is not None and occupant.startswith("LDBEAT Timecode"):
                 try:
                     names = _owned_sequence_names(self._beat_grid_sequences_section())
