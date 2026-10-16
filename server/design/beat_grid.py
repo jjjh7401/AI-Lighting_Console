@@ -42,6 +42,7 @@ from typing import Literal, NotRequired, TypedDict
 import yaml
 
 from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
+from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_probes import (
     read_m1_probe_results,
     read_m1_probe_results_from_path,
@@ -425,7 +426,7 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     if isinstance(raw_app_movement, Mapping):
         app_movement = BeatGridAppMovement(
             shape=raw_app_movement.get("shape"),  # type: ignore[typeddict-item]
-            axes=tuple(raw_app_movement.get("axes") or ()),  # type: ignore[arg-type]
+            axes=canonical_axes(raw_app_movement.get("axes") or ()),
             period_unit=raw_app_movement.get("period_unit"),  # type: ignore[typeddict-item]
             period_value=raw_app_movement.get("period_value"),  # type: ignore[typeddict-item]
             phase_spread=raw_app_movement.get("phase_spread"),  # type: ignore[typeddict-item]
@@ -706,7 +707,7 @@ def check_app_movement_axis_conflict(cue: Mapping[str, object]) -> str | None:
     movement = cue.get("app_movement")
     if not isinstance(movement, Mapping):
         return None
-    axes = set(movement.get("axes") or ())
+    axes = set(canonical_axes(movement.get("axes") or ()))
     if not axes:
         return None
     if cue.get("effect_preset_no") is None:
@@ -767,7 +768,7 @@ def pan_only_vertical_base_warning(cue: Mapping[str, object]) -> str | None:
     movement = cue.get("app_movement")
     if not isinstance(movement, Mapping):
         return None
-    axes = set(movement.get("axes") or ())
+    axes = set(canonical_axes(movement.get("axes") or ()))
     if axes != {"Pan"}:
         return None
     if cue.get("position_preset_no") is not None:

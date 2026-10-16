@@ -520,6 +520,14 @@ class TestTimecodeResolutionBranches:
 _ALL_PASS = {1: "통과", 2: "통과", 4: "통과", 5: "통과", 7: "통과", 9: "통과"}
 
 
+def _progress_table(results: dict) -> str:
+    """진행표 M1 표 모양의 최소 텍스트 — 항목 번호는 ①~⑨ 원문자다."""
+    return "\n".join(
+        f"| {chr(0x2460 + item - 1)} 항목 | {status} | 본 것 | 근거 |"
+        for item, status in results.items()
+    )
+
+
 def _effect_cue(bar: int, preset: str) -> dict:
     """효과 프리셋 리콜 칸 — M1 ④가 「통과」가 아니면 에미터가 이 칸만 막는다
     (``beat_grid_emit._EFFECT_PRESET_RECALL_ITEM``)."""
@@ -543,7 +551,11 @@ def _three_cell_timeline(probe_results: dict) -> dict:
 
 
 class TestBlockedCellsArePreserved:
-    def test_a_blocked_cell_is_neither_deleted_nor_overwritten(self, tmp_path) -> None:
+    def test_a_blocked_cell_is_neither_deleted_nor_overwritten(self, tmp_path, monkeypatch) -> None:
+        # 반영은 progress.md 의 M1 표를 그 자리에서 다시 읽는다 — 판정은 파일로 주입한다.
+        progress = tmp_path / "progress.md"
+        monkeypatch.setattr("server.web.session.default_progress_md_path", lambda: progress)
+        progress.write_text(_progress_table(_ALL_PASS), encoding="utf-8")
         store = SongTimelineStore()
         store.latest = _three_cell_timeline(_ALL_PASS)
         session, console, approval, _audit = _new_session(tmp_path, store=store)
@@ -560,6 +572,7 @@ class TestBlockedCellsArePreserved:
         console.executed.clear()
         # 이번에는 M1 ④가 미확인 — 2마디(효과 칸)만 막힌다.
         store.latest = _three_cell_timeline({**_ALL_PASS, 4: "미확인"})
+        progress.write_text(_progress_table({**_ALL_PASS, 4: "미확인"}), encoding="utf-8")
 
         second = session.beat_grid_apply()
         assert second["ok"] is True

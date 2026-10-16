@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -49,8 +50,9 @@ from server.design.beat_grid_cell_split import (
 )
 from server.design.beat_grid_color_presets import color_preset_rgb, record_color_preset_rgb
 from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
-from server.design.beat_grid_measured import is_movement_measured_open
+from server.design.beat_grid_measured import canonical_axes, is_movement_measured_open
 from server.design.beat_grid_presets import (
+    app_preset_label,
     first_free_base_color_number,
     first_free_base_dimmer_number,
     first_free_base_position_number,
@@ -176,6 +178,9 @@ class PlanPreset:
     #: 콘솔에 이미 있는 같은 RGB·같은 그룹의 색 번호를 다시 쓴다 — 저장 줄은 없고(``store`` 없음),
     #: 칸은 그 번호를 가리키기만 한다(``saved_presets`` 가 넣고, ``save_commands`` 가 건너뛴다).
     reused: bool = False
+    #: 효과 프리셋만 — 승인 뒤 격자에 남기는 내용 기록 ``(그룹 번호, 움직임 서명, BPM)``.
+    #: 다음 계획이 같은 이름·같은 내용의 프리셋을 다시 만들지 않고 재사용하는 근거다.
+    effect_record: tuple[object, ...] | None = None
     #: 위치 후보의 조준 기준. 기본 위치 이름(``Home``·``Center``·``Ring In``·``Audience``)이면
     #: 그 리그 조준값을 쓴다. ``None`` 이면 주석의 바닥 점(「바닥 쪽」) 규칙이다.
     aim: str | None = None
@@ -387,7 +392,7 @@ def _prior_approval_source(grid: Mapping[str, object], cell: PlanCell) -> str | 
 
 def _effect_signature(movement: Mapping[str, object]) -> tuple[object, ...]:
     """같은 움직임 값을 한 프리셋으로 묶는 키 — 모양·축·주기·위상 펼침."""
-    axes = tuple(sorted(str(axis) for axis in (movement.get("axes") or ())))
+    axes = tuple(sorted(canonical_axes(movement.get("axes") or ())))
     return (
         movement.get("shape"),
         axes,
@@ -449,7 +454,7 @@ def _period_donor(
 def _effect_name(movement: Mapping[str, object]) -> str:
     """효과 프리셋 콘솔 이름 — ASCII 대문자. 예: ``WAVE PAN 2 BEAT``. 주기가 없으면 모양·축만."""
     shape = str(movement.get("shape") or "").upper()
-    axes = "+".join(str(axis).upper() for axis in (movement.get("axes") or ()))
+    axes = "+".join(axis.upper() for axis in canonical_axes(movement.get("axes") or ()))
     period = _period_of(movement)
     if period is None:
         return f"{shape} {axes}"
@@ -461,7 +466,7 @@ def _effect_value(movement: Mapping[str, object]) -> str:
     """계획표 값 칸 — 「효과 · 웨이브 · Pan · 박 2」. 화면은 이 머리말로 효과 줄을 알아본다.
     주기가 없으면 「주기 미정」(지어내지 않는다)."""
     shape = str(movement.get("shape") or "")
-    axes = "·".join(str(axis) for axis in (movement.get("axes") or ()))
+    axes = "·".join(canonical_axes(movement.get("axes") or ()))
     shape_word = _EFFECT_SHAPE_LABEL.get(shape, shape)
     period = _period_of(movement)
     period_text = "주기 미정" if period is None else _period_words(period)
@@ -505,9 +510,74 @@ def _first_free_effect_slot(effect_pool: PoolRead, reserved: set[str]) -> tuple[
     return pool_no, number
 
 
+#: 곡 격자에 효과 프리셋의 내용을 남기는 자리 — ``{"21.8": {group_no, signature, bpm}}``.
+_EFFECT_RECORD_KEY = "preset_movements"
+
+
+def _json_signature(signature: tuple[object, ...]) -> list[object]:
+    """움직임 서명을 JSON 을 한 번 거친 모양(튜플 → 리스트)으로 — 저장했다 읽어도 같게 비교한다."""
+    return json.loads(json.dumps(signature))
+
+
+def _record_matches(
+    record: object, group_no: object, signature: tuple[object, ...], bpm: float | None
+) -> bool:
+    if not isinstance(record, Mapping):
+        return False
+    if record.get("group_no") != group_no or record.get("signature") != _json_signature(signature):
+        return False
+    recorded_bpm = record.get("bpm")
+    return recorded_bpm is None or bpm is None or abs(float(recorded_bpm) - bpm) < 0.01
+
+
+def _reusable_effect_slot(
+    grid: Mapping[str, object],
+    effect_pool: PoolRead,
+    *,
+    name: str,
+    group_name: str,
+    group_no: object,
+    movement: Mapping[str, object],
+    bpm: float | None,
+) -> str | None:
+    """콘솔에 이미 있는 같은 이름·같은 내용의 앱이 만든 효과 프리셋 번호(「pool.slot」).
+
+    색 재사용(``_reusable_color_slot``)과 같은 틀이다 — 격자가 그 번호의 이름(``preset_labels``)을
+    기록하고 있고, 콘솔 풀에 그 번호가 아직 있으며, 내용이 같아야 한다. 내용은 격자의
+    ``preset_movements`` 기록(그룹 번호·움직임 서명·BPM)으로 가른다. 기록이 없는 옛 프리셋은
+    이름이 같고 위상 펼침이 없으며, 그 번호를 쓰는 칸이 전부 이 그룹일 때만 쓴다(다른 그룹이
+    쓰면 그룹이 달라 재사용하지 않는다). 풀을 못 읽었으면 있는지 알 수 없어 재사용하지 않는다."""
+    if effect_pool is None:
+        return None
+    pool_no, children = effect_pool
+    signature = _effect_signature(movement)
+    records = grid.get(_EFFECT_RECORD_KEY)
+    for slot in sorted(children):
+        number = f"{pool_no}.{slot}"
+        if app_preset_label(grid, number) != name:
+            continue
+        record = records.get(number) if isinstance(records, Mapping) else None
+        if record is not None:
+            if _record_matches(record, group_no, signature, bpm):
+                return number
+            continue
+        if movement.get("phase_spread"):
+            continue
+        users = {
+            str(track.get("group_name"))
+            for track in grid.get("tracks") or []
+            for cue in track.get("cues") or []
+            if cue.get("effect_preset_no") == number
+        }
+        if users == {group_name}:
+            return number
+    return None
+
+
 def _movement_effect_presets(
     rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
     *,
+    grid: Mapping[str, object],
     effect_pool: PoolRead,
     bpm: float | None,
     beats_per_bar: int | None,
@@ -565,11 +635,24 @@ def _movement_effect_presets(
         placement = _first_free_effect_slot(effect_pool, reserved)
         bundle: tuple[str, ...] | None = None
         reason: str | None = None
+        reusable: str | None = None
         # 그룹 번호는 확인된 것만 쓴다(디머와 같은 규칙). 확인 안 됐으면 저장 줄을 붙이지 않는다.
         if not isinstance(group_no, int) or isinstance(group_no, bool) or not confirmed_of[key]:
             reason = f"그룹 번호가 확인되지 않음: {group_name}"
         elif _period_of(movement) is None:
             reason = "칸에 움직임 주기(박 또는 마디 수)가 없다 — 감독이 고칠 값"
+        elif (
+            reusable := _reusable_effect_slot(
+                grid,
+                effect_pool,
+                name=name,
+                group_name=group_name,
+                group_no=group_no,
+                movement=movement,
+                bpm=bpm,
+            )
+        ) is not None:
+            pass  # 콘솔에 같은 프리셋이 이미 있다 — 새로 만들지 않는다.
         elif placement is None:
             reason = _EFFECT_POOL_HOLD
         else:
@@ -583,8 +666,8 @@ def _movement_effect_presets(
                 beats_per_bar=beats_per_bar,
             )
         # 번호는 저장 줄이 붙는 줄에만 쓴다 — 못 붙는 줄이 번호를 먼저 잡으면 다음 줄 번호가 밀린다.
-        slot: str | None = None
-        if bundle is not None and reason is None and placement is not None:
+        slot: str | None = reusable
+        if reusable is None and bundle is not None and reason is None and placement is not None:
             slot = f"{placement[0]}.{placement[1]}"
             reserved.add(slot)
         ready = slot is not None
@@ -598,7 +681,9 @@ def _movement_effect_presets(
                 groups=(group_name,),
                 ready=ready,
                 hold=None if ready else (reason or _EFFECT_POOL_HOLD),
-                store=bundle if ready else None,
+                store=bundle if ready and reusable is None else None,
+                reused=reusable is not None,
+                effect_record=(group_no, _effect_signature(movement), bpm) if ready else None,
             )
         )
         if not ready:
@@ -1311,6 +1396,7 @@ def build_preset_plan(
 
     effect_presets, effect_unresolved, effect_fixes = _movement_effect_presets(
         rows,
+        grid=grid,
         effect_pool=effect_pool,
         bpm=bpm,
         beats_per_bar=beats_per_bar,
@@ -1504,6 +1590,7 @@ def apply_plan_references(
     date: str,
     source: str,
     planned_from: Mapping[str, object] | None = None,
+    record_approval: bool = True,
 ) -> dict[str, object]:
     """**승인 뒤에만** 부른다. 저장한 프리셋(디머 · 색 · 위치, ``saved_presets``)을 그 칸에서
     참조시키고, 참조가 바뀐 칸·필드를 승인으로 적는다. 색은 RGB 를, 색·위치는 콘솔 이름을 격자에
@@ -1553,6 +1640,19 @@ def apply_plan_references(
         if preset.kind != "dimmer" and not preset.reused:
             assert preset.slot is not None
             updated = record_app_preset_label(updated, preset.slot, preset.name)
+        if preset.kind == "effect" and preset.effect_record is not None and preset.slot:
+            records = updated.get(_EFFECT_RECORD_KEY)
+            records = dict(records) if isinstance(records, Mapping) else {}
+            if not preset.reused or preset.slot not in records:
+                group_no, signature, bpm = preset.effect_record
+                records[preset.slot] = {
+                    "group_no": group_no,
+                    "signature": _json_signature(signature),  # type: ignore[arg-type]
+                    "bpm": bpm,
+                }
+                updated[_EFFECT_RECORD_KEY] = records
+    if not record_approval:
+        return updated
     pending = pending_preset_approvals(updated)
     for cell, prior in touched.items():
         entries = [

@@ -74,7 +74,7 @@ _STATIC_ROLES = frozenset({"key", "audience", "wash"})
 
 #: 무빙 칸의 움직임 모양과 축. 「팬 웨이브」 규칙값이고 곡 전용 값이 아니다.
 _MOTION_SHAPE = "wave"
-_MOTION_AXES = ("pan",)
+_MOTION_AXES = ("Pan",)
 # 밝기·트리거·움직임 주기 같은 숫자는 ``ArrangementPolicy`` 에 든다(REQ-LDARRANGE-004).
 # 펄스·체이스의 패턴은 효과 프리셋의 몫이라 여기서는 밝기만 정한다.
 # 효과·위치·색 번호는 콘솔에서 와야 하므로 지어내지 않는다.

@@ -131,6 +131,10 @@ from server.design.beat_grid_presets import (
     resolve_effect_preset_name,
     resolve_preset_name,
 )
+from server.design.beat_grid_probes import (
+    default_progress_md_path,
+    read_m1_probe_results_from_path,
+)
 from server.design.beat_grid_send import (
     BeatGridCellKey,
     _owned_sequence_names,
@@ -3842,6 +3846,15 @@ class SongTimelineStore:
         문자열로 — 순서가 고정된 리스트 하나뿐이라 ``sort_keys``가 필요
         없다(딕셔너리가 아니다)."""
         return json.dumps(list(song_key), ensure_ascii=False)
+
+    def beat_grid_allocation_owns_timecode(self, number: int, name: str) -> bool:
+        """어느 곡이든 이 앱의 반영 기록이 ``number`` 번 타임코드를 ``name`` 으로 적고 있는가."""
+        return any(
+            isinstance(record, dict)
+            and record.get("timecode_number") == number
+            and record.get("timecode_name") == name
+            for record in self._beat_grid_allocations.values()
+        )
 
     def beat_grid_allocation(self, song_key: tuple[object, object]) -> dict | None:
         return self._beat_grid_allocations.get(self._beat_grid_allocation_key(song_key))
@@ -10680,6 +10693,32 @@ class ChatSession:
                 commands=[],
             )
         )
+        reused_only = [preset for preset in saved_presets(plan) if preset.reused]
+        if not commands and reused_only:
+            # 새로 저장할 줄 없이 콘솔에 있는 같은 프리셋만 쓴다 — 콘솔 쓰기도 승인 카드도 없다.
+            # 칸이 그 번호를 가리키게만 하고, 번호 승인은 다음 「콘솔에 반영」의 승인 카드가 받는다.
+            current = store.latest if store.latest is not None else timeline
+            approved = apply_plan_references(
+                self._beat_grid_view(current),
+                plan,
+                by="supervisor",
+                date=datetime.now(UTC).isoformat(),
+                source="preset_plan:reuse",
+                planned_from=grid,
+                record_approval=False,
+            )
+            store.latest = {**current, "beat_grid": approved}
+            self._send(
+                song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest))
+            )
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=True,
+                reason=(
+                    f"연출 {saved_summary(plan)}: 콘솔에 이미 있는 프리셋을 칸에 적었습니다 "
+                    "(새로 저장한 것 없음, 번호 승인은 「콘솔에 반영」 때 받습니다)."
+                ),
+            )
         if not commands:
             return self._beat_grid_send_status(
                 last_action="apply",
@@ -11002,16 +11041,22 @@ class ChatSession:
             children = [c for c in (node.get("children") or ()) if isinstance(c, dict)]
             targets: list[object] = []
             for child in children:
-                if child.get("class") != "Track":
+                # 첫 자식은 Marker — class 가 비어 오는 응답기도 있어 Marker 만 건너뛴다.
+                if child.get("class") not in (None, "Track"):
                     continue
-                reads = port.query_properties(f"{base}/{child.get('i')}", ("TARGET",))
+                reads = port.query_properties(f"{base}/{child.get('i')}", ("TARGET", "NAME"))
                 value = None
+                track_name = None
                 for read in reads.get("reads") or ():
-                    if isinstance(read, Mapping) and read.get("ok") and read.get("n") == "TARGET":
+                    if not (isinstance(read, Mapping) and read.get("ok")):
+                        continue
+                    if read.get("n") == "TARGET":
                         value = read.get("v")
-                if value is None:
-                    return []
-                targets.append(value)
+                    elif read.get("n") == "NAME":
+                        track_name = read.get("v")
+                if value is None and child.get("class") is None and track_name is None:
+                    continue  # 속성이 없는 자식(Marker) — 트랙이 아니다
+                targets.append({"target": value, "track_name": track_name})
         except Exception:  # noqa: BLE001 - 못 읽으면 거절 쪽으로
             return []
         return targets
@@ -11045,6 +11090,16 @@ class ChatSession:
                     f"Timecode {wanted}의 콘솔 이름('{occupant}')이 기록된 이름"
                     f"('{recorded_name}')과 달라 재적용을 거절합니다."
                 )
+            if (
+                overwrite_notes is not None
+                and occupant.startswith("LDBEAT Timecode")
+                and self._timeline_store is not None
+                and self._timeline_store.beat_grid_allocation_owns_timecode(wanted, occupant)
+            ):
+                # 이 앱이 저장해 둔 반영 기록이 같은 번호·같은 이름을 적고 있다 — TARGET 을
+                # 읽지 않고 신뢰한다(기록은 앱이 직접 쓴 것).
+                overwrite_notes.append(f"기존 {occupant} 을 덮어씁니다")
+                return wanted, None
             if overwrite_notes is not None and occupant.startswith("LDBEAT Timecode"):
                 try:
                     names = _owned_sequence_names(self._beat_grid_sequences_section())
@@ -11241,7 +11296,10 @@ class ChatSession:
             )
 
             apply_stage("dimmer_groups")
-            probe_results = grid.get("probe_results") or {}
+            # 반영할 때마다 progress.md 의 M1 표를 그 자리에서 다시 읽는다 — 저장된 격자의
+            # ``probe_results`` 는 마지막으로 격자를 서빙·저장한 때의 판정이라, 그 뒤에 표가
+            # 「통과」로 바뀌어도 낡은 「미확인」이 게이트를 막았다.
+            probe_results = read_m1_probe_results_from_path(default_progress_md_path())
             # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
             # 넘겨 기록된 마디는 같은 번호를 쓰게 한다(막힌 칸이 있어도 뒤 칸
             # 번호가 당겨지지 않는다). JSON 키는 문자열이라 정수로 되돌린다.
@@ -11673,18 +11731,62 @@ class ChatSession:
         ``_resolve_beat_grid_timecode_number``(``timecode_slot_verdict``)를 그대로 쓴다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
-        record = (
-            store.beat_grid_allocation(self._beat_grid_song_key(timeline))
-            if store is not None and timeline is not None
-            else None
+        record = None
+        if store is not None and timeline is not None:
+            song_key = self._beat_grid_song_key(timeline)
+            record = store.beat_grid_allocation(song_key)
+            if not record:
+                # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 반영 때의 열쇠와
+                # 어긋난다 — 격자가 기억하는 원래 곡 제목 열쇠로 한 번 더 찾는다(PR #779와 같은 길).
+                fallback = self._beat_grid_title_fallback_key(song_key)
+                if fallback is not None:
+                    record = store.beat_grid_allocation(fallback)
+        if record:
+            return self._resolve_beat_grid_timecode_number(
+                record.get("timecode_number"), recorded_name=record.get("timecode_name")
+            )
+        # 기록이 없어도(새 접속·재시작·열쇠 불일치) 격자의 타임코드 칸 번호가 콘솔에서
+        # **앱 소유**(`LDBEAT Timecode N` + 그 트랙이 가리키는 시퀀스가 전부 `LDBEAT `)이면
+        # 그 번호로 재생한다. 앱 소유가 아니면 거절한다(남의 타임코드를 재생하지 않는다).
+        wanted = timeline.get("timecode_number") if timeline is not None else None
+        if isinstance(wanted, int) and not isinstance(wanted, bool) and wanted >= 1:
+            return self._beat_grid_app_owned_timecode(wanted)
+        return None, (
+            "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
+            "먼저 「⇪ 콘솔에 반영」을 해 주세요."
         )
-        if not record:
+
+    def _beat_grid_title_fallback_key(
+        self, song_key: tuple[object, object]
+    ) -> tuple[object, object] | None:
+        """격자(beat_grid.song_title)가 기억하는 원래 곡 제목 열쇠 — 지금 열쇠와 같으면 ``None``."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = timeline.get("beat_grid") if timeline is not None else None
+        title = grid.get("song_title") if isinstance(grid, Mapping) else None
+        if not isinstance(title, str) or not title or title == song_key[0]:
+            return None
+        return (title, song_key[1])
+
+    def _beat_grid_app_owned_timecode(self, wanted: int) -> tuple[int | None, str | None]:
+        path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
+        if occupant is None:
             return None, (
-                "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
+                f"Timecode {wanted}이 콘솔에 없어 재생하지 않습니다 — "
                 "먼저 「⇪ 콘솔에 반영」을 해 주세요."
             )
-        return self._resolve_beat_grid_timecode_number(
-            record.get("timecode_number"), recorded_name=record.get("timecode_name")
+        try:
+            names = _owned_sequence_names(self._beat_grid_sequences_section())
+        except Exception:  # noqa: BLE001
+            names = {}
+        note, why = timecode_overwrite_note(
+            wanted, occupant, self._beat_grid_timecode_track_targets(wanted), names
+        )
+        if note is not None:
+            return wanted, None
+        return None, why or (
+            f"Timecode {wanted}은 이 앱이 만든 타임코드가 아니어서 재생하지 않습니다."
         )
 
     def _beat_grid_console_transport(self, action: str, verbs: tuple[str, ...]) -> dict:
@@ -14506,6 +14608,22 @@ class ChatSession:
             return None
         return self._beat_grid_song_key(timeline)
 
+    def _song_audio_fallback_key(
+        self, song_key: tuple[object, object]
+    ) -> tuple[object, object] | None:
+        """격자가 기억하는 원래 곡 제목 열쇠 — 지금 열쇠와 같으면 ``None``."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return None
+        grid = timeline.get("beat_grid")
+        if not isinstance(grid, dict):
+            return None
+        title = grid.get("song_title")
+        if not isinstance(title, str) or not title or title == song_key[0]:
+            return None
+        return (title, song_key[1])
+
     def request_song_audio_link(self) -> dict:
         """카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오
         링크를 돌려준다(런북 화면이 세션에 첨부가 없을 때 부른다).
@@ -14527,6 +14645,13 @@ class ChatSession:
             self._send(song_audio_link_event(status="none"))
             return {"status": "none"}
         result = store.resolve(song_key)
+        if result.status != "found":
+            # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 원래
+            # 제목 열쇠의 링크를 못 찾는다 — 격자(beat_grid.song_title)가
+            # 원래 곡 제목을 들고 있으니 그 열쇠로 한 번 더 찾는다(리드 1016).
+            fallback = self._song_audio_fallback_key(song_key)
+            if fallback is not None:
+                result = store.resolve(fallback)
         if result.status != "found":
             self._send(song_audio_link_event(status=result.status))
             return {"status": result.status}
