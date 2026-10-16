@@ -306,8 +306,9 @@ def _cell_plan(
     role = track.get("layer_role")
     name = str(track["group_name"])
     lit = settings.lit_percent
-    # 켜는 칸의 계획 색 — 주석 색 > 역광 역할 > 구간 색. 쉬는 칸에는 색이 없다.
-    color = override or (settings.palette.backlight if role == "back" else section_color)
+    # 켜는 칸의 계획 색 — 주석 색 > 역광 역할 > 앞빛 역할 > 구간 색. 쉬는 칸에는 색이 없다.
+    fixed = {"back": settings.palette.backlight, "key": settings.palette.key}.get(role)
+    color = override or fixed or section_color
     if role == "back":
         if _PULSE in active:
             return _CellPlan(PULSE_LABEL, lit, None, "pulse", color)

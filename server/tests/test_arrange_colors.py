@@ -2,7 +2,7 @@
 
 켜는 칸마다 계획 색(콘솔 퍼센트 RGB)이 붙는다. 계획 색은 콘솔 값이 아니라 화면 표시용이라
 「반영 이후 바뀐 칸」 비교와 콘솔 묶음에 닿지 않는다. 색 우선순위는 곡별 주석 색(칸 하나) >
-역광 역할(BACK) > 구간 색이다. 쉬는 칸(「—」)에는 색이 없다.
+역광 역할(BACK) > 앞빛 역할(FOH, 표준 Warm White) > 구간 색이다. 쉬는 칸(「—」)에는 색이 없다.
 
 합성 마디 지도(4/4, 박 500밀리초, 40마디)와 LOVE ATTACK 기본 격자의 트랙 구성으로 잡는다.
 
@@ -24,9 +24,11 @@ from server.audio.bar_map_store import build_bar_map_payload
 from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_generator import REST_LABEL, generate_arrangement_draft
 from server.design.arrange_policy import ArrangementPalette, ArrangementPolicy
+from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_planned import annotated_cell_colors, attach_planned_marks
 from server.design.beat_grid_send import beat_grid_cell_snapshot, unsent_beat_grid_cells
+from server.design.color_names import COLOR_PALETTE_SEQUENCE
 from server.design.preset_plan import load_preset_annotations
 
 BARS = 40
@@ -369,6 +371,24 @@ def test_annotated_cell_colors_resolves_names_skips_unknown_and_drops_ambiguous(
         ]
     }
     assert annotated_cell_colors(annotations) == {("A", 1): (55, 35, 100), ("A", 5): (1, 2, 3)}
+
+
+# -- i. 앞빛(FOH) 은 구간과 상관없이 표준 Warm White ----------------------------------------------
+
+WARM_WHITE = dict(COLOR_PALETTE_SEQUENCE)["Warm White"]
+
+
+def test_front_light_stays_warm_white_in_every_section_on_both_generators() -> None:
+    # 앞빛(FOH, key)은 드롭·브릿지·후렴 어디서나 표준 Warm White 다. 구간 색을 받으면 안 된다.
+    # 생성기와 운영 경로(구간 생성기) 둘 다 같아야 한다.
+    bar_map = _bar_map(KICK_AT_5 + DROP_17_18 + BREAK_25_26)
+    assert PALETTE.key == WARM_WHITE
+    for draft in (
+        generate_arrangement_draft(bar_map, _layout()),
+        generate_segment_draft(bar_map, _layout()),
+    ):
+        front = _cues(draft, "FOH").values()
+        assert {tuple(cue["planned_color"]) for cue in front} == {WARM_WHITE}
 
 
 # -- h. 적용 -------------------------------------------------------------------------------------

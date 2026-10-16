@@ -462,10 +462,10 @@ def test_color_alone_never_splits_a_run_off_the_wash_line() -> None:
 
 def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
-    # 얼굴 빛은 40마디 내내 한 칸이고, 색은 그 칸 첫 마디(도입)의 색이다.
+    # 얼굴 빛(FOH)은 40마디 내내 한 칸이고, 앞빛 역할이라 구간과 상관없이 표준 Warm White 다.
     foh = _cues(draft, "FOH")
     assert sorted(foh) == [1]
-    assert foh[1]["planned_color"] == list(PALETTE.verse)
+    assert foh[1]["planned_color"] == list(PALETTE.key)
     # 체이스 칸 30~40 은 후렴·브릿지·드롭·마지막 후렴을 지나는 한 칸이다. 색은 30 마디(후렴) 색이다.
     side = _cues(draft, "SIDE-ALL")
     assert 30 in side
@@ -491,9 +491,9 @@ def test_an_annotation_color_inside_a_run_gets_its_own_cell_on_any_line() -> Non
     draft = _draft(SYNTHETIC_EVENTS, planned_colors={("FOH", 20): (1, 2, 3)})
     foh = _cues(draft, "FOH")
     assert sorted(foh) == [1, 20, 21]
-    assert foh[1]["planned_color"] == list(PALETTE.verse)
+    assert foh[1]["planned_color"] == list(PALETTE.key)
     assert foh[20]["planned_color"] == [1, 2, 3]
-    assert foh[21]["planned_color"] == list(PALETTE.chorus)  # 다음 마디는 구간 색으로 돌아온다
+    assert foh[21]["planned_color"] == list(PALETTE.key)  # 다음 마디는 앞빛 색으로 돌아온다
     assert {cue["label"] for cue in foh.values()} == {FOH_LABEL}
 
 

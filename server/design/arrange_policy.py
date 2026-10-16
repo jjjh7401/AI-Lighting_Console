@@ -64,6 +64,7 @@ class ArrangementPalette:
     - ``drop``: 드롭 주황(표준 Amber).
     - ``bridge``: 브릿지(마디 지도 ``break`` 구간)의 차분한 색(표준 Cool White).
     - ``backlight``: 역광(BACK) 칸 색. 구간과 상관없이 늘 차가운 하늘색(주석의 SKY).
+    - ``key``: 앞빛(KEY·FOH) 칸 색. 늘 표준 Warm White 이고 구간 색을 받지 않는다.
     - ``last_chorus``: 마지막 드롭 뒤 구간을 돌며 쓰는 색 목록. 비어 있으면 안 된다.
     """
 
@@ -72,10 +73,11 @@ class ArrangementPalette:
     drop: _Rgb = (100, 55, 5)
     bridge: _Rgb = (85, 95, 100)
     backlight: _Rgb = (40, 65, 95)
+    key: _Rgb = (100, 75, 40)
     last_chorus: tuple[_Rgb, ...] = ((100, 50, 75), (55, 35, 100), (100, 55, 5))
 
     def __post_init__(self) -> None:
-        for name in ("verse", "chorus", "drop", "bridge", "backlight"):
+        for name in ("verse", "chorus", "drop", "bridge", "backlight", "key"):
             _check_rgb(name, getattr(self, name))
         if not isinstance(self.last_chorus, tuple) or not self.last_chorus:
             raise ValueError("마지막 후렴 색 목록은 비어 있으면 안 됩니다.")

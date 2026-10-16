@@ -136,3 +136,27 @@ describe("colorCell 칩의 색 네모 — 색 목록이 둘이면 반반", () =>
     });
   });
 });
+
+describe("colorCell 계획 색 — 프리셋 번호 없이 계획 색만 있는 칸", () => {
+  it("계획 색이면 「—」 대신 흐린 네모를 단다", () => {
+    expect(colorCell(cue({ color_rgb: [40, 65, 95], color_planned: true }), "side", COLOR_SECTION)).toEqual({
+      kind: "text",
+      text: "—",
+      dim: true,
+      swatch: "rgb(102, 166, 242)",
+    });
+  });
+
+  it("계획 표시가 없는 색 값은 그대로 「—」이고 네모가 없다", () => {
+    expect(colorCell(cue({ color_rgb: [40, 65, 95] }), "side", COLOR_SECTION)).toEqual({ kind: "text", text: "—" });
+  });
+
+  it("무빙도 색을 쓰므로(#774) 계획 색을 흐린 네모로 단다", () => {
+    expect(colorCell(cue({ color_rgb: [40, 65, 95], color_planned: true }), "mover", null)).toEqual({
+      kind: "text",
+      text: "—",
+      dim: true,
+      swatch: "rgb(102, 166, 242)",
+    });
+  });
+});

@@ -5209,6 +5209,11 @@ body {
   vertical-align: -1px;
 }
 
+/* 계획 색 네모 — 콘솔에 아직 없는 색이라 흐린 칸 안에서만 흐리게 그린다. */
+.beat-grid-glance-dim .beat-grid-glance-sw {
+  opacity: 0.45;
+}
+
 .beat-grid-glance-expand-toggle {
   background: none;
   border: none;

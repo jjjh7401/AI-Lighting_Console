@@ -32,8 +32,9 @@ from typing import Any
 
 from server.audio.bar_map_store import read_bar_map
 from server.design.arrange_apply import apply_arrangement_draft
-from server.design.arrange_generator import generate_arrangement_draft
+from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import default_beat_grid
+from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.preset_plan import load_preset_annotations
 
 __all__ = [
@@ -429,7 +430,10 @@ def build_auto_candidate(timeline: Mapping[str, Any], base: Mapping[str, Any]) -
     base_tracks = list(base.get("tracks") or [])
     if not base_tracks:
         raise ShapeCheckError("기본 격자에 줄이 없습니다.")
-    draft = generate_arrangement_draft(bar_map, [_layout_item(track) for track in base_tracks])
+    layout = [_layout_item(track) for track in base_tracks]
+    # 운영 경로(beat_grid_draft_propose)와 같은 구간 생성기·같은 곡별 주석 색으로 만든다.
+    planned_colors = annotated_cell_colors(load_preset_annotations(timeline.get("song_title")))
+    draft = generate_segment_draft(bar_map, layout, planned_colors=planned_colors)
     if draft["note"] is not None or not draft["tracks"]:
         raise ShapeCheckError(str(draft["note"] or "자동 배치 초안이 비어 있습니다."))
     skeleton = {
