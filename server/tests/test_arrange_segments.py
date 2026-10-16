@@ -1,9 +1,15 @@
 """구간 단위 배치 초안 생성기 시험 — SPEC-LDRHYTHM-001 「음악 분석 이벤트로 나눈 희소 칸」.
 
 기존 ``generate_arrangement_draft`` 는 모든 줄의 모든 마디에 칸을 하나씩 낸다. 새 생성기
-(``generate_segment_draft``)는 마디 지도의 이벤트로 곡을 구간으로 나누고, 줄마다 계획이 바뀌는
+(``generate_segment_draft``)는 마디 지도의 이벤트로 곡을 구간으로 나누고, 줄마다 값이 바뀌는
 마디에만 칸을 낸다. 합성 마디 지도(4/4, 박 500밀리초, 40마디)와 LOVE ATTACK 기본 격자의 트랙
-구성으로 규칙을 잡고, 실제 LOVE ATTACK 마디 특징 픽스처로 강조 마디를 확인한다.
+구성으로 규칙을 잡고, 실제 LOVE ATTACK 마디 특징 픽스처로 강조·예고 마디를 확인한다.
+
+- 칸은 구조화 값(밝기·움직임·효과·위치·진입)이 같은 연속 마디의 묶음이다. 구간 종류와 계획 색은
+  칸을 나누는 값이 아니다. 색은 칸의 속성이고, 색이 바뀌는 마디에서 칸을 나누는 줄은 워시 줄뿐이다.
+- 쉬는 연속 마디는 밝기 0의 「—」 한 칸이다.
+- 라벨은 기본 격자(love_attack.yaml)와 배치 규칙서의 말이다.
+- 빌드 구간 끝 마디에서 후렴이 바로 시작하면 블라인드 줄에 예고(밝기 0) 칸이 선다.
 
 희소 초안에서 「그 마디의 칸」은 마디 이하에서 가장 가까운 행이다(앞 행의 상태가 이어진다).
 """
@@ -21,24 +27,27 @@ from server.audio.bar_map import BarFeatures, classify_bar_events, compute_bar_e
 from server.audio.bar_map_store import build_bar_map_payload
 from server.design import arrange_segments
 from server.design.arrange_apply import apply_arrangement_draft
-from server.design.arrange_generator import (
-    BLIND_LABEL,
-    CHASE_LABEL,
-    HOLD_LABEL,
-    MOTION_LABEL,
-    PULSE_LABEL,
-    REST_LABEL,
-    STATIC_LABEL,
-    STROBE_LABEL,
-    UNCONFIRMED_NOTE,
-)
+from server.design.arrange_generator import REST_LABEL, UNCONFIRMED_NOTE
 from server.design.arrange_policy import ArrangementPalette, ArrangementPolicy
 from server.design.arrange_segments import SegmentSection, generate_segment_draft, split_sections
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
+from server.design.grid_shape import pattern_category
 
 BARS = 40
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 PALETTE = ArrangementPalette()
+
+#: 칸 라벨의 정본 — 기본 격자(love_attack.yaml)와 배치 규칙서(effect-arrangement-rules)의 말이다.
+#: 시험이 따로 들고 있어서 구현의 상수를 바꿔도 시험이 따라 바뀌지 않는다.
+PULSE_LABEL = "킥 1·2·4박"  # BACK 펄스. 예전 「펄스 1·2·4박」이 아니다.
+CHASE_LABEL = "SIDE-L/R 2·4박 번갈이"
+MOTION_LABEL = "팬 웨이브(한 바퀴 2마디)"
+HOLD_LABEL = "정지"
+FOH_LABEL = "FOH 켬"
+WASH_LABEL = "워시"
+BLIND_LABEL = "BLIND 2박"
+STROBE_LABEL = "STROBE 1마디 박마다"
+PRE_HIT_LABEL = "3·4박 전부 비움(예고)"  # 큰 히트 전 비움(예고). 기본 격자 BLIND 17마디 칸의 말.
 
 
 def _ev(kind: str, start: int, end: int | None = None) -> dict:
@@ -148,6 +157,16 @@ def _signature(cue: dict) -> tuple:
         cue.get("planned_color"),
         cue["source_ref"],
     )
+
+
+def _values(cue: dict) -> str:
+    """칸을 나누는 값 — 라벨과 구조화 값 전부. 마디·계획 색·출처만 뺀다.
+
+    라벨을 넣는 까닭: 예고 칸과 쉼 칸은 밝기가 같아서 구조화 값만으로는 가를 수 없다.
+    """
+    skipped = ("bar", "planned_color", "source_ref")
+    kept = {key: value for key, value in cue.items() if key not in skipped}
+    return json.dumps(kept, sort_keys=True, ensure_ascii=False)
 
 
 # -- 구간 나누기와 종류 ---------------------------------------------------------------------
@@ -308,10 +327,12 @@ def test_a_constant_lane_over_a_seven_bar_verse_has_exactly_one_row() -> None:
     events = [_ev("kick_entry", 3), _ev("break", 8), _ev("kick_entry", 15)]
     assert SegmentSection(8, 14, "verse") in split_sections(_bar_map(events))
     draft = _draft(events)
-    for name in ("WASH-ALL", "FOH"):
-        rows = _rows(draft, name)
-        assert [bar for bar in rows if 8 <= bar <= 14] == [8]
-        assert rows == [1, 3, 8, 15]  # 줄의 칸은 구간 경계에서만 생긴다
+    # 워시 줄은 색이 바뀌는 구간 경계에서만 칸을 나눈다. 7마디 벌스는 한 칸이다.
+    wash = _rows(draft, "WASH-ALL")
+    assert [bar for bar in wash if 8 <= bar <= 14] == [8]
+    assert wash == [1, 3, 8, 15]
+    # 얼굴 빛은 구간 색이 바뀌어도 값이 같아서 곡 전체가 한 칸이다.
+    assert _rows(draft, "FOH") == [1]
 
 
 def test_a_four_bar_alternating_lane_has_a_row_only_where_its_plan_changes() -> None:
@@ -354,12 +375,12 @@ def test_no_two_consecutive_rows_of_a_track_share_the_same_plan(events: list[dic
         assert all(left != right for left, right in zip(signatures, signatures[1:], strict=False))
 
 
-def test_every_track_has_a_row_at_the_first_bar_and_rest_runs_get_a_row() -> None:
+def test_every_track_has_a_row_at_the_first_bar_and_a_rest_run_is_one_row() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
     for track in draft["tracks"]:
         assert track["cues"][0]["bar"] == 1
-    # 강조 줄: 첫 마디의 쉼, 강조 한 마디, 다시 쉼 — 쉬는 구간도 첫 마디에 행이 있다.
-    assert _rows(draft, "BLIND") == [1, 9, 10, 18, 19, 40]
+    # 강조 줄: 첫 마디의 쉼, 강조 한 마디, 다시 쉼. 빌드(14~17) 끝 마디(17)의 예고 뒤가 강조(18)다.
+    assert _rows(draft, "BLIND") == [1, 9, 10, 17, 18, 19, 40]
     assert _rows(draft, "STROBE") == [1, 36, 37]
     assert _cues(draft, "BLIND")[10]["label"] == REST_LABEL
 
@@ -369,7 +390,102 @@ def test_a_song_without_events_still_gives_every_track_one_row() -> None:
     assert _rows(draft, "FOH") == [1]
     assert _rows(draft, "STROBE") == [1]
     assert _cues(draft, "STROBE")[1]["label"] == REST_LABEL
-    assert _cues(draft, "FOH")[1]["label"] == STATIC_LABEL
+    assert _cues(draft, "FOH")[1]["label"] == FOH_LABEL
+
+
+# -- 쉬는 칸 ---------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("events", [[], SYNTHETIC_EVENTS])
+def test_a_run_of_consecutive_rest_bars_is_one_rest_cell_of_brightness_zero(
+    events: list[dict],
+) -> None:
+    for track in _draft(events)["tracks"]:
+        cues = track["cues"]
+        for cue in cues:
+            if cue["label"] == REST_LABEL:
+                assert cue["brightness"]["mode"] == "value"
+                assert cue["brightness"]["value_percent"] == 0
+                assert "planned_color" not in cue
+        # 쉼 칸 둘이 이웃하면 연속 마디를 한 칸으로 묶지 않은 것이다.
+        assert not any(
+            left["label"] == REST_LABEL and right["label"] == REST_LABEL
+            for left, right in zip(cues, cues[1:], strict=False)
+        ), track["group_name"]
+
+
+def test_a_rest_run_across_sections_and_windows_is_a_single_row() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    # 블라인드 줄의 10~16 마디는 창 두 개를 넘는 쉼이다. 행은 첫 마디(10) 하나뿐이다.
+    assert [bar for bar in _rows(draft, "BLIND") if 10 <= bar <= 16] == [10]
+    assert all(_state(draft, "BLIND", bar)["label"] == REST_LABEL for bar in range(10, 17))
+    # 구간 경계를 일곱 번 넘도록 내내 쉬는 줄(느린 곡의 STROBE)도 첫 마디의 한 칸이다.
+    slow = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(slow_song=True))
+    assert _rows(slow, "STROBE") == [1]
+
+
+def test_rests_stay_rows_instead_of_disappearing_from_the_draft() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    assert _cues(draft, "BACK")[5]["label"] == REST_LABEL
+    assert _cues(draft, "SIDE-ALL")[7]["label"] == REST_LABEL
+    assert _cues(draft, "STROBE")[1]["label"] == REST_LABEL
+
+
+# -- 칸을 나누는 값 --------------------------------------------------------------------------
+
+
+def test_color_alone_never_splits_a_run_off_the_wash_line() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    for track in draft["tracks"]:
+        if track["layer_role"] == "wash":
+            continue
+        name = track["group_name"]
+        values = [_values(cue) for cue in track["cues"]]
+        assert all(left != right for left, right in zip(values, values[1:], strict=False)), name
+
+
+def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    # 얼굴 빛은 40마디 내내 한 칸이고, 색은 그 칸 첫 마디(도입)의 색이다.
+    foh = _cues(draft, "FOH")
+    assert sorted(foh) == [1]
+    assert foh[1]["planned_color"] == list(PALETTE.verse)
+    # 체이스 칸 30~40 은 후렴·브릿지·드롭·마지막 후렴을 지나는 한 칸이다. 색은 30 마디(후렴) 색이다.
+    side = _cues(draft, "SIDE-ALL")
+    assert 30 in side
+    assert not any(31 <= bar <= 40 for bar in side)
+    assert side[30]["planned_color"] == list(PALETTE.chorus)
+
+
+def test_the_wash_line_splits_where_its_planned_color_changes() -> None:
+    wash = _cues(_draft(SYNTHETIC_EVENTS), "WASH-ALL")
+    assert [(bar, wash[bar]["planned_color"]) for bar in sorted(wash)] == [
+        (1, list(PALETTE.verse)),  # 도입(1~6)과 벌스(7~8)는 종류가 달라도 같은 색이라 한 칸이다
+        (9, list(PALETTE.chorus)),
+        (14, list(PALETTE.verse)),  # 빌드는 벌스 색을 빌린다
+        (18, list(PALETTE.chorus)),
+        (33, list(PALETTE.bridge)),
+        (36, list(PALETTE.drop)),
+        (40, list(PALETTE.last_chorus[0])),
+    ]
+    assert {cue["label"] for cue in wash.values()} == {WASH_LABEL}
+
+
+def test_an_annotation_color_inside_a_run_gets_its_own_cell_on_any_line() -> None:
+    draft = _draft(SYNTHETIC_EVENTS, planned_colors={("FOH", 20): (1, 2, 3)})
+    foh = _cues(draft, "FOH")
+    assert sorted(foh) == [1, 20, 21]
+    assert foh[1]["planned_color"] == list(PALETTE.verse)
+    assert foh[20]["planned_color"] == [1, 2, 3]
+    assert foh[21]["planned_color"] == list(PALETTE.chorus)  # 다음 마디는 구간 색으로 돌아온다
+    assert {cue["label"] for cue in foh.values()} == {FOH_LABEL}
+
+
+def test_an_annotation_color_equal_to_the_planned_color_adds_no_cell() -> None:
+    # LOVE ATTACK 은 BACK 0 마디에 하늘색 주석이 있고 그 값이 역광 색과 같다. 칸은 늘지 않는다.
+    plain = _draft(SYNTHETIC_EVENTS)
+    same = _draft(SYNTHETIC_EVENTS, planned_colors={("BACK", 1): PALETTE.backlight})
+    assert same == plain
 
 
 def test_the_draft_is_much_sparser_than_one_row_per_bar() -> None:
@@ -508,7 +624,7 @@ def test_rows_carry_the_structured_fields_of_the_dense_generator() -> None:
         assert cue["brightness"]["mode"] == "value"
         assert cue["entry"]["trigger_beat"] == 1
         assert str(cue["source_ref"]).startswith("arrangement_segments:")
-        if cue["label"] == REST_LABEL:
+        if cue["label"] in (REST_LABEL, PRE_HIT_LABEL):  # 꺼진 칸: 밝기 0, 색 없음
             assert cue["brightness"]["value_percent"] == 0
             assert "planned_color" not in cue
         else:
@@ -529,9 +645,11 @@ def test_rows_carry_the_structured_fields_of_the_dense_generator() -> None:
         CHASE_LABEL,
         MOTION_LABEL,
         HOLD_LABEL,
-        STATIC_LABEL,
+        FOH_LABEL,
+        WASH_LABEL,
         BLIND_LABEL,
         STROBE_LABEL,
+        PRE_HIT_LABEL,
         REST_LABEL,
     } <= labels
 
@@ -540,8 +658,114 @@ def test_brightness_comes_from_the_policy() -> None:
     draft = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(lit_percent=80, rest_percent=10))
     for track in draft["tracks"]:
         for cue in track["cues"]:
-            expected = 10 if cue["label"] == REST_LABEL else 80
+            expected = 10 if cue["label"] in (REST_LABEL, PRE_HIT_LABEL) else 80
             assert cue["brightness"]["value_percent"] == expected
+
+
+# -- 라벨 ------------------------------------------------------------------------------------
+
+
+def test_labels_use_the_default_grid_and_rules_document_vocabulary() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    labels = {
+        track["group_name"]: {cue["label"] for cue in track["cues"]} for track in draft["tracks"]
+    }
+    assert labels["FOH"] == {FOH_LABEL}
+    assert labels["WASH-ALL"] == {WASH_LABEL}
+    assert labels["BACK"] == {PULSE_LABEL, REST_LABEL}
+    assert labels["SIDE-ALL"] == {CHASE_LABEL, REST_LABEL}
+    assert labels["MOVER-U"] == labels["MOVER-D"] == {MOTION_LABEL, HOLD_LABEL}
+    assert labels["BLIND"] == {BLIND_LABEL, PRE_HIT_LABEL, REST_LABEL}
+    assert labels["STROBE"] == {STROBE_LABEL, REST_LABEL}
+
+
+def test_the_old_generator_wording_is_not_used() -> None:
+    old = {"펄스 1·2·4박", "체이스 2·4박", "팬 웨이브 2마디", "블라인드 2박", "스트로브 1마디"}
+    draft = _draft(SYNTHETIC_EVENTS)
+    labels = {cue["label"] for track in draft["tracks"] for cue in track["cues"]}
+    assert labels.isdisjoint(old | {"유지"})
+
+
+def test_each_label_sits_in_a_pattern_class_the_default_grid_line_also_has() -> None:
+    # 판정기(grid_shape)가 칸 라벨을 나누는 박 패턴 종류로 보아, 라벨마다 기본 격자의 같은 줄에도
+    # 그 종류의 칸이 있다. 기본 격자의 말을 가져왔는지 확인하는 시험이다. 판정기를 통과하려고
+    # 라벨을 고르는 시험이 아니다 — 라벨의 정본은 위 상수(기본 격자와 배치 규칙서의 말)다.
+    base = {
+        track["group_name"]: {pattern_category(cue["label"]) for cue in track["cues"]}
+        for track in default_beat_grid(LOVE_ATTACK_TITLE)["tracks"]
+    }
+    assert pattern_category(PULSE_LABEL) in base["BACK"]
+    assert pattern_category(CHASE_LABEL) in base["SIDE-ALL"]
+    assert pattern_category(HOLD_LABEL) in base["MOVER-U"]
+    assert pattern_category(MOTION_LABEL) in base["MOVER-U"]
+    assert pattern_category(FOH_LABEL) in base["FOH"]
+    assert pattern_category(WASH_LABEL) in base["WASH-ALL"]
+    assert pattern_category(BLIND_LABEL) in base["BLIND"]
+    assert pattern_category(PRE_HIT_LABEL) in base["BLIND"]
+    assert pattern_category(REST_LABEL) in base["BACK"]
+
+
+# -- 예고(큰 히트 전 비움) ---------------------------------------------------------------------
+
+
+def test_the_last_bar_of_a_build_before_a_chorus_gets_a_notice_cell_on_the_blind_line() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)  # 빌드 14~17 바로 뒤 18 마디가 후렴
+    blind = _cues(draft, "BLIND")
+    notice = blind[17]
+    assert notice["label"] == PRE_HIT_LABEL
+    assert notice["brightness"]["value_percent"] == 0
+    assert "planned_color" not in notice
+    assert notice["source_ref"] == "arrangement_segments:pre_hit"
+    assert blind[18]["label"] == BLIND_LABEL  # 임팩트 마디의 강조는 그대로 다음 마디에 있다
+    assert [bar for bar in sorted(blind) if 14 <= bar <= 19] == [17, 18, 19]
+
+
+def test_the_notice_is_not_an_accent() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [9, 18, 40]
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17]
+
+
+def test_the_notice_sits_on_the_bar_before_the_chorus_when_the_build_event_ended_early() -> None:
+    # 빌드 이벤트는 5~8 마디인데 후렴은 10 마디다. 구간으로는 빌드가 9 마디까지라 예고는 9 마디다.
+    draft = _draft([_ev("build", 5, 8), _ev("kick_entry", 10)])
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [9]
+    assert _hits(draft, "BLIND", BLIND_LABEL) == [10]
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [_ev("kick_entry", 9)],  # 빌드 없이 후렴
+        [_ev("build", 5, 8), _ev("break", 9)],  # 빌드 뒤가 브레이크
+        [_ev("build", 5, 8), _ev("drop", 9, 10)],  # 빌드 뒤가 드롭 — 예고는 후렴 앞에만 둔다
+        [_ev("build", 5, 8)],  # 빌드가 곡 끝까지 이어진다
+        [_ev("build", 5, 8), _ev("build", 9, 12)],  # 빌드 뒤가 또 빌드
+    ],
+)
+def test_no_notice_unless_a_chorus_starts_right_after_the_build(events: list[dict]) -> None:
+    draft = _draft(events)
+    for track in draft["tracks"]:
+        assert all(cue["label"] != PRE_HIT_LABEL for cue in track["cues"]), track["group_name"]
+
+
+def test_the_notice_is_only_on_the_blind_line() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    for track in draft["tracks"]:
+        has_notice = any(cue["label"] == PRE_HIT_LABEL for cue in track["cues"])
+        assert has_notice == (track["group_name"] == "BLIND"), track["group_name"]
+
+
+def test_an_annotation_color_on_the_notice_bar_is_ignored_like_on_any_rest() -> None:
+    plain = _draft(SYNTHETIC_EVENTS)
+    assert _draft(SYNTHETIC_EVENTS, planned_colors={("BLIND", 17): (7, 8, 9)}) == plain
+
+
+def test_the_notice_survives_the_slow_song_flag_and_follows_the_rest_brightness() -> None:
+    slow = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(slow_song=True))
+    assert _hits(slow, "BLIND", PRE_HIT_LABEL) == [17]
+    dim = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(rest_percent=10))
+    assert _cues(dim, "BLIND")[17]["brightness"]["value_percent"] == 10
 
 
 def test_draft_shape_matches_the_dense_generator() -> None:
@@ -670,6 +894,10 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     assert draft["bar_range"] == {"start": 0, "end": 82}
     assert _hits(draft, "BLIND", BLIND_LABEL) == [4, 18, 46, 67]
     assert _hits(draft, "STROBE", STROBE_LABEL) == [63]
-    # 일정한 줄의 칸은 구간 경계에서만 생긴다.
+    # 예고는 빌드(14~17·42~45) 끝 마디에만 있고, 강조 마디는 그대로다.
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17, 45]
+    assert _rows(draft, "BLIND") == [0, 4, 5, 17, 18, 19, 45, 46, 47, 67, 68]
+    # 워시 줄의 칸은 색이 바뀌는 구간 경계에서만 생긴다. 얼굴 빛은 곡 전체가 한 칸이다.
     starts = {section.start_bar for section in REAL_SECTIONS}
     assert set(_rows(draft, "WASH-ALL")) <= starts
+    assert _rows(draft, "FOH") == [0]

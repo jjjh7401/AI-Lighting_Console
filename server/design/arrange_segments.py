@@ -2,7 +2,7 @@
 
 ``generate_arrangement_draft`` 는 모든 줄의 모든 마디에 칸을 하나씩 내서 어느 줄이나 칸 길이가
 한 마디로 똑같다. 이 생성기는 마디 지도의 이벤트(킥 진입·빌드업·브레이크·드롭)로 곡을 구간으로
-나누고, 줄마다 계획이 바뀌는 마디에만 칸을 낸다. 칸 하나의 길이는 그 줄의 계획이 이어지는 마디
+나누고, 줄마다 값이 바뀌는 마디에만 칸을 낸다. 칸 하나의 길이는 그 줄의 값이 이어지는 마디
 수다. 입력과 출력 모양은 기존 생성기와 같고(``ArrangementDraft``), 기존 생성기는 건드리지 않는다.
 이 모듈은 파일을 쓰지 않고 콘솔에 닿지 않는다. 같은 입력이면 같은 결과다.
 
@@ -16,12 +16,21 @@
   벌스 색이다(빌드에는 팔레트 항목이 없어 벌스 색을 빌려 쓴다). 마지막 후렴은 앞선 마지막 후렴
   구간의 수만큼 색 목록을 돈다. 역광(BACK) 칸은 어느 구간에서나 역광 색이고, 곡별 주석 색
   (``planned_colors``)은 둘보다 앞선다.
-- 칸 안의 규칙(라벨·밝기·움직임)은 기존 생성기의 ``_cell_plan`` 을 그대로 쓴다. 주인공 교대는
-  구간 시작부터 세어 ``policy.window_bars`` 마디마다 다시 정하고, 차례는 곡 전체에서 이어진다.
+- 칸 안의 규칙(밝기·움직임)은 기존 생성기의 ``_cell_plan`` 을 그대로 쓴다. 라벨만 기본 격자
+  (``love_attack.yaml``)와 배치 규칙서의 말로 바꾼다(BACK 펄스는 「킥 1·2·4박」이다). 주인공
+  교대는 구간 시작부터 세어 ``policy.window_bars`` 마디마다 다시 정하고, 차례는 곡 전체에서
+  이어진다.
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
-  STROBE(느린 곡이면 두지 않는다)다. 임팩트 직전에 비우는 예고는 아직 두지 않는다.
-- 줄마다 마디별 계획을 보고, 계획이 같은 연속 마디를 한 칸으로 묶어 첫 마디에만 칸을 낸다. 쉬는
-  구간(「—」)도 첫 마디에 칸이 있고, 모든 줄에 첫 마디 칸이 있다.
+  STROBE(느린 곡이면 두지 않는다)다.
+- 예고는 강조가 아니다. 빌드 구간 바로 뒤에서 후렴(마지막 후렴 포함)이 시작하면 그 빌드의 끝
+  마디, 곧 큰 히트 직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는
+  쉼과 같다).
+- 칸은 값이 같은 연속 마디의 묶음이고 첫 마디에만 낸다. 값은 라벨·밝기·움직임이고 구간 종류와
+  구간 경계는 값이 아니다. 쉬는 연속 마디(「—」)도 구간을 몇 번 넘든 한 칸이다. 모든 줄에 첫
+  마디 칸이 있다.
+- 색은 칸의 속성이라 칸 첫 마디의 색을 쓴다. 색이 바뀐다고 칸을 나누는 줄은 워시 줄(역할 wash)
+  뿐이다. 다른 줄의 칸은 구간 색이 바뀌는 마디를 넘어 이어진다. 곡별 주석 색이 놓인 마디는 줄을
+  가리지 않고 칸을 나눈다. 그 마디의 칸이 그 색을 보여야 해서다(앞뒤 마디의 색과 다를 때만).
 """
 
 from __future__ import annotations
@@ -67,6 +76,34 @@ _SECTION_BUILD = "build"
 
 #: 구간의 첫 마디에 블라인드(BLIND)를 두는 구간 종류. 드롭은 스트로브(STROBE)가 맡는다.
 _BLIND_SECTIONS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS})
+
+#: 칸 라벨. 기존 생성기의 이름(「펄스」「체이스」「스트로브」「블라인드」「유지」)이 아니라 기본
+#: 격자(``beat_grid_data/love_attack.yaml``)와 배치 규칙서(``reports/effect-arrangement-rules-
+#: 20261007.md``)에 적힌 말이다. 정지와 쉼은 기존 생성기와 같은 말이라 그대로 쓴다.
+PULSE_LABEL = "킥 1·2·4박"
+CHASE_LABEL = "SIDE-L/R 2·4박 번갈이"
+MOTION_LABEL = "팬 웨이브(한 바퀴 2마디)"
+FOH_LABEL = "FOH 켬"
+WASH_LABEL = "워시"
+BLIND_LABEL = "BLIND 2박"
+STROBE_LABEL = "STROBE 1마디 박마다"
+PRE_HIT_LABEL = "3·4박 전부 비움(예고)"
+
+#: 규칙 종류(``_CellPlan.kind``) → 라벨. 유지(``static``)는 줄 역할이 정한다.
+_LABEL_OF_KIND = {
+    "pulse": PULSE_LABEL,
+    "chase": CHASE_LABEL,
+    "motion": MOTION_LABEL,
+    "blind": BLIND_LABEL,
+    "strobe": STROBE_LABEL,
+}
+_STATIC_LABEL_OF_ROLE = {"key": FOH_LABEL, "wash": WASH_LABEL}
+
+#: 큰 히트 직전에 블라인드 줄을 비우는 예고 칸의 규칙 종류.
+_KIND_PRE_HIT = "pre_hit"
+#: 색이 바뀌는 마디에서 칸을 나누는 줄의 역할. 워시는 색이 곧 그 줄의 내용이다. 다른 줄의 칸은
+#: 색이 바뀌어도 이어진다(기본 격자도 색 주석이 워시 줄과 BACK 0마디뿐이다).
+_COLOR_LINE_ROLES = frozenset({"wash"})
 
 # @MX:DEBT: 브릿지 판정의 「브레이크 뒤 2마디 안」이 곡별 정책이 아니라 모듈 상수다
 # @MX:CEILING: 이 값 하나. 곡마다 다르게 둘 수 없다(REQ-LDARRANGE-004 는 규칙 값을 곡별로 둔다)
@@ -115,10 +152,11 @@ def generate_segment_draft(
       예외를 던지지 않는다. 트랙 구성의 겹침이나 모르는 층 역할은 기존 생성기처럼
       ``ValueError`` 다.
     - 돌려주는 모양은 ``generate_arrangement_draft`` 와 같다. ``windows`` 는 구간 안의 창별
-      결정이고, ``tracks`` 의 칸은 줄마다 계획이 바뀌는 마디에만 있다. 칸이 없는 마디는 앞
-      칸의 상태가 이어진다.
+      결정이고, ``tracks`` 의 칸은 줄마다 값이 바뀌는 마디에만 있다. 칸이 없는 마디는 앞
+      칸의 상태가 이어진다. 쉬는 연속 마디는 쉼(「—」) 한 칸이다.
     - ``planned_colors`` 는 기존 생성기와 같다. 켜는 칸에서는 구간 색·역광 색보다 우선하고,
       쉬는 칸에는 닿지 않는다. 이 함수는 파일을 읽지 않는다.
+    - 블라인드 줄에는 후렴 바로 앞 빌드의 끝 마디에 예고 칸(밝기는 쉼과 같고 색은 없다)이 선다.
     """
     settings = ArrangementPolicy() if policy is None else policy
     if bar_map is None:
@@ -130,7 +168,8 @@ def generate_segment_draft(
 
     bar_numbers = sorted(int(entry["bar"]) for entry in bar_map["bars"])
     overrides = planned_colors or {}
-    windows = _plan_windows(split_sections(bar_map), layout, settings)
+    sections = split_sections(bar_map)
+    windows = _plan_windows(sections, layout, settings)
 
     plans: dict[str, dict[int, _CellPlan]] = {str(track["group_name"]): {} for track in layout}
     for window in windows:
@@ -139,7 +178,7 @@ def generate_segment_draft(
             name = str(track["group_name"])
             for bar in range(window.start_bar, window.end_bar + 1):
                 at_start = bar == section.start_bar
-                plans[name][bar] = _cell_plan(
+                plan = _cell_plan(
                     track,
                     active=window.active,
                     moving=window.moving,
@@ -149,20 +188,34 @@ def generate_segment_draft(
                     section_color=window.color,
                     override=overrides.get((name, bar)),
                 )
+                plans[name][bar] = _in_segment_words(plan, track.get("layer_role"))
 
-    tracks = [
-        BeatGridTrack(
-            group_no=track.get("group_no"),
-            group_no_confirmed=bool(track.get("group_no_confirmed", False)),
-            group_name=str(track["group_name"]),
-            layer_role=track.get("layer_role"),
-            cues=[
-                _segment_cue(bar, plan, settings)
-                for bar, plan in _runs(plans[str(track["group_name"])], bar_numbers)
-            ],
+    # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
+    notice = _CellPlan(PRE_HIT_LABEL, settings.rest_percent, None, _KIND_PRE_HIT)
+    pre_hit_bars = _pre_hit_bars(sections)
+    for track in layout:
+        if _is_blind_line(track):
+            for bar in pre_hit_bars:
+                plans[str(track["group_name"])][bar] = notice
+
+    tracks = []
+    for track in layout:
+        name = str(track["group_name"])
+        runs = _runs(
+            plans[name],
+            bar_numbers,
+            splits_on_color=track.get("layer_role") in _COLOR_LINE_ROLES,
+            annotated=frozenset(bar for track_name, bar in overrides if track_name == name),
         )
-        for track in layout
-    ]
+        tracks.append(
+            BeatGridTrack(
+                group_no=track.get("group_no"),
+                group_no_confirmed=bool(track.get("group_no_confirmed", False)),
+                group_name=name,
+                layer_role=track.get("layer_role"),
+                cues=[_segment_cue(bar, plan, settings) for bar, plan in runs],
+            )
+        )
     return ArrangementDraft(
         tracks=tracks,
         windows=[
@@ -276,17 +329,64 @@ def _plan_windows(
     return windows
 
 
-def _runs(
-    plans: Mapping[int, _CellPlan], bar_numbers: Sequence[int]
-) -> list[tuple[int, _CellPlan]]:
-    """마디별 계획에서 앞 마디와 달라지는 마디만 골라 (첫 마디, 계획) 목록으로 돌려준다.
+def _in_segment_words(plan: _CellPlan, role: object) -> _CellPlan:
+    """기존 생성기가 정한 칸의 라벨을 기본 격자와 배치 규칙서의 말로 바꾼다. 값은 건드리지 않는다.
 
-    계획이 같은 연속 마디는 한 칸이다. 쉬는 계획도 다른 계획과 똑같이 센다.
+    정지·쉼과, 규칙서에 말이 없는 역할(예: 객석)의 유지 칸은 기존 라벨 그대로다.
+    """
+    if plan.kind == "static":
+        return plan._replace(label=_STATIC_LABEL_OF_ROLE.get(str(role), plan.label))
+    return plan._replace(label=_LABEL_OF_KIND.get(plan.kind, plan.label))
+
+
+def _is_blind_line(track: Mapping[str, Any]) -> bool:
+    """강조 층 가운데 블라인드 줄인가. 스트로브 줄을 이름으로 가르는 ``_cell_plan`` 과 같다."""
+    return track.get("layer_role") == "effect" and "STROBE" not in str(track["group_name"]).upper()
+
+
+def _pre_hit_bars(sections: Sequence[SegmentSection]) -> list[int]:
+    """후렴이 바로 이어 시작하는 빌드 구간의 끝 마디 — 큰 히트 직전에 비우는 예고 칸이 서는 마디.
+
+    구간은 서로 이어져 있어서 다음 구간이 후렴(마지막 후렴 포함)이면 그 시작 마디가 빌드 구간의
+    끝 마디 바로 다음이다. 빌드 이벤트가 후렴 앞에서 일찍 끝나도 빌드 구간은 후렴 직전 마디까지다.
+    """
+    return [
+        build.end_bar
+        for build, after in zip(sections, sections[1:], strict=False)
+        if build.kind == _SECTION_BUILD and after.kind in _BLIND_SECTIONS
+    ]
+
+
+# @MX:NOTE: [AUTO] 칸을 나누는 값은 라벨·밝기·움직임이다. 구간 종류·구간 경계·계획 색은 값이 아니다.
+def _runs(
+    plans: Mapping[int, _CellPlan],
+    bar_numbers: Sequence[int],
+    *,
+    splits_on_color: bool,
+    annotated: frozenset[int],
+) -> list[tuple[int, _CellPlan]]:
+    """마디별 계획을 값이 같은 연속 마디로 묶어 (첫 마디, 그 마디의 계획) 목록으로 돌려준다.
+
+    값은 라벨·밝기·움직임·규칙 종류, 곧 계획 색을 뺀 계획이다. 쉬는 계획도 다른 계획과 똑같이
+    세므로 쉬는 연속 마디는 구간 경계를 몇 번 넘어도 쉼 한 칸이다. 예고 칸은 쉼과 밝기가 같지만
+    라벨이 달라서 쉼 칸에 묻히지 않는다.
+
+    색은 칸의 속성이라 칸 첫 마디의 색이다. 색이 바뀌는 마디에서 칸을 나누는 경우는 둘이다.
+    ``splits_on_color`` 인 줄(워시 줄)과, 그 마디나 앞 마디가 곡별 주석 색(``annotated``)을 가진
+    경우다. 주석 색은 그 마디의 칸이 보여 줘야 해서 줄을 가리지 않는다. 앞뒤와 색이 같으면 나누지
+    않는다(역광 줄에 역광 색을 주석으로 한 번 더 적어도 칸은 늘지 않는다).
     """
     rows: list[tuple[int, _CellPlan]] = []
-    for bar in bar_numbers:
-        if not rows or rows[-1][1] != plans[bar]:
-            rows.append((bar, plans[bar]))
+    for index, bar in enumerate(bar_numbers):
+        plan = plans[bar]
+        if index > 0:
+            before_bar = bar_numbers[index - 1]
+            before = plans[before_bar]
+            same_values = plan._replace(color_rgb=None) == before._replace(color_rgb=None)
+            color_matters = splits_on_color or bar in annotated or before_bar in annotated
+            if same_values and (plan.color_rgb == before.color_rgb or not color_matters):
+                continue
+        rows.append((bar, plan))
     return rows
 
 
