@@ -311,11 +311,13 @@ def build_song_timing_from_bar_map(bar_map: Mapping[str, object] | None) -> Song
 #: 콘솔 풀을 읽는 시점에 따라 나타나거나 사라지고, 콘솔에 아직 없는 계획 값이라
 #: 「반영 이후 바뀐 칸」 비교에 넣지 않는다. 넣으면 풀을 읽거나 계획을 세우는 것만으로
 #: 미반영 칸이 생긴다. 계획 색(`color_planned`)의 `color_rgb` 도 같은 이유로 뺀다.
+#: `planned_color` 는 콘솔 값이 아닌 계획 값이라 「반영 이후 바뀐 칸」 비교에서 뺀다.
 _DISPLAY_ONLY_CUE_KEYS = frozenset(
     {
         "position_preset_name",
         "color_preset_name",
         "color_planned",
+        "planned_color",
         "planned_dimmer_name",
         "planned_position_name",
     }

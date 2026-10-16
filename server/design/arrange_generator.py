@@ -14,6 +14,9 @@
   (배치 규칙서 §5 벌스 무빙 기본안). 그래서 리듬을 타는 트랙은 구간당 둘(드롭은 셋)을 넘지 않는다.
 - 강조(BLIND·STROBE)는 임팩트 마디에만 둔다. 임팩트는 킥 진입 마디(BLIND)와 드롭 시작
   마디(STROBE)다(spec.md §5 항목 1). 느린 곡이면 스트로브를 두지 않는다(REQ-LDARRANGE-007).
+- 켜는 칸마다 계획 색(콘솔 퍼센트 RGB)을 붙인다. 쉬는 칸에는 붙이지 않는다. 우선순위는 곡별 주석
+  색(칸 하나) > 역광 역할(BACK) > 구간 색이다. 구간 색은 구간 종류(드롭·브릿지·마지막 후렴·후렴·
+  벌스)에서 나온다. 계획 색은 콘솔 값이 아니라 화면 표시용이라 콘솔에 보내지 않는다.
 """
 
 from __future__ import annotations
@@ -53,6 +56,13 @@ STROBE_LABEL = "스트로브 1마디"
 UNCONFIRMED_NOTE = "마디 지도 미확정"
 #: 출처 표식. 손 배치(``beat_grid_data``)와 구분한다.
 SOURCE = "arrangement_generator"
+
+#: 구간 종류. 마디 지도에는 벌스·후렴 이름이 없어서 이벤트와 마디 에너지로 어림한다.
+_SECTION_DROP = "drop"
+_SECTION_BRIDGE = "bridge"
+_SECTION_LAST_CHORUS = "last_chorus"
+_SECTION_CHORUS = "chorus"
+_SECTION_VERSE = "verse"
 
 _PULSE = "pulse"
 _CHASE = "chase"
@@ -104,6 +114,8 @@ class _CellPlan(NamedTuple):
     movement_shape: str | None
     #: 어느 규칙 칸인지. 칸의 ``source_ref`` 로 남아 감독이 출처를 본다.
     kind: str
+    #: 계획 색(콘솔 퍼센트 RGB). 쉬는 칸은 None 이다.
+    color_rgb: tuple[int, int, int] | None = None
 
 
 # @MX:NOTE: [AUTO] 마디 지도와 트랙 구성만 받는 순수 함수다. 파일이나 콘솔에 닿지 않는다.
@@ -111,6 +123,8 @@ def generate_arrangement_draft(
     bar_map: Mapping[str, Any] | None,
     layout: Sequence[Mapping[str, Any]],
     policy: ArrangementPolicy | None = None,
+    *,
+    planned_colors: Mapping[tuple[str, int], tuple[int, int, int]] | None = None,
 ) -> ArrangementDraft:
     """마디 지도와 트랙 구성을 「트랙 × 마디」 초안으로 바꾼다.
 
@@ -119,6 +133,8 @@ def generate_arrangement_draft(
     - ``layout`` 의 항목은 ``group_no``·``group_no_confirmed``·``group_name``·``layer_role``
       을 가진다. 같은 장비를 두 트랙이 잡는 겹침이나 모르는 역할 이름이 있으면 ``ValueError``
       다(AC-LDARRANGE-014).
+    - ``planned_colors`` 는 호출한 쪽이 건네는 「(트랙 이름, 마디) → 주석 색」이다. 켜는 칸에서는
+      구간 색·역광 색보다 우선한다. 이 함수는 파일을 읽지 않는다.
     """
     settings = ArrangementPolicy() if policy is None else policy
     if bar_map is None:
@@ -137,12 +153,23 @@ def generate_arrangement_draft(
         if event["kind"] == "drop"
     ]
     drop_starts = {start for start, _end in drop_ranges}
+    break_ranges = [
+        (int(event["start_bar"]), int(event["end_bar"]))
+        for event in events
+        if event["kind"] == "break"
+    ]
+    energy = {
+        int(entry["bar"]): float(entry["energy"]) for entry in bar_map["bars"] if "energy" in entry
+    }
+    overrides = planned_colors or {}
 
     voices = _voices(layout)
     movers = [str(track["group_name"]) for track in layout if track.get("layer_role") == "mover"]
     plans: dict[str, dict[int, _CellPlan]] = {str(track["group_name"]): {} for track in layout}
     windows: list[ArrangementWindow] = []
     motion_turn = 0
+    last_drop_end = max((end for _start, end in drop_ranges), default=None)
+    after_last_drop = 0
     for window_id in sorted({bar // settings.window_bars for bar in bar_numbers}):
         bars_here = [bar for bar in bar_numbers if bar // settings.window_bars == window_id]
         start, end = bars_here[0], bars_here[-1]
@@ -158,6 +185,20 @@ def generate_arrangement_draft(
         if _MOTION in active:
             moving = movers[motion_turn % len(movers)]
             motion_turn += 1
+        section = _section_kind(
+            start,
+            end,
+            drop_ranges=drop_ranges,
+            break_ranges=break_ranges,
+            last_drop_end=last_drop_end,
+            has_kick=any(bar in kick_bars for bar in bars_here),
+            energies=[energy[bar] for bar in bars_here if bar in energy],
+            settings=settings,
+        )
+        # 마지막 후렴 돌림의 차례 = 이 구간보다 앞서 마지막 드롭 뒤에서 시작한 구간 수.
+        section_color = _section_color(section, after_last_drop, settings)
+        if _after(start, last_drop_end):
+            after_last_drop += 1
         windows.append(
             ArrangementWindow(
                 start_bar=start,
@@ -177,6 +218,8 @@ def generate_arrangement_draft(
                     is_kick=bar in kick_bars,
                     is_drop_start=bar in drop_starts,
                     settings=settings,
+                    section_color=section_color,
+                    override=overrides.get((name, bar)),
                 )
 
     tracks = [
@@ -234,33 +277,84 @@ def _cell_plan(
     is_kick: bool,
     is_drop_start: bool,
     settings: ArrangementPolicy,
+    section_color: tuple[int, int, int],
+    override: tuple[int, int, int] | None = None,
 ) -> _CellPlan:
     role = track.get("layer_role")
     name = str(track["group_name"])
     lit = settings.lit_percent
+    # 켜는 칸의 계획 색 — 주석 색 > 역광 역할 > 구간 색. 쉬는 칸에는 색이 없다.
+    color = override or (settings.palette.backlight if role == "back" else section_color)
     if role == "back":
         if _PULSE in active:
-            return _CellPlan(PULSE_LABEL, lit, None, "pulse")
+            return _CellPlan(PULSE_LABEL, lit, None, "pulse", color)
         return _rest_plan(settings)
     if role == "side":
         if _CHASE in active:
-            return _CellPlan(CHASE_LABEL, lit, None, "chase")
+            return _CellPlan(CHASE_LABEL, lit, None, "chase", color)
         return _rest_plan(settings)
     if role == "mover":
         if moving == name:
-            return _CellPlan(MOTION_LABEL, lit, _MOTION_SHAPE, "motion")
-        return _CellPlan(HOLD_LABEL, lit, None, "hold")
+            return _CellPlan(MOTION_LABEL, lit, _MOTION_SHAPE, "motion", color)
+        return _CellPlan(HOLD_LABEL, lit, None, "hold", color)
     if role == "effect":
         if "STROBE" in name.upper():
             if is_drop_start and not settings.slow_song:
-                return _CellPlan(STROBE_LABEL, lit, None, "strobe")
+                return _CellPlan(STROBE_LABEL, lit, None, "strobe", color)
             return _rest_plan(settings)
         if is_kick:
-            return _CellPlan(BLIND_LABEL, lit, None, "blind")
+            return _CellPlan(BLIND_LABEL, lit, None, "blind", color)
         return _rest_plan(settings)
     if role in _STATIC_ROLES:
-        return _CellPlan(STATIC_LABEL, lit, None, "static")
+        return _CellPlan(STATIC_LABEL, lit, None, "static", color)
     return _rest_plan(settings)
+
+
+def _section_kind(
+    start: int,
+    end: int,
+    *,
+    drop_ranges: Sequence[tuple[int, int]],
+    break_ranges: Sequence[tuple[int, int]],
+    last_drop_end: int | None,
+    has_kick: bool,
+    energies: Sequence[float],
+    settings: ArrangementPolicy,
+) -> str:
+    """4마디 구간 하나의 종류를 돌려준다.
+
+    위에서부터 먼저 맞는 것을 쓴다: 드롭과 겹침 → 브릿지(``break`` 와 겹침) → 마지막 드롭 뒤 →
+    킥 진입이 있거나 마디 에너지 평균이 기준 이상이면 후렴 → 나머지는 벌스. 마디 지도에는
+    구간 이름이 없어서 이것은 어림이다. 에너지가 없는 마디는 평균에서 뺀다.
+    """
+    if any(start <= drop_end and drop_start <= end for drop_start, drop_end in drop_ranges):
+        return _SECTION_DROP
+    if any(start <= break_end and break_start <= end for break_start, break_end in break_ranges):
+        return _SECTION_BRIDGE
+    if _after(start, last_drop_end):
+        return _SECTION_LAST_CHORUS
+    if has_kick or (energies and sum(energies) / len(energies) >= settings.chorus_energy):
+        return _SECTION_CHORUS
+    return _SECTION_VERSE
+
+
+def _after(start: int, last_drop_end: int | None) -> bool:
+    """구간이 마지막 드롭이 끝난 뒤에서 시작하는가. 드롭이 없으면 거짓이다."""
+    return last_drop_end is not None and start > last_drop_end
+
+
+def _section_color(section: str, turn: int, settings: ArrangementPolicy) -> tuple[int, int, int]:
+    """구간 종류의 색. 마지막 후렴은 목록을 돌며 쓴다(``turn`` 은 그 구간이 몇 번째인가)."""
+    palette = settings.palette
+    if section == _SECTION_DROP:
+        return palette.drop
+    if section == _SECTION_BRIDGE:
+        return palette.bridge
+    if section == _SECTION_LAST_CHORUS:
+        return palette.last_chorus[turn % len(palette.last_chorus)]
+    if section == _SECTION_CHORUS:
+        return palette.chorus
+    return palette.verse
 
 
 def _draft_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> BeatGridCue:
@@ -279,4 +373,6 @@ def _draft_cue(bar: int, plan: _CellPlan, settings: ArrangementPolicy) -> BeatGr
             "period_unit": "bar",
             "period_value": settings.motion_period_bars,
         }
+    if plan.color_rgb is not None:
+        raw["planned_color"] = [int(channel) for channel in plan.color_rgb]
     return normalize_beat_grid_cue(raw)

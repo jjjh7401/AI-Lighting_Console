@@ -7,6 +7,9 @@
 프리셋은 그룹마다 따로 저장하므로 이름에 그룹이 붙는다).
 화면은 이 키들을 점선 테두리·흐린 글자로 그려서 콘솔 값과 구분한다.
 
+자동 배치 초안이 칸에 남긴 계획 색(``planned_color``)도 같은 방식으로 보인다. 곡별 계획 주석의
+색이 없고 콘솔 번호·색도 없는 칸에서만 쓴다. 계획 주석이 없는 곡에도 적용한다.
+
 원본 격자는 바뀌지 않는다 — 화면에 보낼 사본에만 붙는다. 「반영 이후 바뀐 칸」 비교
 (``beat_grid_send.beat_grid_cell_snapshot``)도 이 키들을 뺀다.
 """
@@ -16,9 +19,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from server.design.beat_grid_edit import load_preset_pool_policy
+from server.design.color_names import resolve_color_name
 from server.design.preset_plan import LoveAttackPlan, build_preset_plan, load_preset_annotations
 
-__all__ = ["attach_planned_marks"]
+__all__ = ["annotated_cell_colors", "attach_planned_marks"]
 
 _CellKey = tuple[str, int]
 
@@ -31,6 +35,36 @@ def _valid_rgb(rgb: object) -> bool:
         not isinstance(channel, bool) and isinstance(channel, (int, float)) and 0 <= channel <= 100
         for channel in rgb
     )
+
+
+def annotated_cell_colors(
+    annotations: Mapping[str, object] | None,
+) -> dict[_CellKey, tuple[int, int, int]]:
+    """곡별 계획 주석에서 「(트랙 이름, 마디) → 색」을 모은다(파일을 읽지 않는다).
+
+    색의 RGB 는 주석의 ``rgb``(세 채널 0~100)를 먼저 쓰고, 없거나 틀리면 색 이름을 표준 팔레트에서
+    찾는다. 찾지 못한 색은 건너뛴다(지어내지 않는다). 한 칸에 서로 다른 색이 둘 이상 붙으면
+    어느 색인지 알 수 없어 그 칸을 뺀다(``attach_planned_marks`` 와 같은 규칙).
+    """
+    if not annotations:
+        return {}
+    found: dict[_CellKey, set[tuple[int, int, int]]] = {}
+    for entry in annotations.get("colors") or []:
+        if not isinstance(entry, Mapping):
+            continue
+        rgb: object = entry.get("rgb")
+        if not _valid_rgb(rgb):
+            rgb = resolve_color_name(str(entry.get("name") or ""))
+        if not _valid_rgb(rgb):
+            continue
+        color = tuple(int(channel) for channel in rgb)  # type: ignore[attr-defined]
+        for cell in entry.get("cells") or []:
+            if not isinstance(cell, Mapping):
+                continue
+            bar = cell.get("bar")
+            if isinstance(bar, int) and not isinstance(bar, bool):
+                found.setdefault((str(cell.get("group_name")), bar), set()).add(color)  # type: ignore[arg-type]
+    return {key: next(iter(colors)) for key, colors in found.items() if len(colors) == 1}
 
 
 def _planned_names(
@@ -62,12 +96,17 @@ def _marks_for_cue(
     """한 칸에 얹을 계획 표시. 콘솔 번호가 이미 있는 자리에는 계획 표시를 붙이지 않는다."""
     marks: dict[str, object] = {}
     rgbs = colors.get(key, set())
+    unpainted = cue.get("color_preset_no") is None and cue.get("color_rgb") is None
     # 계획 색이 둘 이상이면 어느 색인지 지어내지 않는다(칠하지 않음).
-    if len(rgbs) == 1 and cue.get("color_preset_no") is None and cue.get("color_rgb") is None:
+    if len(rgbs) == 1 and unpainted:
         (rgb,) = rgbs
         if _valid_rgb(rgb):
             marks["color_rgb"] = list(rgb)
             marks["color_planned"] = True
+    elif not rgbs and unpainted and _valid_rgb(cue.get("planned_color")):
+        # 주석 색이 없는 칸은 자동 배치 초안이 남긴 계획 색을 보인다.
+        marks["color_rgb"] = list(cue["planned_color"])  # type: ignore[call-overload]
+        marks["color_planned"] = True
     brightness = cue.get("brightness")
     if key in dimmers and isinstance(brightness, Mapping) and brightness.get("preset_no") is None:
         marks["planned_dimmer_name"] = dimmers[key]
@@ -79,22 +118,26 @@ def _marks_for_cue(
 def attach_planned_marks(grid: Mapping[str, object], song_title: object) -> dict[str, object]:
     """격자 사본의 칸에 계획 표시를 얹는다(원본 불변).
 
-    ``song_title`` 은 계획 주석 파일을 고르는 열쇠다. 계획 주석이 없는 곡이면 키를 하나도 더하지
-    않고 격자를 복사해 돌려준다."""
+    ``song_title`` 은 계획 주석 파일을 고르는 열쇠다. 계획 주석이 없는 곡이면 주석 표시는 더하지
+    않고, 칸의 계획 색(``planned_color``)만 얹는다. 칸에 그것도 없으면 칸은 그대로다."""
     tracks = grid.get("tracks")
-    annotations = load_preset_annotations(song_title)
-    if not annotations or not isinstance(tracks, list):
+    if not isinstance(tracks, list):
         return dict(grid)
-    plan = build_preset_plan(
-        grid,
-        annotations=annotations,
-        policy=load_preset_pool_policy(),
-        dimmer_pool=None,
-        color_pool=None,
-        position_pool=None,
-        dimmer_attributes={},
-    )
-    colors, dimmers, positions = _planned_names(plan)
+    annotations = load_preset_annotations(song_title)
+    colors: Mapping[_CellKey, set[tuple[float, ...]]] = {}
+    dimmers: Mapping[_CellKey, str] = {}
+    positions: Mapping[_CellKey, str] = {}
+    if annotations:
+        plan = build_preset_plan(
+            grid,
+            annotations=annotations,
+            policy=load_preset_pool_policy(),
+            dimmer_pool=None,
+            color_pool=None,
+            position_pool=None,
+            dimmer_attributes={},
+        )
+        colors, dimmers, positions = _planned_names(plan)
     new_tracks: list[object] = []
     for track in tracks:
         if not isinstance(track, Mapping) or not isinstance(track.get("cues"), list):
