@@ -5,7 +5,7 @@ SPEC-LDRHYTHM-001 검증 도구. 격자 두 개를 받아 줄(트랙)마다 여�
 (출력은 표준 출력이나 --out 한 곳), 콘솔과 통신하지 않는다. 같은 입력이면 같은 출력이다.
 
 지표 (줄마다 재고, 전체로 합쳐 판정한다)
-  ① count      칸 수 — 쉼·꺼짐·예고 칸을 뺀 수가 기본과 일치율 50% 이상이면 같다
+  ① count      칸 수 — 쉼·꺼짐·예고 칸을 뺀 수 차이가 max(1, 기본의 50%) 이내면 같다
   ② length     칸 길이 분포 — 1·2·4·8마디·16마디 이상, 그리고 3·5·7 같은 값은 「기타」
   ③ alignment  칸 시작 마디가 구간 경계와 맞는 비율 (곡에 프레이즈 경계가 없어 구간 경계만 쓴다)
   ④ pattern    박 패턴 종류 분포 — 칸 라벨의 키워드로 나눈다. 못 나눈 칸은 「기타」
@@ -108,7 +108,7 @@ class ShapeCheckError(ValueError):
 class Thresholds:
     """판정 기준(제안값). 기본 격자 한 곡으로 교정했다."""
 
-    #: ① 줄별 칸 수 일치율 하한. |후보 − 기본| ≤ 이 값 × 기본.
+    #: ① 줄별 칸 수 허용 비율. |후보 − 기본| ≤ max(1, 이 값 × 기본).
     #: 쉼·꺼짐·예고 칸은 세지 않는다.
     count_share: float = 0.5
     #: ② 전체 칸 길이 분포 거리(0~1, 전체 변위의 절반) 상한.
@@ -251,8 +251,8 @@ def is_advance(cue: Mapping[str, Any]) -> bool:
 
 
 def count_passes(base_count: int, cand_count: int, share: float) -> bool:
-    """① 칸 수: 일치율이 share 이상이면 같은 종류다 — |후보 − 기본| ≤ share × 기본."""
-    return abs(cand_count - base_count) <= share * base_count
+    """① 칸 수: |후보 − 기본| ≤ max(1, share × 기본)이면 같은 종류다."""
+    return abs(cand_count - base_count) <= max(1.0, share * base_count)
 
 
 def total_variation(p: Mapping[str, float], q: Mapping[str, float]) -> float:
@@ -500,7 +500,7 @@ def compare_grids(
                 key="count",
                 scope="줄별",
                 track=name,
-                rule=f"|후보 − 기본| ≤ {thresholds.count_share:g} × 기본",
+                rule=f"|후보 − 기본| ≤ max(1, {thresholds.count_share:g} × 기본)",
                 base=str(base_n),
                 candidate=str(cand_n),
                 passed=count_passes(base_n, cand_n, thresholds.count_share),

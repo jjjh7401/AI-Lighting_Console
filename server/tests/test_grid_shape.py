@@ -158,16 +158,20 @@ def test_accent_hits_skip_rests_and_allow_a_one_bar_lead_in() -> None:
         (7, 3, False),
         (7, 11, False),
         (1, 1, True),
-        (1, 2, False),
+        (1, 2, True),  # 칸 1개 줄에 2개는 같은 종류다(최소 1칸 허용).
+        (1, 3, False),
+        (2, 1, True),
+        (2, 4, False),
         (0, 0, True),
-        (0, 1, False),
+        (0, 1, True),  # 빈 줄도 최소 1칸 허용 안에 든다.
+        (0, 2, False),
         (26, 7, False),
     ],
 )
-def test_count_rule_is_a_fifty_percent_agreement_band(
+def test_count_rule_allows_half_the_base_and_at_least_one_cell(
     base: int, candidate: int, passes: bool
 ) -> None:
-    """① 칸 수는 일치율 50% 이상이면 같은 종류다(양쪽 방향 모두)."""
+    """① 칸 수: |후보 − 기본| ≤ max(1, 0.5 × 기본)이면 같은 종류다(양쪽 방향 모두)."""
     assert count_passes(base, candidate, DEFAULT_THRESHOLDS.count_share) is passes
 
 
