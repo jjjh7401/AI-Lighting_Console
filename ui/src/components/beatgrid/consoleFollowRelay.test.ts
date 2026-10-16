@@ -12,6 +12,7 @@ import {
   consoleAudioPositionSeconds,
   createConsoleFollowRelay,
   observeConsoleFollowStatus,
+  observeConsoleRunStatus,
 } from "./consoleFollowRelay";
 import { resolveConsolePlayResponse } from "./consoleSyncAudio";
 
@@ -37,6 +38,8 @@ describe("createConsoleFollowRelay — 처음 상태", () => {
       responseAtMs: null,
       audioStarted: false,
       failure: null,
+      consoleMayRun: false,
+      runStatusSeen: null,
     });
   });
 
@@ -120,6 +123,37 @@ describe("observeConsoleFollowStatus — 이번 요청의 답인가", () => {
     expect(observeConsoleFollowStatus(relay, answer, 1000)).toBe(true);
     expect(observeConsoleFollowStatus(relay, answer, 9000)).toBe(false);
     expect(relay.responseAtMs).toBe(1000);
+  });
+});
+
+describe("observeConsoleRunStatus — 콘솔 타임코드가 돌고 있을 수 있는가(N11)", () => {
+  it("재생 성공에서 켜지고 정지 성공에서만 꺼진다", () => {
+    const relay = createConsoleFollowRelay();
+    expect(observeConsoleRunStatus(relay, status())).toBe(true);
+    expect(relay.consoleMayRun).toBe(true);
+    expect(observeConsoleRunStatus(relay, status({ last_action: "console_stop" }))).toBe(true);
+    expect(relay.consoleMayRun).toBe(false);
+  });
+
+  it("정지가 거절·만료되면 켜진 채로 둔다(앱은 멈춰도 콘솔은 돈다)", () => {
+    const relay = createConsoleFollowRelay();
+    observeConsoleRunStatus(relay, status());
+    const rejected = status({ last_action: "console_stop", ok: false, reason: "승인 거절" });
+    expect(observeConsoleRunStatus(relay, rejected)).toBe(false);
+    expect(relay.consoleMayRun).toBe(true);
+  });
+
+  it("재생 거절은 켜지 않고, 같은 응답은 두 번 세지 않으며, 다른 종류 응답은 바꾸지 않는다", () => {
+    const relay = createConsoleFollowRelay();
+    expect(observeConsoleRunStatus(relay, status({ ok: false }))).toBe(false);
+    const played = status();
+    observeConsoleRunStatus(relay, played);
+    relay.consoleMayRun = false; // 같은 객체가 다시 와도 다시 켜지지 않는다
+    expect(observeConsoleRunStatus(relay, played)).toBe(false);
+    relay.consoleMayRun = true;
+    expect(observeConsoleRunStatus(relay, status({ last_action: "apply" }))).toBe(false);
+    expect(observeConsoleRunStatus(relay, null)).toBe(false);
+    expect(relay.consoleMayRun).toBe(true);
   });
 });
 

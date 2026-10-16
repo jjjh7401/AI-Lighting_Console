@@ -5590,6 +5590,20 @@ body {
   display: flex;
 }
 
+/* 콘솔 타임코드가 아직 돌고 있을 수 있다는 큰 알림(2차 전체 실행 N11). */
+.beat-grid-console-running {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--warn);
+  border-radius: 8px;
+  background: #3a2a10;
+  color: #ffd27a;
+  font-size: 15px;
+}
+
 /* 전체화면 위 승인 카드 — 채팅 열이 숨겨진 동안 대기 승인을 오른쪽 위에 겹쳐 보인다. */
 .beat-grid-approval-overlay {
   position: fixed;

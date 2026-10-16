@@ -27,7 +27,11 @@ import { BarMapEntry } from "./components/BarMapEntry";
 import { barMapEntryReducer, initialBarMapEntryState } from "./components/barMapEntryState";
 import { BeatGrid } from "./components/BeatGrid";
 import { stageFixturePoints } from "./components/beatGridStageModel";
-import { createConsoleFollowRelay, observeConsoleFollowStatus } from "./components/beatgrid/consoleFollowRelay";
+import {
+  createConsoleFollowRelay,
+  observeConsoleFollowStatus,
+  observeConsoleRunStatus,
+} from "./components/beatgrid/consoleFollowRelay";
 import { pendingApplyCountOf } from "./components/beatgrid/pendingApplyCount";
 import { buildFileFromSongAudioLink } from "./components/beatgrid/songAudioLink";
 import { LIFECYCLE_LABEL as SONG_TIMELINE_LIFECYCLE_LABEL } from "./components/SongTimeline";
@@ -546,7 +550,9 @@ export default function App() {
   useEffect(() => {
     // 자식(`BeatGrid`)의 effect 는 부모의 effect 보다 먼저 돈다 — 응답이 도착한 그 렌더에서 화면은 아직
     // 기록 전의 중계 객체를 본다. 기록한 뒤 순번을 올려야 화면이 한 번 더 확인한다.
-    if (observeConsoleFollowStatus(consoleFollowRelay, state.beatGridSendStatus, Date.now())) {
+    const followChanged = observeConsoleFollowStatus(consoleFollowRelay, state.beatGridSendStatus, Date.now());
+    const runChanged = observeConsoleRunStatus(consoleFollowRelay, state.beatGridSendStatus);
+    if (followChanged || runChanged) {
       setConsoleFollowSeq((n) => n + 1);
     }
   }, [state.beatGridSendStatus, consoleFollowRelay]);
