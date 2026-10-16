@@ -11673,18 +11673,62 @@ class ChatSession:
         ``_resolve_beat_grid_timecode_number``(``timecode_slot_verdict``)를 그대로 쓴다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
-        record = (
-            store.beat_grid_allocation(self._beat_grid_song_key(timeline))
-            if store is not None and timeline is not None
-            else None
+        record = None
+        if store is not None and timeline is not None:
+            song_key = self._beat_grid_song_key(timeline)
+            record = store.beat_grid_allocation(song_key)
+            if not record:
+                # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 반영 때의 열쇠와
+                # 어긋난다 — 격자가 기억하는 원래 곡 제목 열쇠로 한 번 더 찾는다(PR #779와 같은 길).
+                fallback = self._beat_grid_title_fallback_key(song_key)
+                if fallback is not None:
+                    record = store.beat_grid_allocation(fallback)
+        if record:
+            return self._resolve_beat_grid_timecode_number(
+                record.get("timecode_number"), recorded_name=record.get("timecode_name")
+            )
+        # 기록이 없어도(새 접속·재시작·열쇠 불일치) 격자의 타임코드 칸 번호가 콘솔에서
+        # **앱 소유**(`LDBEAT Timecode N` + 그 트랙이 가리키는 시퀀스가 전부 `LDBEAT `)이면
+        # 그 번호로 재생한다. 앱 소유가 아니면 거절한다(남의 타임코드를 재생하지 않는다).
+        wanted = timeline.get("timecode_number") if timeline is not None else None
+        if isinstance(wanted, int) and not isinstance(wanted, bool) and wanted >= 1:
+            return self._beat_grid_app_owned_timecode(wanted)
+        return None, (
+            "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
+            "먼저 「⇪ 콘솔에 반영」을 해 주세요."
         )
-        if not record:
+
+    def _beat_grid_title_fallback_key(
+        self, song_key: tuple[object, object]
+    ) -> tuple[object, object] | None:
+        """격자(beat_grid.song_title)가 기억하는 원래 곡 제목 열쇠 — 지금 열쇠와 같으면 ``None``."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        grid = timeline.get("beat_grid") if timeline is not None else None
+        title = grid.get("song_title") if isinstance(grid, Mapping) else None
+        if not isinstance(title, str) or not title or title == song_key[0]:
+            return None
+        return (title, song_key[1])
+
+    def _beat_grid_app_owned_timecode(self, wanted: int) -> tuple[int | None, str | None]:
+        path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
+        if occupant is None:
             return None, (
-                "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
+                f"Timecode {wanted}이 콘솔에 없어 재생하지 않습니다 — "
                 "먼저 「⇪ 콘솔에 반영」을 해 주세요."
             )
-        return self._resolve_beat_grid_timecode_number(
-            record.get("timecode_number"), recorded_name=record.get("timecode_name")
+        try:
+            names = _owned_sequence_names(self._beat_grid_sequences_section())
+        except Exception:  # noqa: BLE001
+            names = {}
+        note, why = timecode_overwrite_note(
+            wanted, occupant, self._beat_grid_timecode_track_targets(wanted), names
+        )
+        if note is not None:
+            return wanted, None
+        return None, why or (
+            f"Timecode {wanted}은 이 앱이 만든 타임코드가 아니어서 재생하지 않습니다."
         )
 
     def _beat_grid_console_transport(self, action: str, verbs: tuple[str, ...]) -> dict:
