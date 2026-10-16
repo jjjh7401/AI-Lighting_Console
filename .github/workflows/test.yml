@@ -54,7 +54,10 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # jsdom 30 은 Node ^22.22.2 이상을 요구한다. 그 아래 undici 8 은 로드 시점에
+          # zlib.createZstdDecompress(Node 22 부터 있음)를 부르므로 Node 20 에서는
+          # vitest 가 "Cannot read properties of undefined (reading 'bind')" 를 낸다.
+          node-version: 22
           cache: npm
           cache-dependency-path: ui/package-lock.json
 

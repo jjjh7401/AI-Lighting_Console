@@ -9,6 +9,7 @@ Executing anything from a loaded timeline still rides the approval gate.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
@@ -19,6 +20,7 @@ from server.web.session import (
     beat_grid_recorded_sequence_numbers,
     derive_beat_grid_fields,
 )
+from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_library import SongTimelineLibrary, timeline_entry_summary
 
 __all__ = ["TimelineLibraryDeps", "build_timeline_router"]
@@ -28,6 +30,8 @@ __all__ = ["TimelineLibraryDeps", "build_timeline_router"]
 class TimelineLibraryDeps:
     store: SongTimelineStore
     library: SongTimelineLibrary
+    # 불러오기로 제목이 바뀌면 음원 링크를 새 열쇠로 복제하는 데 쓴다(``None`` 이면 건너뜀).
+    song_audio_link_store: SongAudioLinkStore | None = None
 
 
 def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
@@ -72,7 +76,22 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # knows the generic "Design Interview"; the director's chosen name is
         # the meaningful one (user finding, 2026-08-15).
         timeline = dict(entry["timeline"])
+        old_key = (timeline.get("song_title"), timeline.get("sequence_number"))
         timeline["song_title"] = entry["name"]
+        new_key = (timeline["song_title"], timeline.get("sequence_number"))
+        # 음원 링크의 열쇠는 (song_title, sequence_number) — 이름이 바뀌면 옛 열쇠의 링크를
+        # 새 열쇠로 복제한다(옛 열쇠는 지우지 않는다). 링크가 없거나 쓰기가 실패하면 조용히 넘긴다.
+        links = deps.song_audio_link_store
+        if links is not None and new_key != old_key:
+            found = links.resolve(old_key)
+            if found.status == "found" and found.record is not None and found.data is not None:
+                with contextlib.suppress(OSError):
+                    links.link(
+                        new_key,
+                        file_name=found.record["file_name"],
+                        mime_type=found.record["mime_type"],
+                        data=found.data,
+                    )
         deps.store.latest = timeline
         # 카드 t644 — 응답도 재생(``ChatSession.song_timeline_replay``)과 같은 함수로 파생
         # 필드를 채운다. 카드 t651 — 풀 기억은 저장소의 것을 쓴다(재생 프레임과 같은 값). 이 요청은
