@@ -17,7 +17,7 @@ from server.design.preset_plan import (
 )
 from server.design.preset_plan_store import attach_color_store, attach_floor_position_store
 
-from .test_planned_color_presets import _COLOR_POOL, _applied_grid, _fake_reads
+from .test_planned_color_presets import _COLOR_POOL, _applied_grid, _card_session, _fake_reads
 from .test_preset_plan import _POSITION_CHILDREN
 from .test_preset_plan_store_all import _FRAMES, _MEMBERS
 
@@ -158,3 +158,48 @@ def test_a_director_numbered_cell_does_not_hold_the_rest_of_its_color_candidate(
     assert missing == []
     back = next(t for t in approved["tracks"] if t["group_name"] == "BACK")
     assert next(c for c in back["cues"] if c["bar"] == 0)["color_preset_no"] == "4.1"
+
+
+def test_stale_annotation_cells_are_one_line_without_duplicates() -> None:
+    # 워시가 구간마다 한 칸이라 주석이 가리키던 WASH-ALL 7·22마디에는 칸이 없다. 경고는 한 줄,
+    # 같은 칸은 한 번만, 「주석을 고쳐야 함」 같은 지시 없이 건너뛴 사실만 알린다.
+    grid = _applied_grid()
+    plan = build_preset_plan(
+        grid,
+        annotations=load_preset_annotations(LOVE_ATTACK_TITLE),
+        policy=load_preset_pool_policy(),
+        dimmer_pool=None,
+        color_pool=_COLOR_POOL,
+        position_pool=None,
+        dimmer_attributes={},
+    )
+    lines = [line for line in plan.unresolved if line.startswith("주석 칸")]
+    assert lines == [
+        "주석 칸 2개가 이 격자에 없어 건너뜀: WASH-ALL 7·22마디 "
+        "(그 마디에 칸이 없는 배치다 — 칸이 생기면 다시 쓴다)"
+    ]
+
+
+def test_approving_the_plan_card_sends_the_apps_own_store_preset(tmp_path, monkeypatch) -> None:
+    # 「blacklisted command (… 'Store Preset')」는 승인 카드가 필요한 이유일 뿐 차단이 아니다.
+    # 감독이 승인하면 앱이 만든 Store Preset 줄이 콘솔로 나간다. 안전 규칙(차단 목록)은 그대로다.
+    session, console, approval, _store = _card_session(
+        tmp_path, monkeypatch, _applied_grid(), decisions=(True,)
+    )
+    event = session.beat_grid_preset_plan()
+    assert event["ok"] is True
+    [request] = approval.requests
+    card_lines = [item.command for item in request.items]
+    assert any(line.startswith("Store Preset ") for line in card_lines)
+    reasons = " ".join(reason for item in request.items for reason in item.risk_reasons)
+    assert "Store Preset" in reasons  # 카드가 차단 목록 항목을 사유로 보인다
+    sent = [str(call) for call in console.executed]
+    assert any("Store Preset " in line for line in sent)
+
+
+def test_declining_the_plan_card_sends_no_store_preset(tmp_path, monkeypatch) -> None:
+    session, console, _approval, _store = _card_session(
+        tmp_path, monkeypatch, _applied_grid(), decisions=(False,)
+    )
+    session.beat_grid_preset_plan()
+    assert not any("Store Preset" in str(call) for call in console.executed)

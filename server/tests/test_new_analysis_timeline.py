@@ -18,6 +18,7 @@ from pathlib import Path
 
 from server.design.analysis_timeline import ANALYSIS_SOURCE_KEY, build_analysis_timeline
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
+from server.design.beat_grid_ui_values import SECTION_KIND_COLORS, attach_beat_grid_ui_values
 from server.design.profile import resolve_bpm
 from server.safety.audit import AuditLog
 from server.safety.console import ExecOutcome
@@ -72,8 +73,10 @@ def _old_timeline() -> dict:
 _SECTIONS = (
     ("D1", 964, 15_000, 1),
     ("D4", 15_000, 44_000, 4),
-    ("D3", 44_000, 70_000, 3),
+    ("D2", 44_000, 70_000, 2),
     ("D5", 70_000, 100_000, 5),
+    ("D3", 100_000, 130_000, 3),
+    ("D1", 130_000, 160_000, 1),
 )
 
 
@@ -138,6 +141,17 @@ def test_a_confirmed_new_analysis_starts_a_fresh_timeline(tmp_path, monkeypatch)
     assert [s["label"] for s in fresh["sections"]] == [label for label, *_ in _SECTIONS]
     assert [s["start_ms"] for s in fresh["sections"]] == [start for _l, start, *_ in _SECTIONS]
     assert fresh["bar_map"] == _bar_map()
+    # 분석이 확정한 BPM 이 실린다 — 상단 바가 「BPM —」로 비지 않는다.
+    assert fresh["bpm"] == 112.0
+    # 구간 종류는 D 레벨로 추정한다. 이름(D 레벨)은 바꾸지 않는다.
+    assert [s["kind"] for s in fresh["sections"]] == [
+        "intro",
+        "verse",
+        "bridge",
+        "chorus",
+        "verse",
+        "outro",
+    ]
     # 곡 이름은 새로 붙인 오디오 파일 이름이다 — 옛 작업본 이름(OLD TITLE)을 이어받지 않는다.
     assert fresh["song_title"] == LOVE_ATTACK_TITLE
     assert fresh["beat_grid"]["song_title"] == LOVE_ATTACK_TITLE
@@ -207,3 +221,18 @@ def test_sections_starting_in_the_same_bar_keep_the_first() -> None:
     )
     assert [s["label"] for s in timeline["sections"]] == ["A", "C"]
     assert timeline["sections"][0]["bar_count"] == timeline["sections"][1]["bar_start"]
+
+
+def test_the_screen_colors_a_section_by_its_explicit_kind() -> None:
+    # 이름이 「D5」뿐이어도 실린 종류(chorus)로 화면 색이 붙는다.
+    timeline = {"sections": [{"label": "D5", "kind": "chorus", "start_ms": 0}]}
+    [section] = attach_beat_grid_ui_values(timeline)["sections"]
+    assert section["kind"] == "chorus"
+    assert section["color"] == SECTION_KIND_COLORS["chorus"]
+
+
+def test_bpm_falls_back_to_the_bar_map() -> None:
+    timeline = build_analysis_timeline(
+        song_title="X", sections=[], bar_map=_bar_map(), layout=[], source_sha256="abc"
+    )
+    assert timeline["bpm"] == float(_bar_map()["bpm"])

@@ -284,7 +284,11 @@ def attach_beat_grid_ui_values(
                 sections.append(section)
                 continue
             section = dict(section)
-            kind = section_kind(section.get("label"))
+            # 구간이 종류를 직접 싣고 있으면(새 분석 작업본 — 이름이 D 레벨뿐이다) 그 종류를 쓴다.
+            explicit = section.get("kind")
+            kind = (
+                explicit if explicit in SECTION_KIND_COLORS else section_kind(section.get("label"))
+            )
             if kind is not None:
                 section.setdefault("kind", kind)
                 section.setdefault("color", SECTION_KIND_COLORS[kind])
