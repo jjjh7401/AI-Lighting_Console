@@ -9781,6 +9781,7 @@ class ChatSession:
             bar_map=bar_map,
             layout=self._beat_grid_view(current)["tracks"],
             source_sha256=record.source_sha256,
+            bpm=record.bpm.bpm,
         )
         library = self._timeline_library
         if library is None:

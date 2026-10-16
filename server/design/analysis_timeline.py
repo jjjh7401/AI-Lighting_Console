@@ -11,6 +11,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
 from server.design.beat_grid import default_beat_grid
+from server.design.song_cue_render import _infer_confirmed_role
 
 __all__ = ["ANALYSIS_SOURCE_KEY", "build_analysis_timeline"]
 
@@ -18,6 +19,15 @@ __all__ = ["ANALYSIS_SOURCE_KEY", "build_analysis_timeline"]
 ANALYSIS_SOURCE_KEY = "analysis_source_sha256"
 
 _LAYOUT_KEYS = ("group_no", "group_no_confirmed", "group_name", "layer_role")
+
+#: D 레벨 역할 추정(``_infer_confirmed_role``) → 화면 구간 종류. 마지막 구간(finale)은 아웃트로다.
+_ROLE_KIND = {
+    "intro": "intro",
+    "verse": "verse",
+    "chorus": "chorus",
+    "bridge": "bridge",
+    "finale": "outro",
+}
 
 
 class AnalysisSection(Protocol):
@@ -45,12 +55,17 @@ def build_analysis_timeline(
     bar_map: Mapping[str, Any],
     layout: Sequence[Mapping[str, Any]],
     source_sha256: str,
+    bpm: float | None = None,
 ) -> dict[str, Any]:
     """확정 분석 구간 · 마디 지도 · 줄 구성으로 새 타임라인을 만든다.
 
     - ``sections`` 는 채택된 분석 구간이다. 이름·시각·D 레벨을 그대로 옮기고, 마디 지도로
       ``bar_start``·``bar_count`` 를 붙인다. 같은 마디에서 시작하는 구간은 앞의 것만 남긴다.
     - 격자는 ``layout`` 의 줄 구성만 가져오고 칸은 비운다. 데이터 범위는 마디 지도 전체다.
+    - 구간마다 종류(``kind``)를 D 레벨로 추정해 싣는다(첫 구간 intro · 마지막 outro · 최고 D 레벨
+      chorus · D2 이하 bridge · 나머지 verse). 이름은 분석 이름 그대로다 — 이름으로 판정하는 곳이
+      있어 이름은 바꾸지 않는다.
+    - ``bpm`` 은 분석이 확정한 BPM 이다. 없으면 마디 지도의 BPM 을 쓴다.
     - 옛 작업본의 타임코드·시퀀스 번호·콘솔 기록은 싣지 않는다 — 새 작업본이다.
     """
     bars = sorted(bar_map["bars"], key=lambda entry: int(entry["bar"]))
@@ -61,6 +76,7 @@ def build_analysis_timeline(
         if starts and starts[-1][0] == bar:
             continue
         starts.append((bar, section))
+    d_levels = [int(section.d_level) for _bar, section in starts]
     timeline_sections = []
     for position, (bar, section) in enumerate(starts):
         next_bar = starts[position + 1][0] if position + 1 < len(starts) else last_bar + 1
@@ -71,12 +87,14 @@ def build_analysis_timeline(
                 "start_ms": int(section.start_ms),
                 "end_ms": int(section.end_ms),
                 "d_level": section.d_level,
+                "kind": _ROLE_KIND.get(_infer_confirmed_role(position, d_levels)),
                 "bar_start": bar,
                 "bar_count": next_bar - bar,
             }
         )
     tracks = [{**{key: track.get(key) for key in _LAYOUT_KEYS}, "cues": []} for track in layout]
-    return {
+    song_bpm = bpm if bpm is not None else bar_map.get("bpm")
+    timeline: dict[str, Any] = {
         "song_title": song_title,
         "sections": timeline_sections,
         "bar_map": dict(bar_map),
@@ -91,3 +109,6 @@ def build_analysis_timeline(
         },
         ANALYSIS_SOURCE_KEY: source_sha256,
     }
+    if isinstance(song_bpm, (int, float)) and not isinstance(song_bpm, bool) and song_bpm > 0:
+        timeline["bpm"] = float(song_bpm)
+    return timeline
