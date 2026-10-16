@@ -12334,7 +12334,8 @@ class ChatSession:
         합치지 않고 프리셋마다 돌려주는 점만 다르다 — 호출자(``beat_grid_preset_plan``)가 그
         프리셋만 계획에서 빼고 나머지를 새 승인 카드로 올린다."""
         pool_root = self._beat_grid_preset_pool_root()
-        presets = saved_presets(plan)
+        # 재사용 번호(reused)는 콘솔에 이미 있다 — 「채워졌다」 판정은 새로 저장할 줄에만 쓴다.
+        presets = [preset for preset in saved_presets(plan) if not preset.reused]
         pool_numbers = sorted(
             {no for no in (preset_pool_no(preset.slot) for preset in presets) if no is not None}
         )
