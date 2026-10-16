@@ -1183,7 +1183,11 @@ def create_app(deps: WebDeps) -> FastAPI:
     # named versions. Read-and-projection only — no console command route.
     app.include_router(
         build_timeline_router(
-            TimelineLibraryDeps(store=deps.song_timeline_store, library=deps.timeline_library)
+            TimelineLibraryDeps(
+                store=deps.song_timeline_store,
+                library=deps.timeline_library,
+                song_audio_link_store=deps.song_audio_link_store,
+            )
         )
     )
 

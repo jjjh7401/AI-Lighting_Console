@@ -123,6 +123,27 @@ const SONG_AUDIO_EXTENSION_MIME_TYPES: ReadonlyArray<readonly [string, string]> 
 const MAX_SONG_AUDIO_BYTES = 64 * 1024 * 1024;
 
 
+/** 이 곡에 저장된 오디오 링크를 요청하는 효과. 요청 조건(전체화면이 열려 있고 연결됐고 세션
+ * 첨부가 없다)은 그대로 두고, 곡이 바뀌면 다시 요청한다. 불러오기는 최상위 `song_title` 만 바꾸므로
+ * 그 값도 발동 조건에 넣는다. */
+export function useSongAudioLinkRequest({
+  active,
+  hasSessionFile,
+  songTitle,
+  beatGridSongTitle,
+  send,
+}: {
+  active: boolean;
+  hasSessionFile: boolean;
+  songTitle: string | null;
+  beatGridSongTitle: string | null;
+  send: () => void;
+}): void {
+  useEffect(() => {
+    if (active && !hasSessionFile) send();
+  }, [active, hasSessionFile, songTitle, beatGridSongTitle, send]);
+}
+
 export function readRunbookModeFromStorage(): boolean {
   try {
     return window.localStorage.getItem(RUNBOOK_MODE_STORAGE_KEY) === "1";
@@ -523,9 +544,13 @@ export default function App() {
   // 바뀔 때) 이 곡에 저장된 오디오 링크를 요청한다. `songAudioFile`이
   // 있으면(이번 세션에서 이미 직접 올렸으면) 요청하지 않는다 — 세션
   // 첨부가 항상 이긴다(`BeatGrid`의 `??` 우선순위와 같은 결정).
-  useEffect(() => {
-    if (beatGridFullscreen && connected && !songAudioFile) sendSongAudioLinkRequest();
-  }, [beatGridFullscreen, connected, songAudioFile, beatGridSongTitle, sendSongAudioLinkRequest]);
+  useSongAudioLinkRequest({
+    active: beatGridFullscreen && connected,
+    hasSessionFile: songAudioFile !== null,
+    songTitle: state.songTimeline.timeline?.song_title ?? null,
+    beatGridSongTitle,
+    send: sendSongAudioLinkRequest,
+  });
   // 서버 응답을 `File`로 되돌려 `BeatGrid`의 기존 자동 연결 경로에 먹인다
   // (`buildFileFromSongAudioLink` — base64/`File` 생성은 여기, 분할
   // 조립은 `protocol.ts`가 이미 끝냈다).
