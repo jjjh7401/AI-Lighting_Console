@@ -29,6 +29,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 
+from server.design.beat_grid_measured import canonical_axes
 from server.spatial.position_fx import POSITION_FX_EFFECTS, relative_wave_lines
 
 __all__ = [
@@ -106,7 +107,7 @@ def app_movement_commands(
         return (), f"app_movement.shape {shape!r} 는 이 에미터가 아직 못 냅니다(M8은 wave만 구현)"
 
     axes_raw = movement.get("axes") or ()
-    axes = frozenset(axes_raw)
+    axes = frozenset(canonical_axes(axes_raw))
     if not axes or not axes <= {"Pan", "Tilt"}:
         return (), f"app_movement.axes {axes_raw!r} 가 Pan/Tilt의 비어있지 않은 부분집합이 아닙니다"
 

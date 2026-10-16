@@ -131,6 +131,10 @@ from server.design.beat_grid_presets import (
     resolve_effect_preset_name,
     resolve_preset_name,
 )
+from server.design.beat_grid_probes import (
+    default_progress_md_path,
+    read_m1_probe_results_from_path,
+)
 from server.design.beat_grid_send import (
     BeatGridCellKey,
     _owned_sequence_names,
@@ -10680,6 +10684,32 @@ class ChatSession:
                 commands=[],
             )
         )
+        reused_only = [preset for preset in saved_presets(plan) if preset.reused]
+        if not commands and reused_only:
+            # 새로 저장할 줄 없이 콘솔에 있는 같은 프리셋만 쓴다 — 콘솔 쓰기도 승인 카드도 없다.
+            # 칸이 그 번호를 가리키게만 하고, 번호 승인은 다음 「콘솔에 반영」의 승인 카드가 받는다.
+            current = store.latest if store.latest is not None else timeline
+            approved = apply_plan_references(
+                self._beat_grid_view(current),
+                plan,
+                by="supervisor",
+                date=datetime.now(UTC).isoformat(),
+                source="preset_plan:reuse",
+                planned_from=grid,
+                record_approval=False,
+            )
+            store.latest = {**current, "beat_grid": approved}
+            self._send(
+                song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest))
+            )
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=True,
+                reason=(
+                    f"연출 {saved_summary(plan)}: 콘솔에 이미 있는 프리셋을 칸에 적었습니다 "
+                    "(새로 저장한 것 없음, 번호 승인은 「콘솔에 반영」 때 받습니다)."
+                ),
+            )
         if not commands:
             return self._beat_grid_send_status(
                 last_action="apply",
@@ -11241,7 +11271,10 @@ class ChatSession:
             )
 
             apply_stage("dimmer_groups")
-            probe_results = grid.get("probe_results") or {}
+            # 반영할 때마다 progress.md 의 M1 표를 그 자리에서 다시 읽는다 — 저장된 격자의
+            # ``probe_results`` 는 마지막으로 격자를 서빙·저장한 때의 판정이라, 그 뒤에 표가
+            # 「통과」로 바뀌어도 낡은 「미확인」이 게이트를 막았다.
+            probe_results = read_m1_probe_results_from_path(default_progress_md_path())
             # 카드 t572 — 소유한 트랙의 {마디: 큐 번호} 기록. 이 표를 에미터에
             # 넘겨 기록된 마디는 같은 번호를 쓰게 한다(막힌 칸이 있어도 뒤 칸
             # 번호가 당겨지지 않는다). JSON 키는 문자열이라 정수로 되돌린다.
