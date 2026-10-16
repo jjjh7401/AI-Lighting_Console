@@ -114,8 +114,14 @@ describe("positionCell", () => {
 });
 
 describe("colorCell", () => {
-  it("무빙 역할은 색을 안 쓴다 — 대시", () => {
-    expect(colorCell(cue({ color_preset_no: "4.21" }), "mover", null)).toEqual({ kind: "text", text: "—" });
+  it("무빙도 색 프리셋 번호가 있으면 칩이다 — 무빙 색은 무대 구간 색을 따른다", () => {
+    expect(colorCell(cue({ color_preset_no: "4.21" }), "mover", null)).toEqual({
+      kind: "chip",
+      presetNo: "4.21",
+      name: null,
+      label: "4.21",
+      tooltip: "이 곡에서 큐 0곳 사용",
+    });
   });
 
   it("무빙이 아니면 번호가 있으면 칩이다", () => {

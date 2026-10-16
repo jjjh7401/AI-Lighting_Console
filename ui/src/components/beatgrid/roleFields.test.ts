@@ -19,10 +19,14 @@ describe("roleFieldHints", () => {
     expect(roleFieldHints(null)).not.toContain("위치");
   });
 
-  it("무빙이 아니면 색을 포함한다", () => {
+  it("모든 역할이 색을 포함한다 — 무빙도 무대 구간 색을 따른다", () => {
     expect(roleFieldHints("key")).toContain("색");
     expect(roleFieldHints("side")).toContain("색");
-    expect(roleFieldHints("mover")).not.toContain("색");
+    expect(roleFieldHints("mover")).toContain("색");
+  });
+
+  it("무빙은 위치 다음, 움직임 앞에 색을 둔다", () => {
+    expect(roleFieldHints("mover")).toEqual(["밝기", "위치", "색", "움직임"]);
   });
 
   it("무빙만 움직임을 포함한다", () => {

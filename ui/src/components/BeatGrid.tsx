@@ -131,6 +131,7 @@ import { cueRgbHex, presetColorHexMap } from "./beatgrid/presetColorHex";
 import { folderSummarySpans } from "./beatgrid/folderSummary";
 import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./beatgrid/cueDisplayState";
 import { CONSOLE_FOLLOW_DISABLED_REASON, resolveConsolePlayResponse } from "./beatgrid/consoleSyncAudio";
+import { drawerPoolStatusText, shouldAutoRequestDrawer } from "./beatgrid/cuePanelDrawer";
 import {
   brightnessCell,
   changedFieldsLabel,
@@ -1607,6 +1608,20 @@ export function BeatGrid({
     const timer = window.setTimeout(() => setDrawerTimedOut(true), DRAWER_REPLY_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [drawerSections, drawerAsk]);
+  // 큐 패널이 열리면 서랍을 한 번 자동으로 받는다 — 드롭다운을 바로 고를 수 있게(새 WS 타입 없음).
+  // 거절·시간 초과 뒤에는 다시 묻지 않는다(판정은 `shouldAutoRequestDrawer`). 다시 받기는 서랍의 「다시 시도」.
+  useEffect(() => {
+    if (
+      shouldAutoRequestDrawer({
+        panelOpen: selected !== null,
+        drawerSections,
+        drawerAsk,
+        canRequest: onDrawerRequest !== undefined,
+      })
+    ) {
+      requestDrawer();
+    }
+  }, [selected, drawerSections, drawerAsk, onDrawerRequest]);
   const presetPlanBusyRefused = presetPlanRefusedBusy(presetPlanPending, presetPlan !== null, busyCount);
   const [transitionView, setTransitionView] = useState(false);
   // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
@@ -3159,7 +3174,8 @@ export function BeatGrid({
                       ) : null;
                     };
                     const poolStatusNote = (section: BeatGridDrawerSection | null): string | null => {
-                      if (!section) return "프리셋 서랍을 먼저 열어야 선택할 수 있습니다.";
+                      // 서랍을 기다리는 중이면 받는 상태를 말하고, 「먼저 열어야」로 잠그지 않는다.
+                      if (!section) return drawerPoolStatusText(drawerState);
                       if (section.unread) return "이 풀을 콘솔에서 읽지 못했습니다.";
                       return null;
                     };

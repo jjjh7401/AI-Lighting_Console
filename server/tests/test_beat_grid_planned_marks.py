@@ -111,6 +111,61 @@ class TestPlannedColorOnCells:
         assert "color_planned" not in _cue(out, "WASH-ALL", 18)
 
 
+class TestPlannedColorOnMovers:
+    def test_a_mover_cell_takes_the_scene_color_in_effect_at_its_bar(self) -> None:
+        out = _attached(default_beat_grid(LOVE_ATTACK_TITLE))
+
+        # 무빙 색은 무대(WASH) 색을 따른다 — 무대 색이 바뀌는 7·18·22마디에서만 바뀐다.
+        assert _cue(out, "MOVER-U", 7)["color_rgb"] == [55, 35, 100]  # 라벤더(무대 7마디)
+        # 7마디 색은 18마디 전까지 이어진다.
+        assert _cue(out, "MOVER-D", 11)["color_rgb"] == [55, 35, 100]
+        assert _cue(out, "MOVER-U", 14)["color_rgb"] == [55, 35, 100]
+        assert _cue(out, "MOVER-D", 18)["color_rgb"] == [100, 50, 75]  # 핑크
+        assert _cue(out, "MOVER-U", 22)["color_rgb"] == [100, 75, 60]  # 피치
+        assert _cue(out, "MOVER-U", 7)["color_planned"] is True
+
+    def test_a_mover_cell_before_the_first_scene_color_gets_no_color(self) -> None:
+        out = _attached(default_beat_grid(LOVE_ATTACK_TITLE))
+
+        assert "color_rgb" not in _cue(out, "MOVER-U", 0)  # 무대 색이 아직 없는 앞 마디
+        assert "color_planned" not in _cue(out, "MOVER-D", 3)
+
+    def test_a_mover_console_color_is_kept_and_not_marked_planned(self) -> None:
+        grid = default_beat_grid(LOVE_ATTACK_TITLE)
+        _cue(grid, "MOVER-U", 7)["color_preset_no"] = "4.21"
+        grid["preset_colors"] = {"4.21": {"r": 10, "g": 20, "b": 30}}
+
+        out = _attached(grid)
+
+        assert _cue(out, "MOVER-U", 7)["color_rgb"] == [10, 20, 30]
+        assert "color_planned" not in _cue(out, "MOVER-U", 7)
+
+    def test_two_scene_colors_on_one_bar_are_not_guessed_for_movers(self, monkeypatch) -> None:
+        annotations = _annotations_with(
+            [
+                {
+                    "name": "가",
+                    "console_name": "ALPHA",
+                    "rgb": [1, 2, 3],
+                    "cells": [{"group_name": "WASH-ALL", "bar": 7}],
+                },
+                {
+                    "name": "나",
+                    "console_name": "BETA",
+                    "rgb": [4, 5, 6],
+                    "cells": [{"group_name": "WASH-ALL", "bar": 7}],
+                },
+            ]
+        )
+        monkeypatch.setattr(beat_grid_planned, "load_preset_annotations", lambda title: annotations)
+
+        out = attach_planned_marks(default_beat_grid(LOVE_ATTACK_TITLE), LOVE_ATTACK_TITLE)
+
+        assert "color_rgb" not in _cue(out, "MOVER-U", 7)
+        # 가장 가까운 앞 무대 색이 모호하면 뒤 마디도 지어내지 않는다.
+        assert "color_rgb" not in _cue(out, "MOVER-U", 11)
+
+
 class TestPlannedNames:
     def test_a_value_cell_without_a_dimmer_number_gets_its_planned_dimmer_name_name(self) -> None:
         out = _attached(default_beat_grid(LOVE_ATTACK_TITLE))
