@@ -17,7 +17,8 @@ PULSE" 같은 역할·효과 혼성 문자열을 식별자로 쓰지 않는다(�
 칸 데이터 구조화(카드 t537, REQ-LDBEAT-006(i)~(iii)): 큐 칸(``BeatGridCue``)은
 단일 ``label`` 서술 문자열이 아니라 속성별 구조화 필드(밝기·위치 프리셋·
 색 프리셋·효과 프리셋·들어올 때)를 가진다. ``label``은 레거시 호환 + 화면
-표시용으로 남는다.
+표시용으로 남는다. 칸 하나의 왼쪽·오른쪽 따로 색은 선택 키 ``split`` 이고, 모양·검증·화면용
+값은 ``beat_grid_cell_split`` 이 맡는다(이 파일은 칸을 읽을 때 그 키를 지나가게만 한다).
 
 리그·곡 일반화(카드 t537 추가 지시 2, 2026-10-10 감독 원칙 — "지금은 리그
 하나·디자인 하나로 시험하지만, 조건은 언제든 바뀐다. 다른 장비·다른
@@ -36,7 +37,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, NotRequired, TypedDict
 
 import yaml
 
@@ -52,6 +53,8 @@ __all__ = [
     "LOVE_ATTACK_TITLE",
     "BeatGridAppMovement",
     "BeatGridBrightness",
+    "BeatGridCellSplit",
+    "BeatGridCellSplitSide",
     "BeatGridCue",
     "BeatGridEntry",
     "BeatGridEvidence",
@@ -216,6 +219,21 @@ class BeatGridEvidence(TypedDict):
     approval: BeatGridEvidenceApproval | None
 
 
+class BeatGridCellSplitSide(TypedDict):
+    """칸 하나의 왼쪽 또는 오른쪽 한 쪽 — ``color`` 는 표준 팔레트 색 이름이고, 정하지
+    않았으면 `None`이다. 화면용 ``color_rgb`` 는 저장하지 않는다(서빙 경계가 단다,
+    ``beat_grid_cell_split.attach_cell_split_to_cues``)."""
+
+    color: str | None
+
+
+class BeatGridCellSplit(TypedDict):
+    """칸 하나가 왼쪽·오른쪽을 따로 가질 때의 두 쪽(``split``) — 키는 정확히 이 둘이다."""
+
+    left: BeatGridCellSplitSide
+    right: BeatGridCellSplitSide
+
+
 class BeatGridCue(TypedDict):
     """격자 칸 하나(카드 t537 구조화, REQ-LDBEAT-006(i-1)~(i-7); 카드 t548이
     ``app_movement``·``evidence`` 추가). 단일 ``label`` 서술 문자열이 아니라
@@ -238,6 +256,8 @@ class BeatGridCue(TypedDict):
     app_movement: BeatGridAppMovement | None
     #: 카드 t548, REQ-LDBEAT-006(vii) — 칸별 근거 등급. 없으면 `None`.
     evidence: BeatGridEvidence | None
+    #: 칸 하나의 왼쪽·오른쪽 따로 색(선택). 없으면 **키 자체가 없다** — `None` 도 싣지 않는다.
+    split: NotRequired[BeatGridCellSplit]
 
 
 class BeatGridTrack(TypedDict):
@@ -387,7 +407,8 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
     **읽기 경로다 — 파서가 아니다**(REQ-LDBEAT-006(ii-2), AC-LDBEAT-016(g)):
     ``label`` 문자열의 내용을 파싱·분해·정규식 매칭해 구조화 필드를
     역산하지 않는다. ``raw``에 구조화 필드가 없으면 그 자리는 그대로
-    `None`이다 — 추측 0건."""
+    `None`이다 — 추측 0건. 선택 키 ``split``(칸 하나의 왼쪽·오른쪽 따로 색)은 ``raw`` 에 있을
+    때만 사본으로 옮긴다 — 없으면 결과에도 키가 없다."""
     raw_brightness = raw.get("brightness")
     brightness_source: Mapping[str, object] = (
         raw_brightness if isinstance(raw_brightness, Mapping) else {}
@@ -422,7 +443,7 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
             approval=approval,
         )
 
-    return BeatGridCue(
+    cue = BeatGridCue(
         bar=int(raw["bar"]),  # type: ignore[arg-type]
         label=str(raw.get("label") or ""),
         brightness=BeatGridBrightness(
@@ -447,6 +468,14 @@ def normalize_beat_grid_cue(raw: Mapping[str, object]) -> BeatGridCue:
         app_movement=app_movement,
         evidence=evidence,
     )
+    # 칸 하나의 왼쪽·오른쪽 따로 색 — 이 함수는 화이트리스트라 안 옮기면 칸을 읽을 때마다
+    # (기본값 로드 · 서빙 경계 · 편집 병합) 조용히 사라진다. 있을 때만 키를 싣고(없으면 키 자체가
+    # 없다) 값은 검증 없이 사본으로 옮긴다 — 모양이 틀리면 그룹·마디 이름을 아는 서빙 경계
+    # (`attach_cell_split_to_cues`)와 계획(`preset_plan`)이 알린다.
+    raw_split = raw.get("split")
+    if raw_split is not None:
+        cue["split"] = copy.deepcopy(raw_split)  # type: ignore[typeddict-item]
+    return cue
 
 
 def _track(

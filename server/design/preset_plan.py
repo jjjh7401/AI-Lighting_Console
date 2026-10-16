@@ -14,6 +14,11 @@
 그룹 한 선택(``Group 4 + 7 …``)으로 한 번에 한다. 색과 위치는 값이 정해져도 기존 경로
 (t594 · t592)로 가므로 이 카드에 싣지 않고 「이 카드 밖」으로 사유와 함께 남긴다. 앱이 기본값을
 쓴 항목은 「감독이 고칠 값」으로 모아 승인 카드에 보인다 — 콘솔의 값은 덮어쓰지 않는다.
+
+칸 하나의 왼쪽·오른쪽 따로 색(``split``): 색이 정해진 쪽마다 색 후보 한 줄을 낸다
+(``PlanPreset.split_side``). 콘솔 이름은 감독이 정하므로 이름은 비워 두고, 저장 줄도 칸 참조도
+만들지 않는다 — ``save_commands``·``apply_plan_references`` 가 이 줄을 건너뛴다. 색이 비어 있는
+쪽은 후보 없이 「미정」 줄만 남긴다.
 """
 
 from __future__ import annotations
@@ -31,6 +36,11 @@ from server.design.beat_grid import (
     check_evidence_approval,
     pending_preset_approvals,
     preset_pool_no,
+)
+from server.design.beat_grid_cell_split import (
+    CELL_SPLIT_SIDES,
+    cell_split_side_rgb,
+    validate_cell_split,
 )
 from server.design.beat_grid_edit import apply_beat_grid_edit
 from server.design.beat_grid_presets import (
@@ -59,6 +69,15 @@ _DIMMER_NAME_PREFIX = "DIM"
 
 #: 디머 속성 기본 이름 — 콘솔 판독에서 그룹의 디머 속성을 못 얻었을 때만 쓴다(감독이 고칠 값).
 _DEFAULT_DIMMER_ATTRIBUTE = "Dimmer"
+
+#: 칸 하나의 왼쪽·오른쪽 색 후보의 보류 사유 머리 — 콘솔 이름은 앱이 짓지 않고 감독이 정한다.
+_SPLIT_NAME_HOLD = "콘솔 이름 미정 — 칸 색 이름은 감독이 정한다"
+
+#: 칸 하나의 쪽 이름 — 데이터 키 left·right 를 사유 문장에서 사람이 읽는 말로 바꾼다.
+_SPLIT_SIDE_LABEL = {"left": "왼쪽", "right": "오른쪽"}
+
+#: 색 값이 정해진 줄의 보류 사유 — 색 저장은 이 카드가 아니라 기존 색 경로(t594)로 간다.
+_COLOR_PATH_HOLD = "색 저장은 기존 「＋ 새 프리셋」 색 경로(t594)로 만든다 — 이 카드 범위 밖"
 
 #: 풀 판독 결과 — ``(풀 번호, {슬롯: 이름 또는 None})``. 못 읽었으면 ``None``.
 PoolRead = tuple[int, Mapping[int, object]] | None
@@ -93,6 +112,9 @@ class PlanPreset:
     attributes: tuple[str, ...] = ()  # 디머만 — 저장 줄의 디머 속성 이름
     group_nos: tuple[int, ...] = ()  # 디머만 — 저장 선택 ``Group a + b`` 의 번호(확인된 것)
     deferred: bool = False  # 값은 정해졌고 저장은 이 카드 밖(색 t594 · 위치 t592)으로 간다
+    #: 칸 하나의 왼쪽·오른쪽 따로 색 후보면 그 쪽(``"left"`` | ``"right"``), 아니면 ``None``.
+    #: 값이 있으면 이 줄은 저장 줄도 칸 번호 참조도 만들지 않는다(이름은 감독이 정한다).
+    split_side: str | None = None
 
 
 @dataclass(frozen=True)
@@ -146,6 +168,15 @@ def _unique(items: Iterable[str]) -> tuple[str, ...]:
     for item in items:
         seen.setdefault(item, None)
     return tuple(seen)
+
+
+def _preset_label(preset: PlanPreset) -> str:
+    """계획표 아래 사유 줄의 머리 — 이름이 있으면 이름이다. 칸 하나의 왼쪽·오른쪽 색 후보는 이름이
+    없으므로(감독이 정한다) 어느 칸의 어느 쪽인지로 적는다. 그 밖의 줄은 예전과 똑같다."""
+    if preset.name or preset.split_side is None:
+        return preset.name
+    cell = preset.cells[0]
+    return f"{cell.group_name} {cell.bar}마디 {_SPLIT_SIDE_LABEL[preset.split_side]} 칸"
 
 
 def _dimmer_value_lines(
@@ -235,6 +266,9 @@ def build_preset_plan(
 
     - 디머: 칸의 ``brightness.value_percent``를 값으로 묶는다(같은 값 = 한 프리셋).
     - 색·방향: ``annotations``(``preset_plan.yaml``)가 칸에 붙인 색·방향만 쓴다.
+    - 칸 하나의 왼쪽·오른쪽 색: 칸의 ``split`` 에서 색이 정해진 쪽마다 후보 한 줄(``split_side``)을
+      낸다. 색이 비어 있는 쪽은 후보 없이 ``unresolved`` 한 줄이다. 모양이 틀린 ``split`` 은
+      ``ValueError``(그룹·마디를 말한다)로 올린다.
     - 번호: 풀 판독(``dimmer_pool``·``color_pool``·``position_pool``)에서 빈 것만 고른다.
     - 이미 있는 번호는 ``kept``로 세기만 하고 건드리지 않는다.
     - 앱이 기본값을 쓴 항목은 ``supervisor_fixes``(「감독이 고칠 값」)에 모은다.
@@ -393,7 +427,7 @@ def build_preset_plan(
             )
             continue
         channels = " ".join(str(channel) for channel in rgb)
-        holds.append("색 저장은 기존 「＋ 새 프리셋」 색 경로(t594)로 만든다 — 이 카드 범위 밖")
+        holds.append(_COLOR_PATH_HOLD)
         if from_palette:
             fixes.append(
                 f"{name} RGB {channels}: 「{label}」 표준 슬롯 기본값. "
@@ -418,6 +452,54 @@ def build_preset_plan(
                 deferred=True,
             )
         )
+
+    # -- 칸 하나의 왼쪽·오른쪽 따로 색: 색이 정해진 쪽마다 색 후보 한 줄 ------------------
+    # 주석 색 뒤에 번호를 잡는다(주석 쪽 번호가 그대로 유지된다). 콘솔 이름은 감독이 정하므로
+    # 이름은 비우고, 저장·칸 참조는 하지 않는다(`split_side` — `save_commands`·
+    # `apply_plan_references` 가 건너뛴다).
+    for group, _no, _confirmed, cue in rows:
+        split = validate_cell_split(cue.get("split"), group_name=group, bar=cue.get("bar"))
+        if split is None:
+            continue
+        bar = int(cue["bar"])  # type: ignore[arg-type]
+        for side in CELL_SPLIT_SIDES:
+            color = split[side]["color"]
+            if color is None or not color.strip():
+                unresolved.append(
+                    f"{group} {bar}마디 {_SPLIT_SIDE_LABEL[side]} 칸 색 미정 — 감독이 정한다"
+                )
+                continue
+            slot = _reserve_next(
+                color_pool,
+                first_free_base_color_number,
+                policy=policy,
+                grid=grid,
+                reserved=reserved,
+            )
+            if slot is not None:
+                reserved.append(slot)
+            holds = [_SPLIT_NAME_HOLD]
+            if color_pool is None:
+                holds.append("색 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
+            rgb = cell_split_side_rgb(color)
+            if rgb is None:
+                holds.append(f"RGB 미정 — 「{color}」은(는) 표준 색 표에 없어 RGB 를 알 수 없음")
+            else:
+                holds.append(_COLOR_PATH_HOLD)
+            presets.append(
+                PlanPreset(
+                    kind="color",
+                    value="RGB 미정" if rgb is None else "RGB " + " ".join(map(str, rgb)),
+                    name="",
+                    slot=slot,
+                    cells=(PlanCell(group, bar),),
+                    groups=(group,),
+                    ready=False,
+                    hold="; ".join(holds),
+                    deferred=rgb is not None,
+                    split_side=side,
+                )
+            )
 
     # -- 위치: 방향마다 대략 목표(target)가 있으면 값으로 싣는다. 없으면 「미정」 --------
     for entry in annotations.get("directions") or []:
@@ -472,7 +554,7 @@ def build_preset_plan(
         if preset.ready:
             continue
         line = (
-            f"{preset.name} {preset.value}(칸 {len(preset.cells)}개, 후보 "
+            f"{_preset_label(preset)} {preset.value}(칸 {len(preset.cells)}개, 후보 "
             f"{preset.slot or '없음'}): {preset.hold}"
         )
         (deferred_lines if preset.deferred else unresolved).append(line)
@@ -534,6 +616,8 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
     한 번 두고, 묶음마다 ClearAll 로 닫는다."""
     lines: list[str] = []
     for preset in plan.presets:
+        if preset.split_side is not None:
+            continue  # 칸 하나의 왼쪽·오른쪽 색 후보 — 이름을 감독이 정할 때까지 저장 줄이 없다.
         if not preset.ready or preset.kind != "dimmer":
             continue
         assert preset.group_nos and preset.value_percent is not None
@@ -552,7 +636,7 @@ def card_reason(plan: LoveAttackPlan) -> str:
 
     빈칸을 두지 않는다. 값이 정해진 항목은 「이 카드 밖」에, 정해지지 않은 항목은 「미정」에
     사유와 함께 적힌다."""
-    saved = [preset for preset in plan.presets if preset.ready]
+    saved = [preset for preset in plan.presets if preset.ready and preset.split_side is None]
     head = f"디머 프리셋 {len(saved)}개 저장"
     if saved:
         head += ": " + ", ".join(f"{preset.name}({preset.value})" for preset in saved)
@@ -579,7 +663,10 @@ def plan_table_markdown(plan: LoveAttackPlan) -> str:
             status = "미정"
         slot = preset.slot or "콘솔 읽은 뒤 정함"
         cells = len(preset.cells)
-        lines.append(f"| {preset.name} | {preset.value} | {slot} | {cells} | {status} |")
+        # 칸 하나의 왼쪽·오른쪽 색 후보는 이름이 아직 없다 — 빈 칸 대신 줄표를 둔다(화면이 표를
+        # 읽을 때 빈 이름 칸이 되지 않게). 어느 칸의 어느 쪽인지는 아래 사유 줄이 말한다.
+        name = preset.name or ("—" if preset.split_side is not None else "")
+        lines.append(f"| {name} | {preset.value} | {slot} | {cells} | {status} |")
     sections = (
         ("이 카드 밖", plan.deferred),
         ("미정(이번 계획에서 제외)", plan.unresolved),
@@ -614,6 +701,8 @@ def apply_plan_references(
     updated: dict[str, object] = copy.deepcopy(dict(grid))
     touched: list[tuple[PlanCell, str | None]] = []
     for preset in plan.presets:
+        if preset.split_side is not None:
+            continue  # 칸 하나의 왼쪽·오른쪽 색 후보 — 칸의 번호 참조를 쓰지 않는다.
         if not preset.ready or preset.kind != "dimmer" or preset.slot is None:
             continue
         for cell in preset.cells:

@@ -41,8 +41,9 @@ export function PresetPlanPanel({ plan, onClose }: { plan: PresetPlan; onClose?:
           </tr>
         </thead>
         <tbody>
-          {plan.rows.map((row) => (
-            <tr key={`${row.name}|${row.value}`} data-kind={row.kind}>
+          {plan.rows.map((row, index) => (
+            // 칸 하나의 왼쪽·오른쪽 색 후보는 이름이 줄표라 같은 색 둘이 이름·값이 같다 — 순번을 열쇠에 넣는다.
+            <tr key={`${index}|${row.name}|${row.value}`} data-kind={row.kind}>
               <td>{PRESET_PLAN_KIND_LABEL[row.kind]}</td>
               <td>{row.slot}</td>
               <td>{row.name}</td>
