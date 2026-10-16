@@ -643,15 +643,34 @@ def _white_palette_name(cue) -> str | None:
 
 
 #: SPEC-LDRENDER-001 M4(REQ-LDRENDER-004, 감독 결정 3) — 층→색 배정 축.
-#: `back`+`mover` = 지배색(`palette[0]`, 이미 전체 기구 베이스라인 줄로
-#: 나간다 — 델타 불필요). `side`+`wash` = 보조색(`palette[1]`). `key` 는
-#: 표준 팔레트 기존 웜화이트 항목(새 RGB 발명 금지, §4b C3). 이 델타
-#: 순회에 `back`/`mover`가 없는 이유 — 베이스라인이 이미 지배색이라 같은
-#: 값을 또 내면 §D5(REQ-006)가 금지하는 "같은 값 두 줄"이 된다. `effect`가
-#: 없는 이유 — R3(REQ-LDRENDER-007, HARD)가 비액센트 큐의 **어떤** 값
-#: 줄에도 effect 역할 그룹 기구를 금지한다(`_DIMMER_DELTA_EXCLUDED_ROLES`와
-#: 같은 구조적 가드 — M5 를 기다리지 않는다).
-_COLOR_ACCENT_ROLES: tuple[str, ...] = ("side", "wash")
+#: `back` = 지배색(`palette[0]`, 이미 전체 기구 베이스라인 줄로 나간다 — 델타
+#: 불필요). `side`+`wash`+`mover` = 보조색(`palette[1]`). 무빙은 무대(WASH)
+#: 색을 따른다(규칙서 effect-arrangement-rules §2 SCENE) — 베이스라인의 지배색은
+#: 무빙의 색이 아니다(감독 지적 2026-10-16 「무빙 컬러가 반영 안 된다」).
+#: `key` 는 표준 팔레트 기존 웜화이트 항목(새 RGB 발명 금지, §4b C3). `back` 을
+#: 이 델타 순회에서 뺀 이유 — 베이스라인이 이미 지배색이라 같은 값을 또 내면
+#: §D5(REQ-006)가 금지하는 "같은 값 두 줄"이 된다. `effect`가 없는 이유 —
+#: R3(REQ-LDRENDER-007, HARD)가 비액센트 큐의 **어떤** 값 줄에도 effect 역할
+#: 그룹 기구를 금지한다(`_DIMMER_DELTA_EXCLUDED_ROLES`와 같은 구조적 가드 — M5 를
+#: 기다리지 않는다).
+_COLOR_ACCENT_ROLES: tuple[str, ...] = ("side", "wash", "mover")
+
+
+def _accent_group_numbers(
+    layer_mapping: Sequence[Mapping[str, object]], role: str
+) -> tuple[int, ...]:
+    """보조색을 받을 그룹 번호들. 무빙은 여러 그룹(MOVER-U/MOVER-D)이 **모두** 받는다 —
+    `_role_group_numbers` 는 역할당 마지막 그룹 하나만 남기므로(`has_layer` 와 같은 동점
+    규율) 색 줄에는 모자란다. 나머지 역할은 그 규율을 그대로 쓴다."""
+    if role != "mover":
+        group_no = _role_group_numbers(layer_mapping).get(role)
+        return () if group_no is None else (group_no,)
+    numbers: list[int] = []
+    for entry in layer_mapping:
+        group_no = entry.get("group_no")
+        if entry.get("role") == "mover" and isinstance(group_no, int) and group_no not in numbers:
+            numbers.append(group_no)
+    return tuple(numbers)
 
 
 def _role_color_value_lines(
@@ -670,7 +689,7 @@ def _role_color_value_lines(
     여도 3번째 이후 색은 쓰지 않는다(§6.3 동시성 상한).
 
     **중복 줄 가드(REQ-004/REQ-006, §D5)**: 보조색이 지배색과 같아지면
-    (`color_usage="single"`) `side`/`wash` 델타를 **내지 않는다** — 베이스
+    (`color_usage="single"`) `side`/`wash`/`mover` 델타를 **내지 않는다** — 베이스
     라인이 이미 그 값이므로 같은 값을 두 줄로 중복 발화하지 않는다. `key`
     도 지배색이 이미 웜화이트면 같은 이유로 생략한다. REQ-006 이 말하는
     "별도 분기 불필요"가 바로 이 값-비교 생략이다(새 분기를 만들지 않았다).
@@ -692,10 +711,8 @@ def _role_color_value_lines(
     accent_rgb = _COLOR_NAMES.resolve_color_name(palette[1])
     if accent_rgb is not None and accent_rgb != dominant_rgb:
         for role in _COLOR_ACCENT_ROLES:
-            group_no = role_numbers.get(role)
-            if group_no is None:
-                continue
-            lines.append(_group_color_apply_command(group_no, accent_rgb))
+            for group_no in _accent_group_numbers(layer_mapping, role):
+                lines.append(_group_color_apply_command(group_no, accent_rgb))
     warm_white_rgb = _COLOR_NAMES.resolve_color_name("Warm White")
     if warm_white_rgb is not None and warm_white_rgb != dominant_rgb:
         key_group_no = role_numbers.get("key")

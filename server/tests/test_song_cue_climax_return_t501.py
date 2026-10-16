@@ -195,7 +195,7 @@ class TestStubLevelSongColorValueLines:
         assert return_failure is None and section_failure is None
         assert return_lines == section_lines
         assert return_lines != ()
-        assert len(return_lines) == 4  # 베이스라인 1 + side/wash/key 델타 3
+        assert len(return_lines) == 5  # 베이스라인 1 + side/wash/mover/key 델타 4
 
     def test_mib_premove_still_emits_nothing(self) -> None:
         cue = _FullColorCue(

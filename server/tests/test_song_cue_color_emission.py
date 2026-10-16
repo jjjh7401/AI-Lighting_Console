@@ -127,7 +127,7 @@ class _Stub:
     _reviewed_song_timing_commands = ChatSession._reviewed_song_timing_commands
 
 
-def _commands(composition) -> tuple[tuple[str, ...], _Stub]:
+def _commands(composition, layer_mapping=()) -> tuple[tuple[str, ...], _Stub]:
     stub = _Stub()
     commands = ChatSession._reviewed_song_commands(
         stub,
@@ -136,7 +136,7 @@ def _commands(composition) -> tuple[tuple[str, ...], _Stub]:
         preset_start=1,
         fids=list(_FIDS),
         timing=TimingPlan.timecode(9),
-        layer_mapping=(),
+        layer_mapping=layer_mapping,
     )
     return commands, stub
 
@@ -175,6 +175,45 @@ class TestTheConfirmedPathNowSendsColor:
         colour_at = next(i for i, c in enumerate(commands) if "ColorRGB_R" in c)
         store_at = next(i for i, c in enumerate(commands) if c.startswith("Store Sequence"))
         assert colour_at < store_at, commands
+
+
+class TestTheMoverFollowsTheSceneColour:
+    """감독 지적(2026-10-16) 「무빙 컬러가 반영 안 된다」 — 무빙 그룹마다 보조색(무대 색) 줄이
+    실제로 나간다. 가짜 콘솔 = 실제로 보내질 명령 문자열을 그대로 단언한다(실콘솔 무접촉)."""
+
+    _MAPPING = (
+        {"role": "key", "group_no": 2, "group_name": "KEY"},
+        {"role": "back", "group_no": 4, "group_name": "BACK"},
+        {"role": "side", "group_no": 7, "group_name": "SIDE-ALL"},
+        {"role": "wash", "group_no": 10, "group_name": "WASH-ALL"},
+        {"role": "mover", "group_no": 11, "group_name": "MOVER-U"},
+        {"role": "mover", "group_no": 12, "group_name": "MOVER-D"},
+        {"role": "effect", "group_no": 14, "group_name": "BLIND"},
+    )
+
+    def test_each_mover_group_gets_a_line_in_the_accent_colour(self) -> None:
+        composition = _composition(("blue", "amber"), ("blue", "amber"), ("blue", "amber"))
+        commands, _ = _commands(composition, self._MAPPING)
+
+        red, green, blue = resolve_color_name("amber")
+        for group_no in (11, 12):
+            line = (
+                f"Group {group_no} ; Attribute 'ColorRGB_R' At {red} ; "
+                f"Attribute 'ColorRGB_G' At {green} ; Attribute 'ColorRGB_B' At {blue}"
+            )
+            assert line in commands, commands
+
+    def test_back_and_effect_groups_never_get_the_accent_colour(self) -> None:
+        composition = _composition(("blue", "amber"), ("blue", "amber"), ("blue", "amber"))
+        commands, _ = _commands(composition, self._MAPPING)
+
+        red, _, _ = resolve_color_name("amber")
+        offending = [
+            line
+            for line in commands
+            if line.startswith(("Group 4 ;", "Group 14 ;")) and f"ColorRGB_R' At {red}" in line
+        ]
+        assert offending == [], commands
 
 
 class TestTheValueIsNeverInvented:
