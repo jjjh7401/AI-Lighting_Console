@@ -7,13 +7,21 @@ from collections import namedtuple
 import numpy
 import pytest
 
+from server.audio import bar_map_store
 from server.audio.bar_map_store import (
     BarMapStoreError,
     attach_rhythm,
     build_bar_map_payload,
     validate_bar_map,
 )
-from server.audio.rhythm import big_hit_indices, build_rhythm, snap_sections, song_relative
+from server.audio.rhythm import (
+    SECTION_KINDS,
+    big_hit_indices,
+    build_rhythm,
+    classify_section_kinds,
+    snap_sections,
+    song_relative,
+)
 
 Grade = namedtuple("Grade", "start_ms end_ms d_level")
 
@@ -209,3 +217,125 @@ def test_rhythm_block_rejects_unknown_fields() -> None:
     rhythm["phrases"] = []
     with pytest.raises(BarMapStoreError, match="rhythm"):
         attach_rhythm(payload, rhythm)
+
+
+# --- 구간 종류(kind) — 이 곡 안의 에너지 순위·이벤트·구간 순서만 근거로 쓴다 ---
+
+
+def _sections_of(spans: list[tuple[int, int]]) -> list[dict]:
+    return [{"start_bar": a, "end_bar": b, "bars": b - a + 1} for a, b in spans]
+
+
+def _flat_energy(per_section: list[float | None], spans: list[tuple[int, int]]) -> dict:
+    return {
+        bar: value
+        for (a, b), value in zip(spans, per_section, strict=True)
+        if value is not None
+        for bar in range(a, b + 1)
+    }
+
+
+def test_section_kinds_apply_the_rules_in_order_on_a_ten_section_layout() -> None:
+    spans = [(1 + 4 * index, 4 + 4 * index) for index in range(10)]
+    events = [
+        {"kind": "build", "start_bar": 10, "end_bar": 12},
+        {"kind": "break", "start_bar": 21, "end_bar": 21},
+        {"kind": "drop", "start_bar": 26, "end_bar": 27},
+        {"kind": "kick_entry", "start_bar": 5, "end_bar": 5},
+    ]
+    # 둘째 구간(S1)의 에너지를 가장 높게 둔다 — 후렴이 이미 있으면 에너지 순위는 쓰이지 않아야 한다.
+    energy = _flat_energy([0.1, 0.99, 0.5, 0.6, 0.3, 0.2, 0.9, 0.8, 0.4, 0.1], spans)
+    kinds = classify_section_kinds(_sections_of(spans), events, energy)
+    assert kinds == [
+        "intro",  # R3
+        "verse",  # R8 (R7 은 후렴이 있어 쓰이지 않는다)
+        "pre",  # R2: build 시작 마디 10 이 9~12 안에 있다
+        "chorus",  # R5: 앞이 pre
+        "verse",
+        "bridge",  # R6: break 시작 = 구간 시작 21, 다음이 drop
+        "drop",  # R1: drop 시작 마디 26 이 25~28 안에 있다
+        "chorus",  # R5: 앞이 drop
+        "verse",
+        "outro",  # R4
+    ]
+
+
+def test_a_break_started_section_right_before_a_drop_is_a_bridge() -> None:
+    spans = [(1, 4), (5, 8), (9, 12), (13, 16)]
+    events = [
+        {"kind": "break", "start_bar": 5, "end_bar": 5},
+        {"kind": "drop", "start_bar": 9, "end_bar": 12},
+    ]
+    kinds = classify_section_kinds(_sections_of(spans), events, {})
+    assert kinds == ["intro", "bridge", "drop", "outro"]
+
+    # break 가 구간 시작이 아니거나 다음이 drop 이 아니면 다리가 아니다.
+    off_start = [{"kind": "break", "start_bar": 6, "end_bar": 6}, events[1]]
+    assert classify_section_kinds(_sections_of(spans), off_start, {})[1] == "verse"
+    no_drop = [{"kind": "break", "start_bar": 5, "end_bar": 5}]
+    assert classify_section_kinds(_sections_of(spans), no_drop, {})[1] == "verse"
+
+
+def test_chorus_falls_back_to_the_top_third_by_energy_when_events_give_none() -> None:
+    spans = [(1 + 4 * index, 4 + 4 * index) for index in range(6)]
+    # 본문 4개(S1~S4)의 에너지: 0.9, 0.2, 0.7, 0.1 → 올림(4/3) = 2개가 후렴.
+    energy = _flat_energy([0.5, 0.9, 0.2, 0.7, 0.1, 0.5], spans)
+    kinds = classify_section_kinds(_sections_of(spans), [], energy)
+    assert kinds == ["intro", "chorus", "verse", "chorus", "verse", "outro"]
+
+
+def test_energy_ties_pick_the_earlier_section_first() -> None:
+    spans = [(1 + 4 * index, 4 + 4 * index) for index in range(5)]
+    energy = _flat_energy([0.0, 0.5, 0.5, 0.5, 0.0], spans)
+    kinds = classify_section_kinds(_sections_of(spans), [], energy)
+    # 본문 3개 → 올림(3/3) = 1개. 동률이면 앞 구간이다.
+    assert kinds == ["intro", "chorus", "verse", "verse", "outro"]
+
+
+def test_no_energy_means_no_chorus_and_every_body_section_is_a_verse() -> None:
+    spans = [(1 + 4 * index, 4 + 4 * index) for index in range(5)]
+    kinds = classify_section_kinds(_sections_of(spans), [], {})
+    assert kinds == ["intro", "verse", "verse", "verse", "outro"]
+
+
+def test_section_kinds_edge_cases() -> None:
+    assert classify_section_kinds([], [], {}) == []
+    # 구간이 하나면 첫 구간이므로 intro 이고 outro 는 없다.
+    assert classify_section_kinds(_sections_of([(1, 4)]), [], {}) == ["intro"]
+
+
+def test_build_rhythm_sets_a_valid_kind_on_every_section_and_the_payload_validates() -> None:
+    mono, sample_rate, bars, total_ms = _synthetic_track()
+    for bar in bars:
+        bar["energy"] = 0.2 + 0.1 * bar["bar"]
+    events = [{"kind": "drop", "start_bar": 3, "end_bar": 4}]
+    rhythm = build_rhythm(
+        mono, sample_rate, bars, [0, 4000, 8000], [Grade(0, total_ms, 3)], events=events
+    )
+    kinds = [section["kind"] for section in rhythm["sections"]]
+    assert kinds == ["intro", "drop", "outro"]
+    assert set(kinds) <= set(SECTION_KINDS)
+
+    beat_times = [time_ms for bar in bars for time_ms in bar["beats_ms"]]
+    payload = build_bar_map_payload(beat_times, 0, bpm=120.0, time_signature=(4, 4), events=())
+    merged = attach_rhythm(payload, rhythm)
+    assert validate_bar_map(merged) is None
+
+
+def test_validator_accepts_a_valid_kind_rejects_an_unknown_one_and_allows_none() -> None:
+    payload = _two_bar_payload()
+    rhythm = _rhythm_for_two_bars(payload)
+    assert validate_bar_map(attach_rhythm(payload, rhythm)) is None  # kind 없음
+
+    rhythm["sections"][0]["kind"] = "chorus"
+    assert validate_bar_map(attach_rhythm(payload, rhythm)) is None
+
+    rhythm["sections"][0]["kind"] = "refrain"
+    with pytest.raises(BarMapStoreError, match="kind"):
+        attach_rhythm(payload, rhythm)
+
+
+def test_section_kind_vocabularies_match_between_builder_and_validator() -> None:
+    expected = ("intro", "verse", "pre", "chorus", "bridge", "drop", "outro")
+    assert expected == SECTION_KINDS
+    assert frozenset(expected) == bar_map_store._SECTION_KINDS

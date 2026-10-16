@@ -179,7 +179,7 @@ def _synthesize(
     except BarMapStoreError as error:
         return BarMapEntryFailure(str(error))
 
-    rhythm = _rhythm_block(audio_bytes, payload["bars"], grid.bpm)
+    rhythm = _rhythm_block(audio_bytes, payload["bars"], grid.bpm, payload["events"])
     if rhythm is None:
         return payload
     try:
@@ -188,9 +188,10 @@ def _synthesize(
         return BarMapEntryFailure(str(error))
 
 
-def _rhythm_block(audio_bytes: bytes, bars: list, bpm: float) -> dict | None:
+def _rhythm_block(audio_bytes: bytes, bars: list, bpm: float, events: list) -> dict | None:
     """곡 소리에서 ``rhythm`` 블록을 만든다. 디코드할 수 없는 입력이면 ``None`` — 그 지도는 키 없이
-    저장된다(레인1: 키가 없으면 현재 경로). 분석 중의 실제 오류는 호출자가 실패로 바꾼다."""
+    저장된다(레인1: 키가 없으면 현재 경로). 분석 중의 실제 오류는 호출자가 실패로 바꾼다.
+    ``events`` 는 마디 지도의 이벤트이고 구간 종류(kind)를 정하는 데 쓴다."""
     decoded = _decode_mono_audio(audio_bytes)
     if isinstance(decoded, BeatGridFailure):
         return None
@@ -200,4 +201,6 @@ def _rhythm_block(audio_bytes: bytes, bars: list, bpm: float) -> dict | None:
     rms = librosa.feature.rms(y=decoded.mono, frame_length=_FRAME_LENGTH, hop_length=_HOP_LENGTH)[0]
     frame_ms = _HOP_LENGTH * 1000.0 / decoded.sample_rate
     boundaries_ms, d_candidates = sections_from_rms(numpy, rms, frame_ms, decoded.duration_ms, bpm)
-    return build_rhythm(decoded.mono, decoded.sample_rate, bars, boundaries_ms, d_candidates)
+    return build_rhythm(
+        decoded.mono, decoded.sample_rate, bars, boundaries_ms, d_candidates, events=events
+    )

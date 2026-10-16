@@ -12,7 +12,8 @@
   kick_hit·snare_hit 은 이 곡 점수가 평균 + HIT_SIGMA·σ 이상인지 여부.
 - ``hits[]``: 큰 히트 순간. strength 는 합성 점수의 백분위(0~1), kind 는 ``"big"``.
 - ``sections[]``: 구간 경계를 가장 가까운 마디 시작에 맞춘 구간. start_bar·end_bar 는
-  양끝 포함, d_level 은 겹침이 가장 큰 원래 구간의 D 등급(1~5).
+  양끝 포함, d_level 은 겹침이 가장 큰 원래 구간의 D 등급(1~5). 선택 키 kind 는 구간의 종류
+  (``SECTION_KINDS`` 중 하나)이고, 이 곡의 마디 에너지 순위·이벤트·구간 순서만 근거로 정한다.
 
 4·8마디 묶음은 여기서 강제하지 않는다. 구간의 ``bars`` 수를 보고 소비자가 정한다.
 """
@@ -20,6 +21,7 @@
 from __future__ import annotations
 
 import bisect
+import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -43,6 +45,9 @@ HIT_SIGMA = 1.0
 BIG_HIT_SIGMA = 2.0
 #: 큰 히트 국소 최대를 보는 범위(박 수, 앞뒤 각각).
 BIG_HIT_NEIGHBOUR_BEATS = 2
+
+#: 구간 종류. ``bar_map_store._SECTION_KINDS`` 와 같은 값이다(저장소는 이 모듈을 쓰지 않는다).
+SECTION_KINDS = ("intro", "verse", "pre", "chorus", "bridge", "drop", "outro")
 
 #: 가장자리 무음 길이(초). 곡의 첫·끝 프레임 효과를 덮는 앞뒤 패딩이고, 곡 시각은 되돌려 쓴다.
 EDGE_PAD_S = 1.0
@@ -82,7 +87,7 @@ def snap_sections(
     bars: Sequence[Mapping[str, Any]],
     boundaries_ms: Sequence[int],
     d_candidates: Sequence[Any],
-) -> list[dict[str, int]]:
+) -> list[dict[str, Any]]:
     """구간 경계를 가장 가까운 마디 시작에 맞추고, 그 사이를 마디 번호 구간으로 나눈다.
 
     span 의 d_level 은 span 과 시간이 가장 많이 겹치는 원래 구간의 D 등급이다. 겹침이 같으면
@@ -105,7 +110,7 @@ def snap_sections(
     first_indexes = sorted(snapped)
 
     median_bar_ms = float(numpy.median(numpy.diff(starts))) if len(starts) > 1 else 0.0
-    spans: list[dict[str, int]] = []
+    spans: list[dict[str, Any]] = []
     for position, first in enumerate(first_indexes):
         if position + 1 < len(first_indexes):
             last = first_indexes[position + 1] - 1
@@ -129,17 +134,91 @@ def snap_sections(
     return spans
 
 
+def classify_section_kinds(
+    sections: Sequence[Mapping[str, Any]],
+    events: Sequence[Mapping[str, Any]],
+    bar_energy: Mapping[int, float],
+) -> list[str]:
+    """구간(마디 순서)마다 종류를 정해 같은 순서로 돌려준다.
+
+    근거는 이 곡 안의 것뿐이다 — 마디 에너지 순위, 마디 지도의 이벤트, 구간 순서.
+    ``bar_energy`` 는 {마디 번호: 에너지(0~1)} 이고 없는 마디는 에너지가 없는 것으로 본다.
+    규칙은 R1~R8 순서로 적용하며, 이미 종류가 정해진 구간은 뒤 규칙이 바꾸지 않는다.
+    """
+    count = len(sections)
+    kinds: list[str | None] = [None] * count
+
+    def event_starts(kind: str) -> list[int]:
+        return [int(event["start_bar"]) for event in events if event["kind"] == kind]
+
+    def holds(section: Mapping[str, Any], bar: int) -> bool:
+        return int(section["start_bar"]) <= bar <= int(section["end_bar"])
+
+    drop_starts = event_starts("drop")
+    build_starts = event_starts("build")
+    break_starts = event_starts("break")
+
+    # R1 drop, R2 pre: 이벤트의 시작 마디를 품은 구간.
+    for index, section in enumerate(sections):
+        if any(holds(section, bar) for bar in drop_starts):
+            kinds[index] = "drop"
+    for index, section in enumerate(sections):
+        if kinds[index] is None and any(holds(section, bar) for bar in build_starts):
+            kinds[index] = "pre"
+    # R3 intro, R4 outro: 곡의 처음과 끝 구간.
+    if count and kinds[0] is None:
+        kinds[0] = "intro"
+    if count >= 2 and kinds[-1] is None:
+        kinds[-1] = "outro"
+    # R5 chorus: 앞 구간이 pre 나 drop 이면 후렴이다(앞에서부터 차례로 본다).
+    for index in range(1, count):
+        if kinds[index] is None and kinds[index - 1] in ("pre", "drop"):
+            kinds[index] = "chorus"
+    # R6 bridge: break 로 시작하고 바로 다음이 drop 인 구간.
+    for index in range(count - 1):
+        if (
+            kinds[index] is None
+            and int(sections[index]["start_bar"]) in break_starts
+            and kinds[index + 1] == "drop"
+        ):
+            kinds[index] = "bridge"
+
+    # R7 chorus 를 이벤트로 못 찾았을 때만: 에너지 순위로 상위 1/3(올림)을 후렴으로 본다.
+    # 1/3 은 곡마다 다른 값이 아니라 "이 곡 구간 가운데 가장 센 몫"을 뜻하는 일반 규칙이다.
+    if "chorus" not in kinds:
+        ranked: list[tuple[float, int]] = []
+        for index, section in enumerate(sections):
+            if kinds[index] is not None:
+                continue
+            values = [
+                bar_energy[bar]
+                for bar in range(int(section["start_bar"]), int(section["end_bar"]) + 1)
+                if bar in bar_energy
+            ]
+            if values:
+                ranked.append((sum(values) / len(values), index))
+        ranked.sort(key=lambda item: (-item[0], item[1]))
+        for _, index in ranked[: math.ceil(len(ranked) / 3)]:
+            kinds[index] = "chorus"
+
+    # R8 verse: 남은 구간.
+    return [kind or "verse" for kind in kinds]
+
+
 def build_rhythm(
     mono: Any,
     sample_rate: int,
     bars: Sequence[Mapping[str, Any]],
     boundaries_ms: Sequence[int],
     d_candidates: Sequence[Any],
+    *,
+    events: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """곡 소리와 마디 지도로 ``rhythm`` 사전을 만든다.
 
     ``bars`` 는 ``bars[]`` 와 같은 모양(bar, start_ms, beats_ms)이다. 박 시각은 ``beats_ms`` 를
-    그대로 쓴다. 그래서 자동 배치는 저장된 것과 같은 격자를 본다.
+    그대로 쓴다. 그래서 자동 배치는 저장된 것과 같은 격자를 본다. ``events`` 는 마디 지도의
+    ``events[]`` 이고, 구간 종류(kind)를 정하는 데 쓴다. 마디의 ``energy`` 가 있으면 함께 쓴다.
     """
     import librosa
     import numpy
@@ -211,11 +290,13 @@ def build_rhythm(
         if beats[index][0]
         != 0  # 못갖춘마디(마디 0)는 곡 시작에 걸친 부분 창이라 히트 후보가 아니다
     ]
-    return {
-        "beats": beat_items,
-        "hits": hits,
-        "sections": snap_sections(bars, boundaries_ms, d_candidates),
-    }
+    sections = snap_sections(bars, boundaries_ms, d_candidates)
+    bar_energy = {int(bar["bar"]): float(bar["energy"]) for bar in bars if "energy" in bar}
+    for section, kind in zip(
+        sections, classify_section_kinds(sections, events, bar_energy), strict=True
+    ):
+        section["kind"] = kind
+    return {"beats": beat_items, "hits": hits, "sections": sections}
 
 
 def _log10(values: Any) -> Any:

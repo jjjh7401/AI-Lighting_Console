@@ -66,6 +66,10 @@ _RHYTHM_BEAT_KEYS = frozenset(
 )
 _RHYTHM_HIT_KEYS = frozenset({"bar", "beat", "t_ms", "strength", "kind"})
 _RHYTHM_SECTION_KEYS = frozenset({"start_bar", "end_bar", "bars", "start_ms", "end_ms", "d_level"})
+#: 구간 항목의 선택 키 — 구간 종류. 없는 지도(옛 저장분)도 유효하다.
+_RHYTHM_SECTION_OPTIONAL_KEYS = frozenset({"kind"})
+#: 구간 종류의 허용 값. ``rhythm.SECTION_KINDS`` 와 같다(이 모듈은 rhythm 을 import 하지 않는다).
+_SECTION_KINDS = frozenset({"intro", "verse", "pre", "chorus", "bridge", "drop", "outro"})
 
 
 class BarMapStoreError(ValueError):
@@ -321,8 +325,19 @@ def _validate_rhythm(rhythm: object, bars: list) -> str | None:
 
     previous_end = -1
     for item in sections:
-        if not isinstance(item, Mapping) or set(item.keys()) != _RHYTHM_SECTION_KEYS:
+        if (
+            not isinstance(item, Mapping)
+            or not set(item.keys()) >= _RHYTHM_SECTION_KEYS
+            or set(item.keys()) - _RHYTHM_SECTION_KEYS - _RHYTHM_SECTION_OPTIONAL_KEYS
+        ):
             return "rhythm.sections 항목 필드가 맞지 않습니다."
+        if "kind" in item and not (
+            isinstance(item["kind"], str) and item["kind"] in _SECTION_KINDS
+        ):
+            return (
+                f"rhythm.sections.kind 은 {sorted(_SECTION_KINDS)} 중 하나여야 합니다: "
+                f"{item['kind']!r}"
+            )
         start_bar, end_bar = item["start_bar"], item["end_bar"]
         if not (_is_plain_int(start_bar) and _is_plain_int(end_bar)):
             return f"rhythm.sections 의 마디 번호는 정수여야 합니다: {start_bar!r}~{end_bar!r}"
