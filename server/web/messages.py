@@ -236,6 +236,9 @@ BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "co
 # beat_grid_apply 의 mode — 기존 「⇪ 콘솔에 반영」(격자 초안 전체)과, 상단 바의
 # 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드). 새 메시지 타입은 만들지 않는다.
 BEAT_GRID_APPLY_MODES = ("apply", "preset_plan")
+# beat_grid_send_status 의 선택 필드 ``completed`` — 흐름 사슬(초안 적용 → 프리셋 저장 →
+# 콘솔 반영)에서 방금 **성공으로 끝난** 단계. 새 메시지 타입을 만들지 않고 기존 이벤트에 얹는다.
+BEAT_GRID_COMPLETED_STEPS = ("draft_applied", "preset_saved", "reflected")
 
 # Why a catalog section is incomplete. These mirror the rig-context reasons
 # (``server/orchestrator/tools.py``) and stay DISTINCT on the wire: "this path
@@ -1030,6 +1033,8 @@ def beat_grid_send_status_event(
     approval_vs_sent: dict | None = None,
     stale_tracks: list[str] | None = None,
     notices: list[str] | None = None,
+    completed: str | None = None,
+    timecode_suggestion: int | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -1039,7 +1044,22 @@ def beat_grid_send_status_event(
     뭉개지 않는다. ``approval_vs_sent``는 반영(쓰기) 성공 때만 채워진다
     (미리보기/편집은 비교 대상인 "승인 파일"이 없다). ``stale_tracks``
     (카드 t572) — 소유권 레코드에는 있지만 이번 반영의 격자에는 없는
-    트랙 이름 전수. 지워지지 않고 그대로 남아 있다는 뜻이다."""
+    트랙 이름 전수. 지워지지 않고 그대로 남아 있다는 뜻이다.
+
+    ``completed``(``BEAT_GRID_COMPLETED_STEPS`` 중 하나)는 그 단계가 **성공으로
+    끝났을 때만** 실린다. ``timecode_suggestion``(1 이상의 정수)은 프리셋 저장
+    성공 때 콘솔이 비어 있다고 확인한 타임코드 번호 하나를 권한다. 둘 다 없으면
+    키 자체를 싣지 않는다 — ``null`` 로 보내지 않아 기능이 없을 때의 바이트가
+    예전과 같다."""
+    if completed is not None and completed not in BEAT_GRID_COMPLETED_STEPS:
+        raise ValueError(
+            f"beat grid completed must be one of {BEAT_GRID_COMPLETED_STEPS}, got {completed!r}"
+        )
+    optional: dict[str, object] = {}
+    if completed is not None:
+        optional["completed"] = completed
+    if timecode_suggestion is not None:
+        optional["timecode_suggestion"] = timecode_suggestion
     return _event(
         "beat_grid_send_status",
         pending_apply_count=pending_apply_count,
@@ -1050,6 +1070,7 @@ def beat_grid_send_status_event(
         approval_vs_sent=approval_vs_sent,
         stale_tracks=list(stale_tracks) if stale_tracks is not None else [],
         notices=list(notices) if notices is not None else [],
+        **optional,
     )
 
 

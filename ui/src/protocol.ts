@@ -903,6 +903,10 @@ export interface BeatGridApprovalVsSent {
   approved_not_sent: string[];
 }
 
+/** 반영 흐름(초안 「적용」 → 프리셋 저장 → 「콘솔에 반영」) 가운데 방금 **성공으로 끝난**
+ * 단계. 서버가 그 단계의 성공 응답에만 싣는다(`BeatGridSendStatus.completed`). */
+export type BeatGridCompletedStep = "draft_applied" | "preset_saved" | "reflected";
+
 export interface BeatGridSendStatus {
   /** 코디네이터 계약(t568과 합의) — `BeatGridView.unsent_cells`의 길이와
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
@@ -913,6 +917,12 @@ export interface BeatGridSendStatus {
   reason: string | null;
   blocked_cells: BeatGridBlockedCell[];
   approval_vs_sent: BeatGridApprovalVsSent | null;
+  /** 방금 성공으로 끝난 흐름 단계. 서버는 그 단계가 성공했을 때만 싣고 아니면 키 자체를
+   * 싣지 않는다(와이어에 `null`은 오지 않는다). 리듀서가 없음을 `null`로 맞춘다. */
+  completed?: BeatGridCompletedStep | null;
+  /** 타임코드 번호 권유(1 이상 정수). `completed: "preset_saved"`일 때만, 곡 초안에 번호가
+   * 없고 콘솔에서 빈 슬롯을 찾았을 때만 실린다. 권유일 뿐이라 서버는 초안에 적지 않는다. */
+  timecode_suggestion?: number | null;
 }
 
 export interface SongTimelineView {
@@ -2226,6 +2236,9 @@ export function reduceServerEvent(
           reason: event.reason,
           blocked_cells: event.blocked_cells,
           approval_vs_sent: event.approval_vs_sent,
+          // 선택 필드 둘 — 여기서 옮기지 않으면 조용히 버려진다. 없으면 `null` 로 맞춘다.
+          completed: event.completed ?? null,
+          timecode_suggestion: event.timecode_suggestion ?? null,
         },
       };
     case "song_audio_link":

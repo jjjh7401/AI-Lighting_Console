@@ -4267,6 +4267,39 @@ body {
   border-radius: 8px;
 }
 
+/* 반영 흐름 띠 — 상단 바 바로 아래 한 줄(상단 바 안이 아니다 — 거기는 넓은 폭에서 한 줄을
+   지킨다). 지금 가야 할 단계만 굵게, 「⇪ 반영」 버튼의 강조 테두리와 같은 색(`.tbtn.pri`)으로 보인다. */
+.beat-grid-flow-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 8px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.beat-grid-flow-strip [aria-current="step"] {
+  font-weight: 700;
+  color: #d97757;
+}
+
+/* 띠 안의 「N 번 쓰기」 — 상단 바 밖이라 `.beat-grid-topbar .tbtn` 이 닿지 않아 같은 모양을 따로 건다. */
+.beat-grid-flow-strip .tbtn {
+  background: #2b2b33;
+  color: var(--text);
+  border: 1px solid #3a3a44;
+  border-radius: 7px;
+  padding: 1px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.beat-grid-flow-strip .tbtn:hover {
+  border-color: #6a6a78;
+}
+
 .beat-grid-topbar-mode {
   font-size: 14px;
 }
@@ -4359,6 +4392,12 @@ body {
   background: #d97757;
   border-color: #d97757;
   color: #fff;
+}
+
+/* 반영 흐름 — 다음 단계가 「반영」일 때 「⇪ 콘솔에 반영」에 두르는 강조 테두리(`.pri` 와 같은 색). */
+.beat-grid-topbar .tbtn.is-next {
+  border-color: #d97757;
+  box-shadow: 0 0 0 2px #d97757;
 }
 
 .beat-grid-topbar .tbtn:disabled {

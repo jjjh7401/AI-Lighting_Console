@@ -73,6 +73,9 @@ class TestConsolePlayOverTheWire:
             status = _approve_until(ws, "beat_grid_send_status")
         assert status["last_action"] == "console_play"
         assert status["ok"] is True
+        # 콘솔 재생은 사슬의 단계가 아니다 — 선택 필드가 없다(키 자체가 없다).
+        assert "completed" not in status
+        assert "timecode_suggestion" not in status
         executed = [c for c in console.executed if "Timecode" in c]
         assert executed == [f"Top Timecode {_TIMECODE}", f"Go Timecode {_TIMECODE}"]
 
@@ -85,4 +88,6 @@ class TestConsoleStopOverTheWire:
             status = _approve_until(ws, "beat_grid_send_status")
         assert status["last_action"] == "console_stop"
         assert status["ok"] is True
+        assert "completed" not in status
+        assert "timecode_suggestion" not in status
         assert [c for c in console.executed if "Timecode" in c] == [f"Off Timecode {_TIMECODE}"]
