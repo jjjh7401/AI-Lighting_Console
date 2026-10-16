@@ -14456,6 +14456,22 @@ class ChatSession:
             return None
         return self._beat_grid_song_key(timeline)
 
+    def _song_audio_fallback_key(
+        self, song_key: tuple[object, object]
+    ) -> tuple[object, object] | None:
+        """격자가 기억하는 원래 곡 제목 열쇠 — 지금 열쇠와 같으면 ``None``."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return None
+        grid = timeline.get("beat_grid")
+        if not isinstance(grid, dict):
+            return None
+        title = grid.get("song_title")
+        if not isinstance(title, str) or not title or title == song_key[0]:
+            return None
+        return (title, song_key[1])
+
     def request_song_audio_link(self) -> dict:
         """카드 t571(REQ-LDBEAT-024(c) 후속) — 지금 곡에 저장된 오디오
         링크를 돌려준다(런북 화면이 세션에 첨부가 없을 때 부른다).
@@ -14477,6 +14493,13 @@ class ChatSession:
             self._send(song_audio_link_event(status="none"))
             return {"status": "none"}
         result = store.resolve(song_key)
+        if result.status != "found":
+            # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 원래
+            # 제목 열쇠의 링크를 못 찾는다 — 격자(beat_grid.song_title)가
+            # 원래 곡 제목을 들고 있으니 그 열쇠로 한 번 더 찾는다(리드 1016).
+            fallback = self._song_audio_fallback_key(song_key)
+            if fallback is not None:
+                result = store.resolve(fallback)
         if result.status != "found":
             self._send(song_audio_link_event(status=result.status))
             return {"status": result.status}
