@@ -13,11 +13,13 @@ PASS는 0건이다. 콘솔 접촉 0건 — 이 모듈은 파일 하나만 읽는
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from server.resources import resource_base
 
 __all__ = [
+    "beat_grid_write_lock_reason",
     "DEFAULT_PROBE_IDS",
     "UNCONFIRMED_STATUS",
     "default_progress_md_path",
@@ -102,3 +104,21 @@ def read_m1_probe_results_from_path(path: Path) -> dict[int, str]:
     except OSError:
         text = None
     return read_m1_probe_results(text)
+
+
+def beat_grid_write_lock_reason(probe_results: Mapping[int, str]) -> str | None:
+    """화면의 「⚠ 쓰기 잠김」(``isWriteLocked``)과 같은 판정 — M1 프로브 9항목 중 하나라도
+    ``통과`` 로 시작하지 않으면 잠겨 있다. 잠겨 있으면 거절 사유 문장, 아니면 ``None``.
+    누락된 항목은 「미확인」으로 센다(지어낸 PASS 0건)."""
+    not_passed = [
+        (item, str(probe_results.get(item, UNCONFIRMED_STATUS)))
+        for item in DEFAULT_PROBE_IDS
+        if not str(probe_results.get(item, UNCONFIRMED_STATUS)).startswith("통과")
+    ]
+    if not not_passed:
+        return None
+    listed = ", ".join(f"{item}번({status.split('—')[0].strip()})" for item, status in not_passed)
+    return (
+        f"쓰기 잠김 — M1 프로브 {len(not_passed)}개가 아직 「통과」가 아니라 콘솔에 반영하지 "
+        f"않았습니다(콘솔에 보낸 줄 0개): {listed}"
+    )
