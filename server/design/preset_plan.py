@@ -294,11 +294,12 @@ def _reserve_next(
 def _annotated_cells(
     raw: object,
     by_cell: Mapping[tuple[str, int], object],
-    unresolved: list[str],
+    missing: list[tuple[str, int]],
 ) -> tuple[PlanCell, ...]:
     """주석의 칸 목록 → 격자에 실제로 있는 칸만.
 
-    없는 칸은 조용히 버리지 않고 「미정」 목록으로 알린다."""
+    없는 칸은 조용히 버리지 않고 ``missing`` 에 모은다. 계획 끝에 한 줄로 알린다
+    (`_missing_annotation_line`)."""
     cells: list[PlanCell] = []
     for item in raw if isinstance(raw, list) else []:
         if not isinstance(item, Mapping):
@@ -308,8 +309,28 @@ def _annotated_cells(
         if (group, bar) in by_cell:
             cells.append(PlanCell(group, bar))
         else:
-            unresolved.append(f"주석 칸 {group} {bar}마디가 격자에 없음 — 주석을 고쳐야 함")
+            missing.append((group, bar))
     return tuple(cells)
+
+
+def _missing_annotation_line(missing: Sequence[tuple[str, int]]) -> str | None:
+    """격자에 없는 주석 칸을 한 줄로 — 같은 칸은 한 번만, 그룹마다 마디를 모은다.
+
+    새 배치(예: 워시는 구간마다 한 칸)는 주석이 가리키던 마디에 칸을 두지 않을 수 있다. 그 주석은
+    이 계획에서 건너뛴다는 사실만 알린다(주석 파일은 고치지 않는다)."""
+    cells = sorted(set(missing))
+    if not cells:
+        return None
+    groups: dict[str, list[int]] = {}
+    for group, bar in cells:
+        groups.setdefault(group, []).append(bar)
+    where = ", ".join(
+        f"{group} {'·'.join(str(bar) for bar in bars)}마디" for group, bars in groups.items()
+    )
+    return (
+        f"주석 칸 {len(cells)}개가 이 격자에 없어 건너뜀: {where} "
+        "(그 마디에 칸이 없는 배치다 — 칸이 생기면 다시 쓴다)"
+    )
 
 
 def _grid_cue(grid: Mapping[str, object], cell: PlanCell) -> Mapping[str, object] | None:
@@ -1015,6 +1036,7 @@ def build_preset_plan(
             by_cell[(group, int(cue["bar"]))] = (group_no, confirmed)  # type: ignore[index]
 
     unresolved: list[str] = []
+    missing_cells: list[tuple[str, int]] = []
     deferred_lines: list[str] = []
     fixes: list[str] = []
     presets: list[PlanPreset] = []
@@ -1025,7 +1047,7 @@ def build_preset_plan(
     for entry in annotations.get("brightness_decisions") or []:
         if not isinstance(entry, Mapping):
             continue
-        for cell in _annotated_cells(entry.get("cells"), by_cell, unresolved):
+        for cell in _annotated_cells(entry.get("cells"), by_cell, missing_cells):
             brightness_notes[(cell.group_name, cell.bar)] = str(entry.get("note") or "").strip()
 
     # -- 디머: 칸의 value_percent 를 값으로 묶는다(첫 등장 순) -------------------
@@ -1121,7 +1143,7 @@ def build_preset_plan(
     for entry in annotations.get("colors") or []:
         if not isinstance(entry, Mapping):
             continue
-        cells = _annotated_cells(entry.get("cells"), by_cell, unresolved)
+        cells = _annotated_cells(entry.get("cells"), by_cell, missing_cells)
         groups = _unique(cell.group_name for cell in cells)
         name = str(entry.get("console_name") or "")
         label = str(entry.get("name") or "")
@@ -1281,7 +1303,7 @@ def build_preset_plan(
     for entry in annotations.get("directions") or []:
         if not isinstance(entry, Mapping):
             continue
-        cells = _annotated_cells(entry.get("cells"), by_cell, unresolved)
+        cells = _annotated_cells(entry.get("cells"), by_cell, missing_cells)
         label = str(entry.get("name") or "")
         console_name = str(entry.get("console_name") or "")
         target_text = str(entry.get("target") or "").strip()
@@ -1404,6 +1426,9 @@ def build_preset_plan(
     presets.extend(effect_presets)
     unresolved.extend(effect_unresolved)
     fixes.extend(effect_fixes)
+    missing_line = _missing_annotation_line(missing_cells)
+    if missing_line is not None:
+        unresolved.append(missing_line)
 
     return LoveAttackPlan(
         presets=tuple(presets),
