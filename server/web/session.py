@@ -258,7 +258,7 @@ from server.design.rig_capability_read import (
     notice_for as rig_capability_notice,
 )
 from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
-from server.design.rig_read_cache import KIND_MEMBERS, RigReadCache
+from server.design.rig_read_cache import KIND_FIXTURE, KIND_MEMBERS, RigReadCache
 
 # 카드 t441 — 아래 다섯은 (재수출 전용, 이 파일 안에서는 안 쓴다 —
 # `as <같은 이름>` 은 ruff 가 인식하는 명시 재수출 표시다. 값·동작은
@@ -10727,7 +10727,11 @@ class ChatSession:
         return {group: tuple(attrs) for group, attrs in attributes.items()}
 
     def _beat_grid_preset_plan_stores(
-        self, plan: LoveAttackPlan, grid: Mapping[str, object]
+        self,
+        plan: LoveAttackPlan,
+        grid: Mapping[str, object],
+        *,
+        all_groups: Sequence[str] = (),
     ) -> LoveAttackPlan:
         """색·위치 후보에 저장 줄을 붙인다. 그룹 소속 · 컬러 채널 · 장비 좌표를 콘솔에서
         **읽기만** 한다(쓰기 없음) — 후보가 없으면 콘솔을 읽지 않는다. 줄을 못 만든 후보는
@@ -10735,9 +10739,20 @@ class ChatSession:
         candidates = store_candidates(plan)
         if not candidates:
             return plan
-        members = self._beat_grid_group_members(
-            sorted({group for preset in candidates for group in preset.groups})
+        wanted = sorted({group for preset in candidates for group in preset.groups})
+        # 디머 속성 단계가 곡의 모든 그룹 소속을 이미 읽어 캐시에 넣었으면 거기서 꺼낸다. 예전엔
+        # 후보 그룹만으로 다시 읽어(캐시 열쇠가 달라) 리그를 두 번 읽었다(재실행 1: 약 7 초).
+        known = (
+            self._rig_read_cache.get(KIND_MEMBERS, self._group_members_key(all_groups))
+            if all_groups
+            else None
         )
+        by_upper = {name.upper(): fids for name, fids in (known or {}).items()}
+        if known is not None and all(group.upper() in by_upper for group in wanted):
+            members = {group: list(by_upper[group.upper()]) for group in wanted}
+        else:
+            members = self._beat_grid_group_members(wanted)
+        apply_stage("plan_members")
         color_fids = sorted(
             {
                 fid
@@ -10748,14 +10763,17 @@ class ChatSession:
             }
         )
         channel_names = self._beat_grid_color_channel_names(color_fids)
+        apply_stage("plan_color_channels")
         frames = (
             self._beat_grid_pointing_frames()
             if any(preset.kind == "position" for preset in candidates)
             else None
         )
+        apply_stage("plan_pointing_frames")
         plan = attach_color_store(plan, grid, members=members, channel_names=channel_names)
         return attach_floor_position_store(plan, grid, members=members, frames=frames)
 
+    @timed_apply
     def beat_grid_preset_plan(self) -> dict:
         """SPEC-LDRHYTHM-001 stage 2 — LOVE ATTACK 연출 프리셋 계획을 승인 카드 한 장으로 올린다.
 
@@ -10787,9 +10805,12 @@ class ChatSession:
         effect_pool = read_named_pool(
             query, pool_root, MOVEMENT_EFFECT_POOL_NAME, probe_prefix="love-attack-effect"
         )
+        apply_stage("plan_pools")
         # BPM·마디당 박 수는 곡 데이터(bar_map)에서만 읽는다 — 못 읽으면 효과 줄은 「미정」이다.
         bpm, beats_per_bar = effect_plan_timing(timeline)
         group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
+        dimmer_attributes = self._beat_grid_preset_dimmer_attributes(group_names)
+        apply_stage("plan_dimmer_attributes")
         plan = build_preset_plan(
             grid,
             annotations=load_preset_annotations(timeline.get("song_title")),
@@ -10797,12 +10818,14 @@ class ChatSession:
             dimmer_pool=dimmer_pool,
             color_pool=color_pool,
             position_pool=position_pool,
-            dimmer_attributes=self._beat_grid_preset_dimmer_attributes(group_names),
+            dimmer_attributes=dimmer_attributes,
             effect_pool=effect_pool,
             bpm=bpm,
             beats_per_bar=beats_per_bar,
         )
-        plan = self._beat_grid_preset_plan_stores(plan, grid)
+        apply_stage("plan_build")
+        plan = self._beat_grid_preset_plan_stores(plan, grid, all_groups=group_names)
+        apply_stage("plan_stores")
         commands = save_commands(plan)
         # 계획표는 콘솔 풀을 못 읽어도(번호 미정) 먼저 보인다.
         # 승인 카드는 저장할 것이 있을 때만 뜬다.
@@ -12701,6 +12724,14 @@ class ChatSession:
         outcomes``)가 「못 읽음」으로 다룬다(지어내지 않는다)."""
         if not fids:
             return {}
+        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 같은 장비를 바로 다시 계획·반영하면 패치 열거와
+        # 채널 판독(재실행 1 감사로그 약 10 초)을 건너뛴다. 모든 fid 가 읽혔을 때만 기억한다.
+        cache_key = ("beat_grid_color_channels", tuple(sorted(set(fids))))
+        cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)
+        if cached is not None:
+            return {
+                fid: (list(names) if names is not None else None) for fid, names in cached.items()
+            }
         enumerated = self._color_rig_fixture_pairs()
         if enumerated is None:
             return {}
@@ -12709,22 +12740,33 @@ class ChatSession:
         filtered = [(slot, fid) for slot, fid in pairs if fid in wanted]
         if not filtered:
             return {}
-        return self._fixture_color_channel_names(
+        result = self._fixture_color_channel_names(
             filtered, probe_id_prefix="beat-grid-new-color-preset"
         )
+        if set(result) == wanted:
+            self._rig_read_cache.put(KIND_FIXTURE, cache_key, dict(result))
+        return result
 
     def _beat_grid_pointing_frames(self) -> PointingFrames | None:
         """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만
         읽혀도) ``None`` — 일부 장비만 조준한 프리셋을 만들지 않는다."""
+        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 좌표·회전 판독(재실행 1 약 6 초)을 바로 다시
+        # 계획·반영할 때 건너뛴다. 다 읽힌 판독만 기억한다(못 읽으면 None 이라 기억하지 않는다).
+        cache_key = ("beat_grid_pointing_frames",)
+        cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)
+        if cached is not None:
+            return cached
         frames = self._read_pointing_frames("beat-grid-position-preset-read")
         if isinstance(frames, InstructionResult):
             return None
         fixtures, rotz_by_fid, rotation_skipped, _rotation_assumed = frames
-        return PointingFrames(
+        result = PointingFrames(
             positions=dict(fixtures),
             rotz=dict(rotz_by_fid),
             rotation_skipped=tuple(rotation_skipped),
         )
+        self._rig_read_cache.put(KIND_FIXTURE, cache_key, result)
+        return result
 
     def _beat_grid_recheck_new_presets(self, creations: Mapping[str, object]) -> str | None:
         """카드 t598 — 이번 묶음이 ``Store Preset``으로 만들 번호의 풀을 송신 직전에

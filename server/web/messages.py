@@ -1152,6 +1152,20 @@ def song_audio_link_end_event() -> dict:
     return _event("song_audio_link_end")
 
 
+#: 승인 카드에 보이는 사유 중 감독용 한국어로 바꿔 보이는 것 — 게이트의 판정·사유 원문은 그대로다
+#: (감사 로그·분류기). 앱이 만든 프리셋 저장은 차단 목록 항목이라 승인이 필요할 뿐 막힌 것이 아니다.
+_CARD_REASON_KO = {
+    "blacklisted command (matches closed-set entry 'Store Preset')": (
+        "앱이 만든 프리셋 저장 — 승인 필요"
+    ),
+}
+
+
+def card_risk_reason(reason: str) -> str:
+    """승인 카드 화면에 보일 사유 한 줄 — 표에 있으면 한국어로, 없으면 원문 그대로."""
+    return _CARD_REASON_KO.get(reason, reason)
+
+
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:
     """One pending approval bundle: commands + risk reasons + warnings (REQ-MVP-021)."""
     return _event(
@@ -1160,7 +1174,7 @@ def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict
         items=[
             {
                 "command": item.command,
-                "risk_reasons": list(item.risk_reasons),
+                "risk_reasons": [card_risk_reason(reason) for reason in item.risk_reasons],
                 "warnings": list(item.warnings),
             }
             for item in request.items
