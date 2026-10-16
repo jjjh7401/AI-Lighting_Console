@@ -182,6 +182,19 @@ def _floor_store(
     fids = list(members.get(group) or ())
     if not fids:
         return None, POSITION_MEMBERS_UNREAD
+    # 몸체 기울임(Rotx/Roty ≠ 0)으로 조준에서 빠진 장비는 실기 판독
+    # (``_beat_grid_pointing_frames``)이 좌표 표에서도 뺀다. 그대로 두면 아래 검사가 「좌표를
+    # 못 읽음」이라 말해 원인이 틀리다 — 좌표는 읽혔고 조준만 못 한다. 보류는 그대로이고 사유
+    # 문장만 바로잡는다. 좌표 표에 든 채 제외 표시만 된 장비는 아래 조준 단계의 기존 사유가 맡는다.
+    if frames is not None:
+        tilted = [
+            fid for fid in fids if fid in frames.rotation_skipped and fid not in frames.positions
+        ]
+        if tilted:
+            return None, (
+                f"{POSITION_UNAIMABLE}(FID {', '.join(map(str, tilted))}) — "
+                "몸체 기울임(Rotx/Roty가 0이 아님)이라 조준에서 제외됨"
+            )
     if frames is None or any(fid not in frames.positions for fid in fids):
         return None, POSITION_COORDS_UNREAD
     # 무대 기준틀 cy — 읽은 장비 전체의 y 평균(lxseq.position_derive._stage_frame 과 같은 정의).
