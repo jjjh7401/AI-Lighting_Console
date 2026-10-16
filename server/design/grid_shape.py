@@ -678,6 +678,11 @@ def compare_grids(
     )
 
 
+def _cell(text: object) -> str:
+    """표 칸 안의 | 는 \\| 로 가린다. 가리지 않으면 GFM 표에서 열이 밀린다."""
+    return str(text).replace("|", "\\|")
+
+
 def render_markdown(report: ShapeReport, *, inputs: Mapping[str, str]) -> str:
     """사람이 읽는 마크다운 표. 판정, 기준과 측정값, 줄별 표, 빠진 데이터 순서다."""
     lines: list[str] = ["# 격자 모양 비교", ""]
@@ -694,9 +699,11 @@ def render_markdown(report: ShapeReport, *, inputs: Mapping[str, str]) -> str:
         "|---|---|---|---|---|---|---|",
     ]
     for check in report.checks:
+        scope = _cell(check.track or "전체")
         lines.append(
-            f"| {_DISPLAY[check.key]} | {check.track or '전체'} | {check.rule} | "
-            f"{check.base} | {check.candidate} | {_PASS_TEXT[check.passed]} | {check.detail} |"
+            f"| {_DISPLAY[check.key]} | {scope} | {_cell(check.rule)} | "
+            f"{_cell(check.base)} | {_cell(check.candidate)} | "
+            f"{_PASS_TEXT[check.passed]} | {_cell(check.detail)} |"
         )
     lines += [
         "",
@@ -709,11 +716,12 @@ def render_markdown(report: ShapeReport, *, inputs: Mapping[str, str]) -> str:
     ]
     for row in report.rows:
         lines.append(
-            f"| {row.name} | {row.role} | {row.base_count}→{row.cand_count} | "
-            f"기본 {row.base_length} / 후보 {row.cand_length} | "
-            f"{row.base_alignment}→{row.cand_alignment} | "
-            f"기본 {row.base_pattern} / 후보 {row.cand_pattern} | "
-            f"{row.base_accent}→{row.cand_accent} | {row.base_color}→{row.cand_color} |"
+            f"| {_cell(row.name)} | {_cell(row.role)} | {row.base_count}→{row.cand_count} | "
+            f"기본 {_cell(row.base_length)} / 후보 {_cell(row.cand_length)} | "
+            f"{_cell(row.base_alignment)}→{_cell(row.cand_alignment)} | "
+            f"기본 {_cell(row.base_pattern)} / 후보 {_cell(row.cand_pattern)} | "
+            f"{_cell(row.base_accent)}→{_cell(row.cand_accent)} | "
+            f"{_cell(row.base_color)}→{_cell(row.cand_color)} |"
         )
     lines += [
         "",

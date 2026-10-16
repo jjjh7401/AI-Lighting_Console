@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,7 @@ from server.design.grid_shape import (
     length_bin,
     main,
     pattern_category,
+    render_markdown,
     total_variation,
 )
 from server.design.love_attack_timeline import build_love_attack_timeline
@@ -408,3 +410,38 @@ def test_row_accent_text_reads_near_hits_over_positions_in_that_order() -> None:
     report = compare_grids(base, _move_blind_hit(base), _context())
     blind = next(row for row in report.rows if row.name == "BLIND")
     assert (blind.base_accent, blind.cand_accent) == ("2/2", "1/2")
+
+
+_UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
+
+
+def _cells(row: str) -> list[str]:
+    """마크다운 표 한 줄의 칸들. 가리지 않은 | 만 칸의 경계로 본다."""
+    return _UNESCAPED_PIPE.split(row.strip())[1:-1]
+
+
+def _table_rows(text: str, header_prefix: str) -> list[str]:
+    """머리 줄이 header_prefix 로 시작하는 표의 본문 줄들(머리와 구분선 다음부터)."""
+    lines = text.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(header_prefix))
+    rows: list[str] = []
+    for line in lines[start + 2 :]:
+        if not line.startswith("|"):
+            break
+        rows.append(line)
+    return rows
+
+
+def test_table_cells_escape_pipes_so_every_row_keeps_its_columns() -> None:
+    """표 칸 안의 | 는 \\| 로 가린다. 가리지 않으면 GFM 에서 열이 밀린다."""
+    base = _base()
+    text = render_markdown(
+        compare_grids(base, copy.deepcopy(base), _context()), inputs={"기본 격자": "LOVE ATTACK"}
+    )
+    criteria = _table_rows(text, "| 지표 |")
+    track = _table_rows(text, "| 줄 |")
+    assert len(criteria) == 14
+    assert len(track) == 8
+    assert {len(_cells(row)) for row in criteria} == {7}
+    assert {len(_cells(row)) for row in track} == {8}
+    assert "\\|후보 − 기본\\|" in text
