@@ -209,12 +209,15 @@ from server.design.preset_names import (
 )
 from server.design.preset_plan import (
     LoveAttackPlan,
+    PlanPreset,
     apply_plan_references,
     build_preset_plan,
     card_reason,
     load_preset_annotations,
     plan_table_markdown,
+    resolve_preset,
     save_commands,
+    saved_presets,
     saved_summary,
 )
 from server.design.preset_plan_store import (
@@ -3364,6 +3367,15 @@ def _color_creation_text(
     where = f" → RGB({rgb[0]:g}, {rgb[1]:g}, {rgb[2]:g})%" if rgb else ""
     group = next((line.split(" ;")[0] for line in lines if line.startswith("Group ")), "")
     return f"{preset_no} {label}{where} {group}"
+
+
+#: 연출 프리셋 계획 카드의 송신 직전 재확인(`BatchRisk.recheck`)이 묶음을 멈출 때 게이트가 감사
+#: 기록과 회신에 싣는 사유. 어느 프리셋이 걸렸는지는 세션이 따로 기억해 둔다(`found`) — 이 문장은
+#: 줄마다 같은 사유로 적히므로 번호를 싣지 않는다.
+_WHOLE_BATCH_REASON = (
+    "승인 창이 떠 있는 사이 콘솔의 프리셋 번호가 바뀌었거나 읽히지 않아 아무것도 "
+    "보내지 않았습니다 — 해당 프리셋을 빼고 나머지를 새 승인 카드로 다시 올립니다"
+)
 
 
 def _preset_release_command(fids: Sequence[int]) -> str:
@@ -10561,7 +10573,14 @@ class ChatSession:
         저장 줄 → 승인 카드(게이트). 디머 · 색 · 위치 프리셋을 카드 한 장 · 승인 한 번으로
         저장한다. 승인이 **통과한 뒤에만** 칸의 번호 참조와 승인 기록을 적는다. 거절·차단·
         무응답이면 격자는 바이트까지 그대로다. 이 메서드는 UI 메시지에 연결돼 있지 않다 —
-        실제 저장은 감독이 「실행」이라고 한 뒤의 별도 호출이다."""
+        실제 저장은 감독이 「실행」이라고 한 뒤의 별도 호출이다.
+
+        승인 창이 떠 있는 사이 콘솔에서 저장할 번호가 채워졌거나 그 풀을 다시 못 읽으면, 승인
+        직후 게이트가 송신 직전 재확인(``BatchRisk.recheck``, 카드 t598)으로 묶음 전체를 0줄로
+        막는다. 그러면 걸린 프리셋만 계획에서 빼고 나머지를 **새 승인 카드**로 한 번 더 올린다 —
+        감독이 승인한 줄이 항상 실제로 나가는 줄과 같다. 한 번 누르면 승인 카드는 두 장까지다.
+        두 번째도 막히거나 거절되거나 보낼 것이 남지 않으면 아무것도 보내지 않는다. 칸의 번호
+        참조는 실제로 보낸 묶음의 프리셋 몫만 적는다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -10605,38 +10624,85 @@ class ChatSession:
                     "값이 미정). 계획표만 보입니다. 나머지는 미정입니다."
                 ),
             )
-        batch = build_write_approval_batch([commands])
-        token = bind_session_key(self._session_key)
-        try:
-            executed = self._dispatch_declared(
-                ToolCall(
-                    id="preset-plan",
-                    name="run_commands",
-                    arguments={"commands": list(commands)},
-                ),
-                risk=BatchRisk(
-                    reason=(f"연출 프리셋 저장 — {card_reason(plan)} (구간 단위 1회 승인)"),
-                    kind="preset_plan",
-                ),
+        # 승인 카드는 두 장까지다. 첫 카드가 송신 직전 재확인에 막히면(승인 창 사이 번호가 찼거나
+        # 풀을 다시 못 읽음) 걸린 프리셋만 빼고 나머지를 새 카드로 올린다 — 승인은 실제로 나가는
+        # 줄에 대한 것이어야 하므로 이미 승인받은 카드에서 줄을 덜어 보내지 않는다.
+        attempt_plan = plan
+        held: list[tuple[PlanPreset, str]] = []
+        executed = None
+        sent_plan = None
+        batch = None
+        cards = 0
+        for _attempt in range(2):
+            commands = save_commands(attempt_plan)
+            if not commands:
+                break
+            cards += 1
+            batch = build_write_approval_batch([commands])
+            found: list[tuple[PlanPreset, str]] = []
+
+            def _recheck(plan_now=attempt_plan, found=found) -> str | None:
+                hits = self._beat_grid_plan_presend_filled(plan_now)
+                found[:] = hits
+                return _WHOLE_BATCH_REASON if hits else None
+
+            token = bind_session_key(self._session_key)
+            try:
+                executed = self._dispatch_declared(
+                    ToolCall(
+                        id="preset-plan",
+                        name="run_commands",
+                        arguments={"commands": list(commands)},
+                    ),
+                    risk=BatchRisk(
+                        reason=(
+                            f"연출 프리셋 저장 — {card_reason(attempt_plan)} (구간 단위 1회 승인)"
+                        ),
+                        kind="preset_plan",
+                        recheck=_recheck,
+                    ),
+                )
+            finally:
+                reset_session_key(token)
+            if not executed.result.is_error:
+                sent_plan = attempt_plan
+                break
+            if not found:
+                break  # 번호가 찬 것이 아닌 이유(승인 거절·게이트 차단·콘솔 무응답)로 멈췄다.
+            held.extend(found)
+            for preset, why in found:
+                attempt_plan = resolve_preset(attempt_plan, preset, store=None, hold=why)
+        names = " / ".join(f"{preset.slot} {preset.name} — {why}" for preset, why in held)
+        if sent_plan is None:
+            reason = (
+                "LOVE ATTACK 프리셋 저장이 실행되지 않았습니다(승인 거절·게이트 차단·"
+                "콘솔 무응답 중 하나). 격자는 그대로입니다."
             )
-        finally:
-            reset_session_key(token)
-        if executed.result.is_error:
-            return self._beat_grid_send_status(
-                last_action="apply",
-                ok=False,
-                reason=(
-                    "LOVE ATTACK 프리셋 저장이 실행되지 않았습니다(승인 거절·게이트 차단·"
-                    "콘솔 무응답 중 하나). 격자는 그대로입니다."
-                ),
-            )
+            outcomes = executed.command_outcomes
+            if held and not any(outcome.status == "executed_ok" for outcome in outcomes):
+                # 걸린 프리셋이 있고 한 줄도 나가지 않았다 — 무엇을 왜 뺐는지, 두 번째 카드가 어떻게
+                # 끝났는지 말하고 새 빈 번호로 다시 계획하게 한다.
+                if cards < 2:
+                    ending = "빼고 나니 보낼 프리셋이 남지 않아 새 승인 카드는 올리지 않았습니다"
+                elif any(outcome.status == "rejected" for outcome in outcomes):
+                    ending = "나머지로 다시 올린 승인 카드가 거절되었습니다"
+                else:
+                    ending = "나머지로 다시 올린 승인 카드도 막혔습니다"
+                reason = (
+                    "LOVE ATTACK 프리셋 저장이 실행되지 않았습니다 — 아무것도 보내지 않았습니다. "
+                    f"송신 직전 확인에 걸려 뺀 프리셋 {len(held)}개: {names}. {ending}. "
+                    "「프리셋 계획 만들기」를 다시 눌러 새 빈 번호로 계획해 주세요. "
+                    "격자는 그대로입니다."
+                )
+            return self._beat_grid_send_status(last_action="apply", ok=False, reason=reason)
         # 승인 창이 떠 있는 동안(다른 스레드가 답한다) 들어온 편집을 지우지 않도록, 카드 구성 때의
         # 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다. 그 사이 이 카드가 고칠 필드(밝기 ·
-        # 색 번호 · 위치 번호)가 바뀐 칸은 건너뛴다.
+        # 색 번호 · 위치 번호)가 바뀐 칸은 건너뛴다. 칸 참조는 실제로 보낸 계획의 프리셋 몫만
+        # 적는다 — 중간에 뺀 프리셋은 콘솔에 없으니 칸이 가리키면 안 된다.
         current = store.latest if store.latest is not None else timeline
         approved = apply_plan_references(
             self._beat_grid_view(current),
-            plan,
+            sent_plan,
             by="supervisor",
             date=datetime.now(UTC).isoformat(),
             source=f"preset_plan:{batch.sha256}",
@@ -10644,11 +10710,13 @@ class ChatSession:
         )
         store.latest = {**current, "beat_grid": approved}
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(store.latest)))
-        return self._beat_grid_send_status(
-            last_action="apply",
-            ok=True,
-            reason=f"연출 {saved_summary(plan)}를 저장하고 칸에 번호를 적었습니다.",
-        )
+        saved = f"연출 {saved_summary(sent_plan)}를 저장하고 칸에 번호를 적었습니다."
+        if held:
+            saved += (
+                f" 송신 직전 확인에 걸려 뺀 프리셋 {len(held)}개: {names}. "
+                "나머지는 다시 승인받아 보냈습니다."
+            )
+        return self._beat_grid_send_status(last_action="apply", ok=True, reason=saved)
 
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·
     #    콘솔에 반영 (REQ-LDBEAT-011~013/017) --------------------------------
@@ -12179,6 +12247,42 @@ class ChatSession:
                 "아무것도 보내지 않았습니다 — 다시 반영하세요"
             )
         return None
+
+    def _beat_grid_plan_presend_filled(self, plan: LoveAttackPlan) -> list[tuple[PlanPreset, str]]:
+        """연출 프리셋 계획 카드의 송신 직전 재확인 — 이 카드가 저장할 번호의 풀을 다시 완전 판독해,
+        승인 창이 떠 있는 사이 번호가 채워졌거나 풀을 다시 못 읽은 프리셋을 ``(프리셋, 사유)`` 로
+        계획 순서대로 돌려준다. 콘솔 **읽기**만. 새로 읽은 풀은 표식 출처로 남긴다.
+
+        ``_beat_grid_recheck_new_presets``(t598)와 같은 판독이다. 걸린 번호를 사유 문장 하나로
+        합치지 않고 프리셋마다 돌려주는 점만 다르다 — 호출자(``beat_grid_preset_plan``)가 그
+        프리셋만 계획에서 빼고 나머지를 새 승인 카드로 올린다."""
+        pool_root = self._beat_grid_preset_pool_root()
+        presets = saved_presets(plan)
+        pool_numbers = sorted(
+            {no for no in (preset_pool_no(preset.slot) for preset in presets) if no is not None}
+        )
+        fresh = {
+            no: self._paged_pool_children(
+                f"{pool_root}/{no}", probe_id=f"beat-grid-plan-presend-pool-{no}"
+            )
+            for no in pool_numbers
+        }
+        self._beat_grid_learn_pools(fresh)
+        held: list[tuple[PlanPreset, str]] = []
+        for preset in presets:
+            slot = str(preset.slot)
+            pool, _sep, number = slot.partition(".")
+            pool_no = preset_pool_no(slot)
+            children = fresh.get(pool_no) if pool_no is not None else None
+            if children is None:
+                held.append(
+                    (preset, f"{pool}번 프리셋 풀을 송신 직전에 다시 읽지 못해 {slot} 프리셋은 뺌")
+                )
+            elif int(number) in children:
+                held.append(
+                    (preset, f"승인 창 사이 콘솔에서 {slot} 번호가 채워져 덮어쓰지 않으려고 뺌")
+                )
+        return held
 
     def _beat_grid_split_empty_presets(
         self, pending: list[dict[str, object]]
