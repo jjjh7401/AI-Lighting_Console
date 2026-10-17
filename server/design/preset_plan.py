@@ -53,7 +53,11 @@ from server.design.beat_grid_color_presets import (
     color_preset_rgb,
     record_color_preset_rgb,
 )
-from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
+from server.design.beat_grid_edit import (
+    apply_beat_grid_edit,
+    beats_per_bar_from_timeline,
+    speed_master_of,
+)
 from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_presets import (
     app_preset_label,
@@ -659,6 +663,7 @@ def _movement_effect_presets(
     bpm: float | None,
     beats_per_bar: int | None,
     reserved: set[str],
+    policy: Mapping[str, object] | None = None,
 ) -> tuple[tuple[PlanPreset, ...], tuple[str, ...], tuple[str, ...]]:
     """칸의 ``app_movement`` 마다 효과 프리셋 한 줄 — 같은 그룹·같은 움직임은 한 프리셋이다.
 
@@ -788,9 +793,16 @@ def _movement_effect_presets(
             movement = movements[key]
             cycle = _beats_per_cycle(movement, beats_per_bar)
             if bpm is not None and cycle:
+                master = speed_master_of(policy or {})
+                how = (
+                    f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님 — "
+                    "preset_pools.yaml 에 speed_master 가 없다)"
+                    if master is None
+                    else f"스피드 마스터 {master} 에 묶는다(Master 3.{master} At BPM {bpm:g} · "
+                    f"At SpeedMaster {master} · At Measure {cycle:g})"
+                )
                 fixes.append(
-                    f"움직임 속도 — {_effect_name(movement)}: 박 {cycle:g} 주기를 "
-                    f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님). "
+                    f"움직임 속도 — {_effect_name(movement)}: 박 {cycle:g} 주기를 {how}. "
                     "감독이 고칠 값: 속도 기준"
                 )
             if movement.get("phase_spread") is None:
@@ -1502,6 +1514,7 @@ def build_preset_plan(
         bpm=bpm,
         beats_per_bar=beats_per_bar,
         reserved={*kept_counts, *(preset.slot for preset in presets if preset.slot), *reserved},
+        policy=policy,
     )
     presets.extend(effect_presets)
     unresolved.extend(effect_unresolved)

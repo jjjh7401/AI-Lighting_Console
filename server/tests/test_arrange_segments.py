@@ -1375,3 +1375,67 @@ def test_a_break_followed_by_a_drop_is_still_a_bridge_not_an_outro() -> None:
         _bar_map([_ev("kick_entry", 4), _ev("break", 9), _ev("drop", 10, 11)])
     )
     assert "outro" not in [section.kind for section in sections]
+
+
+# -- 트래킹(인수 D-11): 첫 칸 Block · 끝 칸 Release · 구간 첫 칸 Track · 그 밖 Cue Only ----------
+
+
+def _tracking(draft: dict, name: str) -> list[tuple[int, object]]:
+    return [
+        (int(cue["bar"]), (cue.get("entry") or {}).get("tracking"))
+        for track in draft["tracks"]
+        if track["group_name"] == name
+        for cue in track["cues"]
+    ]
+
+
+def test_every_line_blocks_its_first_cell_and_releases_its_last() -> None:
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    for track in draft["tracks"]:
+        values = [(cue.get("entry") or {}).get("tracking") for cue in track["cues"]]
+        assert values[0] == "Block", track["group_name"]
+        if len(values) > 1:
+            assert values[-1] == "Release", track["group_name"]
+
+
+def test_section_starts_track_and_other_cells_are_cue_only() -> None:
+    bar_map = _real_love_attack()
+    starts = {section.start_bar for section in split_sections(bar_map)}
+    draft = generate_segment_draft(bar_map, _layout())
+    for track in draft["tracks"]:
+        for cue in track["cues"][1:-1]:
+            expected = None if int(cue["bar"]) in starts else "Cue Only"
+            got = (cue.get("entry") or {}).get("tracking")
+            assert got == expected, (track["group_name"], cue["bar"])
+    # BLIND: 첫 칸(0) Block, 예고·쉼은 Cue Only, 강조가 구간 첫 마디면 Track, 끝 칸(68) Release.
+    assert _tracking(draft, "BLIND") == [
+        (0, "Block"),
+        (17, "Cue Only"),
+        (18, None),
+        (19, "Cue Only"),
+        (45, "Cue Only"),
+        (46, None),
+        (47, "Cue Only"),
+        (62, "Cue Only"),
+        (63, None),
+        (66, "Cue Only"),
+        (67, None),
+        (68, "Release"),
+    ]
+    assert _tracking(draft, "FOH") == [(0, "Block")]  # 칸이 하나뿐인 줄
+
+
+def test_tracking_survives_applying_the_draft_to_the_grid() -> None:
+    # 적용이 entry.tracking 을 지우면 반영 명령에 Block·Release·/CueOnly 가 안 나간다.
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    base = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
+    grid, _report = apply_arrangement_draft(base, draft)
+    for track in draft["tracks"]:
+        applied = {
+            int(cue["bar"]): cue["entry"].get("tracking")
+            for t in grid["tracks"]
+            if t["group_name"] == track["group_name"]
+            for cue in t["cues"]
+        }
+        for cue in track["cues"]:
+            assert applied[int(cue["bar"])] == (cue.get("entry") or {}).get("tracking")

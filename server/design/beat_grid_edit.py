@@ -154,10 +154,28 @@ def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
     if not isinstance(document, Mapping):
         return {"confirmed": False, "pools": {}}
     pools = document.get("pools")
-    return {
+    policy: dict[str, object] = {
         "confirmed": bool(document.get("confirmed", False)),
         "pools": dict(pools) if isinstance(pools, Mapping) else {},
     }
+    speed_master = speed_master_of(document)
+    if speed_master is not None:
+        policy["speed_master"] = speed_master
+    return policy
+
+
+#: 효과 속도를 묶는 스피드 마스터 번호 범위. 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다
+#: (REQ-LDRHYTHM-010) — 15 까지만 받는다.
+_SPEED_MASTER_RANGE = range(1, 16)
+
+
+def speed_master_of(policy: Mapping[str, object]) -> int | None:
+    """정책(``preset_pools.yaml``)의 ``speed_master`` — 효과 프리셋 속도를 묶을 스피드 마스터 번호.
+    선언이 없거나 범위(1~15) 밖이면 ``None`` 이고, 그때 효과 프리셋은 ``At Speed`` 로 굽는다."""
+    value = policy.get("speed_master")
+    if isinstance(value, int) and not isinstance(value, bool) and value in _SPEED_MASTER_RANGE:
+        return value
+    return None
 
 
 def validate_preset_pool_assignment(

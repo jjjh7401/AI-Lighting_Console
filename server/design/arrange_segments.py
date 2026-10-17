@@ -38,6 +38,8 @@
 - 색은 칸의 속성이라 칸 첫 마디의 색을 쓴다. 색이 바뀐다고 칸을 나누는 줄은 워시 줄(역할 wash)
   뿐이다. 다른 줄의 칸은 구간 색이 바뀌는 마디를 넘어 이어진다. 곡별 주석 색이 놓인 마디는 칸을
   나눈다. 그 마디의 칸이 그 색을 보여야 해서다(앞뒤 마디의 색과 다를 때만).
+- 줄마다 트래킹을 싣는다: 첫 칸 Block, 끝 칸 Release, 구간 첫 칸 Track(콘솔 기본값), 그 밖의 칸
+  Cue Only(``_with_tracking``).
 - 워시 줄은 구간마다 한 칸이다. 구간 첫 마디의 값이 구간 끝까지 가고, 색이 바뀌는 구간 경계에서만
   나뉜다. 구간 중간 마디의 주석 색은 워시 칸을 쪼개지 않는다(리드 결정 2026-10-16).
 """
@@ -334,12 +336,19 @@ def generate_segment_draft(
                 group_no_confirmed=bool(track.get("group_no_confirmed", False)),
                 group_name=name,
                 layer_role=track.get("layer_role"),
-                cues=[
-                    _segment_cue(
-                        bar, plan, settings, role=track.get("layer_role"), color_names=color_names
-                    )
-                    for bar, plan in runs
-                ],
+                cues=_with_tracking(
+                    [
+                        _segment_cue(
+                            bar,
+                            plan,
+                            settings,
+                            role=track.get("layer_role"),
+                            color_names=color_names,
+                        )
+                        for bar, plan in runs
+                    ],
+                    section_starts,
+                ),
             )
         )
     return ArrangementDraft(
@@ -681,6 +690,38 @@ def _runs(
                 continue
         rows.append((bar, plan))
     return rows
+
+
+#: 줄(시퀀스)의 첫 칸·끝 칸·프레이즈 칸의 트래킹 값(``beat_grid_emit._entry_plan`` 이 읽는 값과
+#: 같다). 구간 첫 칸은 콘솔 기본값 Track 이라 값을 두지 않는다(``None``).
+_TRACKING_FIRST = "Block"
+_TRACKING_LAST = "Release"
+_TRACKING_PHRASE = "Cue Only"
+
+
+def _with_tracking(cues: list[BeatGridCue], section_starts: frozenset[int]) -> list[BeatGridCue]:
+    """줄의 칸마다 트래킹 값을 싣는다(인수 D-11, 리드 지시 2026-10-17).
+
+    - 첫 칸은 Block — 앞 곡·이전 상태가 새어 들어오지 않게 막는다.
+    - 끝 칸은 Release — 이 줄이 끝나면 쥔 값을 놓는다(새어 나감 0).
+    - 구간 첫 칸은 Track(콘솔 기본값, 값 없음) — 구간 안에서 값이 이어진다.
+    - 그 밖(프레이즈 칸·구간 안 쉼)은 Cue Only — 그 칸의 값이 다음 칸으로 번지지 않는다.
+
+    칸이 하나뿐인 줄은 Block 하나다. 앞에서부터 처음 맞는 규칙을 쓴다."""
+    last = len(cues) - 1
+    for position, cue in enumerate(cues):
+        if position == 0:
+            tracking: str | None = _TRACKING_FIRST
+        elif position == last:
+            tracking = _TRACKING_LAST
+        elif int(cue["bar"]) in section_starts:
+            tracking = None
+        else:
+            tracking = _TRACKING_PHRASE
+        if tracking is not None:
+            entry = {**(cue.get("entry") or {}), "tracking": tracking}
+            cue["entry"] = entry  # type: ignore[typeddict-item]
+    return cues
 
 
 def _segment_cue(
