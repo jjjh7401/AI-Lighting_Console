@@ -291,6 +291,19 @@ def _cell(value: str | None) -> str:
     return value if value else "—"
 
 
+def _group_missing(
+    presets: Mapping[str, StoredPreset], slot: str | None, group_no: int | None
+) -> str:
+    """그룹 줄로 저장된 프리셋인데 이 그룹 줄이 없으면 표시. 장비 줄로 저장된 프리셋(위치 등)이나
+    저장 줄이 없는 프리셋은 그룹 소속을 몰라 표시하지 않는다(지어내지 않는다)."""
+    preset = presets.get(slot) if slot else None
+    if preset is None or group_no is None or preset.fixtures or not preset.groups:
+        return ""
+    if group_no in preset.groups or group_no in preset.group_refs:
+        return ""
+    return " ⚠그룹 없음"
+
+
 def _console_cell(console: Mapping[tuple[int, int], str] | None, row: CueRow) -> str:
     if console is None:
         return "안 읽음"
@@ -394,15 +407,22 @@ def render_markdown(
     lines.append("## 4. 큐마다 그룹이 켜는 것")
     lines.append("")
     lines.append("칸이 「—」이면 그 큐는 그 값을 바꾸지 않는다(앞 큐 값이 이어진다).")
+    lines.append(
+        "「⚠그룹 없음」은 감사 기록상 그 프리셋에 이 그룹 값이 없다는 뜻이다 — 프리셋이 "
+        "Selective 면 이 그룹은 그 값을 받지 않는다(모드는 3절 콘솔 칸)."
+    )
     lines.append("")
     lines.append("| 그룹 | 시퀀스 | 큐 | 마디 | 밝기 | 색 | 위치 | 효과·무빙 | 콘솔 큐 |")
     lines.append("|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         motion = " · ".join(v for v in (row.effect_preset, row.movement) if v) or None
+        dimmer = row.dimmer.removeprefix("프리셋 ") if row.dimmer.startswith("프리셋 ") else None
         lines.append(
             f"| {row.group_name} | {_cell(str(row.sequence_number or ''))} | "
-            f"{_cell(str(row.cue_number or ''))} | {row.bar} | {_cell(row.dimmer)} | "
-            f"{_cell(row.color_preset)} | {_cell(row.position_preset)} | {_cell(motion)} | "
+            f"{_cell(str(row.cue_number or ''))} | {row.bar} | "
+            f"{_cell(row.dimmer)}{_group_missing(presets, dimmer, row.group_no)} | "
+            f"{_cell(row.color_preset)}{_group_missing(presets, row.color_preset, row.group_no)} | "
+            f"{_cell(row.position_preset)} | {_cell(motion)} | "
             f"{_console_cell(console_cues, row)} |"
         )
     lines.append("")

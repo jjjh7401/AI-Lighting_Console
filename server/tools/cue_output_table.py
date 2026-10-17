@@ -159,14 +159,16 @@ def read_console_presets(port, slots: Iterable[str], root: str) -> dict[str, str
             if child is None:
                 found[f"{pool}.{number}"] = "콘솔에 없음"
                 continue
+            # PRESETMODE 는 응답기로 읽힌다(t538 실측: "Selective"·"Universal"). Selective 면
+            # 담긴 장비에만 값이 간다 — 그 그룹이 프리셋에 없으면 그 그룹은 아무것도 안 받는다.
             try:
-                data = _props(port, f"{root}/{pool}/{number}", ("OWNDATAPRESENT",)).get(
-                    "OWNDATAPRESENT"
-                )
+                props = _props(port, f"{root}/{pool}/{number}", ("OWNDATAPRESENT", "PRESETMODE"))
             except Exception:  # noqa: BLE001
-                data = None
+                props = {}
+            data = props.get("OWNDATAPRESENT")
             state = {"true": "데이터 있음", "false": "데이터 없음"}.get(str(data), "데이터 모름")
-            found[f"{pool}.{number}"] = f"있음 '{child.get('name')}' · {state}"
+            mode = props.get("PRESETMODE") or "모드 모름"
+            found[f"{pool}.{number}"] = f"있음 '{child.get('name')}' · {state} · {mode}"
     return found
 
 
