@@ -44,7 +44,8 @@ describe("applyFailureNote", () => {
 
   it("성공·다른 동작·사유 없음은 null", () => {
     expect(applyFailureNote(status({ ok: true }))).toBeNull();
-    expect(applyFailureNote(status({ last_action: "preview" }))).toBeNull();
+    // 카드 WT-true-reasons — 미리보기 실패는 이제 사유를 보인다(BeatGrid.trueReasons.test.tsx). 다른 동작만 null.
+    expect(applyFailureNote(status({ last_action: "drawer" }))).toBeNull();
     expect(applyFailureNote(status({ reason: null }))).toBeNull();
     expect(applyFailureNote(null)).toBeNull();
   });

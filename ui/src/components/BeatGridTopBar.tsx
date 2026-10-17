@@ -144,6 +144,8 @@ export interface BeatGridTopBarProps {
   onDrawerToggle?: () => void;
   /** 「자동 배치 제안」 — 서버에 초안을 한 번 요청한다(보류만 만든다). 없으면 버튼을 그리지 않는다. */
   onDraftPropose?: () => void;
+  /** 카드 WT-true-reasons — 자동 배치 답을 기다리는 중이면 버튼을 「만드는 중…」으로 잠근다(중복 요청은 busy 로 거절된다). */
+  draftProposeWaiting?: boolean;
   /** 카드 t570 — 플레이 묶음(REQ-LDBEAT-024(a)). 생략하면 기존과 바이트
    * 동일. */
   playback?: BeatGridTopBarPlaybackProps | null;
@@ -247,6 +249,7 @@ timecodeNumber = null,
   pendingApplyCount,
   onDrawerToggle,
   onDraftPropose,
+  draftProposeWaiting = false,
   playback = null,
   flow = null,
 }: BeatGridTopBarProps) {
@@ -462,9 +465,10 @@ timecodeNumber = null,
             type="button"
             className="tbtn"
             title="자동 배치 제안 — 초안을 보류로 만든다. 「적용」 전까지 격자는 그대로다"
+            disabled={draftProposeWaiting}
             onClick={() => onDraftPropose()}
           >
-            자동 배치
+            {draftProposeWaiting ? "자동 배치 만드는 중…" : "자동 배치"}
           </button>
         )}
         <button

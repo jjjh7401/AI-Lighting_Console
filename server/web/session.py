@@ -3846,6 +3846,46 @@ def summarize_outcomes(status: str, views: Sequence[dict]) -> str:
 _DEFAULT_TRACK_NAME = re.compile(r"Track \d+")  # 콘솔이 새 트랙에 붙이는 기본 이름
 
 
+def _console_send_refusal(payload: object) -> str:
+    """``run_commands`` 실패 결과(JSON 문자열 또는 같은 모양의 사전)를 감독이 읽을 한 줄로.
+
+    카드 WT-true-reasons — 미리보기·「콘솔 같이」는 실패를 참/거짓으로만 돌려받아, 승인
+    거절·게이트 차단·콘솔 실패가 한 문구로 뭉개졌다. 결과에 이미 있는 갈래(``gate_status``)와
+    명령별 사유를 그대로 옮긴다. 승인 창의 거절과 시간 초과는 게이트가 같은 「rejected」로
+    돌려주므로 둘을 함께 말한다(가르지 못하는 것을 지어내지 않는다)."""
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except ValueError:
+            detail = payload.strip()[:300]
+            return (
+                f"콘솔 명령이 실행되지 않았습니다: {detail}"
+                if detail
+                else "콘솔 명령이 실행되지 않았습니다."
+            )
+    if not isinstance(payload, Mapping):
+        return "콘솔 명령이 실행되지 않았습니다."
+    rows = [row for row in payload.get("commands") or () if isinstance(row, Mapping)]
+    status = payload.get("gate_status")
+    if status == "rejected":
+        return "승인 카드가 거절됐거나 시간 안에 승인되지 않아 아무것도 보내지 않았습니다."
+    if status is not None:
+        why = str(payload.get("notice") or "").strip() or next(
+            ("; ".join(row["reasons"]) for row in rows if row.get("reasons")), str(status)
+        )
+        return f"안전 게이트가 막아 아무것도 보내지 않았습니다({status}): {why}"
+    failed = [row for row in rows if row.get("status") == "failed"]
+    if failed:
+        listed = ", ".join(
+            f"{row.get('command')} ({row.get('detail')})"
+            if row.get("detail")
+            else str(row.get("command"))
+            for row in failed
+        )
+        return f"콘솔이 명령을 실행하지 못했습니다: {listed}"
+    return "콘솔 명령이 실행되지 않았습니다."
+
+
 def _beat_grid_stop_card_reason(timecode_number: int | None, sequences: Sequence[int]) -> str:
     """끄기 승인 카드의 머리 문구 — 무엇을 끄는지와 쇼 데이터를 바꾸지 않는다는 것을 밝힌다.
     2차 전체 실행: 「블랙아웃/오프」 경고만 보이는 `Off Sequence 54…` 8줄 카드를 감독이
@@ -9978,6 +10018,9 @@ class ChatSession:
             commands=[],
         )
         self._send(event)
+        # 카드 WT-true-reasons — 채팅은 전체화면 뒤에 가려진다. 자동 배치·초안 적용·제안·
+        # 프리셋 계획의 거절이 전체화면에서 무반응으로 보였으므로 상태 줄에도 같은 사유를 싣는다.
+        self._beat_grid_send_status(last_action="edit", ok=False, reason=message)
         return event
 
     def _beat_grid_view(self, timeline: Mapping[str, object]) -> dict:
@@ -11815,6 +11858,12 @@ class ChatSession:
                 # 카드 t615 — 보낼 줄이 없는 반영은 승인 카드를 올리지 못한다(게이트는 줄이 있어야
                 # 받는다). 그래서 보류된 칸의 사유를 거절 사유에 실어 운영자가 보게 한다.
                 reason = result.blocked_reason or "콘솔에 반영할 내용이 없습니다."
+                # 카드 WT-true-reasons — 트랙째 막힌 사유를 싣는다(새 곡 점검: 트랙 9개 초과가
+                # 「반영할 내용이 없습니다」로만 보였다).
+                if result.blocked_reason is None and result.blocked_track_notices:
+                    reason = "콘솔에 반영할 내용이 없습니다 — " + " · ".join(
+                        result.blocked_track_notices
+                    )
                 if result.blocked_reason is None and held_presets:
                     listed = ", ".join(
                         f"{entry['group_name']} {entry['bar']}마디 {entry['field_label']} "
@@ -11935,6 +11984,8 @@ class ChatSession:
                     f"{name} {bar}마디({reason})" for name, bar, reason in preserved_cells
                 )
                 risk_reason += f" · 막혀서 그대로 둔 칸 {len(preserved_cells)}개: {listed}"
+            for notice in result.blocked_track_notices:
+                risk_reason += f" · {notice}"
             if out_of_order:
                 risk_reason += f" · 번호 순서와 시간 순서가 다른 큐 {out_of_order}개"
             if result.rebuilt_sequences:
@@ -12204,7 +12255,11 @@ class ChatSession:
                 last_action="apply",
                 ok=True,
                 blocked_cells=result.blocked_cells,
-                extra_notices=[*result.mib_notes, *result.unsent_notices],
+                extra_notices=[
+                    *result.blocked_track_notices,
+                    *result.mib_notes,
+                    *result.unsent_notices,
+                ],
                 approval_vs_sent={
                     "sha256": batch.sha256,
                     "cell_count": batch.cell_count,
@@ -12240,11 +12295,14 @@ class ChatSession:
 
     def _beat_grid_dispatch_preview(
         self, tool_id: str, commands: tuple[str, ...], *, reason: str | None = None
-    ) -> bool:
+    ) -> str | None:
         """미리보기(Goto/Off) 공용 송신 — 세션 시작 1회 승인(결정⑤,
         REQ-LDBEAT-012(b))만 쓰기 승인과 **독립**으로 거친다. 승인이
         필요한 호출인데 거절되면 세션 승인 상태를 건드리지 않는다(다음
         호출이 다시 승인을 묻는다).
+
+        보냈으면 ``None``, 못 보냈으면 그 사유(``_console_send_refusal``)를 돌려준다 —
+        카드 WT-true-reasons: 참/거짓만 돌려줘 모든 실패가 「감독이 거절」로 보였다.
 
         ``reason`` 은 승인 카드 머리 문구다(없으면 미리보기 기본 문구) — 끄기 카드가
         무엇을 끄는지 밝혀 감독이 거부처럼 읽지 않게 한다(2차 전체 실행 G-22 메모).
@@ -12270,10 +12328,10 @@ class ChatSession:
         finally:
             reset_session_key(token)
         if executed.result.is_error:
-            return False
+            return _console_send_refusal(executed.result.content)
         if needs_approval:
             self._preview_approval.approve()
-        return True
+        return None
 
     def beat_grid_preview(self, bar: int) -> dict:
         """상단 바 「▶ 이 마디 콘솔에서 보기」 — 가장 최근 반영에서 이
@@ -12290,9 +12348,12 @@ class ChatSession:
                 else f"{bar}마디를 담은 큐가 있는 트랙이 없습니다."
             )
             return self._beat_grid_send_status(last_action="preview", ok=False, reason=reason)
-        if not self._beat_grid_dispatch_preview(f"beat-grid-preview-{bar}", commands):
+        refusal = self._beat_grid_dispatch_preview(f"beat-grid-preview-{bar}", commands)
+        if refusal is not None:
             return self._beat_grid_send_status(
-                last_action="preview", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
+                last_action="preview",
+                ok=False,
+                reason=f"미리보기 명령이 실행되지 않았습니다 — {refusal}",
             )
         return self._beat_grid_send_status(last_action="preview", ok=True)
 
@@ -12321,13 +12382,16 @@ class ChatSession:
                 ),
             )
         commands = tuple(f"Off Sequence {number}" for number in sequences)
-        if not self._beat_grid_dispatch_preview(
+        refusal = self._beat_grid_dispatch_preview(
             "beat-grid-preview-off",
             commands,
             reason=_beat_grid_stop_card_reason(None, sequences),
-        ):
+        )
+        if refusal is not None:
             return self._beat_grid_send_status(
-                last_action="preview_off", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
+                last_action="preview_off",
+                ok=False,
+                reason=f"끄기 명령이 실행되지 않았습니다 — {refusal}",
             )
         return self._beat_grid_send_status(
             last_action="preview_off",
@@ -12422,19 +12486,19 @@ class ChatSession:
         # `approval_m2a_play_b2.txt`)대로 타임코드를 끈 다음 그 트랙의 시퀀스를 하나씩 끈다.
         commands += tuple(f"Off Sequence {number}" for number in sequences)
         if self._preview_approval.is_approved:
-            sent = self._beat_grid_send_transport_preapproved(commands)
+            refusal = self._beat_grid_send_transport_preapproved(commands)
         else:
-            sent = self._beat_grid_dispatch_preview(
+            refusal = self._beat_grid_dispatch_preview(
                 f"beat-grid-{action}",
                 commands,
                 reason=(_beat_grid_stop_card_reason(timecode_number, sequences) if stop else None),
             )
-        if not sent:
+        if refusal is not None:
             return self._beat_grid_send_status(
                 last_action=action,
                 ok=False,
                 reason=(
-                    "콘솔 타임코드 명령이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답)."
+                    f"콘솔 타임코드 명령이 실행되지 않았습니다 — {refusal}"
                     + (
                         f" 콘솔 Timecode {timecode_number}이(가) 아직 돌고 있을 수 있어요 — "
                         "콘솔 화면을 확인해 주세요."
@@ -12501,13 +12565,16 @@ class ChatSession:
                 return _timecode_cursor_seconds(read.get("v"))
         return None
 
-    def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> bool:
+    def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> str | None:
         """전체 실행 J-09 — 이 세션에서 미리보기·재생 승인을 이미 받았으면(REQ-LDBEAT-012(b)
         「세션 시작 1회」) 앱 소유 타임코드의 ``Top/Go/Off Timecode N`` 을 다시 묻지 않고 보낸다.
 
         게이트는 그대로 거친다(``execute_preapproved``: 문법·분류·잠금·감사). 일반 승인 창만 다시
         묻지 않는다 — 세션 승인 기록이 그 자리의 승인 증거다. 재생 명령은 쇼 데이터를 바꾸지
-        않으므로 백업 규칙 ③ 을 건너뛴다(카드 없는 SaveShow 를 내지 않는다)."""
+        않으므로 백업 규칙 ③ 을 건너뛴다(카드 없는 SaveShow 를 내지 않는다).
+
+        보냈으면 ``None``, 못 보냈으면 사유다(``_beat_grid_dispatch_preview`` 와 같은 문구).
+        첫 실패에서 멈춘다(뒤 줄은 보내지 않는다 — 고치기 전 ``all(...)`` 과 같다)."""
         token = bind_session_key(self._session_key)
         try:
             decision = self._gate.execute_preapproved(
@@ -12519,8 +12586,27 @@ class ChatSession:
                 showfile_backup=False,
             )
             if not decision.cleared:
-                return False
-            return all(self._gate.execution_port.execute(command).ok for command in commands)
+                return _console_send_refusal(
+                    {
+                        "gate_status": decision.status,
+                        "notice": decision.notice,
+                        "commands": [
+                            {"command": d.command, "status": d.status, "reasons": list(d.reasons)}
+                            for d in decision.commands
+                        ],
+                    }
+                )
+            for command in commands:
+                outcome = self._gate.execution_port.execute(command)
+                if not outcome.ok:
+                    return _console_send_refusal(
+                        {
+                            "commands": [
+                                {"command": command, "status": "failed", "detail": outcome.detail}
+                            ]
+                        }
+                    )
+            return None
         finally:
             reset_session_key(token)
 
@@ -12557,6 +12643,15 @@ class ChatSession:
                 commands=[],
             )
             self._send(event)
+            # 카드 WT-true-reasons — 전체화면에서도 「제안 없음」과 그 까닭이 보이게 한다.
+            self._beat_grid_send_status(
+                last_action="edit",
+                ok=False,
+                reason=(
+                    f"{target} {bar}마디에 대한 AI 제안이 없습니다 — 마디 지도가 없거나 자동 배치 "
+                    "규칙상 이 칸을 바꿀 이유가 없습니다."
+                ),
+            )
             return event
         event = beat_grid_suggestion_event(
             suggestion_id=suggestion.suggestion_id,
@@ -12633,9 +12728,8 @@ class ChatSession:
                 "남겨야 할 감독 칸이 초안 자리를 모두 차지했습니다. "
                 f"({' · '.join(report)})"
             )
-            event = self._beat_grid_rejection(reason)
-            self._beat_grid_send_status(last_action="edit", ok=False, reason=reason)
-            return event
+            # 거절 함수가 상태 이벤트도 실패로 보낸다(카드 WT-true-reasons).
+            return self._beat_grid_rejection(reason)
         self._draft_history.record(timeline)
         updated_timeline = dict(timeline)
         updated_timeline["beat_grid"] = updated_grid

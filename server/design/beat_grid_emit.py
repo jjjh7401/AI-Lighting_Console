@@ -338,6 +338,22 @@ class BeatGridEmitResult:
         )
 
     @property
+    def blocked_track_notices(self) -> tuple[str, ...]:
+        """트랙째 막힌 사유 — 같은 사유끼리 묶어 한 줄씩. 막힌 트랙이 없으면 빈 튜플이다.
+
+        카드 WT-true-reasons — 트랙째 막힘(``cues=()``)은 ``blocked_cells`` 에 안 잡히고
+        묶음 사유(``blocked_reason``)도 비어, 반영 결과가 「콘솔에 반영할 내용이 없습니다」만
+        남겼다(새 곡 점검: 타임코드 5에 트랙 9개)."""
+        by_reason: dict[str, list[str]] = {}
+        for track in self.tracks:
+            if track.blocked_reason is not None:
+                by_reason.setdefault(track.blocked_reason, []).append(track.group_name)
+        return tuple(
+            f"보내지 않은 트랙 {len(names)}개({', '.join(names)}): {reason}"
+            for reason, names in by_reason.items()
+        )
+
+    @property
     def unsent_cells(self) -> tuple[tuple[str, int], ...]:
         """(트랙 이름, 마디) — 구조화 값이 비어 있어 사유 없이 줄을 내지 않은 칸.
 
