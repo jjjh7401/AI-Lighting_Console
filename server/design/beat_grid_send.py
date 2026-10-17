@@ -665,14 +665,13 @@ def apply_beat_grid_ownership_reuse(
     * 소유한 트랙에서 **기록된 마디**의 ``Store Sequence S Cue N`` 줄에만 ``/Overwrite``를
       붙인다(그 큐는 콘솔에 이미 있다). 새 마디는 새 번호라 그대로 둔다.
     * 소유한 트랙에서, 기록된 마디 중 **이번 초안에서 정말 비워진** 칸
-      (격자에서 빠졌거나 낼 내용이 없음)의 번호마다 ``Delete Cue <n>
-      Sequence <s>``를 추가한다. **막힌 칸**(``blocked_reason`` 있음)은
-      지우지 않는다 — 막혔다는 건 이번에 그 칸을 확인하지 못했다는 뜻이지
-      비웠다는 뜻이 아니다(카드 t572 리드 결정, 콘솔 내용은 되돌릴 수
-      없다). 레코드에 없던 트랙(새 트랙)에는 삭제를 내지 않는다."""
+      (격자에서 빠졌거나 낼 내용이 없음)의 옛 큐는 지우지 않고 ``kept_old_cues`` 에
+      적는다(재실행 4 — ``Delete Cue`` 는 실콘솔이 거절했다). **막힌 칸**(``blocked_reason``
+      있음)은 이번에 확인하지 못한 칸이라 거기에도 넣지 않는다(카드 t572 리드 결정)."""
     new_timecode_setup = () if owned_timecode is not None else result.timecode_setup_commands
 
     new_tracks = []
+    kept_old_cues: list[tuple[str, int, int]] = []
     for track in result.tracks:
         owned_number = owned_sequences.get(track.group_name)
         is_owned = owned_number is not None and owned_number == track.sequence_number
@@ -707,27 +706,16 @@ def apply_beat_grid_ownership_reuse(
             for bar, number in recorded.items()
             if bar not in emitted_bars and bar not in blocked_bars
         )
-        # @MX:WARN: [AUTO] ``Delete Cue <n> Sequence <s>``도 ``/Overwrite``와
-        #   같은 처지다 — 이 저장소 어디에도 실기로 확인된 선례가 없다
-        #   (grep 결과 0건, 2026-10-11). 게이트가 위험으로 분류해도 괜찮다
-        #   (배차서 지시) — 한 번들 안의 다른 쓰기와 똑같이 승인을 탄다.
-        # @MX:REASON: 가설 문법. 다음 실기 접속에서 먼저 확인하고, 거절되면
-        #   (예: 번호 띄어쓰기·대상 지정 방식) 이 자리만 고친다 — 소유권
-        #   판정·레코드 쪽은 건드릴 필요가 없다(순수하게 명령 문자열 문제).
-        delete_cues = tuple(
-            CueEmitResult(
-                bar=bar,
-                commands=(f"Delete Cue {number} Sequence {track.sequence_number}",),
-                blocked_reason=None,
-                cue_number=None,
-            )
-            for bar, number in emptied
-        )
+        # @MX:NOTE: [AUTO] 재실행 4 — ``Delete Cue <n> Sequence <s>`` 는 실콘솔이 「Not allowed」로
+        #   거절했다(t608 v4 시퀀스 700, rerun4 시퀀스 63). 실기로 통과한 큐 삭제 문법이
+        #   이 저장소에 없으므로(t618) 비워진 칸의 옛 큐는 지우지 않고 콘솔에 남기고,
+        #   승인 카드에 그 수를 적는다.
+        kept_old_cues.extend((track.group_name, bar, number) for bar, number in emptied)
         new_tracks.append(
             replace(
                 track,
                 assign_timecode_commands=assign_timecode_commands,
-                cues=cues + delete_cues,
+                cues=cues,
             )
         )
 
@@ -737,6 +725,7 @@ def apply_beat_grid_ownership_reuse(
         tracks=tuple(new_tracks),
         timecode_setup_commands=new_timecode_setup,
         timecode_event_commands=new_events,
+        kept_old_cues=tuple(kept_old_cues),
     )
 
 
@@ -829,6 +818,11 @@ def beat_grid_reapply_summary(
             if cue.blocked_reason is not None and cue.bar in recorded:
                 numbers[cue.bar] = recorded[cue.bar]
                 preserved.append((track.group_name, cue.bar, cue.blocked_reason))
+        # 재실행 4 — 지우지 않고 남긴 옛 큐도 콘솔에 있으므로 기록에 남긴다. 빼면 다음 반영이 그
+        # 번호를 새 마디에 /Overwrite 없이 주어 콘솔이 거절한다(t616).
+        for group_name, bar, number in result.kept_old_cues:
+            if group_name == track.group_name:
+                numbers.setdefault(bar, number)
         next_record[track.group_name] = numbers
         latest_bar = -1
         for _number, bar in sorted((number, bar) for bar, number in numbers.items()):

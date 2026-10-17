@@ -227,7 +227,7 @@ class TestReapplyFlows:
             c.startswith(f"Set Sequence {FIRST_SEQUENCE_NUMBER} Property 'Name' ") for c in executed
         )
 
-    def test_reapply_removing_a_cell_emits_delete_cue(self, tmp_path) -> None:
+    def test_reapply_removing_a_cell_keeps_the_old_cue(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(2, "2.2")])
         session, console, approval, _audit = _new_session(
@@ -245,9 +245,12 @@ class TestReapplyFlows:
 
         second = session.beat_grid_apply()
         assert second["ok"] is True
-        assert any(c == f"Delete Cue 2 Sequence {FIRST_SEQUENCE_NUMBER}" for c in console.executed)
+        # 재실행 4 — 실콘솔이 Delete Cue 를 거절하므로 옛 큐는 남기고, 기록에도 남긴다.
+        assert not any(c.startswith("Delete Cue") for c in console.executed)
+        reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
+        assert any("옛 큐 1개는 지우지 않고" in r for r in reasons)
         updated_record = store.beat_grid_allocation(_song_key())
-        assert updated_record["tracks"]["BACK"]["cues"] == {"1": 1}
+        assert updated_record["tracks"]["BACK"]["cues"] == {"1": 1, "2": 2}
 
     def test_track_added_between_applies_gets_a_fresh_number(self, tmp_path) -> None:
         store = SongTimelineStore()
@@ -595,7 +598,7 @@ class TestBlockedCellsArePreserved:
         reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
         assert any("막혀서 그대로 둔 칸 1개" in r and "BACK 2마디" in r for r in reasons)
 
-    def test_a_really_emptied_cell_is_deleted(self, tmp_path) -> None:
+    def test_a_really_emptied_cell_is_kept_not_deleted(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _three_cell_timeline(_ALL_PASS)
         session, console, _approval, _audit = _new_session(tmp_path, store=store)
@@ -609,10 +612,11 @@ class TestBlockedCellsArePreserved:
         second = session.beat_grid_apply()
         assert second["ok"] is True
         seq = FIRST_SEQUENCE_NUMBER
-        assert f"Delete Cue 2 Sequence {seq}" in console.executed
+        assert not any(c.startswith("Delete Cue") for c in console.executed)
         assert f"Store Sequence {seq} Cue 3 /Overwrite" in console.executed
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
+            "2": 2,
             "3": 3,
         }
 

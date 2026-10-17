@@ -11336,16 +11336,17 @@ class ChatSession:
         """``result.commands``(에미터가 실제로 낼 전체 줄)와 **바이트
         동일한 순서**로 재구성되는 "칸" 목록 — ``build_write_approval_
         batch``가 이걸 이어 붙이면 ``result.commands``와 정확히 같다.
-        타임코드 풀 셋업 → (트랙마다: 그 트랙의 칸들 →
-        타임코드 배정)의 순서를 ``BeatGridEmitResult``/``TrackEmitResult``
-        의 ``commands`` 프로퍼티 본문 그대로 따른다."""
+        모든 트랙의 칸들 → 타임코드 풀 셋업 → 트랙마다 타임코드 배정 → 이벤트의 순서를
+        ``BeatGridEmitResult.commands`` 프로퍼티 본문 그대로 따른다."""
         cells: list[tuple[str, ...]] = []
-        if result.timecode_setup_commands:
-            cells.append(result.timecode_setup_commands)
         for track in result.tracks:
             for cue in track.cues:
                 if cue.commands:
                     cells.append(cue.commands)
+        # 재실행 4 — 타임코드는 큐를 다 쓴 뒤에 지우고 다시 만든다(``BeatGridEmitResult.commands``).
+        if result.timecode_setup_commands:
+            cells.append(result.timecode_setup_commands)
+        for track in result.tracks:
             if track.assign_timecode_commands:
                 cells.append(track.assign_timecode_commands)
         if result.timecode_event_commands:
@@ -11653,6 +11654,11 @@ class ChatSession:
                 risk_reason += f" · 막혀서 그대로 둔 칸 {len(preserved_cells)}개: {listed}"
             if out_of_order:
                 risk_reason += f" · 번호 순서와 시간 순서가 다른 큐 {out_of_order}개"
+            if result.kept_old_cues:
+                risk_reason += (
+                    f" · 격자에서 빠진 옛 큐 {len(result.kept_old_cues)}개는 지우지 않고 "
+                    "콘솔에 남깁니다(큐 삭제 문법 미검증)"
+                )
             # 카드 t576 — 칸은 나가지만 그 안의 전환 칸 일부(딜레이·위치만 늦게·MIB)를
             # 보내지 않았다면, 감독이 승인하기 전에 그 사실과 이유를 본다.
             unsent_entry = [
