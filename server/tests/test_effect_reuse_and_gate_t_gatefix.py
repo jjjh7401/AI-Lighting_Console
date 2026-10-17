@@ -127,7 +127,8 @@ class TestEffectPresetsAreReused:
         for key in ("preset_labels", "preset_movements"):
             again[key] = copy.deepcopy(approved[key])
         used = {p.slot for p in stored}
-        pool = (21, {**_EFFECT[1], **{int(s.split(".")[1]): "WAVE" for s in used}})
+        # 콘솔은 저장 줄의 이름을 그대로 단다(WT-preset-reuse-cross-song: 콘솔 이름도 본다).
+        pool = (21, {**_EFFECT[1], **{int(p.slot.split(".")[1]): p.name for p in stored}})
         second = _plan(again, effect_pool=pool)
         effects = [p for p in saved_presets(second) if p.kind == "effect"]
         assert {p.slot for p in effects} == used
