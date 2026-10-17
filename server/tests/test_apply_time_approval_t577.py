@@ -221,7 +221,7 @@ class TestApprovalCardEnumeratesPendingAndRecordsEvidence:
         assert len(harness["approval"].requests) == 1
         risk_reasons = harness["approval"].requests[0].items[0].risk_reasons
         joined = " ".join(risk_reasons)
-        assert "새로 만드는 프리셋 1개" in joined
+        assert "콘솔에 이미 있는 프리셋을 쓰는 칸 1개(새로 저장하지 않음)" in joined
         assert "BACK" in joined
         assert "1마디" in joined
         assert "4.21" in joined

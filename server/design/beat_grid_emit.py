@@ -52,7 +52,7 @@ REQ-LDBEAT-001/003/011~013).
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -271,6 +271,8 @@ class CueEmitResult:
     #: 이 큐의 TrigTime(곡 기준 절대 ms) — 타임코드 트랙의 ``Go+`` 이벤트 시각이다. 큐를
     #: 저장하지 않는 칸은 ``None``.
     trigger_ms: int | None = None
+    #: 전체 실행 C-11 — 격자 칸이 아니라 반영 준비(MIB)가 끼운 어둠 속 미리 이동 큐다.
+    premove: bool = False
 
 
 @dataclass(frozen=True)
@@ -820,6 +822,8 @@ def emit_beat_grid_write_bundle(
                 dimmer_attribute_reasons=dimmer_attribute_reasons,
                 sequence_name_command=name_command if name_pending else None,
             )
+            if cue.get("mib_premove") is True:
+                result = replace(result, premove=True)
             if result.commands:
                 name_pending = False
             if result.commands and recorded_number is None:

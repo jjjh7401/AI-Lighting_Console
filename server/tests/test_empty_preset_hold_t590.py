@@ -124,7 +124,7 @@ class TestExistingSlotPassesThrough:
         )
         assert status["ok"] is True
         risk = _risk_text(approval)
-        assert "새로 만드는 프리셋 1개" in risk
+        assert "콘솔에 이미 있는 프리셋을 쓰는 칸 1개(새로 저장하지 않음)" in risk
         assert _HOLD_LABEL not in risk
         approved = _cue_of(store.latest["beat_grid"], "BACK", 1)
         assert check_evidence_approval(approved) is None

@@ -95,7 +95,7 @@ def test_apply_puts_the_premove_in_the_dark_and_the_lit_cue_keeps_its_position(t
         _cue(14, position_preset_no="1.1", label="", brightness=DIMMER_ON),
         _cue(19, position_preset_no="1.2", label="FOH", brightness=DIMMER_ON),
     ]
-    session, console, _approval, _audit = _new_session(tmp_path, store=_store_with_cues(cues))
+    session, console, approval, _audit = _new_session(tmp_path, store=_store_with_cues(cues))
 
     event = session.beat_grid_apply()
 
@@ -104,6 +104,11 @@ def test_apply_puts_the_premove_in_the_dark_and_the_lit_cue_keeps_its_position(t
     # 사전이동 큐(15마디)와 켜지는 칸(19마디)이 각각 위치 명령을 한 줄씩 낸다.
     position_lines = [line for line in console.executed if line.endswith("At Preset 1.2")]
     assert len(position_lines) == 2
+    # 전체 실행 C-11 — 카드가 격자 칸 2개와 큐 3개의 차이(미리 이동 큐 1개)를 적는다.
+    reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
+    assert any(
+        "큐 3개(격자 칸 2개 중 보내는 칸 2개 + 어둠 속 미리 이동 큐 1개" in r for r in reasons
+    ), reasons
 
 
 def test_apply_shows_the_reason_when_the_dark_stretch_is_too_short(tmp_path):

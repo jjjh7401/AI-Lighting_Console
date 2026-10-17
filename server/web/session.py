@@ -3355,16 +3355,33 @@ def _preset_slot_list(slots: Sequence[int], pool_no: int = POSITION_PRESET_POOL)
 
 
 def _beat_grid_target_summary(
-    result: object, timecode_number: int, sequence_numbers: Mapping[str, int]
+    result: object,
+    timecode_number: int,
+    sequence_numbers: Mapping[str, int],
+    *,
+    grid_cell_count: int | None = None,
 ) -> str:
     """카드 apply-safety(D17) — 승인 카드 첫 줄: 「대상: Timecode N 'LDBEAT Timecode N' ·
-    시퀀스 a–b · 큐 K개」. 시퀀스 범위는 이번에 큐를 내는 트랙의 번호, 큐 수는 낸 큐 줄 수."""
+    시퀀스 a–b · 큐 K개」. 시퀀스 범위는 이번에 큐를 내는 트랙의 번호, 큐 수는 낸 큐 줄 수.
+
+    전체 실행 C-11 — ``grid_cell_count`` 가 있으면 격자 칸 수와 큐 수의 차이를 같은 줄에서
+    설명한다(보낸 칸 · 어둠 속 미리 이동 큐 · 보류 칸 · 보낼 내용 없는 칸). 전부 실제로 보내는
+    결과에서 센다."""
     used: list[int] = []
     cue_count = 0
+    premove_count = 0
+    held_count = 0
     for track in getattr(result, "tracks", ()):
         if getattr(track, "blocked_reason", None) is not None:
+            held_count += len(track.cues)
             continue
         cues = [c for c in track.cues if c.cue_number is not None and c.commands]
+        premove_count += sum(1 for c in cues if getattr(c, "premove", False))
+        held_count += sum(
+            1
+            for c in track.cues
+            if c.blocked_reason is not None and not getattr(c, "premove", False)
+        )
         if cues:
             used.append(track.sequence_number)
             cue_count += len(cues)
@@ -3372,9 +3389,34 @@ def _beat_grid_target_summary(
         used = list(sequence_numbers.values())
     low, high = (min(used), max(used)) if used else (0, 0)
     span = f"{low}" if low == high else f"{low}–{high}"
-    return (
+    summary = (
         f"대상: Timecode {timecode_number} '{beat_grid_timecode_label(timecode_number)}' · "
         f"시퀀스 {span} · 큐 {cue_count}개"
+    )
+    if grid_cell_count is None:
+        return summary
+    sent_cells = cue_count - premove_count
+    empty_count = max(grid_cell_count - sent_cells - held_count, 0)
+    return summary + (
+        f"(격자 칸 {grid_cell_count}개 중 보내는 칸 {sent_cells}개 + 어둠 속 미리 이동 큐 "
+        f"{premove_count}개 · 보류 칸 {held_count}개 · 보낼 내용 없는 칸 {empty_count}개)"
+    )
+
+
+def _beat_grid_cell_breakdown(
+    cells: Sequence[tuple[str, ...]],
+    *,
+    creation_count: int,
+    cue_count: int,
+    result: object,
+) -> str:
+    """전체 실행 C-11 — 승인 묶음의 칸 수가 무엇으로 이루어졌는지(카드가 보여 주는 「N칸」)."""
+    setup = 1 if getattr(result, "timecode_setup_commands", ()) else 0
+    assigns = sum(1 for track in getattr(result, "tracks", ()) if track.assign_timecode_commands)
+    events = 1 if getattr(result, "timecode_event_commands", ()) else 0
+    return (
+        f"승인 묶음 {len(cells)}칸 = 큐 {cue_count} + 새 프리셋 만들기 {creation_count} + "
+        f"타임코드 준비 {setup} + 트랙 연결 {assigns} + 재생 이벤트 {events}"
     )
 
 
@@ -11689,8 +11731,23 @@ class ChatSession:
             risk_reason = "박자 격자 콘솔 반영 — 구간 단위 1회 승인(REQ-LDBEAT-012(a))"
             # 카드 apply-safety(D17) — 836줄이 접혀 있어도 대상 타임코드·시퀀스 범위·큐 수를
             # 카드 맨 앞 줄에서 바로 본다.
+            grid_cell_count = sum(
+                len(track.get("cues") or []) for track in tracks if isinstance(track, Mapping)
+            )
+            emitted_cue_count = sum(
+                1 for track in result.tracks for cue in track.cues if cue.commands
+            )
             risk_reason = (
-                _beat_grid_target_summary(result, timecode_number, sequence_numbers)
+                _beat_grid_target_summary(
+                    result, timecode_number, sequence_numbers, grid_cell_count=grid_cell_count
+                )
+                + " · "
+                + _beat_grid_cell_breakdown(
+                    cells,
+                    creation_count=len(position_plan.creations),
+                    cue_count=emitted_cue_count,
+                    result=result,
+                )
                 + " · "
                 + risk_reason
             )
@@ -11778,9 +11835,25 @@ class ChatSession:
                 description = app_preset_description(grid, str(entry["value"])) or ""
                 return f"{base} '{label}' — {description}"
 
-            if pending_before:
-                listed = ", ".join(_pending_entry_text(entry) for entry in pending_before)
-                risk_reason += f" · 새로 만드는 프리셋 {len(pending_before)}개: {listed}"
+            # 전체 실행 F-05 — 이 목록은 프리셋 번호를 그 칸에서 쓰도록 승인을 기다리는 칸이다.
+            # 저장 줄은 「새로 만드는 위치/효과/색 프리셋」(아래)에서만 나온다. 「새로 만드는
+            # 프리셋 N개」라고 적으면 Store Preset 0줄과 어긋나 보였으므로, 이번에 만드는
+            # 번호를 쓰는 칸과 콘솔에 이미 있는 번호를 쓰는 칸을 나눠 적는다.
+            created_here = [
+                entry for entry in pending_before if str(entry["value"]) in position_plan.creations
+            ]
+            existing = [entry for entry in pending_before if entry not in created_here]
+            if created_here:
+                listed = ", ".join(_pending_entry_text(entry) for entry in created_here)
+                risk_reason += (
+                    f" · 이번에 새로 만드는 프리셋을 쓰는 칸 {len(created_here)}개: {listed}"
+                )
+            if existing:
+                listed = ", ".join(_pending_entry_text(entry) for entry in existing)
+                risk_reason += (
+                    f" · 콘솔에 이미 있는 프리셋을 쓰는 칸 {len(existing)}개"
+                    f"(새로 저장하지 않음): {listed}"
+                )
             position_creations = {
                 number: lines
                 for number, lines in position_plan.creations.items()
