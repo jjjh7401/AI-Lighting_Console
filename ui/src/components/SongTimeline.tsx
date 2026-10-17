@@ -12,6 +12,7 @@ import type {
 import { cueLabel, EMPTY_CELL } from "./CueSheetTimeline";
 import { PlanCueRequestGenerator } from "./PlanCueRequestGenerator";
 import { sectionPosition } from "./runbookM7";
+import { sectionDisplayLabel } from "./songOverviewModel";
 
 /** 머리말의 시퀀스 번호 — 새 분석 작업본은 곡 단위 시퀀스가 없다(줄마다 따로다). 없으면 빈 칸(재실행 2 N3). */
 function sequenceText(number: number | null | undefined): string {
@@ -116,8 +117,8 @@ export function sectionCardTitle(section: SongTimelineSection, status: SongTimel
   // 1차 전체 실행 B-09 — 큐 번호가 없는 옛 분석 작업본(값 null)은 구간 순서로 대신한다.
   const cue = (section.cue_number as number | null | undefined) ?? section.index;
   if (status === "verified") return `CUE ${cue}`;
-  if (status === "stored") return `CUE ${cue} · ${section.label}`;
-  return `PLAN CUE ${cue} · ${section.label}`;
+  if (status === "stored") return `CUE ${cue} · ${sectionDisplayLabel(section)}`;
+  return `PLAN CUE ${cue} · ${sectionDisplayLabel(section)}`;
 }
 
 /** PLAN cues (draft/requires_requery/approved) exist only in the design;
@@ -226,7 +227,7 @@ function TimelineSectionCard({
     <article
       className={`song-timeline-section d-level-${section.d_level}${onConsole ? "" : " is-plan-cue"}${!onConsole && onGeneratorSend ? " has-generator" : ""}${current ? " is-current" : ""}`}
       style={{ flexGrow: width, flexBasis: 0 }}
-      aria-label={`${formatTimestamp(section.start_ms)} ${section.label}, D${section.d_level}`}
+      aria-label={`${formatTimestamp(section.start_ms)} ${sectionDisplayLabel(section)}, D${section.d_level}`}
     >
       <div className="song-timeline-section-head">
         <span>{formatTimestamp(section.start_ms)}</span>

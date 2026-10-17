@@ -11,7 +11,11 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 
-from server.design.analysis_timeline import timeline_meter_from_bar_map
+from server.audio.bar_map_store import validate_bar_map
+from server.design.analysis_timeline import (
+    section_kinds_from_bar_map,
+    timeline_meter_from_bar_map,
+)
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_cell_split import attach_cell_split_to_cues
 from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
@@ -22,6 +26,7 @@ __all__ = [
     "accent_bars_from_bar_map",
     "attach_beat_grid_ui_values",
     "attach_console_preset_names",
+    "attach_section_kinds",
     "format_fid_ranges",
     "section_kind",
     "track_sub_info",
@@ -69,6 +74,87 @@ _KIND_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 _STANDALONE_END = re.compile(r"\bend\b")
+
+#: 화면 구간 종류 -> 감독이 읽는 이름(구간 이름 앞에 붙여 보인다).
+SECTION_KIND_NAMES: dict[str, str] = {
+    "intro": "인트로",
+    "verse": "벌스",
+    "pre-chorus": "프리",
+    "chorus": "후렴",
+    "final-chorus": "마지막 후렴",
+    "bridge": "브리지",
+    "drop": "드롭",
+    "break": "브레이크",
+    "outro": "아웃트로",
+}
+
+
+def _bar_at_ms(bars: Sequence[Mapping[str, object]], start_ms: int) -> int:
+    """``start_ms`` 를 품은 마디 — 시작 시각이 ``start_ms`` 이하인 마지막 마디."""
+    found = int(bars[0]["bar"])  # type: ignore[call-overload]
+    for entry in bars:
+        if int(entry["start_ms"]) <= start_ms:  # type: ignore[call-overload]
+            found = int(entry["bar"])  # type: ignore[call-overload]
+        else:
+            break
+    return found
+
+
+def _bar_map_section_kinds(
+    sections: Sequence[Mapping[str, object]], bar_map: object
+) -> list[str | None]:
+    """구간마다 마디 지도(배치 생성기와 같은 사건 구간)로 정한 종류. 마디 지도가 없거나 구간
+    마디를 알 수 없으면 ``None``. 구간 마디는 ``bar_start``·``bar_count``, 없으면 시각으로 잰다."""
+    if not isinstance(bar_map, Mapping) or validate_bar_map(bar_map) is not None:
+        return [None] * len(sections)
+    bars = sorted(bar_map["bars"], key=lambda entry: int(entry["bar"]))
+    starts: list[int | None] = []
+    for section in sections:
+        bar = section.get("bar_start")
+        if isinstance(bar, int) and not isinstance(bar, bool):
+            starts.append(bar)
+        elif isinstance(section.get("start_ms"), int):
+            starts.append(_bar_at_ms(bars, int(section["start_ms"])))  # type: ignore[call-overload]
+        else:
+            starts.append(None)
+    last_bar = int(bars[-1]["bar"])
+    spans: list[tuple[int, int]] = []
+    for position, start in enumerate(starts):
+        count = sections[position].get("bar_count")
+        if start is None:
+            spans.append((-1, 0))
+            continue
+        if not (isinstance(count, int) and not isinstance(count, bool) and count > 0):
+            following = [b for b in starts[position + 1 :] if b is not None and b > start]
+            count = (following[0] if following else last_bar + 1) - start
+        spans.append((start, count))
+    kinds = section_kinds_from_bar_map(spans, bar_map)
+    return [None if start is None else kind for start, kind in zip(starts, kinds, strict=True)]
+
+
+def attach_section_kinds(timeline: Mapping[str, object]) -> dict:
+    """저장용 — 이름에 종류가 없는 구간에 마디 지도로 정한 종류(``kind``)를 싣는 사본.
+
+    새 분석 작업본을 만들지 않고 옛 작업본에 마디 지도만 붙일 때도 구간 종류가 비지 않게 한다
+    (인수 A-09, 2026-10-17 — 같은 오디오를 다시 분석하면 새 작업본 경로를 타지 않는다). 이름이
+    종류를 말하는 구간(「Chorus 1」)은 그대로 둔다. 이름(``label``)은 바꾸지 않는다."""
+    merged = dict(timeline)
+    raw = merged.get("sections")
+    if not isinstance(raw, list):
+        return merged
+    mappings = [s if isinstance(s, Mapping) else {} for s in raw]
+    kinds = _bar_map_section_kinds(mappings, merged.get("bar_map"))
+    sections: list[object] = []
+    for section, kind in zip(raw, kinds, strict=True):
+        if (
+            isinstance(section, Mapping)
+            and kind is not None
+            and section_kind(section.get("label")) is None
+        ):
+            section = {**section, "kind": kind}
+        sections.append(section)
+    merged["sections"] = sections
+    return merged
 
 
 def section_kind(label: object) -> str | None:
@@ -281,20 +367,27 @@ def attach_beat_grid_ui_values(
             [s if isinstance(s, Mapping) else {} for s in raw_sections],
             bar_map if isinstance(bar_map, Mapping) else None,
         )
+        from_bar_map = _bar_map_section_kinds(
+            [s if isinstance(s, Mapping) else {} for s in raw_sections], bar_map
+        )
         sections: list[object] = []
         for position, section in enumerate(raw_sections):
             if not isinstance(section, Mapping):
                 sections.append(section)
                 continue
             section = dict(section)
-            # 구간이 종류를 직접 싣고 있으면(새 분석 작업본 — 이름이 D 레벨뿐이다) 그 종류를 쓴다.
+            # 이름이 말하는 종류가 먼저, 다음은 마디 지도로 정한 종류(배치 생성기와 같은 출처 —
+            # 이름이 「0:37–1:09 · D5」처럼 D 레벨뿐인 분석 구간), 마지막이 저장된 종류다.
             explicit = section.get("kind")
             kind = (
-                explicit if explicit in SECTION_KIND_COLORS else section_kind(section.get("label"))
+                section_kind(section.get("label"))
+                or from_bar_map[position]
+                or (explicit if explicit in SECTION_KIND_COLORS else None)
             )
             if kind is not None:
-                section.setdefault("kind", kind)
+                section["kind"] = kind
                 section.setdefault("color", SECTION_KIND_COLORS[kind])
+                section["kind_label"] = SECTION_KIND_NAMES.get(kind, kind)
             if position in energies:
                 section.setdefault("energy", energies[position])
             sections.append(section)

@@ -23,7 +23,7 @@ from server.design.beat_grid import (
     check_evidence_approval,
     empty_preset_cells,
 )
-from server.design.beat_grid_edit import load_preset_pool_policy
+from server.design.beat_grid_edit import load_preset_pool_policy, speed_master_of
 from server.design.beat_grid_effect_presets import (
     EFFECT_BAND_UNKNOWN,
     EFFECT_CREATE_ON_APPLY,
@@ -50,6 +50,8 @@ from .test_apply_time_approval_t577 import _cue_of, _new_session, _state_tree, _
 
 _LIBRARY = load_library_from_dir()
 _POLICY = load_preset_pool_policy()
+#: 스피드 마스터 선언이 없는 정책 — 효과 속도를 `At Speed` 로 굽는 옛 경로.
+_NO_MASTER = {key: value for key, value in _POLICY.items() if key != "speed_master"}
 _BPM, _BEATS_PER_BAR = 120.0, 4
 
 
@@ -86,12 +88,14 @@ def _recipe(number: str = "22.1", fx_id: str = "sweep-soft-wide", label: str = "
     }
 
 
-def _outcomes(grid, numbers, *, bpm=_BPM, beats_per_bar=_BEATS_PER_BAR, library=_LIBRARY):
+def _outcomes(
+    grid, numbers, *, bpm=_BPM, beats_per_bar=_BEATS_PER_BAR, library=_LIBRARY, policy=_POLICY
+):
     return effect_preset_outcomes(
         grid,
         numbers,
         library=library,
-        policy=_POLICY,
+        policy=policy,
         bpm=bpm,
         beats_per_bar=beats_per_bar,
     )
@@ -157,21 +161,58 @@ class TestRecordRecipe:
 class TestCreationLines:
     def test_lines_follow_the_universal_preset_shape(self) -> None:
         grid = _grid([dict(_CUE)], **_recipe())
-        commands, reason = _outcomes(grid, ["22.1"])["22.1"]
+        commands, reason = _outcomes(grid, ["22.1"], policy=_NO_MASTER)["22.1"]
         assert reason is None
         assert commands[:3] == ("ChangeDestination Root", "ClearAll", "Group 7")
         store_at = commands.index("Store Preset 22.1 'LA Wave' /Universal")
         assert commands[store_at + 1] == "Label Preset 22.1 'LA Wave'"
         assert commands[-1] == "ClearAll"
 
-    def test_speed_is_bpm_over_beats_per_cycle(self) -> None:
+    def test_without_a_speed_master_speed_is_bpm_over_beats_per_cycle(self) -> None:
         # 120 BPM, 한 주기 2박 → 60. 템플릿의 speed(14)는 쓰지 않는다.
         grid = _grid([dict(_CUE)], **_recipe())
-        commands, _ = _outcomes(grid, ["22.1"])["22.1"]
+        commands, _ = _outcomes(grid, ["22.1"], policy=_NO_MASTER)["22.1"]
         assert "Attribute 'Pan' At Speed 60" in commands
         assert not [c for c in commands if "At Speed 14" in c]
+        assert not [c for c in commands if "SpeedMaster" in c or c.startswith("Master ")]
 
-    def test_bar_period_uses_beats_per_bar(self) -> None:
+    def test_without_a_speed_master_a_bar_period_uses_beats_per_bar(self) -> None:
+        extra = _recipe()
+        extra["preset_fx_recipes"]["22.1"] = {
+            "fx_id": "sweep-soft-wide",
+            "period_unit": "bar",
+            "period_value": 2,
+        }
+        commands, _ = _outcomes(_grid([dict(_CUE)], **extra), ["22.1"], policy=_NO_MASTER)["22.1"]
+        # 2마디 × 4박 = 8박 → 120 / 8 = 15
+        assert "Attribute 'Pan' At Speed 15" in commands
+
+
+class TestSpeedMasterBinding:
+    """인수 D-12 · REQ-LDRHYTHM-009 — 정책에 스피드 마스터가 있으면 효과 속도를 마스터에 묶는다."""
+
+    def test_the_rig_policy_declares_speed_master_15_and_never_16(self) -> None:
+        assert _POLICY["speed_master"] == 15
+        for bad in (16, 0, "15", True, None):
+            policy = {**_NO_MASTER, "speed_master": bad}
+            assert speed_master_of(policy) is None, bad
+
+    def test_the_bundle_sets_the_master_bpm_then_binds_speed_master_and_measure(self) -> None:
+        grid = _grid([dict(_CUE)], **_recipe())
+        commands, reason = _outcomes(grid, ["22.1"])["22.1"]
+        assert reason is None
+        assert commands[0] == "Master 3.15 At BPM 120"
+        assert commands[1:4] == ("ChangeDestination Root", "ClearAll", "Group 7")
+        assert "Attribute 'Pan' At Measure 2" in commands  # 한 주기 2박
+        assert "Attribute 'Pan' At SpeedMaster 15" in commands
+        # 고정 속도와 마스터 결속을 한 속성에 같이 두지 않는다(실기 미측정 조합).
+        assert not [c for c in commands if " At Speed " in c]
+        assert not [c for c in commands if "SpeedMaster 16" in c]
+        assert commands.index("Attribute 'Pan' At SpeedMaster 15") < commands.index(
+            "Store Preset 22.1 'LA Wave' /Universal"
+        )
+
+    def test_a_bar_period_becomes_a_measure_in_beats(self) -> None:
         extra = _recipe()
         extra["preset_fx_recipes"]["22.1"] = {
             "fx_id": "sweep-soft-wide",
@@ -179,8 +220,12 @@ class TestCreationLines:
             "period_value": 2,
         }
         commands, _ = _outcomes(_grid([dict(_CUE)], **extra), ["22.1"])["22.1"]
-        # 2마디 × 4박 = 8박 → 120 / 8 = 15
-        assert "Attribute 'Pan' At Speed 15" in commands
+        assert "Attribute 'Pan' At Measure 8" in commands  # 2마디 × 4박
+
+    def test_the_master_bpm_is_the_song_bpm_with_its_decimals(self) -> None:
+        grid = _grid([dict(_CUE)], **_recipe())
+        commands, _ = _outcomes(grid, ["22.1"], bpm=112.002)["22.1"]
+        assert commands[0] == "Master 3.15 At BPM 112.002"
 
 
 class TestEveryMissingPieceHoldsWithItsReason:
@@ -245,7 +290,7 @@ class TestEveryMissingPieceHoldsWithItsReason:
             ],
             **_recipe(),
         }
-        commands, reason = _outcomes(grid, ["22.1"])["22.1"]
+        commands, reason = _outcomes(grid, ["22.1"], policy=_NO_MASTER)["22.1"]
         assert reason is None and commands[2] == "Group 7"
 
     def test_unconfirmed_track_of_another_cell_holds_the_number(self) -> None:

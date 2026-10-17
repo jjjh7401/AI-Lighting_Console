@@ -24,6 +24,7 @@ from server.design.beat_grid_edit import (
     _KIND_TO_POOL_KEYS,
     BeatGridEditError,
     _assert_ascii_preset_label,
+    speed_master_of,
 )
 from server.design.beat_grid_position_presets import POSITION_GROUP_UNCONFIRMED
 from server.design.beat_grid_presets import app_preset_label
@@ -346,7 +347,18 @@ def _one(
         if beats_per_bar is None or beats_per_bar <= 0:
             return None, EFFECT_TEMPO_MISSING
         beats_per_cycle *= beats_per_bar
-    timed = dataclasses.replace(fx, speed=bpm / beats_per_cycle, speed_master=None)
+    master = speed_master_of(policy)
+    head: tuple[str, ...] = ()
+    if master is None:
+        timed = dataclasses.replace(fx, speed=bpm / beats_per_cycle, speed_master=None)
+    else:
+        # 스피드 마스터에 묶는다(REQ-LDRHYTHM-009): 마스터 BPM = 곡 BPM, 한 바퀴 박 수 = Measure.
+        # 실기 근거 — `Master 3.15 At BPM 112.35` OK(t516 live_write), `At Measure 1`·
+        # `At SpeedMaster 15`·`Store Preset` OK(t531 live P4), Measure 4 느림·1 빠름(t516 감독).
+        timed = dataclasses.replace(
+            fx, speed=None, speed_master=master, measure=float(beats_per_cycle)
+        )
+        head = (f"Master 3.{master} At BPM {bpm:g}",)
     pool, _sep, slot = preset_no.partition(".")
     try:
         bundle = build_fx_preset_bundle(
@@ -354,7 +366,7 @@ def _one(
         )
     except FxInstantiationError as error:
         return None, f"{EFFECT_BUILD_REFUSED}({error.reason})"
-    return bundle.commands, None
+    return head + tuple(bundle.commands), None
 
 
 def effect_preset_outcomes(

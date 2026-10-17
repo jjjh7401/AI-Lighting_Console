@@ -22,6 +22,16 @@ export interface SongOverviewSectionInput {
   color?: string | null;
   /** 서버가 붙이는 구간 에너지 0~1(마디 지도 분석 뒤에만). 있으면 `d_level` 환산보다 우선한다. */
   energy?: number | null;
+  /** 서버가 붙이는 구간 종류 이름(「후렴」 등). 있으면 이름 앞에 붙여 보인다. */
+  kind_label?: string | null;
+}
+
+/** 화면에 보일 구간 이름 — 종류 이름이 있으면 「후렴 · 0:37–1:09 · D5」, 없으면 이름 그대로.
+ * 이름(`label`) 자체는 서버 값 그대로 둔다(이름으로 판정하는 곳이 있다). */
+export function sectionDisplayLabel(section: { label: string; kind_label?: string | null }): string {
+  const kind = section.kind_label?.trim();
+  if (!kind || section.label.startsWith(kind)) return section.label;
+  return `${kind} · ${section.label}`;
 }
 
 export interface SongOverviewSection {
@@ -91,7 +101,7 @@ export function buildSongOverview({
           ? Math.max(0, Math.min(1, level / D_LEVEL_MAX))
           : null;
     out.push({
-      label: section.label,
+      label: sectionDisplayLabel(section),
       startBar,
       endBar,
       hex: section.color ?? section.palette_primary_hex ?? null,

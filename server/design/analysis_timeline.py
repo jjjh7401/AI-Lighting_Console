@@ -10,13 +10,15 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
+from server.audio.bar_map_store import validate_bar_map
+from server.design.arrange_segments import split_sections
 from server.design.beat_grid import default_beat_grid
-from server.design.song_cue_render import _infer_confirmed_role
 
 __all__ = [
     "ANALYSIS_CONFIRMED_KEY",
     "ANALYSIS_SOURCE_KEY",
     "build_analysis_timeline",
+    "section_kinds_from_bar_map",
     "timeline_meter_from_bar_map",
 ]
 
@@ -28,13 +30,18 @@ ANALYSIS_CONFIRMED_KEY = "analysis_confirmed_at"
 
 _LAYOUT_KEYS = ("group_no", "group_no_confirmed", "group_name", "layer_role")
 
-#: D 레벨 역할 추정(``_infer_confirmed_role``) → 화면 구간 종류. 마지막 구간(finale)은 아웃트로다.
-_ROLE_KIND = {
+#: 배치 생성기의 구간 종류(``arrange_segments.split_sections``) → 화면 구간 종류
+#: (``beat_grid_ui_values.SECTION_KIND_COLORS`` 의 키). 빌드는 프리 후렴,
+#: 마지막 후렴은 final-chorus 다.
+_SEGMENT_SCREEN_KIND = {
     "intro": "intro",
     "verse": "verse",
+    "build": "pre-chorus",
     "chorus": "chorus",
     "bridge": "bridge",
-    "finale": "outro",
+    "drop": "drop",
+    "last_chorus": "final-chorus",
+    "outro": "outro",
 }
 
 
@@ -54,6 +61,31 @@ def _bar_at(bars: Sequence[Mapping[str, Any]], start_ms: int) -> int:
         else:
             break
     return found
+
+
+def section_kinds_from_bar_map(
+    spans: Sequence[tuple[int, int]], bar_map: Mapping[str, Any]
+) -> list[str | None]:
+    """화면 구간마다(``(시작 마디, 마디 수)``) 화면 구간 종류를 정한다.
+
+    종류는 배치 생성기와 같은 출처 — 마디 지도의 사건으로 나눈 구간(``split_sections``)이다. 화면
+    구간(분석 구간)과 사건 구간은 경계가 다를 수 있어서, 화면 구간과 가장 많은 마디가 겹치는 사건
+    구간의 종류를 쓴다(같으면 앞 구간). 그래서 화면에 「후렴」이라 적힌 구간은 생성기도 후렴으로
+    배치한다(같은 종류 = 같은 처리, 인수 A-09·D-04). 겹치는 마디가 없거나 마디 지도가 저장 모양
+    검증을 통과하지 못하면 ``None`` 이다(종류를 지어내지 않는다)."""
+    if validate_bar_map(bar_map) is not None:
+        return [None] * len(spans)
+    segments = split_sections(bar_map)
+    kinds: list[str | None] = []
+    for start, count in spans:
+        end = start + max(int(count), 1) - 1
+        best: tuple[int, str] | None = None
+        for segment in segments:
+            overlap = min(end, segment.end_bar) - max(start, segment.start_bar) + 1
+            if overlap > 0 and (best is None or overlap > best[0]):
+                best = (overlap, segment.kind)
+        kinds.append(None if best is None else _SEGMENT_SCREEN_KIND.get(best[1]))
+    return kinds
 
 
 def timeline_meter_from_bar_map(
@@ -103,9 +135,9 @@ def build_analysis_timeline(
     - ``sections`` 는 채택된 분석 구간이다. 이름·시각·D 레벨을 그대로 옮기고, 마디 지도로
       ``bar_start``·``bar_count`` 를 붙인다. 같은 마디에서 시작하는 구간은 앞의 것만 남긴다.
     - 격자는 ``layout`` 의 줄 구성만 가져오고 칸은 비운다. 데이터 범위는 마디 지도 전체다.
-    - 구간마다 종류(``kind``)를 D 레벨로 추정해 싣는다(첫 구간 intro · 마지막 outro · 최고 D 레벨
-      chorus · D2 이하 bridge · 나머지 verse). 이름은 분석 이름 그대로다 — 이름으로 판정하는 곳이
-      있어 이름은 바꾸지 않는다.
+    - 구간마다 종류(``kind``)를 마디 지도의 사건 구간으로 정해 싣는다(``section_kinds_from_bar_map``
+      — 배치 생성기와 같은 출처). 이름은 분석 이름 그대로다 — 이름으로 판정하는 곳이 있어 이름은
+      바꾸지 않는다. 화면은 종류 이름을 따로 붙여 보인다.
     - ``bpm`` 은 분석이 확정한 BPM 이다. 없으면 마디 지도의 BPM 을 쓴다.
     - 큐 번호(``cue_number``)는 구간 순서(1부터)다 — 화면 계약이 숫자를 요구한다(B-09).
     - 옛 작업본의 타임코드·시퀀스 번호·콘솔 기록은 싣지 않는다 — 새 작업본이다.
@@ -118,23 +150,25 @@ def build_analysis_timeline(
         if starts and starts[-1][0] == bar:
             continue
         starts.append((bar, section))
-    d_levels = [int(section.d_level) for _bar, section in starts]
-    timeline_sections = []
-    for position, (bar, section) in enumerate(starts):
-        next_bar = starts[position + 1][0] if position + 1 < len(starts) else last_bar + 1
-        timeline_sections.append(
-            {
-                "index": position + 1,
-                "cue_number": position + 1,
-                "label": section.label,
-                "start_ms": int(section.start_ms),
-                "end_ms": int(section.end_ms),
-                "d_level": section.d_level,
-                "kind": _ROLE_KIND.get(_infer_confirmed_role(position, d_levels)),
-                "bar_start": bar,
-                "bar_count": next_bar - bar,
-            }
-        )
+    spans = [
+        (bar, (starts[position + 1][0] if position + 1 < len(starts) else last_bar + 1) - bar)
+        for position, (bar, _section) in enumerate(starts)
+    ]
+    kinds = section_kinds_from_bar_map(spans, bar_map)
+    timeline_sections = [
+        {
+            "index": position + 1,
+            "cue_number": position + 1,
+            "label": section.label,
+            "start_ms": int(section.start_ms),
+            "end_ms": int(section.end_ms),
+            "d_level": section.d_level,
+            "kind": kinds[position],
+            "bar_start": bar,
+            "bar_count": count,
+        }
+        for position, ((bar, section), (_bar, count)) in enumerate(zip(starts, spans, strict=True))
+    ]
     tracks = [{**{key: track.get(key) for key in _LAYOUT_KEYS}, "cues": []} for track in layout]
     song_bpm = bpm if bpm is not None else bar_map.get("bpm")
     timeline: dict[str, Any] = {

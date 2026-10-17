@@ -18,6 +18,12 @@
 # (REQ-LDBEAT-015(b) — base 풀 vs effect 풀 분리, base 풀 참조는
 # 번호대 검사 대상이 아니다).
 confirmed: false
+# 효과 프리셋 속도를 묶는 스피드 마스터 번호(REQ-LDRHYTHM-009). 리그·쇼마다 다른 값이라 코드가 아니라
+# 이 파일에 둔다. 선언이 없으면 효과 프리셋은 `At Speed <곡 BPM ÷ 주기 박>` 로 굽는다.
+# 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다(REQ-LDRHYTHM-010, 1~15 만 받는다).
+# 이 리그의 실기 근거: `Master 3.15 At BPM 112.35` OK(.moai/reports/t516 live_write) ·
+# `Attribute 'Dimmer' At Measure 1` / `At SpeedMaster 15` / `Store Preset` OK(.moai/reports/t531 live P4).
+speed_master: 15
 pools:
   # 위치 효과 풀(기본 위치 풀 2.41~ 과 분리) — effect_kind == "position".
   position_effect: {start: "2.61", end: "2.68"}

@@ -31,6 +31,7 @@ import {
   buildSongOverview,
   overviewVisibleWindow,
   pxPerBarForZoom,
+  sectionDisplayLabel,
   type OverviewZoom,
   type SongOverviewSectionInput,
 } from "./songOverviewModel";
@@ -1415,6 +1416,7 @@ export interface BeatGridSectionLite {
   label: string;
   start_ms: number;
   palette_primary_hex?: string | null;
+  kind_label?: string | null;
 }
 
 export interface BeatGridSectionBlock {
@@ -1441,7 +1443,7 @@ export function deriveSectionBlocks(
   if (!secondsPerBar || !Number.isFinite(secondsPerBar) || secondsPerBar <= 0) return [];
   const withBars = sections
     .map((section) => ({
-      label: section.label,
+      label: sectionDisplayLabel(section),
       startBar: Math.max(0, Math.round(section.start_ms / 1000 / secondsPerBar)),
       hex: section.palette_primary_hex ?? null,
     }))

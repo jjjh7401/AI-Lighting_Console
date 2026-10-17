@@ -100,7 +100,7 @@ REAL_SECTIONS = [
     SegmentSection(61, 62, "bridge"),
     SegmentSection(63, 66, "drop"),
     SegmentSection(67, 81, "last_chorus"),
-    SegmentSection(82, 82, "verse"),
+    SegmentSection(82, 82, "outro"),  # 곡 끝 브레이크, 뒤에 사건 없음
 ]
 
 
@@ -404,8 +404,9 @@ def test_every_track_has_a_row_at_the_first_bar_and_a_rest_run_is_one_row() -> N
     draft = _draft(SYNTHETIC_EVENTS)
     for track in draft["tracks"]:
         assert track["cues"][0]["bar"] == 1
-    # 강조 줄: 첫 마디의 쉼, 강조 한 마디, 다시 쉼. 빌드(14~17) 끝 마디(17)의 예고 뒤가 강조(18)다.
-    assert _rows(draft, "BLIND") == [1, 9, 10, 17, 18, 19, 40]
+    # 강조 줄: 첫 마디의 쉼, 예고, 강조 한 마디, 다시 쉼. 강조 구간(후렴 9·18, 드롭 36, 마지막 후렴
+    # 40) 바로 앞 마디(8·17·35·39)마다 예고가 선다. 드롭의 강조는 스트로브 줄이라 36 은 쉼이다.
+    assert _rows(draft, "BLIND") == [1, 8, 9, 10, 17, 18, 19, 35, 36, 39, 40]
     assert _rows(draft, "STROBE") == [1, 36, 37]
     assert _cues(draft, "BLIND")[10]["label"] == REST_LABEL
 
@@ -776,7 +777,7 @@ def test_the_last_bar_of_a_build_before_a_chorus_gets_a_notice_cell_on_the_blind
 def test_the_notice_is_not_an_accent() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
     assert _hits(draft, "BLIND", BLIND_LABEL) == [9, 18, 40]
-    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17]
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [8, 17, 35, 39]
 
 
 def test_the_notice_sits_on_the_bar_before_the_chorus_when_the_build_event_ended_early() -> None:
@@ -791,15 +792,36 @@ def test_the_notice_sits_on_the_bar_before_the_chorus_when_the_build_event_ended
     [
         [_ev("kick_entry", 9)],  # 빌드 없이 후렴
         [_ev("build", 5, 8), _ev("break", 9)],  # 빌드 뒤가 브레이크
-        [_ev("build", 5, 8), _ev("drop", 9, 10)],  # 빌드 뒤가 드롭 — 예고는 후렴 앞에만 둔다
         [_ev("build", 5, 8)],  # 빌드가 곡 끝까지 이어진다
         [_ev("build", 5, 8), _ev("build", 9, 12)],  # 빌드 뒤가 또 빌드
     ],
 )
-def test_no_notice_unless_a_chorus_starts_right_after_the_build(events: list[dict]) -> None:
+def test_no_notice_unless_an_accent_section_starts_right_after(events: list[dict]) -> None:
     draft = _draft(events)
     for track in draft["tracks"]:
         assert all(cue["label"] != PRE_HIT_LABEL for cue in track["cues"]), track["group_name"]
+
+
+@pytest.mark.parametrize(
+    ("events", "notices"),
+    [
+        # 빌드 뒤 드롭(8), 드롭 끝 뒤 마지막 후렴(10)
+        ([_ev("build", 5, 8), _ev("drop", 9, 10)], [8, 10]),
+        # 브리지 뒤 드롭(6 — 곡 후반 62마디 꼴), 드롭 뒤 마지막 후렴(9 — 66마디 꼴)
+        ([_ev("break", 5), _ev("drop", 7, 9)], [6, 9]),
+        ([_ev("build", 3, 4), _ev("drop", 5, 8)], [4, 8]),
+    ],
+)
+def test_a_notice_stands_before_a_drop_and_before_the_last_chorus_too(
+    events: list[dict], notices: list[int]
+) -> None:
+    assert _hits(_draft(events), "BLIND", PRE_HIT_LABEL) == notices
+
+
+def test_a_one_bar_accent_section_gets_no_notice_on_its_own_accent_bar() -> None:
+    # 드롭이 한 마디(9)이고 바로 마지막 후렴(10)이 오면 9 마디는 드롭 강조라 예고를 두지 않는다.
+    draft = _draft([_ev("build", 5, 8), _ev("drop", 9, 9)])
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [8]
 
 
 def test_the_notice_is_only_on_the_blind_line() -> None:
@@ -816,7 +838,7 @@ def test_an_annotation_color_on_the_notice_bar_is_ignored_like_on_any_rest() -> 
 
 def test_the_notice_survives_the_slow_song_flag_and_follows_the_rest_brightness() -> None:
     slow = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(slow_song=True))
-    assert _hits(slow, "BLIND", PRE_HIT_LABEL) == [17]
+    assert _hits(slow, "BLIND", PRE_HIT_LABEL) == [8, 17, 35, 39]
     dim = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(rest_percent=10))
     assert _cues(dim, "BLIND")[17]["brightness"]["value_percent"] == 10
 
@@ -941,9 +963,10 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     # 4마디 킥은 도입 뒤 곧바로 들어오는 벌스라 강조가 없다(기본 격자도 4마디에 BLIND 가 없다).
     assert _hits(draft, "BLIND", BLIND_LABEL) == [18, 46, 67]
     assert _hits(draft, "STROBE", STROBE_LABEL) == [63]
-    # 예고는 빌드(14~17·42~45) 끝 마디에만 있고, 강조 마디는 그대로다.
-    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17, 45]
-    assert _rows(draft, "BLIND") == [0, 17, 18, 19, 45, 46, 47, 67, 68]
+    # 예고는 강조 구간 바로 앞 마디에 선다: 후렴 18·46 앞 17·45, 곡 후반의 드롭 63 앞 62(브리지 끝),
+    # 마지막 후렴 67 앞 66(드롭 끝) — 인수 D-07(2026-10-17). 강조 마디는 그대로다.
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17, 45, 62, 66]
+    assert _rows(draft, "BLIND") == [0, 17, 18, 19, 45, 46, 47, 62, 63, 66, 67, 68]
     # 워시 줄의 칸은 색이 바뀌는 구간 경계에서만 생긴다. 얼굴 빛은 곡 전체가 한 칸이다.
     starts = {section.start_bar for section in REAL_SECTIONS}
     assert set(_rows(draft, "WASH-ALL")) <= starts
@@ -1210,10 +1233,10 @@ def test_only_the_blind_line_changes_when_the_emphasis_moves() -> None:
 def test_the_drop_start_strobe_and_the_pre_hit_notice_stay_where_they_were() -> None:
     draft = _hit_draft([(11, 1), (25, 2), (38, 1)])
     assert _hits(draft, "STROBE", STROBE_LABEL) == [36]
-    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17]
-    # 예고 칸은 빌드 끝 마디(17)에 서고 큰 히트가 18 마디 안에 있어도 움직이지 않는다.
+    assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [8, 17, 35, 39]
+    # 예고 칸은 강조 구간 바로 앞 마디에 서고 큰 히트가 구간 안 어디에 있어도 움직이지 않는다.
     on_start = _hit_draft([(18, 1)])
-    assert _hits(on_start, "BLIND", PRE_HIT_LABEL) == [17]
+    assert _hits(on_start, "BLIND", PRE_HIT_LABEL) == [8, 17, 35, 39]
     assert _hits(on_start, "BLIND", BLIND_LABEL) == [9, 18, 40]
 
 
@@ -1339,3 +1362,80 @@ def test_the_app_path_love_attack_draft_is_similar_to_the_hand_grid() -> None:
     for grid in (candidate, numbered):
         report = compare_grids(base, grid, context)
         assert report.verdict == "비슷함", report.failing
+
+
+def test_a_final_break_section_with_nothing_after_it_is_the_outro() -> None:
+    # 곡 끝 구간이 브레이크로 시작하고 뒤에 사건이 없으면 아웃트로다(실제 곡 82마디 꼴).
+    sections = split_sections(_bar_map([_ev("kick_entry", 4), _ev("break", 9)]))
+    assert sections[-1].kind == "outro"
+
+
+def test_a_break_followed_by_a_drop_is_still_a_bridge_not_an_outro() -> None:
+    sections = split_sections(
+        _bar_map([_ev("kick_entry", 4), _ev("break", 9), _ev("drop", 10, 11)])
+    )
+    assert "outro" not in [section.kind for section in sections]
+
+
+# -- 트래킹(인수 D-11): 첫 칸 Block · 끝 칸 Release · 구간 첫 칸 Track · 그 밖 Cue Only ----------
+
+
+def _tracking(draft: dict, name: str) -> list[tuple[int, object]]:
+    return [
+        (int(cue["bar"]), (cue.get("entry") or {}).get("tracking"))
+        for track in draft["tracks"]
+        if track["group_name"] == name
+        for cue in track["cues"]
+    ]
+
+
+def test_every_line_blocks_its_first_cell_and_releases_its_last() -> None:
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    for track in draft["tracks"]:
+        values = [(cue.get("entry") or {}).get("tracking") for cue in track["cues"]]
+        assert values[0] == "Block", track["group_name"]
+        if len(values) > 1:
+            assert values[-1] == "Release", track["group_name"]
+
+
+def test_section_starts_track_and_other_cells_are_cue_only() -> None:
+    bar_map = _real_love_attack()
+    starts = {section.start_bar for section in split_sections(bar_map)}
+    draft = generate_segment_draft(bar_map, _layout())
+    for track in draft["tracks"]:
+        for cue in track["cues"][1:-1]:
+            expected = None if int(cue["bar"]) in starts else "Cue Only"
+            got = (cue.get("entry") or {}).get("tracking")
+            assert got == expected, (track["group_name"], cue["bar"])
+    # BLIND: 첫 칸(0) Block, 예고·쉼은 Cue Only, 강조가 구간 첫 마디면 Track, 끝 칸(68) Release.
+    assert _tracking(draft, "BLIND") == [
+        (0, "Block"),
+        (17, "Cue Only"),
+        (18, None),
+        (19, "Cue Only"),
+        (45, "Cue Only"),
+        (46, None),
+        (47, "Cue Only"),
+        (62, "Cue Only"),
+        (63, None),
+        (66, "Cue Only"),
+        (67, None),
+        (68, "Release"),
+    ]
+    assert _tracking(draft, "FOH") == [(0, "Block")]  # 칸이 하나뿐인 줄
+
+
+def test_tracking_survives_applying_the_draft_to_the_grid() -> None:
+    # 적용이 entry.tracking 을 지우면 반영 명령에 Block·Release·/CueOnly 가 안 나간다.
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    base = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
+    grid, _report = apply_arrangement_draft(base, draft)
+    for track in draft["tracks"]:
+        applied = {
+            int(cue["bar"]): cue["entry"].get("tracking")
+            for t in grid["tracks"]
+            if t["group_name"] == track["group_name"]
+            for cue in t["cues"]
+        }
+        for cue in track["cues"]:
+            assert applied[int(cue["bar"])] == (cue.get("entry") or {}).get("tracking")

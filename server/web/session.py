@@ -168,7 +168,11 @@ from server.design.beat_grid_suggestion import (
     SuggestionSource,
 )
 from server.design.beat_grid_suggestion_rules import ArrangementRuleSuggestionSource
-from server.design.beat_grid_ui_values import attach_beat_grid_ui_values, track_sub_info
+from server.design.beat_grid_ui_values import (
+    attach_beat_grid_ui_values,
+    attach_section_kinds,
+    track_sub_info,
+)
 from server.design.beat_grid_unverified import unverified_beat_grid_cells
 from server.design.capability_verdict import position_verdict
 from server.design.console_slots import (  # 카드 t480 — 업로드 길 공용 판독기
@@ -9659,7 +9663,8 @@ class ChatSession:
                 commands=[],
             )
         self._draft_history.record(timeline)
-        updated = attach_bar_map(timeline, payload)
+        # 구간 종류도 같은 마디 지도로 싣는다 — 옛 작업본에 붙여도 종류가 비지 않는다(A-09).
+        updated = attach_section_kinds(attach_bar_map(timeline, payload))
         updated = self._draft_badge(
             updated, depth=self._draft_history.depth, report=("마디 지도 저장",)
         )

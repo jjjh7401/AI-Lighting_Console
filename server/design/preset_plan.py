@@ -53,7 +53,11 @@ from server.design.beat_grid_color_presets import (
     color_preset_rgb,
     record_color_preset_rgb,
 )
-from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
+from server.design.beat_grid_edit import (
+    apply_beat_grid_edit,
+    beats_per_bar_from_timeline,
+    speed_master_of,
+)
 from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_presets import (
     app_preset_label,
@@ -103,8 +107,6 @@ _COLOR_PATH_HOLD = "색 저장은 기존 「＋ 새 프리셋」 색 경로(t594
 #: 칸·번호가 다 있는 색·위치 후보의 사유 — 저장 줄은 콘솔 판독을 마친 뒤
 #: `preset_plan_store` 가 붙인다.
 _COLOR_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·컬러 채널을 읽은 뒤 만든다"
-#: 색 후보에서 빼는 레이어 역할 — 키(key)와 효과(effect) 장비는 컬러 채널이 없다.
-_NO_COLOR_ROLES = frozenset({"key", "effect"})
 _POSITION_STORE_HOLD = "저장 줄 미정 — 콘솔에서 그룹 소속·장비 좌표를 읽은 뒤 만든다"
 #: 무빙 기본 위치 사다리 이름 → 계획표 말.
 #: 사다리 순서는 바닥 쪽 < 무대 중앙 < 위로 연 자리 < 객석 상단이다.
@@ -661,6 +663,7 @@ def _movement_effect_presets(
     bpm: float | None,
     beats_per_bar: int | None,
     reserved: set[str],
+    policy: Mapping[str, object] | None = None,
 ) -> tuple[tuple[PlanPreset, ...], tuple[str, ...], tuple[str, ...]]:
     """칸의 ``app_movement`` 마다 효과 프리셋 한 줄 — 같은 그룹·같은 움직임은 한 프리셋이다.
 
@@ -790,9 +793,16 @@ def _movement_effect_presets(
             movement = movements[key]
             cycle = _beats_per_cycle(movement, beats_per_bar)
             if bpm is not None and cycle:
+                master = speed_master_of(policy or {})
+                how = (
+                    f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님 — "
+                    "preset_pools.yaml 에 speed_master 가 없다)"
+                    if master is None
+                    else f"스피드 마스터 {master} 에 묶는다(Master 3.{master} At BPM {bpm:g} · "
+                    f"At SpeedMaster {master} · At Measure {cycle:g})"
+                )
                 fixes.append(
-                    f"움직임 속도 — {_effect_name(movement)}: 박 {cycle:g} 주기를 "
-                    f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님). "
+                    f"움직임 속도 — {_effect_name(movement)}: 박 {cycle:g} 주기를 {how}. "
                     "감독이 고칠 값: 속도 기준"
                 )
             if movement.get("phase_spread") is None:
@@ -846,15 +856,12 @@ def _planned_color_presets(
     direction_names: dict[tuple[int, int, int], str] = {}
     order: list[tuple[str, tuple[int, int, int]]] = []
     cells_of: dict[tuple[str, tuple[int, int, int]], list[PlanCell]] = {}
-    # 키(key)·효과(effect) 역할은 컬러 채널이 없는 장비라 색 후보에 아예 세지 않는다.
-    no_color = {
-        str(track.get("group_name"))
-        for track in grid.get("tracks") or []
-        if track.get("layer_role") in _NO_COLOR_ROLES
-    }
+    # 계획 색이 있는 칸은 역할과 무관하게 후보에 센다. 컬러 채널이 있는지는 역할로 짐작하지 않고
+    # 저장 단계(``preset_plan_store``)가 장비 채널을 읽어 가른다 — 없으면 그 후보는 사유와 함께
+    # 「미정」으로 남는다(리드 지시 2026-10-17, 인수 C-06).
     for group, _no, _confirmed, cue in rows:
         bar = cue.get("bar")
-        if not isinstance(bar, int) or isinstance(bar, bool) or group in no_color:
+        if not isinstance(bar, int) or isinstance(bar, bool):
             continue
         if cue.get("color_preset_no") is not None or (group, bar) in taken:
             continue
@@ -1507,6 +1514,7 @@ def build_preset_plan(
         bpm=bpm,
         beats_per_bar=beats_per_bar,
         reserved={*kept_counts, *(preset.slot for preset in presets if preset.slot), *reserved},
+        policy=policy,
     )
     presets.extend(effect_presets)
     unresolved.extend(effect_unresolved)

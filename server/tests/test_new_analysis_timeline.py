@@ -143,14 +143,15 @@ def test_a_confirmed_new_analysis_starts_a_fresh_timeline(tmp_path, monkeypatch)
     assert fresh["bar_map"] == _bar_map()
     # 분석이 확정한 BPM 이 실린다 — 상단 바가 「BPM —」로 비지 않는다.
     assert fresh["bpm"] == 112.0
-    # 구간 종류는 D 레벨로 추정한다. 이름(D 레벨)은 바꾸지 않는다.
+    # 구간 종류는 배치 생성기와 같은 사건 구간(마디 지도)에서 겹침이 가장 큰 종류다 — D2 라도 후렴
+    # (18~32마디) 자리에 있으면 후렴이다(인수 A-09·D-04). 이름(D 레벨)은 바꾸지 않는다.
     assert [s["kind"] for s in fresh["sections"]] == [
         "intro",
         "verse",
-        "bridge",
         "chorus",
         "verse",
-        "outro",
+        "chorus",
+        "final-chorus",
     ]
     # 곡 이름은 새로 붙인 오디오 파일 이름이다 — 옛 작업본 이름(OLD TITLE)을 이어받지 않는다.
     assert fresh["song_title"] == LOVE_ATTACK_TITLE
