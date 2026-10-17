@@ -59,6 +59,7 @@ from server.design.beat_grid_edit import (
     speed_master_of,
 )
 from server.design.beat_grid_measured import canonical_axes
+from server.design.beat_grid_mib import cue_is_lit
 from server.design.beat_grid_presets import (
     app_preset_label,
     first_free_base_color_number,
@@ -359,6 +360,49 @@ def _annotated_cells(
         else:
             missing.append((group, bar))
     return tuple(cells)
+
+
+def _hold_through_lit_run(
+    cells: Sequence[PlanCell],
+    rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
+    *,
+    claimed: set[tuple[str, int]],
+) -> tuple[PlanCell, ...]:
+    """주석 방향 칸 뒤로 같은 줄이 켜진 채 이어지는 칸까지 그 방향을 잇는다.
+
+    주석은 칸 하나에 위치를 정하지만, 자동 배치는 그 뒤 칸에 제 위치를 둔다. 둘 다 켜져 있으면
+    무빙이 켜진 채 옮긴다(full2 D-09: 0마디 바닥 쪽 → 4마디 Home). 그래서 주석 위치는 처음 꺼지는
+    칸(``cue_is_lit`` — 반영 단계 MIB 와 같은 판정)까지 머물고, 그 어둠 뒤에서 계획 위치로 간다.
+    번호가 이미 있는 칸, 자동 배치가 위치를 정하지 않은 칸(손설계), 다른 주석이 잡은 칸
+    (``claimed``)에서도 멈춘다."""
+    cues_of: dict[str, list[Mapping[str, object]]] = {}
+    for group, _no, _confirmed, cue in rows:
+        bar = cue.get("bar")
+        if isinstance(bar, int) and not isinstance(bar, bool):
+            cues_of.setdefault(group, []).append(cue)
+    held = list(cells)
+    seen = {(cell.group_name, cell.bar) for cell in cells}
+    for cell in cells:
+        later = sorted(
+            (cue for cue in cues_of.get(cell.group_name, ()) if int(cue["bar"]) > cell.bar),  # type: ignore[call-overload]
+            key=lambda cue: int(cue["bar"]),  # type: ignore[call-overload]
+        )
+        for cue in later:
+            key = (cell.group_name, int(cue["bar"]))  # type: ignore[call-overload]
+            # 자동 배치가 위치를 정한 칸(``planned_position``)만 잇는다 — 감독이 손으로 설계한 칸
+            # (상대 이동·새 자리 등)은 제 위치가 있으니 거기서 멈춘다.
+            if (
+                not cue_is_lit(cue)
+                or cue.get("position_preset_no") is not None
+                or not isinstance(cue.get("planned_position"), str)
+            ):
+                break
+            if key in claimed and key not in seen:
+                break
+            if key not in seen:
+                seen.add(key)
+                held.append(PlanCell(*key))
+    return tuple(held)
 
 
 def _missing_annotation_line(missing: Sequence[tuple[str, int]]) -> str | None:
@@ -746,6 +790,7 @@ def _movement_effect_presets(
                 label=name,
                 bpm=bpm,
                 beats_per_bar=beats_per_bar,
+                speed_master=speed_master_of(policy or {}),
             )
         # 번호는 저장 줄이 붙는 줄에만 쓴다 — 못 붙는 줄이 번호를 먼저 잡으면 다음 줄 번호가 밀린다.
         slot: str | None = reusable
@@ -1437,10 +1482,16 @@ def build_preset_plan(
     # -- 위치: 방향마다 대략 목표(target)가 있으면 값으로 싣는다. 없으면 「미정」 --------
     # 위치 프리셋은 **그룹마다 따로** 저장한다 — 방향 하나가 그 방향을 쓰는 그룹 수만큼의 줄이 되고,
     # 번호도 줄마다 따로 잡는다. 이름은 「콘솔 이름 + 그룹 이름」이라 줄마다 다르다.
-    for entry in annotations.get("directions") or []:
-        if not isinstance(entry, Mapping):
-            continue
-        cells = _annotated_cells(entry.get("cells"), by_cell, missing_cells)
+    directions = [e for e in annotations.get("directions") or [] if isinstance(e, Mapping)]
+    claimed = {
+        (cell.group_name, cell.bar)
+        for entry in directions
+        for cell in _annotated_cells(entry.get("cells"), by_cell, [])
+    }
+    for entry in directions:
+        cells = _hold_through_lit_run(
+            _annotated_cells(entry.get("cells"), by_cell, missing_cells), rows, claimed=claimed
+        )
         label = str(entry.get("name") or "")
         console_name = str(entry.get("console_name") or "")
         target_text = str(entry.get("target") or "").strip()

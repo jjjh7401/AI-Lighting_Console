@@ -142,6 +142,25 @@ def app_movement_commands(
     return tuple(commands), None
 
 
+_SPEED_LINE = re.compile(r"^Attribute '([^']+)' At Speed \S+$")
+
+
+def _bind_speed_to_master(
+    lines: Sequence[str], *, speed_master: int, measure: int
+) -> tuple[str, ...]:
+    """``Attribute 'x' At Speed s`` 줄마다 ``At Measure`` · ``At SpeedMaster`` 두 줄로 바꾼다."""
+    out: list[str] = []
+    for line in lines:
+        match = _SPEED_LINE.match(line)
+        if match is None:
+            out.append(line)
+            continue
+        attribute = match.group(1)
+        out.append(f"Attribute '{attribute}' At Measure {measure}")
+        out.append(f"Attribute '{attribute}' At SpeedMaster {speed_master}")
+    return tuple(out)
+
+
 def movement_effect_store_commands(
     movement: Mapping[str, object] | None,
     *,
@@ -151,13 +170,20 @@ def movement_effect_store_commands(
     label: str,
     bpm: float | None,
     beats_per_bar: int | None,
+    speed_master: int | None = None,
 ) -> tuple[tuple[str, ...], str | None]:
     """한 칸의 ``app_movement`` 를 콘솔 효과 프리셋(Phaser) 저장 묶음으로 낸다.
 
     상대 웨이브 줄은 :func:`app_movement_commands` 와 같다(같은 검증·같은 순서). 그 뒤에
     ``Store Preset <풀>.<번호> '<이름>' /Universal`` 과 ``Label Preset`` 줄을 붙여 닫는다.
     기준 위치 리콜은 이 묶음에 넣지 않는다 — 칸이 자기 위치 프리셋을 따로 리콜한다. 거절은
-    사유 문장 하나이고, 그때 부분 묶음은 내지 않는다(app_movement_commands 와 같은 규율)."""
+    사유 문장 하나이고, 그때 부분 묶음은 내지 않는다(app_movement_commands 와 같은 규율).
+
+    ``speed_master`` (``preset_pools.yaml`` 의 번호)가 있으면 속도를 프리셋에 굽지 않고 묶는다 —
+    ``At Speed`` 줄 대신 ``At Measure <한 주기 박 수>`` · ``At SpeedMaster <n>`` 을 내고, 묶음 맨
+    앞에 ``Master 3.<n> At BPM <곡 BPM>`` 을 붙인다(``beat_grid_effect_presets`` 와 같은 규칙,
+    REQ-LDRHYTHM-009). 실기 근거 — ``Master 3.15 At BPM 112.35`` OK(t516 live_write),
+    ``At Measure 1`` → ``At SpeedMaster 15`` → ``Store Preset`` 순서 OK(t531 live P4)."""
     name = label.strip()
     if not name or "'" in name or '"' in name:
         return (), "효과 프리셋 이름이 비었거나 따옴표를 담고 있습니다"
@@ -172,7 +198,16 @@ def movement_effect_store_commands(
         return (), reason
     if not body:
         return (), "이 칸에 app_movement 가 없어 효과 프리셋으로 만들 것이 없습니다"
+    head: tuple[str, ...] = ()
+    if speed_master is not None and bpm is not None:
+        # 위 검증을 통과했으니 주기 값은 양의 정수이고, 마디 단위면 마디당 박도 있다.
+        cycle = int(movement["period_value"])  # type: ignore[index, call-overload]
+        if movement["period_unit"] == "bar":  # type: ignore[index]
+            cycle *= beats_per_bar or 0
+        body = _bind_speed_to_master(body, speed_master=speed_master, measure=cycle)
+        head = (f"Master 3.{speed_master} At BPM {bpm:g}",)
     return (
+        *head,
         "ClearAll",
         *body,
         f"Store Preset {preset_pool}.{preset} '{name}' /Universal",

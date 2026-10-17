@@ -53,6 +53,7 @@ from server.audio.bar_map_store import validate_bar_map
 from server.design.arrange_generator import (
     _CHASE,
     _MOTION,
+    _MOTION_AXES,
     _PULSE,
     _SECTION_BRIDGE,
     _SECTION_CHORUS,
@@ -72,6 +73,7 @@ from server.design.arrange_generator import (
 )
 from server.design.arrange_policy import MOVER_POSITION_LADDER, ArrangementPolicy
 from server.design.beat_grid import BeatGridCue, BeatGridTrack
+from server.design.beat_grid_measured import visible_axes
 from server.design.beat_grid_mib import MIB_MIN_DARK_SECONDS
 from server.design.cell_direction import SEGMENT_WORDS, assign_color_names
 
@@ -344,6 +346,7 @@ def generate_segment_draft(
                             settings,
                             role=track.get("layer_role"),
                             color_names=color_names,
+                            axes=_motion_axes(track),
                         )
                         for bar, plan in runs
                     ],
@@ -724,6 +727,15 @@ def _with_tracking(cues: list[BeatGridCue], section_starts: frozenset[int]) -> l
     return cues
 
 
+def _motion_axes(track: Mapping[str, Any]) -> tuple[str, ...]:
+    """이 줄의 웨이브 축 — 확인된 그룹 번호로 실측 기록(``measured_movements.yaml``)을 읽어 보이는
+    축을 고른다. 기본 팬 웨이브가 「기울인 기준에서만 보임」으로 닫힌 그룹은 기준과 무관하게 보이는
+    축(예: MOVER-D 의 틸트 웨이브, probe-moverd D1·D3)으로 낸다. 번호가 확인 안 됐으면
+    기본 축이다."""
+    group_no = track.get("group_no") if track.get("group_no_confirmed") else None
+    return visible_axes(group_no if isinstance(group_no, int) else None, "wave", _MOTION_AXES)
+
+
 def _segment_cue(
     bar: int,
     plan: _CellPlan,
@@ -731,10 +743,13 @@ def _segment_cue(
     *,
     role: object,
     color_names: Mapping[tuple[int, int, int], str],
+    axes: Sequence[str] = _MOTION_AXES,
 ) -> BeatGridCue:
     """칸 하나를 기존 생성기의 ``_draft_cue`` 로 만든다 — 라벨은 구간 단위 말 표로, 출처 표식은 이
     생성기의 것으로 한다. 계획 위치는 ``_draft_cue`` 가 방향 값에서 파생한다."""
-    cue = _draft_cue(bar, plan, settings, role=role, words=SEGMENT_WORDS, color_names=color_names)
+    cue = _draft_cue(
+        bar, plan, settings, role=role, words=SEGMENT_WORDS, color_names=color_names, axes=axes
+    )
     cue["source_ref"] = f"{SOURCE}:{plan.kind}"
     return cue
 
