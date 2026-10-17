@@ -355,8 +355,9 @@ def test_a_constant_lane_over_a_seven_bar_verse_has_exactly_one_row() -> None:
     wash = _rows(draft, "WASH-ALL")
     assert [bar for bar in wash if 8 < bar <= 14] == []
     assert wash == [1, 15]
-    # 얼굴 빛은 구간 색이 바뀌어도 값이 같아서 곡 전체가 한 칸이다.
-    assert _rows(draft, "FOH") == [1]
+    # 얼굴 빛은 구간 색이 바뀌어도 값이 같아서 한 칸이고, 마지막 구간 첫 마디(15)에 Release 를
+    # 받을 같은 값의 끝 칸이 하나 더 선다(인수 D-11).
+    assert _rows(draft, "FOH") == [1, 15]
 
 
 def test_a_lit_rhythm_lane_gets_a_new_cell_at_every_phrase() -> None:
@@ -401,7 +402,10 @@ def test_two_consecutive_rows_share_a_plan_only_at_a_phrase_start_of_a_lit_cell(
             if _signature(left) == _signature(right):
                 assert right["bar"] in phrases, (track["group_name"], right["bar"])
                 assert right["label"] != REST_LABEL
-                assert track["layer_role"] in ("back", "side", "mover")
+                # 칸 하나뿐인 켜진 줄(FOH)의 끝 칸은 같은 값이다 — Release 를 받으려고 선 칸이다.
+                assert track["layer_role"] in ("back", "side", "mover") or (
+                    right is track["cues"][-1] and len(track["cues"]) == 2
+                )
 
 
 def test_every_track_has_a_row_at_the_first_bar_and_a_rest_run_is_one_row() -> None:
@@ -479,10 +483,11 @@ def test_color_alone_never_splits_a_run_off_the_wash_line() -> None:
 
 def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
     draft = _draft(SYNTHETIC_EVENTS)
-    # 얼굴 빛(FOH)은 40마디 내내 한 칸이고, 앞빛 역할이라 구간과 상관없이 표준 Warm White 다.
+    # 얼굴 빛(FOH)은 40마디 내내 같은 값이고(끝 칸 40 은 Release 를 받을 같은 값), 앞빛 역할이라
+    # 구간과 상관없이 표준 Warm White 다.
     foh = _cues(draft, "FOH")
-    assert sorted(foh) == [1]
-    assert foh[1]["planned_color"] == list(PALETTE.key)
+    assert sorted(foh) == [1, 40]
+    assert foh[1]["planned_color"] == foh[40]["planned_color"] == list(PALETTE.key)
     # 체이스 칸 33~35(브릿지)와 36~39(드롭)는 값이 같아도 프레이즈마다 새 칸이고,
     # 칸마다 그 구간 색이다.
     side = _cues(draft, "SIDE-ALL")
@@ -974,10 +979,11 @@ def test_real_love_attack_events_sections_and_accents() -> None:
     # 마지막 후렴 67 앞 66(드롭 끝) — 인수 D-07(2026-10-17). 강조 마디는 그대로다.
     assert _hits(draft, "BLIND", PRE_HIT_LABEL) == [17, 45, 62, 66]
     assert _rows(draft, "BLIND") == [0, 17, 18, 19, 45, 46, 47, 62, 63, 66, 67, 68]
-    # 워시 줄의 칸은 색이 바뀌는 구간 경계에서만 생긴다. 얼굴 빛은 곡 전체가 한 칸이다.
+    # 워시 줄의 칸은 색이 바뀌는 구간 경계에서만 생긴다. 얼굴 빛은 곡 전체가 같은 값이고, 마지막
+    # 구간(아웃트로 82) 첫 마디에 Release 를 받을 끝 칸이 선다.
     starts = {section.start_bar for section in REAL_SECTIONS}
     assert set(_rows(draft, "WASH-ALL")) <= starts
-    assert _rows(draft, "FOH") == [0]
+    assert _rows(draft, "FOH") == [0, REAL_SECTIONS[-1].start_bar]
 
 
 # -- 리듬 블록(rhythm): 구간 경계는 그대로, 구간 등급은 메타데이터 -------------------------
@@ -1429,7 +1435,17 @@ def test_section_starts_track_and_other_cells_are_cue_only() -> None:
         (67, None),
         (68, "Release"),
     ]
-    assert _tracking(draft, "FOH") == [(0, "Block")]  # 칸이 하나뿐인 줄
+    # 값이 하나뿐인 줄(FOH)도 끝 칸이 Release 다 — full3 D-11 「FOH 만 Release 없음」.
+    assert _tracking(draft, "FOH") == [(0, "Block"), (82, "Release")]
+    assert all(
+        track["cues"][-1]["entry"].get("tracking") == "Release"
+        for track in draft["tracks"]
+        if len(track["cues"]) > 1
+    )
+    lit_lines = [
+        t for t in draft["tracks"] if any(c["brightness"]["value_percent"] for c in t["cues"])
+    ]
+    assert all(len(track["cues"]) > 1 for track in lit_lines)
 
 
 def test_tracking_survives_applying_the_draft_to_the_grid() -> None:

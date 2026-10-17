@@ -198,6 +198,7 @@ class TestPlannedColorCandidates:
         }
         assert effect_cells == {
             ("FOH", 0),
+            ("FOH", 82),  # Release 를 받을 끝 칸(인수 D-11) — 첫 칸과 같은 색
             ("BLIND", 18),
             ("BLIND", 46),
             ("BLIND", 67),
@@ -214,12 +215,21 @@ class TestPlannedColorCandidates:
         for fid in members["BLIND"]:
             channels[fid] = ["Dimmer"]
         stored = attach_color_store(plan, grid, members=members, channel_names=channels)
+        # BLIND 만 담은 후보는 「미정 + 사유」, 다른 그룹과 섞인 후보는 BLIND 칸만 빼고
+        # 사유를 남긴다.
         blind = [p for p in _color_presets(stored) if "BLIND" in p.groups]
-        assert blind and all(not p.ready and p.hold for p in blind)
+        assert all(not p.ready and p.hold for p in blind)
+        assert any(
+            "BLIND" in fix and "컬러 채널이 없는 장비" in fix for fix in stored.supervisor_fixes
+        )
         updated = _approve(grid, stored)
         numbered = _numbered_cells(updated)
         assert not {cell for cell in numbered if cell[0] == "BLIND"}
         assert ("FOH", 0) in numbered
+        # full3 C-06: 주석 색(핑크)은 BLIND 와 워시·무빙 칸을 한 후보로 묶는다. 색 채널 없는
+        # 그룹 하나가 후보 전체를 막으면 안 된다 — BLIND 를 뺀 계획 색 칸은 전부 번호를 받는다.
+        colorable = {cell for cell in _planned_cells(grid) if cell[0] != "BLIND"}
+        assert colorable - numbered == set()
 
     def test_a_console_number_with_the_same_rgb_and_group_is_reused_without_a_store_line(
         self,

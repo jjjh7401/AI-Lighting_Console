@@ -1719,10 +1719,12 @@ def resolve_preset(
     hold: str | None = None,
     fixes: Sequence[str] = (),
     cells: tuple[PlanCell, ...] | None = None,
+    groups: tuple[str, ...] | None = None,
 ) -> LoveAttackPlan:
     """저장 줄을 기다리던 색·위치 후보(``deferred``) 한 줄을 마무리한 새 계획을 돌려준다.
 
-    ``cells`` 를 주면 후보의 칸을 그 칸들로 줄인다(이미 번호가 있는 칸을 뺄 때).
+    ``cells`` 를 주면 후보의 칸을 그 칸들로 줄인다(이미 번호가 있는 칸을 뺄 때). ``groups`` 를
+    주면 후보의 그룹도 그것으로 줄인다(색 채널 없는 그룹을 뺄 때).
 
     ``store`` 가 있으면 그 줄을 이 카드가 저장한다(``ready``). 없으면 ``hold`` 를 사유로
     「미정」으로 내린다. 후보였을 때 「이 카드 밖」·「미정」 목록에 있던 사유 문장도 함께 바꾼다 —
@@ -1735,6 +1737,7 @@ def resolve_preset(
         hold=None if store is not None else hold,
         store=store,
         cells=preset.cells if cells is None else cells,
+        groups=preset.groups if groups is None else groups,
     )
     old_line = _outside_line(preset)
     deferred = [line for line in plan.deferred if line != old_line]

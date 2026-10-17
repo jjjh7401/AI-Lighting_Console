@@ -24,7 +24,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 from server.design.beat_grid import preset_pool_no
-from server.design.beat_grid_color_presets import color_preset_outcomes, record_color_preset_rgb
+from server.design.beat_grid_color_presets import (
+    color_preset_outcomes,
+    group_has_no_color,
+    record_color_preset_rgb,
+)
 from server.design.beat_grid_edit import (
     BeatGridEditError,
     _assert_ascii_preset_label,
@@ -160,6 +164,28 @@ def attach_color_store(
         cells = tuple(cell for cell in preset.cells if cell not in taken)
         if not cells:
             plan = resolve_preset(plan, preset, store=None, hold=_occupied_hold(grid, preset))
+            continue
+        # 컬러 채널이 하나도 없는 그룹(예: 디머만 있는 블라인더)의 칸은 이 색을 낼 수 없다 — 그 칸만
+        # 빼고 나머지 칸은 저장한다. 주석 색은 여러 그룹 칸을 한 후보로 묶어서, 빼지 않으면 그 그룹
+        # 하나가 후보 전체를 막는다(full3 C-06: 핑크 24칸 중 BLIND 3칸 때문에 21칸이 번호 없음).
+        colorless = tuple(
+            group
+            for group in preset.groups
+            if group_has_no_color(members.get(group) or (), channel_names)
+        )
+        kept = tuple(cell for cell in cells if cell.group_name not in colorless)
+        if colorless and kept:
+            dropped = len(cells) - len(kept)
+            note = (
+                f"{preset.name} — {'·'.join(colorless)} 칸 {dropped}개는 컬러 채널이 없는 장비라 "
+                "색 프리셋을 쓰지 않는다(나머지 칸만 저장)"
+            )
+            groups = tuple(group for group in preset.groups if group not in colorless)
+            narrowed = replace(preset, cells=kept, groups=groups)
+            store, hold = _color_store(grid, narrowed, members=members, channel_names=channel_names)
+            plan = resolve_preset(
+                plan, preset, store=store, hold=hold, cells=kept, groups=groups, fixes=(note,)
+            )
             continue
         narrowed = replace(preset, cells=cells)
         store, hold = _color_store(grid, narrowed, members=members, channel_names=channel_names)
