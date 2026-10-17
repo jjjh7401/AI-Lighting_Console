@@ -250,6 +250,8 @@ describe("reduceServerEvent — beat_grid_send_status (카드 t563)", () => {
       // 반영 흐름의 선택 필드 둘 — 서버가 키를 싣지 않았으면 리듀서가 `null` 로 맞춘다.
       completed: null,
       timecode_suggestion: null,
+      // 알림 목록 — 서버가 싣지 않았으면 빈 배열(2차 전체 실행 I-02).
+      notices: [],
     });
 
     // 코디네이터 계약(t568과 합의) — 스냅샷이 없으면 대기 수는 null이다

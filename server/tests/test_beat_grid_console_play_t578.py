@@ -17,6 +17,7 @@ from __future__ import annotations
 from server.web.session import SongTimelineStore
 
 from .test_beat_grid_reapply_t572 import (
+    FIRST_SEQUENCE_NUMBER,
     OWNED_TIMECODE_NAME,
     TIMECODE_NUMBER,
     _empty_pool_state_tree,
@@ -149,11 +150,14 @@ class TestSessionOnceApproval:
         assert session.beat_grid_console_stop()["ok"] is True
 
         assert len(approval.requests) == 1  # 다시 묻지 않는다
+        # 2차 전체 실행 G-22 — 정지는 타임코드 다음에 그 곡 트랙의 시퀀스도 끈다.
         assert console.executed == [
             f"Off Timecode {TIMECODE_NUMBER}",
+            f"Off Sequence {FIRST_SEQUENCE_NUMBER}",
             f"Top Timecode {TIMECODE_NUMBER}",
             f"Go Timecode {TIMECODE_NUMBER}",
             f"Off Timecode {TIMECODE_NUMBER}",
+            f"Off Sequence {FIRST_SEQUENCE_NUMBER}",
         ]
 
     def test_a_rejected_first_card_keeps_asking(self, tmp_path) -> None:

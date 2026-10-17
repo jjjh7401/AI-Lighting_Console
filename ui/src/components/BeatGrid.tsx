@@ -923,7 +923,14 @@ export function emptyPresetCellIndex(
  * 반영이 아니거나 성공이면 `null`. 승인 창 사이 콘솔에서 번호가 채워져 송신을 통째로
  * 멈춘 경우처럼, 감독이 「다시 반영」해야 하는지를 격자 화면에서 바로 본다. */
 export function applyFailureNote(status: BeatGridSendStatus | null | undefined): string | null {
-  if (!status || status.ok || !status.reason) return null;
+  if (!status) return null;
+  // 2차 전체 실행 I-02 — 「콘솔 같이」 정지: 보냈어도 콘솔이 멈췄는지 확인 못 했거나 아직 돌면
+  // 서버 알림을, 못 보냈으면 사유(「아직 돌고 있을 수 있어요」 포함)를 보인다.
+  if (status.last_action === "console_stop") {
+    if (!status.ok) return status.reason ? `⚠ 콘솔 정지 안 됨 — ${status.reason}` : null;
+    return status.notices?.length ? `⚠ ${status.notices.join(" ")}` : null;
+  }
+  if (status.ok || !status.reason) return null;
   if (status.last_action === "apply") return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
   // 격자 편집 실패(자동 배치 적용이 바꾼 칸 0개 등) — 채팅에만 두면 전체화면에서 성공처럼 보인다.
   if (status.last_action === "edit") return `⚠ 격자에 적용 안 됨 — ${status.reason}`;

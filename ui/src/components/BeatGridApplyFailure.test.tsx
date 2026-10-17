@@ -57,6 +57,28 @@ describe("applyFailureNote", () => {
     expect(applyFailureNote(status({ last_action: "edit", ok: true, reason }))).toBeNull();
   });
 
+  it("「콘솔 같이」 정지 — 멈췄는지 확인 못 한 알림·정지 실패 사유를 보인다(2차 전체 실행 I-02)", () => {
+    const unverified = "콘솔 Timecode 5이(가) 멈췄는지 확인하지 못했어요 — 콘솔 화면에서 확인해 주세요.";
+    expect(
+      applyFailureNote(
+        status({ last_action: "console_stop", ok: true, reason: null, notices: [unverified] }),
+      ),
+    ).toBe(`⚠ ${unverified}`);
+    expect(
+      applyFailureNote(status({ last_action: "console_stop", ok: true, reason: null, notices: [] })),
+    ).toBeNull();
+    const declined = "콘솔 타임코드 명령이 실행되지 않았습니다. 콘솔 Timecode 5이(가) 아직 돌고 있을 수 있어요";
+    expect(applyFailureNote(status({ last_action: "console_stop", reason: declined }))).toBe(
+      `⚠ 콘솔 정지 안 됨 — ${declined}`,
+    );
+  });
+
+  it("서버 문구(session.py)에 정지 확인 알림이 실제로 있다", () => {
+    const source = readFileSync(resolve(__dirname, "../../../server/web/session.py"), "utf8");
+    expect(source).toContain("멈췄는지 확인하지 못했어요");
+    expect(source).toContain("아직 돌고 있을 수 있어요");
+  });
+
   it("서버 문구(session.py)에 「바뀐 칸이 0개」가 실제로 있다", () => {
     const source = readFileSync(resolve(__dirname, "../../../server/web/session.py"), "utf8");
     expect(source).toContain("격자에서 바뀐 칸이 0개입니다");

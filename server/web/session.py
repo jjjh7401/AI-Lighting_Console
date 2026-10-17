@@ -3838,6 +3838,42 @@ def summarize_outcomes(status: str, views: Sequence[dict]) -> str:
 _DEFAULT_TRACK_NAME = re.compile(r"Track \d+")  # 콘솔이 새 트랙에 붙이는 기본 이름
 
 
+def _beat_grid_stop_card_reason(timecode_number: int | None, sequences: Sequence[int]) -> str:
+    """끄기 승인 카드의 머리 문구 — 무엇을 끄는지와 쇼 데이터를 바꾸지 않는다는 것을 밝힌다.
+    2차 전체 실행: 「블랙아웃/오프」 경고만 보이는 `Off Sequence 54…` 8줄 카드를 감독이
+    승인 규칙 밖으로 읽고 거부했다."""
+    targets: list[str] = []
+    if timecode_number is not None:
+        targets.append(f"Timecode {timecode_number}")
+    if sequences:
+        low, high = min(sequences), max(sequences)
+        span = f"{low}" if low == high else f"{low}–{high}"
+        targets.append(f"이 곡 시퀀스 {span}({len(sequences)}개)")
+    what = " · ".join(targets) or "이 곡"
+    return (
+        f"박자 격자 정지 — 이 앱이 반영한 {what}만 끕니다. 쇼 데이터는 바꾸지 않습니다 "
+        "(세션 시작 1회 승인, REQ-LDBEAT-012(b))"
+    )
+
+
+_TIMECODE_CURSOR = re.compile(r"^\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(\d+(?:\.\d+)?)\s*s?\s*$")
+
+
+def _timecode_cursor_seconds(value: object) -> float | None:
+    """타임코드 ``CURSOR`` 값(``4.77`` · ``1m00.70`` · ``1h02m03.4``)을 초로. 모르면 ``None``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    if not isinstance(value, str):
+        return None
+    match = _TIMECODE_CURSOR.match(value)
+    if match is None:
+        return None
+    hours, minutes, seconds = match.groups()
+    return int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds)
+
+
 class SongTimelineStore:
     """Process-wide LAST director-timeline payload (runbook UI). Song-timeline
     events are otherwise push-only within one WebSocket session — the app
@@ -12095,11 +12131,16 @@ class ChatSession:
             commands.append(f"Goto Cue {bars_with_cues[covering_bar]} Sequence {sequence_number}")
         return tuple(commands) if commands else None
 
-    def _beat_grid_dispatch_preview(self, tool_id: str, commands: tuple[str, ...]) -> bool:
+    def _beat_grid_dispatch_preview(
+        self, tool_id: str, commands: tuple[str, ...], *, reason: str | None = None
+    ) -> bool:
         """미리보기(Goto/Off) 공용 송신 — 세션 시작 1회 승인(결정⑤,
         REQ-LDBEAT-012(b))만 쓰기 승인과 **독립**으로 거친다. 승인이
         필요한 호출인데 거절되면 세션 승인 상태를 건드리지 않는다(다음
         호출이 다시 승인을 묻는다).
+
+        ``reason`` 은 승인 카드 머리 문구다(없으면 미리보기 기본 문구) — 끄기 카드가
+        무엇을 끄는지 밝혀 감독이 거부처럼 읽지 않게 한다(2차 전체 실행 G-22 메모).
 
         ``beat_grid_apply``와 같은 이유로 ambient 세션 키를 직접 묶는다 —
         ``run_instruction`` 체인 밖의 호출이라 아무도 대신 묶어 주지
@@ -12107,7 +12148,7 @@ class ChatSession:
         needs_approval = not self._preview_approval.authorize_preview()
         risk = (
             BatchRisk(
-                reason="박자 격자 미리보기 — 세션 시작 1회 승인(REQ-LDBEAT-012(b))",
+                reason=reason or "박자 격자 미리보기 — 세션 시작 1회 승인(REQ-LDBEAT-012(b))",
                 kind="beat_grid_preview",
             )
             if needs_approval
@@ -12158,7 +12199,12 @@ class ChatSession:
                 ok=False,
                 reason="아직 콘솔에 반영된 적이 없어 끌 시퀀스가 없습니다.",
             )
-        if not self._beat_grid_dispatch_preview("beat-grid-preview-off", commands):
+        sequences = tuple(int(c.rsplit(" ", 1)[1]) for c in commands)
+        if not self._beat_grid_dispatch_preview(
+            "beat-grid-preview-off",
+            commands,
+            reason=_beat_grid_stop_card_reason(None, sequences),
+        ):
             return self._beat_grid_send_status(
                 last_action="preview_off", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
             )
@@ -12220,9 +12266,14 @@ class ChatSession:
             f"Timecode {wanted}은 이 앱이 만든 타임코드가 아니어서 재생하지 않습니다."
         )
 
-    def _beat_grid_console_transport(self, action: str, verbs: tuple[str, ...]) -> dict:
+    def _beat_grid_console_transport(
+        self, action: str, verbs: tuple[str, ...], *, stop: bool = False
+    ) -> dict:
         """「콘솔 같이」 공용 송신 — t563 미리보기 길(세션 시작 1회 승인)을 그대로
-        탄다. 새 생쓰기 경로는 없다(``run_commands`` → 게이트)."""
+        탄다. 새 생쓰기 경로는 없다(``run_commands`` → 게이트).
+
+        ``stop`` 이면 ``Off Timecode N`` 뒤에 그 곡 트랙의 시퀀스를 하나씩 ``Off Sequence`` 로
+        끄고, 보낸 뒤 타임코드 커서로 멈췄는지 확인한다(``_beat_grid_stop_notices``)."""
         timecode_number, reason = self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action=action, ok=False, reason=reason)
@@ -12230,19 +12281,90 @@ class ChatSession:
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
         commands = tuple(f"{verb} Timecode {timecode_number}" for verb in verbs)
+        sequences = self._beat_grid_owned_sequence_numbers() if stop else ()
+        # 2차 전체 실행 G-22·I-03 — `Off Timecode` 만으로는 이미 켜진 시퀀스가 남아 곡 끝·정지
+        # 뒤에도 무대가 계속 바뀌었다. 실기 해제 묶음(t506 §9, t520
+        # `approval_m2a_play_b2.txt`)대로 타임코드를 끈 다음 그 트랙의 시퀀스를 하나씩 끈다.
+        commands += tuple(f"Off Sequence {number}" for number in sequences)
         if self._preview_approval.is_approved:
             sent = self._beat_grid_send_transport_preapproved(commands)
         else:
-            sent = self._beat_grid_dispatch_preview(f"beat-grid-{action}", commands)
+            sent = self._beat_grid_dispatch_preview(
+                f"beat-grid-{action}",
+                commands,
+                reason=(_beat_grid_stop_card_reason(timecode_number, sequences) if stop else None),
+            )
         if not sent:
             return self._beat_grid_send_status(
                 last_action=action,
                 ok=False,
                 reason=(
                     "콘솔 타임코드 명령이 실행되지 않았습니다(승인 거절·게이트 차단·콘솔 무응답)."
+                    + (
+                        f" 콘솔 Timecode {timecode_number}이(가) 아직 돌고 있을 수 있어요 — "
+                        "콘솔 화면을 확인해 주세요."
+                        if stop
+                        else ""
+                    )
                 ),
             )
-        return self._beat_grid_send_status(last_action=action, ok=True)
+        notices = self._beat_grid_stop_notices(timecode_number) if stop else []
+        return self._beat_grid_send_status(last_action=action, ok=True, extra_notices=notices)
+
+    def _beat_grid_owned_sequence_numbers(self) -> tuple[int, ...]:
+        """정지 때 끌 시퀀스 — 이 곡의 반영 소유 기록에 적힌 트랙 시퀀스, 없으면 가장 최근
+        반영이 실제로 쓴 번호(``beat_grid_applied``). 번호를 지어내지 않는다."""
+        numbers: list[int] = []
+        record = self._beat_grid_song_record()
+        tracks = record.get("tracks") if record else None
+        if isinstance(tracks, Mapping):
+            for track in tracks.values():
+                number = track.get("sequence_number") if isinstance(track, Mapping) else None
+                if isinstance(number, int) and not isinstance(number, bool):
+                    numbers.append(number)
+        if not numbers:
+            store = self._timeline_store
+            applied = store.beat_grid_applied if store is not None else None
+            if applied is not None:
+                numbers = list(applied.sequence_numbers.values())
+        return tuple(sorted(set(numbers)))
+
+    #: 정지 확인 때 커서를 두 번 읽는 간격(초). 시험은 0 으로 줄인다.
+    _beat_grid_stop_check_interval_seconds = 0.4
+
+    def _beat_grid_stop_notices(self, timecode_number: int) -> list[str]:
+        """2차 전체 실행 I-02 — 끄기를 보낸 뒤 타임코드 커서(``CURSOR``)를 간격을 두고 두 번
+        읽는다. 그대로면 멈춘 것이다(알림 없음). 늘어나면 아직 돌고 있다고, 못 읽으면 확인하지
+        못했다고 알린다 — 「ok」 회신만으로 멈췄다고 말하지 않는다(full2: ok 인데 계속 돌았다)."""
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        path = f"{pool}/{timecode_number}"
+        first = self._beat_grid_timecode_cursor(path)
+        if first is not None:
+            time.sleep(self._beat_grid_stop_check_interval_seconds)
+        second = self._beat_grid_timecode_cursor(path) if first is not None else None
+        if first is None or second is None:
+            return [
+                f"콘솔 Timecode {timecode_number}이(가) 멈췄는지 확인하지 못했어요 — "
+                "콘솔 화면에서 확인해 주세요."
+            ]
+        if second > first:
+            return [
+                f"콘솔 Timecode {timecode_number}이(가) 아직 돌고 있어요"
+                f"(커서 {first:.2f}→{second:.2f}초) — 콘솔에서 직접 멈춰 주세요."
+            ]
+        return []
+
+    def _beat_grid_timecode_cursor(self, path: str) -> float | None:
+        """타임코드 커서를 초로 — 읽기만 한다. 못 읽거나 모양을 모르면 ``None``."""
+        try:
+            payload = self._rig_capability_port.query_properties(path, ("CURSOR",))
+        except Exception:  # noqa: BLE001 - 못 읽으면 「확인 못 함」으로 알린다
+            return None
+        reads = payload.get("reads") if isinstance(payload, Mapping) else None
+        for read in reads or ():
+            if isinstance(read, Mapping) and read.get("ok") and read.get("n") == "CURSOR":
+                return _timecode_cursor_seconds(read.get("v"))
+        return None
 
     def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> bool:
         """전체 실행 J-09 — 이 세션에서 미리보기·재생 승인을 이미 받았으면(REQ-LDBEAT-012(b)
@@ -12274,8 +12396,9 @@ class ChatSession:
         return self._beat_grid_console_transport("console_play", ("Top", "Go"))
 
     def beat_grid_console_stop(self) -> dict:
-        """카드 t578 — 「콘솔 같이」 켬 + ❚❚ : 그 곡의 타임코드를 끈다."""
-        return self._beat_grid_console_transport("console_stop", ("Off",))
+        """카드 t578 — 「콘솔 같이」 켬 + ❚❚ (곡 끝 자동 정지 포함): 그 곡의 타임코드와
+        트랙 시퀀스를 끄고, 멈췄는지 확인한다."""
+        return self._beat_grid_console_transport("console_stop", ("Off",), stop=True)
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.
