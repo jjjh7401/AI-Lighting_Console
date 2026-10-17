@@ -7,6 +7,8 @@
 - G-22·I-02·I-03 정지는 t506·t520 실기 해제 묶음과 같다 — ``Off Timecode N`` 다음에 그 곡
   트랙의 시퀀스마다 ``Off Sequence S``(``.moai/reports/t520/approval_m2a_play_b2.txt``).
   보낸 뒤 커서를 읽어 멈췄는지 확인하고, 못 읽거나 아직 움직이면 알린다.
+- B-07 콘솔 이름이 ``LDBEAT Timecode 3`` 이고 트랙도 ``LDBEAT`` 시퀀스를 가리켜도, 이 앱의
+  반영 기록이 그 번호를 적고 있지 않으면 남의 타임코드다(감독 손설계 TC3·4).
 
 콘솔 접촉: 0건 — ``FakeConsole`` 만 쓴다.
 """
@@ -141,3 +143,54 @@ def test_a_declined_stop_warns_that_the_console_may_still_run(tmp_path) -> None:
     assert event["ok"] is False
     assert "돌고 있을 수 있어요" in event["reason"]
     assert [c for c in console.executed if c.startswith("Off ")] == []
+
+
+# -- B-07 ---------------------------------------------------------------------
+
+
+def test_timecode_input_refuses_an_app_named_timecode_no_record_owns(tmp_path) -> None:
+    # 실제 콘솔의 TC3: 이름 「LDBEAT Timecode 3」, 트랙이 가리키는 시퀀스도 「LDBEAT …」 — 이름만
+    # 보면 앱 것처럼 보이지만 이 앱의 반영 기록(TC 20)은 3번을 적고 있지 않다.
+    store = SongTimelineStore()
+    store.latest = _timeline()
+    _seed_record(store)
+    tree = _owned_state_tree()
+    tree["DataPool/Timecodes"] = {
+        "children": [
+            {"i": TIMECODE_NUMBER, "name": f"LDBEAT Timecode {TIMECODE_NUMBER}"},
+            {"i": 3, "name": "LDBEAT Timecode 3"},
+        ],
+        "node": {"childCount": 2},
+    }
+    tree["DataPool/Sequences"] = {"children": [{"i": 70, "name": "LDBEAT FOH"}]}
+    session, console, _approval, _audit = _new_session(tmp_path, store=store, state_tree=tree)
+    session._beat_grid_timecode_track_targets = lambda wanted: [
+        {"target": "Sequence 70", "track_name": "LDBEAT FOH"}
+    ]
+
+    event = session.beat_grid_timecode_set(3)
+
+    assert event["ok"] is False
+    assert "이 앱이 만든 타임코드가 아니라서 쓸 수 없어요" in event["reason"]
+    assert store.latest["timecode_number"] == TIMECODE_NUMBER
+    assert console.executed == []
+
+
+def test_timecode_input_accepts_a_timecode_another_song_record_owns(tmp_path) -> None:
+    store = SongTimelineStore()
+    store.latest = _timeline()
+    store.set_beat_grid_allocation(
+        ("OTHER SONG", None),
+        {"timecode_number": 7, "timecode_name": "LDBEAT Timecode 7", "tracks": {}},
+    )
+    tree = _empty_pool_state_tree()
+    tree["DataPool/Timecodes"] = {
+        "children": [{"i": 7, "name": "LDBEAT Timecode 7#2"}],
+        "node": {"childCount": 1},
+    }
+    session, _console, _approval, _audit = _new_session(tmp_path, store=store, state_tree=tree)
+
+    event = session.beat_grid_timecode_set(7)
+
+    assert event["ok"] is True
+    assert store.latest["timecode_number"] == 7

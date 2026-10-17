@@ -3982,11 +3982,12 @@ class SongTimelineStore:
         return json.dumps(list(song_key), ensure_ascii=False)
 
     def beat_grid_allocation_owns_timecode(self, number: int, name: str) -> bool:
-        """어느 곡이든 이 앱의 반영 기록이 ``number`` 번 타임코드를 ``name`` 으로 적고 있는가."""
+        """어느 곡이든 이 앱의 반영 기록이 ``number`` 번 타임코드를 ``name`` 으로 적고 있는가.
+        콘솔이 이름 뒤에 붙인 「#숫자」는 같은 이름으로 본다(``same_console_name``)."""
         return any(
             isinstance(record, dict)
             and record.get("timecode_number") == number
-            and record.get("timecode_name") == name
+            and _same_owned_sequence_name(name, record.get("timecode_name"))
             for record in self._beat_grid_allocations.values()
         )
 
@@ -11326,8 +11327,11 @@ class ChatSession:
             and _same_owned_sequence_name(occupant, record.get("timecode_name"))
         ):
             return None, ""
-        number, _why = self._resolve_beat_grid_timecode_number(wanted, overwrite_notes=[])
-        if number is not None:
+        # 2차 전체 실행 B-07 — 감독 손설계 TC3·4 는 콘솔 이름이 「LDBEAT Timecode 3」이고 트랙도
+        # 「LDBEAT …」 시퀀스를 가리켜서, 콘솔 이름만 보는 판정(``timecode_overwrite_note``)이
+        # 앱 것으로 받았다. 입력은 이 앱의 반영 기록(어느 곡이든)이 적은 번호·이름일 때만 받는다.
+        store = self._timeline_store
+        if store is not None and store.beat_grid_allocation_owns_timecode(wanted, occupant):
             return None, ""
         return (
             f"타임코드 {wanted}번은 콘솔에 이미 '{occupant}'이(가) 있어요. 이 앱이 만든 "
