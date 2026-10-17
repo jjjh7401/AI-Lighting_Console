@@ -53,6 +53,7 @@ from server.design.analysis_timeline import (
     ANALYSIS_CONFIRMED_KEY,
     ANALYSIS_SOURCE_KEY,
     build_analysis_timeline,
+    carry_console_preset_records,
 )
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.arrange_apply import (
@@ -9932,8 +9933,14 @@ class ChatSession:
         # 타임코드·시퀀스 번호)을 이어받는다. 안 그러면 새 작업본 열쇠에 남은 더 옛 기록이 콘솔과
         # 어긋나 반영이 거절된다. 다른 곡이면 이어받지 않는다(남의 곡 번호를 덮어쓰지 않게).
         previous_owner = self._beat_grid_song_record()
-        if previous_owner and _same_song_working_copy(current, record.source_sha256, song_title):
+        same_song = _same_song_working_copy(current, record.source_sha256, song_title)
+        if previous_owner and same_song:
             store.set_beat_grid_allocation(self._beat_grid_song_key(fresh), previous_owner)
+        # 3차 전체 실행 E-10·I-08 — 같은 이유로 콘솔 프리셋 저장 기록도 이어받는다. 안 그러면 다음
+        # 계획이 이미 저장한 프리셋을 못 알아보고 새 번호에 또 저장한다(콘솔은 이름에 「#숫자」).
+        previous_grid = current.get("beat_grid")
+        if same_song and isinstance(previous_grid, Mapping):
+            fresh = carry_console_preset_records(previous_grid, fresh)
         store.latest = fresh
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))
         bars = fresh["beat_grid"]["bar_range"]

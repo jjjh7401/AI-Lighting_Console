@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
@@ -17,7 +18,9 @@ from server.design.beat_grid import default_beat_grid
 __all__ = [
     "ANALYSIS_CONFIRMED_KEY",
     "ANALYSIS_SOURCE_KEY",
+    "CONSOLE_PRESET_RECORD_KEYS",
     "build_analysis_timeline",
+    "carry_console_preset_records",
     "section_kinds_from_bar_map",
     "timeline_meter_from_bar_map",
 ]
@@ -118,6 +121,35 @@ def timeline_meter_from_bar_map(
     if valid_bpm and beats is not None:
         meter["seconds_per_bar"] = beats * 60.0 / float(song_bpm)
     return meter
+
+
+#: 앱이 콘솔에 저장한 프리셋의 기록 — 칸이 아니라 콘솔에 지금 있는 것의 사실이다.
+CONSOLE_PRESET_RECORD_KEYS = (
+    "dimmer_presets",
+    "preset_colors",
+    "preset_labels",
+    "preset_descriptions",
+    "preset_movements",
+    "preset_positions",
+)
+
+
+def carry_console_preset_records(
+    previous_grid: Mapping[str, Any], timeline: Mapping[str, Any]
+) -> dict[str, Any]:
+    """새 작업본(``timeline``) 격자에 직전 격자의 콘솔 프리셋 저장 기록을 옮긴 사본.
+
+    새 분석은 칸을 비우지만 콘솔의 프리셋은 그대로 남는다. 기록을 버리면 다음 계획이 재사용할
+    근거가 없어 같은 프리셋을 새 번호로 또 저장한다(3차 전체 실행 E-10·I-08: 17개 두 벌, 콘솔은
+    같은 이름에 「#숫자」). 같은 곡일 때만 부른다 — 판정은 부르는 쪽(세션) 몫이다."""
+    carried = {
+        key: copy.deepcopy(previous_grid[key])
+        for key in CONSOLE_PRESET_RECORD_KEYS
+        if isinstance(previous_grid.get(key), Mapping) and previous_grid[key]
+    }
+    updated = dict(timeline)
+    updated["beat_grid"] = {**timeline["beat_grid"], **carried}
+    return updated
 
 
 def build_analysis_timeline(
