@@ -31,7 +31,19 @@ export interface ConsoleFollowRelay {
   consoleMayRun: boolean;
   /** 위 판정에 쓴 마지막 응답 객체 — 같은 응답을 두 번 세지 않는다. */
   runStatusSeen: BeatGridSendStatus | null;
+  /** ▶ 를 누를 때의 `busy` 횟수 — 그 뒤 늘면 이번 재생 요청이 `busy` 로 거절된 것이다(4차 전체 실행 H-10). */
+  awaitingBusyAt: number;
+  /** ❚❚ 로 콘솔 정지를 보내고 서버 답을 기다리는 중인가. 이 사이에 보낸 재생은 `busy` 로 거절된다. */
+  stopping: boolean;
+  /** ❚❚ 를 누를 때 화면에 있던 응답 객체와 `busy` 횟수 — 이것과 다른 응답이나 `busy` 가 오면 정지 처리는 끝났다. */
+  stopPressedAgainst: BeatGridSendStatus | null;
+  stopBusyAt: number;
+  /** 정지 처리 중에 ▶ 가 눌렸다 — 정지가 끝나면 그 재생을 보낸다. */
+  playQueued: boolean;
 }
+
+/** 재생 요청이 `busy` 로 거절됐을 때 보이는 문구. */
+export const CONSOLE_PLAY_BUSY_MESSAGE = "앞 명령을 처리 중이라 콘솔 재생이 거절됐습니다 — ▶ 를 다시 눌러 주세요.";
 
 /** 서버가 거절하면서 이유를 싣지 않았을 때 쓰는 문구. */
 const CONSOLE_PLAY_REJECTED_FALLBACK = "콘솔 타임코드 재생이 거절됐습니다.";
@@ -52,7 +64,36 @@ export function createConsoleFollowRelay(): ConsoleFollowRelay {
     failure: null,
     consoleMayRun: false,
     runStatusSeen: null,
+    awaitingBusyAt: 0,
+    stopping: false,
+    stopPressedAgainst: null,
+    stopBusyAt: 0,
+    playQueued: false,
   };
+}
+
+/** 재생 요청 뒤 `busy` 가 왔으면 대기를 풀고 이유를 남긴다. 풀었으면 `true`(호출자는 이유를 보인다).
+ * 풀지 않으면 「응답 대기」가 영영 남아 그 뒤 ▶ 가 전부 무시된다(4차 전체 실행 H-10). */
+export function releaseBusyRefusedPlay(relay: ConsoleFollowRelay, busyCount: number): boolean {
+  if (!relay.awaiting || busyCount <= relay.awaitingBusyAt) return false;
+  relay.awaiting = false;
+  relay.failure = CONSOLE_PLAY_BUSY_MESSAGE;
+  return true;
+}
+
+/** 콘솔 정지 처리가 끝났는지 본다 — ❚❚ 뒤 새 응답이나 `busy` 가 오면 끝났다. 끝났고 그 사이 ▶ 가 눌려
+ * 있었으면 `true`(호출자는 그 재생을 지금 보낸다). */
+export function settleConsoleStop(
+  relay: ConsoleFollowRelay,
+  status: BeatGridSendStatus | null,
+  busyCount: number,
+): boolean {
+  if (!relay.stopping) return false;
+  if (status === relay.stopPressedAgainst && busyCount <= relay.stopBusyAt) return false;
+  relay.stopping = false;
+  const queued = relay.playQueued;
+  relay.playQueued = false;
+  return queued;
 }
 
 /** 콘솔 타임코드가 돌고 있을 수 있는지를 응답 하나로 갱신한다. 바뀌었으면 `true`(호출자는 화면에 알린다).

@@ -137,6 +137,8 @@ import {
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
   consoleAudioPositionSeconds,
   createConsoleFollowRelay,
+  releaseBusyRefusedPlay,
+  settleConsoleStop,
   shouldStopConsoleAtSongEnd,
   type ConsoleFollowRelay,
 } from "./beatgrid/consoleFollowRelay";
@@ -1960,10 +1962,19 @@ export function BeatGrid({
         consoleAudioTimerRef.current = null;
         relay.responseAtMs = null;
         relay.audioStarted = false;
+        // 정지 답이 오기 전까지는 재생을 보내지 않는다 — 그 사이 보낸 재생은 `busy` 로 거절된다(H-10).
+        relay.stopping = true;
+        relay.stopPressedAgainst = sendStatus;
+        relay.stopBusyAt = busyCount;
+        relay.playQueued = false;
         onConsoleStop?.();
         return;
       }
       if (relay.awaiting) return;
+      if (relay.stopping) {
+        relay.playQueued = true;
+        return;
+      }
       // 새로 누른 ▶ 는 콘솔 타임코드를 처음부터 다시 돌린다 — 앞 실행에 걸어 둔 음원 시작 예약은 거두고
       // 이번 응답만 따른다(옛 시작 시각으로 음원이 먼저 트는 일이 없게).
       if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
@@ -1973,6 +1984,7 @@ export function BeatGrid({
       setConsoleFollowError(null);
       relay.failure = null;
       relay.awaiting = true;
+      relay.awaitingBusyAt = busyCount;
       relay.pressedAgainst = sendStatus;
       onConsolePlay?.();
       return;
@@ -2152,6 +2164,16 @@ export function BeatGrid({
     resumeRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendStatus, consoleFollowSeq]);
+
+  // 4차 전체 실행 H-10 — 재생 요청이 `busy` 로 거절되면 대기를 풀고 이유를 보인다. 정지 처리 중에 눌린 ▶ 는
+  // 정지 답(새 응답 또는 `busy`)이 온 뒤에 보낸다.
+  const togglePlayRef = useRef(togglePlay);
+  togglePlayRef.current = togglePlay;
+  useEffect(() => {
+    if (releaseBusyRefusedPlay(relay, busyCount)) setConsoleFollowError(relay.failure);
+    if (settleConsoleStop(relay, sendStatus, busyCount)) togglePlayRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendStatus, busyCount]);
 
   // 음원이 연결되면(`canplay`) 기다리던 시작을 그 자리에서 이어 간다.
   useEffect(() => {
@@ -2610,7 +2632,7 @@ export function BeatGrid({
       {presetPlanWait !== null && (
         <p className="beat-grid-preset-plan-wait" role="status">
           {presetPlanWait === "waiting"
-            ? "프리셋 계획을 만드는 중이에요 — 콘솔 풀을 읽느라 30초 넘게 걸릴 수 있어요. 다시 누르지 않아도 계획표가 뜹니다."
+            ? "프리셋 계획 요청을 이미 보냈어요 — 콘솔 풀을 읽느라 1분쯤 걸려요. 다시 누르지 않아도 계획표가 뜹니다."
             : "프리셋 계획 답이 늦어요 — ▤ 서랍의 「프리셋 계획 만들기」로 다시 요청할 수 있어요."}
         </p>
       )}
