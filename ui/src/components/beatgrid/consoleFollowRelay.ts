@@ -100,3 +100,10 @@ export function observeConsoleFollowStatus(
 export function consoleAudioPositionSeconds(responseAtMs: number, delaySeconds: number, nowMs: number): number {
   return (nowMs - responseAtMs) / 1000 - delaySeconds;
 }
+
+/** 전체 실행 G-22 — 곡 끝에서 콘솔 타임코드도 끌지. 「콘솔 같이」가 켜져 있고 콘솔이 돌고 있을 수
+ * 있을 때만 끈다(❚❚ 와 같은 `Off Timecode N`). 콘솔 쪽 자동 정지(AutoStop)는 실측된 적이 없어
+ * 기대지 않는다(t498: 타임코드에 AUTOSTOP 필드 없음). */
+export function shouldStopConsoleAtSongEnd(relay: ConsoleFollowRelay): boolean {
+  return relay.consoleFollow && relay.consoleMayRun;
+}
