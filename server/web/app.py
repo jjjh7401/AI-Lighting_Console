@@ -675,7 +675,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
-                    await asyncio.to_thread(session.beat_grid_draft_propose)
+                    # 카드 WT-all-fixtures — 초안이 콘솔 그룹 전부의 소속 장비와 장비 능력을 읽어
+                    # 실측 58~100초 걸린다. 인라인 await 하면 그동안 상태 요청에 못 답해 화면이
+                    # 연결을 새로 열고, 초안 답이 닫힌 옛 연결로 간다. 백그라운드 task 로 돌린다.
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(session.beat_grid_draft_propose)
+                    )
                 elif message_type == "beat_grid_draft_apply":
                     if current_task is not None and not current_task.done():
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
