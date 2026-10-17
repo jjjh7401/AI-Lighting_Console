@@ -598,7 +598,11 @@ class SafetyGate:
     #   skipped — only the general-channel approval re-ask is (design.md
     #   §1.3; acceptance.md AC-LDPLUGIN-021 항목 3)
     def execute_preapproved(
-        self, commands: Sequence[str], *, risk: BatchRisk | None = None
+        self,
+        commands: Sequence[str],
+        *,
+        risk: BatchRisk | None = None,
+        showfile_backup: bool = True,
     ) -> ScreenDecision:
         """Screen a command bundle already covered by a director ``ApprovalBinding``.
 
@@ -620,6 +624,10 @@ class SafetyGate:
         ``risk`` mirrors :meth:`screen`'s parameter (SPEC-COPILOT-BULKGATE-001)
         purely for audit-log parity — it never triggers an approval request
         here, since none is ever made.
+
+        ``showfile_backup=False`` — 전체 실행 J-09: 세션 1회 승인을 받은 박자 격자 재생 명령
+        (``Top/Go/Off Timecode N``)은 쇼 데이터를 바꾸지 않으므로 규칙 ③ 백업을 건너뛴다.
+        그러지 않으면 누를 때마다 카드 없는 SaveShow 가 나간다(E-06). 다른 단계는 그대로다.
         """
         commands = list(commands)
         session_key = current_session_key()
@@ -668,7 +676,7 @@ class SafetyGate:
                     return locked
 
                 # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
-                if self._backup is not None:
+                if self._backup is not None and showfile_backup:
                     try:
                         self._backup.before_risky_execution()
                     except BackupError as error:

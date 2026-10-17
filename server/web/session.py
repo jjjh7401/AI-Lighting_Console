@@ -12222,7 +12222,11 @@ class ChatSession:
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
         commands = tuple(f"{verb} Timecode {timecode_number}" for verb in verbs)
-        if not self._beat_grid_dispatch_preview(f"beat-grid-{action}", commands):
+        if self._preview_approval.is_approved:
+            sent = self._beat_grid_send_transport_preapproved(commands)
+        else:
+            sent = self._beat_grid_dispatch_preview(f"beat-grid-{action}", commands)
+        if not sent:
             return self._beat_grid_send_status(
                 last_action=action,
                 ok=False,
@@ -12231,6 +12235,29 @@ class ChatSession:
                 ),
             )
         return self._beat_grid_send_status(last_action=action, ok=True)
+
+    def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> bool:
+        """전체 실행 J-09 — 이 세션에서 미리보기·재생 승인을 이미 받았으면(REQ-LDBEAT-012(b)
+        「세션 시작 1회」) 앱 소유 타임코드의 ``Top/Go/Off Timecode N`` 을 다시 묻지 않고 보낸다.
+
+        게이트는 그대로 거친다(``execute_preapproved``: 문법·분류·잠금·감사). 일반 승인 창만 다시
+        묻지 않는다 — 세션 승인 기록이 그 자리의 승인 증거다. 재생 명령은 쇼 데이터를 바꾸지
+        않으므로 백업 규칙 ③ 을 건너뛴다(카드 없는 SaveShow 를 내지 않는다)."""
+        token = bind_session_key(self._session_key)
+        try:
+            decision = self._gate.execute_preapproved(
+                list(commands),
+                risk=BatchRisk(
+                    reason="박자 격자 재생 — 세션 시작 1회 승인(REQ-LDBEAT-012(b))",
+                    kind="beat_grid_transport_session",
+                ),
+                showfile_backup=False,
+            )
+            if not decision.cleared:
+                return False
+            return all(self._gate.execution_port.execute(command).ok for command in commands)
+        finally:
+            reset_session_key(token)
 
     def beat_grid_console_play(self) -> dict:
         """카드 t578(REQ-LDBEAT-024(a)) — 「콘솔 같이」 켬 + ▶ : 그 곡의 타임코드를
