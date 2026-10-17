@@ -30,9 +30,8 @@
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
   STROBE(느린 곡이면 두지 않는다)다. 마디 지도에 리듬 블록이 있으면 BLIND 마디는 그 구간 안 첫 큰
   히트(``kind == "big"``)의 마디이고, 구간 안에 큰 히트가 없으면 구간의 첫 마디 그대로다.
-- 예고는 강조가 아니다. 빌드 구간 바로 뒤에서 후렴(마지막 후렴 포함)이 시작하면 그 빌드의 끝
-  마디, 곧 큰 히트 직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는
-  쉼과 같다).
+- 예고는 강조가 아니다. 강조 구간(후렴·마지막 후렴·드롭)이 시작하기 바로 앞 마디, 곧 큰 히트
+  직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는 쉼과 같다).
 - 칸은 값이 같은 연속 마디의 묶음이고 첫 마디에만 낸다. 값은 라벨·밝기·움직임이고 구간 종류와
   구간 경계는 값이 아니다. 쉬는 연속 마디(「—」)도 구간을 몇 번 넘든 한 칸이다. 모든 줄에 첫
   마디 칸이 있다.
@@ -88,6 +87,8 @@ _DROP = "drop"
 #: 기존 생성기에 없는 구간 종류. 팔레트에 항목이 없어 둘 다 벌스 색을 쓴다.
 _SECTION_INTRO = "intro"
 _SECTION_BUILD = "build"
+#: 곡 끝 브레이크 구간. 도입처럼 다룬다(움직임이 주인공, 두 무빙 바닥 쪽, 벌스 색).
+_SECTION_OUTRO = "outro"
 
 #: 구간의 첫 마디에 블라인드(BLIND)를 두는 구간 종류. 드롭은 스트로브(STROBE)가 맡는다.
 _BLIND_SECTIONS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS})
@@ -99,6 +100,7 @@ _HIT_KINDS = frozenset({_SECTION_CHORUS, _SECTION_LAST_CHORUS, _SECTION_DROP})
 #: 무대 중앙, 코러스·마지막 코러스·드롭은 두 무빙이 다른 자리에서 함께 연다(규칙 5).
 _MOVER_TARGET_OF_KIND: dict[str, tuple[str, str]] = {
     _SECTION_INTRO: ("Home", "Home"),
+    _SECTION_OUTRO: ("Home", "Home"),
     _SECTION_VERSE: ("Center", "Home"),
     _SECTION_BUILD: ("Center", "Center"),
     _SECTION_BRIDGE: ("Center", "Center"),
@@ -111,6 +113,7 @@ _MOVER_TARGET_OF_KIND: dict[str, tuple[str, str]] = {
 #: 고정이다(후렴·벌스·도입은 움직임+펄스, 빌드·브릿지는 체이스+움직임). 마지막 후렴은 후렴과 같다.
 _LEAD_OF_KIND: dict[str, str] = {
     _SECTION_INTRO: _MOTION,
+    _SECTION_OUTRO: _MOTION,
     _SECTION_VERSE: _MOTION,
     _SECTION_BUILD: _CHASE,
     _SECTION_CHORUS: _MOTION,
@@ -181,7 +184,7 @@ class SegmentSection(NamedTuple):
 
     start_bar: int
     end_bar: int
-    #: 도입·벌스·빌드·후렴·브릿지·드롭·마지막 후렴 중 하나.
+    #: 도입·벌스·빌드·후렴·브릿지·드롭·마지막 후렴·아웃트로 중 하나.
     kind: str
     #: 이 구간 시작 마디를 품은 리듬 구간(``bar_map["rhythm"]["sections"]``)의 등급(1~5).
     #: 리듬 블록이 없거나 품은 리듬 구간이 없으면 ``None``. 메타데이터라 초안에는 실리지 않는다.
@@ -224,7 +227,7 @@ def generate_segment_draft(
       칸의 상태가 이어진다. 쉬는 연속 마디는 쉼(「—」) 한 칸이다.
     - ``planned_colors`` 는 기존 생성기와 같다. 켜는 칸에서는 구간 색·역광 색보다 우선하고,
       쉬는 칸에는 닿지 않는다. 이 함수는 파일을 읽지 않는다.
-    - 블라인드 줄에는 후렴 바로 앞 빌드의 끝 마디에 예고 칸(밝기는 쉼과 같고 색은 없다)이 선다.
+    - 블라인드 줄에는 강조 구간 바로 앞 마디에 예고 칸(밝기는 쉼과 같고 색은 없다)이 선다.
     """
     settings = ArrangementPolicy() if policy is None else policy
     if bar_map is None:
@@ -378,7 +381,7 @@ def split_sections(bar_map: Mapping[str, Any]) -> list[SegmentSection]:
     starts.update(event.end_bar + 1 for event in events if event.kind == _DROP)
     ordered = sorted(starts & set(bar_numbers))
     ends = [start - 1 for start in ordered[1:]] + [bar_numbers[-1]]
-    return [
+    sections = [
         SegmentSection(
             start,
             end,
@@ -387,6 +390,16 @@ def split_sections(bar_map: Mapping[str, Any]) -> list[SegmentSection]:
         )
         for start, end in zip(ordered, ends, strict=True)
     ]
+    # 곡 끝까지 가는 마지막 구간이 브레이크로 시작하고 뒤에 사건이 없으면 아웃트로다(벌스가 아니다).
+    last = sections[-1]
+    if (
+        len(sections) > 1
+        and last.kind == _SECTION_VERSE
+        and any(event.kind == _BREAK and event.start_bar == last.start_bar for event in events)
+        and all(event.start_bar <= last.start_bar for event in events)
+    ):
+        sections[-1] = last._replace(kind=_SECTION_OUTRO)
+    return sections
 
 
 def _rhythm_sections(bar_map: Mapping[str, Any]) -> list[tuple[int, int, int]]:
@@ -618,15 +631,19 @@ def _is_blind_line(track: Mapping[str, Any]) -> bool:
 
 
 def _pre_hit_bars(sections: Sequence[SegmentSection]) -> list[int]:
-    """후렴이 바로 이어 시작하는 빌드 구간의 끝 마디 — 큰 히트 직전에 비우는 예고 칸이 서는 마디.
+    """강조 구간(후렴·마지막 후렴·드롭)이 바로 이어 시작하는 구간의 끝 마디 — 큰 히트 직전에
+    비우는 예고 칸이 서는 마디.
 
-    구간은 서로 이어져 있어서 다음 구간이 후렴(마지막 후렴 포함)이면 그 시작 마디가 빌드 구간의
-    끝 마디 바로 다음이다. 빌드 이벤트가 후렴 앞에서 일찍 끝나도 빌드 구간은 후렴 직전 마디까지다.
+    구간은 서로 이어져 있어서 다음 구간의 시작 마디가 앞 구간 끝 마디 바로 다음이다. 앞 구간이
+    무엇이든(빌드·브리지·드롭) 강조 직전 마디다 — 곡 후반의 브리지→드롭, 드롭→마지막 후렴도
+    같은 규칙이다(인수 D-07, 2026-10-17). 앞 구간이 한 마디짜리 강조 구간이면 그 마디는 강조라
+    예고를 두지 않는다.
     """
     return [
-        build.end_bar
-        for build, after in zip(sections, sections[1:], strict=False)
-        if build.kind == _SECTION_BUILD and after.kind in _BLIND_SECTIONS
+        before.end_bar
+        for before, after in zip(sections, sections[1:], strict=False)
+        if after.kind in _HIT_KINDS
+        and not (before.kind in _HIT_KINDS and before.start_bar == before.end_bar)
     ]
 
 

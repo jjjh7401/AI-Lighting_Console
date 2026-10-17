@@ -13,6 +13,7 @@ import {
   overviewBarAtFraction,
   overviewVisibleWindow,
   pxPerBarForZoom,
+  sectionDisplayLabel,
   type SongOverviewSectionInput,
 } from "./songOverviewModel";
 
@@ -131,5 +132,30 @@ describe("지금 보는 범위 창 · 클릭 점프", () => {
     expect(overviewBarAtFraction(0.5, 80)).toBe(40);
     expect(overviewBarAtFraction(1, 80)).toBe(79);
     expect(overviewBarAtFraction(-0.2, 80)).toBe(0);
+  });
+});
+
+describe("구간 종류 이름 — 인수 A-09", () => {
+  it("분석 구간 이름(D 레벨뿐) 앞에 서버가 보낸 종류 이름을 붙인다", () => {
+    expect(sectionDisplayLabel({ label: "0:37–1:09 · D5", kind_label: "후렴" })).toBe("후렴 · 0:37–1:09 · D5");
+  });
+
+  it("종류 이름이 없거나 이름이 이미 종류로 시작하면 이름 그대로다", () => {
+    expect(sectionDisplayLabel({ label: "0:00–0:13 · D1" })).toBe("0:00–0:13 · D1");
+    expect(sectionDisplayLabel({ label: "후렴 1", kind_label: "후렴" })).toBe("후렴 1");
+  });
+
+  it("곡 지도 구간 이름에도 종류가 붙는다", () => {
+    const view = buildSongOverview({
+      sections: [
+        { label: "0:00–0:13 · D1", start_ms: 0, bar_start: 0, kind_label: "인트로" },
+        { label: "0:37–1:09 · D5", start_ms: 8000, bar_start: 4, kind_label: "후렴" },
+      ],
+      barCount: 8,
+    });
+    expect(view.sections.map((section) => section.label)).toEqual([
+      "인트로 · 0:00–0:13 · D1",
+      "후렴 · 0:37–1:09 · D5",
+    ]);
   });
 });

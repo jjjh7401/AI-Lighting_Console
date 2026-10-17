@@ -327,8 +327,10 @@ export interface SongTimelineSection {
   color?: string | null;
   /** #726 — 구간 에너지 0~1. 마디 지도를 분석한 뒤에만 생긴다. 없으면 키가 없다. */
   energy?: number | null;
-  /** #726 — 구간 종류 이름(이름에서 알아볼 때만). */
+  /** #726 — 구간 종류(이름 또는 마디 지도로 정함). */
   kind?: string | null;
+  /** 구간 종류의 감독용 이름(「후렴」 등). 있으면 화면이 구간 이름 앞에 붙인다(인수 A-09). */
+  kind_label?: string | null;
   /** t472 — 사전이동이 있는 구간에만: 사전이동에 쓸 수 있는 어둠(초), 모르면 null (t471). */
   dark_window_seconds?: number | null;
   /** t472 — 어둠이 모자라 무빙이 켜진 채 움직이는가 (t471, REQ-066). 사전이동 구간에만. */

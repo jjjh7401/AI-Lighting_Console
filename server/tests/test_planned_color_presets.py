@@ -68,27 +68,11 @@ def _applied_grid() -> dict:
     return grid
 
 
-#: 색 후보에서 빼는 역할 — 키(FOH)·효과(BLIND·STROBE)는 컬러 채널이 없는 장비다(리드 결정).
-_NO_COLOR_ROLES = {"key", "effect"}
-
-
 def _planned_cells(grid: dict) -> set[tuple[str, int]]:
-    """색 후보 범위의 계획 색 칸 — 키·효과 역할 줄은 세지 않는다."""
+    """계획 색 칸 전부 — 역할로 빼지 않는다(컬러 채널 유무는 저장 단계가 장비를 읽어 가른다)."""
     return {
         (track["group_name"], cue["bar"])
         for track in grid["tracks"]
-        if track.get("layer_role") not in _NO_COLOR_ROLES
-        for cue in track["cues"]
-        if isinstance(cue.get("planned_color"), list)
-    }
-
-
-def _no_color_cells(grid: dict) -> set[tuple[str, int]]:
-    """키·효과 역할 줄의 계획 색 칸 — 색 후보에 아예 들어가지 않아야 한다."""
-    return {
-        (track["group_name"], cue["bar"])
-        for track in grid["tracks"]
-        if track.get("layer_role") in _NO_COLOR_ROLES
         for cue in track["cues"]
         if isinstance(cue.get("planned_color"), list)
     }
@@ -196,25 +180,42 @@ class TestPlannedColorCandidates:
         assert not any("계획 색 RGB 1 2 3" in line for line in plan.unresolved), plan.unresolved
         assert all(p.name for p in _color_presets(plan) if p.split_side is None)
 
-    def test_key_and_effect_lines_are_not_counted_as_color_candidates_at_all(self) -> None:
+    def test_key_and_effect_lines_are_color_candidates_like_any_other_line(self) -> None:
+        # 인수 C-06(2026-10-17): FOH 0 · BLIND 18·46·67 · STROBE 63 이 번호 없이 남았다. 역할로
+        # 「컬러 채널 없음」을 단정해 후보에서 뺐기 때문이다 — 장비 능력은 채널 판독이 정한다.
         grid = _applied_grid()
-        no_color_groups = {
-            track["group_name"]
+        effect_cells = {
+            (track["group_name"], cue["bar"])
             for track in grid["tracks"]
-            if track.get("layer_role") in _NO_COLOR_ROLES
+            if track.get("layer_role") in {"key", "effect"}
+            for cue in track["cues"]
+            if isinstance(cue.get("planned_color"), list)
         }
-        assert _no_color_cells(grid), "픽스처에 키·효과 줄의 계획 색 칸이 있어야 한다"
-        plan = _with_stores(grid, _plan(grid))
-        updated = _approve(grid, plan)
-        assert not (_no_color_cells(grid) & _numbered_cells(updated))
-        assert not any(
-            group in no_color_groups for preset in _color_presets(plan) for group in preset.groups
-        )
-        covered = set().union(*(_cells_of(p) for p in _color_presets(plan)))
-        assert not (_no_color_cells(grid) & covered)
+        assert effect_cells == {
+            ("FOH", 0),
+            ("BLIND", 18),
+            ("BLIND", 46),
+            ("BLIND", 67),
+            ("STROBE", 63),
+        }
+        updated = _approve(grid, _with_stores(grid, _plan(grid)))
+        assert effect_cells <= _numbered_cells(updated)
 
+    def test_a_group_without_color_channels_is_held_with_a_reason_not_numbered(self) -> None:
+        # 컬러 채널이 없는 장비(여기선 BLIND 를 디머만 있는 장비로 둔다)는 번호 없이 사유가 남는다.
+        grid = _applied_grid()
+        plan = _plan(grid)
+        members, channels = _fake_reads(grid)
+        for fid in members["BLIND"]:
+            channels[fid] = ["Dimmer"]
+        stored = attach_color_store(plan, grid, members=members, channel_names=channels)
+        blind = [p for p in _color_presets(stored) if "BLIND" in p.groups]
+        assert blind and all(not p.ready and p.hold for p in blind)
+        updated = _approve(grid, stored)
+        numbered = _numbered_cells(updated)
+        assert not {cell for cell in numbered if cell[0] == "BLIND"}
+        assert ("FOH", 0) in numbered
 
-class TestConsoleNumberReuse:
     def test_a_console_number_with_the_same_rgb_and_group_is_reused_without_a_store_line(
         self,
     ) -> None:
@@ -377,9 +378,9 @@ class TestTheApprovalCard:
         assert event["ok"] is True
         assert len(approval.requests) == 1  # 카드는 한 장이다
         card = list(approval.requests[0].commands)
-        # 주석 색 3 + 계획 색 13. 키·효과 줄(FOH·BLIND·STROBE)의 프리셋 3개는 세지 않는다.
+        # 주석 색 3 + 계획 색 13 + 키·효과 줄(FOH·BLIND·STROBE)의 계획 색 3.
         # 주석 PITCH(워시 22마디)는 구간 중간이라 칸이 없어 저장하지 않는다(워시는 구간마다 한 칸).
-        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 16
+        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 19
         numbered = _numbered_cells(store.latest["beat_grid"])
         assert _planned_cells(grid) <= numbered
         assert numbered - _planned_cells(grid) == _ANNOTATION_ONLY

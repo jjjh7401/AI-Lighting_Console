@@ -24,7 +24,6 @@ from .test_preset_plan_store_all import _FRAMES, _MEMBERS
 #: 효과 풀 21 — 1~7 이 찼다고 두는 픽스처. 첫 빈 번호는 8.
 _EFFECT_POOL = (21, {slot: f"EFX {slot}" for slot in range(1, 8)})
 _POSITION_POOL = (2, _POSITION_CHILDREN)
-_NO_COLOR_ROLES = {"key", "effect"}
 
 
 def _director_numbered(grid: dict) -> tuple[str, int]:
@@ -92,10 +91,7 @@ def test_every_lit_cell_gets_a_color_number() -> None:
     missing = [
         (track["group_name"], cue["bar"], cue["label"])
         for track, cue in _cells(approved)
-        if track.get("layer_role") not in _NO_COLOR_ROLES
-        and _lit(cue)
-        and cue.get("planned_color") is not None
-        and cue.get("color_preset_no") is None
+        if _lit(cue) and cue.get("planned_color") is not None and cue.get("color_preset_no") is None
     ]
     assert missing == []
 
@@ -106,10 +102,7 @@ def test_every_lit_colored_line_cell_has_a_planned_color_to_number() -> None:
     uncolored = [
         (track["group_name"], cue["bar"], cue["label"])
         for track, cue in _cells(grid)
-        if track.get("layer_role") not in _NO_COLOR_ROLES
-        and _lit(cue)
-        and cue.get("planned_color") is None
-        and cue.get("color_preset_no") is None
+        if _lit(cue) and cue.get("planned_color") is None and cue.get("color_preset_no") is None
     ]
     assert uncolored == []
 
@@ -150,10 +143,7 @@ def test_a_director_numbered_cell_does_not_hold_the_rest_of_its_color_candidate(
     missing = [
         (track["group_name"], cue["bar"])
         for track, cue in _cells(approved)
-        if track.get("layer_role") not in _NO_COLOR_ROLES
-        and _lit(cue)
-        and cue.get("planned_color") is not None
-        and cue.get("color_preset_no") is None
+        if _lit(cue) and cue.get("planned_color") is not None and cue.get("color_preset_no") is None
     ]
     assert missing == []
     back = next(t for t in approved["tracks"] if t["group_name"] == "BACK")
