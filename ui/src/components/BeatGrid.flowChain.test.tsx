@@ -327,7 +327,7 @@ describe("초안 「적용」 뒤 — 프리셋 계획을 기다리는 동안 (1
     expect(waitLine()).toBeNull();
     render({ sendStatus: status({ completed: "draft_applied" }), onDrawerRequest });
     expect(handlers.onPresetPlanRequest).toHaveBeenCalledTimes(1);
-    expect(waitLine()).toContain("만드는 중");
+    expect(waitLine()).toContain("요청을 이미 보냈어요");
     act(() => headerButton("▤").click());
     const button = planButton();
     expect(button).toBeDefined();
@@ -340,7 +340,7 @@ describe("초안 「적용」 뒤 — 프리셋 계획을 기다리는 동안 (1
     render({ sendStatus: null, busyCount: 0 });
     const applied = status({ completed: "draft_applied" });
     render({ sendStatus: applied, busyCount: 0 });
-    expect(waitLine()).toContain("만드는 중");
+    expect(waitLine()).toContain("요청을 이미 보냈어요");
     render({ sendStatus: applied, busyCount: 1 });
     expect(waitLine()).toBeNull();
   });

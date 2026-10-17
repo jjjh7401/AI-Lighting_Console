@@ -112,6 +112,7 @@ function createApp(options: AppOptions = {}) {
   const onConsoleStop = vi.fn();
   let sendStatus: BeatGridSendStatus | null = null;
   let seq = 0;
+  let busyCount = 0;
   let shown = false;
   const draw = () => {
     act(() => {
@@ -121,6 +122,7 @@ function createApp(options: AppOptions = {}) {
             grid={grid}
             consoleFollowRelay={relay}
             consoleFollowSeq={seq}
+            busyCount={busyCount}
             sendStatus={sendStatus}
             onConsolePlay={onConsolePlay}
             onConsoleStop={onConsoleStop}
@@ -152,6 +154,11 @@ function createApp(options: AppOptions = {}) {
         seq += 1;
         draw();
       }
+    },
+    /** 서버가 `busy`(이전 지시 처리 중)로 답한다 — `App` 은 그 횟수만 올린다. */
+    busy() {
+      busyCount += 1;
+      draw();
     },
   };
 }
@@ -556,6 +563,44 @@ describe("▶ 를 다시 누를 때와 켬/끔", () => {
     app.receive(status());
     advance(DELAY_SECONDS * 1000);
     expect(media.play).toHaveBeenCalledTimes(1);
+  });
+
+  // 4차 전체 실행 H-10(full4-p4-ws.log 11:18:36~38): Space 로 멈춘 0.8초 뒤 Space 를 다시 눌렀다. 정지 처리에
+  // 1.7초 걸려 그 재생 요청이 `busy` 로 거절됐고, 화면은 「응답 대기」를 풀지 않아 그 뒤 누름이 모두 무시됐다.
+  it("H-10: Space 로 멈춘 직후(정지 응답 전) Space 를 다시 누르면 정지가 끝난 뒤 재생 요청이 나간다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+    const space = () => act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " " })));
+
+    space(); // ❚❚
+    expect(app.onConsoleStop).toHaveBeenCalledTimes(1);
+    advance(800);
+    space(); // 정지 응답 전 — 서버가 아직 정지를 처리하는 중이다
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(1); // 지금 보내면 `busy` 로 거절된다
+
+    app.receive(status({ last_action: "console_stop" })); // 정지 끝
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(2); // 미뤄 둔 재생이 이제 나간다
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+    expect(media.play).toHaveBeenCalledTimes(2);
+    expect(playButton().textContent).toBe("❚❚ 일시정지");
+  });
+
+  it("H-10: 재생 요청이 `busy` 로 거절되면 대기를 풀고 이유를 보인다 — 다시 누르면 요청이 나간다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+
+    app.busy();
+    expect(app.relay.awaiting).toBe(false);
+    expect(errorTexts().some((text) => text.includes("처리 중"))).toBe(true);
+    click(playButton());
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(2);
   });
 
   it("「콘솔 같이」를 끄고 멈춰도 남은 콘솔 시작 시각이 지워져 다시 열어도 이어 틀지 않는다", () => {

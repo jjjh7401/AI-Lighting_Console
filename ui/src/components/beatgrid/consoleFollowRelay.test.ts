@@ -41,6 +41,11 @@ describe("createConsoleFollowRelay — 처음 상태", () => {
       failure: null,
       consoleMayRun: false,
       runStatusSeen: null,
+      awaitingBusyAt: 0,
+      stopping: false,
+      stopPressedAgainst: null,
+      stopBusyAt: 0,
+      playQueued: false,
     });
   });
 
