@@ -18,7 +18,9 @@ import type { BeatGridSendStatus, BeatGridView } from "../protocol";
 import { BeatGrid, type BeatGridProps } from "./BeatGrid";
 import {
   CONSOLE_DELAY_MISSING_MESSAGE,
+  CONSOLE_FOLLOW_OFF_MESSAGE,
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
+  CONSOLE_PLAY_WAITING_MESSAGE,
   createConsoleFollowRelay,
   observeConsoleFollowStatus,
 } from "./beatgrid/consoleFollowRelay";
@@ -623,5 +625,72 @@ describe("▶ 를 다시 누를 때와 켬/끔", () => {
     connectAudio();
     advance(20_000);
     expect(media.play).toHaveBeenCalledTimes(1);
+  });
+});
+
+// 감독 실기(WT-director-play) — 새 탭은 「콘솔 같이 끔」으로 시작한다. 감독은 그걸 모르고 ▶ 를 눌렀고
+// 음원만 돌았다(콘솔로 나간 프레임 0). 기본값은 그대로 두고(켜 둔 채 기억하면 새 탭의 ▶ 한 번이 카드 없이
+// 콘솔을 움직인다), 끈 채 ▶ 를 누르면 콘솔이 따라가지 않는다고 알린다.
+describe("새 탭은 「콘솔 같이 끔」 — 끈 채 ▶ 를 누르면 콘솔이 따라가지 않는다고 알린다", () => {
+  it("끈 채 ▶ 를 누르면 음원만 돈다는 안내가 보이고, 켜면 안내가 사라진다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    expect(consoleFollowToggle().getAttribute("aria-pressed")).toBe("false");
+    expect(errorTexts()).not.toContain(CONSOLE_FOLLOW_OFF_MESSAGE);
+
+    click(playButton());
+    expect(app.onConsolePlay).not.toHaveBeenCalled(); // 콘솔에는 아무것도 보내지 않는다(기존 동작 유지)
+    expect(media.play).toHaveBeenCalledTimes(1);
+    expect(errorTexts()).toContain(CONSOLE_FOLLOW_OFF_MESSAGE);
+
+    click(playButton()); // ❚❚
+    click(consoleFollowToggle()); // 켠다
+    expect(errorTexts()).not.toContain(CONSOLE_FOLLOW_OFF_MESSAGE);
+  });
+
+  it("음원만 도는 중에 「콘솔 같이」를 켜면 음원을 먼저 멈춘다 — 다음 ▶ 는 정지가 아니라 콘솔 재생이다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    click(playButton()); // 끈 채 ▶ — 음원만 돈다
+    expect(playButton().textContent).toBe("❚❚ 일시정지");
+
+    click(consoleFollowToggle()); // 켠다
+    expect(media.pause).toHaveBeenCalled();
+    expect(playButton().textContent).toBe("▶ 재생");
+
+    click(playButton());
+    expect(app.onConsoleStop).not.toHaveBeenCalled(); // 예전엔 이 ▶ 가 ❚❚ 로 처리돼 정지를 보냈다
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(1);
+  });
+
+  it("콘솔 재생을 보낸 뒤 답을 기다리는 동안 그 사실을 보이고, 답이 오면 거둔다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    expect(errorTexts()).toContain(CONSOLE_PLAY_WAITING_MESSAGE);
+
+    app.receive(status());
+    expect(errorTexts()).not.toContain(CONSOLE_PLAY_WAITING_MESSAGE);
+  });
+
+  it("콘솔 재생이 거절되면 기다림 문구 대신 거절 이유를 보인다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status({ ok: false, reason: "이 곡을 콘솔에 반영한 기록이 없어요" }));
+    expect(errorTexts()).not.toContain(CONSOLE_PLAY_WAITING_MESSAGE);
+    expect(errorTexts()).toContain("이 곡을 콘솔에 반영한 기록이 없어요");
+  });
+
+  it("「콘솔 같이」를 쓸 수 없는 화면(송신 경로 없음)에서는 안내를 띄우지 않는다", () => {
+    const app = createApp({ props: { onConsolePlay: undefined, onConsoleStop: undefined } });
+    app.open();
+    connectAudio();
+    click(playButton());
+    expect(errorTexts()).not.toContain(CONSOLE_FOLLOW_OFF_MESSAGE);
   });
 });

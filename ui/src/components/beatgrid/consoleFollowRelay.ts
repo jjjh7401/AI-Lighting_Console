@@ -54,6 +54,13 @@ export const CONSOLE_DELAY_MISSING_MESSAGE = "콘솔→음원 지연 측정값�
 /** 음원을 틀 때가 됐는데 이 곡에 연결된 음원이 아예 없을 때. 콘솔 타임코드는 이미 돌고 있다. */
 export const CONSOLE_NO_SONG_AUDIO_MESSAGE = "이 곡에 연결된 음원이 없어 콘솔 타임코드만 재생 중입니다.";
 
+/** 감독 실기(WT-director-play) — 새 탭은 「콘솔 같이 끔」으로 시작해 ▶ 가 음원만 튼다. 그걸 모르고 콘솔을
+ *  기다리지 않게 알린다. */
+export const CONSOLE_PLAY_WAITING_MESSAGE = "콘솔 타임코드 재생 요청을 보냈어요 — 콘솔 응답을 기다리는 중(음원은 콘솔이 출발한 뒤 시작합니다).";
+
+export const CONSOLE_FOLLOW_OFF_MESSAGE =
+  "「콘솔 같이」가 꺼져 있어 음원만 재생 중입니다 — 콘솔도 함께 돌리려면 ❚❚ 후 「콘솔 같이」를 켜고 ▶ 를 누르세요.";
+
 export function createConsoleFollowRelay(): ConsoleFollowRelay {
   return {
     consoleFollow: false,
