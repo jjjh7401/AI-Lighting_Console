@@ -49,7 +49,7 @@ from server.design.beat_grid_cell_split import (
     validate_cell_split,
 )
 from server.design.beat_grid_color_presets import (
-    color_preset_group,
+    color_preset_groups,
     color_preset_rgb,
     record_color_preset_rgb,
 )
@@ -428,7 +428,8 @@ def _reusable_color_slot(
     """콘솔에 이미 있는 같은 RGB·같은 그룹의 색 번호(「pool.slot」).
     격자가 그 번호의 RGB 를 기록하고 있고, 그 번호에 **이 그룹의 값이 담겨 있어야** 한다.
 
-    - 저장할 때 담은 그룹이 기록돼 있으면(``preset_colors[...]["group"]``) 그 그룹만 쓴다.
+    - 저장할 때 담은 그룹이 기록돼 있으면(``preset_colors[...]["group"/"groups"]``) 그 그룹들만
+      쓴다.
     - 기록이 없는 옛 번호는 누가 담겼는지 모른다 — 그 번호를 쓰는 칸이 있고 전부 이 그룹일
       때만 쓴다. 쓰는 칸이 없으면 쓰지 않는다(1차 전체 실행: 4.106 은 WASH-ALL 만 담겼는데,
       새 분석으로 격자가 비자 무빙 그룹들이 같은 RGB 라며 재사용해 색이 안 들어갈 수 있었다).
@@ -444,9 +445,10 @@ def _reusable_color_slot(
             abs(a - b) < 0.5 for a, b in zip(recorded, rgb, strict=True)
         ):
             continue
-        stored_for = color_preset_group(grid, number)
+        stored_for = color_preset_groups(grid, number)
         if stored_for is not None:
-            if stored_for.casefold() == group.casefold():  # 대화 상자 대상은 손 입력일 수 있다
+            # 대화 상자 대상은 손 입력일 수 있다 — 대소문자는 가리지 않는다.
+            if group.casefold() in {name.casefold() for name in stored_for}:
                 return number
             continue
         users = {
@@ -833,14 +835,15 @@ def _planned_color_presets(
     """자동 배치가 칸에 실은 계획 색(``planned_color``)을 색 후보로 센다. 결과는 ``presets`` 에
     새 후보·재사용으로 더하거나, 같은 그룹의 주석 색 후보에 칸을 보탠다.
 
-    - 키는 (그룹, RGB). 색 저장 경로는 한 번호를 한 그룹에만 쓴다 — 여러 그룹 색 선택은
-      실기 선례가 없어 보류된다. 그래서 같은 RGB 라도 그룹마다 한 프리셋이다.
-    - 같은 그룹·같은 RGB 의 주석 색 후보(저장 줄을 기다리거나 재사용)가 있으면 그 후보에
-      칸을 보탠다.
-    - 콘솔에 같은 RGB·같은 그룹의 색 번호가 있으면 그 번호를 재사용한다(저장 줄 없음).
-    - 나머지는 콘솔 색 풀의 빈 번호에 새 저장 후보를 낸다. 이름은 「색 이름 그룹」. 색 이름은 곡
-      주석의 콘솔 이름 → 칸의 방향 값에 실린 이름 → 팔레트 표 → 가장 가까운 이름(+번호) 순으로
-      정해서 이름이 빈 후보가 없다(``assign_color_names``).
+    - 키는 RGB. 같은 RGB 는 한 프리셋에 쓰는 그룹을 전부 담는다(2차 전체 실행 E-08 — 그룹마다
+      따로 저장해 색 18개·고유 RGB 6개였다). 저장 줄은 ``Group 10 + 7`` 한 선택이다.
+    - 같은 RGB 의 주석 색 후보가 이 그룹을 담고 있으면(재사용) 그 후보에 칸을 보탠다. 저장 줄을
+      기다리는 주석 후보면 남은 그룹을 그 후보에 더한다(한 프리셋).
+    - 콘솔에 같은 RGB 이고 이 그룹을 담아 저장한 번호가 있으면 그 번호를 재사용한다(저장 줄 없음,
+      2차 전체 실행 I-08). 번호가 그룹마다 다를 수 있다 — 칸은 자기 그룹이 담긴 번호를 부른다.
+    - 재사용할 번호가 없는 그룹만 모아 콘솔 색 풀의 빈 번호 하나에 새 저장 후보를 낸다. 이름은 색
+      이름이다. 색 이름은 곡 주석의 콘솔 이름 → 칸의 방향 값에 실린 이름 → 팔레트 표 → 가장 가까운
+      이름(+번호) 순으로 정해서 이름이 빈 후보가 없다(``assign_color_names``).
     - 번호가 이미 있는 칸, 칸 쪽 색(split), 살아 있는 주석 색 후보가 잡은 칸은 건드리지 않는다.
     """
     base_names = _planned_base_names(annotations)
@@ -854,8 +857,8 @@ def _planned_color_presets(
     }
     #: 칸의 방향 값이 이미 들고 있는 색 이름 — 라벨·무대와 프리셋 이름이 같은 이름을 쓰게 한다.
     direction_names: dict[tuple[int, int, int], str] = {}
-    order: list[tuple[str, tuple[int, int, int]]] = []
-    cells_of: dict[tuple[str, tuple[int, int, int]], list[PlanCell]] = {}
+    #: RGB → 그룹 → 칸(첫 등장 순). 그룹 순서가 저장 선택(``Group a + b``)의 순서다.
+    cells_of: dict[tuple[int, int, int], dict[str, list[PlanCell]]] = {}
     # 계획 색이 있는 칸은 역할과 무관하게 후보에 센다. 컬러 채널이 있는지는 역할로 짐작하지 않고
     # 저장 단계(``preset_plan_store``)가 장비 채널을 읽어 가른다 — 없으면 그 후보는 사유와 함께
     # 「미정」으로 남는다(리드 지시 2026-10-17, 인수 C-06).
@@ -875,55 +878,84 @@ def _planned_color_presets(
         hinted = color.get("name") if isinstance(color, Mapping) else None
         if isinstance(hinted, str) and hinted.strip() and _rgb_key(color.get("rgb")) == rgb:
             direction_names.setdefault(rgb, hinted.strip())
-        key = (group, rgb)
-        if key not in cells_of:
-            cells_of[key] = []
-            order.append(key)
-        cells_of[key].append(PlanCell(group_name=group, bar=bar))
+        cells_of.setdefault(rgb, {}).setdefault(group, []).append(
+            PlanCell(group_name=group, bar=bar)
+        )
 
     # 이 계획이 다루는 색 전부의 이름을 한 번에 정한다 — 이름 없는 색은 없고 색마다 이름이 다르다.
     color_names = assign_color_names(
-        {rgb for _group, rgb in order},
-        preferred={rgb: base_names[rgb] for _group, rgb in order if rgb in base_names},
+        set(cells_of),
+        preferred={rgb: base_names[rgb] for rgb in cells_of if rgb in base_names},
         hints=direction_names,
     )
 
-    for group, rgb in order:
-        cells = tuple(cells_of[(group, rgb)])
+    for rgb, by_group in cells_of.items():
         channels = " ".join(str(channel) for channel in rgb)
         value = f"RGB {channels}"
-        name = f"{color_names[rgb]} {group}"
-        annotated = next(
-            (
-                index
-                for index, preset in enumerate(presets)
-                if preset.kind == "color"
-                and (preset.deferred or preset.reused)
-                and preset.groups == (group,)
-                and _rgb_key(preset.rgb) == rgb
-            ),
-            None,
-        )
-        if annotated is not None:
-            # 같은 그룹·같은 색의 주석 후보가 이미 있다 — 그 번호에 칸을 보탠다(한 프리셋).
+        name = color_names[rgb]
+        remaining: list[str] = []
+        for group, group_cells in by_group.items():
+            # 같은 색의 주석 후보가 이 그룹을 이미 담고 있다 — 그 번호에 칸을 보탠다(한 프리셋).
+            annotated = next(
+                (
+                    index
+                    for index, preset in enumerate(presets)
+                    if preset.kind == "color"
+                    and (preset.deferred or preset.reused)
+                    and group in preset.groups
+                    and _rgb_key(preset.rgb) == rgb
+                ),
+                None,
+            )
+            if annotated is None:
+                remaining.append(group)
+                continue
             current = presets[annotated]
-            presets[annotated] = replace(current, cells=current.cells + cells)
-            continue
-        reused_slot = _reusable_color_slot(grid, color_pool, rgb, group)
-        if reused_slot is not None:
+            presets[annotated] = replace(current, cells=current.cells + tuple(group_cells))
+        # 그룹마다 그 그룹을 담아 저장한 번호가 있으면 재사용한다 — 번호별로 칸을 모은다.
+        reuse_groups: dict[str, list[str]] = {}
+        for group in remaining:
+            reused_slot = _reusable_color_slot(grid, color_pool, rgb, group)
+            if reused_slot is not None:
+                reuse_groups.setdefault(reused_slot, []).append(group)
+        for reused_slot, groups in reuse_groups.items():
             presets.append(
                 PlanPreset(
                     kind="color",
                     value=value,
                     name=name,
                     slot=reused_slot,
-                    cells=cells,
-                    groups=(group,),
+                    cells=tuple(cell for group in groups for cell in by_group[group]),
+                    groups=tuple(groups),
                     ready=True,
                     hold=None,
                     rgb=rgb,
                     reused=True,
                 )
+            )
+        reused_any = {group for groups in reuse_groups.values() for group in groups}
+        remaining = [group for group in remaining if group not in reused_any]
+        if not remaining:
+            continue
+        cells = tuple(cell for group in remaining for cell in by_group[group])
+        # 저장 줄을 기다리는 같은 색 주석 후보가 있으면 남은 그룹을 그 후보에 더한다(한 프리셋).
+        pending = next(
+            (
+                index
+                for index, preset in enumerate(presets)
+                if preset.kind == "color"
+                and preset.deferred
+                and not preset.reused
+                and _rgb_key(preset.rgb) == rgb
+            ),
+            None,
+        )
+        if pending is not None:
+            current = presets[pending]
+            presets[pending] = replace(
+                current,
+                cells=current.cells + cells,
+                groups=_unique((*current.groups, *remaining)),
             )
             continue
         holds: list[str] = []
@@ -956,7 +988,7 @@ def _planned_color_presets(
                 name=name,
                 slot=slot,
                 cells=cells,
-                groups=(group,),
+                groups=tuple(remaining),
                 ready=False,
                 hold="; ".join(holds),
                 deferred=candidate,
@@ -1113,8 +1145,12 @@ def build_preset_plan(
         for cell in _annotated_cells(entry.get("cells"), by_cell, missing_cells):
             brightness_notes[(cell.group_name, cell.bar)] = str(entry.get("note") or "").strip()
 
-    # -- 디머: 칸의 value_percent 를 값으로 묶는다(첫 등장 순) -------------------
-    uses: dict[int, list[tuple[str, object, bool, int]]] = {}
+    # -- 디머: 칸의 value_percent 와 그룹의 밝기 속성 구성으로 묶는다(첫 등장 순) ------
+    # 2차 전체 실행 G-13 — 그룹 8개(3·10 포함)를 한 프리셋에 저장하면 콘솔 프리셋에 ``Dimmer2`` 가
+    # 담기지 않았다. 실기(2026-10-17): 3·10 이 섞인 1.903·1.904·1.905 는 빠짐, 3·10 이 없는 1.907 과
+    # ``Dimmer2`` 를 가진 그룹만 담은 1.906 은 담김. 콘솔 안의 이유는 모른다 — 확인된 꼴(1.906)대로
+    # 밝기 속성 구성이 다르면 프리셋을 나눈다.
+    uses: dict[tuple[int, tuple[str, ...]], list[tuple[str, object, bool, int]]] = {}
     for group, group_no, confirmed, cue in rows:
         brightness = cue.get("brightness")
         if not isinstance(brightness, Mapping) or brightness.get("mode") != "value":
@@ -1125,10 +1161,16 @@ def build_preset_plan(
         if isinstance(percent, bool) or not isinstance(percent, int):
             unresolved.append(f"{group} {cue.get('bar')}마디: 밝기 값 {percent!r}은 정수 %가 아님")
             continue
-        uses.setdefault(percent, []).append((group, group_no, confirmed, int(cue["bar"])))  # type: ignore[arg-type]
+        signature = tuple(dimmer_attributes.get(group) or ()) or (_DEFAULT_DIMMER_ATTRIBUTE,)
+        uses.setdefault((percent, signature), []).append(
+            (group, group_no, confirmed, int(cue["bar"]))  # type: ignore[arg-type]
+        )
 
-    for percent, uses_of_value in uses.items():
-        name = f"{_DIMMER_NAME_PREFIX}-{percent}"
+    for (percent, signature), uses_of_value in uses.items():
+        # 밝기 속성이 하나면 「DIM-100」, 더 있으면 그 속성 이름을 붙인다(「DIM-100 DIMMER2」).
+        name = " ".join(
+            (f"{_DIMMER_NAME_PREFIX}-{percent}", *(attr.upper() for attr in signature[1:]))
+        )
         cells = tuple(PlanCell(group, bar) for group, _no, _c, bar in uses_of_value)
         groups = _unique(group for group, _no, _c, _bar in uses_of_value)
         holds: list[str] = []
@@ -1243,10 +1285,13 @@ def build_preset_plan(
         from_palette = rgb is None
         if rgb is None:
             rgb = resolve_color_name(label)  # 표준 팔레트 이름으로만 찾는다(없으면 None)
-        # 같은 RGB·같은 그룹의 색 번호가 콘솔에 이미 있으면 새로 잡지 않고 그 번호를 쓴다.
+        # 같은 RGB 이고 이 그룹들을 전부 담은 색 번호가 콘솔에 이미 있으면 새로 잡지 않고 그 번호를
+        # 쓴다. 그룹마다 번호가 다르면 한 번호로 묶을 수 없으니 새로 저장한다.
         reused = None
-        if cells and len(groups) == 1:
-            reused = _reusable_color_slot(grid, color_pool, _rgb_key(rgb), groups[0])
+        if cells:
+            slots = {_reusable_color_slot(grid, color_pool, _rgb_key(rgb), g) for g in groups}
+            if len(slots) == 1:
+                (reused,) = slots
         # 칸이 없는 색은 번호를 잡지 않는다 — 쓰지 않을 빈 번호를 점유하지 않으려고.
         slot = reused
         if slot is None and cells:
@@ -1584,15 +1629,26 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
             continue
         if preset.kind == "dimmer":
             assert preset.group_nos and preset.value_percent is not None
-            pairs = preset.attribute_group_nos or (
-                (attr, preset.group_nos) for attr in preset.attributes
+            pairs = tuple(
+                preset.attribute_group_nos
+                or ((attr, preset.group_nos) for attr in preset.attributes)
             )
-            bundle: Sequence[str] = (
-                *(
+            if len({tuple(numbers) for _attr, numbers in pairs}) == 1:
+                # 모든 속성이 같은 그룹이면 한 줄(``Group 12 + 14 ; Attribute 'Dimmer' At 100 ;
+                # Attribute 'Dimmer2' At 100``) — 실기 1.906 이 Dimmer·Dimmer2 를 다 담은 꼴이다.
+                values = " ; ".join(
+                    f"Attribute '{attr}' At {preset.value_percent}" for attr, _numbers in pairs
+                )
+                selection = "Group " + " + ".join(str(number) for number in pairs[0][1])
+                value_lines: tuple[str, ...] = (f"{selection} ; {values}",)
+            else:
+                value_lines = tuple(
                     line
                     for attr, numbers in pairs
                     for line in _dimmer_value_lines(numbers, preset.value_percent, (attr,))
-                ),
+                )
+            bundle: Sequence[str] = (
+                *value_lines,
                 f"Store Preset {preset.slot}",
                 f"Label Preset {preset.slot} '{preset.name}'",
                 "ClearAll",
@@ -1784,8 +1840,7 @@ def apply_plan_references(
         if preset.kind == "color" and not preset.reused:
             assert preset.rgb is not None and preset.slot is not None
             # 담은 그룹도 남긴다 — 다음 계획의 재사용이 「저장한 그룹만」을 가른다.
-            stored_group = preset.groups[0] if len(preset.groups) == 1 else None
-            updated = record_color_preset_rgb(updated, preset.slot, preset.rgb, stored_group)
+            updated = record_color_preset_rgb(updated, preset.slot, preset.rgb, preset.groups)
         if preset.kind != "dimmer" and not preset.reused:
             assert preset.slot is not None
             updated = record_app_preset_label(updated, preset.slot, preset.name)

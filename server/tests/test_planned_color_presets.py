@@ -17,6 +17,7 @@ from pathlib import Path
 from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
+from server.design.beat_grid_color_presets import color_preset_groups
 from server.design.beat_grid_edit import load_preset_pool_policy
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import PointingFrames
@@ -147,24 +148,28 @@ class TestPlannedColorCandidates:
         # 적용이 시드 칸을 초안 칸으로 바꾸므로 계획 색 없이 번호만 받는 칸은 없다.
         assert numbered - planned == _ANNOTATION_ONLY
 
-    def test_the_plan_has_one_color_preset_per_group_and_rgb(self) -> None:
+    def test_the_plan_stores_one_color_preset_per_rgb(self) -> None:
+        # 2차 전체 실행 E-08 — 같은 RGB 를 그룹마다 따로 저장해 색 18개·고유 RGB 6개였다.
         grid = _applied_grid()
-        plan = _plan(grid)
-        keys = [(preset.groups, preset.rgb) for preset in _color_presets(plan) if preset.groups]
-        assert len(keys) == len(set(keys)), keys
+        plan = _with_stores(grid, _plan(grid))
+        new = [p for p in _color_presets(plan) if p.store is not None and not p.reused]
+        rgbs = [tuple(p.rgb) for p in new]
+        assert len(rgbs) == len(set(rgbs)), rgbs
+        assert any(len(p.groups) > 1 for p in new), "같은 색을 여러 그룹이 쓰는 픽스처여야 한다"
 
-    def test_names_follow_the_annotation_then_the_palette_and_carry_the_group_elsewhere(
-        self,
-    ) -> None:
+    def test_names_follow_the_annotation_then_the_palette_and_carry_no_group(self) -> None:
         grid = _applied_grid()
-        names = {preset.name for preset in _color_presets(_plan(grid))}
+        presets = _color_presets(_plan(grid))
+        names = {preset.name for preset in presets}
         # 주석 색은 주석의 콘솔 이름을 그대로 쓴다(WASH-ALL 라벤더 = LAVENDER).
         assert "LAVENDER" in names
         assert "PINK" in names and "SKY" in names
-        # 다른 그룹의 같은 색은 「이름 그룹」, 주석에 없는 드롭·브릿지 색은 표준 팔레트 이름이다.
-        assert "LAVENDER SIDE-ALL" in names
-        assert "AMBER MOVER-D" in names
-        assert "COOL WHITE WASH-ALL" in names
+        # 다른 그룹의 같은 색은 같은 프리셋(같은 이름)에 담긴다. 주석에 없는 드롭·브릿지 색은 표준
+        # 팔레트 이름이다.
+        assert not [name for name in names if name.endswith(("SIDE-ALL", "MOVER-D", "WASH-ALL"))]
+        lavender_groups = {group for p in presets if p.name == "LAVENDER" for group in p.groups}
+        assert {"WASH-ALL", "SIDE-ALL"} <= lavender_groups
+        assert "AMBER" in names and "COOL WHITE" in names
 
     def test_a_planned_color_outside_the_table_takes_the_nearest_name(self) -> None:
         # 리드 지시: 이름이 없다고 색 프리셋을 막지 않는다. 표 밖의 색은 가장 가까운 이름을 받는다.
@@ -175,7 +180,7 @@ class TestPlannedColorCandidates:
         plan = _plan(grid)
         expected = assign_color_names([(1, 2, 3)])[(1, 2, 3)]
         mine = [p for p in _color_presets(plan) if ("MOVER-U", 14) in _cells_of(p)]
-        assert [p.name for p in mine] == [f"{expected} MOVER-U"]
+        assert [p.name for p in mine] == [expected]
         assert mine[0].deferred or mine[0].ready or mine[0].reused
         assert not any("계획 색 RGB 1 2 3" in line for line in plan.unresolved), plan.unresolved
         assert all(p.name for p in _color_presets(plan) if p.split_side is None)
@@ -292,14 +297,41 @@ class TestPlannedColorCandidates:
         users = {group for p in _color_presets(plan) if p.slot == "4.33" for group in p.groups}
         assert users == {"WASH-ALL"}
 
-    def test_a_new_color_store_records_the_group_it_holds(self) -> None:
+    def test_a_new_color_store_records_the_groups_it_holds(self) -> None:
         grid = _applied_grid()
         plan = _with_stores(grid, _plan(grid))
         updated = _approve(grid, plan)
-        stored = [p for p in _color_presets(plan) if p.store is not None and len(p.groups) == 1]
-        assert stored
+        stored = [p for p in _color_presets(plan) if p.store is not None]
+        assert any(len(p.groups) > 1 for p in stored)
         for preset in stored:
-            assert updated["preset_colors"][preset.slot]["group"] == preset.groups[0]
+            assert color_preset_groups(updated, preset.slot) == preset.groups
+
+    def test_a_second_plan_reuses_every_stored_color_and_stores_none(self) -> None:
+        # 2차 전체 실행 I-08 — 계획을 다시 요청하면 저장한 프리셋을 재사용해야 한다(저장 0).
+        grid = _applied_grid()
+        first = _with_stores(grid, _plan(grid))
+        approved = _approve(grid, first)
+        slots = {
+            int(p.slot.partition(".")[2]): p.name
+            for p in _color_presets(first)
+            if p.slot and p.store is not None
+        }
+        pool = (_COLOR_POOL[0], {**_COLOR_POOL[1], **slots})
+        again = _with_stores(approved, _plan(approved, color_pool=pool))
+        assert not [line for line in save_commands(again) if line.startswith("Store Preset 4.")]
+
+    def test_per_group_numbers_from_an_older_plan_are_each_reused_by_their_group(self) -> None:
+        # 2차 전체 실행 저장분(그룹마다 한 번호, ``group`` 기록)은 그 그룹 칸이 그대로 부른다.
+        grid = _applied_grid()
+        grid["preset_colors"] = {
+            "4.33": {"r": 55, "g": 35, "b": 100, "group": "WASH-ALL"},
+            "4.34": {"r": 55, "g": 35, "b": 100, "group": "SIDE-ALL"},
+        }
+        pool = (_COLOR_POOL[0], {**_COLOR_POOL[1], 33: "LAVENDER", 34: "LAVENDER#2"})
+        plan = _plan(grid, color_pool=pool)
+        by_slot = {p.slot: set(p.groups) for p in _color_presets(plan) if p.reused}
+        assert by_slot.get("4.33") == {"WASH-ALL"}
+        assert by_slot.get("4.34") == {"SIDE-ALL"}
 
 
 class TestStoreLinesAndCard:
@@ -378,9 +410,11 @@ class TestTheApprovalCard:
         assert event["ok"] is True
         assert len(approval.requests) == 1  # 카드는 한 장이다
         card = list(approval.requests[0].commands)
-        # 주석 색 3 + 계획 색 13 + 키·효과 줄(FOH·BLIND·STROBE)의 계획 색 3.
-        # 주석 PITCH(워시 22마디)는 구간 중간이라 칸이 없어 저장하지 않는다(워시는 구간마다 한 칸).
-        assert len([line for line in card if line.startswith("Store Preset 4.")]) == 19
+        # 고유 RGB 마다 한 번(2차 전체 실행 E-08 — 그룹마다 따로 저장하면 19번이었다): SKY·PINK·
+        # WARM WHITE·LAVENDER·COOL WHITE·AMBER. 주석 PITCH(워시 22마디)는 구간 중간이라 칸이 없어
+        # 저장하지 않는다(워시는 구간마다 한 칸).
+        stores = [line for line in card if line.startswith("Store Preset 4.")]
+        assert len(stores) == len(set(stores)) == 6
         numbered = _numbered_cells(store.latest["beat_grid"])
         assert _planned_cells(grid) <= numbered
         assert numbered - _planned_cells(grid) == _ANNOTATION_ONLY

@@ -37,7 +37,6 @@ from server.design.beat_grid_color_presets import (
     COLOR_LABEL_INVALID,
     COLOR_LABEL_MISSING,
     COLOR_MEMBERS_UNREAD,
-    COLOR_MULTI_GROUP,
     COLOR_RGB_MISSING,
     color_grid_blocker,
     color_preset_outcomes,
@@ -240,7 +239,8 @@ class TestColorGridBlocker:
         grid = _grid([cue], confirmed=False, **_RECIPE)
         assert color_grid_blocker(grid, "4.41") == COLOR_GROUP_UNCONFIRMED
 
-    def test_multi_group(self) -> None:
+    def test_multi_group_is_not_a_blocker(self) -> None:
+        # 2차 전체 실행 E-08 — 같은 번호를 여러 그룹이 쓰면 한 선택(``Group 7 + 8``)으로 만든다.
         grid = {
             "tracks": [
                 {
@@ -258,7 +258,16 @@ class TestColorGridBlocker:
             ],
             **_RECIPE,
         }
-        assert color_grid_blocker(grid, "4.41") == COLOR_MULTI_GROUP
+        assert color_grid_blocker(grid, "4.41") is None
+        outcomes = color_preset_outcomes(
+            grid,
+            ["4.41"],
+            members={"BACK": [101], "SIDE": [201]},
+            channel_names={101: _CHANNELS_OK, 201: _CHANNELS_OK},
+        )
+        bundle, reason = outcomes["4.41"]
+        assert reason is None and bundle is not None
+        assert bundle[1].startswith("Group 7 + 8 ; Attribute 'ColorRGB_R' At ")
 
 
 class TestColorPresetOutcomes:
@@ -697,7 +706,8 @@ class TestApplyCreatesTheColorPreset:
     # 떨어진다(실측) — 색 전용 보류가 아니라 다른 관문과 섞여 이 칸에서는
     # 잠글 수 없다.
 
-    def test_multi_group_holds(self, tmp_path) -> None:
+    def test_multi_group_stores_once_with_one_selection(self, tmp_path) -> None:
+        # 2차 전체 실행 E-08 — 두 그룹이 쓰는 번호는 한 선택으로 한 번 저장한다.
         grid = {
             "tracks": [
                 {
@@ -724,10 +734,10 @@ class TestApplyCreatesTheColorPreset:
             members={"BACK": [101], "SIDE": [201]},
             channels={101: _CHANNELS_OK, 201: _CHANNELS_OK},
         )
-        assert status["ok"] is False
-        assert approval.requests == []
-        assert not [c for c in _sent(approval) if "4.41" in c]
-        assert COLOR_MULTI_GROUP in status["reason"]
+        assert status["ok"] is True, status
+        sent = _sent(approval)
+        assert sent.count("Store Preset 4.41") == 1
+        assert [c for c in sent if c.startswith("Group 7 + 8 ; Attribute 'ColorRGB_R' At 50")]
 
     def test_members_unread_holds(self, tmp_path) -> None:
         status, _store, approval, _console = _apply_session(
