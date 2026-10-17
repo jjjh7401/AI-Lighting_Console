@@ -12142,20 +12142,16 @@ class ChatSession:
             reset_session_key(token)
 
     def _beat_grid_preview_commands(self, verb: str, bar: int | None) -> tuple[str, ...] | None:
-        """``verb``가 "goto"면 ``bar``를 담은 최신 큐로, "off"면 전체
-        끄기로 — 둘 다 가장 최근 반영(저장소의 ``beat_grid_applied``)에서만
-        번호를 가져온다. 쓸 명령이 없으면(반영 전, 또는 그 마디를 담은 큐가
-        있는 트랙이 하나도 없으면) ``None``."""
+        """``verb``가 "goto"면 ``bar``를 담은 최신 큐로 — 가장 최근 반영(저장소의
+        ``beat_grid_applied``)에서만 번호를 가져온다. 쓸 명령이 없으면(반영 전, 또는 그
+        마디를 담은 큐가 있는 트랙이 하나도 없으면) ``None``. 「■ 끄기」는 정지 묶음을 쓴다
+        (``beat_grid_preview_off``)."""
         store = self._timeline_store
         applied = store.beat_grid_applied if store is not None else None
         if applied is None:
             return None
         commands: list[str] = []
-        if verb == "off":
-            for sequence_number in applied.sequence_numbers.values():
-                commands.append(f"Off Sequence {sequence_number}")
-            return tuple(commands) if commands else None
-        assert bar is not None
+        assert verb == "goto" and bar is not None
         for group_name, sequence_number in applied.sequence_numbers.items():
             bars_with_cues = applied.cue_numbers.get(group_name) or {}
             covering_bar = max((b for b in bars_with_cues if b <= bar), default=None)
@@ -12223,16 +12219,30 @@ class ChatSession:
         return self._beat_grid_send_status(last_action="preview", ok=True)
 
     def beat_grid_preview_off(self) -> dict:
-        """상단 바 「■ 끄기」 — 가장 최근 반영의 모든 시퀀스를
-        ``Off Sequence``로 끈다."""
-        commands = self._beat_grid_preview_commands("off", None)
-        if commands is None:
+        """상단 바 「■ 끄기」 — 곡 끝·❚❚ 와 같은 정지 묶음(``Off Timecode N`` + 소유 시퀀스
+        ``Off Sequence``)을 보내고 커서로 멈췄는지 확인한다.
+
+        3차 전체 실행 I-02·I-03 — ■ 가 ``Off Sequence`` 만 보내 TC5 가 계속 돌았고, 서버 재시작
+        뒤에는 메모리의 마지막 반영만 보고 아무것도 안 보냈다. 대상 타임코드는 이 곡의 소유
+        기록(디스크)·타임코드 번호에서 찾는다(``_beat_grid_owned_timecode``). 그래도 못 찾으면
+        끌 수 있는 시퀀스만 끄고 타임코드는 콘솔에서 멈추라고 알린다."""
+        owned = self._beat_grid_owned_timecode()
+        if owned[0] is not None:
+            return self._beat_grid_console_transport(
+                "preview_off", ("Off",), stop=True, owned=owned
+            )
+        sequences = self._beat_grid_owned_sequence_numbers()
+        why = owned[1] or ""
+        if not sequences:
             return self._beat_grid_send_status(
                 last_action="preview_off",
                 ok=False,
-                reason="아직 콘솔에 반영된 적이 없어 끌 시퀀스가 없습니다.",
+                reason=(
+                    "끌 타임코드·시퀀스를 찾지 못해 아무것도 보내지 않았습니다 — 콘솔 타임코드가 "
+                    f"돌고 있으면 콘솔에서 직접 멈춰 주세요. ({why})"
+                ),
             )
-        sequences = tuple(int(c.rsplit(" ", 1)[1]) for c in commands)
+        commands = tuple(f"Off Sequence {number}" for number in sequences)
         if not self._beat_grid_dispatch_preview(
             "beat-grid-preview-off",
             commands,
@@ -12241,7 +12251,14 @@ class ChatSession:
             return self._beat_grid_send_status(
                 last_action="preview_off", ok=False, reason="감독이 미리보기 승인을 거절했습니다."
             )
-        return self._beat_grid_send_status(last_action="preview_off", ok=True)
+        return self._beat_grid_send_status(
+            last_action="preview_off",
+            ok=True,
+            extra_notices=[
+                "끌 타임코드 번호를 찾지 못해 시퀀스만 껐어요 — 콘솔 타임코드가 돌고 있으면 "
+                f"다시 켜질 수 있으니 콘솔에서 직접 멈춰 주세요. ({why})"
+            ],
+        )
 
     def _beat_grid_owned_timecode(self) -> tuple[int | None, str | None]:
         """카드 t578 — 「콘솔 같이」가 재생할 타임코드 번호. t572 소유 기록에서만
@@ -12300,14 +12317,21 @@ class ChatSession:
         )
 
     def _beat_grid_console_transport(
-        self, action: str, verbs: tuple[str, ...], *, stop: bool = False
+        self,
+        action: str,
+        verbs: tuple[str, ...],
+        *,
+        stop: bool = False,
+        owned: tuple[int | None, str | None] | None = None,
     ) -> dict:
         """「콘솔 같이」 공용 송신 — t563 미리보기 길(세션 시작 1회 승인)을 그대로
         탄다. 새 생쓰기 경로는 없다(``run_commands`` → 게이트).
 
         ``stop`` 이면 ``Off Timecode N`` 뒤에 그 곡 트랙의 시퀀스를 하나씩 ``Off Sequence`` 로
-        끄고, 보낸 뒤 타임코드 커서로 멈췄는지 확인한다(``_beat_grid_stop_notices``)."""
-        timecode_number, reason = self._beat_grid_owned_timecode()
+        끄고, 보낸 뒤 타임코드 커서로 멈췄는지 확인한다(``_beat_grid_stop_notices``).
+        ``owned`` 는 호출자가 이미 찾은 ``_beat_grid_owned_timecode()`` 결과다
+        (콘솔을 다시 읽지 않는다)."""
+        timecode_number, reason = owned if owned is not None else self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action=action, ok=False, reason=reason)
         # 문면은 t520 실측 선례(`.moai/reports/t520/verdict.md`): `Top Timecode N` 은

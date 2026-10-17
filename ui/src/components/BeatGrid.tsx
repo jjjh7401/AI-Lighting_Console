@@ -926,7 +926,8 @@ export function applyFailureNote(status: BeatGridSendStatus | null | undefined):
   if (!status) return null;
   // 2차 전체 실행 I-02 — 「콘솔 같이」 정지: 보냈어도 콘솔이 멈췄는지 확인 못 했거나 아직 돌면
   // 서버 알림을, 못 보냈으면 사유(「아직 돌고 있을 수 있어요」 포함)를 보인다.
-  if (status.last_action === "console_stop") {
+  // 3차 전체 실행 I-02 — 「■ 끄기」도 같은 정지 묶음이라 같은 알림을 보인다.
+  if (status.last_action === "console_stop" || status.last_action === "preview_off") {
     if (!status.ok) return status.reason ? `⚠ 콘솔 정지 안 됨 — ${status.reason}` : null;
     return status.notices?.length ? `⚠ ${status.notices.join(" ")}` : null;
   }

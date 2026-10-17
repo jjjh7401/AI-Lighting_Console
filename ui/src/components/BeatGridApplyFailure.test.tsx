@@ -73,6 +73,19 @@ describe("applyFailureNote", () => {
     );
   });
 
+  it("「■ 끄기」도 같은 정지 알림·실패 사유를 보인다(3차 전체 실행 I-02)", () => {
+    const running = "콘솔 Timecode 5이(가) 아직 돌고 있어요(커서 51.57→53.63초) — 콘솔에서 직접 멈춰 주세요.";
+    expect(
+      applyFailureNote(
+        status({ last_action: "preview_off", ok: true, reason: null, notices: [running] }),
+      ),
+    ).toBe(`⚠ ${running}`);
+    const none = "끌 타임코드·시퀀스를 찾지 못해 아무것도 보내지 않았습니다";
+    expect(applyFailureNote(status({ last_action: "preview_off", reason: none }))).toBe(
+      `⚠ 콘솔 정지 안 됨 — ${none}`,
+    );
+  });
+
   it("서버 문구(session.py)에 정지 확인 알림이 실제로 있다", () => {
     const source = readFileSync(resolve(__dirname, "../../../server/web/session.py"), "utf8");
     expect(source).toContain("멈췄는지 확인하지 못했어요");
