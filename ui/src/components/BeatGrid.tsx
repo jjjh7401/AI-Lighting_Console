@@ -954,8 +954,28 @@ export function applyFailureNote(status: BeatGridSendStatus | null | undefined):
   if (status.last_action === "apply") return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
   // 격자 편집 실패(자동 배치 적용이 바꾼 칸 0개 등) — 채팅에만 두면 전체화면에서 성공처럼 보인다.
   if (status.last_action === "edit") return `⚠ 격자에 적용 안 됨 — ${status.reason}`;
+  // 카드 WT-true-reasons — 「▶ 이 마디 콘솔에서 보기」 실패도 무반응으로 두지 않는다.
+  if (status.last_action === "preview") return `⚠ 콘솔 미리보기 안 됨 — ${status.reason}`;
   return null;
 }
+
+/** 카드 WT-true-reasons — 「자동 배치」 요청 상태. 초안 카드가 뜨기 전까지 실측 58~100초 걸려
+ * 그동안 화면이 조용했다(새 곡 점검 사례 2). 초안이 오면 끝, 새 상태 응답(거절 사유)이 오면 끝,
+ * 요청 뒤 `busy` 가 오면 거절이다. */
+export function draftProposeState(
+  ask: { busyAt: number; status: BeatGridSendStatus | null } | null,
+  draftShown: boolean,
+  sendStatus: BeatGridSendStatus | null,
+  busyCount: number,
+): "waiting" | "busy" | null {
+  if (ask === null || draftShown || sendStatus !== ask.status) return null;
+  return busyCount > ask.busyAt ? "busy" : "waiting";
+}
+
+export const DRAFT_PROPOSE_WAITING_MESSAGE =
+  "자동 배치를 만드는 중이에요 — 콘솔 그룹과 장비를 읽느라 1~2분 걸릴 수 있어요. 다시 누르지 않아도 초안이 뜹니다.";
+export const DRAFT_PROPOSE_BUSY_MESSAGE =
+  "앞 명령을 처리 중이라 자동 배치 요청이 거절됐습니다 — 잠시 뒤 「자동 배치」를 다시 눌러 주세요.";
 
 export function emptyPresetBadge(cell: BeatGridEmptyPresetCell): string {
   const values = cell.fields.map((f) => (f.kind === "pool_unread" ? `${f.value}?` : f.value));
@@ -1709,7 +1729,25 @@ export function BeatGrid({
       requestDrawer();
     }
   }, [selected, drawerSections, drawerAsk, onDrawerRequest]);
-  const presetPlanBusyRefused = presetPlanRefusedBusy(presetPlanPending, presetPlan !== null, busyCount);
+  // 카드 WT-true-reasons — 계획 요청이 거절되면(서버 `_beat_grid_rejection`) 「만드는 중」을 풀고
+  // 사유는 상태 줄(`applyFailureNote`)이 보인다. 고치기 전에는 90초 「만드는 중」 뒤 「늦어요」만 떴다.
+  const presetPlanRejected =
+    presetPlanPending !== null &&
+    lastServerReply !== null &&
+    lastServerReply.summary === BEAT_GRID_REJECTION_SUMMARY &&
+    lastServerReply.seq > presetPlanPending.sinceSeq;
+  const presetPlanAnswered = presetPlan !== null || presetPlanRejected;
+  const presetPlanBusyRefused = presetPlanRefusedBusy(presetPlanPending, presetPlanAnswered, busyCount);
+  const [draftAsk, setDraftAsk] = useState<{ busyAt: number; status: BeatGridSendStatus | null } | null>(
+    null,
+  );
+  const requestDraftPropose = onDraftPropose
+    ? () => {
+        setDraftAsk({ busyAt: busyCount, status: sendStatus });
+        onDraftPropose();
+      }
+    : undefined;
+  const draftState = draftProposeState(draftAsk, pendingDraft !== null, sendStatus, busyCount);
   // 「만드는 중」이 「늦어요」로 바뀌는 순간에 다시 그린다(그 사이 다른 렌더가 없어도).
   const [presetPlanClock, setPresetPlanClock] = useState(() => Date.now());
   useEffect(() => {
@@ -1720,7 +1758,7 @@ export function BeatGrid({
   }, [presetPlanPending]);
   const presetPlanWait = presetPlanWaiting(
     presetPlanPending,
-    presetPlan !== null,
+    presetPlanAnswered,
     busyCount,
     Math.max(presetPlanClock, Date.now()),
   );
@@ -2634,7 +2672,8 @@ export function BeatGrid({
         onTimecodeSubmit={onTimecodeSubmit}
         pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
-        onDraftPropose={pendingDraft ? undefined : onDraftPropose}
+        onDraftPropose={pendingDraft ? undefined : requestDraftPropose}
+        draftProposeWaiting={draftState === "waiting"}
         flow={{ done: flowDone, timecodeSuggestion }}
         playback={{
           playing,
@@ -2658,6 +2697,11 @@ export function BeatGrid({
           {presetPlanWait === "waiting"
             ? "프리셋 계획 요청을 이미 보냈어요 — 콘솔 풀을 읽느라 1분쯤 걸려요. 다시 누르지 않아도 계획표가 뜹니다."
             : "프리셋 계획 답이 늦어요 — ▤ 서랍의 「프리셋 계획 만들기」로 다시 요청할 수 있어요."}
+        </p>
+      )}
+      {draftState !== null && (
+        <p className="beat-grid-preset-plan-wait" role="status">
+          {draftState === "waiting" ? DRAFT_PROPOSE_WAITING_MESSAGE : DRAFT_PROPOSE_BUSY_MESSAGE}
         </p>
       )}
       {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
