@@ -61,6 +61,7 @@ from server.design.beat_grid_presets import (
 from server.design.beat_grid_send import build_song_timing_from_bar_map
 from server.design.cell_direction import assign_color_names
 from server.design.color_names import COLOR_PALETTE_SEQUENCE, resolve_color_name
+from server.design.preset_names import same_console_name
 
 __all__ = [
     "LoveAttackPlan",
@@ -292,6 +293,44 @@ def _reserve_next(
         policy=policy, grid=grid, console_children=(pool_no, {**children, **taken})
     )
     return number
+
+
+#: 격자가 기억하는 앱이 저장한 디머 프리셋 — 번호 -> {"percent", "attribute_group_nos"}.
+#: 이름만으로는 내용이 같은지 모른다(같은 DIM-100 이 다른 그룹으로 저장됐을 수 있다).
+_DIMMER_RECORD_KEY = "dimmer_presets"
+
+
+def _reusable_dimmer_slot(
+    grid: Mapping[str, object],
+    dimmer_pool: PoolRead,
+    name: str,
+    percent: int,
+    attribute_group_nos: Sequence[tuple[str, tuple[int, ...]]],
+) -> str | None:
+    """콘솔에 이미 있는 같은 디머 프리셋 번호(「pool.slot」) — 콘솔 이름이 ``name``(콘솔이 붙인
+    「#숫자」 허용)이고, 격자의 저장 기록이 같은 값이며 이번에 필요한 속성·그룹을 전부 덮어야
+    한다. 기록이 없는 번호(이 기록을 남기기 전 저장분)는 재사용하지 않는다."""
+    if dimmer_pool is None:
+        return None
+    records = grid.get(_DIMMER_RECORD_KEY)
+    if not isinstance(records, Mapping):
+        return None
+    pool_no, children = dimmer_pool
+    for slot in sorted(children):
+        number = f"{pool_no}.{slot}"
+        if not same_console_name(children[slot], name):
+            continue
+        record = records.get(number)
+        if not isinstance(record, Mapping) or record.get("percent") != percent:
+            continue
+        stored = {
+            str(attr): set(nos)
+            for attr, nos in record.get("attribute_group_nos") or []
+            if isinstance(nos, list)
+        }
+        if all(set(nos) <= stored.get(attr, set()) for attr, nos in attribute_group_nos):
+            return number
+    return None
 
 
 def _annotated_cells(
@@ -1071,11 +1110,6 @@ def build_preset_plan(
         name = f"{_DIMMER_NAME_PREFIX}-{percent}"
         cells = tuple(PlanCell(group, bar) for group, _no, _c, bar in uses_of_value)
         groups = _unique(group for group, _no, _c, _bar in uses_of_value)
-        slot = _reserve_next(
-            dimmer_pool, first_free_base_dimmer_number, policy=policy, grid=grid, reserved=reserved
-        )
-        if slot is not None:
-            reserved.append(slot)
         holds: list[str] = []
         if dimmer_pool is None:
             holds.append("디머 풀을 콘솔에서 읽지 못해 빈 번호를 알 수 없음")
@@ -1114,6 +1148,25 @@ def build_preset_plan(
             )
             for attr in attributes
         )
+        # 전체 실행 E-10·I-08 — 콘솔에 같은 이름(콘솔이 붙인 「#숫자」 허용)·같은 값·같은 그룹을
+        # 덮는 디머 프리셋이 있고 격자가 그 저장을 기록하고 있으면 다시 저장하지 않고 재사용한다.
+        reused_slot = (
+            _reusable_dimmer_slot(grid, dimmer_pool, name, percent, attribute_group_nos)
+            if not holds
+            else None
+        )
+        if reused_slot is not None:
+            slot: str | None = reused_slot
+        else:
+            slot = _reserve_next(
+                dimmer_pool,
+                first_free_base_dimmer_number,
+                policy=policy,
+                grid=grid,
+                reserved=reserved,
+            )
+            if slot is not None:
+                reserved.append(slot)
         ready = not holds and slot is not None
         if ready and len(groups) > 1:
             selection = " + ".join(str(number) for number in group_nos)
@@ -1144,6 +1197,7 @@ def build_preset_plan(
                 attributes=attributes if ready else (),
                 group_nos=group_nos if ready else (),
                 attribute_group_nos=attribute_group_nos if ready else (),
+                reused=reused_slot is not None,
             )
         )
         # 밝기 결정이 붙은 칸을 쓰는 디머 줄은 「감독이 고칠 값」으로 드러낸다(줄마다 한 번).
@@ -1711,6 +1765,16 @@ def apply_plan_references(
         if preset.kind != "dimmer" and not preset.reused:
             assert preset.slot is not None
             updated = record_app_preset_label(updated, preset.slot, preset.name)
+        if preset.kind == "dimmer" and not preset.reused and preset.slot:
+            dimmer_records = updated.get(_DIMMER_RECORD_KEY)
+            dimmer_records = dict(dimmer_records) if isinstance(dimmer_records, Mapping) else {}
+            dimmer_records[preset.slot] = {
+                "percent": preset.value_percent,
+                "attribute_group_nos": [
+                    [attr, list(nos)] for attr, nos in preset.attribute_group_nos
+                ],
+            }
+            updated[_DIMMER_RECORD_KEY] = dimmer_records
         if preset.kind == "effect" and preset.effect_record is not None and preset.slot:
             records = updated.get(_EFFECT_RECORD_KEY)
             records = dict(records) if isinstance(records, Mapping) else {}

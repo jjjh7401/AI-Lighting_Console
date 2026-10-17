@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -139,3 +140,21 @@ def match_preset_name_across_pools(
         return PresetPoolMatch(pool_no=None, slot=None, kind=NAME_ABSENT)
     pool_no, match = found[0]
     return PresetPoolMatch(pool_no=pool_no, slot=match.slot, rule=match.rule, name=match.name)
+
+
+_CONSOLE_DUPLICATE_SUFFIX = re.compile(r"#\d+")
+
+
+def same_console_name(console_name: object, planned_name: object) -> bool:
+    """콘솔 이름이 앱이 적은 이름과 같거나, 그 뒤에 콘솔이 붙인 「#숫자」만 더 붙었는지.
+
+    같은 이름이 이미 있으면 콘솔은 이름 끝에 ``#6`` 같은 접미사를 붙인다(실서버 rerun3:
+    'LDBEAT FOH#6', 전체 실행 E-10: 'DIM-100#6'). 그 밖의 차이는 다른 이름이다."""
+    if not isinstance(console_name, str) or not isinstance(planned_name, str):
+        return console_name == planned_name
+    if console_name == planned_name:
+        return True
+    suffix = console_name[len(planned_name) :]
+    return console_name.startswith(planned_name) and bool(
+        _CONSOLE_DUPLICATE_SUFFIX.fullmatch(suffix)
+    )
