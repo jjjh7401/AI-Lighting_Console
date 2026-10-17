@@ -1557,6 +1557,23 @@ export function presetPlanRefusedBusy(
   return pending !== null && !planShown && busyCount > pending.busyAt;
 }
 
+/** 프리셋 계획 요청 뒤 이만큼 답이 없으면 「늦어요」로 바꾸고 다시 누를 수 있게 한다. 계획은 콘솔 풀을
+ * 읽어 만들어 실측 38초 걸렸다(1차 전체 실행 E-02). */
+export const PRESET_PLAN_SLOW_MS = 90_000;
+
+/** 프리셋 계획 요청이 아직 답을 기다리는가 — 「만드는 중」 안내를 띄우고 손 재요청을 막는다.
+ * 1차 전체 실행 E-02: 자동 요청은 나갔는데 화면이 조용해 서랍에서 다시 눌렀고, 그 두 번째 요청이
+ * `busy` 로 거절돼 「처리되지 않았습니다」가 떴다. */
+export function presetPlanWaiting(
+  pending: { busyAt: number; at: number } | null,
+  planShown: boolean,
+  busyCount: number,
+  now: number,
+): "waiting" | "slow" | null {
+  if (pending === null || planShown || busyCount > pending.busyAt) return null;
+  return now - pending.at < PRESET_PLAN_SLOW_MS ? "waiting" : "slow";
+}
+
 export function BeatGrid({
   grid,
   onExit,
@@ -1615,9 +1632,11 @@ export function BeatGrid({
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
   // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
-  const [presetPlanPending, setPresetPlanPending] = useState<{ sinceSeq: number; busyAt: number } | null>(null);
+  const [presetPlanPending, setPresetPlanPending] = useState<
+    { sinceSeq: number; busyAt: number; at: number } | null
+  >(null);
   const requestPresetPlan = () => {
-    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount });
+    setPresetPlanPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount, at: Date.now() });
     onPresetPlanRequest?.();
   };
   const presetPlan =
@@ -1658,6 +1677,25 @@ export function BeatGrid({
     }
   }, [selected, drawerSections, drawerAsk, onDrawerRequest]);
   const presetPlanBusyRefused = presetPlanRefusedBusy(presetPlanPending, presetPlan !== null, busyCount);
+  // 「만드는 중」이 「늦어요」로 바뀌는 순간에 다시 그린다(그 사이 다른 렌더가 없어도).
+  const [presetPlanClock, setPresetPlanClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (presetPlanPending === null) return;
+    const left = presetPlanPending.at + PRESET_PLAN_SLOW_MS - Date.now();
+    const timer = setTimeout(() => setPresetPlanClock(Date.now()), Math.max(0, left) + 50);
+    return () => clearTimeout(timer);
+  }, [presetPlanPending]);
+  const presetPlanWait = presetPlanWaiting(
+    presetPlanPending,
+    presetPlan !== null,
+    busyCount,
+    Math.max(presetPlanClock, Date.now()),
+  );
+  /** 서랍의 손 요청 — 앞 요청이 아직 만드는 중이면 다시 보내지 않는다(같은 계획표가 뜬다). */
+  const requestPresetPlanByHand = () => {
+    if (presetPlanWait === "waiting") return;
+    requestPresetPlan();
+  };
   const [transitionView, setTransitionView] = useState(false);
   // 카드 t560(REQ-LDBEAT-019(c)) — "이 구간 L·R 따로" 선언(트랙별 콘솔
   // 그룹 이름 키 하나, mockup `SPLIT` 전역과 같은 단순함). 로컬 UI 상태일
@@ -2535,6 +2573,13 @@ export function BeatGrid({
         }}
       />
       {presetPlan && <PresetPlanPanel plan={presetPlan} onClose={() => setPresetPlanPending(null)} />}
+      {presetPlanWait !== null && (
+        <p className="beat-grid-preset-plan-wait" role="status">
+          {presetPlanWait === "waiting"
+            ? "프리셋 계획을 만드는 중이에요 — 콘솔 풀을 읽느라 30초 넘게 걸릴 수 있어요. 다시 누르지 않아도 계획표가 뜹니다."
+            : "프리셋 계획 답이 늦어요 — ▤ 서랍의 「프리셋 계획 만들기」로 다시 요청할 수 있어요."}
+        </p>
+      )}
       {/* 카드 t598 — 반영 실패 사유(전체화면에서도 이 격자 화면이 그대로 보인다). */}
       {applyFailure && (
         <p className="beat-grid-apply-fail" role="status">
@@ -4077,7 +4122,7 @@ export function BeatGrid({
             </span>
           </h4>
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
-          {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlan} />}
+          {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlanByHand} />}
           {presetPlanBusyRefused && (
             <p className="beat-grid-drawer-unread" role="alert">
               지금 서버가 다른 일을 처리하는 중이라 프리셋 계획 요청이 처리되지 않았습니다 — 끝난 뒤 다시 눌러 주세요.

@@ -113,9 +113,11 @@ const PLAN_STATUS_LINE: Record<SongTimelinePlanStatus, string> = {
 };
 
 export function sectionCardTitle(section: SongTimelineSection, status: SongTimelinePlanStatus): string {
-  if (status === "verified") return `CUE ${section.cue_number}`;
-  if (status === "stored") return `CUE ${section.cue_number} · ${section.label}`;
-  return `PLAN CUE ${section.cue_number} · ${section.label}`;
+  // 1차 전체 실행 B-09 — 큐 번호가 없는 옛 분석 작업본(값 null)은 구간 순서로 대신한다.
+  const cue = (section.cue_number as number | null | undefined) ?? section.index;
+  if (status === "verified") return `CUE ${cue}`;
+  if (status === "stored") return `CUE ${cue} · ${section.label}`;
+  return `PLAN CUE ${cue} · ${section.label}`;
 }
 
 /** PLAN cues (draft/requires_requery/approved) exist only in the design;

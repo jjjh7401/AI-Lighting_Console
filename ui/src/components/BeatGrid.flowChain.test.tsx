@@ -10,7 +10,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { BeatGridSendStatus, BeatGridView } from "../protocol";
-import { BeatGrid, type BeatGridProps } from "./BeatGrid";
+import { BeatGrid, PRESET_PLAN_SLOW_MS, presetPlanWaiting, type BeatGridProps } from "./BeatGrid";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -310,5 +310,49 @@ describe("처음부터 끝까지", () => {
     expect(currentStep()).toBe("1/3 프리셋 저장");
     expect(strip().querySelector("button")).toBeNull();
     expect(handlers.onPresetPlanRequest).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("초안 「적용」 뒤 — 프리셋 계획을 기다리는 동안 (1차 전체 실행 E-02)", () => {
+  const waitLine = () => container.querySelector(".beat-grid-preset-plan-wait")?.textContent ?? null;
+  const planButton = () =>
+    Array.from(container.querySelectorAll("button")).find((button) =>
+      (button.textContent ?? "").includes("프리셋 계획 만들기"),
+    );
+
+  it("자동 요청 뒤 계획표가 오기 전까지 「만드는 중」을 보이고, 서랍에서 다시 눌러도 두 번 보내지 않는다", () => {
+    const { handlers, render } = setup();
+    const onDrawerRequest = vi.fn(); // 서랍 단추는 이 콜백이 있을 때만 그려진다
+    render({ sendStatus: null, onDrawerRequest });
+    expect(waitLine()).toBeNull();
+    render({ sendStatus: status({ completed: "draft_applied" }), onDrawerRequest });
+    expect(handlers.onPresetPlanRequest).toHaveBeenCalledTimes(1);
+    expect(waitLine()).toContain("만드는 중");
+    act(() => headerButton("▤").click());
+    const button = planButton();
+    expect(button).toBeDefined();
+    act(() => button?.click());
+    expect(handlers.onPresetPlanRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it("서버가 busy 로 거절하면 「만드는 중」은 내린다", () => {
+    const { render } = setup();
+    render({ sendStatus: null, busyCount: 0 });
+    const applied = status({ completed: "draft_applied" });
+    render({ sendStatus: applied, busyCount: 0 });
+    expect(waitLine()).toContain("만드는 중");
+    render({ sendStatus: applied, busyCount: 1 });
+    expect(waitLine()).toBeNull();
+  });
+});
+
+describe("presetPlanWaiting", () => {
+  it("기다림 → 늦음 → (계획표·busy) 끝", () => {
+    const pending = { busyAt: 0, at: 1_000 };
+    expect(presetPlanWaiting(null, false, 0, 2_000)).toBeNull();
+    expect(presetPlanWaiting(pending, false, 0, 2_000)).toBe("waiting");
+    expect(presetPlanWaiting(pending, false, 0, 1_000 + PRESET_PLAN_SLOW_MS)).toBe("slow");
+    expect(presetPlanWaiting(pending, true, 0, 2_000)).toBeNull();
+    expect(presetPlanWaiting(pending, false, 1, 2_000)).toBeNull();
   });
 });
