@@ -19,6 +19,7 @@ import re
 
 from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
+from server.safety.gate import BACKUP_ITEM_REASON
 from server.web.question import QuestionRequest
 
 PROTOCOL_VERSION = 1
@@ -1167,6 +1168,7 @@ def song_audio_link_end_event() -> dict:
 #: (감사 로그·분류기). 차단 목록 항목은 승인이 필요할 뿐 막힌 것이 아니다(전체 실행 E-15 — 원문
 #: 「blacklisted command」가 거절처럼 읽혔다).
 _CARD_REASON_KO = {
+    BACKUP_ITEM_REASON: "쇼 파일 안전 백업 — 승인하면 실행 직전에 한 번 나갑니다",
     "blacklisted command (matches closed-set entry 'Store Preset')": (
         "앱이 만든 프리셋 저장 — 승인 필요"
     ),

@@ -134,7 +134,8 @@ class TestScenario2ApprovalFlow:
         with _client(stack, provider) as client, client.websocket_connect("/ws") as ws:
             _send(ws, type="chat", text="시퀀스 5 지워줘")
             request = _receive_until(ws, "approval_request")
-            (item,) = request["items"]
+            backup, item = request["items"]
+            assert backup["command"] == "SaveShow"  # 전체 실행 E-06 — 먼저 나가는 백업 줄
             assert item["command"] == "Delete Sequence 5"
             assert item["risk_reasons"], "risk reason must be shown (REQ-MVP-021)"
             assert request["actions"] == ["approve", "reject"]
@@ -303,7 +304,8 @@ class TestScenario4PanelOverTheRealWire:
             assert recv_frame(ws)["type"] == "status"
             _send(ws, type="panel_execute", target_kind="executor", target=201)
             request = _receive_until(ws, "approval_request")
-            (item,) = request["items"]
+            backup, item = request["items"]
+            assert backup["command"] == "SaveShow"  # 전체 실행 E-06 — 먼저 나가는 백업 줄
             assert item["command"] == "Go+ Executor 201"
             _send(
                 ws,
