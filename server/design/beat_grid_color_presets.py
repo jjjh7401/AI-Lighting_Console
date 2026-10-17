@@ -116,6 +116,15 @@ def color_preset_rgb(
     return (r, g, b)
 
 
+def color_preset_group(grid: Mapping[str, object], preset_no: str) -> str | None:
+    """곡 격자 ``preset_colors[preset_no]["group"]`` — 그 번호에 값을 담아 저장한 그룹.
+    기록이 없으면(옛 기록·콘솔 쇼 프리셋) ``None`` — 「누가 담겼는지 모른다」다."""
+    colors = grid.get("preset_colors")
+    raw = colors.get(preset_no) if isinstance(colors, Mapping) else None
+    group = raw.get("group") if isinstance(raw, Mapping) else None
+    return group if isinstance(group, str) and group else None
+
+
 def _rgb_list(grid: Mapping[str, object], preset_no: object) -> list[float] | None:
     if not isinstance(preset_no, str):
         return None
@@ -164,11 +173,18 @@ def attach_color_rgb_to_cues(grid: Mapping[str, object]) -> dict[str, object]:
 
 
 def record_color_preset_rgb(
-    grid: Mapping[str, object], preset_no: str, rgb: Sequence[object]
+    grid: Mapping[str, object],
+    preset_no: str,
+    rgb: Sequence[object],
+    group: str | None = None,
 ) -> dict[str, object]:
     """새 색 프리셋의 목표 RGB를 곡 격자에 남기는 단일 저장 자리. ``grid``의
     사본을 돌려준다(원본은 그대로). ``pool.slot`` 꼴이 아니거나 값이
-    0~100 범위의 유한한 수 셋이 아니면 거절한다."""
+    0~100 범위의 유한한 수 셋이 아니면 거절한다.
+
+    ``group`` 은 그 번호에 값을 담아 저장한 그룹 이름이다(색 저장은 한 번호에 한 그룹).
+    재사용이 「저장한 그룹만」을 가르는 근거다(1차 전체 실행 — 4.106 이 WASH-ALL 만
+    담겼는데 무빙 그룹이 재사용했다)."""
     if not _is_pool_slot(preset_no):
         raise ValueError(f"'{preset_no}'은(는) pool.slot 꼴의 프리셋 번호가 아닙니다.")
     if len(rgb) != 3:
@@ -183,6 +199,8 @@ def record_color_preset_rgb(
     existing = grid.get("preset_colors")
     colors = dict(existing) if isinstance(existing, Mapping) else {}
     colors[preset_no] = {"r": channels[0], "g": channels[1], "b": channels[2]}
+    if group:
+        colors[preset_no]["group"] = group
     updated["preset_colors"] = colors
     return updated
 

@@ -488,10 +488,11 @@ class TestReferenceUpdate:
         for group, bar in (("WASH-ALL", 7), ("BACK", 0), ("MOVER-U", 0), ("MOVER-D", 0)):
             assert check_evidence_approval(_cue_of(approved, group, bar)) is None
         assert approved["preset_colors"] == {
-            "4.33": {"r": 55.0, "g": 35.0, "b": 100.0},
-            "4.34": {"r": 40.0, "g": 65.0, "b": 95.0},
-            "4.35": {"r": 100.0, "g": 50.0, "b": 75.0},
-            "4.36": {"r": 100.0, "g": 75.0, "b": 60.0},
+            # 담아 저장한 그룹도 남는다 — 다음 계획의 재사용이 그 그룹만 쓰게(1차 전체 실행).
+            "4.33": {"r": 55.0, "g": 35.0, "b": 100.0, "group": "WASH-ALL"},
+            "4.34": {"r": 40.0, "g": 65.0, "b": 95.0, "group": "BACK"},
+            "4.35": {"r": 100.0, "g": 50.0, "b": 75.0, "group": "WASH-ALL"},
+            "4.36": {"r": 100.0, "g": 75.0, "b": 60.0, "group": "WASH-ALL"},
         }
         assert approved["preset_labels"] == {
             "4.33": "LAVENDER",
@@ -538,7 +539,12 @@ class TestReferenceUpdate:
         assert _cue_of(approved, "WASH-ALL", 14)["color_preset_no"] == "4.5"
         assert _cue_of(approved, "WASH-ALL", 7)["color_preset_no"] == "4.33"
         # 콘솔에는 이 프리셋이 이미 있다 — 값·이름은 칸이 안 바뀌어도 격자에 남는다.
-        assert approved["preset_colors"]["4.33"] == {"r": 55.0, "g": 35.0, "b": 100.0}
+        assert approved["preset_colors"]["4.33"] == {
+            "r": 55.0,
+            "g": 35.0,
+            "b": 100.0,
+            "group": "WASH-ALL",
+        }
 
     def test_a_position_edited_while_the_card_was_open_is_not_repointed(self) -> None:
         planned, plan = _with_stores()
@@ -644,7 +650,7 @@ class TestApprovalCard:
         assert _cue_of(grid, "MOVER-U", 0)["position_preset_no"] == "2.31"
         assert _cue_of(grid, "MOVER-D", 0)["position_preset_no"] == "2.32"
         assert grid["preset_labels"]["4.33"] == "LAVENDER"
-        assert grid["preset_colors"]["4.34"] == {"r": 40.0, "g": 65.0, "b": 95.0}
+        assert grid["preset_colors"]["4.34"] == {"r": 40.0, "g": 65.0, "b": 95.0, "group": "BACK"}
         for group, bar in (("WASH-ALL", 7), ("BACK", 0), ("MOVER-U", 0), ("MOVER-D", 0)):
             assert check_evidence_approval(_cue_of(grid, group, bar)) is None
 

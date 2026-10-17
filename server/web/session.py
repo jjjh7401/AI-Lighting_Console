@@ -10686,7 +10686,7 @@ class ChatSession:
         # REQ-LDBEAT-015(h) 이름·설명과 같은 저장 모양 + 카드 t594 목표 RGB.
         updated_grid = record_app_preset_description(updated_grid, preset_no, description.strip())
         updated_grid = record_app_preset_label(updated_grid, preset_no, label)
-        updated_grid = record_color_preset_rgb(updated_grid, preset_no, rgb)
+        updated_grid = record_color_preset_rgb(updated_grid, preset_no, rgb, target)
 
         self._draft_history.record(timeline)
         updated_timeline = dict(timeline)

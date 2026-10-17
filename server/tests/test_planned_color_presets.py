@@ -219,7 +219,8 @@ class TestConsoleNumberReuse:
         self,
     ) -> None:
         grid = _applied_grid()
-        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100}}  # 라벤더 번호의 기록
+        # 라벤더 번호의 기록 — 저장할 때 담은 그룹(WASH-ALL)까지 적혀 있다.
+        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100, "group": "WASH-ALL"}}
         plan = _with_stores(grid, _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER))
         lavender = next(p for p in _color_presets(plan) if p.slot == "4.33")
         assert lavender.reused is True
@@ -255,6 +256,50 @@ class TestConsoleNumberReuse:
         assert wash_lavender.slot != "4.33"
         assert wash_lavender.reused is False
 
+    def test_a_number_stored_for_one_group_is_not_reused_by_another(self) -> None:
+        # 1차 전체 실행 — 4.106 은 「Group 10 ; Attribute 'ColorRGB_…'」(WASH-ALL)만 담아
+        # 저장됐는데(감사 기록 10-16 15:38), 새 분석으로 격자가 비자 그 번호를 쓰는 칸이 없어
+        # MOVER-U·MOVER-D 도 같은 RGB 라며 그 번호를 재사용했다. 재사용은 저장한 그룹만이다.
+        grid = _applied_grid()
+        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100, "group": "WASH-ALL"}}
+        plan = _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER)
+        users = {group for p in _color_presets(plan) if p.slot == "4.33" for group in p.groups}
+        assert users == {"WASH-ALL"}
+        others = [
+            p
+            for p in _color_presets(plan)
+            if p.rgb is not None and tuple(p.rgb) == (55, 35, 100) and p.groups != ("WASH-ALL",)
+        ]
+        assert others, "다른 그룹의 라벤더 후보가 있어야 한다(픽스처)"
+        assert all(p.slot != "4.33" and not p.reused for p in others)
+
+    def test_an_old_number_without_its_group_is_not_reused_when_no_cell_uses_it(self) -> None:
+        # 그룹 기록이 없는 옛 번호(4.106 처럼)는 누가 담겼는지 모른다 — 그 번호를 쓰는 칸이 전부
+        # 이 그룹일 때만 재사용한다. 쓰는 칸이 하나도 없으면 재사용하지 않는다(새 번호로 저장).
+        grid = _applied_grid()
+        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100}}
+        plan = _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER)
+        assert not [p for p in _color_presets(plan) if p.slot == "4.33"]
+
+    def test_an_old_number_is_still_reused_by_the_group_whose_cells_use_it(self) -> None:
+        grid = _applied_grid()
+        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100}}
+        wash = next(t for t in grid["tracks"] if t["group_name"] == "WASH-ALL")
+        held = next(c for c in wash["cues"] if c["bar"] != 0)
+        held["color_preset_no"] = "4.33"  # WASH-ALL 칸만 이 번호를 쓰고 있다
+        plan = _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER)
+        users = {group for p in _color_presets(plan) if p.slot == "4.33" for group in p.groups}
+        assert users == {"WASH-ALL"}
+
+    def test_a_new_color_store_records_the_group_it_holds(self) -> None:
+        grid = _applied_grid()
+        plan = _with_stores(grid, _plan(grid))
+        updated = _approve(grid, plan)
+        stored = [p for p in _color_presets(plan) if p.store is not None and len(p.groups) == 1]
+        assert stored
+        for preset in stored:
+            assert updated["preset_colors"][preset.slot]["group"] == preset.groups[0]
+
 
 class TestStoreLinesAndCard:
     def test_each_new_planned_preset_gets_one_store_bundle_and_nothing_is_held_on_the_fake_console(
@@ -273,7 +318,7 @@ class TestStoreLinesAndCard:
 
     def test_the_card_table_marks_reused_presets(self) -> None:
         grid = _applied_grid()
-        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100}}
+        grid["preset_colors"] = {"4.33": {"r": 55, "g": 35, "b": 100, "group": "WASH-ALL"}}
         plan = _with_stores(grid, _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER))
         table = plan_table_markdown(plan)
         assert "재사용(이 카드)" in table

@@ -48,7 +48,11 @@ from server.design.beat_grid_cell_split import (
     cell_split_side_rgb,
     validate_cell_split,
 )
-from server.design.beat_grid_color_presets import color_preset_rgb, record_color_preset_rgb
+from server.design.beat_grid_color_presets import (
+    color_preset_group,
+    color_preset_rgb,
+    record_color_preset_rgb,
+)
 from server.design.beat_grid_edit import apply_beat_grid_edit, beats_per_bar_from_timeline
 from server.design.beat_grid_measured import canonical_axes
 from server.design.beat_grid_presets import (
@@ -381,8 +385,14 @@ def _reusable_color_slot(
     group: str,
 ) -> str | None:
     """콘솔에 이미 있는 같은 RGB·같은 그룹의 색 번호(「pool.slot」).
-    격자가 그 번호의 RGB 를 기록하고 있고, 그 번호를 쓰는 칸이 전부 이 그룹이어야 한다.
-    다른 그룹이 쓰면 여러 그룹 색 번호가 되므로 재사용하지 않는다."""
+    격자가 그 번호의 RGB 를 기록하고 있고, 그 번호에 **이 그룹의 값이 담겨 있어야** 한다.
+
+    - 저장할 때 담은 그룹이 기록돼 있으면(``preset_colors[...]["group"]``) 그 그룹만 쓴다.
+    - 기록이 없는 옛 번호는 누가 담겼는지 모른다 — 그 번호를 쓰는 칸이 있고 전부 이 그룹일
+      때만 쓴다. 쓰는 칸이 없으면 쓰지 않는다(1차 전체 실행: 4.106 은 WASH-ALL 만 담겼는데,
+      새 분석으로 격자가 비자 무빙 그룹들이 같은 RGB 라며 재사용해 색이 안 들어갈 수 있었다).
+    빠진 그룹은 새 번호로 저장한다 — 다른 그룹을 기존 번호에 ``/Merge`` 로 더하는 줄은
+    실기로 잰 적이 없다(t531 p3_c 는 같은 그룹 값 교체만 쟀다)."""
     if color_pool is None or rgb is None:
         return None
     pool_no, children = color_pool
@@ -393,15 +403,19 @@ def _reusable_color_slot(
             abs(a - b) < 0.5 for a, b in zip(recorded, rgb, strict=True)
         ):
             continue
+        stored_for = color_preset_group(grid, number)
+        if stored_for is not None:
+            if stored_for.casefold() == group.casefold():  # 대화 상자 대상은 손 입력일 수 있다
+                return number
+            continue
         users = {
             str(track.get("group_name"))
             for track in grid.get("tracks") or []
             for cue in track.get("cues") or []
             if cue.get("color_preset_no") == number
         }
-        if users - {group}:
-            continue
-        return number
+        if users == {group}:
+            return number
     return None
 
 
@@ -1707,7 +1721,9 @@ def apply_plan_references(
         # 재사용한 번호는 이미 기록돼 있으므로 그 기록을 덮지 않는다.
         if preset.kind == "color" and not preset.reused:
             assert preset.rgb is not None and preset.slot is not None
-            updated = record_color_preset_rgb(updated, preset.slot, preset.rgb)
+            # 담은 그룹도 남긴다 — 다음 계획의 재사용이 「저장한 그룹만」을 가른다.
+            stored_group = preset.groups[0] if len(preset.groups) == 1 else None
+            updated = record_color_preset_rgb(updated, preset.slot, preset.rgb, stored_group)
         if preset.kind != "dimmer" and not preset.reused:
             assert preset.slot is not None
             updated = record_app_preset_label(updated, preset.slot, preset.name)
