@@ -417,6 +417,7 @@ def _draft_cue(
     role: object = None,
     words: Mapping[str, str] = BASIC_WORDS,
     color_names: Mapping[tuple[int, int, int], str] | None = None,
+    axes: Sequence[str] = _MOTION_AXES,
 ) -> BeatGridCue:
     """규칙 결정 하나를 격자 칸으로 옮긴다. 값은 이 결정에서만 온다.
 
@@ -430,7 +431,7 @@ def _draft_cue(
         if plan.movement_shape is None
         else {
             "shape": plan.movement_shape,
-            "axes": list(_MOTION_AXES),
+            "axes": list(axes),
             "period_unit": "bar",
             "period_value": settings.motion_period_bars,
             "phase_spread": None,

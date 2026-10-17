@@ -45,6 +45,10 @@ PALETTE = ArrangementPalette()
 PULSE_LABEL = "킥 1·2·4박"  # BACK 펄스. 예전 「펄스 1·2·4박」이 아니다.
 CHASE_LABEL = "SIDE-L/R 2·4박 번갈이"
 MOTION_LABEL = "팬 웨이브(한 바퀴 2마디)"
+#: 실측 기록(measured_movements.yaml)이 팬 웨이브를 닫고 틸트 웨이브를 연 무빙
+#: (이 리그의 MOVER-D)의 말.
+TILT_MOTION_LABEL = "틸트 웨이브(한 바퀴 2마디)"
+MOVING_LABELS = frozenset({MOTION_LABEL, TILT_MOTION_LABEL})
 HOLD_LABEL = "정지"
 FOH_LABEL = "FOH 켬"
 WASH_LABEL = "워시"
@@ -654,8 +658,8 @@ def test_motion_alternates_between_the_two_movers_and_the_other_holds() -> None:
     for window in draft["windows"]:
         upper = _state(draft, "MOVER-U", window["start_bar"])["label"]
         lower = _state(draft, "MOVER-D", window["start_bar"])["label"]
-        assert {upper, lower} == {MOTION_LABEL, HOLD_LABEL}
-        turns.append("U" if upper == MOTION_LABEL else "D")
+        assert {upper, lower} in ({MOTION_LABEL, HOLD_LABEL}, {TILT_MOTION_LABEL, HOLD_LABEL})
+        turns.append("U" if upper in MOVING_LABELS else "D")
     assert turns == ["U", "D"] * 5
 
 
@@ -683,7 +687,7 @@ def test_rows_carry_the_structured_fields_of_the_dense_generator() -> None:
         else:
             assert cue["brightness"]["value_percent"] == 100
             assert len(cue["planned_color"]) == 3
-        if cue["label"] == MOTION_LABEL:
+        if cue["label"] in MOVING_LABELS:
             movement = cue["app_movement"]
             assert (movement["shape"], movement["period_unit"], movement["period_value"]) == (
                 "wave",
@@ -728,7 +732,10 @@ def test_labels_use_the_default_grid_and_rules_document_vocabulary() -> None:
     assert labels["BACK"] == {PULSE_LABEL, REST_LABEL}
     assert labels["SIDE-ALL"] == {CHASE_LABEL, REST_LABEL}
     # 무빙은 위치를 바꾸기 전에 사전이동(MIB) 쉼 칸을 둔다.
-    assert labels["MOVER-U"] == labels["MOVER-D"] == {MOTION_LABEL, HOLD_LABEL, REST_LABEL}
+    # MOVER-D 는 실측 기록이 팬 웨이브를 닫고 틸트 웨이브를 열어 틸트로 움직인다
+    # (probe-moverd D1·D3).
+    assert labels["MOVER-U"] == {MOTION_LABEL, HOLD_LABEL, REST_LABEL}
+    assert labels["MOVER-D"] == {TILT_MOTION_LABEL, HOLD_LABEL, REST_LABEL}
     assert labels["BLIND"] == {BLIND_LABEL, PRE_HIT_LABEL, REST_LABEL}
     assert labels["STROBE"] == {STROBE_LABEL, REST_LABEL}
 

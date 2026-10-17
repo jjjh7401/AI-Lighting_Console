@@ -72,6 +72,7 @@ SEGMENT_WORDS: dict[str, str] = {
     "pulse": "킥 1·2·4박",
     "chase": "SIDE-L/R 2·4박 번갈이",
     "motion": "팬 웨이브(한 바퀴 2마디)",
+    "motion:Tilt": "틸트 웨이브(한 바퀴 2마디)",
     "blind": "BLIND 2박",
     "strobe": "STROBE 1마디 박마다",
     "pre_hit": "3·4박 전부 비움(예고)",
@@ -274,6 +275,9 @@ def direction_label(
         return None
     if kind == "static":
         return words.get(f"static:{layer_role}") or words.get("static")
+    movement = direction.get("movement")
+    if kind == "motion" and isinstance(movement, Mapping) and movement.get("axes") == ["Tilt"]:
+        return words.get("motion:Tilt") or words.get(kind)
     return words.get(kind)
 
 

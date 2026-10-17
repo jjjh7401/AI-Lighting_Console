@@ -86,6 +86,24 @@ def canonical_axes(axes: Sequence[str] | frozenset[str]) -> tuple[str, ...]:
     return tuple(_AXIS_SPELLING.get(str(axis).strip().casefold(), str(axis)) for axis in axes)
 
 
+def visible_axes(group_no: int | None, shape: str, default: Sequence[str]) -> tuple[str, ...]:
+    """이 그룹에서 ``shape`` 움직임을 눈에 보이게 낼 축. 기본 축 ``default`` 가 실측 기록에서
+    「기울인 기준에서만 보임」(닫힘)으로 남아 있고, 같은 그룹·같은 모양에 기준과 무관하게 보이는
+    (``base_condition: any``) 기록이 있으면 그 기록의 축을 쓴다. 그 밖(기록 없음·기본이 열림·대안
+    없음)은 ``default`` 그대로다 — 그룹 번호는 이 함수가 아니라 기록 파일이 쥔다."""
+    wanted = tuple(canonical_axes(default))
+    if group_no is None:
+        return wanted
+    entries = [e for e in MEASURED_MOVEMENTS if e.group_no == group_no and e.shape == shape]
+    default_entry = next((e for e in entries if e.axes == frozenset(wanted)), None)
+    if default_entry is None or default_entry.base_condition == _OPEN_BASE_CONDITION:
+        return wanted
+    open_entry = next((e for e in entries if e.base_condition == _OPEN_BASE_CONDITION), None)
+    if open_entry is None:
+        return wanted
+    return tuple(axis for axis in ("Pan", "Tilt") if axis in open_entry.axes)
+
+
 def is_movement_measured_open(
     group_no: int | None, shape: object, axes: Sequence[str] | frozenset[str]
 ) -> bool:
