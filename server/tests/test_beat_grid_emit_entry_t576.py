@@ -162,8 +162,8 @@ class TestUnsentFields:
         assert _emit(_cue(2, mib_mode="none")).skipped_fields == ()
 
 
-class TestReapplyOverwriteStillLands:
-    def test_overwrite_is_appended_to_a_store_line_that_carries_a_fade(self) -> None:
+class TestReapplyRebuildKeepsTheFadeLine:
+    def test_rebuilt_sequence_keeps_the_store_line_that_carries_a_fade(self) -> None:
         result = emit_beat_grid_write_bundle(
             [
                 {
@@ -186,7 +186,10 @@ class TestReapplyOverwriteStillLands:
             owned_timecode=20,
             recorded_cue_numbers={"BACK": {2: 1}},
         )
-        assert f"Store Sequence {_SEQ} Cue 1 CueFade 4 /CueOnly /Overwrite" in reused.commands
+        # 재실행 4 — 소유 시퀀스는 통째로 지우고 다시 만든다. 페이드·트래킹 줄은 그대로 나간다.
+        assert reused.commands[0] == f"Delete Sequence {_SEQ} /NoConfirm"
+        assert f"Store Sequence {_SEQ} Cue 1 CueFade 4 /CueOnly" in reused.commands
+        assert not any("/Overwrite" in line for line in reused.commands)
 
 
 # =============================================================================

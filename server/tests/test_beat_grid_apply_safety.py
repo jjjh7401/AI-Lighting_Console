@@ -66,11 +66,12 @@ def test_d14_reapply_over_app_timecode_reuses_its_sequence_and_allocates_none(tm
     assert event["ok"] is True, event
     # 새 시퀀스를 만드는 줄(Store Sequence <n> 만)이 없고, 큐는 옛 시퀀스 5 로 간다.
     assert not any(c.startswith("Store Sequence 1 ") for c in console.executed), console.executed
-    assert any(
-        c.startswith("Store Sequence 5 Cue ") and c.endswith("/Overwrite") for c in console.executed
-    ), console.executed
+    # 재실행 4 — 옛 시퀀스 5 는 통째로 지우고 같은 번호로 다시 만든다(새 번호 0개).
+    assert any(c.startswith("Store Sequence 5 Cue ") for c in console.executed), console.executed
     assert any(f"Assign Sequence 5 At Timecode {TIMECODE_NUMBER}.1." in c for c in console.executed)
-    assert not any(c.startswith("Delete Sequence") for c in console.executed)
+    assert [c for c in console.executed if c.startswith("Delete Sequence")] == [
+        "Delete Sequence 5 /NoConfirm"
+    ]
     assert any("재사용(새 번호 0개)" in r for r in _reasons(approval))
 
 
@@ -82,11 +83,11 @@ def test_d14_unmatched_old_app_sequence_is_deleted_inside_the_same_card(tmp_path
 
     assert event["ok"] is True, event
     assert len(approval.requests) == 1
-    delete_lines = [c for c in console.executed if c.startswith("Delete Sequence")]
-    assert delete_lines == ["Delete Sequence 6 /NoConfirm"]
-    # 타임코드를 지운 뒤에 시퀀스를 지운다.
+    # 재실행 4 — 재사용하는 5 는 큐보다 먼저 지우고 다시 만들고, 짝 없는 6 은 타임코드를 지운 뒤에
+    # 지운다.
     order = [c for c in console.executed if c.startswith("Delete ")]
     assert order == [
+        "Delete Sequence 5 /NoConfirm",
         f"Delete Timecode {TIMECODE_NUMBER} /NoConfirm",
         "Delete Sequence 6 /NoConfirm",
     ]

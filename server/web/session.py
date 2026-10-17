@@ -11551,7 +11551,8 @@ class ChatSession:
                 timecode_numbers=timecode_numbers,
                 dimmer_attributes=dimmer_attributes,
                 probe_results=probe_results,
-                recorded_cue_numbers=recorded_cue_numbers,
+                # 재실행 4 — 소유 시퀀스는 통째로 지우고 다시 만드므로 큐 번호를 1번부터 매긴다.
+                recorded_cue_numbers=None,
                 dimmer_attribute_reasons=dimmer_reasons,
                 held_cells=approved_held_cells,
                 song_end_seconds=song_end_seconds_from_bar_map(timeline.get("bar_map")),
@@ -11594,8 +11595,15 @@ class ChatSession:
                 result = clear_app_timecode_before_rebuild(
                     result, timecode_number, delete_sequences=tuple(sorted(stale_app_sequences))
                 )
+            # 재실행 4 — 다시 만든 시퀀스의 옛 큐는 사라졌으므로 그 트랙의 옛 기록은 넘기지 않는다.
+            rebuilt = set(result.rebuilt_sequences)
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
-                result, recorded_cue_numbers=recorded_cue_numbers
+                result,
+                recorded_cue_numbers={
+                    name: cues
+                    for name, cues in recorded_cue_numbers.items()
+                    if sequence_numbers.get(name) not in rebuilt
+                },
             )
             # 카드 t592 — 새 위치 프리셋 만들기 줄(조준 → Store → Label → ClearAll)은
             # 큐 줄보다 **앞**에 둔다: 끝의 ClearAll 이 프로그래머를 비운 뒤 에미터의
@@ -11654,10 +11662,11 @@ class ChatSession:
                 risk_reason += f" · 막혀서 그대로 둔 칸 {len(preserved_cells)}개: {listed}"
             if out_of_order:
                 risk_reason += f" · 번호 순서와 시간 순서가 다른 큐 {out_of_order}개"
-            if result.kept_old_cues:
+            if result.rebuilt_sequences:
+                listed = ", ".join(str(number) for number in result.rebuilt_sequences)
                 risk_reason += (
-                    f" · 격자에서 빠진 옛 큐 {len(result.kept_old_cues)}개는 지우지 않고 "
-                    "콘솔에 남깁니다(큐 삭제 문법 미검증)"
+                    f" · 이 앱이 쓰던 시퀀스 {len(result.rebuilt_sequences)}개를 통째로 지우고 "
+                    f"같은 번호로 다시 만듭니다(Delete Sequence): {listed}"
                 )
             # 카드 t576 — 칸은 나가지만 그 안의 전환 칸 일부(딜레이·위치만 늦게·MIB)를
             # 보내지 않았다면, 감독이 승인하기 전에 그 사실과 이유를 본다.

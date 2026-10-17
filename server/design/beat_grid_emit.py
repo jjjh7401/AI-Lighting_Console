@@ -299,8 +299,8 @@ class BeatGridEmitResult:
     timecode_event_commands: tuple[str, ...] = field(default_factory=tuple)
     #: 반영 준비(MIB) — 사전이동을 못 넣은 전환의 사유(미리보기에 「MIB 불가 — …」로 보인다).
     mib_notes: tuple[str, ...] = field(default_factory=tuple)
-    #: 재실행 4 — 재반영에서 격자에서 빠졌지만 지우지 않고 콘솔에 남긴 옛 큐 (트랙, 마디, 큐 번호).
-    kept_old_cues: tuple[tuple[str, int, int], ...] = field(default_factory=tuple)
+    #: 재실행 4 — 재반영에서 통째로 지우고 같은 번호로 다시 만드는 시퀀스 번호.
+    rebuilt_sequences: tuple[int, ...] = field(default_factory=tuple)
 
     @property
     def commands(self) -> tuple[str, ...]:
