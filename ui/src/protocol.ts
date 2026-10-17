@@ -1014,6 +1014,9 @@ export interface SongTimelineView {
   total_duration_ms?: number;
   bar_count?: number;
   seconds_per_bar?: number;
+  /** 0마디가 시작하는 곡 시각(초) — 서버가 마디 지도 1마디 첫 박에서 한 마디 길이를 빼서 채운다
+   * (콘솔 큐 시각과 같은 기준, 3차 전체 실행 G-19). 음수일 수 있다. 없으면 화면은 0초로 본다. */
+  bar_zero_start_seconds?: number;
   /** 예: "LTC" */
   tc_source?: string;
   /** 예: "00:00.0 = 곡 첫 음 (카운트인 없음)" */

@@ -1745,7 +1745,32 @@ def fill_bar_map_header(timeline: dict) -> dict:
         and all(isinstance(part, int) and not isinstance(part, bool) for part in signature)
     ):
         filled["time_signature"] = f"{signature[0]}/{signature[1]}"
+    zero_start = _bar_zero_start_seconds(timeline.get("seconds_per_bar"), bars)
+    if "bar_zero_start_seconds" not in timeline and zero_start is not None:
+        filled["bar_zero_start_seconds"] = zero_start
     return {**timeline, **filled} if filled else timeline
+
+
+def _bar_zero_start_seconds(seconds_per_bar: object, bars: object) -> float | None:
+    """0마디가 시작하는 곡 시각(초) — 화면의 초↔마디 환산 기준(3차 전체 실행 G-19).
+
+    콘솔 큐 시각과 같은 식이다(1마디 첫 박 + (마디 − 1) × 한 마디 길이,
+    ``beat_grid_emit.SongTiming.bar_start_seconds``). 그래서 0마디 시작은 1마디 첫 박에서 한 마디
+    길이를 뺀 값이다(음수일 수 있다 — 앞박이 한 마디보다 짧다). 화면이 쓰는 한 마디 길이
+    (``seconds_per_bar``)가 없거나 마디 지도에 1마디가 없으면 채우지 않는다(지어내지 않는다)."""
+    if (
+        isinstance(seconds_per_bar, bool)
+        or not isinstance(seconds_per_bar, (int, float))
+        or not math.isfinite(seconds_per_bar)
+        or seconds_per_bar <= 0
+        or not isinstance(bars, list)
+    ):
+        return None
+    bar1 = next((b for b in bars if isinstance(b, dict) and b.get("bar") == 1), None)
+    start_ms = bar1.get("start_ms") if bar1 is not None else None
+    if isinstance(start_ms, bool) or not isinstance(start_ms, (int, float)):
+        return None
+    return float(start_ms) / 1000.0 - float(seconds_per_bar)
 
 
 def song_timeline_event(*, timeline: dict) -> dict:

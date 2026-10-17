@@ -29,6 +29,8 @@ export interface BeatGridTransitionViewProps {
   cue: BeatGridCue;
   prevCue: BeatGridCue | null;
   secondsPerBar: number | null | undefined;
+  /** 0마디가 시작하는 곡 시각(초) — 트리거 시각 표시 기준. 없으면 0초. */
+  barZeroStartSeconds?: number | null;
   beatsPerBar: number | null;
   sectionStartBars: readonly number[] | null;
   /** 카드 t567 — 강조(★) 마디(곡 데이터). 위치 끊김 경고의 예외. */
@@ -41,6 +43,7 @@ export function BeatGridTransitionView({
   cue,
   prevCue,
   secondsPerBar,
+  barZeroStartSeconds = null,
   beatsPerBar,
   sectionStartBars,
   accentBars = [],
@@ -54,7 +57,7 @@ export function BeatGridTransitionView({
   const [fadeError, setFadeError] = useState<string | null>(null);
   const mib = transitionMib(prevCue, cue);
   const warnings = transitionWarnings(prevCue, cue, sectionStartBars, accentBars);
-  const triggerAt = triggerSeconds(cue, secondsPerBar, beatsPerBar);
+  const triggerAt = triggerSeconds(cue, secondsPerBar, beatsPerBar, barZeroStartSeconds);
   const editable = !!onEditRequest;
 
   const save = (patch: Partial<FullBeatGridEntry>) =>

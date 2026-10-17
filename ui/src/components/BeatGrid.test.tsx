@@ -193,6 +193,21 @@ describe("barToSeconds / secondsToBar", () => {
     expect(secondsToBar(1000, 2.0, 25)).toBe(25);
   });
 
+  // 3차 전체 실행 G-19 — 마디 번호는 마디 지도 첫 박 기준(콘솔 큐와 같은 식)으로 바뀐다.
+  it("uses the bar-map origin so the bar number flips on the console downbeat", () => {
+    const spb = 240 / 112.00191993244025;
+    const origin = 1.498 - spb;
+    // 0초 기준이면 2.1초는 0마디지만, 1마디 첫 박(1.498초)을 지났으니 1마디다.
+    expect(secondsToBar(2.1, spb, 82)).toBe(0);
+    expect(secondsToBar(2.1, spb, 82, origin)).toBe(1);
+    expect(secondsToBar(1.49, spb, 82, origin)).toBe(0);
+    // 27마디 시작 = 1.498 + 26 × 한 마디 길이(57.21초) — 콘솔 큐 시각과 같다.
+    expect(barToSeconds(27, spb, origin)).toBeCloseTo(1.498 + 26 * spb, 9);
+    expect(secondsToBar(1.498 + 26 * spb + 0.01, spb, 82, origin)).toBe(27);
+    // 0마디 시작은 음원 앞(음수)이라 0초로 붙인다.
+    expect(barToSeconds(0, spb, origin)).toBe(0);
+  });
+
   it("clamps the inverse to zero, never negative", () => {
     expect(secondsToBar(-5, 2.0, 25)).toBe(0);
   });

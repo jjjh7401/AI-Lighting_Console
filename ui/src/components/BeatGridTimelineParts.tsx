@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { BeatGridCue, BeatGridTrack } from "../protocol";
-import { barToX, PX_PER_BAR } from "./BeatGrid";
+import { barToSeconds, barToX, PX_PER_BAR } from "./BeatGrid";
 import {
   entryFadeInBars,
   entryHasFade,
@@ -199,6 +199,7 @@ export function BeatGridScenePanel({
   bar,
   tracks,
   secondsPerBar,
+  barZeroStartSeconds = null,
   sectionStartBars,
   onClose,
   onSelectRow,
@@ -209,6 +210,8 @@ export function BeatGridScenePanel({
   bar: number;
   tracks: readonly BeatGridTrack[];
   secondsPerBar: number | null | undefined;
+  /** 0마디가 시작하는 곡 시각(초) — 「곡 X초」 기준. 없으면 0초. */
+  barZeroStartSeconds?: number | null;
   sectionStartBars: readonly number[] | null;
   onClose: () => void;
   onSelectRow: (trackIndex: number) => void;
@@ -225,7 +228,10 @@ export function BeatGridScenePanel({
       <header>
         <span>
           장면 전환 · {bar}마디
-          {secondsPerBar !== null && secondsPerBar !== undefined ? ` (곡 ${trimSeconds(bar * secondsPerBar)}초)` : ""}
+          {(() => {
+            const seconds = barToSeconds(bar, secondsPerBar, barZeroStartSeconds);
+            return seconds === null ? "" : ` (곡 ${trimSeconds(seconds)}초)`;
+          })()}
         </span>
         <button type="button" aria-label="닫기" onClick={onClose}>
           ✕

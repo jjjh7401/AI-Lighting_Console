@@ -200,3 +200,21 @@ describe("formatPlaybackClock", () => {
     expect(formatPlaybackClock(125.04)).toBe("2:05.0");
   });
 });
+
+// 3차 전체 실행 G-19 — LOVE ATTACK 마디 지도의 1마디 첫 박은 1.498초, 한 마디 2.14282초라
+// 0마디는 1.498 − 2.14282 = −0.64482초에 시작한다(콘솔 큐와 같은 기준). 0초 기준이면 화면
+// 마디 경계가 콘솔보다 0.645초 늦었다.
+describe("0마디 시작 시각(bar_zero_start_seconds) 기준", () => {
+  const spb = 240 / 112.00191993244025;
+  const origin = 1.498 - spb;
+
+  it("재생선은 1마디 첫 박에서 정확히 1마디 자리다", () => {
+    expect(playheadPixelX(1.498, spb, 100, origin)).toBeCloseTo(100, 6);
+    expect(playheadPixelX(1.498 + 26 * spb, spb, 100, origin)).toBeCloseTo(2700, 6);
+  });
+
+  it("기준이 없으면 예전 그대로 0초가 0마디 시작이다", () => {
+    expect(playheadPixelX(spb, spb, 100)).toBeCloseTo(100, 6);
+    expect(playheadPixelX(spb, spb, 100, null)).toBeCloseTo(100, 6);
+  });
+});
