@@ -229,16 +229,19 @@ def read_beat_grid_stage(
     *,
     fixtures_path: str,
     groups_path: str,
-    track_names: Iterable[str],
+    track_names: Iterable[str] | None,
 ) -> dict[str, object]:
     """무대 칸 한 번 그릴 만큼을 읽는다 — ``{fixtures, groups, unread}``.
 
     어느 단계가 실패해도 예외를 올리지 않는다: 읽은 만큼 싣고 못 읽은 이유를
     ``unread`` 에 그대로 적는다(앱은 그 이유를 무대 칸 안내로 보인다).
+    ``track_names`` 가 ``None`` 이면 콘솔 그룹 **전부**의 소속을 읽는다(카드 WT-all-fixtures —
+    배치 줄을 콘솔 그룹으로 정할 때).
     """
     unread: list[str] = []
+    every_group = track_names is None
     wanted: dict[str, str] = {}
-    for name in track_names:
+    for name in track_names or ():
         wanted.setdefault(name.upper(), name)
     # 그룹 목록을 먼저 본다 — 소속을 읽을 그룹이 있을 때만 장비 질의에 SUBFIXTUREINDEX 를 싣는다.
     listing_failure: str | None = None
@@ -256,7 +259,7 @@ def read_beat_grid_stage(
         slot = child.get("i")
         if not isinstance(name, str) or isinstance(slot, bool) or not isinstance(slot, int):
             continue
-        if name.upper() in wanted:
+        if every_group or name.upper() in wanted:
             found.append((slot, name))
     found_keys = {name.upper() for _, name in found}
 

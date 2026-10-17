@@ -27,6 +27,16 @@ describe("자동 배치 초안 보류 상태", () => {
     expect(next.pendingBeatGridDraft).toEqual(DRAFT);
   });
 
+  it("콘솔 장비 대조(console_coverage)를 그대로 싣는다 — 빠진 장비 안내가 사라지지 않게(WT-all-fixtures)", () => {
+    const console_coverage = {
+      added: ["KEY"],
+      uncovered: [{ fid: 621, group_names: ["HAZE"], reason: "일부러 뺌: 연기 장비(연출 대상 아님)", intentional: true }],
+      unread: [],
+    };
+    const next = reduceServerEvent(initialState, { v: 1, type: "beat_grid_draft", ...DRAFT, console_coverage });
+    expect(next.pendingBeatGridDraft?.console_coverage).toEqual(console_coverage);
+  });
+
   it("같은 id 의 consumed 를 받으면 보류 초안을 지운다", () => {
     const held = reduceServerEvent(initialState, { v: 1, type: "beat_grid_draft", ...DRAFT });
     const next = reduceServerEvent(held, { v: 1, type: "beat_grid_draft_consumed", draft_id: "d-1" });

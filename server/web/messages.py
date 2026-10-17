@@ -1021,12 +1021,17 @@ def beat_grid_draft_event(*, draft_id: str, draft: dict) -> dict:
         }
         for track in draft["tracks"]
     ]
+    extra: dict = {}
+    if "console_coverage" in draft:
+        # 카드 WT-all-fixtures — 콘솔 그룹 대조(새로 붙인 줄·빠진 장비와 이유).
+        extra["console_coverage"] = draft["console_coverage"]
     return _event(
         "beat_grid_draft",
         draft_id=draft_id,
         bar_range=dict(draft["bar_range"]),
         windows=[dict(window) for window in draft["windows"]],
         tracks=tracks,
+        **extra,
     )
 
 

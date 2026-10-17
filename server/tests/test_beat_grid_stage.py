@@ -243,6 +243,19 @@ def test_stage_returns_fixtures_and_track_groups_only() -> None:
     assert any("WASH" in reason for reason in payload["unread"])
 
 
+def test_stage_reads_every_console_group_when_no_track_names_are_given() -> None:
+    # 카드 WT-all-fixtures — 배치 줄을 콘솔 그룹으로 정할 때는 이름을 고르지 않고 전부 읽는다.
+    payload = read_beat_grid_stage(
+        _rig(), fixtures_path=FIXTURES, groups_path=GROUPS, track_names=None
+    )
+    groups = {g["group_name"]: g for g in payload["groups"]}
+    assert set(groups) == {"BACK", "SIDE-L", "SIDE-ALL", "KEY"}
+    assert groups["SIDE-L"]["member_fids"] == [301, 302]
+    # KEY 의 sf 1 은 본체 장비에 없다 — 소속을 지어내지 않고 불완전으로 둔다.
+    assert groups["KEY"]["complete"] is False
+    assert not any("그룹이 없음" in reason for reason in payload["unread"])
+
+
 def test_stage_never_writes() -> None:
     console = _rig()
     read_beat_grid_stage(console, fixtures_path=FIXTURES, groups_path=GROUPS, track_names=["BACK"])

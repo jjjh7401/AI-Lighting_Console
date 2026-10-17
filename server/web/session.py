@@ -185,6 +185,12 @@ from server.design.console_slots import (  # 카드 t480 — 업로드 길 공�
     resolve_position_preset_labels,
     white_preset_slots,
 )
+from server.design.console_tracks import (
+    ConsoleTrackPlan,
+    coverage_payload,
+    is_smoke_fixture,
+    plan_console_tracks,
+)
 from server.design.cue_sheet_apply import (
     ConsoleApplyError,
     changed_cue_numbers,
@@ -10116,6 +10122,58 @@ class ChatSession:
         self._send(event)
         return event
 
+    def _beat_grid_console_track_plan(
+        self, layout: Sequence[Mapping[str, object]]
+    ) -> tuple[ConsoleTrackPlan | None, list[str]]:
+        """카드 WT-all-fixtures — 콘솔 그룹 전부의 소속 장비를 **읽기만** 해서 배치 줄을 정한다.
+
+        ``(계획, 판독 공백)``. 경로가 없거나 그룹을 하나도 못 읽으면 계획은 ``None`` 이고 이유만
+        돌려준다(줄을 지어내지 않는다). 밝기 채널 유무는 리그 능력 판독이 전수일 때만 쓴다."""
+        fixtures_path = self._rig_paths.get("fixtures")
+        groups_path = self._rig_paths.get("groups")
+        if not fixtures_path or not groups_path:
+            return None, [
+                "리그 설정에 패치(fixtures)·그룹(groups) 경로가 없어 콘솔 그룹을 못 읽었습니다"
+            ]
+        try:
+            payload = read_beat_grid_stage(
+                self._stage_port,
+                fixtures_path=fixtures_path,
+                groups_path=groups_path,
+                track_names=None,
+            )
+        except Exception as error:  # noqa: BLE001 — 못 읽으면 이유만 남긴다
+            return None, [f"콘솔 그룹 판독 실패: {error}"]
+        unread = [str(line) for line in payload.get("unread") or []]
+        groups = [g for g in payload.get("groups") or [] if isinstance(g, dict)]
+        if not groups:
+            return None, unread or ["콘솔 그룹을 하나도 읽지 못했습니다"]
+        dimmerless: set[int] = set()
+        smoke: set[int] = set()
+        try:
+            capabilities = self._try_rig_capabilities().capabilities
+        except Exception:  # noqa: BLE001 — 기종을 모르면 밝기 채널 판정만 뺀다
+            capabilities = None
+        if capabilities is not None:
+            # 전수로 읽힌 장비만 판정한다 — 부분 판독에서 속성이 안 보이는 것은 「없다」가 아니다.
+            whole = {fid: cap for fid, cap in capabilities.fixtures.items() if cap.whole}
+            dimmerless = {fid for fid, cap in whole.items() if not cap.has_attribute("Dimmer")}
+            smoke = {fid for fid, cap in whole.items() if is_smoke_fixture(cap.attributes)}
+        else:
+            unread.append(
+                "장비 능력을 못 읽어 연기 장비·밝기(Dimmer) 채널이 없는 장비를 가리지 못했습니다 — "
+                "그런 장비도 줄에 들어갔을 수 있습니다"
+            )
+        fixture_fids = [int(f["fid"]) for f in payload.get("fixtures") or [] if isinstance(f, dict)]
+        plan = plan_console_tracks(
+            groups=groups,
+            fixture_fids=fixture_fids,
+            existing_names=[str(track.get("group_name")) for track in layout],
+            dimmerless_fids=dimmerless,
+            smoke_fids=smoke,
+        )
+        return plan, unread
+
     def _beat_grid_attach_pan_tilt(self, payload: dict) -> None:
         """무대 장비마다 ``pan_tilt``(참/거짓)를 단다 — 리그 능력 판독으로 알 때만.
         모르면(판독 실패·그 fid 미판독·부분 판독에서 속성 안 보임) 키를 뺀다."""
@@ -12523,12 +12581,24 @@ class ChatSession:
             return self._beat_grid_rejection(
                 "마디 지도가 없어 자동 배치를 만들 수 없습니다. 곡 오디오를 먼저 분석하세요."
             )
-        layout = self._beat_grid_view(timeline)["tracks"]
+        layout = list(self._beat_grid_view(timeline)["tracks"])
+        # 카드 WT-all-fixtures — 줄을 기본 격자 파일에서만 받지 않는다. 콘솔 그룹·소속 장비를 읽어
+        # 빠진 장비의 줄을 붙이고, 그래도 빠진 장비는 이유와 함께 화면에 싣는다.
+        plan, console_unread = self._beat_grid_console_track_plan(layout)
+        if plan is not None:
+            layout.extend(plan.added)
+        coverage = coverage_payload(plan, unread=console_unread)
+        if not layout:
+            reason = "; ".join(coverage["unread"]) or "콘솔 그룹에 장비가 없습니다"
+            return self._beat_grid_rejection(
+                f"콘솔 그룹을 읽지 못해 이 곡의 줄을 만들 수 없습니다 — {reason}"
+            )
         # 곡별 계획 주석의 칸 색을 읽어 건넨다(생성기는 파일을 읽지 않는다). 주석이 없으면 빈 사전.
         planned_colors = annotated_cell_colors(load_preset_annotations(timeline.get("song_title")))
         draft = generate_segment_draft(bar_map, layout, planned_colors=planned_colors)
         if draft["note"] is not None or not draft["tracks"]:
             return self._beat_grid_rejection(draft["note"] or "자동 배치 초안이 비어 있습니다.")
+        draft["console_coverage"] = coverage
         draft_id = self._arrangement_drafts.create(draft)
         event = beat_grid_draft_event(draft_id=draft_id, draft=draft)
         self._send(event)

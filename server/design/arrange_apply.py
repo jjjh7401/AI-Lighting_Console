@@ -149,6 +149,10 @@ def apply_arrangement_draft(
     updated["tracks"] = tracks
     if draft.get("bar_range"):
         updated["bar_range"] = _union_bar_range(grid.get("bar_range"), draft["bar_range"])
+    # 콘솔 그룹 대조 결과는 적용 뒤에도 격자에 남는다 — 빠진 장비 안내가 초안 카드와 함께
+    # 사라지면 조용히 빠진 것과 같다(카드 WT-all-fixtures). 다음 초안 적용이 덮어쓴다.
+    if "console_coverage" in draft:
+        updated["console_coverage"] = copy.deepcopy(draft["console_coverage"])
     report = (
         f"자동 배치 칸 {placed_cells}개를 새로 만들고 기존 칸 {removed_cells}개를 지웠습니다"
         f"(감독이 고친 칸 {kept_cells}개는 그대로)"

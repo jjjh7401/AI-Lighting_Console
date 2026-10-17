@@ -176,3 +176,116 @@ class TestReject:
         assert "찾을 수 없습니다" in session.beat_grid_draft_apply(draft_id)["text"]
         # 거절·그 뒤의 실패한 적용 어느 쪽도 「초안 적용」 단계 완료를 알리지 않는다.
         assert _completed_statuses(sent) == []
+
+
+class TestNewSongRowsFromConsole:
+    """카드 WT-all-fixtures — 등록 안 된 곡도 콘솔 그룹으로 줄이 생긴다(감독 2026-10-18).
+
+    예전에는 기본 격자 파일이 없는 곡의 줄이 0개라 「자동 배치 초안이 비어 있습니다」로
+    거절됐다. 지금은 콘솔에서 그룹·소속 장비를 **읽기만** 해서 줄을 정한다.
+    """
+
+    @staticmethod
+    def _session(tmp_path, *, title: str = "NEW SONG"):
+        from .test_beat_grid_stage import FIXTURES, GROUPS
+        from .test_beat_grid_stage import FakeConsole as StageConsole
+
+        fixtures = [
+            {"slot": 1, "fid": 101, "name": "Key 1", "x": 0.0, "y": 0.0, "z": 0.0, "sf": 1},
+            {"slot": 2, "fid": 111, "name": "Foh 1", "x": 1.0, "y": 0.0, "z": 0.0, "sf": 2},
+            {"slot": 3, "fid": 201, "name": "Back 1", "x": 0.0, "y": 5.0, "z": 3.0, "sf": 3},
+            {"slot": 4, "fid": 202, "name": "Back 2", "x": 2.0, "y": 5.0, "z": 3.0, "sf": 4},
+        ]
+        groups = {
+            1: ("ALL", [1, 2, 3, 4]),
+            2: ("KEY", [1]),
+            3: ("FOH", [2]),
+            4: ("BACK", [3, 4]),
+        }
+        store = SongTimelineStore()
+        store.latest = {"song_title": title, "sequence_number": 7, "bar_map": _bar_map()}
+        sent: list[dict] = []
+        session, console = _new_session(tmp_path, store=store, sent=sent)
+        session._stage_port = StageConsole(fixtures=fixtures, groups=groups)
+        session._rig_paths = {**session._rig_paths, "fixtures": FIXTURES, "groups": GROUPS}
+        return session, console, store, sent
+
+    def test_a_new_song_gets_rows_from_console_groups_and_the_draft_is_not_refused(
+        self, tmp_path
+    ) -> None:
+        session, console, store, sent = self._session(tmp_path)
+        event = session.beat_grid_draft_propose()
+        assert event["type"] == "beat_grid_draft", event.get("text")
+        assert [track["group_name"] for track in event["tracks"]] == ["KEY", "FOH", "BACK"]
+        assert event["console_coverage"]["uncovered"] == []
+        assert console.executed == []
+
+    def test_applying_it_creates_the_rows_and_keeps_the_coverage_on_the_grid(
+        self, tmp_path
+    ) -> None:
+        session, console, store, sent = self._session(tmp_path)
+        draft_id = session.beat_grid_draft_propose()["draft_id"]
+        result = session.beat_grid_draft_apply(draft_id)
+        assert result["status"] == "ok", result.get("text")
+        grid = store.latest["beat_grid"]
+        assert [track["group_name"] for track in grid["tracks"]] == ["KEY", "FOH", "BACK"]
+        assert grid["console_coverage"]["uncovered"] == []
+        assert console.executed == []
+
+    def test_love_attack_rows_stay_and_the_missing_key_row_is_added(self, tmp_path) -> None:
+        session, console, store, sent = self._session(tmp_path, title=LOVE_ATTACK_TITLE)
+        event = session.beat_grid_draft_propose()
+        names = [track["group_name"] for track in event["tracks"]]
+        default_names = [
+            track["group_name"] for track in default_beat_grid(LOVE_ATTACK_TITLE)["tracks"]
+        ]
+        # 기본 격자의 줄은 그대로 앞에 있고, 콘솔에만 있는 KEY 가 뒤에 붙는다.
+        assert names[: len(default_names)] == default_names
+        assert names[len(default_names) :] == ["KEY"]
+
+    def test_a_smoke_machine_is_left_out_on_purpose_and_shown_as_such(self, tmp_path) -> None:
+        # 감독 2026-10-18 — HAZE 는 연기 장비라 무시. 판단은 채널 속성(Haze1·Blower1)으로 한다.
+        from types import SimpleNamespace
+
+        from .test_beat_grid_stage import FakeConsole as StageConsole
+
+        session, console, store, sent = self._session(tmp_path)
+        stage = session._stage_port
+        session._stage_port = StageConsole(
+            fixtures=[
+                *stage.fixtures,
+                {"slot": 5, "fid": 621, "name": "Haze 1", "x": 0.0, "y": 6.0, "z": 0.0, "sf": 5},
+            ],
+            groups={**stage.groups, 1: ("ALL", [1, 2, 3, 4, 5]), 16: ("HAZE", [5])},
+        )
+
+        def cap(*attributes: str) -> SimpleNamespace:
+            return SimpleNamespace(
+                whole=True,
+                attributes=attributes,
+                has_attribute=lambda name, a=attributes: name in a,
+            )
+
+        fixtures = {101: cap("Dimmer"), 111: cap("Dimmer"), 201: cap("Dimmer"), 202: cap("Dimmer")}
+        fixtures[621] = cap("Haze1", "Blower1")
+        session._try_rig_capabilities = lambda: SimpleNamespace(  # type: ignore[method-assign]
+            capabilities=SimpleNamespace(fixtures=fixtures)
+        )
+        event = session.beat_grid_draft_propose()
+        assert [track["group_name"] for track in event["tracks"]] == ["KEY", "FOH", "BACK"]
+        [missing] = event["console_coverage"]["uncovered"]
+        assert missing["fid"] == 621
+        assert missing["group_names"] == ["HAZE"]
+        assert missing["reason"] == "일부러 뺌: 연기 장비(연출 대상 아님)"
+        assert missing["intentional"] is True
+        assert console.executed == []
+
+    def test_without_console_paths_a_new_song_is_refused_with_the_reason(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = {"song_title": "NEW SONG", "sequence_number": 7, "bar_map": _bar_map()}
+        session, console = _new_session(tmp_path, store=store, sent=[])
+        session._rig_paths = {**session._rig_paths, "fixtures": None, "groups": None}
+        event = session.beat_grid_draft_propose()
+        assert event["type"] == "chat_response"
+        # 「비어 있습니다」가 아니라 왜 줄이 없는지(콘솔 그룹을 못 읽음)를 말한다.
+        assert "콘솔 그룹" in event["text"]
