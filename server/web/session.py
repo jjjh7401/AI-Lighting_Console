@@ -83,6 +83,7 @@ from server.design.beat_grid_color_presets import (
 from server.design.beat_grid_color_presets import (
     referencing_tracks as color_referencing_tracks,
 )
+from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
 from server.design.beat_grid_edit import (
     BeatGridEditError,
     _assert_ascii_preset_label,
@@ -11666,6 +11667,8 @@ class ChatSession:
                 dimmer_attribute_reasons=dimmer_reasons,
                 held_cells=approved_held_cells,
                 song_end_seconds=song_end_seconds_from_bar_map(timeline.get("bar_map")),
+                # 2차 전체 실행 G-19 — 앱 음원이 Go 뒤 기다리는 지연과 같은 값(같은 데이터 파일).
+                timecode_lead_seconds=CONSOLE_AUDIO_OFFSET_SECONDS,
             )
             apply_stage("bundle")
             # 카드 t615 — 저장되는 큐가 없는 트랙은 맨 Store 줄을 내지 않는다(빈 Cue 1 방지).
