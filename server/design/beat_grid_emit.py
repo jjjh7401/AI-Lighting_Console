@@ -614,6 +614,10 @@ def _emit_cue(
     if sequence_name_command is not None:
         # 카드 t612 — 실기 선례(t531)대로 이름은 큐 저장 바로 뒤에 건다.
         commands.append(sequence_name_command)
+        # WT-end-wrap — 새 시퀀스는 WRAPAROUND 가 켜진 채 만들어진다(t538 r5_seq_props).
+        # 큐가 모두 TrigType Time 이라 마지막 큐 뒤 큐1로 감겨 TrigTime(≈4초) 뒤 다시 켜졌다
+        # (barcheck g178.2→g182.4). 문법은 t538 에서 되읽기로 확인한 ``'WrapAround' 1|0``.
+        commands.append(f"Set Sequence {sequence_number} Property 'WrapAround' 0")
     commands.append("ClearAll")
     commands.append(f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigType' 'Time'")
     # 2차 전체 실행 G-19 — 타임코드 시각 = 음원 시각 + 콘솔→음원 지연(t520 실기 생성기

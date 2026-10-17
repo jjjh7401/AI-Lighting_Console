@@ -66,6 +66,8 @@ class TestNoEntryKeepsTheCueBaseline:
             "Group 7 ; At Preset 2.1",
             f"Store Sequence {_SEQ} Cue 1",
             f"Set Sequence {_SEQ} Property 'Name' 'LDBEAT BACK'",
+            # WT-end-wrap — 마지막 큐 뒤 큐1로 감겨 다시 켜지지 않게 감김을 끈다.
+            f"Set Sequence {_SEQ} Property 'WrapAround' 0",
             "ClearAll",
             f"Set Cue 1 Sequence {_SEQ} Property 'TrigType' 'Time'",
             f"Set Cue 1 Sequence {_SEQ} Property 'TrigTime' 3",
