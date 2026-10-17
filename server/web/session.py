@@ -3856,6 +3856,18 @@ def _beat_grid_stop_card_reason(timecode_number: int | None, sequences: Sequence
     )
 
 
+def _same_song_working_copy(
+    current: Mapping[str, object], source_sha256: str, song_title: str
+) -> bool:
+    """옛 작업본이 새로 분석한 곡과 같은 곡인가 — 같은 오디오로 분석했거나, 격자가 기억하는 원래
+    곡 제목(라이브러리 불러오기가 ``song_title`` 을 저장 이름으로 바꿔도 남는다)이 같을 때."""
+    if current.get(ANALYSIS_SOURCE_KEY) == source_sha256:
+        return True
+    grid = current.get("beat_grid")
+    grid_title = grid.get("song_title") if isinstance(grid, Mapping) else None
+    return isinstance(grid_title, str) and grid_title.strip() == song_title.strip() != ""
+
+
 _TIMECODE_CURSOR = re.compile(r"^\s*(?:(\d+)h)?\s*(?:(\d+)m)?\s*(\d+(?:\.\d+)?)\s*s?\s*$")
 
 
@@ -9904,6 +9916,12 @@ class ChatSession:
         fresh = self._draft_badge(
             fresh, depth=self._draft_history.depth, report=("새 분석으로 새 작업본",)
         )
+        # 2차 전체 실행 F-02 — 같은 곡의 새 작업본은 직전 작업본의 반영 소유 기록(콘솔에 지금 있는
+        # 타임코드·시퀀스 번호)을 이어받는다. 안 그러면 새 작업본 열쇠에 남은 더 옛 기록이 콘솔과
+        # 어긋나 반영이 거절된다. 다른 곡이면 이어받지 않는다(남의 곡 번호를 덮어쓰지 않게).
+        previous_owner = self._beat_grid_song_record()
+        if previous_owner and _same_song_working_copy(current, record.source_sha256, song_title):
+            store.set_beat_grid_allocation(self._beat_grid_song_key(fresh), previous_owner)
         store.latest = fresh
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))
         bars = fresh["beat_grid"]["bar_range"]
