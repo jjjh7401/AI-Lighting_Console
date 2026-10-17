@@ -9,9 +9,14 @@ import type {
   SongTimelineSection,
   SongTimelineView,
 } from "../protocol";
-import { cueLabel } from "./CueSheetTimeline";
+import { cueLabel, EMPTY_CELL } from "./CueSheetTimeline";
 import { PlanCueRequestGenerator } from "./PlanCueRequestGenerator";
 import { sectionPosition } from "./runbookM7";
+
+/** 머리말의 시퀀스 번호 — 새 분석 작업본은 곡 단위 시퀀스가 없다(줄마다 따로다). 없으면 빈 칸(재실행 2 N3). */
+function sequenceText(number: number | null | undefined): string {
+  return typeof number === "number" && Number.isFinite(number) ? String(number) : EMPTY_CELL;
+}
 
 export const LIFECYCLE_LABEL: Record<SongTimelineView["lifecycle"], string> = {
   draft: "초안",
@@ -336,12 +341,12 @@ export function SongTimeline({
       <header className="song-timeline-header">
         <div>
           <p className="song-timeline-eyebrow">
-            {isExample ? "DEMO · CONSOLE WRITE DISABLED" : `DIRECTOR TIMELINE / SEQUENCE ${timeline.sequence_number}`}
+            {isExample ? "DEMO · CONSOLE WRITE DISABLED" : `DIRECTOR TIMELINE / SEQUENCE ${sequenceText(timeline.sequence_number)}`}
           </p>
           <h2>{timeline.song_title}</h2>
           <p className="song-timeline-subtitle">
             {TIMING_LABEL[timeline.timing_mode]}
-            {timeline.timecode_number !== null && ` · TIMECODE ${timeline.timecode_number}`}
+            {typeof timeline.timecode_number === "number" && ` · TIMECODE ${timeline.timecode_number}`}
           </p>
         </div>
         <div className={`song-timeline-status is-${timeline.lifecycle}`}>
@@ -364,11 +369,11 @@ export function SongTimeline({
           <span>계획 단계 — 콘솔에 저장된 큐가 없습니다.</span>
         ) : executor ? (
           <>
-            <span>EXEC {executor.executor_no} · {executor.sequence_name ?? `SEQUENCE ${timeline.sequence_number}`}</span>
+            <span>EXEC {executor.executor_no} · {executor.sequence_name ?? `SEQUENCE ${sequenceText(timeline.sequence_number)}`}</span>
             <strong>{executor.current_cue?.status === "ok" ? `현재 Cue ${executor.current_cue.value}` : "현재 Cue 확인 불가"}</strong>
           </>
         ) : (
-          <span>SEQUENCE {timeline.sequence_number}에 연결된 실행기가 없습니다.</span>
+          <span>SEQUENCE {sequenceText(timeline.sequence_number)}에 연결된 실행기가 없습니다.</span>
         )}
       </div>
 

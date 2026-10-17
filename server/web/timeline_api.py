@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, HTTPException
 
 from server.design.beat_grid_ui_values import attach_beat_grid_ui_values
+from server.web.messages import fill_bar_map_header
 from server.web.session import (
     SongTimelineStore,
     beat_grid_recorded_sequence_numbers,
@@ -112,7 +113,12 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
             empty_marks={},
             pool_read_at=deps.store.beat_grid_pool_read_at,
         )
-        return {"ok": True, "item": timeline_entry_summary(entry), "timeline": derived}
+        # 화면 머리말(BPM·마디 수·박자표)도 재생(``song_timeline_event``)과 같은 함수로 채운다.
+        return {
+            "ok": True,
+            "item": timeline_entry_summary(entry),
+            "timeline": fill_bar_map_header(derived),
+        }
 
     @router.delete("/api/timelines/{entry_id}")
     def delete_timeline(entry_id: str) -> dict:
