@@ -555,7 +555,10 @@ def read_mode_capabilities(
             if payload is None:
                 gaps.append(f"{function_path}: 범위 미판독")
                 continue
-            attribute = _text(payload, "ATTRIBUTE") or logical_name
+            # 속성 이름은 논리채널 이름이 먼저다 — 명령(``Attribute 'X'``)이 받는 이름이 그쪽이다.
+            # 실측(t520 dim2_readonly): Spiider ch26 논리채널 ``Dimmer2`` 아래 채널함수의
+            # ATTRIBUTE 는 ``Dimmer`` 라, 함수 쪽 이름을 쓰면 둘째 디머가 목록에서 사라진다.
+            attribute = logical_name or _text(payload, "ATTRIBUTE")
             if not attribute:
                 gaps.append(f"{function_path}: 속성 이름 없음")
                 continue
