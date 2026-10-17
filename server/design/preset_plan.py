@@ -1042,6 +1042,38 @@ def _planned_color_presets(
         )
 
 
+#: 격자가 기억하는 앱이 저장한 위치 프리셋 — 번호 -> {"group", "aim", "value"}.
+#: ``aim`` 은 기본 위치 이름(주석 바닥 점이면 None), ``value`` 는 계획표의 값 글자(바닥 점의
+#: 대략 목표가 여기 담긴다). 이름만으로는 같은 조준인지 모른다.
+_POSITION_RECORD_KEY = "preset_positions"
+
+
+def _position_record(group: str, aim: str | None, value: str) -> dict[str, object]:
+    return {"group": group, "aim": aim, "value": value}
+
+
+def _reusable_position_slot(
+    grid: Mapping[str, object],
+    position_pool: PoolRead,
+    name: str,
+    record: Mapping[str, object],
+) -> str | None:
+    """콘솔에 이미 있는 같은 위치 번호(「pool.slot」) — 콘솔 이름이 ``name``(콘솔이 붙인
+    「#숫자」 허용)이고, 격자의 저장 기록이 ``record``(그룹·기본 위치·값)와 같아야 한다. 기록이
+    없는 번호(이 기록을 남기기 전 저장분)는 재사용하지 않는다(3차 전체 실행 I-08)."""
+    if position_pool is None:
+        return None
+    records = grid.get(_POSITION_RECORD_KEY)
+    if not isinstance(records, Mapping):
+        return None
+    pool_no, children = position_pool
+    for slot in sorted(children):
+        number = f"{pool_no}.{slot}"
+        if records.get(number) == record and same_console_name(children[slot], name):
+            return number
+    return None
+
+
 def _planned_position_presets(
     rows: Sequence[tuple[str, object, bool, Mapping[str, object]]],
     *,
@@ -1103,6 +1135,26 @@ def _planned_position_presets(
                     groups=(group,),
                     ready=False,
                     hold="계획 위치 이름이 기본 위치 사다리에 없음",
+                )
+            )
+            continue
+        reused = _reusable_position_slot(
+            grid, position_pool, name, _position_record(group, look, value)
+        )
+        if reused is not None:
+            # 콘솔에 이미 있는 번호를 쓴다 — 저장 줄 없이 칸만 그 번호를 가리킨다(「재사용」).
+            presets.append(
+                PlanPreset(
+                    kind="position",
+                    value=value,
+                    name=name,
+                    slot=reused,
+                    cells=cells,
+                    groups=(group,),
+                    ready=True,
+                    hold=None,
+                    aim=look,
+                    reused=True,
                 )
             )
             continue
@@ -1504,6 +1556,30 @@ def build_preset_plan(
         # 칸이 하나도 없는 방향은 자리표시 한 줄만 낸다(그룹 이름이 빈 줄 — 번호를 잡지 않는다).
         for group in _unique(cell.group_name for cell in cells) or ("",):
             group_cells = tuple(cell for cell in cells if cell.group_name == group)
+            name = f"{console_name} {group}".strip()
+            reused_slot = (
+                _reusable_position_slot(
+                    grid, position_pool, name, _position_record(group, None, value)
+                )
+                if group_cells and target_text
+                else None
+            )
+            if reused_slot is not None:
+                # 콘솔에 이미 있는 번호를 쓴다 — 저장 줄 없이 칸만 그 번호를 가리킨다(「재사용」).
+                presets.append(
+                    PlanPreset(
+                        kind="position",
+                        value=value,
+                        name=name,
+                        slot=reused_slot,
+                        cells=group_cells,
+                        groups=(group,),
+                        ready=True,
+                        hold=None,
+                        reused=True,
+                    )
+                )
+                continue
             slot = None
             if group_cells:
                 slot = _reserve_next(
@@ -1535,7 +1611,7 @@ def build_preset_plan(
                 PlanPreset(
                     kind="position",
                     value=value,
-                    name=f"{console_name} {group}".strip(),
+                    name=name,
                     slot=slot,
                     cells=group_cells,
                     groups=(group,) if group else (),
@@ -1905,6 +1981,15 @@ def apply_plan_references(
                 ],
             }
             updated[_DIMMER_RECORD_KEY] = dimmer_records
+        if preset.kind == "position" and preset.groups and not preset.reused and preset.slot:
+            position_records = updated.get(_POSITION_RECORD_KEY)
+            position_records = (
+                dict(position_records) if isinstance(position_records, Mapping) else {}
+            )
+            position_records[preset.slot] = _position_record(
+                preset.groups[0], preset.aim, preset.value
+            )
+            updated[_POSITION_RECORD_KEY] = position_records
         if preset.kind == "effect" and preset.effect_record is not None and preset.slot:
             records = updated.get(_EFFECT_RECORD_KEY)
             records = dict(records) if isinstance(records, Mapping) else {}
