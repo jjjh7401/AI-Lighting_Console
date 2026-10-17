@@ -17,7 +17,6 @@ from server.design.beat_grid_color_presets import (
     COLOR_ATTRS_MISSING,
     COLOR_CHANNELS_UNREAD,
     COLOR_MEMBERS_UNREAD,
-    COLOR_MULTI_GROUP,
     attach_color_rgb_to_cues,
     color_preset_outcomes,
     record_color_preset_rgb,
@@ -214,8 +213,11 @@ class TestColorStore:
         assert _cue_of(approved, "WASH-ALL", 14)["color_preset_no"] == "4.5"
         assert _cue_of(approved, "WASH-ALL", 7)["color_preset_no"] == "4.33"
 
-    def test_a_color_spread_over_two_groups_is_held_like_the_t594_path(self) -> None:
-        # t594 는 여러 그룹이 같은 색 번호를 쓰는 꼴을 만들지 않는다(실기 선례 없음) — 카드도 같다.
+    def test_a_color_spread_over_two_groups_is_one_preset_with_one_multi_group_selection(
+        self,
+    ) -> None:
+        # 2차 전체 실행 E-08 — 같은 RGB 를 그룹마다 따로 저장하지 않는다. 두 그룹을 한 선택
+        # (``Group a + b``)으로 한 번 저장한다(디머 저장이 실기로 쓴 꼴).
         spread = {
             "name": "라벤더",
             "console_name": "LAVENDER",
@@ -226,8 +228,11 @@ class TestColorStore:
         plan = attach_color_store(plan, grid, members=_MEMBERS, channel_names=_CHANNELS)
 
         lavender = _preset(plan, "LAVENDER")
-        assert lavender.ready is False and lavender.store is None
-        assert lavender.hold == COLOR_MULTI_GROUP
+        assert lavender.ready is True and lavender.store is not None
+        assert set(lavender.groups) == {"WASH-ALL", "BACK"}
+        selections = [line for line in lavender.store if "ColorRGB_R" in line]
+        assert len(selections) == 1
+        assert selections[0].startswith("Group ") and " + " in selections[0].split(" ; ")[0]
 
 
 # == ① 위치 저장 줄 ==============================================================

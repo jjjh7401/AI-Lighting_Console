@@ -49,11 +49,11 @@ __all__ = [
     "COLOR_LABEL_INVALID",
     "COLOR_LABEL_MISSING",
     "COLOR_MEMBERS_UNREAD",
-    "COLOR_MULTI_GROUP",
     "COLOR_RGB_MISSING",
     "attach_color_rgb_to_cues",
     "attach_color_rgb_to_drawer",
     "color_grid_blocker",
+    "color_preset_groups",
     "color_preset_outcomes",
     "color_preset_rgb",
     "record_color_preset_rgb",
@@ -65,7 +65,6 @@ COLOR_RGB_MISSING = "색 프리셋 목표 RGB 가 없음"
 COLOR_LABEL_MISSING = "색 프리셋 콘솔 이름(영문)이 없음"
 COLOR_LABEL_INVALID = "색 프리셋 콘솔 이름이 영문·숫자 규칙에 맞지 않음"
 COLOR_GROUP_UNCONFIRMED = POSITION_GROUP_UNCONFIRMED
-COLOR_MULTI_GROUP = "여러 그룹이 같은 색 번호를 씀 — 여러 그룹 선택으로 만드는 꼴은 실기 선례 없음"
 COLOR_MEMBERS_UNREAD = "트랙 그룹 소속을 다 읽지 못함"
 COLOR_CHANNELS_UNREAD = "장비 컬러 채널 이름을 다 읽지 못함"
 COLOR_ATTRS_MISSING = "컬러(ColorRGB R/G/B) 속성이 없는 장비가 있음"
@@ -116,13 +115,20 @@ def color_preset_rgb(
     return (r, g, b)
 
 
-def color_preset_group(grid: Mapping[str, object], preset_no: str) -> str | None:
-    """곡 격자 ``preset_colors[preset_no]["group"]`` — 그 번호에 값을 담아 저장한 그룹.
-    기록이 없으면(옛 기록·콘솔 쇼 프리셋) ``None`` — 「누가 담겼는지 모른다」다."""
+def color_preset_groups(grid: Mapping[str, object], preset_no: str) -> tuple[str, ...] | None:
+    """곡 격자 ``preset_colors[preset_no]`` 의 ``groups``(여러 그룹) 또는 ``group``(한 그룹) —
+    그 번호에 값을 담아 저장한 그룹들. 기록이 없으면(옛 기록·콘솔 쇼 프리셋) ``None`` —
+    「누가 담겼는지 모른다」다."""
     colors = grid.get("preset_colors")
     raw = colors.get(preset_no) if isinstance(colors, Mapping) else None
-    group = raw.get("group") if isinstance(raw, Mapping) else None
-    return group if isinstance(group, str) and group else None
+    if not isinstance(raw, Mapping):
+        return None
+    many = raw.get("groups")
+    if isinstance(many, list):
+        names = tuple(name for name in many if isinstance(name, str) and name)
+        return names or None
+    group = raw.get("group")
+    return (group,) if isinstance(group, str) and group else None
 
 
 def _rgb_list(grid: Mapping[str, object], preset_no: object) -> list[float] | None:
@@ -176,15 +182,15 @@ def record_color_preset_rgb(
     grid: Mapping[str, object],
     preset_no: str,
     rgb: Sequence[object],
-    group: str | None = None,
+    group: str | Sequence[str] | None = None,
 ) -> dict[str, object]:
     """새 색 프리셋의 목표 RGB를 곡 격자에 남기는 단일 저장 자리. ``grid``의
     사본을 돌려준다(원본은 그대로). ``pool.slot`` 꼴이 아니거나 값이
     0~100 범위의 유한한 수 셋이 아니면 거절한다.
 
-    ``group`` 은 그 번호에 값을 담아 저장한 그룹 이름이다(색 저장은 한 번호에 한 그룹).
-    재사용이 「저장한 그룹만」을 가르는 근거다(1차 전체 실행 — 4.106 이 WASH-ALL 만
-    담겼는데 무빙 그룹이 재사용했다)."""
+    ``group`` 은 그 번호에 값을 담아 저장한 그룹 이름(하나면 ``group``, 여럿이면 ``groups``
+    로 남긴다). 재사용이 「저장한 그룹만」을 가르는 근거다(1차 전체 실행 — 4.106 이
+    WASH-ALL 만 담겼는데 무빙 그룹이 재사용했다)."""
     if not _is_pool_slot(preset_no):
         raise ValueError(f"'{preset_no}'은(는) pool.slot 꼴의 프리셋 번호가 아닙니다.")
     if len(rgb) != 3:
@@ -199,8 +205,11 @@ def record_color_preset_rgb(
     existing = grid.get("preset_colors")
     colors = dict(existing) if isinstance(existing, Mapping) else {}
     colors[preset_no] = {"r": channels[0], "g": channels[1], "b": channels[2]}
-    if group:
-        colors[preset_no]["group"] = group
+    names = [group] if isinstance(group, str) else [name for name in group or () if name]
+    if len(names) == 1 and names[0]:
+        colors[preset_no]["group"] = names[0]
+    elif len(names) > 1:
+        colors[preset_no]["groups"] = list(names)
     updated["preset_colors"] = colors
     return updated
 
@@ -246,9 +255,13 @@ def _member_color_verdict(names: Sequence[str | None] | None) -> str:
 
 def _grid_only_blocker_and_parts(
     grid: Mapping[str, object], preset_no: str
-) -> tuple[str | None, tuple[tuple[float, float, float], str, int] | None]:
+) -> tuple[str | None, tuple[tuple[float, float, float], str, tuple[int, ...]] | None]:
     """콘솔을 읽지 않고 격자만으로 아는 조건(RGB·이름·그룹 확인) — ``color_grid_
-    blocker``와 ``_blocker_and_parts``가 공유하는 앞부분."""
+    blocker``와 ``_blocker_and_parts``가 공유하는 앞부분.
+
+    같은 번호를 여러 그룹이 쓰면 그 그룹을 전부 한 선택(``Group 10 + 7``)에 담는다 — 같은 RGB 를
+    그룹마다 따로 저장하지 않는다(2차 전체 실행 E-08). 이 선택 꼴은 디머 저장이 실기로 썼다
+    (2차 전체 실행 1.28 — 그룹 8개가 한 줄로 저장되어 큐에서 불렸다)."""
     rgb = color_preset_rgb(grid, preset_no)
     if rgb is None:
         return COLOR_RGB_MISSING, None
@@ -262,13 +275,16 @@ def _grid_only_blocker_and_parts(
     tracks = referencing_tracks(grid, preset_no)
     if any(not track.get("group_no_confirmed") for track in tracks):
         return COLOR_GROUP_UNCONFIRMED, None
-    groups = {track.get("group_no") for track in tracks}
-    if len(groups) != 1:
-        return COLOR_MULTI_GROUP, None
-    (group,) = groups
-    if not _positive_int(group):
+    groups: list[int] = []
+    for track in tracks:
+        number = track.get("group_no")
+        if not _positive_int(number):
+            return COLOR_GROUP_UNCONFIRMED, None
+        if number not in groups:
+            groups.append(int(number))  # type: ignore[arg-type]
+    if not groups:
         return COLOR_GROUP_UNCONFIRMED, None
-    return None, (rgb, label, int(group))  # type: ignore[arg-type]
+    return None, (rgb, label, tuple(groups))
 
 
 def color_grid_blocker(grid: Mapping[str, object], preset_no: str) -> str | None:
@@ -285,7 +301,9 @@ def _blocker_and_parts(
     *,
     members: Mapping[str, Sequence[int]],
     channel_names: Mapping[int, Sequence[str | None] | None],
-) -> tuple[str | None, tuple[tuple[float, float, float], str, int, tuple[int, ...]] | None]:
+) -> tuple[
+    str | None, tuple[tuple[float, float, float], str, tuple[int, ...], tuple[int, ...]] | None
+]:
     blocker, parts = _grid_only_blocker_and_parts(grid, preset_no)
     if blocker is not None or parts is None:
         return blocker, None
@@ -320,14 +338,16 @@ def _format_value(value: float) -> str:
 
 
 def _build_bundle(
-    *, group: int, rgb: tuple[float, float, float], pool: int, slot: int, label: str
+    *, groups: Sequence[int], rgb: tuple[float, float, float], pool: int, slot: int, label: str
 ) -> tuple[str, ...]:
     """looks/instantiate 선례와 같은 꼴 — ``ClearAll`` → 선택+값(한 줄) →
     ``Store Preset`` → ``Label Preset`` → ``ClearAll``. 선택+값을 한 줄로
-    묶는 이유는 모듈 설명(송신 중복 제거 면제) 참조."""
+    묶는 이유는 모듈 설명(송신 중복 제거 면제) 참조. 그룹이 여럿이면 선택은
+    ``Group 10 + 7`` 하나다."""
     r, g, b = rgb
     selection = (
-        f"Group {group} ; Attribute 'ColorRGB_R' At {_format_value(r)}"
+        f"Group {' + '.join(str(group) for group in groups)}"
+        f" ; Attribute 'ColorRGB_R' At {_format_value(r)}"
         f" ; Attribute 'ColorRGB_G' At {_format_value(g)}"
         f" ; Attribute 'ColorRGB_B' At {_format_value(b)}"
     )
@@ -356,11 +376,11 @@ def _one(
     )
     if blocker is not None or parts is None:
         return None, blocker
-    rgb, label, group, _fids = parts
+    rgb, label, groups, _fids = parts
     pool_no = preset_pool_no(preset_no)
     assert pool_no is not None  # 걸림돌이 없으면 pool.slot 꼴이 이미 확인됐다.
     slot = int(preset_no.partition(".")[2])
-    return _build_bundle(group=group, rgb=rgb, pool=pool_no, slot=slot, label=label), None
+    return _build_bundle(groups=groups, rgb=rgb, pool=pool_no, slot=slot, label=label), None
 
 
 def color_preset_outcomes(
