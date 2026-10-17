@@ -15,6 +15,7 @@ import base64
 import binascii
 import json
 import math
+import re
 
 from server.deploy.review import ReviewRequest
 from server.safety.approval import ApprovalRequest
@@ -1163,17 +1164,37 @@ def song_audio_link_end_event() -> dict:
 
 
 #: 승인 카드에 보이는 사유 중 감독용 한국어로 바꿔 보이는 것 — 게이트의 판정·사유 원문은 그대로다
-#: (감사 로그·분류기). 앱이 만든 프리셋 저장은 차단 목록 항목이라 승인이 필요할 뿐 막힌 것이 아니다.
+#: (감사 로그·분류기). 차단 목록 항목은 승인이 필요할 뿐 막힌 것이 아니다(전체 실행 E-15 — 원문
+#: 「blacklisted command」가 거절처럼 읽혔다).
 _CARD_REASON_KO = {
     "blacklisted command (matches closed-set entry 'Store Preset')": (
         "앱이 만든 프리셋 저장 — 승인 필요"
     ),
 }
 
+#: 차단 목록 항목 -> 카드에 보일 이름. 표에 없는 항목은 콘솔 명령 원문을 그대로 보인다.
+_CLOSED_SET_ENTRY_KO = {
+    "Delete": "지우기(Delete) — 되돌릴 수 없음",
+    "Store Sequence": "시퀀스·큐 저장(Store Sequence)",
+    "Store Timecode": "타임코드 저장(Store Timecode)",
+    "Assign Sequence": "시퀀스를 타임코드에 연결(Assign Sequence)",
+    "Store Cue": "큐 저장(Store Cue)",
+    "Store Group": "그룹 저장(Store Group)",
+}
+
+_BLACKLISTED_REASON = re.compile(r"blacklisted command \(matches closed-set entry '(.+)'\)")
+
 
 def card_risk_reason(reason: str) -> str:
-    """승인 카드 화면에 보일 사유 한 줄 — 표에 있으면 한국어로, 없으면 원문 그대로."""
-    return _CARD_REASON_KO.get(reason, reason)
+    """승인 카드 화면에 보일 사유 한 줄 — 표에 있으면 한국어로, 차단 목록 항목은 「승인이 필요한
+    명령」으로, 그 밖은 원문 그대로."""
+    if reason in _CARD_REASON_KO:
+        return _CARD_REASON_KO[reason]
+    matched = _BLACKLISTED_REASON.fullmatch(reason)
+    if matched is not None:
+        entry = matched.group(1)
+        return f"승인이 필요한 콘솔 명령: {_CLOSED_SET_ENTRY_KO.get(entry, entry)}"
+    return reason
 
 
 def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:
