@@ -152,7 +152,7 @@ class _FakePort:
 
     def query_properties(self, path: str, names) -> dict:
         self.calls.append(("props", path))
-        values = {"OWNDATAPRESENT": "true", "MEMORYFOOTPRINT": "3216"}
+        values = {"OWNDATAPRESENT": "true", "MEMORYFOOTPRINT": "3216", "PRESETMODE": "Selective"}
         return {"ok": True, "reads": [{"n": n, "ok": True, "v": values[n]} for n in names]}
 
 
@@ -161,7 +161,8 @@ def test_console_reads_mark_present_and_missing_cues_and_presets() -> None:
     cues = tool.read_console_cues(port, [60, 60], "DataPool/Sequences")
     assert cues == {(60, 1): "있음 · 데이터 있음 · 3216"}
     presets = tool.read_console_presets(port, {"1.20", "4.106"}, "DataPool/PresetPools")
-    assert presets == {"1.20": "있음 'DIM-100' · 데이터 있음", "4.106": "콘솔에 없음"}
+    # 프리셋 모드(PRESETMODE)도 응답기로 읽혀 표에 실린다(t538 실측 "Selective"·"Universal").
+    assert presets == {"1.20": "있음 'DIM-100' · 데이터 있음 · Selective", "4.106": "콘솔에 없음"}
     assert {kind for kind, _path in port.calls} <= {"state", "props"}
     text = render_markdown(planned_cue_rows(_GRID, _ALLOCATION), {}, console_cues=cues)
     assert "| MOVER-D | 60 | 2 | 4 |" in text and "콘솔에 없음" in text
@@ -185,3 +186,21 @@ def test_the_cli_reads_files_only_without_the_console_flag(tmp_path, capsys) -> 
     text = out.read_text(encoding="utf-8")
     assert "| MOVER-D | 60 | 1 | 0 | 프리셋 1.20 | 4.106 |" in text
     assert "| 1.20 | DIM-100 | 12 | Dimmer=100 | 안 읽음 |" in text
+
+
+def test_a_cue_whose_preset_lacks_its_group_is_marked() -> None:
+    # 1차 전체 실행 — 4.106 은 「Group 10 ; …」(WASH-ALL)만 담겼는데
+    # 무빙 그룹 큐가 그 번호를 불렀다.
+    audit = [
+        _ok("ClearAll"),
+        _ok("Group 10 ; Attribute 'ColorRGB_R' At 55"),
+        _ok("Store Preset 4.106"),
+        _ok("ClearAll"),
+        _ok("Group 12 ; Attribute 'Dimmer' At 100"),
+        _ok("Store Preset 1.20"),
+    ]
+    rows = planned_cue_rows(_GRID, _ALLOCATION)
+    text = render_markdown(rows, stored_presets_from_audit(audit))
+    assert "| MOVER-D | 60 | 1 | 0 | 프리셋 1.20 | 4.106 ⚠그룹 없음 |" in text
+    # 밝기 프리셋은 그룹 12 를 담았다 — 표시가 없다.
+    assert "프리셋 1.20 ⚠" not in text
