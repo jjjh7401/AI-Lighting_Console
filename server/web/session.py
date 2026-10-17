@@ -145,6 +145,7 @@ from server.design.beat_grid_send import (
     APP_TIMECODE_PREFIX,
     BeatGridCellKey,
     _owned_sequence_names,
+    _same_owned_sequence_name,
     apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
     beat_grid_reapply_summary,
@@ -11150,9 +11151,10 @@ class ChatSession:
     def beat_grid_timecode_set(self, timecode_number: object) -> dict:
         """반영 준비 — 상단 바 타임코드 번호 입력. director 가 적은 번호 하나를 곡 초안에 적고,
         보관함에 자동 저장 판(``<곡> (자동 vN)``)을 남긴다. 콘솔에는 아무것도 쓰지 않는다.
-        번호가 콘솔에서 비었는지·남의 것인지는 「콘솔에 반영」 때
-        ``_resolve_beat_grid_timecode_number`` 가 본다. 양의 정수만 받는다. 번호를 지어내지
-        않으며, 거절하면 초안은 그대로 둔다."""
+        전체 실행 B-07 — 콘솔에 이 앱 것이 아닌 타임코드(감독이 손으로 만든 TC3·4 등)가 있는
+        번호는 여기서 바로 거절한다(판정은 반영과 같은 ``_resolve_beat_grid_timecode_number``).
+        빈 번호는 받고, 콘솔을 못 읽으면 받되 반영 때 다시 확인한다. 양의 정수만 받는다.
+        번호를 지어내지 않으며, 거절하면 초안은 그대로 둔다."""
         if (
             not isinstance(timecode_number, int)
             or isinstance(timecode_number, bool)
@@ -11169,6 +11171,9 @@ class ChatSession:
                 ok=False,
                 reason="곡 초안이 없어 타임코드 번호를 적을 곳이 없습니다",
             )
+        refusal, console_note = self._beat_grid_timecode_input_check(timecode_number)
+        if refusal is not None:
+            return self._beat_grid_send_status(last_action="edit", ok=False, reason=refusal)
         updated = {**timeline, "timecode_number": timecode_number}
         store.latest = updated
         library = self._timeline_library
@@ -11191,8 +11196,53 @@ class ChatSession:
             else "초안에 저장했어요(보관함 자동 저장은 되지 않았어요)."
         )
         return self._beat_grid_send_status(
-            last_action="edit", ok=True, reason=f"타임코드 {timecode_number}번을 적었습니다. {note}"
+            last_action="edit",
+            ok=True,
+            reason=f"타임코드 {timecode_number}번을 적었습니다. {note}{console_note}",
         )
+
+    def _beat_grid_timecode_input_check(self, wanted: int) -> tuple[str | None, str]:
+        """타임코드 번호 입력 판정 — ``(거절 사유 또는 None, 덧붙일 안내)``.
+
+        빈 번호면 받는다. 콘솔을 못 읽으면 받되 반영 때 다시 본다고 알린다. 차 있으면 이 곡의
+        반영 기록이 같은 번호·같은 이름(콘솔 「#숫자」 허용)이거나, 반영과 같은 판정이 앱 소유로
+        보는 경우에만 받는다."""
+        path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
+        if occupant is None:
+            if axes.timecode_go:
+                return None, ""
+            return None, " 콘솔을 읽지 못해 「⇪ 콘솔에 반영」 때 다시 확인합니다."
+        record = self._beat_grid_song_record()
+        if (
+            record
+            and record.get("timecode_number") == wanted
+            and _same_owned_sequence_name(occupant, record.get("timecode_name"))
+        ):
+            return None, ""
+        number, _why = self._resolve_beat_grid_timecode_number(wanted, overwrite_notes=[])
+        if number is not None:
+            return None, ""
+        return (
+            f"타임코드 {wanted}번은 콘솔에 이미 '{occupant}'이(가) 있어요. 이 앱이 만든 "
+            "타임코드가 아니라서 쓸 수 없어요. 비어 있는 번호를 넣어 주세요."
+        ), ""
+
+    def _beat_grid_song_record(self) -> Mapping[str, object] | None:
+        """지금 곡의 반영 소유 기록 — 열쇠가 어긋나면 격자의 원래 곡 제목 열쇠로 한 번 더 찾는다."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if store is None or timeline is None:
+            return None
+        song_key = self._beat_grid_song_key(timeline)
+        record = store.beat_grid_allocation(song_key)
+        if not record:
+            # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 반영 때의 열쇠와
+            # 어긋난다 — 격자가 기억하는 원래 곡 제목 열쇠로 한 번 더 찾는다(PR #779와 같은 길).
+            fallback = self._beat_grid_title_fallback_key(song_key)
+            if fallback is not None:
+                record = store.beat_grid_allocation(fallback)
+        return record or None
 
     def _beat_grid_timecode_reusable_sequences(
         self,
@@ -11297,7 +11347,7 @@ class ChatSession:
         path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
         occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, wanted)
         if occupant is not None:
-            if recorded_name is not None and occupant == recorded_name:
+            if recorded_name is not None and _same_owned_sequence_name(occupant, recorded_name):
                 return wanted, None
             if recorded_name is not None:
                 return None, (
@@ -12036,16 +12086,7 @@ class ChatSession:
         ``_resolve_beat_grid_timecode_number``(``timecode_slot_verdict``)를 그대로 쓴다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
-        record = None
-        if store is not None and timeline is not None:
-            song_key = self._beat_grid_song_key(timeline)
-            record = store.beat_grid_allocation(song_key)
-            if not record:
-                # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 반영 때의 열쇠와
-                # 어긋난다 — 격자가 기억하는 원래 곡 제목 열쇠로 한 번 더 찾는다(PR #779와 같은 길).
-                fallback = self._beat_grid_title_fallback_key(song_key)
-                if fallback is not None:
-                    record = store.beat_grid_allocation(fallback)
+        record = self._beat_grid_song_record()
         if record:
             return self._resolve_beat_grid_timecode_number(
                 record.get("timecode_number"), recorded_name=record.get("timecode_name")

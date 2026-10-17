@@ -18,6 +18,7 @@ from server.web.session import SongTimelineStore
 from .test_beat_grid_send_t563 import (
     _APPROVED_EVIDENCE,
     _new_session,
+    _state_tree,
     _timeline,
     _timeline_events,
 )
@@ -75,6 +76,50 @@ def test_timecode_setter_saves_on_the_draft_and_a_library_snapshot(tmp_path):
     assert [e["timeline"]["timecode_number"] for e in _timeline_events(sent)] == [7]
     assert console.executed == []  # 번호를 적는 것만으로는 콘솔에 아무것도 나가지 않는다
     assert session.beat_grid_apply()["ok"] is True  # 이제 반영은 번호 문제로 막히지 않는다
+
+
+def _tree_with_timecode(number: int, name: str) -> dict:
+    tree = _state_tree()
+    tree["DataPool/Timecodes"] = {
+        "children": [{"i": number, "name": name}],
+        "node": {"childCount": 1},
+    }
+    return tree
+
+
+@pytest.mark.parametrize("name", ["Timecode 3", "LDBEAT Timecode 3"])
+def test_timecode_setter_refuses_a_number_the_app_does_not_own(tmp_path, name):
+    # 전체 실행 B-07 — 감독이 손으로 만든 TC3 는 입력 단계에서 거절한다(이름이 LDBEAT 로
+    # 시작해도 이 앱의 반영 기록·트랙이 없으면 남의 것이다).
+    store = _store_with(_timeline())  # 타임코드 번호 20
+    sent: list[dict] = []
+    session, console, _approval, _audit = _new_session(
+        tmp_path, store=store, sent=sent, state_tree=_tree_with_timecode(3, name)
+    )
+
+    event = session.beat_grid_timecode_set(3)
+
+    assert event["ok"] is False
+    assert "이 앱이 만든 타임코드가 아니라서 쓸 수 없어요" in event["reason"]
+    assert store.latest["timecode_number"] == 20
+    assert _timeline_events(sent) == []
+    assert console.executed == []
+
+
+def test_timecode_setter_accepts_this_songs_own_timecode_even_with_a_console_suffix(tmp_path):
+    store = _store_with(_timeline())
+    session, _console, _approval, _audit = _new_session(
+        tmp_path, store=store, state_tree=_tree_with_timecode(5, "LDBEAT Timecode 5#2")
+    )
+    store.set_beat_grid_allocation(
+        session._beat_grid_song_key(store.latest),
+        {"timecode_number": 5, "timecode_name": "LDBEAT Timecode 5", "tracks": {}},
+    )
+
+    event = session.beat_grid_timecode_set(5)
+
+    assert event["ok"] is True, event
+    assert store.latest["timecode_number"] == 5
 
 
 def test_cells_without_dimmer_readout_are_excluded_and_the_rest_is_sent(tmp_path):
