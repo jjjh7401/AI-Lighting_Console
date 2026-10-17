@@ -134,7 +134,9 @@ import { cueEditKey, deriveCueDisplayState, editedCueKeysFromUnsent } from "./be
 import { CONSOLE_FOLLOW_DISABLED_REASON, consoleSyncAudioStartOffsetSeconds } from "./beatgrid/consoleSyncAudio";
 import {
   CONSOLE_DELAY_MISSING_MESSAGE,
+  CONSOLE_FOLLOW_OFF_MESSAGE,
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
+  CONSOLE_PLAY_WAITING_MESSAGE,
   consoleAudioPositionSeconds,
   createConsoleFollowRelay,
   releaseBusyRefusedPlay,
@@ -1981,7 +1983,8 @@ export function BeatGrid({
       consoleAudioTimerRef.current = null;
       relay.responseAtMs = null;
       relay.audioStarted = false;
-      setConsoleFollowError(null);
+      // 감독 실기(WT-director-play) — 답이 없는 동안 ▶ 가 그대로라 눌렸는지조차 안 보였다.
+      setConsoleFollowError(CONSOLE_PLAY_WAITING_MESSAGE);
       relay.failure = null;
       relay.awaiting = true;
       relay.awaitingBusyAt = busyCount;
@@ -2004,6 +2007,8 @@ export function BeatGrid({
     playbackAnchorRef.current = { anchorSeconds: playbackSeconds, anchorPerfMs: performance.now() };
     setPlaying(true);
     resumeFollow();
+    // 감독 실기(WT-director-play) — 새 탭은 「콘솔 같이 끔」으로 시작해 이 ▶ 는 음원만 튼다. 알린다.
+    if (consoleFollowAvailable) setConsoleFollowError(CONSOLE_FOLLOW_OFF_MESSAGE);
     if (audioStatus === "connected" && audioRef.current) {
       try {
         audioRef.current.currentTime = playbackSeconds;
@@ -2017,6 +2022,21 @@ export function BeatGrid({
         setLastPlaybackError(`[음원 재생 실패] ${message}`);
       });
     }
+  };
+
+  // 「콘솔 같이」 켬/끔. 감독 실기(WT-director-play) — 음원만 도는 중에 켜면 다음 ▶ 가 ❚❚ 로 처리돼 음원이
+  // 멈추고 콘솔 정지만 나갔다(「음악이 시작됐는데 바로 끝나」). 켜는 순간 음원을 먼저 멈춰 다음 ▶ 가 콘솔 재생이
+  // 되게 한다. 콘솔이 돌고 있을 수 있으면(이미 콘솔 같이로 재생 중) 건드리지 않는다.
+  const toggleConsoleFollow = () => {
+    const turningOn = !relay.consoleFollow;
+    if (turningOn) {
+      setConsoleFollowError((message) => (message === CONSOLE_FOLLOW_OFF_MESSAGE ? null : message));
+      if (playing && !relay.consoleMayRun) {
+        setPlaying(false);
+        audioRef.current?.pause();
+      }
+    }
+    setConsoleFollow(turningOn);
   };
 
   // REQ-LDBEAT-024(a) — ⏮ 처음. 재생 중이면 0초로 다시 앵커를 두고 계속
@@ -2161,6 +2181,9 @@ export function BeatGrid({
   // 바뀌는 다음 렌더가 기록된 응답을 본다. 서버가 거절했으면 그 이유를 보인다(음원은 틀지 않는다).
   useEffect(() => {
     if (relay.failure) setConsoleFollowError(relay.failure);
+    else if (!relay.awaiting) {
+      setConsoleFollowError((message) => (message === CONSOLE_PLAY_WAITING_MESSAGE ? null : message));
+    }
     resumeRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendStatus, consoleFollowSeq]);
@@ -2622,9 +2645,7 @@ export function BeatGrid({
           audioFailureReason,
           consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,
           consoleFollowOn: consoleFollow,
-          onToggleConsoleFollow: consoleFollowAvailable
-            ? () => setConsoleFollow(!relay.consoleFollow)
-            : undefined,
+          onToggleConsoleFollow: consoleFollowAvailable ? toggleConsoleFollow : undefined,
           consoleFollowError,
         }}
       />
