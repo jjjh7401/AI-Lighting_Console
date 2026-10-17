@@ -1145,8 +1145,12 @@ def build_preset_plan(
         for cell in _annotated_cells(entry.get("cells"), by_cell, missing_cells):
             brightness_notes[(cell.group_name, cell.bar)] = str(entry.get("note") or "").strip()
 
-    # -- 디머: 칸의 value_percent 를 값으로 묶는다(첫 등장 순) -------------------
-    uses: dict[int, list[tuple[str, object, bool, int]]] = {}
+    # -- 디머: 칸의 value_percent 와 그룹의 밝기 속성 구성으로 묶는다(첫 등장 순) ------
+    # 2차 전체 실행 G-13 — 그룹 8개(3·10 포함)를 한 프리셋에 저장하면 콘솔 프리셋에 ``Dimmer2`` 가
+    # 담기지 않았다. 실기(2026-10-17): 3·10 이 섞인 1.903·1.904·1.905 는 빠짐, 3·10 이 없는 1.907 과
+    # ``Dimmer2`` 를 가진 그룹만 담은 1.906 은 담김. 콘솔 안의 이유는 모른다 — 확인된 꼴(1.906)대로
+    # 밝기 속성 구성이 다르면 프리셋을 나눈다.
+    uses: dict[tuple[int, tuple[str, ...]], list[tuple[str, object, bool, int]]] = {}
     for group, group_no, confirmed, cue in rows:
         brightness = cue.get("brightness")
         if not isinstance(brightness, Mapping) or brightness.get("mode") != "value":
@@ -1157,10 +1161,16 @@ def build_preset_plan(
         if isinstance(percent, bool) or not isinstance(percent, int):
             unresolved.append(f"{group} {cue.get('bar')}마디: 밝기 값 {percent!r}은 정수 %가 아님")
             continue
-        uses.setdefault(percent, []).append((group, group_no, confirmed, int(cue["bar"])))  # type: ignore[arg-type]
+        signature = tuple(dimmer_attributes.get(group) or ()) or (_DEFAULT_DIMMER_ATTRIBUTE,)
+        uses.setdefault((percent, signature), []).append(
+            (group, group_no, confirmed, int(cue["bar"]))  # type: ignore[arg-type]
+        )
 
-    for percent, uses_of_value in uses.items():
-        name = f"{_DIMMER_NAME_PREFIX}-{percent}"
+    for (percent, signature), uses_of_value in uses.items():
+        # 밝기 속성이 하나면 「DIM-100」, 더 있으면 그 속성 이름을 붙인다(「DIM-100 DIMMER2」).
+        name = " ".join(
+            (f"{_DIMMER_NAME_PREFIX}-{percent}", *(attr.upper() for attr in signature[1:]))
+        )
         cells = tuple(PlanCell(group, bar) for group, _no, _c, bar in uses_of_value)
         groups = _unique(group for group, _no, _c, _bar in uses_of_value)
         holds: list[str] = []
@@ -1619,15 +1629,26 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
             continue
         if preset.kind == "dimmer":
             assert preset.group_nos and preset.value_percent is not None
-            pairs = preset.attribute_group_nos or (
-                (attr, preset.group_nos) for attr in preset.attributes
+            pairs = tuple(
+                preset.attribute_group_nos
+                or ((attr, preset.group_nos) for attr in preset.attributes)
             )
-            bundle: Sequence[str] = (
-                *(
+            if len({tuple(numbers) for _attr, numbers in pairs}) == 1:
+                # 모든 속성이 같은 그룹이면 한 줄(``Group 12 + 14 ; Attribute 'Dimmer' At 100 ;
+                # Attribute 'Dimmer2' At 100``) — 실기 1.906 이 Dimmer·Dimmer2 를 다 담은 꼴이다.
+                values = " ; ".join(
+                    f"Attribute '{attr}' At {preset.value_percent}" for attr, _numbers in pairs
+                )
+                selection = "Group " + " + ".join(str(number) for number in pairs[0][1])
+                value_lines: tuple[str, ...] = (f"{selection} ; {values}",)
+            else:
+                value_lines = tuple(
                     line
                     for attr, numbers in pairs
                     for line in _dimmer_value_lines(numbers, preset.value_percent, (attr,))
-                ),
+                )
+            bundle: Sequence[str] = (
+                *value_lines,
                 f"Store Preset {preset.slot}",
                 f"Label Preset {preset.slot} '{preset.name}'",
                 "ClearAll",

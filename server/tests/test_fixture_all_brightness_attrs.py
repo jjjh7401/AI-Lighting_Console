@@ -78,13 +78,17 @@ def _dimmer_lines(attributes) -> list[str]:
     ]
 
 
-def test_a_group_with_a_second_dimmer_gets_it_opened_in_the_shared_preset() -> None:
+def test_a_group_with_a_second_dimmer_gets_its_own_preset_with_both_dimmers_on_one_line() -> None:
+    # 2차 전체 실행 G-13 — 다른 그룹과 한 프리셋에 저장하면 콘솔 프리셋에 Dimmer2 가 빠졌다.
+    # 실기 1.906 꼴: 둘째 디머를 가진 그룹만, 두 속성을 한 줄에.
     attributes = {**_ATTRIBUTES, "MOVER-D": ("Dimmer", "Dimmer2")}
     lines = _dimmer_lines(attributes)
-    assert "Group 4 + 7 + 11 + 12 + 14 ; Attribute 'Dimmer' At 100" in lines
-    # 둘째 디머는 그 속성을 가진 그룹만 고른다 — 없는 기종을 같은 선택에 넣지 않는다.
-    assert "Group 12 ; Attribute 'Dimmer2' At 100" in lines
-    assert not [line for line in lines if "'Dimmer2'" in line and "Group 12 ;" not in line]
+    assert "Group 4 + 7 + 11 + 14 ; Attribute 'Dimmer' At 100" in lines
+    assert "Group 12 ; Attribute 'Dimmer' At 100 ; Attribute 'Dimmer2' At 100" in lines
+    assert not [line for line in lines if "'Dimmer2'" in line and not line.startswith("Group 12 ;")]
+    card = save_commands(_plan(attributes=attributes))
+    labels = [line for line in card if line.startswith("Label Preset 1.")]
+    assert any(line.endswith("'DIM-100 DIMMER2'") for line in labels), labels
 
 
 def test_groups_with_one_dimmer_keep_their_exact_lines() -> None:
