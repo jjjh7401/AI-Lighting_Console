@@ -10,6 +10,7 @@ import {
   CONSOLE_DELAY_MISSING_MESSAGE,
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
   consoleAudioPositionSeconds,
+  shouldStopConsoleAtSongEnd,
   createConsoleFollowRelay,
   observeConsoleFollowStatus,
   observeConsoleRunStatus,
@@ -189,5 +190,18 @@ describe("안내 문구", () => {
 
   it("음원이 없을 때 문구", () => {
     expect(CONSOLE_NO_SONG_AUDIO_MESSAGE).toBe("이 곡에 연결된 음원이 없어 콘솔 타임코드만 재생 중입니다.");
+  });
+});
+
+describe("shouldStopConsoleAtSongEnd — 전체 실행 G-22", () => {
+  it("곡 끝에서 「콘솔 같이」이고 콘솔이 돌 수 있을 때만 끈다", () => {
+    const relay = createConsoleFollowRelay();
+    expect(shouldStopConsoleAtSongEnd(relay)).toBe(false);
+    relay.consoleFollow = true;
+    expect(shouldStopConsoleAtSongEnd(relay)).toBe(false);
+    relay.consoleMayRun = true;
+    expect(shouldStopConsoleAtSongEnd(relay)).toBe(true);
+    relay.consoleFollow = false;
+    expect(shouldStopConsoleAtSongEnd(relay)).toBe(false);
   });
 });

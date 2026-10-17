@@ -29,6 +29,7 @@ from dataclasses import replace
 
 from server.design.app_movement import dimmer_attribute_names
 from server.design.beat_grid_emit import BeatGridEmitResult, SongTiming
+from server.design.preset_names import same_console_name
 from server.design.rig_capability_read import DesignRigRead
 from server.looks.songcue import SequenceNumberError, select_sequence_number
 
@@ -536,22 +537,8 @@ def timecode_overwrite_note(
     return f"기존 {occupant} 을 덮어씁니다", None
 
 
-_CONSOLE_DUPLICATE_SUFFIX = re.compile(r"#\d+")
-
-
-def _same_owned_sequence_name(console_name: str | None, recorded_name: object) -> bool:
-    """콘솔 이름이 기록된 이름과 같거나, 기록된 이름 뒤에 콘솔이 붙인 「#숫자」만 더 붙었는지.
-
-    같은 이름의 시퀀스가 이미 있으면 콘솔은 이름 끝에 ``#6`` 같은 접미사를 붙인다(실서버
-    rerun3: 'LDBEAT FOH#6' 대 기록 'LDBEAT FOH'). 그 밖의 차이는 여전히 다른 이름이다."""
-    if not isinstance(console_name, str) or not isinstance(recorded_name, str):
-        return console_name == recorded_name
-    if console_name == recorded_name:
-        return True
-    suffix = console_name[len(recorded_name) :]
-    return console_name.startswith(recorded_name) and bool(
-        _CONSOLE_DUPLICATE_SUFFIX.fullmatch(suffix)
-    )
+#: 콘솔이 붙인 「#숫자」를 같은 이름으로 보는 비교 — 시퀀스·타임코드·프리셋이 같은 규칙을 쓴다.
+_same_owned_sequence_name = same_console_name
 
 
 def verify_owned_sequences(

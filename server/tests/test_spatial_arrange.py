@@ -1134,7 +1134,9 @@ class TestGateChokepoint:
 
         assert len(port.requests) == 1, "exactly one card per bundle"
         approved = port.requests[0]
-        assert len(approved.items) == 6, "every line of the bundle is on the card"
+        # 전체 실행 E-06 — 번들 6줄에 더해, 승인되면 먼저 나가는 백업 줄이 맨 앞에 보인다.
+        assert approved.items[0].command == "SaveShow"
+        assert len(approved.items) == 7, "every line of the bundle (and the backup) is on the card"
         assert all(item.risk_reasons for item in approved.items), (
             "a card with no stated reason asks the operator to approve a blank"
         )

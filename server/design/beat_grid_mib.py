@@ -79,6 +79,8 @@ def plan_mib_premoves(
                 "position_preset_no": target,
                 "evidence": cur.get("evidence"),
                 "label": "",
+                # 전체 실행 C-11 — 격자 칸이 아닌 큐다. 카드가 격자 칸 수와 큐 수의 차이를 센다.
+                "mib_premove": True,
             }
         )
     return premoves, notes

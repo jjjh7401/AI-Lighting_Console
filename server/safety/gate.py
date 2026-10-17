@@ -60,6 +60,8 @@ from server.safety.session_context import SessionKey, current_session_key
 # calibration): the MA3 ``SaveShow`` keyword saves the current showfile when
 # sent through the exec path. Recorded as a check-in ratification item.
 BACKUP_COMMAND = "SaveShow"
+#: 승인 카드 맨 앞 백업 줄의 사유 — 승인하면 실행 직전에 이 줄이 한 번 나간다(규칙 ③).
+BACKUP_ITEM_REASON = "showfile backup (REQ-MVP-017 rule 3): sent once right before execution"
 
 # Bounded-LRU cap for self._unconfirmed (M6c backlog). Order-of-magnitude
 # default for a long-running operating session; no existing constant to
@@ -479,6 +481,13 @@ class SafetyGate:
                         for f in approval_findings
                     )
                 )
+                # 전체 실행 E-06·J-02·J-10 — 승인되면 아래 백업 규칙 ③ 이 SaveShow 를 먼저
+                # 보낸다. 카드 목록 맨 앞에 그 줄을 보여, 보내는 줄이 전부 승인 목록 안에 있게 한다.
+                if self._backup is not None:
+                    backup_item = ApprovalItem(
+                        command=BACKUP_COMMAND, risk_reasons=(BACKUP_ITEM_REASON,)
+                    )
+                    approval_request = ApprovalRequest(items=(backup_item, *approval_request.items))
                 held = approval_findings
                 approved = self._approval_port.request_approval(approval_request)
                 if not approved:
@@ -588,7 +597,11 @@ class SafetyGate:
     #   skipped — only the general-channel approval re-ask is (design.md
     #   §1.3; acceptance.md AC-LDPLUGIN-021 항목 3)
     def execute_preapproved(
-        self, commands: Sequence[str], *, risk: BatchRisk | None = None
+        self,
+        commands: Sequence[str],
+        *,
+        risk: BatchRisk | None = None,
+        showfile_backup: bool = True,
     ) -> ScreenDecision:
         """Screen a command bundle already covered by a director ``ApprovalBinding``.
 
@@ -610,6 +623,10 @@ class SafetyGate:
         ``risk`` mirrors :meth:`screen`'s parameter (SPEC-COPILOT-BULKGATE-001)
         purely for audit-log parity — it never triggers an approval request
         here, since none is ever made.
+
+        ``showfile_backup=False`` — 전체 실행 J-09: 세션 1회 승인을 받은 박자 격자 재생 명령
+        (``Top/Go/Off Timecode N``)은 쇼 데이터를 바꾸지 않으므로 규칙 ③ 백업을 건너뛴다.
+        그러지 않으면 누를 때마다 카드 없는 SaveShow 가 나간다(E-06). 다른 단계는 그대로다.
         """
         commands = list(commands)
         session_key = current_session_key()
@@ -658,7 +675,7 @@ class SafetyGate:
                     return locked
 
                 # Backup rule ③ (REQ-MVP-017): only the RISKY path backs up.
-                if self._backup is not None:
+                if self._backup is not None and showfile_backup:
                     try:
                         self._backup.before_risky_execution()
                     except BackupError as error:

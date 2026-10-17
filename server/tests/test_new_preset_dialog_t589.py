@@ -518,7 +518,7 @@ class TestApprovalCardShowsLabelAndDescription:
         joined = " ".join(risk_reasons)
         # 카드 t603 — 창이 효과 레시피(틀·주기)도 남기므로, 빈 번호는 보류가 아니라
         # 반영 묶음에서 만들어진다(t593). 이름·설명은 승인 대기 줄에 그대로 보인다(t589 잠금).
-        assert "새로 만드는 프리셋 1개" in joined
+        assert "이번에 새로 만드는 프리셋을 쓰는 칸 1개" in joined
         assert "2.61 'LA Wave' — 따뜻한 흰색" in joined
         assert "새로 만드는 효과 프리셋 1개" in joined
         assert "2.61 'LA Wave' ← sweep-soft-wide · 2박 주기" in joined

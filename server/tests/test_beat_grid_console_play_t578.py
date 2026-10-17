@@ -119,3 +119,64 @@ class TestConsoleStop:
 
         assert event["ok"] is False
         assert console.executed == []
+
+
+class TestSessionOnceApproval:
+    """전체 실행 J-09 — REQ-LDBEAT-012(b): 세션 첫 승인 뒤 재생·정지는 다시 묻지 않는다."""
+
+    def _session(self, tmp_path):
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        _seed_record(store)
+        session, console, approval, audit = _new_session(
+            tmp_path, store=store, state_tree=_owned_state_tree()
+        )
+        session._gate.use_showfile_backup()
+        return session, console, approval, audit
+
+    def test_only_the_first_press_asks_and_later_presses_send_no_backup(self, tmp_path) -> None:
+        session, console, approval, _audit = self._session(tmp_path)
+
+        assert session.beat_grid_console_play()["ok"] is True
+        assert len(approval.requests) == 1
+        # 첫 카드에는 승인되면 먼저 나가는 백업 줄이 보인다(E-06).
+        assert approval.requests[0].items[0].command == "SaveShow"
+        assert console.executed.count("SaveShow") == 1
+
+        console.executed.clear()
+        assert session.beat_grid_console_stop()["ok"] is True
+        assert session.beat_grid_console_play()["ok"] is True
+        assert session.beat_grid_console_stop()["ok"] is True
+
+        assert len(approval.requests) == 1  # 다시 묻지 않는다
+        assert console.executed == [
+            f"Off Timecode {TIMECODE_NUMBER}",
+            f"Top Timecode {TIMECODE_NUMBER}",
+            f"Go Timecode {TIMECODE_NUMBER}",
+            f"Off Timecode {TIMECODE_NUMBER}",
+        ]
+
+    def test_a_rejected_first_card_keeps_asking(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _timeline()
+        _seed_record(store)
+        session, console, approval, _audit = _new_session(
+            tmp_path, store=store, state_tree=_owned_state_tree(), decisions=(False, True)
+        )
+
+        assert session.beat_grid_console_play()["ok"] is False
+        assert session.beat_grid_console_play()["ok"] is True
+        assert len(approval.requests) == 2
+        assert _timecode_lines(console.executed) == [
+            f"Top Timecode {TIMECODE_NUMBER}",
+            f"Go Timecode {TIMECODE_NUMBER}",
+        ]
+
+    def test_another_session_asks_again(self, tmp_path) -> None:
+        session, _console, approval, _audit = self._session(tmp_path)
+        assert session.beat_grid_console_play()["ok"] is True
+
+        other, _console2, approval2, _audit2 = self._session(tmp_path / "other")
+        assert other.beat_grid_console_play()["ok"] is True
+        assert len(approval.requests) == 1
+        assert len(approval2.requests) == 1

@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
 from server.design.beat_grid_position_presets import PointingFrames
 from server.design.rig_read_cache import KIND_MEMBERS
 from server.safety.approval import ApprovalItem, ApprovalRequest
-from server.web.messages import approval_request_event
+from server.web.messages import approval_request_event, card_risk_reason
 
 from .test_planned_color_presets import _applied_grid, _card_session
 
@@ -175,7 +177,27 @@ def test_the_card_shows_the_app_store_preset_reason_in_korean() -> None:
     )
     event = approval_request_event(request_id="r1", request=request)
     assert event["items"][0]["risk_reasons"] == ["앱이 만든 프리셋 저장 — 승인 필요"]
-    # 다른 위험 명령의 사유는 그대로다 — 안전 판정의 원문을 바꾸지 않는다.
+    # 전체 실행 E-15 — 다른 차단 목록 명령도 거절처럼 읽히지 않게 사람 말로 보인다. 카드 표시만
+    # 바꾸고 게이트의 사유 원문(request)은 그대로다.
     assert event["items"][1]["risk_reasons"] == [
-        "blacklisted command (matches closed-set entry 'Delete')"
+        "승인이 필요한 콘솔 명령: 지우기(Delete) — 되돌릴 수 없음"
     ]
+    assert request.items[1].risk_reasons == (
+        "blacklisted command (matches closed-set entry 'Delete')",
+    )
+
+
+@pytest.mark.parametrize(
+    ("entry", "shown"),
+    [
+        ("Store Sequence", "승인이 필요한 콘솔 명령: 시퀀스·큐 저장(Store Sequence)"),
+        ("Store Timecode", "승인이 필요한 콘솔 명령: 타임코드 저장(Store Timecode)"),
+        ("Assign Sequence", "승인이 필요한 콘솔 명령: 시퀀스를 타임코드에 연결(Assign Sequence)"),
+        ("Copy Sequence", "승인이 필요한 콘솔 명령: Copy Sequence"),
+    ],
+)
+def test_no_card_reason_says_blacklisted(entry: str, shown: str) -> None:
+    reason = f"blacklisted command (matches closed-set entry {entry!r})"
+    assert card_risk_reason(reason) == shown
+    assert "blacklisted" not in card_risk_reason(reason)
+    assert card_risk_reason("unrelated reason") == "unrelated reason"

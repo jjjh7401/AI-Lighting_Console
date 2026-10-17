@@ -324,7 +324,9 @@ class TestAcDeploy014BlacklistApprovalRegression:
         # Held for human review: an approval request carries the command + its
         # blacklist risk reason (never silently dropped, never silently sent).
         assert decision.approval_request is not None
-        item = decision.approval_request.items[0]
+        # 전체 실행 E-06 — 승인되면 먼저 나가는 백업 줄이 카드 맨 앞에 보인다.
+        backup, item = decision.approval_request.items
+        assert backup.command == "SaveShow"
         assert item.command == "Delete Sequence 5"
         assert any("blacklist" in reason for reason in item.risk_reasons)
 

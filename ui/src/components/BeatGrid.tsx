@@ -136,6 +136,7 @@ import {
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
   consoleAudioPositionSeconds,
   createConsoleFollowRelay,
+  shouldStopConsoleAtSongEnd,
   type ConsoleFollowRelay,
 } from "./beatgrid/consoleFollowRelay";
 import { drawerPoolStatusText, shouldAutoRequestDrawer } from "./beatgrid/cuePanelDrawer";
@@ -390,6 +391,8 @@ export function writeHoldLabel(
 ): string | null {
   const failing = probes.filter((probe) => !probe.status.startsWith("통과")).length;
   if (failing === 0) return null;
+  // 전체 실행 C-10·J-05 — 보류 칸이 0이면 반영은 아무 칸도 막지 않는다. 배지도 띄우지 않는다.
+  if (heldCellCount === 0) return null;
   return `일부 칸 보류 (프로브 ${failing}개 미통과, 칸 ${heldCellCount ?? 0}개)`;
 }
 
@@ -1869,6 +1872,9 @@ export function BeatGrid({
     : null;
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const consoleFollowAvailable = !!onConsolePlay && !!onConsoleStop;
+  // 전체 실행 G-22 — 재생 루프(아래 rAF effect)가 곡 끝에서 부를 최신 ❚❚ 송신.
+  const onConsoleStopRef = useRef(onConsoleStop);
+  onConsoleStopRef.current = onConsoleStop;
   // 카드 t570(REQ-LDBEAT-024(e)) — 편집 칸이 보고 있는 L·R 자식 줄(없으면
   // 부모 그룹 줄). `resolveLRSplitViewAfterBarChange`가 마디 변화에 따라
   // 매 렌더 다시 계산한다 — 별도 clear 코드 없이 구간을 벗어나면 저절로
@@ -2220,6 +2226,9 @@ export function BeatGrid({
         // 곡이 끝났다 — 다시 열어도 이어 트는 것이 없게 콘솔 시작 시각을 지운다.
         relay.responseAtMs = null;
         relay.audioStarted = false;
+        // 전체 실행 G-22 — 콘솔 타임코드는 곡 끝에서 스스로 멈추지 않았다(계속 돌며 색이 바뀜).
+        // 「콘솔 같이」면 ❚❚ 와 같은 정지를 보낸다.
+        if (shouldStopConsoleAtSongEnd(relay)) onConsoleStopRef.current?.();
         return;
       }
       rafRef.current = requestAnimationFrame(tick);

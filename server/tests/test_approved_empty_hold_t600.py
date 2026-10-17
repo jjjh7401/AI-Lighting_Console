@@ -112,7 +112,7 @@ class TestApprovedCellWithEmptyNumberIsHeld:
             tmp_path, [pending, _approved(2, effect_preset_no="4.99")]
         )
         assert status["ok"] is True
-        assert "새로 만드는 프리셋 1개" in _risk(approval)
+        assert "콘솔에 이미 있는 프리셋을 쓰는 칸 1개(새로 저장하지 않음)" in _risk(approval)
         assert check_evidence_approval(_cue_of(store.latest["beat_grid"], "BACK", 1)) is None
         assert not [c for c in _sent(approval) if "4.99" in c]
 
