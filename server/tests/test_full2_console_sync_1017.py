@@ -9,6 +9,8 @@
   보낸 뒤 커서를 읽어 멈췄는지 확인하고, 못 읽거나 아직 움직이면 알린다.
 - B-07 콘솔 이름이 ``LDBEAT Timecode 3`` 이고 트랙도 ``LDBEAT`` 시퀀스를 가리켜도, 이 앱의
   반영 기록이 그 번호를 적고 있지 않으면 남의 타임코드다(감독 손설계 TC3·4).
+- J-09 「세션 첫 승인」은 연결이 아니라 서버 단위다 — 새로고침·재접속 뒤 재생도 다시 묻지 않는다.
+- 「⇪ 반영N」 배지: 색 번호가 있는 칸에 화면용으로만 붙는 ``color_rgb`` 는 미반영 비교에서 뺀다.
 
 콘솔 접촉: 0건 — ``FakeConsole`` 만 쓴다.
 """
@@ -16,7 +18,11 @@
 from __future__ import annotations
 
 from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
-from server.design.beat_grid_send import song_end_seconds_from_bar_map
+from server.design.beat_grid_send import (
+    beat_grid_cell_snapshot,
+    song_end_seconds_from_bar_map,
+    unsent_beat_grid_cells,
+)
 from server.looks.songcue import _format_seconds
 from server.web.session import SongTimelineStore
 
@@ -237,3 +243,41 @@ def test_a_declined_first_play_keeps_asking_on_the_next_connection(tmp_path) -> 
     )
     assert second.beat_grid_console_play()["ok"] is True
     assert len(approval_2.requests) == 1
+
+
+# -- 「⇪ 반영N」 배지 ------------------------------------------------------------
+
+
+def _grid(cue: dict) -> dict:
+    return {"tracks": [{"group_name": "FOH", "cues": [cue]}]}
+
+
+def test_a_colour_resolved_only_for_display_is_not_an_unsent_change() -> None:
+    # 2차 전체 실행 — 반영 두 번 뒤에도 「⇪ 반영64」. 미반영 64칸은 전부 색 번호가 있고 서빙이
+    # 그 번호에서 푼 ``color_rgb`` 를 단 칸이었다(스냅샷은 저장 모양이라 그 키가 없다).
+    stored = _grid({"bar": 0, "label": "FOH 켬", "color_preset_no": "4.124"})
+    served = _grid(
+        {"bar": 0, "label": "FOH 켬", "color_preset_no": "4.124", "color_rgb": [100.0, 75.0, 40.0]}
+    )
+
+    assert unsent_beat_grid_cells(served, beat_grid_cell_snapshot(stored)) == []
+
+
+def test_a_changed_colour_number_is_still_unsent() -> None:
+    stored = _grid({"bar": 0, "label": "FOH 켬", "color_preset_no": "4.124"})
+    changed = _grid(
+        {"bar": 0, "label": "FOH 켬", "color_preset_no": "4.125", "color_rgb": [1, 2, 3]}
+    )
+
+    assert unsent_beat_grid_cells(changed, beat_grid_cell_snapshot(stored)) == [
+        {"group_name": "FOH", "bar": 0}
+    ]
+
+
+def test_a_raw_colour_without_a_number_is_still_compared() -> None:
+    stored = _grid({"bar": 0, "color_preset_no": None, "color_rgb": [10, 20, 30]})
+    changed = _grid({"bar": 0, "color_preset_no": None, "color_rgb": [10, 20, 99]})
+
+    assert unsent_beat_grid_cells(changed, beat_grid_cell_snapshot(stored)) == [
+        {"group_name": "FOH", "bar": 0}
+    ]
