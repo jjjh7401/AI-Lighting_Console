@@ -974,6 +974,9 @@ export interface BeatGridSendStatus {
   /** 타임코드 번호 권유(1 이상 정수). `completed: "preset_saved"`일 때만, 곡 초안에 번호가
    * 없고 콘솔에서 빈 슬롯을 찾았을 때만 실린다. 권유일 뿐이라 서버는 초안에 적지 않는다. */
   timecode_suggestion?: number | null;
+  /** 서버가 덧붙인 알림 문구(없으면 빈 배열). 2차 전체 실행 I-02 — 「콘솔 같이」 정지 뒤
+   * 콘솔 타임코드가 멈췄는지 확인하지 못했거나 아직 돌고 있으면 여기에 실린다. */
+  notices?: readonly string[];
 }
 
 export interface SongTimelineView {
@@ -2290,6 +2293,7 @@ export function reduceServerEvent(
           // 선택 필드 둘 — 여기서 옮기지 않으면 조용히 버려진다. 없으면 `null` 로 맞춘다.
           completed: event.completed ?? null,
           timecode_suggestion: event.timecode_suggestion ?? null,
+          notices: event.notices ?? [],
         },
       };
     case "song_audio_link":

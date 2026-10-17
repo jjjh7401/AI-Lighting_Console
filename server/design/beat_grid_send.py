@@ -337,6 +337,11 @@ def _comparable_cue(cue: Mapping[str, object]) -> dict[str, object]:
     ``color_rgb`` 가 저장 값 ``color`` 에서 서빙 경계가 푼 파생값이라, 스냅샷(저장 모양)과 지금(서빙
     모양)이 달라 보이지 않게 뺀다. ``split`` 이 없는 칸은 표시용 이름 키만 빠지는 예전 그대로다."""
     comparable = {key: value for key, value in cue.items() if key not in _DISPLAY_ONLY_CUE_KEYS}
+    if comparable.get("color_preset_no") is not None:
+        # 2차 전체 실행 「⇪ 반영64」 — 색 번호가 있는 칸의 ``color_rgb`` 는 서빙 경계가 그 번호의
+        # 기록 색에서 푼 표시값이다(``attach_color_rgb_to_cues``). 스냅샷(저장 모양)엔 없고 지금
+        # (서빙 모양)엔 있어 반영 직후에도 색 칸 전부가 미반영으로 잡혔다. 콘솔에 가는 값은 번호다.
+        comparable.pop("color_rgb", None)
     split = comparable.get("split")
     if isinstance(split, Mapping):
         comparable["split"] = {

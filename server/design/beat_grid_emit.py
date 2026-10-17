@@ -555,6 +555,7 @@ def _emit_cue(
     dimmer_attributes: Mapping[str, Sequence[str]],
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
     sequence_name_command: str | None = None,
+    timecode_lead_seconds: float = 0.0,
 ) -> CueEmitResult:
     bar = int(cue["bar"])  # type: ignore[arg-type]
 
@@ -615,7 +616,11 @@ def _emit_cue(
         commands.append(sequence_name_command)
     commands.append("ClearAll")
     commands.append(f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigType' 'Time'")
-    trigger_ms = round((bar_seconds + entry_plan.trigger_offset_seconds) * 1000)
+    # 2차 전체 실행 G-19 — 타임코드 시각 = 음원 시각 + 콘솔→음원 지연(t520 실기 생성기
+    # `m2a_batch1.py:15` 「타임코드 시각 = 음악 시각 + LEAD」). 음원은 Go 뒤 그만큼 늦게 시작한다.
+    trigger_ms = round(
+        (timecode_lead_seconds + bar_seconds + entry_plan.trigger_offset_seconds) * 1000
+    )
     commands.append(
         f"Set Cue {cue_number} Sequence {sequence_number} Property 'TrigTime' "
         f"{_format_seconds(trigger_ms)}"
@@ -663,6 +668,7 @@ def emit_beat_grid_write_bundle(
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
     held_cells: Mapping[tuple[str, int], str] | None = None,
     song_end_seconds: float | None = None,
+    timecode_lead_seconds: float = 0.0,
 ) -> BeatGridEmitResult:
     """박자 격자 트랙 목록 → 콘솔 송신 커맨드 번들. 콘솔 접촉 0건 — 전부
     순수 변환이다.
@@ -688,7 +694,10 @@ def emit_beat_grid_write_bundle(
     카드 tc-events — ``song_end_seconds``(마지막 마디 끝, 곡 기준 초)가 있으면 타임코드의
     ``Duration`` 으로 쓴다(``AutoStop 0``). 그리고 배정된 트랙마다 ``CmdSubTrack`` 을 만들고
     큐 TrigTime 마다 ``Go+`` 이벤트를 넣는다 — 이 이벤트가 없으면 ``Go Timecode`` 는 아무것도
-    재생하지 않는다(실기 판별: tc4-play-probe, 레시피 t520)."""
+    재생하지 않는다(실기 판별: tc4-play-probe, 레시피 t520).
+
+    ``timecode_lead_seconds``(2차 전체 실행 G-19) — 콘솔 타임코드 0초부터 음원 0초까지의 지연.
+    큐 TrigTime·``Go+`` 이벤트·``Duration`` 이 모두 이만큼 늦게 선다(음원 시각 + 지연)."""
     if (
         timing is None
         or timing.bpm is None
@@ -821,6 +830,7 @@ def emit_beat_grid_write_bundle(
                 dimmer_attributes=dimmer_attributes,
                 dimmer_attribute_reasons=dimmer_attribute_reasons,
                 sequence_name_command=name_command if name_pending else None,
+                timecode_lead_seconds=timecode_lead_seconds,
             )
             if cue.get("mib_premove") is True:
                 result = replace(result, premove=True)
@@ -876,7 +886,8 @@ def emit_beat_grid_write_bundle(
             # 카드 tc-events — 길이가 0 이면 이벤트가 있어도 재생되지 않는다(실기 tc4 판별).
             timecode_setup_commands.append(
                 f"Set Timecode {timecode_number} Property 'Duration' "
-                f"{_format_seconds(round(song_end_seconds * 1000))} 'AutoStop' 0"
+                f"{_format_seconds(round((song_end_seconds + timecode_lead_seconds) * 1000))} "
+                "'AutoStop' 0"
             )
         # 카드 t614 — 트랙 주소 ``N.1.k`` 의 트랙 그룹 1 을 배정 줄보다 먼저 만든다
         #   (실기 선례 t520: ``Store Timecode 24.1`` → ``Assign … 24.1.1`` / ``24.1.2``).

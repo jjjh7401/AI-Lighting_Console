@@ -275,3 +275,60 @@ def test_analysis_sections_carry_a_cue_number() -> None:
         source_sha256="abc",
     )
     assert [s["cue_number"] for s in timeline["sections"]] == [1, 2, 3]
+
+
+def _reconfirm(session) -> None:
+    record = session._song_analysis
+    session._song_analysis = ConfirmedSongAnalysis(
+        source_sha256=record.source_sha256,
+        source_file_name=record.source_file_name,
+        confirmed_at="2099-01-01T00:00:00+00:00",
+        bpm=record.bpm,
+        sections=record.sections,
+    )
+
+
+def _ownership(sequence_number: int) -> dict:
+    return {
+        "timecode_number": 5,
+        "timecode_name": "LDBEAT Timecode 5",
+        "tracks": {
+            "FOH": {"sequence_number": sequence_number, "sequence_name": "LDBEAT FOH"},
+        },
+    }
+
+
+def test_a_new_working_copy_of_the_same_song_keeps_the_console_ownership(
+    tmp_path, monkeypatch
+) -> None:
+    # 2차 전체 실행 F-02 — 라이브러리에서 불러온 「… 분석 전 백업 (자동 v1)」으로 반영(시퀀스
+    # 54–61)한 뒤 같은 곡을 다시 분석하자, 새 작업본(「LOVE ATTACK」) 열쇠에 남은 옛 기록(62–69)
+    # 때문에 「시퀀스 62번을 콘솔에서 찾지 못해」 반영이 거절됐다. 새 작업본은 직전 작업본의
+    # 소유 기록을 이어받는다.
+    session, store, _sent, _console, _library = _session(tmp_path, monkeypatch)
+    session.analyse_bar_map(1)
+    title = store.latest["song_title"]
+    loaded = {**store.latest, "song_title": f"{title} 분석 전 백업 (자동 v1)"}
+    store.latest = loaded
+    store.set_beat_grid_allocation(session._beat_grid_song_key(loaded), _ownership(54))
+    store.set_beat_grid_allocation((title, loaded.get("sequence_number")), _ownership(62))
+    _reconfirm(session)
+
+    session.analyse_bar_map(1)
+
+    fresh = store.latest
+    assert fresh["song_title"] == title
+    assert store.beat_grid_allocation(session._beat_grid_song_key(fresh)) == _ownership(54)
+
+
+def test_a_new_working_copy_of_another_song_inherits_nothing(tmp_path, monkeypatch) -> None:
+    # 다른 곡의 작업본에서 새 곡을 분석하면 옛 곡의 타임코드·시퀀스를 이어받지 않는다
+    # (남의 곡 번호를 덮어쓰지 않게).
+    session, store, _sent, _console, _library = _session(tmp_path, monkeypatch)
+    old = store.latest
+    old["beat_grid"] = {**old["beat_grid"], "song_title": "OTHER SONG"}
+    store.set_beat_grid_allocation(session._beat_grid_song_key(old), _ownership(40))
+
+    session.analyse_bar_map(1)
+
+    assert store.beat_grid_allocation(session._beat_grid_song_key(store.latest)) is None
