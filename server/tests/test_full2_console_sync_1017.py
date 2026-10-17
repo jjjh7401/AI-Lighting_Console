@@ -194,3 +194,46 @@ def test_timecode_input_accepts_a_timecode_another_song_record_owns(tmp_path) ->
 
     assert event["ok"] is True
     assert store.latest["timecode_number"] == 7
+
+
+# -- J-09 ---------------------------------------------------------------------
+
+
+def test_the_first_play_approval_survives_a_reconnect(tmp_path) -> None:
+    store = SongTimelineStore()
+    store.latest = _timeline()
+    _seed_record(store)
+    first, _console, approval, _audit = _new_session(
+        tmp_path, store=store, state_tree=_owned_state_tree()
+    )
+    assert first.beat_grid_console_play()["ok"] is True
+    assert len(approval.requests) == 1
+
+    # 새로고침 = 같은 서버(같은 저장소)의 새 연결(새 ChatSession).
+    second, console, approval_2, _audit_2 = _new_session(
+        tmp_path, store=store, state_tree=_owned_state_tree()
+    )
+    event = second.beat_grid_console_play()
+
+    assert event["ok"] is True
+    assert approval_2.requests == []
+    assert [c for c in console.executed if "Timecode" in c] == [
+        f"Top Timecode {TIMECODE_NUMBER}",
+        f"Go Timecode {TIMECODE_NUMBER}",
+    ]
+
+
+def test_a_declined_first_play_keeps_asking_on_the_next_connection(tmp_path) -> None:
+    store = SongTimelineStore()
+    store.latest = _timeline()
+    _seed_record(store)
+    first, _console, _approval, _audit = _new_session(
+        tmp_path, store=store, state_tree=_owned_state_tree(), decisions=(False,)
+    )
+    assert first.beat_grid_console_play()["ok"] is False
+
+    second, _console_2, approval_2, _audit_2 = _new_session(
+        tmp_path, store=store, state_tree=_owned_state_tree()
+    )
+    assert second.beat_grid_console_play()["ok"] is True
+    assert len(approval_2.requests) == 1

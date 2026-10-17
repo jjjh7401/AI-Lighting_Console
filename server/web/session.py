@@ -3946,6 +3946,11 @@ class SongTimelineStore:
         # 아니라 콘솔을 설명하므로 프로세스 단위인 저장소에 둔다(재연결해도 끄기·미리보기가
         # 같은 번호를 쓴다). 곡별이 아니라 가장 최근 하나 — 파일에 저장하지 않는다.
         self._beat_grid_applied: _BeatGridAppliedState | None = None
+        # 2차 전체 실행 J-09 — 미리보기·「콘솔 같이」 재생의 세션 시작 1회 승인
+        # (REQ-LDBEAT-012(b)). 연결마다 새로 만들면 새로고침·재접속마다 Top/Go 카드가 다시
+        # 떴다(점검 1회에 카드 4장). 콘솔이 하나라 서버 프로세스 단위가 맞는 수명이다 — 서버를
+        # 다시 띄우면 다시 묻는다. 파일에 저장하지 않는다. 쓰기 승인과는 무관하다.
+        self.preview_approval = PreviewApprovalSession()
 
     @property
     def beat_grid_applied(self) -> _BeatGridAppliedState | None:
@@ -4464,7 +4469,13 @@ class ChatSession:
         self._beat_grid_empty_marks: dict[tuple[object, object], list[dict[str, object]]] = {}
         # 무대 판독이 만든 트랙 둘째 줄(그룹 이름 대문자 -> sub_info) — 송신 때 트랙에 싣는다.
         self._beat_grid_track_sub_infos: dict[str, dict] = {}
-        self._preview_approval = PreviewApprovalSession()
+        # 2차 전체 실행 J-09 — 승인 상태는 저장소(서버 단위)의 것을 쓴다. 저장소가 없으면
+        # (시험 등) 이 연결 안에만 둔다.
+        self._preview_approval = (
+            timeline_store.preview_approval
+            if timeline_store is not None
+            else PreviewApprovalSession()
+        )
         # t291 — 콘솔 반영이 「무엇을 보낼지」 정할 때 대는 기준본. 첫 편집
         # 직전의 타임라인 깊은 사본이다. 이력의 걸음 수가 아니라 **값**을
         # 비교하므로, 되돌리기로 원래 값이 된 큐는 반영 대상에서 빠진다.
