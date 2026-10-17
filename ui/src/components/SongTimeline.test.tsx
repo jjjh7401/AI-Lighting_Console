@@ -118,6 +118,14 @@ describe("plan vs console cue separation", () => {
     expect(sectionCardTitle(SECTION, "verified")).toBe(`CUE ${SECTION.cue_number}`);
   });
 
+  it("큐 번호가 없는 옛 분석 작업본도 「undefined」 대신 구간 순서를 쓴다 (1차 전체 실행 B-09)", () => {
+    // 서버가 cue_number 를 싣기 전에 저장된 작업본은 값이 null 이다(실저장본 실측).
+    const legacy = { ...SECTION, index: 4, cue_number: null } as unknown as typeof SECTION;
+    expect(sectionCardTitle(legacy, "draft")).toBe(`PLAN CUE 4 · ${SECTION.label}`);
+    expect(sectionCardTitle(legacy, "stored")).not.toContain("undefined");
+    expect(sectionCardTitle(legacy, "verified")).not.toContain("null");
+  });
+
   it("never links a live executor to a PLAN cue, even with a matching sequence", () => {
     const executor = LINKED_MONITOR.executors[0];
     expect(liveExecutorForSection("draft", executor)).toBeNull();

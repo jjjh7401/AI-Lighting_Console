@@ -10,6 +10,7 @@ Executing anything from a loaded timeline still rides the approval gate.
 from __future__ import annotations
 
 import contextlib
+import re
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
@@ -25,6 +26,11 @@ from server.web.song_audio_store import SongAudioLinkStore
 from server.web.timeline_library import SongTimelineLibrary, timeline_entry_summary
 
 __all__ = ["TimelineLibraryDeps", "build_timeline_router"]
+
+#: ``SongTimelineLibrary.auto_save`` 가 붙이는 이름 꼬리.
+_AUTO_SAVE_NAME = re.compile(r".* \(자동 v\d+\)$")
+#: 설계 흐름이 새 설계에 찍는 일반 이름(``song_cue_render._DESIGN_INTERVIEW_TITLE``).
+_DESIGN_INTERVIEW_TITLE = "Design Interview"
 
 
 @dataclass
@@ -76,9 +82,17 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # library NAME becomes the displayed song title — the design flow only
         # knows the generic "Design Interview"; the director's chosen name is
         # the meaningful one (user finding, 2026-08-15).
+        # 자동 저장(``<base> (자동 vN)``) 이름은 감독이 고른 이름이 아니다 — 저장된 곡 이름이
+        # 있으면 그대로 둔다(1차 전체 실행 B-02: 「… 분석 전 백업 (자동 v1)」이 제목이 됐다).
+        # 곡 이름이 비었거나 일반 설계 이름뿐이면 지금처럼 저장 이름을 쓴다.
         timeline = dict(entry["timeline"])
         old_key = (timeline.get("song_title"), timeline.get("sequence_number"))
-        timeline["song_title"] = entry["name"]
+        saved_title = str(timeline.get("song_title") or "").strip()
+        keep_title = _AUTO_SAVE_NAME.match(str(entry["name"])) is not None and saved_title not in (
+            "",
+            _DESIGN_INTERVIEW_TITLE,
+        )
+        timeline["song_title"] = saved_title if keep_title else entry["name"]
         new_key = (timeline["song_title"], timeline.get("sequence_number"))
         # 음원 링크의 열쇠는 (song_title, sequence_number) — 이름이 바뀌면 옛 열쇠의 링크를
         # 새 열쇠로 복제한다(옛 열쇠는 지우지 않는다). 링크가 없거나 쓰기가 실패하면 조용히 넘긴다.

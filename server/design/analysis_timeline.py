@@ -13,10 +13,18 @@ from typing import Any, Protocol
 from server.design.beat_grid import default_beat_grid
 from server.design.song_cue_render import _infer_confirmed_role
 
-__all__ = ["ANALYSIS_SOURCE_KEY", "build_analysis_timeline", "timeline_meter_from_bar_map"]
+__all__ = [
+    "ANALYSIS_CONFIRMED_KEY",
+    "ANALYSIS_SOURCE_KEY",
+    "build_analysis_timeline",
+    "timeline_meter_from_bar_map",
+]
 
 #: 이 작업본을 만든 분석의 오디오 해시. 같은 분석으로 다시 만들지 않으려고 본다.
 ANALYSIS_SOURCE_KEY = "analysis_source_sha256"
+#: 이 작업본을 만든 분석 확인 시각. 같은 오디오라도 다시 분석·확인하면 시각이 달라 새 작업본이다
+#: (1차 전체 실행 B-01 — 해시만 보면 같은 곡 재분석이 옛 격자에 마디 지도만 붙였다).
+ANALYSIS_CONFIRMED_KEY = "analysis_confirmed_at"
 
 _LAYOUT_KEYS = ("group_no", "group_no_confirmed", "group_name", "layer_role")
 
@@ -88,6 +96,7 @@ def build_analysis_timeline(
     layout: Sequence[Mapping[str, Any]],
     source_sha256: str,
     bpm: float | None = None,
+    confirmed_at: str | None = None,
 ) -> dict[str, Any]:
     """확정 분석 구간 · 마디 지도 · 줄 구성으로 새 타임라인을 만든다.
 
@@ -98,6 +107,7 @@ def build_analysis_timeline(
       chorus · D2 이하 bridge · 나머지 verse). 이름은 분석 이름 그대로다 — 이름으로 판정하는 곳이
       있어 이름은 바꾸지 않는다.
     - ``bpm`` 은 분석이 확정한 BPM 이다. 없으면 마디 지도의 BPM 을 쓴다.
+    - 큐 번호(``cue_number``)는 구간 순서(1부터)다 — 화면 계약이 숫자를 요구한다(B-09).
     - 옛 작업본의 타임코드·시퀀스 번호·콘솔 기록은 싣지 않는다 — 새 작업본이다.
     """
     bars = sorted(bar_map["bars"], key=lambda entry: int(entry["bar"]))
@@ -115,6 +125,7 @@ def build_analysis_timeline(
         timeline_sections.append(
             {
                 "index": position + 1,
+                "cue_number": position + 1,
                 "label": section.label,
                 "start_ms": int(section.start_ms),
                 "end_ms": int(section.end_ms),
@@ -141,6 +152,8 @@ def build_analysis_timeline(
         },
         ANALYSIS_SOURCE_KEY: source_sha256,
     }
+    if confirmed_at is not None:
+        timeline[ANALYSIS_CONFIRMED_KEY] = confirmed_at
     if isinstance(song_bpm, (int, float)) and not isinstance(song_bpm, bool) and song_bpm > 0:
         timeline["bpm"] = float(song_bpm)
     timeline.update(timeline_meter_from_bar_map(bar_map, song_bpm))

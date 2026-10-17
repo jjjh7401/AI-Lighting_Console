@@ -49,7 +49,11 @@ from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_ba
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
 from server.design import color_names as _COLOR_NAMES
-from server.design.analysis_timeline import ANALYSIS_SOURCE_KEY, build_analysis_timeline
+from server.design.analysis_timeline import (
+    ANALYSIS_CONFIRMED_KEY,
+    ANALYSIS_SOURCE_KEY,
+    build_analysis_timeline,
+)
 from server.design.approval_vs_sent import verify_approval_vs_sent
 from server.design.arrange_apply import (
     ArrangementApplyError,
@@ -9727,12 +9731,16 @@ class ChatSession:
         # 2026-10-16). 옛 작업본은 라이브러리에 자동 백업하고 되돌리기 기록에도 남긴다.
         # REQ-LDBARENTRY-011 은 이 경로가 라이브러리를 건드리지 않는다고 적는다. 새 작업본을 열 때의
         # 자동 백업은 리드 지시(2026-10-16)로 그 예외다 — 확정 분석이 있을 때만 일어난다.
+        # 「그 분석」은 오디오 해시 + 확인 시각이다 — 같은 곡도 다시 분석·확인하면 새 작업본(B-01).
         record = self._song_analysis
         if (
             isinstance(record, ConfirmedSongAnalysis)
             and record.accepted
             and record.source_sha256 == audio.sha256
-            and current.get(ANALYSIS_SOURCE_KEY) != record.source_sha256
+            and (
+                current.get(ANALYSIS_SOURCE_KEY) != record.source_sha256
+                or current.get(ANALYSIS_CONFIRMED_KEY) != record.confirmed_at
+            )
         ):
             self._start_analysis_timeline(current, record, result)
             return
@@ -9782,6 +9790,7 @@ class ChatSession:
             layout=self._beat_grid_view(current)["tracks"],
             source_sha256=record.source_sha256,
             bpm=record.bpm.bpm,
+            confirmed_at=record.confirmed_at,
         )
         library = self._timeline_library
         if library is None:

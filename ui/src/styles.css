@@ -4518,6 +4518,12 @@ body {
   margin: 4px 0;
 }
 
+/* 1차 전체 실행 E-02 — 「적용」 뒤 프리셋 계획을 기다리는 동안의 안내 한 줄. */
+.beat-grid-preset-plan-wait {
+  font-size: 12px;
+  margin: 4px 0;
+}
+
 /* 카드 t587 — 줄바꿈 금지(nowrap)는 걸지 않는다: 넘치면 오른쪽 「⇪ 반영」「▤」가
    잘렸다(1450px 에서 87px 넘침). 시안 `.top{flex-wrap:wrap}` 처럼 한 줄은 줄임
    문구로 지키고, 그래도 넘치면 잘리지 않고 다음 줄로 내려간다. BPM 알약의

@@ -146,3 +146,23 @@ class TestTimelineApi:
             assert client.get("/api/timelines").json()["items"] == []
             assert client.post(f"/api/timelines/{entry_id}/load").status_code == 404
             assert client.delete(f"/api/timelines/{entry_id}").status_code == 404
+
+    def test_loading_an_auto_backup_keeps_the_song_title(self, tmp_path):
+        # 1차 전체 실행 B-02 — 「LOVE ATTACK 분석 전 백업 (자동 v1)」을 불러오면 제목이 그 저장
+        # 이름이 됐다. 자동 저장 이름은 감독이 고른 이름이 아니다 — 곡 이름을 그대로 둔다.
+        deps = _deps(tmp_path)
+        song = {**_TIMELINE, "song_title": "LOVE ATTACK"}
+        entry = deps.timeline_library.auto_save("LOVE ATTACK 분석 전 백업", song)
+        assert entry["name"] == "LOVE ATTACK 분석 전 백업 (자동 v1)"
+        with TestClient(create_app(deps)) as client:
+            loaded = client.post(f"/api/timelines/{entry['id']}/load").json()
+        assert loaded["timeline"]["song_title"] == "LOVE ATTACK"
+        assert deps.song_timeline_store.latest["song_title"] == "LOVE ATTACK"
+
+    def test_an_auto_save_of_the_generic_design_title_still_takes_its_name(self, tmp_path):
+        # 일반 설계 이름(「Design Interview」)뿐인 자동 저장은 지금처럼 저장 이름을 제목으로 쓴다.
+        deps = _deps(tmp_path)
+        entry = deps.timeline_library.auto_save("Sequence 210", _TIMELINE)
+        with TestClient(create_app(deps)) as client:
+            loaded = client.post(f"/api/timelines/{entry['id']}/load").json()
+        assert loaded["timeline"]["song_title"] == "Sequence 210 (자동 v1)"

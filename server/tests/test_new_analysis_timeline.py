@@ -236,3 +236,41 @@ def test_bpm_falls_back_to_the_bar_map() -> None:
         song_title="X", sections=[], bar_map=_bar_map(), layout=[], source_sha256="abc"
     )
     assert timeline["bpm"] == float(_bar_map()["bpm"])
+
+
+def test_a_reconfirmed_analysis_of_the_same_song_starts_over(tmp_path, monkeypatch) -> None:
+    # 1차 전체 실행 B-01 — 같은 곡을 다시 분석·확인하면 새 작업본이다. 이미 같은 오디오로 만든
+    # 작업본(라이브러리 백업을 불러온 경우 포함)이어도 확인이 새로 났으면 격자를 비우고 새로 연다.
+    session, store, _sent, _console, library = _session(tmp_path, monkeypatch)
+    session.analyse_bar_map(1)
+    proposed = session.beat_grid_draft_propose()
+    session.beat_grid_draft_apply(proposed["draft_id"])
+    assert _cells(store.latest) > 0
+    record = session._song_analysis
+    session._song_analysis = ConfirmedSongAnalysis(
+        source_sha256=record.source_sha256,
+        source_file_name=record.source_file_name,
+        confirmed_at="2099-01-01T00:00:00+00:00",
+        bpm=record.bpm,
+        sections=record.sections,
+    )
+    session.analyse_bar_map(1)
+    assert _cells(store.latest) == 0
+    assert len(library.items()) == 2
+
+
+def test_analysis_sections_carry_a_cue_number() -> None:
+    # 1차 전체 실행 B-09 — 런북 카드가 「PLAN CUE undefined」로 나왔다.
+    # 구간마다 큐 번호(순서)를 싣는다.
+    class _S:
+        def __init__(self, label: str, start: int) -> None:
+            self.label, self.start_ms, self.end_ms, self.d_level = label, start, start + 1, 1
+
+    timeline = build_analysis_timeline(
+        song_title="X",
+        sections=[_S("A", 964), _S("B", 970), _S("C", 15_000), _S("D", 44_000)],
+        bar_map=_bar_map(),
+        layout=[],
+        source_sha256="abc",
+    )
+    assert [s["cue_number"] for s in timeline["sections"]] == [1, 2, 3]
