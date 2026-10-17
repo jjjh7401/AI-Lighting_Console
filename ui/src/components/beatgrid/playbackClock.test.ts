@@ -204,7 +204,7 @@ describe("formatPlaybackClock", () => {
 // 3차 전체 실행 G-19 — LOVE ATTACK 마디 지도의 1마디 첫 박은 1.498초, 한 마디 2.14282초라
 // 0마디는 1.498 − 2.14282 = −0.64482초에 시작한다(콘솔 큐와 같은 기준). 0초 기준이면 화면
 // 마디 경계가 콘솔보다 0.645초 늦었다.
-describe("0마디 시작 시각(bar_origin_seconds) 기준", () => {
+describe("0마디 시작 시각(bar_zero_start_seconds) 기준", () => {
   const spb = 240 / 112.00191993244025;
   const origin = 1.498 - spb;
 

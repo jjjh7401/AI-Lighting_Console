@@ -228,11 +228,11 @@ describe("재생 — 음원 시계·재생선 연속 이동·따라가기 배선
   it("재생선은 마디가 아니라 초에서 구한 소수 픽셀로 놓이고 한 마디 폭을 덮는다", () => {
     // 3차 전체 실행 G-19 — 재생선·마디 번호·빔 위상은 마디 지도 0마디 시작 시각을 기준으로 한다.
     expect(SOURCE).toMatch(
-      /const playheadX = playheadPixelX\(playbackSeconds, secondsPerBar, pxPerBar, barOriginSeconds\)/,
+      /const playheadX = playheadPixelX\(playbackSeconds, secondsPerBar, pxPerBar, barZeroStartSeconds\)/,
     );
-    expect(SOURCE).toMatch(/secondsToBar\(playbackSeconds, secondsPerBar, maxBar, barOriginSeconds\)/);
-    expect(SOURCE).toMatch(/secondsToBar\(next, secondsPerBar, axisEnd, barOriginSeconds\)/);
-    expect(SOURCE).toMatch(/seconds: playbackSeconds - originOf\(barOriginSeconds\)/);
+    expect(SOURCE).toMatch(/secondsToBar\(playbackSeconds, secondsPerBar, maxBar, barZeroStartSeconds\)/);
+    expect(SOURCE).toMatch(/secondsToBar\(next, secondsPerBar, axisEnd, barZeroStartSeconds\)/);
+    expect(SOURCE).toMatch(/seconds: playbackSeconds - zeroStartOf\(barZeroStartSeconds\)/);
     expect(SOURCE).toMatch(/style=\{\{ left: playheadX, width: pxPerBar \}\}/);
   });
   it("따라가기는 매 프레임 연속 목표로 가고, 직접 스크롤 신호(휠·터치·스크롤바)에 멈춘다", () => {

@@ -199,7 +199,7 @@ export function BeatGridScenePanel({
   bar,
   tracks,
   secondsPerBar,
-  barOriginSeconds = null,
+  barZeroStartSeconds = null,
   sectionStartBars,
   onClose,
   onSelectRow,
@@ -211,7 +211,7 @@ export function BeatGridScenePanel({
   tracks: readonly BeatGridTrack[];
   secondsPerBar: number | null | undefined;
   /** 0마디가 시작하는 곡 시각(초) — 「곡 X초」 기준. 없으면 0초. */
-  barOriginSeconds?: number | null;
+  barZeroStartSeconds?: number | null;
   sectionStartBars: readonly number[] | null;
   onClose: () => void;
   onSelectRow: (trackIndex: number) => void;
@@ -229,7 +229,7 @@ export function BeatGridScenePanel({
         <span>
           장면 전환 · {bar}마디
           {(() => {
-            const seconds = barToSeconds(bar, secondsPerBar, barOriginSeconds);
+            const seconds = barToSeconds(bar, secondsPerBar, barZeroStartSeconds);
             return seconds === null ? "" : ` (곡 ${trimSeconds(seconds)}초)`;
           })()}
         </span>

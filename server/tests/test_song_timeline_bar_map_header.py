@@ -38,7 +38,7 @@ def test_existing_header_keys_win() -> None:
 def test_nothing_is_invented_without_a_bar_map_value() -> None:
     sent = song_timeline_event(timeline={"bar_map": {"bpm": None, "bars": []}})["timeline"]
     assert "bpm" not in sent and "bar_count" not in sent and "time_signature" not in sent
-    assert "bar_origin_seconds" not in sent
+    assert "bar_zero_start_seconds" not in sent
     assert song_timeline_event(timeline={"song_title": "x"})["timeline"] == {"song_title": "x"}
 
 
@@ -54,23 +54,23 @@ def _love_attack_bars() -> list[dict]:
     ]
 
 
-def test_the_bar_origin_follows_the_bar_map_first_downbeat() -> None:
+def test_the_bar_zero_start_follows_the_bar_map_first_downbeat() -> None:
     spb = 240 / 112.00191993244025
     timeline = {
         "seconds_per_bar": spb,
         "bar_map": {**_bar_map(), "bars": _love_attack_bars()},
     }
     sent = song_timeline_event(timeline=timeline)["timeline"]
-    assert abs(sent["bar_origin_seconds"] - (1.498 - spb)) < 1e-9
+    assert abs(sent["bar_zero_start_seconds"] - (1.498 - spb)) < 1e-9
     # 1마디 경계가 마디 지도의 1마디 첫 박과 같다.
-    assert abs(sent["bar_origin_seconds"] + 1 * spb - 1.498) < 1e-9
-    assert "bar_origin_seconds" not in timeline
+    assert abs(sent["bar_zero_start_seconds"] + 1 * spb - 1.498) < 1e-9
+    assert "bar_zero_start_seconds" not in timeline
 
 
-def test_no_origin_without_the_playback_bar_length_or_a_first_bar() -> None:
+def test_no_zero_start_without_the_playback_bar_length_or_a_first_bar() -> None:
     bar_map = {**_bar_map(), "bars": _love_attack_bars()}
     sent = song_timeline_event(timeline={"bar_map": bar_map})["timeline"]
-    assert "bar_origin_seconds" not in sent
+    assert "bar_zero_start_seconds" not in sent
     no_bar1 = {**bar_map, "bars": [_love_attack_bars()[0]]}
     sent = song_timeline_event(timeline={"seconds_per_bar": 2.0, "bar_map": no_bar1})["timeline"]
-    assert "bar_origin_seconds" not in sent
+    assert "bar_zero_start_seconds" not in sent
