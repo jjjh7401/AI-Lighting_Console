@@ -100,9 +100,13 @@ class TestTimecodeEvents:
 class TestClearBeforeRebuild:
     def test_delete_is_first_and_targets_only_that_number(self) -> None:
         cleared = clear_app_timecode_before_rebuild(_emit(), 30)
-        assert cleared.commands[0] == "Delete Timecode 30 /NoConfirm"
-        assert sum(1 for line in cleared.commands if line.startswith("Delete ")) == 1
-        assert cleared.commands.index("Store Timecode 30") == 1
+        commands = list(cleared.commands)
+        # 재실행 4 — 타임코드 지우기는 큐를 다 쓴 뒤, 타임코드 설정의 첫 줄이다.
+        delete_at = commands.index("Delete Timecode 30 /NoConfirm")
+        assert cleared.timecode_setup_commands[0] == "Delete Timecode 30 /NoConfirm"
+        assert all(not line.startswith("Store Sequence ") for line in commands[delete_at:])
+        assert sum(1 for line in commands if line.startswith("Delete ")) == 1
+        assert commands.index("Store Timecode 30") == delete_at + 1
 
     def test_no_delete_when_timecode_is_not_rebuilt(self) -> None:
         result = _emit()

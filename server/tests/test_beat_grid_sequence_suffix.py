@@ -3,7 +3,7 @@
 같은 이름의 시퀀스가 콘솔에 이미 있으면(다른 타임코드가 쓰는 'LDBEAT FOH') 콘솔은 이름 끝에
 「#6」 같은 접미사를 붙인다. 소유 기록은 'LDBEAT FOH' 를 기억하므로 이름이 달라 「⇪ 콘솔에
 반영」이 통째로 거절됐다(실서버 rerun3 응답 원문). 접미사만 다른 이름은 같은 시퀀스로 인정하고,
-재반영 때 이름 줄을 다시 보내지 않아 접미사가 바뀌거나 늘지 않게 한다.
+재반영은 시퀀스를 다시 만들며 이름을 다시 붙인다(재실행 4).
 
 콘솔 접촉 0건 — 순수 함수가 명령 문자열만 만든다.
 """
@@ -79,15 +79,16 @@ def test_first_apply_still_names_the_sequence() -> None:
     assert _name_lines(_emit(None).commands) == ["Set Sequence 62 Property 'Name' 'LDBEAT FOH'"]
 
 
-def test_reapply_of_owned_track_does_not_rename_the_sequence() -> None:
-    recorded = {"FOH": {1: 1}}
+def test_reapply_rebuilds_the_owned_sequence_and_names_it_again() -> None:
+    # 재실행 4 — 소유 시퀀스는 통째로 지우고 다시 만들므로 이름도 다시 붙인다. 콘솔이 다시
+    # 「#숫자」를 붙여도 소유 확인이 같은 시퀀스로 인정한다(위 시험).
     reused = apply_beat_grid_ownership_reuse(
-        _emit(recorded),
+        _emit(None),
         owned_sequences={"FOH": 62},
         owned_timecode=5,
-        recorded_cue_numbers=recorded,
+        recorded_cue_numbers={"FOH": {1: 1}},
     )
-    assert _name_lines(reused.commands) == []
-    # 큐 저장 줄은 그대로 나간다 — 이름 줄만 빠진다.
-    assert "Store Sequence 62 Cue 1 /Overwrite" in reused.commands
+    assert reused.commands[0] == "Delete Sequence 62 /NoConfirm"
+    assert _name_lines(reused.commands) == ["Set Sequence 62 Property 'Name' 'LDBEAT FOH'"]
+    assert "Store Sequence 62 Cue 1" in reused.commands
     assert "Store Sequence 62 Cue 2" in reused.commands

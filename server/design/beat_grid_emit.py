@@ -299,13 +299,30 @@ class BeatGridEmitResult:
     timecode_event_commands: tuple[str, ...] = field(default_factory=tuple)
     #: 반영 준비(MIB) — 사전이동을 못 넣은 전환의 사유(미리보기에 「MIB 불가 — …」로 보인다).
     mib_notes: tuple[str, ...] = field(default_factory=tuple)
+    #: 재실행 4 — 재반영에서 통째로 지우고 같은 번호로 다시 만드는 시퀀스 번호.
+    rebuilt_sequences: tuple[int, ...] = field(default_factory=tuple)
 
     @property
     def commands(self) -> tuple[str, ...]:
+        """보내는 순서: 모든 트랙의 큐 → 타임코드 설정(지우기·다시 만들기) → 트랙 배정 → 이벤트.
+
+        재실행 4 — 타임코드를 먼저 지우고 큐를 쓰다가 콘솔이 한 줄을 거절하면 타임코드가
+        반쪽으로 남았다. 시퀀스·큐를 다 쓴 뒤에 타임코드를 손대므로, 큐 쓰기에서 멈추면
+        옛 타임코드가 그대로다."""
         if self.blocked_reason is not None:
             return ()
-        track_commands = tuple(line for track in self.tracks for line in track.commands)
-        return self.timecode_setup_commands + track_commands + self.timecode_event_commands
+        cue_commands = tuple(
+            line for track in self.tracks for cue in track.cues for line in cue.commands
+        )
+        assign_commands = tuple(
+            line for track in self.tracks for line in track.assign_timecode_commands
+        )
+        return (
+            cue_commands
+            + self.timecode_setup_commands
+            + assign_commands
+            + self.timecode_event_commands
+        )
 
     @property
     def blocked_cells(self) -> tuple[tuple[str, int, str], ...]:

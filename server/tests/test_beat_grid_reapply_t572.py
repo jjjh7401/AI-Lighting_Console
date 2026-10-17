@@ -194,7 +194,7 @@ def _non_cue_store_lines(executed: list[str]) -> list[str]:
 
 
 class TestReapplyFlows:
-    def test_reapply_reuses_owned_numbers_and_sends_overwrite(self, tmp_path) -> None:
+    def test_reapply_rebuilds_the_owned_sequence_under_the_same_number(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _timeline()
         session, console, approval, _audit = _new_session(
@@ -221,13 +221,15 @@ class TestReapplyFlows:
         # 않게). 시퀀스는 기록된 번호를 그대로 재사용한다.
         assert executed.index("Delete Timecode 20 /NoConfirm") < executed.index("Store Timecode 20")
         assert any(c.startswith("Assign Sequence 1 At Timecode 20.1.") for c in executed)
-        assert any("/Overwrite" in c for c in executed)
-        # 재실행 3 B1 — 소유한 시퀀스는 이름을 다시 쓰지 않는다(콘솔이 「#숫자」를 붙인다).
-        assert not any(
-            c.startswith(f"Set Sequence {FIRST_SEQUENCE_NUMBER} Property 'Name' ") for c in executed
-        )
+        # 재실행 4 — 소유 시퀀스는 큐보다 먼저 통째로 지우고 같은 번호로 다시 만든다. 새 시퀀스라
+        # 이름을 다시 붙이고, /Overwrite 는 쓰지 않는다.
+        seq = FIRST_SEQUENCE_NUMBER
+        delete_at = console.executed.index(f"Delete Sequence {seq} /NoConfirm")
+        assert delete_at < console.executed.index(f"Store Sequence {seq} Cue 1")
+        assert not any("/Overwrite" in c for c in console.executed)
+        assert any(c.startswith(f"Set Sequence {seq} Property 'Name' ") for c in executed)
 
-    def test_reapply_removing_a_cell_emits_delete_cue(self, tmp_path) -> None:
+    def test_reapply_removing_a_cell_leaves_no_old_cue(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(2, "2.2")])
         session, console, approval, _audit = _new_session(
@@ -245,7 +247,12 @@ class TestReapplyFlows:
 
         second = session.beat_grid_apply()
         assert second["ok"] is True
-        assert any(c == f"Delete Cue 2 Sequence {FIRST_SEQUENCE_NUMBER}" for c in console.executed)
+        # 재실행 4 — 실콘솔이 Delete Cue 를 거절하므로 큐 하나를 지우지 않고, 시퀀스를 통째로 지우고
+        # 다시 만든다. 빠진 칸의 옛 큐는 남지 않고 기록에서도 빠진다.
+        assert not any(c.startswith("Delete Cue") for c in console.executed)
+        assert f"Delete Sequence {FIRST_SEQUENCE_NUMBER} /NoConfirm" in console.executed
+        reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
+        assert any("통째로 지우고 같은 번호로 다시 만듭니다" in r for r in reasons)
         updated_record = store.beat_grid_allocation(_song_key())
         assert updated_record["tracks"]["BACK"]["cues"] == {"1": 1}
 
@@ -554,7 +561,9 @@ def _three_cell_timeline(probe_results: dict) -> dict:
 
 
 class TestBlockedCellsArePreserved:
-    def test_a_blocked_cell_is_neither_deleted_nor_overwritten(self, tmp_path, monkeypatch) -> None:
+    def test_a_blocked_cell_is_not_sent_when_the_sequence_is_rebuilt(
+        self, tmp_path, monkeypatch
+    ) -> None:
         # 반영은 progress.md 의 M1 표를 그 자리에서 다시 읽는다 — 판정은 파일로 주입한다.
         progress = tmp_path / "progress.md"
         monkeypatch.setattr("server.web.session.default_progress_md_path", lambda: progress)
@@ -580,22 +589,18 @@ class TestBlockedCellsArePreserved:
         second = session.beat_grid_apply()
         assert second["ok"] is True
         seq = FIRST_SEQUENCE_NUMBER
-        # 막힌 칸(큐 2)은 지우지도, 다른 칸 내용으로 덮어쓰지도 않는다.
-        assert not any(c.startswith(f"Delete Cue 2 Sequence {seq}") for c in console.executed)
-        assert not any(c.startswith(f"Store Sequence {seq} Cue 2") for c in console.executed)
-        # 3마디는 당겨지지 않고 원래 번호 3에 덮어쓴다.
-        assert f"Store Sequence {seq} Cue 3 /Overwrite" in console.executed
-        # 기록에도 막힌 칸의 번호가 그대로 남는다.
+        # 재실행 4 — 시퀀스를 통째로 지우고 다시 만든다. 막힌 칸(2마디)은 보내지 않으므로 옛 큐도
+        # 사라지고, 나머지 칸은 시간 순서로 1번부터 번호를 받는다.
+        assert f"Delete Sequence {seq} /NoConfirm" in console.executed
+        assert f"Store Sequence {seq} Cue 1" in console.executed
+        assert f"Store Sequence {seq} Cue 2" in console.executed
+        assert not any(c.startswith(f"Store Sequence {seq} Cue 3") for c in console.executed)
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
-            "2": 2,
-            "3": 3,
+            "3": 2,
         }
-        # 승인 카드에 「막혀서 그대로 둔 칸」이 적힌다.
-        reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
-        assert any("막혀서 그대로 둔 칸 1개" in r and "BACK 2마디" in r for r in reasons)
 
-    def test_a_really_emptied_cell_is_deleted(self, tmp_path) -> None:
+    def test_a_really_emptied_cell_leaves_no_old_cue(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _three_cell_timeline(_ALL_PASS)
         session, console, _approval, _audit = _new_session(tmp_path, store=store)
@@ -609,11 +614,12 @@ class TestBlockedCellsArePreserved:
         second = session.beat_grid_apply()
         assert second["ok"] is True
         seq = FIRST_SEQUENCE_NUMBER
-        assert f"Delete Cue 2 Sequence {seq}" in console.executed
-        assert f"Store Sequence {seq} Cue 3 /Overwrite" in console.executed
+        assert not any(c.startswith("Delete Cue") for c in console.executed)
+        assert f"Delete Sequence {seq} /NoConfirm" in console.executed
+        assert f"Store Sequence {seq} Cue 2" in console.executed
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
-            "3": 3,
+            "3": 2,
         }
 
     def test_a_wholly_blocked_owned_track_keeps_every_cue(self, tmp_path) -> None:
@@ -649,7 +655,7 @@ class TestBlockedCellsArePreserved:
 
 
 class TestNewBarBetweenRecordedBars:
-    def test_a_new_bar_between_takes_the_next_number_and_is_reported(self, tmp_path) -> None:
+    def test_a_new_bar_between_is_numbered_in_time_order(self, tmp_path) -> None:
         store = SongTimelineStore()
         store.latest = _timeline(cues=[_cue(1, "1.1"), _cue(3, "1.3")])
         session, console, approval, _audit = _new_session(tmp_path, store=store)
@@ -662,10 +668,9 @@ class TestNewBarBetweenRecordedBars:
         second = session.beat_grid_apply()
         assert second["ok"] is True
         seq = FIRST_SEQUENCE_NUMBER
-        # 새 마디(2)는 최대 번호(2) 다음 정수 3을 받는다 — 소수점 번호 없음.
-        # 3마디는 기록된 번호 2를 그대로 쓴다.
+        # 재실행 4 — 시퀀스를 다시 만들므로 새 마디(2)도 시간 순서대로 2번을 받는다.
+        assert f"Delete Sequence {seq} /NoConfirm" in console.executed
         assert f"Store Sequence {seq} Cue 3" in console.executed
-        assert f"Store Sequence {seq} Cue 2 /Overwrite" in console.executed
         # 큐 번호(``Store Sequence <s> Cue <n>`` 의 다섯째 토큰)는 소수점이 없어야 한다.
         assert not any(
             "." in c.split()[4]
@@ -674,11 +679,11 @@ class TestNewBarBetweenRecordedBars:
         )
         assert store.beat_grid_allocation(_song_key())["tracks"]["BACK"]["cues"] == {
             "1": 1,
-            "2": 3,
-            "3": 2,
+            "2": 2,
+            "3": 3,
         }
         reasons = [r for item in approval.requests[-1].items for r in item.risk_reasons]
-        assert any("번호 순서와 시간 순서가 다른 큐 1개" in r for r in reasons)
+        assert not any("번호 순서와 시간 순서가 다른 큐" in r for r in reasons)
 
 
 class TestApprovalSentMismatch:

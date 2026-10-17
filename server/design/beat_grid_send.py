@@ -28,7 +28,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 from server.design.app_movement import dimmer_attribute_names
-from server.design.beat_grid_emit import BeatGridEmitResult, CueEmitResult, SongTiming
+from server.design.beat_grid_emit import BeatGridEmitResult, SongTiming
 from server.design.rig_capability_read import DesignRigRead
 from server.looks.songcue import SequenceNumberError, select_sequence_number
 
@@ -606,38 +606,6 @@ def verify_owned_sequences(
     return owned_sequences, None
 
 
-def _overwrite_store_cue(cue: CueEmitResult, *, sequence_number: int) -> CueEmitResult:
-    """이 칸이 실제로 저장한 ``Store Sequence <s> Cue <n>`` 줄 하나(있다면
-    정확히 그 줄, ``_emit_cue``가 쓰는 모양 그대로)에만 ``/Overwrite``를
-    덧붙인다 — 문자열을 더 넓게 훑지 않는다(``cue_number``로 그 줄이
-    정확히 무엇일지 미리 알고, 그 값과만 비교한다).
-
-    # @MX:WARN: [AUTO] ``Store Sequence S Cue N ... /Overwrite``는 이 저장소에서 실기로
-    #   확인된 적이 없다 — 기존 쓰기 경로들(``position_fx.py``·
-    #   ``pointing.py``·``scene/compile.py``)은 전부 ``/Merge``를 고르고
-    #   ``/Overwrite``를 일부러 피한다(각자의 독스트링: "destructive flag
-    #   the safety gate routes to human approval"). 재적용이 바로 그 승인을
-    #   받으려는 쪽이므로 선택은 맞지만, 콘솔이 이 정확한 문법(``Sequence``
-    #   뒤 ``/Overwrite``)을 받는지는 아직 측정되지 않았다.
-    # @MX:REASON: 측정 전까지는 가설 문법이다 — ``31_choreography_
-    #   patterns.md``에 ``Store ... /Overwrite``의 측정 기록이 없다. 다음
-    #   실기 접속에서 먼저 이 한 줄만 쏘아 확인하고, 거절되면 이 함수가
-    #   돌려주는 모양부터 고친다.
-    """
-    if not cue.commands or cue.cue_number is None:
-        return cue
-    target = f"Store Sequence {sequence_number} Cue {cue.cue_number}"
-    # 카드 t576 — 저장 줄 뒤에 ``CueFade <초>``·``/CueOnly``가 붙을 수 있다. 그 줄도
-    # 같은 큐의 저장 줄이므로 맨 끝에 ``/Overwrite``를 덧붙인다(옵션은 실측 순서대로
-    # 키워드 뒤). ``Store Sequence 1 Cue 1`` 이 ``Store Sequence 1 Cue 10`` 과 섞이지
-    # 않게 정확히 같거나 공백으로 이어지는 줄만 고른다.
-    overwritten = tuple(
-        f"{line} /Overwrite" if line == target or line.startswith(f"{target} ") else line
-        for line in cue.commands
-    )
-    return replace(cue, commands=overwritten)
-
-
 def apply_beat_grid_ownership_reuse(
     result: BeatGridEmitResult,
     *,
@@ -653,81 +621,50 @@ def apply_beat_grid_ownership_reuse(
     아무 쓰기도 지어내지 않는다 — 이 함수는 ``result``가 이미 낸 명령을
     가지치기/치환만 한다:
 
-    * 소유한 트랙의 ``Store Sequence <s>`` 줄과 ``Set Sequence <s> Property 'Name'``
-      줄은 뺀다(재실행 3 B1 — 이름을 다시 쓰면 콘솔이 「#숫자」 접미사를 붙인다).
+    * 소유한 트랙(트랙 전체가 막히지 않았고 낼 큐가 있는 트랙)은 **시퀀스를 통째로 지우고 같은
+      번호로 다시 만든다** — 첫 큐 줄 앞에 ``Delete Sequence <s> /NoConfirm`` 을 넣는다. 그
+      뒤 큐 줄은 첫 반영과 같은 꼴(``/Overwrite`` 없음, 이름 줄 포함)이다. 재실행 4: 큐 하나
+      지우기(``Delete Cue N Sequence S``)는 실콘솔이 「Not allowed」로 거절했고(t608 v4·
+      rerun4, t618), ``Delete Sequence N /NoConfirm`` 은 rerun2 에서 8건 모두 ``OK`` 였다.
+      옛 큐를 남기면 ``Go+`` 재생이 낡은 큐를 지나간다. 다시 만든 번호는
+      ``rebuilt_sequences`` 에 적는다.
+    * 막힌 트랙과 낼 큐가 없는 트랙은 손대지 않는다(명령 0줄 그대로).
     * ``owned_timecode``가 있으면(그 타임코드를 재사용한다) 전체 ``Store
       Timecode``/``Set ... 'Name'`` 설정 줄을 뺀다(한 곡에 타임코드는
       하나뿐이라 전역이다) — 그리고 소유한 트랙의 ``Assign Sequence ...
       At Timecode ...`` 줄도 뺀다(이미 배정돼 있다, 다시 배정하면 콘솔이
-      둘째 트랙을 만든다). 새 트랙(``owned_sequences``에 없는 그룹)은
-      ``Assign`` 줄을 그대로 낸다(그 시퀀스는 아직 그 타임코드에
-      배정된 적이 없다).
-    * 소유한 트랙에서 **기록된 마디**의 ``Store Sequence S Cue N`` 줄에만 ``/Overwrite``를
-      붙인다(그 큐는 콘솔에 이미 있다). 새 마디는 새 번호라 그대로 둔다.
-    * 소유한 트랙에서, 기록된 마디 중 **이번 초안에서 정말 비워진** 칸
-      (격자에서 빠졌거나 낼 내용이 없음)의 번호마다 ``Delete Cue <n>
-      Sequence <s>``를 추가한다. **막힌 칸**(``blocked_reason`` 있음)은
-      지우지 않는다 — 막혔다는 건 이번에 그 칸을 확인하지 못했다는 뜻이지
-      비웠다는 뜻이 아니다(카드 t572 리드 결정, 콘솔 내용은 되돌릴 수
-      없다). 레코드에 없던 트랙(새 트랙)에는 삭제를 내지 않는다."""
+      둘째 트랙을 만든다).
+
+    ``recorded_cue_numbers``·``overwrite_all_groups`` 는 시퀀스를 다시 만들면서 더 쓰지 않는다
+    (호출 꼴만 유지한다). 큐 번호는 호출자가 기록 없이 방출해 1번부터 시간 순서로 매긴다."""
+    del recorded_cue_numbers, overwrite_all_groups
     new_timecode_setup = () if owned_timecode is not None else result.timecode_setup_commands
 
     new_tracks = []
+    rebuilt: list[int] = []
     for track in result.tracks:
         owned_number = owned_sequences.get(track.group_name)
         is_owned = owned_number is not None and owned_number == track.sequence_number
         # 트랙 전체가 막힌 경우(그룹 번호 미확인 등)에는 에미터가 칸 목록을
         # 비워 돌려준다 — 그걸 「칸이 다 비워졌다」로 읽으면 그 트랙의 큐를
         # 전부 지우게 된다. 막힌 트랙은 손대지 않는다(명령 0줄 그대로).
-        if not is_owned or track.blocked_reason is not None:
+        first = next((i for i, cue in enumerate(track.cues) if cue.commands), None)
+        if not is_owned or track.blocked_reason is not None or first is None:
             new_tracks.append(track)
             continue
 
         assign_timecode_commands = (
             () if owned_timecode is not None else track.assign_timecode_commands
         )
-        recorded = recorded_cue_numbers.get(track.group_name) or {}
-        # 재실행 3 B1 — 소유 확인을 통과한 시퀀스는 이름을 다시 쓰지 않는다. 같은 이름의 시퀀스가
-        # 콘솔에 따로 있으면 이름을 다시 쓸 때마다 콘솔이 「#숫자」 접미사를 붙인다.
-        name_prefix = f"Set Sequence {track.sequence_number} Property 'Name' "
-        cues = tuple(
-            replace(cue, commands=tuple(c for c in cue.commands if not c.startswith(name_prefix)))
-            for cue in track.cues
-        )
-        cues = tuple(
-            _overwrite_store_cue(cue, sequence_number=track.sequence_number)
-            if cue.bar in recorded or track.group_name in overwrite_all_groups
-            else cue
-            for cue in cues
-        )
-        emitted_bars = {cue.bar for cue in cues if cue.cue_number is not None}
-        blocked_bars = {cue.bar for cue in cues if cue.blocked_reason is not None}
-        emptied = sorted(
-            (bar, number)
-            for bar, number in recorded.items()
-            if bar not in emitted_bars and bar not in blocked_bars
-        )
-        # @MX:WARN: [AUTO] ``Delete Cue <n> Sequence <s>``도 ``/Overwrite``와
-        #   같은 처지다 — 이 저장소 어디에도 실기로 확인된 선례가 없다
-        #   (grep 결과 0건, 2026-10-11). 게이트가 위험으로 분류해도 괜찮다
-        #   (배차서 지시) — 한 번들 안의 다른 쓰기와 똑같이 승인을 탄다.
-        # @MX:REASON: 가설 문법. 다음 실기 접속에서 먼저 확인하고, 거절되면
-        #   (예: 번호 띄어쓰기·대상 지정 방식) 이 자리만 고친다 — 소유권
-        #   판정·레코드 쪽은 건드릴 필요가 없다(순수하게 명령 문자열 문제).
-        delete_cues = tuple(
-            CueEmitResult(
-                bar=bar,
-                commands=(f"Delete Cue {number} Sequence {track.sequence_number}",),
-                blocked_reason=None,
-                cue_number=None,
-            )
-            for bar, number in emptied
-        )
+        cues = list(track.cues)
+        delete_line = f"Delete Sequence {track.sequence_number} /NoConfirm"
+        cues[first] = replace(cues[first], commands=(delete_line, *cues[first].commands))
+        rebuilt.append(track.sequence_number)
         new_tracks.append(
             replace(
                 track,
                 assign_timecode_commands=assign_timecode_commands,
-                cues=cues + delete_cues,
+                cues=tuple(cues),
             )
         )
 
@@ -737,6 +674,7 @@ def apply_beat_grid_ownership_reuse(
         tracks=tuple(new_tracks),
         timecode_setup_commands=new_timecode_setup,
         timecode_event_commands=new_events,
+        rebuilt_sequences=tuple(rebuilt),
     )
 
 
