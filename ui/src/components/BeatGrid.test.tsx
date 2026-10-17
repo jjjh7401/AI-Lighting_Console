@@ -275,6 +275,11 @@ describe("writeHoldLabel — 카드 apply-safety(D16)", () => {
     expect(label).not.toContain("잠김");
   });
 
+  it("shows nothing when no cell is held even if some probes fail", () => {
+    const probes = buildProbeStatusTable({ 1: "통과", 2: "미확인" });
+    expect(writeHoldLabel(probes, 0)).toBeNull();
+  });
+
   it("shows nothing when every probe passed", () => {
     const allPass = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [i + 1, "통과"]));
     expect(writeHoldLabel(buildProbeStatusTable(allPass), 0)).toBeNull();

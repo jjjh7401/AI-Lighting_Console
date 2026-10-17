@@ -4186,6 +4186,10 @@ def derive_beat_grid_fields(
         return timeline
     snapshot = snapshots.get(ChatSession._beat_grid_song_key(timeline))
     updated = dict(timeline)
+    # 전체 실행 C-10·J-05 — 배지는 격자에 저장된 낡은 M1 판정을 읽어 「칸 17개 보류」를 띄우는데,
+    # 반영은 progress.md 를 그 자리에서 다시 읽어 아무 칸도 막지 않았다. 반영과 같은 판독을 쓴다
+    # (REQ-LDBEAT-003(b): M1 상태는 progress.md 에서 읽는다).
+    grid = {**grid, "probe_results": read_m1_probe_results_from_path(default_progress_md_path())}
     updated_grid = dict(grid)
     updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
     # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게

@@ -390,6 +390,8 @@ export function writeHoldLabel(
 ): string | null {
   const failing = probes.filter((probe) => !probe.status.startsWith("통과")).length;
   if (failing === 0) return null;
+  // 전체 실행 C-10·J-05 — 보류 칸이 0이면 반영은 아무 칸도 막지 않는다. 배지도 띄우지 않는다.
+  if (heldCellCount === 0) return null;
   return `일부 칸 보류 (프로브 ${failing}개 미통과, 칸 ${heldCellCount ?? 0}개)`;
 }
 
