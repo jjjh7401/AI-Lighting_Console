@@ -447,6 +447,26 @@ class TestApplyCreatesTheEffect:
         assert status["ok"] is True
         assert not [c for c in _sent(approval) if c.startswith("Store Preset")]
 
+    def test_reused_effect_still_sends_the_speed_master_bpm(self, tmp_path) -> None:
+        """재현(4차 전체 실행 D-12) — 효과 프리셋을 다시 쓰면(콘솔에 이미 있는 번호) 만들기 줄이
+        없어서 스피드 마스터 BPM 줄(``Master 3.15 At BPM``)도 함께 빠졌다(full4 0건, full3 4건).
+        프리셋은 스피드 마스터에 묶여 있으니 마스터 BPM 을 곡 BPM 으로 반영마다 맞춘다."""
+        master = speed_master_of(load_preset_pool_policy())
+        assert master is not None
+        status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[1])
+        assert status["ok"] is True
+        sent = _sent(approval)
+        assert not [c for c in sent if c.startswith("Store Preset")]
+        assert sent.count(f"Master 3.{master} At BPM 112.35") == 1
+        first_cue_line = next(i for i, c in enumerate(sent) if c.startswith("Store Sequence"))
+        assert sent.index(f"Master 3.{master} At BPM 112.35") < first_cue_line
+        assert status["approval_vs_sent"]["match"] is True
+
+    def test_a_new_effect_sends_the_speed_master_bpm_once(self, tmp_path) -> None:
+        master = speed_master_of(load_preset_pool_policy())
+        _status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[5])
+        assert _sent(approval).count(f"Master 3.{master} At BPM 112.35") == 1
+
     def test_unreadable_pool_is_never_stored(self, tmp_path) -> None:
         status, store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=None)
         assert status["ok"] is False

@@ -53,6 +53,7 @@ __all__ = [
     "effect_template_catalog",
     "effect_template_problem",
     "record_effect_preset_recipe",
+    "speed_master_bpm_lines",
 ]
 
 #: 보류 사유 — 승인 카드·빈 프리셋 표식·시험이 같은 값을 읽는다(t592 문구와 나란히).
@@ -367,6 +368,28 @@ def _one(
     except FxInstantiationError as error:
         return None, f"{EFFECT_BUILD_REFUSED}({error.reason})"
     return head + tuple(bundle.commands), None
+
+
+def speed_master_bpm_lines(
+    grid: Mapping[str, object], *, policy: Mapping[str, object], bpm: float | None
+) -> tuple[str, ...]:
+    """격자에 효과 프리셋을 쓰는 칸이 있으면 스피드 마스터 BPM 을 곡 BPM 으로 맞추는 줄 하나.
+
+    효과 프리셋은 스피드 마스터에 묶여(``At SpeedMaster``) 콘솔에 남으므로, 다시 쓰는 프리셋은
+    만들기 줄이 없다 — 그래도 마스터 BPM 은 반영마다 이 곡 BPM 으로 맞춰야 한다(4차 전체 실행
+    D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 스피드 마스터가 선언되지 않았거나 BPM 을
+    모르면 빈 묶음이다."""
+    master = speed_master_of(policy)
+    if master is None or bpm is None or not math.isfinite(bpm) or bpm <= 0:
+        return ()
+    uses_effect = any(
+        _is_pool_slot(cue.get("effect_preset_no"))
+        for track in grid.get("tracks") or []  # type: ignore[attr-defined]
+        if isinstance(track, Mapping)
+        for cue in track.get("cues") or []
+        if isinstance(cue, Mapping)
+    )
+    return (f"Master 3.{master} At BPM {bpm:g}",) if uses_effect else ()
 
 
 def effect_preset_outcomes(

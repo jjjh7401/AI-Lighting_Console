@@ -105,6 +105,7 @@ from server.design.beat_grid_effect_presets import (
     effect_template_catalog,
     effect_template_problem,
     record_effect_preset_recipe,
+    speed_master_bpm_lines,
 )
 from server.design.beat_grid_emit import (
     M1_GATE_MARK,
@@ -11801,6 +11802,18 @@ class ChatSession:
                 *position_plan.creations.values(),
                 *self._beat_grid_apply_cells(result),
             ]
+            # 4차 전체 실행 D-12 — 다시 쓰는 효과 프리셋은 만들기 줄이 없어서 스피드 마스터 BPM 줄도
+            # 빠졌다. 효과를 쓰는 칸이 있으면 반영마다 맨 앞에서 한 번 맞춘다(만들기 묶음이 이미
+            # 그 줄을 실었으면 다시 넣지 않는다).
+            bpm_lines = speed_master_bpm_lines(
+                grid,
+                policy=load_preset_pool_policy(),
+                bpm=timing.bpm if timing is not None else None,
+            )
+            if bpm_lines and not any(
+                bpm_lines[0] in creation for creation in position_plan.creations.values()
+            ):
+                cells.insert(0, bpm_lines)
             # 카드 t593 은 여기에 효과 만들기 줄이 같은 묶음의 다른 줄과 겹치면 반영을
             # 멈추는 가드를 뒀다 — 당시엔 송신 중복 제거가 묶음 안 반복 줄을 건너뛰어
             # 빈 효과가 저장됐기 때문이다(카드 t601). 카드 t601 이 그 중복 제거를
