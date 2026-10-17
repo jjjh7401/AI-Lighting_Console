@@ -92,3 +92,23 @@ def test_reapply_rebuilds_the_owned_sequence_and_names_it_again() -> None:
     assert _name_lines(reused.commands) == ["Set Sequence 62 Property 'Name' 'LDBEAT FOH'"]
     assert "Store Sequence 62 Cue 1" in reused.commands
     assert "Store Sequence 62 Cue 2" in reused.commands
+
+
+_WRAP_OFF = "Set Sequence 62 Property 'WrapAround' 0"
+
+
+def test_the_sequence_does_not_wrap_back_to_cue_1_after_the_last_cue() -> None:
+    # WT-end-wrap — 앱이 만든 시퀀스는 WRAPAROUND 가 기본 켜짐이다(t538 r5_seq_props).
+    # 큐마다 TrigType Time 이라, 마지막 큐 뒤 큐1(TrigTime ≈ 3.96초)로 감겨 다시 켜졌다
+    # (barcheck: g178.2 꺼짐 → g182.4 큐1 값). 시퀀스를 만들 때마다 감김을 끈다.
+    first = _emit(None).commands
+    assert first.count(_WRAP_OFF) == 1
+    assert first.index(_WRAP_OFF) > first.index("Store Sequence 62 Cue 1")
+    assert first.index(_WRAP_OFF) < first.index("Store Sequence 62 Cue 2")
+    reused = apply_beat_grid_ownership_reuse(
+        _emit(None),
+        owned_sequences={"FOH": 62},
+        owned_timecode=5,
+        recorded_cue_numbers={"FOH": {1: 1}},
+    )
+    assert reused.commands.count(_WRAP_OFF) == 1
