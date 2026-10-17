@@ -77,6 +77,7 @@ export function BeatGridCueHeadMeta({
   cue,
   endBar,
   secondsPerBar,
+  barOriginSeconds = null,
   confirmedFixtureCount,
   confirmedFixtureRange = null,
 }: {
@@ -84,6 +85,8 @@ export function BeatGridCueHeadMeta({
   cue: BeatGridCue;
   endBar: number;
   secondsPerBar: number | null | undefined;
+  /** 0마디가 시작하는 곡 시각(초) — 「타임코드 X초」가 콘솔 큐 시각과 같게(3차 전체 실행 G-19). */
+  barOriginSeconds?: number | null;
   confirmedFixtureCount: number;
   /** 카드 t586 — 소속이 확인된 장비 번호 범위(예: 「201~202」, 시안 머리
    * `Group 10 'WASH-ALL' · 401~410…`). 모르면 `null` — 범위를 빼고 쓴다. */
@@ -101,7 +104,9 @@ export function BeatGridCueHeadMeta({
         `${confirmedFixtureCount > 0 ? `장비 ${confirmedFixtureRange ? `${confirmedFixtureRange} · ` : ""}${confirmedFixtureCount}대(소속 확인)` : "장비 소속 미확인"} · ${track.group_no_confirmed && track.group_no !== null ? `그룹 ${track.group_no}` : "그룹 번호 미확인"}`}
       <br />
       {seqText}Cue {cueNo} · {cue.bar}~{endBar - 1}마디 · {lengthBars}마디
-      {hasTiming ? ` ≈ ${(lengthBars * secondsPerBar).toFixed(1)}초 · 타임코드 ${(cue.bar * secondsPerBar).toFixed(2)}초` : ""}
+      {hasTiming
+        ? ` ≈ ${(lengthBars * secondsPerBar).toFixed(1)}초 · 타임코드 ${Math.max(0, (barOriginSeconds ?? 0) + cue.bar * secondsPerBar).toFixed(2)}초`
+        : ""}
     </div>
   );
 }

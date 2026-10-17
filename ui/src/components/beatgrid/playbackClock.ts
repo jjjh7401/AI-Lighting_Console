@@ -74,14 +74,17 @@ export function audioClockSeconds(audio: AudioClockSource | null): number | null
 
 /** 재생 위치(초) → 가로 픽셀. 격자 칸과 같은 식(마디 = 초 ÷ 박 길이, 픽셀 = 마디 × pxPerBar)을
  * 쓰므로 칸 위에 정확히 놓인다. 마디 단위로 끊기지 않고 소수 픽셀로 흐른다.
- * 박 길이를 모르면 `null`(지어내지 않음). */
+ * 박 길이를 모르면 `null`(지어내지 않음). `barOriginSeconds` 는 0마디가 시작하는 곡 시각
+ * (`barToSeconds` 와 같은 기준, 3차 전체 실행 G-19) — 없으면 0초. */
 export function playheadPixelX(
   seconds: number,
   secondsPerBar: number | null | undefined,
   pxPerBar: number,
+  barOriginSeconds: number | null | undefined = 0,
 ): number | null {
   if (!secondsPerBar || !Number.isFinite(secondsPerBar)) return null;
-  return (seconds / secondsPerBar) * pxPerBar;
+  const origin = typeof barOriginSeconds === "number" && Number.isFinite(barOriginSeconds) ? barOriginSeconds : 0;
+  return ((seconds - origin) / secondsPerBar) * pxPerBar;
 }
 
 /** 재생선 따라가기의 새 `scrollLeft`(px) — mockup `keepVisible()`의 "1/3 지점" 규칙을

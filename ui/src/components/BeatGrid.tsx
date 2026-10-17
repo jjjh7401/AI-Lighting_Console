@@ -210,12 +210,22 @@ export function cueForBar(track: BeatGridTrack, bar: number): BeatGridCue | null
   return found;
 }
 
-/** REQ-LDBEAT-005(b) — "음원 0초 = 앞박, 1마디 = 환산 초"(배치 규칙서 §4
- * 기준). `secondsPerBar`가 없으면(타임라인에 BPM/박자 미확정) 환산할 수
- * 없으므로 `null`. */
-export function barToSeconds(bar: number, secondsPerBar: number | null | undefined): number | null {
+/** REQ-LDBEAT-005(b) — 마디의 곡 시각(초). `barOriginSeconds` 는 0마디가 시작하는 곡 시각
+ * (서버 `bar_origin_seconds` — 콘솔 큐와 같은 마디 지도 기준, 3차 전체 실행 G-19)이다. 없으면
+ * 예전처럼 "음원 0초 = 앞박"이다. 음원 앞쪽(음수)은 0초로 붙인다. `secondsPerBar`가 없으면
+ * (타임라인에 BPM/박자 미확정) 환산할 수 없으므로 `null`. */
+export function barToSeconds(
+  bar: number,
+  secondsPerBar: number | null | undefined,
+  barOriginSeconds: number | null | undefined = 0,
+): number | null {
   if (!secondsPerBar || !Number.isFinite(secondsPerBar)) return null;
-  return bar * secondsPerBar;
+  return Math.max(0, originOf(barOriginSeconds) + bar * secondsPerBar);
+}
+
+/** 서버가 준 0마디 시작 시각 — 없거나 숫자가 아니면 0(예전 기준). */
+export function originOf(barOriginSeconds: number | null | undefined): number {
+  return typeof barOriginSeconds === "number" && Number.isFinite(barOriginSeconds) ? barOriginSeconds : 0;
 }
 
 /** `barToSeconds`의 역함수 — `maxBar`로 클램프하고 내림한다. */
@@ -223,9 +233,10 @@ export function secondsToBar(
   seconds: number,
   secondsPerBar: number | null | undefined,
   maxBar: number,
+  barOriginSeconds: number | null | undefined = 0,
 ): number | null {
   if (!secondsPerBar || !Number.isFinite(secondsPerBar)) return null;
-  const bar = Math.floor(seconds / secondsPerBar);
+  const bar = Math.floor((seconds - originOf(barOriginSeconds)) / secondsPerBar);
   return Math.max(0, Math.min(maxBar, bar));
 }
 
@@ -585,6 +596,9 @@ export interface BeatGridProps {
   stageGroups?: readonly BeatGridStageGroup[];
   probeResults?: Readonly<Record<number, ProbeStatus>>;
   secondsPerBar?: number | null;
+  /** 0마디가 시작하는 곡 시각(초, 서버 `bar_origin_seconds`) — 마디 번호·재생선·무대·시각 표시가
+   * 콘솔 큐와 같은 마디 지도 기준을 쓴다(3차 전체 실행 G-19). 없으면 0초. */
+  barOriginSeconds?: number | null;
   /** t537 (3) — 색 프리셋 번호 → 실제 콘솔 색(hex). 이 카드는 콘솔 접촉
    * 0이라 아직 이 데이터의 살아있는 출처가 없다(M3+ 이후 프리셋 풀 읽기가
    * 채운다) — 넘기지 않으면(또는 번호가 이 표에 없으면) 그 칸은 항상
@@ -1596,6 +1610,7 @@ export function BeatGrid({
   stageGroups = [],
   probeResults,
   secondsPerBar = null,
+  barOriginSeconds = null,
   colorPresetHex,
   sections,
   accentBars,
@@ -2193,7 +2208,7 @@ export function BeatGrid({
   // 예외가 나도 재생(오디오·시계)은 멈추지 않는다(REQ-LDBEAT-024(f)).
   useEffect(() => {
     if (!playing || typeof window === "undefined") return;
-    const totalSeconds = grid ? barToSeconds(axisEnd, secondsPerBar) : null;
+    const totalSeconds = grid ? barToSeconds(axisEnd, secondsPerBar, barOriginSeconds) : null;
     let previousBar: number | null = null;
     const tick = () => {
       const anchor = playbackAnchorRef.current;
@@ -2209,7 +2224,7 @@ export function BeatGrid({
         () => {
           if (!grid) return;
           const ctx = livePlaybackContextRef.current;
-          const bar = secondsToBar(next, secondsPerBar, axisEnd);
+          const bar = secondsToBar(next, secondsPerBar, axisEnd, barOriginSeconds);
           if (bar !== null && bar !== previousBar) {
             previousBar = bar;
             setBarCursor((prev) => ({ bar, anchor: ctx.selected ?? prev?.anchor ?? null }));
@@ -2218,7 +2233,7 @@ export function BeatGrid({
           // 재생선 따라가기는 매 프레임 — 마디 칸이 아니라 초에서 픽셀을 바로 구해 연속으로 흘린다.
           if (followPausedRef.current && followPauseEnded(lastManualScrollMsRef.current, nowMs)) resumeFollow();
           const el = lanesRef.current;
-          const x = playheadPixelX(next, secondsPerBar, ctx.pxPerBar);
+          const x = playheadPixelX(next, secondsPerBar, ctx.pxPerBar, barOriginSeconds);
           if (el && x !== null && !followPausedRef.current) {
             const target = followScrollTarget(x, el.scrollLeft, ctx.visibleWidth);
             if (target !== null) el.scrollLeft = target;
@@ -2247,7 +2262,7 @@ export function BeatGrid({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [playing, grid, secondsPerBar]);
+  }, [playing, grid, secondsPerBar, barOriginSeconds]);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
   // t537 — M1 상태의 살아있는 소스는 `grid.probe_results`(서버가 progress.md를
@@ -2422,9 +2437,9 @@ export function BeatGrid({
   // 카드 t534 — 재생 위치를 마디로 환산(음원 동기가 없으면 null, 지어내지
   // 않음). 플레이헤드 선·"이 마디 한눈에" 둘 다 이 값이 있을 때만 재생
   // 위치를 반영한다 — 없으면 선택된 칸(or 시작 마디)이 기준이다.
-  const playheadBar = secondsToBar(playbackSeconds, secondsPerBar, maxBar);
+  const playheadBar = secondsToBar(playbackSeconds, secondsPerBar, maxBar, barOriginSeconds);
   // 재생선 가로 위치 — 마디 단위가 아니라 초에서 바로 구한 소수 픽셀(칸과 같은 식).
-  const playheadX = playheadPixelX(playbackSeconds, secondsPerBar, pxPerBar);
+  const playheadX = playheadPixelX(playbackSeconds, secondsPerBar, pxPerBar, barOriginSeconds);
   const laneContentWidth = barToX(maxBar + 1);
   // 카드 t561 — 전환·장면 전환·편집 칸 머리에 쓰는 값. 구간 경계는 곡 전체
   // 지도와 같은 `overviewModel.sections`(카드 t559)에서 온다(없으면 `null` —
@@ -2487,7 +2502,7 @@ export function BeatGrid({
   };
 
   const seek = (delta: number) => {
-    const totalSeconds = barToSeconds(maxBar, secondsPerBar) ?? playbackSeconds;
+    const totalSeconds = barToSeconds(maxBar, secondsPerBar, barOriginSeconds) ?? playbackSeconds;
     const next = clampPlaybackSeconds(playbackSeconds, delta, totalSeconds);
     setPlaybackSeconds(next);
     // AC-LDBEAT-024(d) — 재생 중이면 음원·앵커를 같이 옮겨 끊김 없이
@@ -2507,7 +2522,7 @@ export function BeatGrid({
     resumeFollow();
     setBarCursor({ bar: target, anchor: selected });
     if (playing) {
-      const targetSeconds = barToSeconds(target, secondsPerBar);
+      const targetSeconds = barToSeconds(target, secondsPerBar, barOriginSeconds);
       if (targetSeconds !== null) {
         setPlaybackSeconds(targetSeconds);
         playbackAnchorRef.current = { anchorSeconds: targetSeconds, anchorPerfMs: performance.now() };
@@ -3123,6 +3138,7 @@ export function BeatGrid({
               bar={sceneBar}
               tracks={grid.tracks}
               secondsPerBar={secondsPerBar}
+              barOriginSeconds={barOriginSeconds}
               sectionStartBars={sectionStartBars}
               accentBars={overviewModel.accentBars}
               onClose={() => setSceneBar(null)}
@@ -3175,6 +3191,7 @@ export function BeatGrid({
                   cue={selectedCue}
                   endBar={selectedSegmentEnd}
                   secondsPerBar={secondsPerBar}
+                  barOriginSeconds={barOriginSeconds}
                   confirmedFixtureCount={selectedConfirmedFixtures}
                   confirmedFixtureRange={confirmedFixtureRange(selectedTrack.group_name, fixtures)}
                 />
@@ -3188,6 +3205,7 @@ export function BeatGrid({
                     cue={selectedCue}
                     prevCue={selectedPrevCue}
                     secondsPerBar={secondsPerBar}
+                    barOriginSeconds={barOriginSeconds}
                     beatsPerBar={beatsPerBar}
                     sectionStartBars={sectionStartBars}
                     accentBars={overviewModel.accentBars}
@@ -3818,6 +3836,7 @@ export function BeatGrid({
                           secondsPerBar,
                           transitionMib(selectedPrevCue, selectedCue),
                           beatsPerBar,
+                          barOriginSeconds,
                         )
                       : cueConsoleCommandLines(selectedTrack, selectedCue)
                   }
@@ -3850,7 +3869,7 @@ export function BeatGrid({
             <span>
               {viewBar === 0 ? "앞박" : `${viewBar}마디`}
               {(() => {
-                const seconds = barToSeconds(viewBar, secondsPerBar);
+                const seconds = barToSeconds(viewBar, secondsPerBar, barOriginSeconds);
                 return seconds === null ? "" : ` · ${seconds.toFixed(1)}초`;
               })()}
             </span>
@@ -3858,7 +3877,8 @@ export function BeatGrid({
           {/* 카드 t561 — 선택 테두리·그룹 이름표·장비 영역 클릭(REQ-LDBEAT-022). */}
           <BeatGridStage
             notes={stageNotes}
-            motion={{ seconds: playbackSeconds, secondsPerBar, beatsPerBar }}
+            // 빔 위상은 0마디 시작부터 센 초다 — 마디 칸과 같은 기준(3차 전체 실행 G-19).
+            motion={{ seconds: playbackSeconds - originOf(barOriginSeconds), secondsPerBar, beatsPerBar }}
             presetBook={{ labels: grid.preset_labels, movements: grid.preset_movements }}
             fixtures={fixtures}
             tracks={grid.tracks}
@@ -3942,6 +3962,7 @@ export function BeatGrid({
                         startBar: viewSegment.startBar,
                         endBar: viewSegment.endBar,
                         secondsPerBar,
+                        barOriginSeconds,
                         fixtures,
                       })
                     : null;

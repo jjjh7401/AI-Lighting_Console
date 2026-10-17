@@ -1300,6 +1300,7 @@ export default function App() {
             onExit={() => setBeatGridFullscreen(false)}
             hasTimeline={Boolean(state.songTimeline.timeline)}
             secondsPerBar={state.songTimeline.timeline?.seconds_per_bar}
+            barOriginSeconds={state.songTimeline.timeline?.bar_origin_seconds}
             timeSignature={state.songTimeline.timeline?.time_signature}
             sections={state.songTimeline.timeline?.sections}
             accentBars={state.songTimeline.timeline?.accent_bars}

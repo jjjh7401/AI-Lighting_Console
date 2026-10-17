@@ -113,12 +113,15 @@ export function triggerSeconds(
   cue: BeatGridCue,
   secondsPerBar: number | null | undefined,
   beatsPerBar: number | null,
+  barOriginSeconds: number | null | undefined = 0,
 ): number | null {
   if (secondsPerBar === null || secondsPerBar === undefined) return null;
+  // 0마디가 시작하는 곡 시각(서버 `bar_origin_seconds`, 콘솔 큐와 같은 기준) — 없으면 0초.
+  const origin = typeof barOriginSeconds === "number" && Number.isFinite(barOriginSeconds) ? barOriginSeconds : 0;
   const beat = cue.entry.trigger_beat ?? null;
-  if (beat === null) return cue.bar * secondsPerBar;
+  if (beat === null) return Math.max(0, origin + cue.bar * secondsPerBar);
   if (beatsPerBar === null) return null;
-  return (cue.bar + (beat - 1) / beatsPerBar) * secondsPerBar;
+  return Math.max(0, origin + (cue.bar + (beat - 1) / beatsPerBar) * secondsPerBar);
 }
 
 /** 칸이 켜져 있는지 — 배치 규칙서의 「—」 관례(`cueIsActive`와 같은 판단)에
@@ -291,6 +294,7 @@ export function transitionConsoleCommandLines(
   secondsPerBar: number | null | undefined,
   mib: TransitionMib | null,
   beatsPerBar: number | null = null,
+  barOriginSeconds: number | null | undefined = 0,
 ): string[] {
   const lines: string[] = [];
   const entry = cue.entry;
@@ -304,7 +308,7 @@ export function transitionConsoleCommandLines(
     lines.push(`Store Sequence <시퀀스> Cue <큐> CueFade ${trimSeconds(fadeBars * secondsPerBar)}`);
   }
   const beat = entry.trigger_beat ?? 1;
-  const at = triggerSeconds(cue, secondsPerBar, beatsPerBar);
+  const at = triggerSeconds(cue, secondsPerBar, beatsPerBar, barOriginSeconds);
   lines.push(`(트리거: ${cue.bar}마디 ${beat}박${at === null ? "" : ` = 곡 ${trimSeconds(at)}초`} · 타임코드 이벤트)`);
   if (mib?.kind === "auto") lines.push("(MIB) 앞 큐 사이에 위치 전용 큐 — 밝기 0 유지");
   if (entry.delay_beats) lines.push(`(딜레이 ${entry.delay_beats}박 — 속성별 송신 줄 꼴 [미확인])`);

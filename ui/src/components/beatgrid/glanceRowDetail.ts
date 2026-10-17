@@ -40,9 +40,12 @@ export function buildGlanceRowDetail(params: {
   /** 배타적 — `trackCueSegments`의 관례와 같다. */
   endBar: number;
   secondsPerBar: number | null | undefined;
+  /** 0마디가 시작하는 곡 시각(초) — 타임코드 표시 기준(콘솔 큐와 같다). 없으면 0초. */
+  barOriginSeconds?: number | null;
   fixtures: readonly GlanceDetailFixture[];
 }): GlanceRowDetail {
   const { track, startBar, endBar, secondsPerBar, fixtures } = params;
+  const origin = params.barOriginSeconds ?? 0;
   const confirmedFids = fixtures
     .filter((fixture) => fixture.confirmedGroupName === track.group_name)
     .map((fixture) => fixture.fid)
@@ -50,7 +53,7 @@ export function buildGlanceRowDetail(params: {
   const lengthBars = Math.max(0, endBar - startBar);
   const hasSecondsPerBar = !!secondsPerBar && Number.isFinite(secondsPerBar) && secondsPerBar > 0;
   const timecodeLabel = hasSecondsPerBar
-    ? formatTc(startBar * (secondsPerBar as number) * 1000)
+    ? formatTc(Math.max(0, origin + startBar * (secondsPerBar as number)) * 1000)
     : GLANCE_DETAIL_UNKNOWN;
   return {
     fixtureNumbers: confirmedFids.length > 0 ? confirmedFids : GLANCE_DETAIL_UNKNOWN,
