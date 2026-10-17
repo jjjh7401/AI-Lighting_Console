@@ -637,6 +637,8 @@ export interface BeatGridView {
    * 응답이면 `undefined`(둘 다 토글 비활성과 무관 — 그 토글은 송신 경로
    * 자체가 없어 이 카드 범위에서는 늘 비활성이다). */
   console_audio_offset_seconds?: number | null;
+  /** 카드 WT-all-fixtures — 마지막 자동 배치 적용 때의 콘솔 장비 대조. 적용한 적이 없으면 없다. */
+  console_coverage?: BeatGridConsoleCoverage | null;
   /** 카드 t579(REQ-LDBEAT-010) — 「⚠ 실기 미확인」을 달 칸. 서버가 M1 표(⑨,
    * `probe_results`)와 실측 무빙 기록으로만 가른 목록이다 — 화면은 라벨 글자를
    * 맞춰 보지 않는다. 필드가 없는 옛 서버 응답이면 `undefined`(배지 없음). */
@@ -919,11 +921,31 @@ export interface BeatGridDraftWindow {
   drop: boolean;
 }
 
+/** 카드 WT-all-fixtures — 배치 줄에 안 들어간 콘솔 장비 하나. 이유는 서버 문장 그대로다. */
+export interface BeatGridUncoveredFixture {
+  fid: number;
+  group_names: string[];
+  reason: string;
+  /** 일부러 뺀 장비(연기 장비 — 감독 2026-10-18)면 참. 경고가 아니라 안내로 보인다. */
+  intentional: boolean;
+}
+
+/** 카드 WT-all-fixtures — 서버가 콘솔 그룹·소속 장비와 배치 줄을 대조한 결과. */
+export interface BeatGridConsoleCoverage {
+  /** 콘솔 그룹으로 새로 붙인 줄 이름. */
+  added: string[];
+  uncovered: BeatGridUncoveredFixture[];
+  /** 대조를 막은 판독 공백(사람이 읽는 문장). */
+  unread: string[];
+}
+
 export interface BeatGridDraft {
   draft_id: string;
   bar_range: { start: number; end: number };
   windows: BeatGridDraftWindow[];
   tracks: BeatGridDraftTrack[];
+  /** 옛 서버 응답이면 없다. */
+  console_coverage?: BeatGridConsoleCoverage;
 }
 
 export interface BeatGridPendingSuggestion {
@@ -2275,6 +2297,7 @@ export function reduceServerEvent(
           bar_range: event.bar_range,
           windows: event.windows,
           tracks: event.tracks,
+          ...(event.console_coverage ? { console_coverage: event.console_coverage } : {}),
         },
       };
     case "beat_grid_draft_consumed":

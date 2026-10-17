@@ -169,6 +169,7 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import { ConsoleCoverageNotice } from "./beatgrid/ConsoleCoverageNotice";
 import { ConsoleRunningBanner } from "./beatgrid/ConsoleRunningBanner";
 import { NO_FLOW_DONE, completedStepOf, type FlowDone } from "./beatgrid/flowChain";
 import {
@@ -2612,6 +2613,8 @@ export function BeatGrid({
         approvalPending={approvalPending}
         onStop={onConsoleStop}
       />
+      {/* 카드 WT-all-fixtures — 콘솔 장비가 배치에서 빠졌으면 이유와 함께 보인다(조용히 빠지지 않게). */}
+      <ConsoleCoverageNotice coverage={grid.console_coverage} />
       {/* 카드 t559(M9 step 8) — 상단 바, REQ-LDBEAT-017. */}
       <BeatGridTopBar
         songTitle={grid.song_title}
@@ -3125,6 +3128,7 @@ export function BeatGrid({
                 줄 {pendingDraft.tracks.length}개 · 칸 {draftCellCount(pendingDraft)}개. 「적용」하면 같은 칸의 라벨이
                 초안 값으로 바뀌고 되돌리기 기록이 남습니다. 콘솔에는 쓰지 않습니다.
               </p>
+              <ConsoleCoverageNotice coverage={pendingDraft.console_coverage} />
               <ul className="beat-grid-draft-tracks">
                 {pendingDraft.tracks.map((track, index) => (
                   <li key={`${track.group_name}-${index}`}>

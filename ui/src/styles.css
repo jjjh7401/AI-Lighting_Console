@@ -5610,6 +5610,26 @@ body {
   font-size: 15px;
 }
 
+/* 콘솔 장비가 마디 배치에서 빠졌다는 알림(카드 WT-all-fixtures). 일부러 뺀 것만 있으면 조용한 안내다. */
+.beat-grid-console-coverage {
+  padding: 8px 14px;
+  border: 1px solid var(--line, #444);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.beat-grid-console-coverage[role="alert"] {
+  border: 2px solid var(--warn);
+  background: #3a2a10;
+  color: #ffd27a;
+}
+.beat-grid-console-coverage ul {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+.beat-grid-console-coverage p {
+  margin: 4px 0 0;
+}
+
 /* 전체화면 위 승인 카드 — 채팅 열이 숨겨진 동안 대기 승인을 오른쪽 위에 겹쳐 보인다. */
 .beat-grid-approval-overlay {
   position: fixed;

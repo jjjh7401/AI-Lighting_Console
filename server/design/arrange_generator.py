@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
-from typing import Any, NamedTuple, TypedDict
+from typing import Any, NamedTuple, NotRequired, TypedDict
 
 from server.audio.bar_map_store import validate_bar_map
 from server.design.arrange_policy import ArrangementPolicy
@@ -111,6 +111,9 @@ class ArrangementDraft(TypedDict):
     source: str
     #: 정상이면 None, 마디 지도가 없거나 쓸 수 없으면 안내 문장.
     note: str | None
+    #: 콘솔 그룹 대조 결과(카드 WT-all-fixtures) — 새로 붙인 줄·빠진 장비와 이유·판독 공백.
+    #: 세션이 초안을 만든 뒤 싣는다. 생성기는 이 키를 만들지 않는다.
+    console_coverage: NotRequired[dict[str, Any]]
 
 
 class _CellPlan(NamedTuple):
