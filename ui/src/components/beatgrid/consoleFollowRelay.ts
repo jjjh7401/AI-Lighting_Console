@@ -25,6 +25,12 @@ export interface ConsoleFollowRelay {
   audioStarted: boolean;
   /** 서버가 거절한 이유 — 다음에 마운트되는 화면도 보이게 둔다. */
   failure: string | null;
+  /** 콘솔 타임코드가 돌고 있을 수 있는가 — 재생 성공 응답에서 켜지고 **정지 성공 응답에서만** 꺼진다.
+   * 정지는 승인 카드(`Off Timecode N`)를 따로 거치므로, 카드가 거절·만료되면 앱은 멈춰도 콘솔은 돈다
+   * (2차 전체 실행 N11). 화면은 이 값으로 크게 알린다. 콘솔을 읽은 값이 아니라 보낸 명령의 결과다. */
+  consoleMayRun: boolean;
+  /** 위 판정에 쓴 마지막 응답 객체 — 같은 응답을 두 번 세지 않는다. */
+  runStatusSeen: BeatGridSendStatus | null;
 }
 
 /** 서버가 거절하면서 이유를 싣지 않았을 때 쓰는 문구. */
@@ -44,7 +50,24 @@ export function createConsoleFollowRelay(): ConsoleFollowRelay {
     responseAtMs: null,
     audioStarted: false,
     failure: null,
+    consoleMayRun: false,
+    runStatusSeen: null,
   };
+}
+
+/** 콘솔 타임코드가 돌고 있을 수 있는지를 응답 하나로 갱신한다. 바뀌었으면 `true`(호출자는 화면에 알린다).
+ * - 콘솔 재생 성공(`console_play` + ok) → 돌 수 있음.
+ * - 콘솔 정지 성공(`console_stop` + ok) → 멈춤.
+ * - 정지 거절·실패(승인 거절·카드 만료·게이트 차단)는 바꾸지 않는다 — 콘솔은 그대로 돈다. */
+export function observeConsoleRunStatus(relay: ConsoleFollowRelay, status: BeatGridSendStatus | null): boolean {
+  if (status === null || status === relay.runStatusSeen) return false;
+  relay.runStatusSeen = status;
+  let next = relay.consoleMayRun;
+  if (status.last_action === "console_play" && status.ok) next = true;
+  if (status.last_action === "console_stop" && status.ok) next = false;
+  if (next === relay.consoleMayRun) return false;
+  relay.consoleMayRun = next;
+  return true;
 }
 
 /** 서버 응답 하나를 중계 객체에 반영한다. 이번 요청의 답으로 받아들였으면 `true`(호출자는 화면에 다시

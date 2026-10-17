@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 
+from server.design.analysis_timeline import timeline_meter_from_bar_map
 from server.design.beat_grid import preset_pool_no
 from server.design.beat_grid_cell_split import attach_cell_split_to_cues
 from server.design.beat_grid_color_presets import attach_color_rgb_to_cues
@@ -301,6 +302,15 @@ def attach_beat_grid_ui_values(
     accents = accent_bars_from_bar_map(bar_map if isinstance(bar_map, Mapping) else None)
     if accents:
         merged["accent_bars"] = accents
+    # 박자 머리값이 비어 있으면(새 분석 작업본 — 실저장본에서 None) 마디 지도에서 채운다. 있는 값은
+    # 덮지 않는다. 화면은 한 마디 길이로 재생 위치를 마디로 바꾼다(2차 전체 실행 N9).
+    bpm = merged.get("bpm")
+    for key, value in timeline_meter_from_bar_map(
+        bar_map if isinstance(bar_map, Mapping) else None,
+        bpm if isinstance(bpm, (int, float)) and not isinstance(bpm, bool) else None,
+    ).items():
+        if merged.get(key) is None:
+            merged[key] = value
     grid = merged.get("beat_grid")
     if isinstance(grid, Mapping):
         grid = attach_color_rgb_to_cues(grid)

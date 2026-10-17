@@ -163,6 +163,7 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import { ConsoleRunningBanner } from "./beatgrid/ConsoleRunningBanner";
 import { NO_FLOW_DONE, completedStepOf, type FlowDone } from "./beatgrid/flowChain";
 import {
   audioClockSeconds,
@@ -2487,6 +2488,13 @@ export function BeatGrid({
 
   return (
     <section className="beat-grid" aria-label="박자 격자">
+      {/* 2차 전체 실행 N11 — 앱은 멈췄는데 콘솔 정지가 확인되지 않았으면 크게 알린다. */}
+      <ConsoleRunningBanner
+        visible={relay.consoleMayRun && !playing}
+        timecodeNumber={timecodeNumber ?? null}
+        approvalPending={approvalPending}
+        onStop={onConsoleStop}
+      />
       {/* 카드 t559(M9 step 8) — 상단 바, REQ-LDBEAT-017. */}
       <BeatGridTopBar
         songTitle={grid.song_title}

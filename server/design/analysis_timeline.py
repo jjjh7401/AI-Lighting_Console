@@ -13,7 +13,7 @@ from typing import Any, Protocol
 from server.design.beat_grid import default_beat_grid
 from server.design.song_cue_render import _infer_confirmed_role
 
-__all__ = ["ANALYSIS_SOURCE_KEY", "build_analysis_timeline"]
+__all__ = ["ANALYSIS_SOURCE_KEY", "build_analysis_timeline", "timeline_meter_from_bar_map"]
 
 #: 이 작업본을 만든 분석의 오디오 해시. 같은 분석으로 다시 만들지 않으려고 본다.
 ANALYSIS_SOURCE_KEY = "analysis_source_sha256"
@@ -46,6 +46,38 @@ def _bar_at(bars: Sequence[Mapping[str, Any]], start_ms: int) -> int:
         else:
             break
     return found
+
+
+def timeline_meter_from_bar_map(
+    bar_map: Mapping[str, Any] | None, bpm: float | None = None
+) -> dict[str, Any]:
+    """마디 지도에서 타임라인 박자 머리값(``time_signature``·``bar_count``·``seconds_per_bar``).
+
+    화면은 한 마디 길이(``seconds_per_bar``)로 재생 위치를 마디로 바꾼다 — 없으면 시계만
+    가고 격자 스크롤·재생선·마디 표시·무대가 0 에 멈춘다(2차 전체 실행 N9). 한 마디 길이는
+    **선언된** BPM 과 박자표 분자가 다 있을 때만 낸다(``session._song_seconds_per_bar`` 와
+    같은 규칙 — 지어내지 않는다). ``bpm`` 은 분석이 확정한 BPM 이고, 없으면 마디 지도의
+    BPM 을 쓴다. 모르는 값은 키를 뺀다."""
+    meter: dict[str, Any] = {}
+    if not isinstance(bar_map, Mapping):
+        return meter
+    signature = bar_map.get("time_signature")
+    beats: int | None = None
+    if isinstance(signature, (list, tuple)) and len(signature) == 2:
+        top, bottom = signature
+        if all(isinstance(v, int) and not isinstance(v, bool) and v > 0 for v in (top, bottom)):
+            beats = int(top)
+            meter["time_signature"] = f"{top}/{bottom}"
+    bars = bar_map.get("bars")
+    if isinstance(bars, list) and bars:
+        meter["bar_count"] = len(bars)
+    song_bpm = bpm if bpm is not None else bar_map.get("bpm")
+    valid_bpm = (
+        isinstance(song_bpm, (int, float)) and not isinstance(song_bpm, bool) and song_bpm > 0
+    )
+    if valid_bpm and beats is not None:
+        meter["seconds_per_bar"] = beats * 60.0 / float(song_bpm)
+    return meter
 
 
 def build_analysis_timeline(
@@ -111,4 +143,5 @@ def build_analysis_timeline(
     }
     if isinstance(song_bpm, (int, float)) and not isinstance(song_bpm, bool) and song_bpm > 0:
         timeline["bpm"] = float(song_bpm)
+    timeline.update(timeline_meter_from_bar_map(bar_map, song_bpm))
     return timeline
