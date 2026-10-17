@@ -317,6 +317,7 @@ def generate_segment_draft(
     color_names = assign_color_names(
         plan.color_rgb for by_bar in plans.values() for plan in by_bar.values() if plan.color_rgb
     )
+    tail_bar = _tail_bar(bar_map)
     tracks = []
     for track in layout:
         name = str(track["group_name"])
@@ -343,6 +344,8 @@ def generate_segment_draft(
             and sections[-1].start_bar > runs[0][0]
         ):
             runs.append((sections[-1].start_bar, runs[0][1]))
+        if tail_bar is not None:
+            runs = _ending_dark(runs, tail_bar, _rest_plan(settings))
         tracks.append(
             BeatGridTrack(
                 group_no=track.get("group_no"),
@@ -706,6 +709,43 @@ def _runs(
     return rows
 
 
+def _tail_bar(bar_map: Mapping[str, Any]) -> int | None:
+    """곡 마지막 마디가 박이 모자란 꼬리 마디(마지막 다운비트 뒤 남은 소리)면 그 번호, 아니면
+    ``None``. 박자표가 없거나 읽히지 않으면 꼬리를 모르므로 ``None`` 이다."""
+    signature = bar_map.get("time_signature")
+    bars = bar_map.get("bars") or []
+    if not isinstance(signature, Sequence) or not signature or not bars:
+        return None
+    last = max(bars, key=lambda entry: int(entry["bar"]))
+    beats = last.get("beats_ms")
+    if not isinstance(beats, Sequence) or not isinstance(signature[0], int):
+        return None
+    return int(last["bar"]) if len(beats) < signature[0] else None
+
+
+def _ending_dark(
+    runs: list[tuple[int, _CellPlan]], last_bar: int, dark: _CellPlan
+) -> list[tuple[int, _CellPlan]]:
+    """켜진 채 끝나는 줄에 곡 꼬리 마디의 꺼진 끝 칸을 둔다(4차 전체 실행 D-11).
+
+    끝 칸은 Release 를 받지만 Release 는 앞에서 이어 온 값을 놓을 뿐 그 칸이 쥔 값은 남긴다 —
+    끝 칸이 켜진 값이면 곡 끝 Off 까지 켜져 있다(full4: MOVER-D 82마디 DIM-100 이 3 초).
+    마지막 칸이 그 마디에서 시작하면 그 칸을 꺼진 칸으로 바꾸고, 바로 앞 칸이 이미 꺼진 칸이면
+    그 칸이 끝 칸이 된다. 이미 꺼진 채 끝나는 줄과 칸이 그 마디 하나뿐인 줄은 그대로다.
+    꼬리가 없는(마지막 마디가 꽉 찬) 곡은 부르지 않는다 — 곡 끝 Off 가 그 마디 끝에서 끈다."""
+    if not runs or runs[-1][1].brightness_percent <= 0:
+        return runs
+    out = list(runs)
+    if out[-1][0] == last_bar:
+        if len(out) == 1:
+            return out
+        out.pop()
+        if out[-1][1].brightness_percent <= 0:
+            return out
+    out.append((last_bar, dark))
+    return out
+
+
 #: 줄(시퀀스)의 첫 칸·끝 칸·프레이즈 칸의 트래킹 값(``beat_grid_emit._entry_plan`` 이 읽는 값과
 #: 같다). 구간 첫 칸은 콘솔 기본값 Track 이라 값을 두지 않는다(``None``).
 _TRACKING_FIRST = "Block"
@@ -721,7 +761,8 @@ def _with_tracking(cues: list[BeatGridCue], section_starts: frozenset[int]) -> l
     - 구간 첫 칸은 Track(콘솔 기본값, 값 없음) — 구간 안에서 값이 이어진다.
     - 그 밖(프레이즈 칸·구간 안 쉼)은 Cue Only — 그 칸의 값이 다음 칸으로 번지지 않는다.
 
-    칸이 하나뿐인 줄은 Block 하나다(생성기는 그런 줄에 끝 칸을 하나 더 둬서 Release 를 준다).
+    칸이 하나뿐인 줄은 Block 하나다(생성기는 켜진 채 끝나는 줄에 꺼진 끝 칸을 둬서 Release 를
+    준다 — ``_ending_dark``).
     앞에서부터 처음 맞는 규칙을 쓴다."""
     last = len(cues) - 1
     for position, cue in enumerate(cues):

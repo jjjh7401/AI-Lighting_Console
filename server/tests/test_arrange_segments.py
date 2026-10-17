@@ -1448,6 +1448,26 @@ def test_section_starts_track_and_other_cells_are_cue_only() -> None:
     assert all(len(track["cues"]) > 1 for track in lit_lines)
 
 
+def test_every_line_ends_dark_with_release_at_the_last_bar() -> None:
+    """4차 전체 실행 D-11 — 끝 칸이 켜진 값이면 Release 를 받아도 그 칸이 쥔 값(밝기)은 남아서
+    곡 끝 Off(g 181.1)까지 3 초 켜져 있었다(MOVER-D 82마디 DIM-100, FOH·WASH·BACK·MOVER-U 도 같은
+    모양). 켜진 채 끝나는 줄은 곡의 마지막 마디에 꺼진 끝 칸을 받는다. 이미 꺼진 채 끝나는 줄은
+    그대로다."""
+    bar_map = _real_love_attack()
+    last_bar = max(int(entry["bar"]) for entry in bar_map["bars"])
+    draft = generate_segment_draft(bar_map, _layout())
+    for track in draft["tracks"]:
+        end = track["cues"][-1]
+        assert end["brightness"]["value_percent"] == 0, (track["group_name"], end["bar"])
+        assert end["entry"].get("tracking") == "Release", track["group_name"]
+        lit_before = [c for c in track["cues"][:-1] if c["brightness"]["value_percent"]]
+        assert lit_before, track["group_name"]  # 곡 안에서 켜진 칸은 그대로 남는다
+    # 켜진 채 끝나던 줄은 마지막 마디(82)에서 꺼지고, 꺼진 채 끝나던 줄은 끝 칸이 그대로다.
+    assert _rows(draft, "FOH") == [0, last_bar]
+    assert _rows(draft, "MOVER-D")[-1] == last_bar
+    assert _rows(draft, "BLIND")[-1] == 68
+
+
 def test_tracking_survives_applying_the_draft_to_the_grid() -> None:
     # 적용이 entry.tracking 을 지우면 반영 명령에 Block·Release·/CueOnly 가 안 나간다.
     draft = generate_segment_draft(_real_love_attack(), _layout())

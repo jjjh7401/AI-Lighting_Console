@@ -197,8 +197,8 @@ class TestPlannedColorCandidates:
             if isinstance(cue.get("planned_color"), list)
         }
         assert effect_cells == {
+            # FOH 82 는 Release 를 받는 꺼진 끝 칸이라(4차 전체 실행 D-11) 색이 없다.
             ("FOH", 0),
-            ("FOH", 82),  # Release 를 받을 끝 칸(인수 D-11) — 첫 칸과 같은 색
             ("BLIND", 18),
             ("BLIND", 46),
             ("BLIND", 67),
