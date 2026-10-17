@@ -161,8 +161,9 @@ def test_a_director_numbered_cell_does_not_hold_the_rest_of_its_color_candidate(
 
 
 def test_stale_annotation_cells_are_one_line_without_duplicates() -> None:
-    # 워시가 구간마다 한 칸이라 주석이 가리키던 WASH-ALL 7·22마디에는 칸이 없다. 경고는 한 줄,
-    # 같은 칸은 한 번만, 「주석을 고쳐야 함」 같은 지시 없이 건너뛴 사실만 알린다.
+    # 워시가 구간마다 한 칸이라 주석이 가리키던 WASH-ALL 7·14·22마디에는 칸이 없다(4마디 킥이
+    # 벌스라 도입·벌스·빌드가 같은 벌스 색 한 칸이다). 경고는 한 줄, 같은 칸은 한 번만,
+    # 「주석을 고쳐야 함」 같은 지시 없이 건너뛴 사실만 알린다.
     grid = _applied_grid()
     plan = build_preset_plan(
         grid,
@@ -175,7 +176,7 @@ def test_stale_annotation_cells_are_one_line_without_duplicates() -> None:
     )
     lines = [line for line in plan.unresolved if line.startswith("주석 칸")]
     assert lines == [
-        "주석 칸 2개가 이 격자에 없어 건너뜀: WASH-ALL 7·22마디 "
+        "주석 칸 3개가 이 격자에 없어 건너뜀: WASH-ALL 7·14·22마디 "
         "(그 마디에 칸이 없는 배치다 — 칸이 생기면 다시 쓴다)"
     ]
 

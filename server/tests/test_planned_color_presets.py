@@ -225,8 +225,9 @@ class TestConsoleNumberReuse:
         assert lavender.reused is True
         assert lavender.ready is True
         assert lavender.store is None
-        # 워시 줄은 구간마다 한 칸이라 주석 라벤더 칸은 구간 첫 마디(14)다.
-        assert ("WASH-ALL", 14) in _cells_of(lavender)
+        # 워시 줄은 구간마다 한 칸이다. 4마디 킥이 벌스라 도입·벌스·빌드가 같은 라벤더(벌스 색)
+        # 한 칸이고, 라벤더 칸은 그 칸의 첫 마디(0)다.
+        assert ("WASH-ALL", 0) in _cells_of(lavender)
         lines = save_commands(plan)
         assert not any("Store Preset 4.33" in line for line in lines)
         updated = _approve(grid, plan)
@@ -250,7 +251,7 @@ class TestConsoleNumberReuse:
         )
         back0["color_preset_no"] = "4.33"  # 다른 그룹(BACK)이 이 번호를 쓰고 있다
         plan = _plan(grid, color_pool=_COLOR_POOL_WITH_LAVENDER)
-        wash_lavender = next(p for p in _color_presets(plan) if ("WASH-ALL", 14) in _cells_of(p))
+        wash_lavender = next(p for p in _color_presets(plan) if ("WASH-ALL", 0) in _cells_of(p))
         assert wash_lavender.slot != "4.33"
         assert wash_lavender.reused is False
 
@@ -263,9 +264,10 @@ class TestStoreLinesAndCard:
         plan = _with_stores(grid, _plan(grid))
         new = [p for p in _color_presets(plan) if p.deferred or p.ready]
         held = [p for p in _color_presets(plan) if not p.ready and not p.deferred]
-        # 칸이 있는 후보는 전부 저장된다. 남는 것은 주석 색이 구간 중간 마디(워시 22마디 PITCH)에
-        # 놓여 칸이 없는 주석뿐이다 — 워시 줄은 구간마다 한 칸이다(리드 결정 2026-10-16).
-        assert [(p.name, p.cells) for p in held] == [("PITCH", ())]
+        # 칸이 있는 후보는 전부 저장된다. 남는 것은 주석 색이 칸 없는 마디(워시 14마디 LAVENDER,
+        # 22마디 PITCH)에 놓인 주석뿐이다 — 워시 줄은 구간마다 한 칸이고(리드 결정 2026-10-16),
+        # 도입·벌스·빌드는 같은 벌스 색이라 0마디 한 칸이다.
+        assert [(p.name, p.cells) for p in held] == [("LAVENDER", ()), ("PITCH", ())]
         stores = [line for line in save_commands(plan) if line.startswith("Store Preset 4.")]
         assert len(stores) == len([p for p in new if not p.reused])
 
