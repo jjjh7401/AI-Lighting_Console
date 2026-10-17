@@ -64,7 +64,11 @@ def test_a_new_analysis_of_the_same_song_keeps_the_console_preset_records(
         assert fresh.get(key) == value, key
 
 
-def test_a_new_analysis_of_another_song_inherits_no_preset_records(tmp_path, monkeypatch) -> None:
+def test_a_new_analysis_of_another_song_still_inherits_the_preset_records(
+    tmp_path, monkeypatch
+) -> None:
+    # WT-preset-reuse-cross-song — 프리셋 기록은 콘솔의 사실이라 곡이 달라도 이어받는다(이전엔
+    # 이어받지 않는다고 단언했다). 콘솔에 지금 있는지는 재사용 판정이 가른다.
     session, store, _sent, _console, _library = _session(tmp_path, monkeypatch)
     store.latest["beat_grid"] = {
         **store.latest["beat_grid"],
@@ -76,7 +80,7 @@ def test_a_new_analysis_of_another_song_inherits_no_preset_records(tmp_path, mon
 
     fresh = store.latest["beat_grid"]
     for key in CONSOLE_PRESET_RECORD_KEYS:
-        assert key not in fresh, key
+        assert fresh.get(key) == _RECORDS[key], key
 
 
 def _store_plan(grid: dict, *, color_pool, position_pool):

@@ -141,7 +141,8 @@ def carry_console_preset_records(
 
     새 분석은 칸을 비우지만 콘솔의 프리셋은 그대로 남는다. 기록을 버리면 다음 계획이 재사용할
     근거가 없어 같은 프리셋을 새 번호로 또 저장한다(3차 전체 실행 E-10·I-08: 17개 두 벌, 콘솔은
-    같은 이름에 「#숫자」). 같은 곡일 때만 부른다 — 판정은 부르는 쪽(세션) 몫이다."""
+    같은 이름에 「#숫자」). 다른 곡이어도 부른다 — 기록은 콘솔의 사실이고, 콘솔에 지금 있는지·
+    내용이 같은지는 재사용 판정(``preset_plan``)이 가른다(WT-preset-reuse-cross-song)."""
     carried = {
         key: copy.deepcopy(previous_grid[key])
         for key in CONSOLE_PRESET_RECORD_KEYS

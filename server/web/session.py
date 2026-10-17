@@ -9945,8 +9945,11 @@ class ChatSession:
             store.set_beat_grid_allocation(self._beat_grid_song_key(fresh), previous_owner)
         # 3차 전체 실행 E-10·I-08 — 같은 이유로 콘솔 프리셋 저장 기록도 이어받는다. 안 그러면 다음
         # 계획이 이미 저장한 프리셋을 못 알아보고 새 번호에 또 저장한다(콘솔은 이름에 「#숫자」).
+        # WT-preset-reuse-cross-song — 프리셋 기록은 곡이 아니라 콘솔의 사실이라 다른 곡이어도
+        # 이어받는다(새 곡 점검: 18개 재사용 0). 재사용은 콘솔에 그 번호가 지금 있고 이름·기록이
+        # 같을 때만이다(``preset_plan._reusable_*_slot``). 소유 기록은 위처럼 같은 곡일 때만.
         previous_grid = current.get("beat_grid")
-        if same_song and isinstance(previous_grid, Mapping):
+        if isinstance(previous_grid, Mapping):
             fresh = carry_console_preset_records(previous_grid, fresh)
         store.latest = fresh
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))

@@ -489,6 +489,10 @@ def _reusable_color_slot(
             abs(a - b) < 0.5 for a, b in zip(recorded, rgb, strict=True)
         ):
             continue
+        # WT-preset-reuse-cross-song — 기록은 다른 곡에서 이어받았을 수 있다. 콘솔의 그 번호가
+        # 아직 앱이 적은 이름(콘솔이 붙인 「#숫자」 허용)일 때만 같은 프리셋으로 본다.
+        if not same_console_name(children[slot], app_preset_label(grid, number)):
+            continue
         stored_for = color_preset_groups(grid, number)
         if stored_for is not None:
             # 대화 상자 대상은 손 입력일 수 있다 — 대소문자는 가리지 않는다.
@@ -681,7 +685,7 @@ def _reusable_effect_slot(
     records = grid.get(_EFFECT_RECORD_KEY)
     for slot in sorted(children):
         number = f"{pool_no}.{slot}"
-        if app_preset_label(grid, number) != name:
+        if app_preset_label(grid, number) != name or not same_console_name(children[slot], name):
             continue
         record = records.get(number) if isinstance(records, Mapping) else None
         if record is not None:
