@@ -56,6 +56,7 @@ __all__ = [
     "color_preset_groups",
     "color_preset_outcomes",
     "color_preset_rgb",
+    "group_has_no_color",
     "record_color_preset_rgb",
     "referencing_tracks",
 ]
@@ -251,6 +252,16 @@ def _member_color_verdict(names: Sequence[str | None] | None) -> str:
         return "unread"
     attrs = {_attr_name(name) for name in names}
     return "ok" if set(_REQUIRED_COLOR_ATTRS) <= attrs else "missing"
+
+
+def group_has_no_color(
+    fids: Sequence[int], channel_names: Mapping[int, Sequence[str | None] | None]
+) -> bool:
+    """그룹 장비를 **전부** 읽었고 그중 컬러(R·G·B) 속성을 가진 장비가 하나도 없으면 True.
+    하나라도 못 읽었거나(``unread``) 색을 내는 장비가 있으면 False — 모르는 그룹은 빼지 않는다."""
+    return bool(fids) and all(
+        _member_color_verdict(channel_names.get(fid)) == "missing" for fid in fids
+    )
 
 
 def _grid_only_blocker_and_parts(

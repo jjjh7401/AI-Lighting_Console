@@ -332,6 +332,17 @@ def generate_segment_draft(
             if track.get("layer_role") in _PHRASE_ROLES
             else frozenset(),
         )
+        # 칸이 하나뿐인 줄(곡 내내 켜는 FOH 등)은 마지막 구간 첫 마디에 같은 값의 끝 칸을 하나 더
+        # 둔다 — 그 칸이 다른 줄처럼 Release 를 받는다(인수 D-11, full3: FOH 만 Release 없음).
+        # 하나뿐인 첫 칸에 Release 를 얹으면 곡 시작에서 값을 놓게 되므로 그렇게 하지 않는다.
+        runs = list(runs)
+        if (
+            len(runs) == 1
+            and (runs[0][1].brightness_percent or 0) > 0
+            and sections
+            and sections[-1].start_bar > runs[0][0]
+        ):
+            runs.append((sections[-1].start_bar, runs[0][1]))
         tracks.append(
             BeatGridTrack(
                 group_no=track.get("group_no"),
@@ -710,7 +721,8 @@ def _with_tracking(cues: list[BeatGridCue], section_starts: frozenset[int]) -> l
     - 구간 첫 칸은 Track(콘솔 기본값, 값 없음) — 구간 안에서 값이 이어진다.
     - 그 밖(프레이즈 칸·구간 안 쉼)은 Cue Only — 그 칸의 값이 다음 칸으로 번지지 않는다.
 
-    칸이 하나뿐인 줄은 Block 하나다. 앞에서부터 처음 맞는 규칙을 쓴다."""
+    칸이 하나뿐인 줄은 Block 하나다(생성기는 그런 줄에 끝 칸을 하나 더 둬서 Release 를 준다).
+    앞에서부터 처음 맞는 규칙을 쓴다."""
     last = len(cues) - 1
     for position, cue in enumerate(cues):
         if position == 0:
