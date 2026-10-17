@@ -164,6 +164,9 @@ class PlanPreset:
     group_no: int | None = None  # 디머만 — 그룹이 하나일 때 그 번호(확인된 것)
     attributes: tuple[str, ...] = ()  # 디머만 — 저장 줄의 디머 속성 이름
     group_nos: tuple[int, ...] = ()  # 디머만 — 저장 선택 ``Group a + b`` 의 번호(확인된 것)
+    #: 디머만 — 속성마다 그 속성을 가진 그룹 번호. 둘째 디머(``Dimmer2``)처럼 일부 기종에만 있는
+    #: 속성은 그 그룹만 골라 낸다. 비면 ``attributes`` × ``group_nos`` 한 선택이다.
+    attribute_group_nos: tuple[tuple[str, tuple[int, ...]], ...] = ()
     #: 값은 정해졌고 저장 줄만 아직 없다. 색·위치는 콘솔 판독 뒤 `preset_plan_store` 가 줄을
     #: 붙이거나 사유와 함께 「미정」으로 내리고(``resolve_preset``), 칸 쪽 색 후보는 기존 색
     #: 경로(t594)로 간다.
@@ -1098,6 +1101,19 @@ def build_preset_plan(
                 attributes_of[group] = (_DEFAULT_DIMMER_ATTRIBUTE,)
                 defaulted.append(group)
         attributes = _unique(attr for group in groups for attr in attributes_of[group])
+        # 속성마다 그 속성을 가진 그룹만 고른다 — 기종의 밝기 속성을 다 열되, 없는 기종을 같은
+        # 선택에 넣지 않는다(``Group 12 ; Attribute 'Dimmer2'`` 꼴만 실측됨, t548·t520).
+        attribute_group_nos = tuple(
+            (
+                attr,
+                tuple(
+                    confirmed_no[group]
+                    for group in groups
+                    if group in confirmed_no and attr in attributes_of[group]
+                ),
+            )
+            for attr in attributes
+        )
         ready = not holds and slot is not None
         if ready and len(groups) > 1:
             selection = " + ".join(str(number) for number in group_nos)
@@ -1127,6 +1143,7 @@ def build_preset_plan(
                 group_no=group_nos[0] if len(group_nos) == 1 else None,
                 attributes=attributes if ready else (),
                 group_nos=group_nos if ready else (),
+                attribute_group_nos=attribute_group_nos if ready else (),
             )
         )
         # 밝기 결정이 붙은 칸을 쓰는 디머 줄은 「감독이 고칠 값」으로 드러낸다(줄마다 한 번).
@@ -1491,8 +1508,15 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
             continue
         if preset.kind == "dimmer":
             assert preset.group_nos and preset.value_percent is not None
+            pairs = preset.attribute_group_nos or (
+                (attr, preset.group_nos) for attr in preset.attributes
+            )
             bundle: Sequence[str] = (
-                *_dimmer_value_lines(preset.group_nos, preset.value_percent, preset.attributes),
+                *(
+                    line
+                    for attr, numbers in pairs
+                    for line in _dimmer_value_lines(numbers, preset.value_percent, (attr,))
+                ),
                 f"Store Preset {preset.slot}",
                 f"Label Preset {preset.slot} '{preset.name}'",
                 "ClearAll",
