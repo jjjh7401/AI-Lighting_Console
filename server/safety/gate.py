@@ -468,16 +468,8 @@ class SafetyGate:
             audit_extra: dict[str, object] = {"kind": risk.kind} if risk is not None else {}
             if approval_findings:
                 self._observe("approval")
-                # 전체 실행 E-06·J-02·J-10 — 승인되면 아래 백업 규칙 ③ 이 SaveShow 를 먼저
-                # 보낸다. 카드 목록 맨 앞에 그 줄을 보여, 보내는 줄이 전부 승인 목록 안에 있게 한다.
-                backup_items = (
-                    (ApprovalItem(command=BACKUP_COMMAND, risk_reasons=(BACKUP_ITEM_REASON,)),)
-                    if self._backup is not None
-                    else ()
-                )
                 approval_request = ApprovalRequest(
-                    items=backup_items
-                    + tuple(
+                    items=tuple(
                         ApprovalItem(
                             command=f.command,
                             # 분류가 준 사유는 잃지 않는다 — 선언의 사유가 앞에 붙을 뿐.
@@ -489,6 +481,13 @@ class SafetyGate:
                         for f in approval_findings
                     )
                 )
+                # 전체 실행 E-06·J-02·J-10 — 승인되면 아래 백업 규칙 ③ 이 SaveShow 를 먼저
+                # 보낸다. 카드 목록 맨 앞에 그 줄을 보여, 보내는 줄이 전부 승인 목록 안에 있게 한다.
+                if self._backup is not None:
+                    backup_item = ApprovalItem(
+                        command=BACKUP_COMMAND, risk_reasons=(BACKUP_ITEM_REASON,)
+                    )
+                    approval_request = ApprovalRequest(items=(backup_item, *approval_request.items))
                 held = approval_findings
                 approved = self._approval_port.request_approval(approval_request)
                 if not approved:
