@@ -222,9 +222,9 @@ class TestReapplyFlows:
         assert executed.index("Delete Timecode 20 /NoConfirm") < executed.index("Store Timecode 20")
         assert any(c.startswith("Assign Sequence 1 At Timecode 20.1.") for c in executed)
         assert any("/Overwrite" in c for c in executed)
-        assert any(
-            c == f"Set Sequence {FIRST_SEQUENCE_NUMBER} Property 'Name' '{OWNED_SEQUENCE_NAME}'"
-            for c in executed
+        # 재실행 3 B1 — 소유한 시퀀스는 이름을 다시 쓰지 않는다(콘솔이 「#숫자」를 붙인다).
+        assert not any(
+            c.startswith(f"Set Sequence {FIRST_SEQUENCE_NUMBER} Property 'Name' ") for c in executed
         )
 
     def test_reapply_removing_a_cell_emits_delete_cue(self, tmp_path) -> None:

@@ -536,6 +536,24 @@ def timecode_overwrite_note(
     return f"기존 {occupant} 을 덮어씁니다", None
 
 
+_CONSOLE_DUPLICATE_SUFFIX = re.compile(r"#\d+")
+
+
+def _same_owned_sequence_name(console_name: str | None, recorded_name: object) -> bool:
+    """콘솔 이름이 기록된 이름과 같거나, 기록된 이름 뒤에 콘솔이 붙인 「#숫자」만 더 붙었는지.
+
+    같은 이름의 시퀀스가 이미 있으면 콘솔은 이름 끝에 ``#6`` 같은 접미사를 붙인다(실서버
+    rerun3: 'LDBEAT FOH#6' 대 기록 'LDBEAT FOH'). 그 밖의 차이는 여전히 다른 이름이다."""
+    if not isinstance(console_name, str) or not isinstance(recorded_name, str):
+        return console_name == recorded_name
+    if console_name == recorded_name:
+        return True
+    suffix = console_name[len(recorded_name) :]
+    return console_name.startswith(recorded_name) and bool(
+        _CONSOLE_DUPLICATE_SUFFIX.fullmatch(suffix)
+    )
+
+
 def verify_owned_sequences(
     sequences_section: Mapping[str, object],
     owned: Mapping[str, Mapping[str, object]],
@@ -578,7 +596,7 @@ def verify_owned_sequences(
                 "못해 재적용을 거절합니다."
             )
         console_name = console_names[recorded_no]
-        if console_name != recorded_name:
+        if not _same_owned_sequence_name(console_name, recorded_name):
             return {}, (
                 f"'{group_name}' 트랙이 쓰던 시퀀스 {recorded_no}번의 콘솔 이름"
                 f"('{console_name}')이 기록된 이름('{recorded_name}')과 달라 재적용을 "
@@ -635,8 +653,8 @@ def apply_beat_grid_ownership_reuse(
     아무 쓰기도 지어내지 않는다 — 이 함수는 ``result``가 이미 낸 명령을
     가지치기/치환만 한다:
 
-    * 소유한 트랙의 ``Store Sequence <s>`` 줄은 뺀다(``Set ... 'Name'``
-      줄은 남긴다 — 코디네이터 결정, 이름 갱신 자체는 해롭지 않다).
+    * 소유한 트랙의 ``Store Sequence <s>`` 줄과 ``Set Sequence <s> Property 'Name'``
+      줄은 뺀다(재실행 3 B1 — 이름을 다시 쓰면 콘솔이 「#숫자」 접미사를 붙인다).
     * ``owned_timecode``가 있으면(그 타임코드를 재사용한다) 전체 ``Store
       Timecode``/``Set ... 'Name'`` 설정 줄을 뺀다(한 곡에 타임코드는
       하나뿐이라 전역이다) — 그리고 소유한 트랙의 ``Assign Sequence ...
@@ -669,11 +687,18 @@ def apply_beat_grid_ownership_reuse(
             () if owned_timecode is not None else track.assign_timecode_commands
         )
         recorded = recorded_cue_numbers.get(track.group_name) or {}
+        # 재실행 3 B1 — 소유 확인을 통과한 시퀀스는 이름을 다시 쓰지 않는다. 같은 이름의 시퀀스가
+        # 콘솔에 따로 있으면 이름을 다시 쓸 때마다 콘솔이 「#숫자」 접미사를 붙인다.
+        name_prefix = f"Set Sequence {track.sequence_number} Property 'Name' "
+        cues = tuple(
+            replace(cue, commands=tuple(c for c in cue.commands if not c.startswith(name_prefix)))
+            for cue in track.cues
+        )
         cues = tuple(
             _overwrite_store_cue(cue, sequence_number=track.sequence_number)
             if cue.bar in recorded or track.group_name in overwrite_all_groups
             else cue
-            for cue in track.cues
+            for cue in cues
         )
         emitted_bars = {cue.bar for cue in cues if cue.cue_number is not None}
         blocked_bars = {cue.bar for cue in cues if cue.blocked_reason is not None}
