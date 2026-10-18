@@ -48,7 +48,9 @@ export function LRSplitRow({ child, left, width, onSelect, follow }: LRSplitRowP
       onClick={onSelect}
     >
       <span className="beat-grid-track-label beat-grid-track-label-child">
-        └ {child.label} <small>· {child.memberCount}대</small>
+        <span className="beat-grid-track-name" title={`${child.label} · ${child.memberCount}대`}>
+          └ {child.label} <small>· {child.memberCount}대</small>
+        </span>
       </span>
       <div className="beat-grid-track-cues">
         {follow?.spans.map((span, index) => (
@@ -89,7 +91,11 @@ export interface LRSplitCellRowProps {
 export function LRSplitCellRow({ row, toX }: LRSplitCellRowProps) {
   return (
     <div className="beat-grid-track beat-grid-track-child" role="row">
-      <span className="beat-grid-track-label beat-grid-track-label-child">└ {row.label}</span>
+      <span className="beat-grid-track-label beat-grid-track-label-child">
+        <span className="beat-grid-track-name" title={row.label}>
+          └ {row.label}
+        </span>
+      </span>
       <div className="beat-grid-track-cues">
         {row.cells.map((cell) => {
           const name = cell.color?.trim() ? cell.color : CELL_SPLIT_COLOR_UNSET;
