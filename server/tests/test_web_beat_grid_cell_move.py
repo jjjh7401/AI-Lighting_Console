@@ -17,11 +17,13 @@
    격자·기록을 그대로 두며, 한국어 사유를 ``beat_grid_send_status`` 로 클라이언트에 보낸다.
 3. 소유하지 않은 타임코드는 읽지도 쓰지도 않는다. 허용 목록(``move_bundle_allowed``)이 마지막
    안전핀이다.
-4. 승인 카드 거절, 승인 창이 열린 사이 바뀐 이벤트(송신 직전 재확인), 줄 하나의 실패는 아무것도
-   확정하지 않고 옮기기 승인도 남기지 않는다.
+4. 승인 카드 거절, 승인 창이 열린 사이 바뀐 이벤트(송신 직전 재확인), 첫 줄의 실패처럼 나간 줄이
+   하나도 없으면 아무것도 확정하지 않고 옮기기 승인도 남기지 않는다.
 5. 승인 창이 열린 사이 다른 연결이 격자를 고친 경우에도 그 고침을 지우지 않는다.
 6. 반영 단계(에미터)가 사전이동 큐(MIB 선행)를 끼우는 줄은 옮기기 전이든 옮긴 뒤든 콘솔을 읽기 전에
    거절한다 — 칸만 옮기면 그 큐의 이벤트가 옛 자리에 남거나 새로 필요한 큐가 빠진다.
+7. 줄 일부만 나가고 멈추면 콘솔이 장부보다 앞서 있다 — 격자는 옮긴 대로 두되 소유 기록·칸 기록은
+   그대로 둬 옮긴 칸이 「미반영」으로 남고, 옮기기 승인은 줄이 모두 나갔을 때만 남긴다.
 """
 
 from __future__ import annotations
@@ -77,6 +79,7 @@ PREMOVE_ROW = (
     "움직임 준비(MIB 선행) 칸이 있는 줄은 이번 버전에서 칸 옮기기를 막습니다 "
     "— ⇪ 전체 반영을 사용해 주세요"
 )
+PARTIAL_SEND = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요"
 
 # 120 BPM 4/4 — 한 박 0.5초, 한 마디 2초, 1마디 다운비트 1.5초, 콘솔 지연 3.002초.
 #   BACK: 3마디 8.502 · 5마디(3박 트리거) 13.502 · 9마디 20.502
@@ -940,7 +943,7 @@ class TestForeignTimecode:
 # == 승인 카드 거절 · 송신 직전 재확인 · 줄 실패 =========================================
 
 
-class TestNothingIsCommittedUnlessEveryLineWent:
+class TestNothingIsCommittedWhenNoLineWent:
     def test_a_declined_card_sends_nothing_and_grants_nothing(self, tmp_path) -> None:
         h = _build(tmp_path, answers=(False,))
         event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
@@ -991,26 +994,6 @@ class TestNothingIsCommittedUnlessEveryLineWent:
         assert not h.store.cell_live_approval.covers(_MOVE)
         _assert_untouched(h)
 
-    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
-    def test_a_failing_line_commits_nothing_and_says_how_many_lines_already_went(
-        self, tmp_path, preapproved: bool
-    ) -> None:
-        h = _build(tmp_path)
-        if preapproved:
-            h.store.cell_live_approval.approve(_MOVE)
-        h.console.fail_on[LINE_BACK_9_TO_11] = "no confirmation"
-        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
-        assert h.console.executed == [LINE_BACK_5_TO_6, LINE_BACK_9_TO_11]
-        assert event["ok"] is False
-        assert LINE_BACK_9_TO_11 in event["reason"]
-        assert "이미 콘솔에 나간 1줄" in event["reason"]
-        assert "⇪ 전체 반영" in event["reason"]
-        assert _status(h) == event
-        _assert_untouched(h)
-        assert (
-            h.store.cell_live_approval.covers(_MOVE) is preapproved
-        )  # 실패한 카드는 승인을 남기지 않는다
-
     def test_a_first_line_that_fails_says_nothing_went(self, tmp_path) -> None:
         h = _build(tmp_path)
         h.console.fail_on[LINE_BACK_5_TO_6] = "no confirmation"
@@ -1018,6 +1001,95 @@ class TestNothingIsCommittedUnlessEveryLineWent:
         assert event["ok"] is False
         assert "이미 콘솔에 나간" not in event["reason"]
         _assert_untouched(h)
+        assert not h.store.cell_live_approval.covers(_MOVE)
+
+
+# == 줄 일부만 나가고 다음 줄이 실패 — 콘솔이 장부보다 앞서 있다 ==============================
+
+
+class TestSomeLinesWentThenOneFailed:
+    """나간 줄이 하나라도 있으면 콘솔은 소유 기록·칸 기록보다 앞서 있다.
+
+    격자는 감독이 옮긴 대로 두고(감독이 눈으로 본 것), 장부는 그대로 둬 옮긴 칸이 「미반영」으로
+    남게 한다 — ⇪ 전체 반영이 맞춘다. 옮기기 승인은 줄이 모두 나갔을 때만 남긴다. 나간 줄이
+    없으면(첫 줄이 실패하면) 아무것도 바꾸지 않는다. 카드를 거친 송신과 이미 승인된 범위의 송신
+    둘 다 같다."""
+
+    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
+    def test_the_grid_moves_and_the_ledger_stays_so_the_cells_show_as_unsent(
+        self, tmp_path, preapproved: bool
+    ) -> None:
+        h = _build(tmp_path)
+        if preapproved:
+            h.store.cell_live_approval.approve(_MOVE)
+        h.console.fail_on[LINE_BACK_9_TO_11] = "no confirmation"
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
+
+        assert h.console.executed == [LINE_BACK_5_TO_6, LINE_BACK_9_TO_11]
+        # 격자: 감독이 옮긴 대로다(두 칸 모두 새 마디).
+        assert _bars(h, "BACK") == [3, 6, 11]
+        # 장부: 옛 마디 그대로다 — 그래서 옮긴 칸이 격자와 어긋나 「미반영」으로 센다.
+        assert h.store.beat_grid_allocation(SONG) == h.before["record"]
+        assert h.store.beat_grid_snapshots[h.before["key"]] == h.before["snapshot"]
+        # 화면은 옮긴 격자와 그 미반영 칸을 함께 받는다(옛 칸과 새 칸이 모두 미반영이다).
+        redrawn = [e for e in h.sent if e.get("type") == "song_timeline"][-1]
+        grid = redrawn["timeline"]["beat_grid"]
+        assert [cue["bar"] for cue in grid["tracks"][0]["cues"]] == [3, 6, 11]
+        assert grid["unsent_cells"] == [
+            {"group_name": "BACK", "bar": 5},
+            {"group_name": "BACK", "bar": 6},
+            {"group_name": "BACK", "bar": 9},
+            {"group_name": "BACK", "bar": 11},
+        ]
+        # 상태: 실패이고 사유는 일부만 반영됐다는 것이다.
+        assert event["ok"] is False
+        assert event["reason"] == PARTIAL_SEND
+        assert event["pending_apply_count"] == 4
+        assert _status(h) == event
+        # 이 묶음은 승인을 남기지 않는다 — 미리 승인된 범위는 그대로다.
+        assert h.store.cell_live_approval.covers(_MOVE) is preapproved
+
+    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
+    def test_a_first_line_that_fails_changes_nothing(self, tmp_path, preapproved: bool) -> None:
+        h = _build(tmp_path)
+        if preapproved:
+            h.store.cell_live_approval.approve(_MOVE)
+        h.console.fail_on[LINE_BACK_5_TO_6] = "no confirmation"
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
+
+        assert h.console.executed == [LINE_BACK_5_TO_6]  # 첫 줄에서 멈춘다
+        assert event["ok"] is False
+        assert LINE_BACK_5_TO_6 in event["reason"]
+        assert "일부만" not in event["reason"]
+        assert _status(h) == event
+        _assert_untouched(h)
+        assert h.store.cell_live_approval.covers(_MOVE) is preapproved
+
+    def test_a_cell_removed_meanwhile_still_leaves_the_ledger_and_the_other_edit(
+        self, tmp_path
+    ) -> None:
+        h = _build(tmp_path)
+
+        def other_tab_deletes_the_cell() -> None:
+            latest = copy.deepcopy(h.store.latest)
+            latest["beat_grid"]["tracks"][0]["cues"].pop(1)  # BACK 5마디
+            h.store.latest = latest
+
+        h.hooks.on_card = other_tab_deletes_the_cell
+        h.console.fail_on[LINE_BACK_9_TO_11] = "no confirmation"
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
+
+        assert h.console.executed == [LINE_BACK_5_TO_6, LINE_BACK_9_TO_11]
+        assert event["ok"] is False
+        assert event["reason"] == PARTIAL_SEND  # 「이벤트는 옮겼지만」이 아니라 일부만이다
+        assert _status(h) == event
+        # 격자는 다른 연결이 고친 그대로이고 장부는 옛 마디 그대로다.
+        assert _bars(h, "BACK") == [3, 9]
+        assert h.store.beat_grid_allocation(SONG) == h.before["record"]
+        assert h.store.beat_grid_snapshots[h.before["key"]] == h.before["snapshot"]
         assert not h.store.cell_live_approval.covers(_MOVE)
 
 
