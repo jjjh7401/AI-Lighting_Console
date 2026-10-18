@@ -46,6 +46,8 @@ describe("createConsoleFollowRelay — 처음 상태", () => {
       stopPressedAgainst: null,
       stopBusyAt: 0,
       playQueued: false,
+      timecodePaused: false,
+      startSeconds: 0,
     });
   });
 

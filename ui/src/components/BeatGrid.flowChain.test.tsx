@@ -59,6 +59,8 @@ function setup() {
     onApply: vi.fn(),
     onTimecodeSubmit: vi.fn(),
     onConsolePlay: vi.fn(),
+    onConsolePause: vi.fn(),
+    onConsoleResume: vi.fn(),
     onConsoleStop: vi.fn(),
   };
   /** `key` 를 바꾸면 같은 응답 객체로 새 인스턴스가 마운트된다(전체화면을 나갔다 다시 들어오는 경우). */

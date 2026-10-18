@@ -640,6 +640,9 @@ export interface BeatGridProps {
    * 응답(`beat_grid_send_status`). 둘 다 넘겨야 토글이 켜진다 — 생략하면 기존처럼
    * 늘 비활성이다. */
   onConsolePlay?: () => void;
+  /** PR 1 — ❚❚ 일시정지(타임코드만)·일시정지 뒤 ▶ 이어 가기. */
+  onConsolePause?: () => void;
+  onConsoleResume?: () => void;
   onConsoleStop?: () => void;
   sendStatus?: BeatGridSendStatus | null;
   /** 「콘솔 같이」 의도와 콘솔 재생 시작 시각을 이 화면 밖(`App`)에서 쥐는 중계 객체. 전체화면을 닫으면 이
@@ -1652,6 +1655,8 @@ export function BeatGrid({
   onTimecodeSubmit,
   pendingApplyCount,
   onConsolePlay,
+  onConsolePause,
+  onConsoleResume,
   onConsoleStop,
   sendStatus = null,
   consoleFollowRelay,
@@ -1939,8 +1944,9 @@ export function BeatGrid({
     ? applyFailureNote(sendStatus)
     : null;
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const consoleFollowAvailable = !!onConsolePlay && !!onConsoleStop;
-  // 전체 실행 G-22 — 재생 루프(아래 rAF effect)가 곡 끝에서 부를 최신 ❚❚ 송신.
+  const consoleFollowAvailable =
+    !!onConsolePlay && !!onConsoleStop && !!onConsolePause && !!onConsoleResume;
+  // 전체 실행 G-22 — 재생 루프(아래 rAF effect)가 곡 끝에서 부를 최신 정지 묶음 송신.
   const onConsoleStopRef = useRef(onConsoleStop);
   onConsoleStopRef.current = onConsoleStop;
   // 카드 t570(REQ-LDBEAT-024(e)) — 편집 칸이 보고 있는 L·R 자식 줄(없으면
@@ -1992,7 +1998,7 @@ export function BeatGrid({
   // 큐잉을 풀어 즉시 시작한다. 일시정지는 `playbackSeconds`를 그대로 둔다
   // (멈춘 자리부터 이어 재생 — AC-LDBEAT-024(d)).
   const togglePlay = () => {
-    // 카드 t578 — 「콘솔 같이」 켬: ❚❚ 는 음원을 멈추고 콘솔 타임코드도 끈다. 멈춘 뒤에는 아무것도
+    // 카드 t578·PR 1 — 「콘솔 같이」 켬: ❚❚ 는 음원을 멈추고 콘솔 타임코드만 멈춘다(시퀀스는 그대로). 멈춘 뒤에는 아무것도
     // 다시 시작하지 않는다 — 걸어 둔 음원 시작 타이머와 콘솔 시작 시각을 지운다.
     // ▶ 는 여기서 음원을 틀지 않는다 — 서버 응답(아래 `resumeConsoleAudio`)이 지연 뒤 튼다.
     if (consoleFollow && consoleFollowAvailable) {
@@ -2008,7 +2014,9 @@ export function BeatGrid({
         relay.stopPressedAgainst = sendStatus;
         relay.stopBusyAt = busyCount;
         relay.playQueued = false;
-        onConsoleStop?.();
+        // PR 1 — ❚❚ 는 타임코드만 멈춘다. 그 뒤 ▶ 는 멈춘 자리에서 이어 간다(`timecodePaused`).
+        relay.timecodePaused = true;
+        onConsolePause?.();
         return;
       }
       if (relay.awaiting) return;
@@ -2016,8 +2024,8 @@ export function BeatGrid({
         relay.playQueued = true;
         return;
       }
-      // 새로 누른 ▶ 는 콘솔 타임코드를 처음부터 다시 돌린다 — 앞 실행에 걸어 둔 음원 시작 예약은 거두고
-      // 이번 응답만 따른다(옛 시작 시각으로 음원이 먼저 트는 일이 없게).
+      // ▶ 는 콘솔 타임코드를 다시 돌린다 — 처음부터(`Top`+`Go`), 또는 ❚❚ 로 멈춘 뒤라면 멈춘 자리부터(`Go`만).
+      // 앞 실행에 걸어 둔 음원 시작 예약은 거두고 이번 응답만 따른다(옛 시작 시각으로 음원이 먼저 트는 일이 없게).
       if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
       consoleAudioTimerRef.current = null;
       relay.responseAtMs = null;
@@ -2028,7 +2036,10 @@ export function BeatGrid({
       relay.awaiting = true;
       relay.awaitingBusyAt = busyCount;
       relay.pressedAgainst = sendStatus;
-      onConsolePlay?.();
+      // PR 1 — 멈춘 자리에서 이어 가면 음원도 그 자리(`playbackSeconds`)에서 잇는다. 처음부터면 0.
+      relay.startSeconds = relay.timecodePaused ? playbackSeconds : 0;
+      if (relay.timecodePaused) onConsoleResume?.();
+      else onConsolePlay?.();
       return;
     }
     if (playing) {
@@ -2082,6 +2093,8 @@ export function BeatGrid({
   // 재생한다(mockup `bTop`의 "재생 중이면 멈췄다 다시 시작" 과 같은
   // 결과 — 끊김 없이 0초부터). 멈춰 있으면 ▶ 가 그 자리(0초)부터 잇는다.
   const rewindToStart = () => {
+    // PR 1 — ⏮ 은 처음이다. 멈춰 둔 타임코드도 이어 가지 않고, 다음 ▶ 는 처음부터 잇는다.
+    relay.timecodePaused = false;
     setPlaybackSeconds(0);
     resumeFollow();
     if (playing) {
@@ -2168,16 +2181,19 @@ export function BeatGrid({
       setConsoleFollowError(CONSOLE_DELAY_MISSING_MESSAGE);
       return;
     }
-    const position = consoleAudioPositionSeconds(responseAt, delay, Date.now());
-    if (position < 0) {
-      setPlaybackSeconds(0);
+    // PR 1 — 이어 가기는 멈춘 자리(`startSeconds`)에서 잇는다. 처음부터 재생은 0이다.
+    const base = relay.startSeconds;
+    const elapsed = consoleAudioPositionSeconds(responseAt, delay, Date.now());
+    if (elapsed < 0) {
+      setPlaybackSeconds(base);
       if (consoleAudioTimerRef.current !== null) clearTimeout(consoleAudioTimerRef.current);
       consoleAudioTimerRef.current = setTimeout(() => {
         consoleAudioTimerRef.current = null;
         resumeRef.current();
-      }, -position * 1000);
+      }, -elapsed * 1000);
       return;
     }
+    const position = base + elapsed;
     if (relay.audioStarted) return;
     const audio = audioRef.current;
     if (!audio) return;
@@ -2336,7 +2352,8 @@ export function BeatGrid({
         relay.responseAtMs = null;
         relay.audioStarted = false;
         // 전체 실행 G-22 — 콘솔 타임코드는 곡 끝에서 스스로 멈추지 않았다(계속 돌며 색이 바뀜).
-        // 「콘솔 같이」면 ❚❚ 와 같은 정지를 보낸다.
+        // 「콘솔 같이」면 시퀀스까지 끄는 정지 묶음을 보낸다(PR 1 부터 ❚❚ 는 타임코드만 멈춘다).
+        relay.timecodePaused = false;
         if (shouldStopConsoleAtSongEnd(relay)) onConsoleStopRef.current?.();
         return;
       }
@@ -2605,6 +2622,11 @@ export function BeatGrid({
     const target = Math.max(grid.bar_range.start, Math.min(maxBar, bar));
     resumeFollow();
     setBarCursor({ bar: target, anchor: selected });
+    // PR 1 — 일시정지 중 마디를 누르면 그 마디의 콘솔 상태로도 간다(기존 「이 마디 콘솔에서 보기」 Goto).
+    // 재생 위치는 멈춘 자리에 그대로 둔다 — 이어 가기(▶)는 타임코드 커서부터 잇는다.
+    if (!playing && consoleFollow && consoleFollowAvailable && relay.timecodePaused) {
+      onPreviewBar?.(target);
+    }
     if (playing) {
       const targetSeconds = barToSeconds(target, secondsPerBar, barZeroStartSeconds);
       if (targetSeconds !== null) {
@@ -2664,7 +2686,14 @@ export function BeatGrid({
         barRange={{ start: grid.bar_range.start, end: maxBar }}
         onBarChange={jumpToBar}
         onPreviewBar={onPreviewBar}
-        onPreviewOff={onPreviewOff}
+        onPreviewOff={
+          onPreviewOff &&
+          (() => {
+            // PR 1 — ■ 끄기는 정지 묶음이다. 멈춰 둔 타임코드도 이어 가지 않는다.
+            relay.timecodePaused = false;
+            onPreviewOff();
+          })
+        }
         onApply={requestApply}
         applyProgress={applyProgressText}
         onApplyProgressClick={approvalPending ? onApprovalNoteClick : undefined}

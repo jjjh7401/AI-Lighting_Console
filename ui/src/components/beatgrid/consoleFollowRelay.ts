@@ -40,6 +40,12 @@ export interface ConsoleFollowRelay {
   stopBusyAt: number;
   /** 정지 처리 중에 ▶ 가 눌렸다 — 정지가 끝나면 그 재생을 보낸다. */
   playQueued: boolean;
+  /** PR 1 — ❚❚ 로 콘솔 타임코드를 멈춘 뒤 아직 이어 가지 않았는가. 참이면 다음 ▶ 는 처음으로 되감지 않고
+   * `Go Timecode`만 보내 멈춘 자리부터 잇는다. 콘솔 재생이 성공하면 거둔다. 처음부터 재생·■ 끄기·곡 끝·⏮ 처음에서도 거둔다. */
+  timecodePaused: boolean;
+  /** PR 1 — 지금 콘솔 재생이 시작한 곡 위치(초). 처음부터 재생은 0, 이어 가기는 멈춘 자리다. 음원은 이 자리에서
+   * 콘솔→음원 지연만큼 늦춰 튼다(`resumeConsoleAudio`). */
+  startSeconds: number;
 }
 
 /** 재생 요청이 `busy` 로 거절됐을 때 보이는 문구. */
@@ -76,6 +82,8 @@ export function createConsoleFollowRelay(): ConsoleFollowRelay {
     stopPressedAgainst: null,
     stopBusyAt: 0,
     playQueued: false,
+    timecodePaused: false,
+    startSeconds: 0,
   };
 }
 
@@ -111,7 +119,11 @@ export function observeConsoleRunStatus(relay: ConsoleFollowRelay, status: BeatG
   if (status === null || status === relay.runStatusSeen) return false;
   relay.runStatusSeen = status;
   let next = relay.consoleMayRun;
-  if (status.last_action === "console_play" && status.ok) next = true;
+  if (status.last_action === "console_play" && status.ok) {
+    next = true;
+    // PR 1 — 처음부터든 이어 가기(`Go`)든 콘솔이 돌기 시작했으면 일시정지는 끝났다.
+    relay.timecodePaused = false;
+  }
   if (status.last_action === "console_stop" && status.ok) next = false;
   if (next === relay.consoleMayRun) return false;
   relay.consoleMayRun = next;

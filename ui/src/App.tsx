@@ -443,6 +443,8 @@ export default function App() {
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridConsolePlay,
+    sendBeatGridConsolePause,
+    sendBeatGridConsoleResume,
     sendBeatGridConsoleStop,
     sendBeatGridStageRequest,
     sendSongAudioLinkRequest,
@@ -1329,6 +1331,8 @@ export default function App() {
             onPreviewBar={sendBeatGridPreview}
             onPreviewOff={sendBeatGridPreviewOff}
             onConsolePlay={sendBeatGridConsolePlay}
+            onConsolePause={sendBeatGridConsolePause}
+            onConsoleResume={sendBeatGridConsoleResume}
             onConsoleStop={sendBeatGridConsoleStop}
             sendStatus={state.beatGridSendStatus}
             consoleFollowRelay={consoleFollowRelay}
