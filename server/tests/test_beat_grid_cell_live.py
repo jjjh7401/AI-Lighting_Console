@@ -40,6 +40,7 @@ from server.design.beat_grid_cell_live import (
     CellLiveRefused,
     command_track_index,
     console_tracks_for_groups,
+    cue_event_seconds,
     move_bundle_allowed,
     move_record_tracks,
     move_snapshot_keys,
@@ -601,39 +602,33 @@ def _timed_cue(bar: int, *, trigger_beat: object = None) -> dict:
 
 class TestCueEventSeconds:
     def test_the_event_is_the_bar_start_plus_the_console_lead(self) -> None:
-        seconds = cell_live_module.cue_event_seconds(
-            _timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD
-        )
+        seconds = cue_event_seconds(_timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD)
         assert seconds == pytest.approx(1.5 + 2 * 2 + 3.002)
 
     def test_a_trigger_beat_pushes_the_event_later_inside_the_bar(self) -> None:
         # 3박에서 트리거 — 마디 시작에서 두 박(1초) 뒤다.
-        seconds = cell_live_module.cue_event_seconds(
+        seconds = cue_event_seconds(
             _timed_cue(3, trigger_beat=3), 3, timing=_TIMING, lead_seconds=_LEAD
         )
         assert seconds == pytest.approx(1.5 + 2 * 2 + 1.0 + 3.002)
 
     def test_the_first_beat_is_no_offset(self) -> None:
-        first = cell_live_module.cue_event_seconds(
+        first = cue_event_seconds(
             _timed_cue(3, trigger_beat=1), 3, timing=_TIMING, lead_seconds=_LEAD
         )
-        plain = cell_live_module.cue_event_seconds(
-            _timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD
-        )
+        plain = cue_event_seconds(_timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD)
         assert first == plain
 
     def test_the_same_cue_is_timed_at_whichever_bar_it_is_asked_about(self) -> None:
         # 옮긴 뒤의 시각은 같은 칸(트리거 박은 그대로)을 새 마디로 물어서 얻는다.
         cue = _timed_cue(5, trigger_beat=2)
-        old = cell_live_module.cue_event_seconds(cue, 5, timing=_TIMING, lead_seconds=_LEAD)
-        new = cell_live_module.cue_event_seconds(cue, 6, timing=_TIMING, lead_seconds=_LEAD)
+        old = cue_event_seconds(cue, 5, timing=_TIMING, lead_seconds=_LEAD)
+        new = cue_event_seconds(cue, 6, timing=_TIMING, lead_seconds=_LEAD)
         assert new - old == pytest.approx(2.0)
 
     def test_the_pickup_bar_is_timed_when_its_beats_are_known(self) -> None:
         timing = SongTiming(bpm=120.0, beats_per_bar=4, downbeat_bar1_seconds=1.5, pickup_beats=2.0)
-        seconds = cell_live_module.cue_event_seconds(
-            _timed_cue(0), 0, timing=timing, lead_seconds=_LEAD
-        )
+        seconds = cue_event_seconds(_timed_cue(0), 0, timing=timing, lead_seconds=_LEAD)
         assert seconds == pytest.approx(1.5 - 1.0 + 3.002)
 
     @pytest.mark.parametrize(
@@ -659,17 +654,17 @@ class TestCueEventSeconds:
     )
     def test_a_timing_that_cannot_give_a_time_is_refused(self, kwargs: dict) -> None:
         with pytest.raises(CellLiveRefused):
-            cell_live_module.cue_event_seconds(_timed_cue(3), 3, **kwargs)
+            cue_event_seconds(_timed_cue(3), 3, **kwargs)
 
     def test_the_pickup_bar_without_its_beats_is_refused(self) -> None:
         with pytest.raises(CellLiveRefused, match="0마디"):
-            cell_live_module.cue_event_seconds(_timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD)
+            cue_event_seconds(_timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD)
 
     @pytest.mark.parametrize("trigger_beat", [0, 5, -1, True, 2.0, "2"])
     def test_a_trigger_beat_the_emitter_would_block_is_refused(self, trigger_beat: object) -> None:
         # 에미터는 이 칸을 막아 이벤트를 만들지 않는다 — 옮길 이벤트도 없다.
         with pytest.raises(CellLiveRefused, match="trigger_beat"):
-            cell_live_module.cue_event_seconds(
+            cue_event_seconds(
                 _timed_cue(3, trigger_beat=trigger_beat), 3, timing=_TIMING, lead_seconds=_LEAD
             )
 
@@ -693,7 +688,7 @@ class TestCueEventSeconds:
         )
         emitted_ms = emitted.tracks[0].cues[0].trigger_ms
         assert emitted_ms is not None
-        seconds = cell_live_module.cue_event_seconds(cue, bar, timing=timing, lead_seconds=_LEAD)
+        seconds = cue_event_seconds(cue, bar, timing=timing, lead_seconds=_LEAD)
         assert round(seconds * 1000) == emitted_ms
         text = _format_seconds(round(seconds * 1000))
         event = f"Store Property 'Time' {text} 'AbsTime' {text} 'Token' 'Go+'"
@@ -756,21 +751,17 @@ _REFUSALS = [
         id="snapshot-cell-moved-twice",
     ),
     pytest.param(
-        lambda: cell_live_module.cue_event_seconds(
-            _timed_cue(3), 3, timing=None, lead_seconds=_LEAD
-        ),
+        lambda: cue_event_seconds(_timed_cue(3), 3, timing=None, lead_seconds=_LEAD),
         id="event-no-timing",
     ),
     pytest.param(
-        lambda: cell_live_module.cue_event_seconds(
+        lambda: cue_event_seconds(
             _timed_cue(3, trigger_beat=9), 3, timing=_TIMING, lead_seconds=_LEAD
         ),
         id="event-bad-trigger-beat",
     ),
     pytest.param(
-        lambda: cell_live_module.cue_event_seconds(
-            _timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD
-        ),
+        lambda: cue_event_seconds(_timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD),
         id="event-pickup-beats-unknown",
     ),
 ]

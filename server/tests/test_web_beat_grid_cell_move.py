@@ -751,6 +751,33 @@ class TestEventsFoundByTime:
         assert _console_event_ms(h.console, "BACK") == [8502, 11000, 15502, 20502]
 
 
+# == 옮길 자리에 이미 이벤트가 있는 경우 ================================================
+
+
+class TestTargetTimeAlreadyTaken:
+    @staticmethod
+    def _tree_with_stray_event(stray_ms: int) -> dict:
+        # 장부(소유 기록·칸 기록)에는 없는 이벤트 — 콘솔이 장부와 어긋난 경우다.
+        event_ms = _emitted_event_ms(_tracks())
+        event_ms["BACK"] = sorted([*event_ms["BACK"], stray_ms])
+        return _console_tree(event_ms)
+
+    @pytest.mark.parametrize("stray_ms", [15502, 15505, 15495], ids=str)
+    def test_an_event_already_at_the_target_time_refuses_the_move(
+        self, tmp_path, stray_ms: int
+    ) -> None:
+        # 5마디 칸이 가는 자리(15.502초)에 이벤트가 있으면 같은 시각에 Go+ 가 둘 선다.
+        h = _build(tmp_path, tree=self._tree_with_stray_event(stray_ms))
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+        _assert_refused_before_sending(h, event, "BACK 5마디", "이미 다른 이벤트")
+
+    def test_an_event_just_outside_the_same_time_tolerance_does_not_block(self, tmp_path) -> None:
+        h = _build(tmp_path, tree=self._tree_with_stray_event(15520))
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+        assert event["ok"] is True
+        assert _console_event_ms(h.console, "BACK") == [8502, 15502, 15520, 20502]
+
+
 # == 소유하지 않은 타임코드는 건드리지 않는다 ==============================================
 
 
@@ -923,6 +950,41 @@ class TestEditsMadeWhileTheCardWasOpen:
         assert ("BACK", 6) in h.store.beat_grid_snapshots[h.before["key"]]
         assert event["pending_apply_count"] == 1  # 그래서 이 칸은 미반영으로 센다
         assert h.store.cell_live_approval.covers(_MOVE)  # 승인된 줄은 모두 나갔다
+
+
+# == 예상하지 못한 오류 — 던지지 않고 사실대로 알린다 =====================================
+
+
+class TestUnexpectedErrors:
+    @staticmethod
+    def _explode(*args: object, **kwargs: object) -> None:
+        raise RuntimeError("boom")
+
+    def test_an_error_while_sending_is_reported_and_commits_nothing(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        h = _build(tmp_path)
+        monkeypatch.setattr(h.session, "_dispatch_declared", self._explode)
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+        assert event["ok"] is False
+        assert "예기치 못한 오류" in event["reason"]
+        assert "boom" in event["reason"]
+        assert "⇪ 전체 반영" in event["reason"]
+        assert _status(h) == event
+        assert h.console.executed == []
+        assert not h.store.cell_live_approval.covers(_MOVE)
+        _assert_untouched(h)
+
+    def test_an_error_while_committing_is_still_reported(self, tmp_path, monkeypatch) -> None:
+        # 줄은 이미 나갔다 — 던지면 화면은 아무것도 모른 채 콘솔과 어긋난다.
+        h = _build(tmp_path)
+        monkeypatch.setattr(h.session, "_draft_badge", self._explode)
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+        assert h.console.executed == [LINE_BACK_5_TO_6]
+        assert event["ok"] is False
+        assert "예기치 못한 오류" in event["reason"]
+        assert "boom" in event["reason"]
+        assert _status(h) == event
 
 
 # == 옮긴 뒤 콘솔의 이벤트는 같은 격자를 다시 반영했을 때와 같다 ============================

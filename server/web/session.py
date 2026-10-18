@@ -77,6 +77,18 @@ from server.design.beat_grid import (
     preset_pool_no,
     split_empty_preset_holds,
 )
+from server.design.beat_grid_cell_edit import BeatGridCellEditError, row_move_many
+from server.design.beat_grid_cell_live import (
+    SCOPE_MOVE,
+    CellLiveRefused,
+    console_tracks_for_groups,
+    cue_event_seconds,
+    move_bundle_allowed,
+    move_record_tracks,
+    move_snapshot_keys,
+    owned_timecode_numbers,
+    parse_event_seconds,
+)
 from server.design.beat_grid_color_presets import (
     attach_color_rgb_to_drawer,
     color_preset_groups,
@@ -192,6 +204,11 @@ from server.design.beat_grid_suggestion import (
     SuggestionSource,
 )
 from server.design.beat_grid_suggestion_rules import ArrangementRuleSuggestionSource
+from server.design.beat_grid_tc_cell import (
+    TcCellIndexError,
+    plan_tc_cell_commands,
+    tc_track_container,
+)
 from server.design.beat_grid_ui_values import (
     attach_beat_grid_ui_values,
     attach_section_kinds,
@@ -392,6 +409,7 @@ from server.orchestrator.tools import (
 from server.orchestrator.write_reason import showfile_write_risk
 from server.prechk.query import read_properties
 from server.presets.store import preset_store_commands as _preset_store_commands
+from server.rig.paging import paged_children
 from server.safety.approval import ApprovalRequest
 from server.safety.audit import AuditLog
 from server.safety.gate import (
@@ -3949,6 +3967,61 @@ _BEAT_GRID_CONSOLE_UNREAD_MESSAGE = (
     "콘솔 시퀀스를 읽지 못해 재생·정지를 보내지 않았습니다 — "
     "콘솔 연결을 확인한 뒤 다시 눌러 주세요."
 )
+
+# SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔 타임코드 이벤트에 바로 반영(``beat_grid_cell_edit``).
+#: 승인 카드에 올리는 문구 — 무엇이 바뀌고, 이 승인이 어디까지 쓰이는지 밝힌다.
+_CELL_LIVE_CARD_TEXT = (
+    "칸 편집 바로 반영 — 칸을 옮기면 콘솔의 이벤트 시각도 바로 바뀝니다. "
+    "이 승인은 이 서버를 켜 둔 동안 옮기기에만 씁니다."
+)
+#: 이미 승인된 범위로 보낼 때 감사 기록에 남는 사유(이때는 카드가 뜨지 않는다).
+_CELL_LIVE_SESSION_REASON = (
+    "칸 옮기기 — 이 서버를 켜 둔 동안 옮기기에만 쓰는 승인(SPEC-LDRHYTHM-001)"
+)
+_CELL_LIVE_NO_GRID_MESSAGE = "이 곡의 격자가 없습니다"
+_CELL_LIVE_NO_RECORD_MESSAGE = (
+    "이 곡은 아직 콘솔에 보낸 기록이 없어 칸을 바로 옮길 수 없습니다. ⇪ 전체 반영을 먼저 해 주세요"
+)
+_CELL_LIVE_NO_TRACK_MESSAGE = "콘솔에서 이 줄의 트랙을 찾지 못했습니다"
+_CELL_LIVE_NO_EVENT_MESSAGE = "콘솔의 이벤트를 시각으로 찾지 못해 옮기지 않았습니다"
+#: 두 이벤트 시각을 「같다」고 보는 오차(초) — 송신 직전 재확인과 옮길 자리의 겹침 검사가 쓴다.
+#: 이벤트를 시각으로 찾는 오차(``beat_grid_tc_cell``)와 같은 값이다.
+_CELL_LIVE_SAME_TIME_SECONDS = 0.01
+#: 계획한 줄이 고치는 이벤트 자리 — ``move_bundle_allowed`` 를 통과한 줄만 여기로 온다.
+_CELL_LIVE_LINE = re.compile(
+    r"Set Timecode (?P<timecode>[0-9]+)\.1\.(?P<track>[0-9]+)\.1\.1\.(?P<event>[0-9]+) Property "
+)
+
+
+def _is_bar_number(value: object) -> bool:
+    """1 이상의 정수 마디인가 — ``bool`` 은 정수로 치지 않는다(``True`` 가 1마디로 새지 않게)."""
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+@dataclass(frozen=True)
+class _CellMoveEvent:
+    """보낼 줄 하나가 고치는 콘솔 이벤트 — 송신 직전 재확인이 이 자리를 다시 읽는다."""
+
+    path: str
+    seconds: float
+    label: str
+
+
+@dataclass(frozen=True)
+class _CellMovePlan:
+    """칸 옮기기 한 번의 계획 — 콘솔에 보낼 줄과, 줄이 다 나갔을 때 확정할 장부.
+
+    ``record``·``snapshot`` 은 보내기 **전에** 만들어 둔 옮긴 뒤의 소유 기록·칸 기록이다. 확정할 때
+    거절될 일이 없도록 검증을 보내기 전에 끝낸다."""
+
+    store: SongTimelineStore
+    moves: tuple[tuple[str, int, int], ...]
+    commands: tuple[str, ...]
+    events: tuple[_CellMoveEvent, ...]
+    song_key: tuple[object, object]
+    record_key: tuple[object, object]
+    record: dict[str, object]
+    snapshot: dict[BeatGridCellKey, object] | None
 
 
 #: 승인 카드 머리 — 「콘솔 같이」 송신이 승인을 받는 동안에만 값이 있다(WT-approval-card-text).
@@ -13445,6 +13518,462 @@ class ChatSession:
         """PR 1 ▶(일시정지 뒤) — ``Go Timecode N`` 만 보내 타임코드 커서부터 잇는다.
         처음부터 재생(``beat_grid_console_play``, ``Top`` + ``Go``)과 달리 되감지 않는다."""
         return self._beat_grid_console_transport("console_play", ("Go",))
+
+    # -- SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔 타임코드 이벤트에 바로 반영 -----------------
+    #
+    # 순서: 격자 규칙 → 소유 기록 → 칸의 콘솔 시각 계산 → 콘솔 읽기(트랙·이벤트) → 줄 계획 →
+    # 허용 목록 → 옮긴 뒤의 기록 만들기 → (승인 카드 또는 승인된 범위로) 송신 → 다 나갔을 때만 확정.
+    # 송신 앞의 단계는 읽기뿐이라 거절하면 아무것도 바뀌지 않는다. 확정에 쓸 새 기록은 송신 전에
+    # 만들어 두어 확정 때 거절될 일이 없다. 거절·실패의 사유는 모두 한국어 문장으로
+    # ``beat_grid_send_status`` 에 실린다.
+
+    def beat_grid_cell_edit(self, ops: Sequence[Mapping[str, object]]) -> dict:
+        """칸을 옮기면 콘솔의 그 칸 타임코드 이벤트 시각도 바로 옮긴다.
+
+        ``ops`` 는 ``{"op": "move", "group_name", "bar", "to_bar"}`` 목록이다. 칸이 서는 시각은
+        에미터와 같은 식으로 계산하고(``cue_event_seconds``), 이벤트 번호는 읽은 목록에서
+        **시각으로** 찾는다. 보낼 줄은 ``Set Timecode T.1.K.1.1.N Property 'Time' S`` 한 꼴뿐이고,
+        이 곡이 소유한 타임코드·트랙이 아니면 보내지 않는다(``move_bundle_allowed``).
+
+        옮기기 범위를 아직 승인받지 않았으면 승인 카드를 한 번 묻고(송신 직전에 이벤트 시각을 다시
+        읽어 그대로일 때만 나간다), 줄이 모두 나가면 이 서버를 켜 둔 동안 옮기기 범위를 승인으로
+        남긴다. 이미 승인된 범위면 카드 없이 같은 줄만 보낸다. 줄이 **모두** 나갔을 때만 격자·소유
+        기록·칸 기록을 함께 확정한다 — 거절·실패하면 이 셋은 그대로이고, 사유를 상태로 알린다."""
+        try:
+            plan = self._plan_cell_moves(ops)
+        except CellLiveRefused as error:
+            return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=str(error))
+        try:
+            refusal = self._send_cell_moves(plan)
+            if refusal is None:
+                return self._commit_cell_moves(plan)
+        except Exception as error:  # noqa: BLE001 — 콘솔에 얼마나 나갔는지 모르므로 사실대로 알린다
+            _LOG.exception("칸 옮기기 송신·확정 중 예외")
+            return self._beat_grid_send_status(
+                last_action="cell_edit",
+                ok=False,
+                reason=(
+                    "칸 옮기기 중 예기치 못한 오류가 났습니다 — 콘솔에 일부 나갔을 수 있으니 "
+                    f"콘솔을 확인하고 ⇪ 전체 반영으로 맞춰 주세요: {error}"
+                ),
+            )
+        return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=refusal)
+
+    @staticmethod
+    def _cell_moves_from_ops(
+        ops: Sequence[Mapping[str, object]],
+    ) -> tuple[tuple[str, int, int], ...]:
+        """``ops`` 를 ``(줄, 옛 마디, 새 마디)`` 로 — 줄별로 묶고 줄과 항목의 순서는 받은 대로 둔다.
+
+        이 길은 옮기기만 한다. 줄 이름이 없거나 마디가 1 이상의 정수가 아니거나 옛 마디와 새 마디가
+        같은 항목은 거절한다(같은 마디로 옮기는 것은 옮기기가 아니다)."""
+        grouped: dict[str, list[tuple[int, int]]] = {}
+        for op in ops:
+            if not isinstance(op, Mapping) or op.get("op") != "move":
+                raise CellLiveRefused("이 버전은 칸 옮기기만 지원합니다")
+            group, bar, to_bar = op.get("group_name"), op.get("bar"), op.get("to_bar")
+            if (
+                not isinstance(group, str)
+                or not group.strip()
+                or not _is_bar_number(bar)
+                or not _is_bar_number(to_bar)
+            ):
+                raise CellLiveRefused(
+                    "옮기기 항목이 올바르지 않습니다 — 줄 이름과 1 이상의 정수 마디가 있어야 합니다"
+                )
+            if bar == to_bar:
+                raise CellLiveRefused(
+                    f"'{group}' 줄 {bar}마디의 칸을 같은 마디로 옮길 수는 없습니다"
+                )
+            grouped.setdefault(group, []).append((bar, to_bar))  # type: ignore[arg-type]
+        if not grouped:
+            raise CellLiveRefused("옮길 칸을 고르지 않았습니다")
+        return tuple(
+            (group, bar, to_bar) for group, pairs in grouped.items() for bar, to_bar in pairs
+        )
+
+    @staticmethod
+    def _cell_moved_grid(
+        grid: Mapping[str, object], moves: Sequence[tuple[str, int, int]]
+    ) -> dict[str, object]:
+        """``moves`` 대로 칸을 옮긴 격자 사본 — 줄마다 ``row_move_many`` 의 규칙으로 판정한다.
+
+        줄이 격자에 없거나 규칙을 어기면 ``CellLiveRefused``(줄 이름을 붙여 한국어 사유를 싣는다).
+        입력 격자는 고치지 않는다. 계획할 때(거절 판정)와 확정할 때(지금 저장된 격자에 다시 적용)가
+        같은 이 함수를 쓴다."""
+        pairs: dict[str, list[tuple[int, int]]] = {}
+        for group, bar, to_bar in moves:
+            pairs.setdefault(group, []).append((bar, to_bar))
+        tracks: list[object] = []
+        found: set[str] = set()
+        for track in grid.get("tracks") or []:  # type: ignore[attr-defined]
+            group = str(track.get("group_name")) if isinstance(track, Mapping) else None
+            if group is None or group not in pairs:
+                tracks.append(track)
+                continue
+            try:
+                cues = row_move_many(track.get("cues") or [], pairs[group])
+            except BeatGridCellEditError as error:
+                raise CellLiveRefused(f"'{group}' 줄 — {error}") from error
+            tracks.append({**track, "cues": cues})
+            found.add(group)
+        absent = [group for group in pairs if group not in found]
+        if absent:
+            raise CellLiveRefused(f"이 줄이 격자에 없습니다: {', '.join(absent)}")
+        return {**grid, "tracks": tracks}
+
+    def _cell_live_property(self, path: str, name: str) -> object | None:
+        """콘솔 속성 하나의 값 — 콘솔이 못 읽었다고 답하면 ``None``. 읽기 자체가 실패하면
+        (시간 초과 등) ``CellLiveRefused``: 모르는 것을 없는 것으로 보고 계획을 세우지 않는다."""
+        try:
+            payload = self._rig_capability_port.query_properties(path, (name,))
+        except Exception as error:  # noqa: BLE001 — 읽기 실패는 모두 같은 거절이다
+            raise CellLiveRefused(
+                f"콘솔에서 {path} 의 {name} 을(를) 읽지 못했습니다: {error}"
+            ) from error
+        reads = payload.get("reads") if isinstance(payload, Mapping) else None
+        for read in reads or ():
+            if isinstance(read, Mapping) and read.get("ok") and read.get("n") == name:
+                return read.get("v")
+        return None
+
+    def _cell_live_children(self, path: str, what: str) -> list[dict]:
+        """``path`` 의 자식 전부(창을 이어 읽는다). 못 읽었거나 끝까지 읽지 못했으면
+        ``CellLiveRefused`` — 잘린 목록을 전부인 양 쓰지 않는다."""
+        port = self._rig_capability_port
+        try:
+            children, truncated = paged_children(port, path, port.query_state(path))
+        except Exception as error:  # noqa: BLE001 — 읽기 실패는 모두 같은 거절이다
+            raise CellLiveRefused(f"콘솔의 {what}을(를) 읽지 못했습니다: {error}") from error
+        if truncated:
+            raise CellLiveRefused(f"콘솔의 {what}을(를) 끝까지 읽지 못했습니다")
+        return children
+
+    def _cell_live_read_tracks(self, timecodes: Sequence[int]) -> list[tuple[int, int, object]]:
+        """소유한 타임코드마다 트랙을 읽는다 — ``(타임코드, 상태 자리, TARGET 원값)`` 목록.
+
+        트랙은 2번 자리부터다(1번은 마커). 소유하지 않은 타임코드는 읽지 않는다."""
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        reads: list[tuple[int, int, object]] = []
+        for timecode in timecodes:
+            base = f"{pool}/{timecode}/1"
+            for child in self._cell_live_children(base, f"타임코드 {timecode} 트랙 목록"):
+                index = child.get("i")
+                if (
+                    isinstance(index, int)
+                    and not isinstance(index, bool)
+                    and index >= 2
+                    and child.get("class") in (None, "Track")
+                ):
+                    reads.append(
+                        (timecode, index, self._cell_live_property(f"{base}/{index}", "TARGET"))
+                    )
+        return reads
+
+    def _cell_live_read_events(
+        self, timecode: int, track_number: int
+    ) -> tuple[str, list[tuple[int, float]]]:
+        """트랙 하나의 이벤트 — ``(이벤트 컨테이너 상태 경로, [(번호, 시각 초)])``.
+
+        명령의 트랙 번호 ``K`` 는 상태 자리 ``K + 1`` 이다. 시각을 못 읽은 이벤트가 하나라도 있으면
+        거절한다 — 그 이벤트가 찾는 시각과 같은지 모르면 「정확히 하나」를 말할 수 없다."""
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        container = f"{pool}/{timecode}/1/{track_number + 1}/1/1"
+        events: list[tuple[int, float]] = []
+        for child in self._cell_live_children(
+            container, f"타임코드 {timecode} 트랙 {track_number} 이벤트 목록"
+        ):
+            index = child.get("i")
+            if not isinstance(index, int) or isinstance(index, bool):
+                continue
+            raw = self._cell_live_property(f"{container}/{index}", "TIME")
+            if raw is None:
+                raise CellLiveRefused(
+                    f"콘솔의 타임코드 {timecode} 트랙 {track_number} "
+                    f"이벤트 {index} 의 시각을 읽지 못했습니다"
+                )
+            events.append((index, parse_event_seconds(raw)))
+        return container, events
+
+    def _plan_cell_moves(self, ops: Sequence[Mapping[str, object]]) -> _CellMovePlan:
+        """콘솔을 읽기만 해서 옮기기 계획을 세운다 — 무엇이든 어긋나면 ``CellLiveRefused``."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if store is None or timeline is None:
+            raise CellLiveRefused(_CELL_LIVE_NO_GRID_MESSAGE)
+        moves = self._cell_moves_from_ops(ops)
+        grid = self._beat_grid_view(timeline)
+        self._cell_moved_grid(grid, moves)  # 격자 규칙 — 어긋나면 여기서 끝난다
+
+        song_key = self._beat_grid_song_key(timeline)
+        record = self._beat_grid_song_record()
+        if record is None or not owned_record_has_tracks(record):
+            raise CellLiveRefused(_CELL_LIVE_NO_RECORD_MESSAGE)
+        # 기록은 찾은 열쇠 그대로 다시 적는다(라이브러리에서 불러온 곡은 원래 제목 열쇠에 있다).
+        record_key = song_key
+        if not store.beat_grid_allocation(song_key):
+            record_key = self._beat_grid_title_fallback_key(song_key) or song_key
+
+        # 칸이 콘솔에서 서야 할 시각 — 옛 마디와 새 마디(트리거 박은 그대로).
+        # 콘솔을 읽기 전에 끝낸다.
+        timing = build_song_timing_from_bar_map(timeline.get("bar_map"))
+        cues_at = {
+            str(track.get("group_name")): {cue["bar"]: cue for cue in track.get("cues") or []}
+            for track in grid.get("tracks") or []
+            if isinstance(track, Mapping)
+        }
+        rows: list[tuple[str, int, float, float]] = []
+        for group, bar, to_bar in moves:
+            cue = cues_at[group][bar]
+            try:
+                from_seconds = cue_event_seconds(
+                    cue, bar, timing=timing, lead_seconds=CONSOLE_AUDIO_OFFSET_SECONDS
+                )
+                to_seconds = cue_event_seconds(
+                    cue, to_bar, timing=timing, lead_seconds=CONSOLE_AUDIO_OFFSET_SECONDS
+                )
+            except CellLiveRefused as error:
+                raise CellLiveRefused(f"{group} {bar}마디 — {error}") from error
+            rows.append((group, bar, from_seconds, to_seconds))
+
+        # 콘솔 읽기 — 소유한 타임코드의 트랙만. 옮길 줄마다 그 줄의 시퀀스를 가리키는 트랙을 찾는다.
+        owned_timecodes = owned_timecode_numbers(record)
+        mapping = console_tracks_for_groups(record, self._cell_live_read_tracks(owned_timecodes))
+        groups = list(dict.fromkeys(group for group, *_ in moves))
+        missing = [group for group in groups if group not in mapping]
+        if missing:
+            raise CellLiveRefused(f"{_CELL_LIVE_NO_TRACK_MESSAGE}: {', '.join(missing)}")
+        used = sorted({mapping[group] for group in groups})
+        events_of = {track: self._cell_live_read_events(*track) for track in used}
+
+        commands: list[str] = []
+        labels: list[str] = []
+        targets: list[float] = []
+        for group, bar, from_seconds, to_seconds in rows:
+            timecode, track_number = mapping[group]
+            try:
+                lines = plan_tc_cell_commands(
+                    "move",
+                    tc_track_container(timecode, track_number),
+                    events_of[(timecode, track_number)][1],
+                    from_seconds=from_seconds,
+                    to_seconds=to_seconds,
+                )
+            except TcCellIndexError as error:
+                raise CellLiveRefused(
+                    f"{_CELL_LIVE_NO_EVENT_MESSAGE} — {group} {bar}마디: {error}"
+                ) from error
+            except ValueError as error:
+                raise CellLiveRefused(
+                    f"{group} {bar}마디의 이벤트 시각을 계산할 수 없습니다: {error}"
+                ) from error
+            commands.extend(lines)
+            labels.extend([f"{group} {bar}마디"] * len(lines))
+            targets.extend([to_seconds] * len(lines))
+
+        # 마지막 안전핀 — 이 곡이 소유한 타임코드 가운데, 옮길 줄이 가리키는 트랙의
+        # 이벤트 시각 고치기만 나간다.
+        owned = {
+            timecode: frozenset(track for tc, track in used if tc == timecode)
+            for timecode in owned_timecodes
+        }
+        move_bundle_allowed(commands, owned)
+
+        events: list[_CellMoveEvent] = []
+        moving: set[tuple[tuple[int, int], int]] = set()
+        landing: list[tuple[tuple[int, int], float, str]] = []
+        for line, label, target in zip(commands, labels, targets, strict=True):
+            match = _CELL_LIVE_LINE.match(line)  # 허용 목록을 통과한 줄이라 항상 맞는다
+            if match is None:
+                raise CellLiveRefused(f"계획한 줄의 꼴을 읽지 못했습니다: {line!r}")
+            track = (int(match["timecode"]), int(match["track"]))
+            container, read = events_of[track]
+            seconds = dict(read).get(int(match["event"]))
+            if seconds is None:
+                raise CellLiveRefused(f"계획한 줄이 콘솔에서 읽은 이벤트와 맞지 않습니다: {line!r}")
+            events.append(_CellMoveEvent(f"{container}/{match['event']}", seconds, label))
+            moving.add((track, int(match["event"])))
+            landing.append((track, target, label))
+        # 옮길 자리에 (함께 옮겨 가지 않는) 다른 이벤트가 이미 있으면 같은 시각에 Go+ 가 둘 서서
+        # 큐를 하나 건너뛴다. 장부가 콘솔과 어긋나 있어도 막도록, 방금 읽은 콘솔로 직접 본다.
+        for track, target, label in landing:
+            for number, seconds in events_of[track][1]:
+                if (track, number) not in moving and abs(seconds - target) <= (
+                    _CELL_LIVE_SAME_TIME_SECONDS
+                ):
+                    raise CellLiveRefused(
+                        f"{label} 을(를) 옮길 {target:g}초에 콘솔 트랙에 이미 다른 이벤트가 있어 "
+                        "옮기지 않았습니다 — ⇪ 전체 반영으로 맞춰 주세요"
+                    )
+
+        # 옮긴 뒤의 장부 — 보내기 전에 만들어 둔다. 거절되면 여기서 끝나 아무것도 안 나간다.
+        snapshot = self._beat_grid_snapshots.get(song_key)
+        return _CellMovePlan(
+            store=store,
+            moves=moves,
+            commands=tuple(commands),
+            events=tuple(events),
+            song_key=song_key,
+            record_key=record_key,
+            record=move_record_tracks(record, moves),
+            snapshot=move_snapshot_keys(snapshot, moves) if snapshot is not None else None,
+        )
+
+    def _send_cell_moves(self, plan: _CellMovePlan) -> str | None:
+        """계획한 줄을 콘솔에 보낸다 — 다 나갔으면 ``None``, 아니면 감독이 읽을 한국어 사유.
+
+        옮기기 범위를 이미 승인받았으면 카드 없이 게이트만 거치고, 아니면 승인 카드를 한 번 묻는다.
+        줄이 모두 나간 때만 이 서버를 켜 둔 동안 옮기기 범위를 승인으로 남긴다(거절·실패는 남기지
+        않는다). 일부만 나가고 멈췄으면 사유 끝에 그 줄 수와 맞추는 길을 덧붙인다. 나간 줄은
+        되돌리지 않는다."""
+        approval = plan.store.cell_live_approval
+        approved = approval.covers(frozenset({SCOPE_MOVE}))
+        # 이 메서드는 ``run_instruction`` 체인 밖의 전용 진입점이라 게이트·승인 채널이 읽는 ambient
+        # 세션 키를 스스로 묶는다(``beat_grid_apply`` 와 같은 이유 — 안 묶으면 카드 없이 거절된다).
+        token = bind_session_key(self._session_key)
+        try:
+            if approved:
+                refusal, ran = self._cell_live_send_preapproved(plan.commands)
+            else:
+                refusal, ran = self._cell_live_send_with_card(plan)
+        finally:
+            reset_session_key(token)
+        if refusal is not None:
+            if ran:
+                refusal += (
+                    f" 이미 콘솔에 나간 {ran}줄은 되돌리지 않았습니다 — 격자와 콘솔이 어긋났을 수 "
+                    "있으니 ⇪ 전체 반영으로 맞춰 주세요."
+                )
+            return refusal
+        if not approved:
+            approval.approve(frozenset({SCOPE_MOVE}))
+        return None
+
+    def _cell_live_send_with_card(self, plan: _CellMovePlan) -> tuple[str | None, int]:
+        """승인 카드를 한 번 묻고 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
+
+        승인 직후·실행 직전에 계획한 이벤트들을 다시 읽어, 승인 창이 열린 사이 하나라도 바뀌었으면
+        묶음 전체를 막는다(``BatchRisk.recheck``)."""
+        executed = self._dispatch_declared(
+            ToolCall(
+                id="beat-grid-cell-live",
+                name="run_commands",
+                arguments={"commands": list(plan.commands)},
+            ),
+            risk=BatchRisk(
+                reason=_CELL_LIVE_CARD_TEXT,
+                kind="beat_grid_cell_live",
+                recheck=lambda: self._cell_live_recheck(plan),
+            ),
+        )
+        if not executed.result.is_error:
+            return None, len(plan.commands)
+        ran = sum(1 for outcome in executed.command_outcomes if outcome.status == "executed_ok")
+        return _console_send_refusal(executed.result.content), ran
+
+    def _cell_live_send_preapproved(self, commands: Sequence[str]) -> tuple[str | None, int]:
+        """이미 승인받은 옮기기 범위로 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
+
+        게이트는 그대로 거친다(``execute_preapproved``: 문법·분류·잠금·감사). 일반 승인 창만 다시
+        묻지 않는다. 결과 처리는 ``_beat_grid_send_transport_preapproved`` 와 같다 — 첫 실패에서
+        멈춘다. 이 길은 쇼 백업을 하지 않는다(첫 승인 카드의 송신이 이미 백업했다)."""
+        decision = self._gate.execute_preapproved(
+            list(commands),
+            risk=BatchRisk(reason=_CELL_LIVE_SESSION_REASON, kind="beat_grid_cell_live_session"),
+            showfile_backup=False,
+        )
+        if not decision.cleared:
+            return (
+                _console_send_refusal(
+                    {
+                        "gate_status": decision.status,
+                        "notice": decision.notice,
+                        "commands": [
+                            {"command": d.command, "status": d.status, "reasons": list(d.reasons)}
+                            for d in decision.commands
+                        ],
+                    }
+                ),
+                0,
+            )
+        ran = 0
+        for command in commands:
+            outcome = self._gate.execution_port.execute(command)
+            if not outcome.ok:
+                return (
+                    _console_send_refusal(
+                        {
+                            "commands": [
+                                {"command": command, "status": "failed", "detail": outcome.detail}
+                            ]
+                        }
+                    ),
+                    ran,
+                )
+            ran += 1
+        return None, ran
+
+    def _cell_live_recheck(self, plan: _CellMovePlan) -> str | None:
+        """송신 직전 재확인 — 계획한 이벤트마다 시각을 다시 읽어 그대로인지 본다.
+        어긋나면 그 사유를, 모두 그대로면 ``None`` 을 돌려준다."""
+        for event in plan.events:
+            unread = (
+                f"승인을 기다린 뒤 {event.label} 이벤트의 시각을 다시 읽지 못해 보내지 않았습니다"
+            )
+            try:
+                raw = self._cell_live_property(event.path, "TIME")
+                now = parse_event_seconds(raw) if raw is not None else None
+            except CellLiveRefused as error:
+                return f"{unread}: {error}"
+            if now is None:
+                return unread
+            if abs(now - event.seconds) > _CELL_LIVE_SAME_TIME_SECONDS:
+                return (
+                    f"승인을 기다리는 동안 콘솔의 {event.label} 이벤트 시각이 "
+                    f"{event.seconds:g}초에서 {now:g}초로 바뀌어 아무것도 보내지 않았습니다"
+                )
+        return None
+
+    def _commit_cell_moves(self, plan: _CellMovePlan) -> dict:
+        """줄이 모두 나간 뒤 소유 기록·칸 기록·격자를 확정하고 화면을 새로 그리게 한다.
+
+        장부(소유 기록·칸 기록)는 콘솔이 지금 가진 모습이라 먼저 적는다. 격자는 승인 창이 열려
+        있던 사이 다른 연결이 고쳤을 수 있으므로 계획 때 본 격자가 아니라 **지금 저장된** 격자에
+        같은 옮김을 다시 적용한다(``_beat_grid_record_approval`` 과 같은 이유). 그 사이 옮길 칸이
+        사라졌으면 격자는 그대로 두고 사실대로 알린다. 장부와 어긋난 칸은 「미반영」으로 센다."""
+        store = plan.store
+        store.set_beat_grid_allocation(plan.record_key, plan.record)
+        if plan.snapshot is not None:
+            self._beat_grid_snapshots[plan.song_key] = plan.snapshot
+        current = store.latest
+        try:
+            if current is None:
+                raise CellLiveRefused(_CELL_LIVE_NO_GRID_MESSAGE)
+            grid = self._cell_moved_grid(self._beat_grid_view(current), plan.moves)
+        except CellLiveRefused as error:
+            if current is not None:
+                self._send(
+                    song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(current))
+                )
+            return self._beat_grid_send_status(
+                last_action="cell_edit",
+                ok=False,
+                reason=(
+                    "콘솔의 이벤트는 옮겼지만 그 사이 격자가 바뀌어 격자의 칸은 옮기지 못했습니다"
+                    f"({error}) — 콘솔과 격자가 어긋났으니 ⇪ 전체 반영으로 맞춰 주세요"
+                ),
+            )
+        self._draft_history.record(current)
+        updated = dict(current)
+        updated["beat_grid"] = grid
+        updated = self._draft_badge(
+            updated,
+            depth=self._draft_history.depth,
+            report=[f"{group} {bar}→{to_bar}마디 옮김" for group, bar, to_bar in plan.moves],
+        )
+        store.latest = updated
+        self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
+        return self._beat_grid_send_status(last_action="cell_edit", ok=True)
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.

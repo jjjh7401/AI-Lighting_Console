@@ -6,7 +6,8 @@
 
 - 이 곡이 쓰는 타임코드와, 그룹의 시퀀스를 가리키는 콘솔 트랙. 트랙 번호를 짐작하지 않고 읽은
   TARGET 으로만 찾는다 — 찾지 못한 그룹은 건드리지 않고, 둘 이상이면 거절한다.
-- 이벤트 시각. 유한하고 0 이상인 수만 받는다.
+- 이벤트 시각. 유한하고 0 이상인 수만 받는다. 칸이 콘솔에서 서야 할 시각은 에미터의 식을 그대로
+  옮겨 계산한다(``cue_event_seconds``).
 - 보내려는 명령 줄. 옮기기가 허용하는 단 한 가지 꼴(이 곡이 쓰는 트랙의 이벤트 시각 고치기)과 글자
   하나까지 같을 때만 통과시킨다. 지우기·만들기(Store)·``cd`` 같은 그 밖의 줄은 모두 거절한다.
 - 옮긴 뒤의 장부. 소유 기록(``tracks[줄]["cues"]``)과 칸 기록(스냅샷)에서 옮긴 칸의 마디 열쇠만
@@ -22,7 +23,7 @@ import copy
 import math
 import re
 from collections.abc import Mapping, Sequence
-from typing import TypeGuard
+from typing import Protocol, TypeGuard
 
 from server.design.beat_grid_send import BeatGridCellKey, PartialCellSnapshot, parse_track_target
 
@@ -32,6 +33,7 @@ __all__ = [
     "CellLiveRefused",
     "command_track_index",
     "console_tracks_for_groups",
+    "cue_event_seconds",
     "move_bundle_allowed",
     "move_record_tracks",
     "move_snapshot_keys",
@@ -162,6 +164,65 @@ def parse_event_seconds(text: object) -> float:
     if not math.isfinite(seconds) or seconds < 0:
         raise CellLiveRefused(f"이벤트 시각은 0 이상의 유한한 수여야 합니다: {text!r}")
     return seconds
+
+
+class _SongClock(Protocol):
+    """곡 템포와 마디 시작 시각을 주는 곳 — ``beat_grid_emit.SongTiming`` 이 맞는 모양이다."""
+
+    @property
+    def bpm(self) -> float: ...
+
+    @property
+    def beats_per_bar(self) -> int: ...
+
+    def bar_start_seconds(self, bar: int) -> float | None: ...
+
+
+# @MX:NOTE: [AUTO] 에미터(``beat_grid_emit._emit_cue``·``_entry_plan``)의 TrigTime·Go+ 이벤트 시각
+#   식을 연산 순서까지 그대로 옮겼다 — 반올림 한 번 차이도 이벤트를 시각으로 못 찾게 만든다. 둘이
+#   어긋나지 않는다는 근거는 에미터를 실제로 돌려 견주는 시험이다(``test_beat_grid_cell_live``).
+def cue_event_seconds(
+    cue: Mapping[str, object],
+    bar: int,
+    *,
+    timing: _SongClock | None,
+    lead_seconds: float | None,
+) -> float:
+    """칸 ``cue`` 가 ``bar`` 마디에 섰을 때 콘솔 타임코드 이벤트가 있어야 할 시각(초).
+
+    ``콘솔 지연 + 마디 시작 + 트리거 박 오프셋`` 이다. 오프셋은 ``entry.trigger_beat``(1~마디당
+    박)의 ``(박 - 1) * 60 / bpm`` 이고 없으면 0 이다. 같은 칸을 다른 마디로 물으면 옮긴 뒤의 시각을
+    준다. 에미터가 막는 입력(곡 템포 없음, 계산할 수 없는 마디, 범위를 벗어난 트리거 박)은 이벤트가
+    만들어지지 않는 칸이므로 같은 기준으로 ``CellLiveRefused``. 콘솔 지연을 모를 때도 마찬가지다."""
+    if (
+        timing is None
+        or timing.bpm is None
+        or timing.bpm <= 0
+        or timing.beats_per_bar is None
+        or timing.beats_per_bar <= 0
+    ):
+        raise CellLiveRefused("곡 타이밍(템포·박자)이 없어 칸의 콘솔 시각을 계산할 수 없습니다")
+    if lead_seconds is None:
+        raise CellLiveRefused(
+            "콘솔 음원 지연 값을 읽을 수 없어 칸의 콘솔 시각을 계산할 수 없습니다"
+        )
+    bar_seconds = timing.bar_start_seconds(bar)
+    if bar_seconds is None:
+        raise CellLiveRefused(
+            f"{bar}마디의 시작 시각을 계산할 수 없습니다 "
+            "— 0마디는 못갖춘마디의 박 수를 알아야 합니다"
+        )
+    entry = cue.get("entry")
+    trigger_beat = entry.get("trigger_beat") if isinstance(entry, Mapping) else None
+    offset = 0.0
+    if trigger_beat is not None:
+        if not _is_int(trigger_beat) or not 1 <= trigger_beat <= timing.beats_per_bar:
+            raise CellLiveRefused(
+                f"trigger_beat {trigger_beat!r} 는 1~{timing.beats_per_bar} 박이어야 합니다 "
+                "— 에미터가 이 칸을 막아 콘솔에 옮길 이벤트가 없습니다"
+            )
+        offset = (trigger_beat - 1) * (60.0 / timing.bpm)
+    return lead_seconds + bar_seconds + offset
 
 
 # @MX:NOTE: [AUTO] 콘솔로 나가는 명령 줄의 마지막 안전핀 — 허용 목록(allow-list)이다. 목록 밖은 전부
