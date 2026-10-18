@@ -3141,7 +3141,11 @@ export function BeatGrid({
       ? 0
       : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
   // 「⇪ 콘솔에 반영」 — 칸 단위 반영 배선이 있으면 바뀐 칸만(고른 칸이 있으면 그 가운데 바뀐 칸만) 보낸다.
-  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells, grid.partial_baseline, grid.known_cells);
+  // 보통 클릭으로 고른 편집 칸 하나도 고른 칸이다. 여럿 고르기 목록(`cellSel`)은 비워 둔 채 표시·일괄 바꾸기는 그대로다.
+  // 무대 줄을 고른 때(`stageRows`)는 편집 칸이 따라와도 세지 않는다 — 목록이 비었을 때의 예전 동작을 그대로 쓴다.
+  const applyPicks =
+    pickedCells.length > 0 ? pickedCells : selectedCell && stageRows.length === 0 ? [selectedCell] : [];
+  const applyPlan = partialApplyPlan(grid.unsent_cells, applyPicks, grid.partial_baseline, grid.known_cells);
 
   return (
     <section className="beat-grid" aria-label="박자 격자">

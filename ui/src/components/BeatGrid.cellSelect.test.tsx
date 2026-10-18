@@ -724,6 +724,48 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
     });
   });
 
+  // 보통 클릭으로 칸 하나만 골라도 그 칸이 고른 칸이다 — Shift/Ctrl 로 여럿 고르지 않아도 그 칸만 보낸다.
+  describe("보통 클릭으로 칸 하나만 골랐을 때", () => {
+    it("기록 기준: 누른 칸 하나로 「⇪ 콘솔에 반영」이 켜지고, 그 칸 하나만 보낸다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, RECORD);
+      clickCue(1, 1); // BBB 3마디
+      expect(multiCount()).toBe(0);
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).not.toContain("고른 칸을 먼저 골라 주세요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([["BBB", 3]]);
+    });
+
+    it("칸 기록 기준: 누른 칸이 바뀐 칸이면 그 한 칸만 보낸다 — 다른 바뀐 칸은 빠진다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      clickCue(0, 0); // AAA 1마디 — 바뀐 칸
+      expect(scope()).toBe("고른 1칸 중 바뀐 1칸만 보내요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([["AAA", 1]]);
+    });
+
+    it("칸 기록 기준: 누른 칸이 안 바뀐 칸이면 꺼지고 그렇게 말한다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      clickCue(0, 1); // AAA 3마디 — 안 바뀐 칸
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe("고른 칸 중 바뀐 칸이 없어요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
+
+    it("무대 줄을 고른 뒤에는 편집 칸 하나로 세지 않는다 — 바뀐 칸 전부는 그대로다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      stageClick("BBB");
+      expect(scope()).toBe("바뀐 3칸만 보내요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["AAA", 1],
+        ["BBB", 3],
+        ["CCC", 5],
+      ]);
+    });
+  });
+
   // 칸 단위 반영만 한 곡의 칸 기록은 부분이다 — 서버가 아는 칸을 known_cells 로 싣는다(unsent_cells 는 그 가운데 바뀐 칸).
   // 아는데 안 바뀐 칸은 콘솔과 같아 빼고, 바뀐 칸과 모르는 칸은 보낸다.
   describe("칸 기록이 부분일 때(known_cells)", () => {
@@ -842,13 +884,15 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
       expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
     });
 
-    it("선택을 풀면 다시 꺼진다", () => {
+    it("보통 클릭은 여럿 고른 칸을 비우고, 누른 칸 하나를 고른 칸으로 남긴다", () => {
       setup(THREE_BY_THREE(), {}, RECORD);
       clickCue(0, 0);
       clickCue(2, 1, { shift: true });
       expect(mainApply().disabled).toBe(false);
-      clickCue(1, 1); // 보통 클릭 = 고른 칸 비움
-      expect(mainApply().disabled).toBe(true);
+      clickCue(1, 1); // 보통 클릭 = 여럿 고른 칸을 비우고 이 칸 하나를 고른다
+      expect(multiCount()).toBe(0);
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).toContain("고른 1칸을 보내요");
     });
   });
 
