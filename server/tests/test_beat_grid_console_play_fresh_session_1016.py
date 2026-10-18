@@ -67,7 +67,14 @@ def test_record_under_grid_title_is_found_after_title_changed(tmp_path) -> None:
         timeline=timeline,
         record=(
             ("LOVE ATTACK", timeline["sequence_number"]),
-            {"timecode_number": TIMECODE_NUMBER, "timecode_name": name, "tracks": {}},
+            {
+                "timecode_number": TIMECODE_NUMBER,
+                "timecode_name": name,
+                # WT-play-stale-owner — 타임코드가 가리키는 5번은 이 곡이 쓴 것이다.
+                "tracks": {
+                    "BACK": {"sequence_number": 5, "sequence_name": "LDBEAT BACK", "cues": {}}
+                },
+            },
         ),
     )
     assert session.beat_grid_console_play()["ok"] is True

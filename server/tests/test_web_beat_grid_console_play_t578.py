@@ -35,6 +35,13 @@ def _deps(tmp_path, *, owned: bool) -> tuple[WebDeps, FakeConsole]:
             "children": [{"i": _TIMECODE, "name": _TIMECODE_NAME}],
             "node": {"childCount": 1},
         }
+        # WT-play-stale-owner — 이 곡이 쓴 1번 시퀀스와 그것을 가리키는 타임코드 트랙.
+        state_tree["DataPool/Sequences"] = {"children": [{"i": 1, "name": "LDBEAT BACK"}]}
+        state_tree[f"DataPool/Timecodes/{_TIMECODE}/1"] = {"children": [{"i": 1, "class": "Track"}]}
+        state_tree[f"DataPool/Timecodes/{_TIMECODE}/1/1"] = {
+            "children": [],
+            "props": {"TARGET": "LDBEAT BACK", "NAME": "Track 1"},
+        }
     console = FakeConsole(state_tree=state_tree)
     audit = AuditLog(tmp_path / "audit")
     channel = ApprovalChannel(timeout_seconds=5.0)
@@ -51,7 +58,13 @@ def _deps(tmp_path, *, owned: bool) -> tuple[WebDeps, FakeConsole]:
     if owned:
         deps.song_timeline_store.set_beat_grid_allocation(
             ("LOVE ATTACK", 210),
-            {"timecode_number": _TIMECODE, "timecode_name": _TIMECODE_NAME, "tracks": {}},
+            {
+                "timecode_number": _TIMECODE,
+                "timecode_name": _TIMECODE_NAME,
+                "tracks": {
+                    "BACK": {"sequence_number": 1, "sequence_name": "LDBEAT BACK", "cues": {}}
+                },
+            },
         )
     return deps, console
 

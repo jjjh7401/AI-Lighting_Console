@@ -81,7 +81,7 @@ def test_sixteen_rows_stay_on_one_timecode(tmp_path) -> None:
     assert record.get("extra_timecodes", []) == []
 
 
-def _transport_session(tmp_path, monkeypatch, *, extra_name: str):
+def _transport_session(tmp_path, monkeypatch, *, extra_name: str, extra_target: str = "LDBEAT T2"):
     """이 곡이 TC20 + TC21 로 나눠 반영돼 있는 상태 — 소유 기록과 콘솔 타임코드 이름."""
     from server.web.session import SongTimelineStore
 
@@ -100,13 +100,32 @@ def _transport_session(tmp_path, monkeypatch, *, extra_name: str):
     session, console, approval, _audit = base._new_session(
         tmp_path, store=store, state_tree=base._state_tree()
     )
+    # WT-play-stale-owner — 콘솔: T1(300)은 TC20, T2(301)은 TC21 에 있다.
+    console.state_tree["DataPool/Sequences"] = {
+        "children": [
+            {"i": 300, "name": "LDBEAT T1"},
+            {"i": 301, "name": "LDBEAT T2"},
+            {"i": 302, "name": "LDBEAT T3"},  # 이 곡의 기록에 없는 시퀀스(다른 곡의 것)
+        ]
+    }
+    for number, sequence_name in ((20, "LDBEAT T1"), (21, extra_target)):
+        console.state_tree[f"DataPool/Timecodes/{number}/1"] = {
+            "children": [{"i": 1, "class": "Track"}]
+        }
+        console.state_tree[f"DataPool/Timecodes/{number}/1/1"] = {
+            "children": [],
+            "props": {"TARGET": sequence_name, "NAME": "Track 1"},
+        }
     store.set_beat_grid_allocation(
         session._beat_grid_song_key(store.latest),
         {
             "timecode_number": 20,
             "timecode_name": "LDBEAT Timecode 20",
             "extra_timecodes": [{"timecode_number": 21, "timecode_name": "LDBEAT Timecode 21"}],
-            "tracks": {"T1": {"sequence_number": 300, "sequence_name": "LDBEAT T1", "cues": {}}},
+            "tracks": {
+                "T1": {"sequence_number": 300, "sequence_name": "LDBEAT T1", "cues": {}},
+                "T2": {"sequence_number": 301, "sequence_name": "LDBEAT T2", "cues": {}},
+            },
         },
     )
     sent: list[tuple[str, ...]] = []
@@ -134,6 +153,18 @@ def test_play_and_stop_send_every_owned_timecode(tmp_path, monkeypatch) -> None:
     session._beat_grid_console_transport("console_stop", ("Off",), stop=True)
     assert sent[-1][:2] == ("Off Timecode 20", "Off Timecode 21")
     assert "Off Sequence 300" in sent[-1]
+
+
+def test_an_extra_timecode_pointing_at_another_songs_sequence_is_not_played(
+    tmp_path, monkeypatch
+) -> None:
+    # WT-play-stale-owner — 이름이 맞아도 TC21 이 기록에 없는 시퀀스를 가리키면 건드리지 않는다.
+    session, sent = _transport_session(
+        tmp_path, monkeypatch, extra_name="LDBEAT Timecode 21", extra_target="LDBEAT T3"
+    )
+    session._beat_grid_console_transport("console_play", ("Top", "Go"))
+    assert sent[-1][-2:] == ("Top Timecode 20", "Go Timecode 20")
+    assert not [line for line in sent[-1] if "Timecode 21" in line]
 
 
 def test_an_extra_timecode_renamed_on_the_console_is_not_played(tmp_path, monkeypatch) -> None:

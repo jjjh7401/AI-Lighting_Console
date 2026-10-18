@@ -57,6 +57,16 @@ class FakeConsole:
             raise RuntimeError(f"no such path: {path}")
         return self.state_tree[path]
 
+    def query_properties(self, path: str, property_names, *, offset=None) -> dict:
+        # 카드 WT-play-stale-owner — 노드의 ``props`` 사전을 읽기 응답 모양으로 돌려준다.
+        # 없는 속성은 ``ok: False`` (콘솔이 「property not readable」 을 준 것과 같다).
+        props = (self.state_tree.get(path) or {}).get("props") or {}
+        return {
+            "reads": [
+                {"ok": name in props, "n": name, "v": props.get(name)} for name in property_names
+            ]
+        }
+
 
 class ScriptedApproval:
     """Deterministic approval port; optionally acts during the request."""
