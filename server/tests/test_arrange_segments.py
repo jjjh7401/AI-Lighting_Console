@@ -672,15 +672,24 @@ def test_rhythmic_tracks_per_bar_stay_within_the_layer_caps() -> None:
 
 def test_motion_alternates_between_the_two_movers_and_the_other_holds() -> None:
     # 움직이는 무빙은 구간 안에서 창마다 번갈고, 구간마다 위 무빙(U)부터 다시 센다. 사전이동(MIB)
-    # 쉼 칸이 있는 마디는 그 무빙이 쉬므로 뺀다.
+    # 쉼 칸이 있는 마디는 그 무빙이 쉬므로 뺀다. 곡 첫 창은 감독 결정 D1 대로 두 무빙이 함께 어둡다
+    # (인트로 0~3마디 어둠 + 사전이동). 그 창은 번갈이에서 빼고, 나머지 번갈이 순서는 그대로다.
     draft = _draft([])
     turns = []
-    for window in draft["windows"]:
+    for index, window in enumerate(draft["windows"]):
         upper = _state(draft, "MOVER-U", window["start_bar"])["label"]
         lower = _state(draft, "MOVER-D", window["start_bar"])["label"]
-        assert {upper, lower} in ({MOTION_LABEL, HOLD_LABEL}, {TILT_MOTION_LABEL, HOLD_LABEL})
+        if index == 0 and upper == lower == REST_LABEL:
+            continue
+        # 움직이는 무빙은 하나이고, 쉬는 무빙은 정지 또는 쉼(사전이동 쉼 포함)이다.
+        assert {upper, lower} in (
+            {MOTION_LABEL, HOLD_LABEL},
+            {TILT_MOTION_LABEL, HOLD_LABEL},
+            {MOTION_LABEL, REST_LABEL},
+            {TILT_MOTION_LABEL, REST_LABEL},
+        )
         turns.append("U" if upper in MOVING_LABELS else "D")
-    assert turns == ["U", "D"] * 5
+    assert turns == ["D", "U"] * 4 + ["D"]
 
 
 def test_layout_without_rhythm_tracks_has_no_lead() -> None:
@@ -1323,7 +1332,9 @@ def test_every_mover_position_change_can_premove_in_the_dark(song: str) -> None:
     # 곡에서 15건이었다).
     bar_map = _real_love_attack() if song == "real" else _bar_map(SYNTHETIC_EVENTS)
     premoves, notes = _mib(bar_map)
-    assert notes == []
+    # 「켜진 채 움직임 시작」은 감독 결정 D3(a) 의 화면 경고다.
+    # 위치 이동이 불가한 사유가 아니라서 여기서 뺀다.
+    assert [note for note in notes if "불가" in note] == []
     assert premoves >= 2
 
 

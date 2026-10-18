@@ -185,6 +185,34 @@ describe("transitionWarnings — [제안] 경고(규칙서 §2.3 규칙 2)", () 
   });
 });
 
+describe("켜진 채 움직임 시작 — 감독 결정 D3(a): 켜진 칸에서 웨이브가 시작하면 경고", () => {
+  const wave = { shape: "wave" as const, axes: ["Pan" as const], period_unit: "bar" as const, period_value: 2, phase_spread: null };
+  const litStop = cue(0, { position_preset_no: "2.1" });
+  const cut = { fade_bars: 0, mib_mode: null };
+  it("앞 칸이 켜진 정지에서 웨이브가 시작하면 경고", () => {
+    const start = cue(4, { position_preset_no: "2.1", app_movement: wave, entry: cut });
+    expect(transitionWarnings(litStop, start, [])).toContain("켜진 채 움직임 시작");
+  });
+  it("앞 칸이 꺼져 있으면 어둠에서 시작하는 것이라 경고 없음", () => {
+    const dark = cue(0, { label: "—", position_preset_no: "2.1" });
+    const start = cue(4, { position_preset_no: "2.1", app_movement: wave, entry: cut });
+    expect(transitionWarnings(dark, start, [])).toEqual([]);
+  });
+  it("앞 칸도 웨이브면 시작이 아니라 이어짐이라 경고 없음", () => {
+    const moving = cue(0, { position_preset_no: "2.1", app_movement: wave });
+    const next = cue(4, { position_preset_no: "2.1", app_movement: wave, entry: cut });
+    expect(transitionWarnings(moving, next, [])).toEqual([]);
+  });
+  it("강조(★) 마디여도 경고한다 — ★ 예외는 위치 경고에만 걸린다", () => {
+    const start = cue(4, { position_preset_no: "2.1", app_movement: wave, entry: cut });
+    expect(transitionWarnings(litStop, start, [], [4])).toContain("켜진 채 움직임 시작");
+  });
+  it("페이드가 있으면 판정하지 않는다(기존 끊기 규칙과 같다)", () => {
+    const start = cue(4, { position_preset_no: "2.1", app_movement: wave, entry: { fade_bars: 1, mib_mode: null } });
+    expect(transitionWarnings(litStop, start, [])).toEqual([]);
+  });
+});
+
 describe("jointMarker — 이음매 표시(M · ! · ◢)", () => {
   it("MIB 자동이면 M", () => {
     const off = cue(0, { label: "—", position_preset_no: "2.1" });

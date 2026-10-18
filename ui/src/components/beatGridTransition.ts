@@ -155,6 +155,12 @@ export function transitionMib(prev: BeatGridCue | null, cur: BeatGridCue): Trans
   return { kind: "lit", text: "앞 큐가 켜져 있어 MIB 불가 — 켜진 채 이동(페이드로 보이게)" };
 }
 
+/** 웨이브(앱 무빙)가 켜진 칸에서 새로 시작하는가 — 앞 칸도 켜져 있어 어둠 속 시작이 아니다(감독 결정 D3(a)).
+ * 반영 단계 알림 `movement_lit_starts`(서버 `beat_grid_mib`)와 같은 판정이다. */
+export function startsMovementLit(prev: BeatGridCue, cur: BeatGridCue): boolean {
+  return cueIsLit(prev) && cueIsLit(cur) && Boolean(cur.app_movement) && !prev.app_movement;
+}
+
 /** 시안 `warnOf` — [제안] 경고(규칙서 §2.3 규칙 2). 페이드가 미정이거나
  * 구간 경계를 모르면 그 판정은 하지 않는다(모르는 것을 경고로 만들지 않음).
  * 카드 t567 — 시안처럼 강조(★) 마디(곡 데이터 `accentBars`)에선 켜진 채 위치
@@ -174,6 +180,10 @@ export function transitionWarnings(
     !accentBars.includes(cur.bar)
   ) {
     warnings.push("켜진 채 위치가 끊어 바뀜");
+  }
+  if (startsMovementLit(prev, cur)) {
+    // ★ 예외는 위치 경고에만 건다 — 웨이브가 켜진 채 시작하는 곳은 강조 마디(후렴)에서도 보여야 한다(D3).
+    warnings.push("켜진 채 움직임 시작");
   }
   if (
     sectionStartBars !== null &&

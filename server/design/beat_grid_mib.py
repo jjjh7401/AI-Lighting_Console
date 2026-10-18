@@ -42,6 +42,25 @@ def cue_is_lit(cue: Mapping[str, object]) -> bool:
     return label not in _UNLIT_LABELS
 
 
+def _has_movement(cue: Mapping[str, object]) -> bool:
+    """웨이브(앱 무빙)가 붙은 칸인가."""
+    return bool(cue.get("app_movement"))
+
+
+def _starts_movement_lit(prev: Mapping[str, object], cur: Mapping[str, object]) -> bool:
+    """웨이브가 켜진 칸에서 새로 시작하는가 — 앞 칸도 켜져 있어 어둠이 없다(감독 결정 D3(a))."""
+    return cue_is_lit(prev) and cue_is_lit(cur) and _has_movement(cur) and not _has_movement(prev)
+
+
+def movement_lit_starts(cues: Sequence[Mapping[str, object]]) -> list[int]:
+    """웨이브가 켜진 칸에서 시작하는 마디들. 화면에는 「켜진 채 움직임 시작」으로 보인다."""
+    return [
+        int(cur["bar"])  # type: ignore[arg-type]
+        for prev, cur in zip(cues, cues[1:], strict=False)
+        if _starts_movement_lit(prev, cur)
+    ]
+
+
 def plan_mib_premoves(
     cues: Sequence[Mapping[str, object]], timing: BarClock
 ) -> tuple[list[dict[str, object]], list[str]]:
@@ -53,6 +72,11 @@ def plan_mib_premoves(
     premoves: list[dict[str, object]] = []
     notes: list[str] = []
     for prev, cur in zip(cues, cues[1:], strict=False):
+        if _starts_movement_lit(prev, cur):
+            notes.append(
+                f"{int(cur['bar'])}마디 켜진 채 움직임 시작 — "  # type: ignore[arg-type]
+                "앞 큐가 켜져 있어 웨이브가 켜진 채 시작합니다"
+            )
         target = cur.get("position_preset_no")
         if target is None or prev.get("position_preset_no") == target:
             continue  # 위치가 안 바뀜 — MIB 필요 없음

@@ -602,29 +602,35 @@ def _darken_before_moves(
     index_of = {bar: index for index, bar in enumerate(bar_numbers)}
     position: str | None = None
     position_start = bar_numbers[0]
+
+    def span_before(bar: int) -> list[int]:
+        """``bar`` 앞에 세울 쉼의 마디들 — 앞 위치가 켜진 시작(``position_start``) 뒤에서만."""
+        return _pre_dark_span(
+            bar,
+            bar_numbers,
+            bar_ms,
+            need_ms,
+            index_of,
+            position_start,
+            phrase_starts,
+            settings.window_bars,
+        )
+
     for bar in bar_numbers:
         here = by_bar[bar].position
         if here is None:
             continue
-        if position is not None and here != position:
-            # 쉼 첫 마디 s: 사전이동 마디(s 다음 마디)부터 이 마디까지가
-            # need_ms 이상인 가장 뒤 마디.
-            start = next(
-                (
-                    candidate
-                    for candidate in reversed(bar_numbers[: index_of[bar] - 1])
-                    if bar_ms[bar] - bar_ms[bar_numbers[index_of[candidate] + 1]] >= need_ms
-                ),
-                None,
-            )
-            # 쉼 앞에 창 길이보다 짧은 켜는 자투리가 남으면 쉼을 그 창 시작으로 당긴다.
-            snap = max(
-                (p for p in phrase_starts if start is not None and position_start < p <= start),
-                default=None,
-            )
-            if snap is not None and start is not None and start - snap < settings.window_bars:
-                start = snap
-            span = [] if start is None else bar_numbers[index_of[start] : index_of[bar]]
+        if position is None:
+            # 곡 첫 마디부터 켜는 무빙은 곡 첫 구간을 어둡게 해 그 안에서 옮긴다(감독 결정 D1).
+            # 위치는 어둠 머리 뒤 첫 켜는 마디부터 켜진 채 선다. 그 뒤 이동은 앞 위치 규칙을 따른다.
+            if bar == bar_numbers[0]:
+                head = _song_start_head(bar, bar_numbers, bar_ms, need_ms, section_starts)
+                if head and keep_lit.isdisjoint(head):
+                    for dark_bar in head:
+                        by_bar[dark_bar] = dark
+                    position, position_start = here, bar_numbers[index_of[bar] + len(head)]
+        elif here != position:
+            span = span_before(bar)
             head = _dark_head(bar, bar_numbers, bar_ms, need_ms, section_starts)
             if span and span[0] > position_start and keep_lit.isdisjoint(span):
                 for dark_bar in span:
@@ -645,6 +651,86 @@ def _darken_before_moves(
                 here = position
         if here != position:
             position, position_start = here, bar
+    _darken_before_lit_waves(
+        by_bar, bar_numbers, bar_ms, settings, keep_lit=keep_lit, phrase_starts=phrase_starts
+    )
+
+
+def _pre_dark_span(
+    bar: int,
+    bar_numbers: Sequence[int],
+    bar_ms: Mapping[int, int],
+    need_ms: float,
+    index_of: Mapping[int, int],
+    position_start: int,
+    phrase_starts: frozenset[int],
+    window_bars: int,
+) -> list[int]:
+    """``bar`` 앞에 세울 쉼의 마디들. 사전이동 마디부터 ``bar`` 까지가 need_ms 이상인 가장 뒤다."""
+    # 쉼 첫 마디 s: 사전이동 마디(s 다음 마디)부터 이 마디까지가 need_ms 이상인 가장 뒤 마디.
+    start = next(
+        (
+            candidate
+            for candidate in reversed(bar_numbers[: index_of[bar] - 1])
+            if bar_ms[bar] - bar_ms[bar_numbers[index_of[candidate] + 1]] >= need_ms
+        ),
+        None,
+    )
+    # 쉼 앞에 창 길이보다 짧은 켜는 자투리가 남으면 쉼을 그 창 시작으로 당긴다.
+    snap = max(
+        (p for p in phrase_starts if start is not None and position_start < p <= start),
+        default=None,
+    )
+    if snap is not None and start is not None and start - snap < window_bars:
+        start = snap
+    return [] if start is None else bar_numbers[index_of[start] : index_of[bar]]
+
+
+def _darken_before_lit_waves(
+    by_bar: dict[int, _CellPlan],
+    bar_numbers: Sequence[int],
+    bar_ms: Mapping[int, int],
+    settings: ArrangementPolicy,
+    *,
+    keep_lit: frozenset[int],
+    phrase_starts: frozenset[int],
+) -> None:
+    """위치 쉼을 정한 뒤, 정지에서 웨이브로 바뀌어 켜진 채 남는 칸 앞을 쉼으로 비운다(감독 결정 D2).
+
+    위치 쉼이 다 정해진 뒤에 본다. 그래서 위치 이동 쉼에 덮여 이미 꺼진 웨이브 앞은 건드리지 않는다.
+    앞 위치가 한 마디 이상 켜져 있어야 한다. 쉼이 ``keep_lit``(후렴·드롭)에 걸리면 세우지 않는다.
+    그 웨이브는 「켜진 채 움직임 시작」으로 화면에 남는다(D3 (a)).
+    """
+    dark = _rest_plan(settings)
+    need_ms = MIB_MIN_DARK_SECONDS * 1000
+    index_of = {bar: index for index, bar in enumerate(bar_numbers)}
+    for index in range(1, len(bar_numbers)):
+        bar = bar_numbers[index]
+        cur = by_bar[bar]
+        prev = by_bar[bar_numbers[index - 1]]
+        if cur.position is None or cur.movement_shape is None:
+            continue
+        if prev.position != cur.position or prev.movement_shape is not None:
+            continue
+        # 앞 위치가 켜진 연속 구간의 첫 마디
+        run_start = bar_numbers[index - 1]
+        for back in range(index - 2, -1, -1):
+            if by_bar[bar_numbers[back]].position != cur.position:
+                break
+            run_start = bar_numbers[back]
+        span = _pre_dark_span(
+            bar,
+            bar_numbers,
+            bar_ms,
+            need_ms,
+            index_of,
+            run_start,
+            phrase_starts,
+            settings.window_bars,
+        )
+        if span and span[0] > run_start and keep_lit.isdisjoint(span):
+            for dark_bar in span:
+                by_bar[dark_bar] = dark
 
 
 def _before(bar: int, bar_numbers: Sequence[int]) -> int | None:
@@ -673,6 +759,30 @@ def _dark_head(
         if later in section_starts:
             return []
         if bar_ms[later] - premove_ms >= need_ms:
+            return list(bar_numbers[index : bar_numbers.index(later)])
+    return []
+
+
+def _song_start_head(
+    bar: int,
+    bar_numbers: Sequence[int],
+    bar_ms: Mapping[int, int],
+    need_ms: float,
+    section_starts: frozenset[int],
+) -> list[int]:
+    """곡 첫 위치 앞의 어둠 머리. ``bar`` 부터 켜는 마디 앞까지, 사전이동 뒤 need_ms 이상 어둡게.
+
+    곡 첫 구간 안에서만 쉼을 세운다. 켜는 마디는 첫 구간이 끝난 뒤 다음 구간의 첫 마디까지만 간다.
+    """
+    index = bar_numbers.index(bar)
+    if index + 1 >= len(bar_numbers):
+        return []
+    premove_ms = bar_ms[bar_numbers[index + 1]]
+    next_section = min((s for s in section_starts if s > bar), default=None)
+    for later in bar_numbers[index + 1 :]:
+        if bar_ms[later] - premove_ms >= need_ms:
+            if next_section is not None and later > next_section:
+                return []
             return list(bar_numbers[index : bar_numbers.index(later)])
     return []
 
