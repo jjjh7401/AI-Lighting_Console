@@ -13552,13 +13552,22 @@ class ChatSession:
         기록·칸 기록을 함께 확정한다 — 나간 줄이 하나도 없이 거절·실패하면 이 셋은 그대로이고,
         사유를 상태로 알린다. 일부만 나가고 멈췄으면 콘솔이 장부보다 앞서 있으므로 격자만 옮긴
         대로 두고 소유 기록·칸 기록은 그대로 둔다 — 옮긴 칸이 「미반영」으로 남고 ⇪ 전체 반영이
-        맞춘다."""
+        맞춘다. 줄이 하나라도 나갔으면(끝까지든 일부만이든) 초안 되돌리기·다시하기 기록을 비운다 —
+        되돌리기는 콘솔에 닿지 않아 격자만 옛 마디로 돌아가기 때문이다. 한 줄도 나가지 않았으면 그
+        기록은 그대로다."""
         try:
             plan = self._plan_cell_moves(ops)
         except CellLiveRefused as error:
             return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=str(error))
         try:
             refusal, ran = self._send_cell_moves(plan)
+            if refusal is None or ran:
+                # 줄이 하나라도 나갔다 — 초안 되돌리기·다시하기 기록을 비운다. 되돌리기는 콘솔에
+                # 닿지 않고 격자만 옛 마디로 돌리므로, 이미 나간 이벤트 시각은 새 마디에 남아
+                # 어긋난다. 일부만 나간 때는 칸 기록이 옛 모습이라 「미반영」으로도 드러나지 않는다.
+                # 한 줄도 나가지 않은 옮기기는 아무것도 바꾸지 않았으니 기록을 건드리지 않는다.
+                # 확정(``_commit_cell_moves``)도 이 옮기기를 되돌리기 기록에 쌓지 않는다.
+                self._draft_history = TimelineDraftHistory()
             if refusal is None:
                 return self._commit_cell_moves(plan)
             if ran:
@@ -13976,7 +13985,11 @@ class ChatSession:
         사라졌으면 격자는 그대로 두고 사실대로 알린다. 장부와 어긋난 칸은 「미반영」으로 센다.
 
         ``partial`` 은 줄 일부만 나가고 멈춘 경우다. 콘솔이 장부보다 앞서 있으니 장부는 적지 않고
-        격자만 옮긴 대로 둔다 — 옮긴 칸이 「미반영」으로 남는다. 상태는 일부만 반영됐다는 실패다."""
+        격자만 옮긴 대로 둔다 — 옮긴 칸이 「미반영」으로 남는다. 상태는 일부만 반영됐다는 실패다.
+
+        이 옮기기는 되돌리기 기록에 쌓지 않는다. 줄이 이미 콘솔에 나간 뒤라, 옛 격자를 기록에 남기면
+        되돌리기가 콘솔과 어긋난 격자를 만든다. 부른 쪽(``beat_grid_cell_edit``)이 기록을 이미
+        비웠으므로 화면에 보내는 되돌리기 단계 표시도 0 이다."""
         store = plan.store
         if not partial:
             store.set_beat_grid_allocation(plan.record_key, plan.record)
@@ -14000,7 +14013,6 @@ class ChatSession:
                     f"({error}) — 콘솔과 격자가 어긋났으니 ⇪ 전체 반영으로 맞춰 주세요"
                 )
             return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=reason)
-        self._draft_history.record(current)
         updated = dict(current)
         updated["beat_grid"] = grid
         updated = self._draft_badge(
