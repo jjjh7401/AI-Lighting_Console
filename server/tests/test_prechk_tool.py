@@ -1262,7 +1262,12 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     # 재생·정지. t563 미리보기와 같은 게이트 경로(세션 1회 승인) — 같은 사유의
     # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
     "beat_grid_apply",
+    # PR 1 (2026-10-18, SPEC-LDBEAT-001 ❚❚·▶ 이어 가기) — 「콘솔 같이」 일시정지(`Off Timecode`만)와
+    # 타임코드 커서부터 잇기(`Go Timecode`만). t578 과 같은 게이트 경로(세션 1회 승인) — 같은 사유의
+    # 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
+    "beat_grid_console_pause",
     "beat_grid_console_play",
+    "beat_grid_console_resume",
     "beat_grid_console_stop",
     # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 제안·적용·거절(화면이 보내는 요청).
     # 같은 사유의 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.

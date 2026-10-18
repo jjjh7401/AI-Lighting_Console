@@ -724,6 +724,8 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_preview",
                     "beat_grid_preview_off",
                     "beat_grid_console_play",
+                    "beat_grid_console_pause",
+                    "beat_grid_console_resume",
                     "beat_grid_console_stop",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
@@ -757,6 +759,15 @@ def create_app(deps: WebDeps) -> FastAPI:
                     elif message_type == "beat_grid_console_play":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_console_play)
+                        )
+                    # PR 1 — ❚❚ 는 타임코드만 멈추고, 멈춘 뒤 ▶ 는 타임코드 커서부터 이어 간다.
+                    elif message_type == "beat_grid_console_pause":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_console_pause)
+                        )
+                    elif message_type == "beat_grid_console_resume":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_console_resume)
                         )
                     else:
                         current_task = asyncio.create_task(

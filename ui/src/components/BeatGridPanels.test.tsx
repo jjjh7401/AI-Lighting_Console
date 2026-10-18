@@ -243,7 +243,7 @@ describe("재생 — 음원 시계·재생선 연속 이동·따라가기 배선
   });
   it("▶·⏮·지도 클릭은 따라가기를 곧바로 다시 켠다", () => {
     expect(SOURCE).toMatch(/setPlaying\(true\);\s*resumeFollow\(\);/);
-    expect(SOURCE).toMatch(/const rewindToStart = \(\) => \{\s*setPlaybackSeconds\(0\);\s*resumeFollow\(\);/);
+    expect(SOURCE).toMatch(/const rewindToStart = \(\) => \{[\s\S]*?setPlaybackSeconds\(0\);\s*resumeFollow\(\);/);
     expect(SOURCE).toMatch(/const jumpToBar = \(bar: number\) => \{[\s\S]*?resumeFollow\(\);/);
   });
 });

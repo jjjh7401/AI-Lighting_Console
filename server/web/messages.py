@@ -187,6 +187,8 @@ CLIENT_MESSAGE_TYPES = (
     # 게이트 경로(세션 1회 승인)를 탄다. 페이로드 없음(타임코드 번호는 서버의 소유
     # 기록에 있다).
     "beat_grid_console_play",
+    "beat_grid_console_pause",
+    "beat_grid_console_resume",
     "beat_grid_console_stop",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
@@ -943,6 +945,8 @@ def parse_client_message(raw: str) -> dict:
         "beat_grid_preview_off",
         # 카드 t578 — 「콘솔 같이」 재생·정지도 페이로드가 없다(번호는 소유 기록).
         "beat_grid_console_play",
+        "beat_grid_console_pause",
+        "beat_grid_console_resume",
         "beat_grid_console_stop",
         # 카드 t565 — 무대 판독 요청도 페이로드가 없다.
         "beat_grid_stage_request",

@@ -16,6 +16,8 @@ import {
   buildBeatGridPreview,
   buildBeatGridPreviewOff,
   buildBeatGridConsolePlay,
+  buildBeatGridConsolePause,
+  buildBeatGridConsoleResume,
   buildBeatGridConsoleStop,
   buildBeatGridDraftApply,
   buildBeatGridDraftPropose,
@@ -284,6 +286,9 @@ export interface CopilotSocket {
   sendBeatGridPreviewOff: () => void;
   /** 카드 t578 — 「콘솔 같이」 타임코드 재생·정지. */
   sendBeatGridConsolePlay: () => void;
+  /** PR 1 — ❚❚ 일시정지(타임코드만) · 일시정지 뒤 ▶ 이어 가기. */
+  sendBeatGridConsolePause: () => void;
+  sendBeatGridConsoleResume: () => void;
   sendBeatGridConsoleStop: () => void;
   /** 카드 t565 — 2D 무대 판독 요청(콘솔 읽기만). */
   sendBeatGridStageRequest: () => void;
@@ -557,6 +562,8 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   const sendBeatGridPreviewOff = useCallback(() => send(buildBeatGridPreviewOff()), [send]);
   const sendBeatGridConsolePlay = useCallback(() => send(buildBeatGridConsolePlay()), [send]);
   const sendBeatGridConsoleStop = useCallback(() => send(buildBeatGridConsoleStop()), [send]);
+  const sendBeatGridConsolePause = useCallback(() => send(buildBeatGridConsolePause()), [send]);
+  const sendBeatGridConsoleResume = useCallback(() => send(buildBeatGridConsoleResume()), [send]);
   const sendVectorworksExportUpload = useCallback(
     (fileName: string, contentBase64: string) => {
       const socket = socketRef.current;
@@ -682,6 +689,8 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridConsolePlay,
+    sendBeatGridConsolePause,
+    sendBeatGridConsoleResume,
     sendBeatGridConsoleStop,
     sendBeatGridStageRequest,
     sendSongAudioLinkRequest,

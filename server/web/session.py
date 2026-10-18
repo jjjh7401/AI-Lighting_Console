@@ -3934,6 +3934,16 @@ _BEAT_GRID_CONSOLE_UNREAD_MESSAGE = (
 )
 
 
+def _beat_grid_pause_card_reason(timecode_number: int | None) -> str:
+    """일시정지 승인 카드의 머리 문구 — 타임코드만 세우고 시퀀스는 끄지 않는다는 것을 밝힌다.
+    무대 조명이 그대로 있는지는 실측된 적이 없어(감독 실기로 확인) 문구로 약속하지 않는다."""
+    what = f"Timecode {timecode_number}" if timecode_number is not None else "이 곡"
+    return (
+        f"박자 격자 일시정지 — 이 앱이 반영한 {what}만 멈춥니다(시퀀스는 끄지 않습니다). "
+        "쇼 데이터는 바꾸지 않습니다 (세션 시작 1회 승인, REQ-LDBEAT-012(b))"
+    )
+
+
 def _beat_grid_stop_card_reason(timecode_number: int | None, sequences: Sequence[int]) -> str:
     """끄기 승인 카드의 머리 문구 — 무엇을 끄는지와 쇼 데이터를 바꾸지 않는다는 것을 밝힌다.
     2차 전체 실행: 「블랙아웃/오프」 경고만 보이는 `Off Sequence 54…` 8줄 카드를 감독이
@@ -12802,6 +12812,7 @@ class ChatSession:
         verbs: tuple[str, ...],
         *,
         stop: bool = False,
+        pause: bool = False,
         owned: tuple[int | None, str | None] | None = None,
     ) -> dict:
         """「콘솔 같이」 공용 송신 — t563 미리보기 길(세션 시작 1회 승인)을 그대로
@@ -12809,6 +12820,8 @@ class ChatSession:
 
         ``stop`` 이면 ``Off Timecode N`` 뒤에 그 곡 트랙의 시퀀스를 하나씩 ``Off Sequence`` 로
         끄고, 보낸 뒤 타임코드 커서로 멈췄는지 확인한다(``_beat_grid_stop_notices``).
+        ``pause`` 면(❚❚, PR 1) ``Off Timecode N`` 만 보내고 시퀀스는 끄지 않는다 — 타임코드가
+        멈췄는지는 같은 방식으로 확인한다.
         ``owned`` 는 호출자가 이미 찾은 ``_beat_grid_owned_timecode()`` 결과다
         (콘솔을 다시 읽지 않는다)."""
         timecode_number, reason = owned if owned is not None else self._beat_grid_owned_timecode()
@@ -12822,6 +12835,7 @@ class ChatSession:
             (timecode_number, *self._beat_grid_owned_extra_timecodes()), verbs
         )
         rewind = "Top" in verbs
+        # ❚❚(pause) 는 시퀀스를 끄지 않는다 — 타임코드 커서만 세운다(PR 1, 감독 지시).
         sequences = self._beat_grid_owned_sequence_numbers() if stop or rewind else ()
         offs = tuple(f"Off Sequence {number}" for number in sequences)
         if rewind:
@@ -12834,13 +12848,21 @@ class ChatSession:
             # 뒤에도 무대가 계속 바뀌었다. 실기 해제 묶음(t506 §9, t520
             # `approval_m2a_play_b2.txt`)대로 타임코드를 끈 다음 그 트랙의 시퀀스를 하나씩 끈다.
             commands += offs
+        # 멈추는 쪽(정지·일시정지)은 승인 카드 문구가 다르고, 끝에 타임코드 커서를 확인한다.
+        halting = stop or pause
+        if stop:
+            card_reason: str | None = _beat_grid_stop_card_reason(timecode_number, sequences)
+        elif pause:
+            card_reason = _beat_grid_pause_card_reason(timecode_number)
+        else:
+            card_reason = None
         if self._preview_approval.is_approved:
             refusal = self._beat_grid_send_transport_preapproved(commands)
         else:
             refusal = self._beat_grid_dispatch_preview(
                 f"beat-grid-{action}",
                 commands,
-                reason=(_beat_grid_stop_card_reason(timecode_number, sequences) if stop else None),
+                reason=card_reason,
             )
         if refusal is not None:
             return self._beat_grid_send_status(
@@ -12851,12 +12873,12 @@ class ChatSession:
                     + (
                         f" 콘솔 Timecode {timecode_number}이(가) 아직 돌고 있을 수 있어요 — "
                         "콘솔 화면을 확인해 주세요."
-                        if stop
+                        if halting
                         else ""
                     )
                 ),
             )
-        notices = self._beat_grid_stop_notices(timecode_number) if stop else []
+        notices = self._beat_grid_stop_notices(timecode_number) if halting else []
         return self._beat_grid_send_status(last_action=action, ok=True, extra_notices=notices)
 
     def _beat_grid_owned_sequence_numbers(self) -> tuple[int, ...]:
@@ -12966,9 +12988,20 @@ class ChatSession:
         return self._beat_grid_console_transport("console_play", ("Top", "Go"))
 
     def beat_grid_console_stop(self) -> dict:
-        """카드 t578 — 「콘솔 같이」 켬 + ❚❚ (곡 끝 자동 정지 포함): 그 곡의 타임코드와
-        트랙 시퀀스를 끄고, 멈췄는지 확인한다."""
+        """카드 t578 — 「콘솔 같이」 곡 끝 자동 정지(G-22): 그 곡의 타임코드와 트랙 시퀀스를 끄고,
+        멈췄는지 확인한다. ❚❚ 는 PR 1 부터 ``beat_grid_console_pause`` 를 쓴다."""
         return self._beat_grid_console_transport("console_stop", ("Off",), stop=True)
+
+    def beat_grid_console_pause(self) -> dict:
+        """PR 1 ❚❚ — 「콘솔 같이」 일시정지: 그 곡의 타임코드만 멈춘다(``Off Timecode N``).
+        시퀀스는 끄지 않는다. 정지(``beat_grid_console_stop``)와 달리 조명을 끄는 묶음이 아니다.
+        ▶ 는 ``beat_grid_console_resume`` 이 타임코드 커서부터 잇는다."""
+        return self._beat_grid_console_transport("console_stop", ("Off",), pause=True)
+
+    def beat_grid_console_resume(self) -> dict:
+        """PR 1 ▶(일시정지 뒤) — ``Go Timecode N`` 만 보내 타임코드 커서부터 잇는다.
+        처음부터 재생(``beat_grid_console_play``, ``Top`` + ``Go``)과 달리 되감지 않는다."""
+        return self._beat_grid_console_transport("console_play", ("Go",))
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.

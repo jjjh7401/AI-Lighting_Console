@@ -1534,9 +1534,19 @@ export function buildBeatGridConsolePlay(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_play" });
 }
 
-/** 카드 t578 — 「콘솔 같이」 켬 + ❚❚ . 서버가 `Off Timecode`를 보낸다. */
+/** 카드 t578 — 「콘솔 같이」 곡 끝 자동 정지. 서버가 `Off Timecode`와 그 곡 시퀀스를 끈다(■ 묶음). */
 export function buildBeatGridConsoleStop(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_stop" });
+}
+
+/** PR 1 — 「콘솔 같이」 ❚❚ 일시정지. 서버가 `Off Timecode`만 보내고 시퀀스는 그대로 둔다. */
+export function buildBeatGridConsolePause(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_pause" });
+}
+
+/** PR 1 — 일시정지 뒤 ▶ 이어 가기. 서버가 `Go Timecode`만 보내 타임코드 커서부터 잇는다. */
+export function buildBeatGridConsoleResume(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_resume" });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는

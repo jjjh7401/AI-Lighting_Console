@@ -111,6 +111,8 @@ function createApp(options: AppOptions = {}) {
   const grid = options.grid ?? gridWithDelay(DELAY_SECONDS);
   const relay = createConsoleFollowRelay();
   const onConsolePlay = vi.fn();
+  const onConsolePause = vi.fn();
+  const onConsoleResume = vi.fn();
   const onConsoleStop = vi.fn();
   let sendStatus: BeatGridSendStatus | null = null;
   let seq = 0;
@@ -127,6 +129,8 @@ function createApp(options: AppOptions = {}) {
             busyCount={busyCount}
             sendStatus={sendStatus}
             onConsolePlay={onConsolePlay}
+            onConsolePause={onConsolePause}
+            onConsoleResume={onConsoleResume}
             onConsoleStop={onConsoleStop}
             {...options.props}
           />
@@ -137,6 +141,8 @@ function createApp(options: AppOptions = {}) {
   return {
     relay,
     onConsolePlay,
+    onConsolePause,
+    onConsoleResume,
     onConsoleStop,
     /** 전체화면을 연다 — 새 `BeatGrid` 인스턴스가 마운트된다. */
     open() {
@@ -348,7 +354,8 @@ describe("(1)~(7) 전체화면을 닫았다 열어도 콘솔 재생 뒤 음원�
     expect(media.play).toHaveBeenCalledTimes(1);
 
     click(playButton()); // ❚❚
-    expect(app.onConsoleStop).toHaveBeenCalledTimes(1);
+    expect(app.onConsolePause).toHaveBeenCalledTimes(1);
+    expect(app.onConsoleStop).not.toHaveBeenCalled(); // PR 1 — ❚❚ 는 정지 묶음이 아니다
     expect(media.pause).toHaveBeenCalled();
     expect(playButton().textContent).toBe("▶ 재생");
     expect(app.relay.responseAtMs).toBeNull();
@@ -361,6 +368,7 @@ describe("(1)~(7) 전체화면을 닫았다 열어도 콘솔 재생 뒤 음원�
     expect(media.play).toHaveBeenCalledTimes(1); // 처음 한 번뿐
     expect(playButton().textContent).toBe("▶ 재생");
     expect(app.onConsolePlay).toHaveBeenCalledTimes(1);
+    expect(app.onConsoleResume).not.toHaveBeenCalled(); // 닫았다 열어도 이어 잇지 않는다
   });
 });
 
@@ -579,13 +587,14 @@ describe("▶ 를 다시 누를 때와 켬/끔", () => {
     const space = () => act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space", key: " " })));
 
     space(); // ❚❚
-    expect(app.onConsoleStop).toHaveBeenCalledTimes(1);
+    expect(app.onConsolePause).toHaveBeenCalledTimes(1);
     advance(800);
     space(); // 정지 응답 전 — 서버가 아직 정지를 처리하는 중이다
     expect(app.onConsolePlay).toHaveBeenCalledTimes(1); // 지금 보내면 `busy` 로 거절된다
 
     app.receive(status({ last_action: "console_stop" })); // 정지 끝
-    expect(app.onConsolePlay).toHaveBeenCalledTimes(2); // 미뤄 둔 재생이 이제 나간다
+    expect(app.onConsoleResume).toHaveBeenCalledTimes(1); // 미뤄 둔 ▶ 는 멈춘 자리에서 잇는 요청이다(PR 1)
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(1);
     app.receive(status());
     advance(DELAY_SECONDS * 1000);
     expect(media.play).toHaveBeenCalledTimes(2);
@@ -692,5 +701,68 @@ describe("새 탭은 「콘솔 같이 끔」 — 끈 채 ▶ 를 누르면 콘�
     connectAudio();
     click(playButton());
     expect(errorTexts()).not.toContain(CONSOLE_FOLLOW_OFF_MESSAGE);
+  });
+});
+
+// PR 1 — ❚❚ 는 타임코드만 세우고(시퀀스는 그대로), ▶ 는 멈춘 자리에서 이어 간다. ⏮ 처음·마디 누르기도 여기서 본다.
+describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가기(▶)는 멈춘 자리에서 잇는다", () => {
+  const rewindButton = () => headerButton("⏮");
+  const nextBarButton = () => {
+    const found = container.querySelector<HTMLButtonElement>(
+      'header.beat-grid-topbar button[title="다음 마디 (→)"]',
+    );
+    if (!found) throw new Error("next bar button not found");
+    return found;
+  };
+  /** 재생을 시작하고 조금 돌린 뒤 ❚❚ 로 멈추고, 서버의 일시정지 답까지 받는다. */
+  const pauseAfterStart = (app: TestApp) => {
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+    click(playButton()); // ❚❚
+    app.receive(status({ last_action: "console_stop" })); // 일시정지 답(타임코드만 멈췄다)
+  };
+
+  it("❚❚ 는 일시정지만 보내고, 그 뒤 ▶ 는 처음부터가 아니라 이어 가기만 보낸다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pauseAfterStart(app);
+    expect(app.onConsolePause).toHaveBeenCalledTimes(1);
+    expect(app.onConsoleStop).not.toHaveBeenCalled();
+
+    click(playButton()); // ▶
+    expect(app.onConsoleResume).toHaveBeenCalledTimes(1);
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(1); // 처음 한 번뿐
+  });
+
+  it("⏮ 처음을 누른 뒤의 ▶ 는 멈춘 자리가 아니라 처음부터 보낸다", () => {
+    const app = createApp();
+    app.open();
+    connectAudio();
+    pauseAfterStart(app);
+
+    click(rewindButton()); // ⏮
+    click(playButton()); // ▶
+    expect(app.onConsoleResume).not.toHaveBeenCalled();
+    expect(app.onConsolePlay).toHaveBeenCalledTimes(2);
+  });
+
+  it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 재생 중에는 보내지 않는다", () => {
+    const onPreviewBar = vi.fn();
+    const app = createApp({ props: { onPreviewBar } });
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+
+    click(nextBarButton()); // 재생 중 — 콘솔 보기는 보내지 않는다
+    expect(onPreviewBar).not.toHaveBeenCalled();
+
+    click(playButton()); // ❚❚
+    app.receive(status({ last_action: "console_stop" }));
+    click(nextBarButton()); // 일시정지 중 — 그 마디의 콘솔 보기(Goto)를 보낸다
+    expect(onPreviewBar).toHaveBeenCalledTimes(1);
   });
 });
