@@ -728,6 +728,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_console_pause",
                     "beat_grid_console_resume",
                     "beat_grid_console_stop",
+                    "beat_grid_console_seek",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
                     # `beat_grid_edit`과 달리 이 셋은 `run_commands` ->
@@ -773,6 +774,11 @@ def create_app(deps: WebDeps) -> FastAPI:
                     elif message_type == "beat_grid_console_resume":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_console_resume)
+                        )
+                    # 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
+                    elif message_type == "beat_grid_console_seek":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_console_seek, message["seconds"])
                         )
                     else:
                         current_task = asyncio.create_task(

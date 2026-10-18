@@ -4035,6 +4035,16 @@ def _timecode_cursor_seconds(value: object) -> float | None:
     return int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds)
 
 
+#: 옮긴 커서를 되읽어 맞았다고 칠 허용 오차(초). 콘솔 CURSOR 는 소수 둘째 자리로 읽힌다.
+CURSOR_SEEK_TOLERANCE_SECONDS = 0.05
+
+
+def _cursor_seconds_text(seconds: float) -> str:
+    """콘솔 명령에 넣는 초 글자 — 소수 셋째 자리까지, 뒤의 0 은 뗀다(82.4 · 83 · 0.5)."""
+    text = f"{seconds:.3f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
 class SongTimelineStore:
     """Process-wide LAST director-timeline payload (runbook UI). Song-timeline
     events are otherwise push-only within one WebSocket session — the app
@@ -13436,6 +13446,59 @@ class ChatSession:
         """PR 1 ▶(일시정지 뒤) — ``Go Timecode N`` 만 보내 타임코드 커서부터 잇는다.
         처음부터 재생(``beat_grid_console_play``, ``Top`` + ``Go``)과 달리 되감지 않는다."""
         return self._beat_grid_console_transport("console_play", ("Go",))
+
+    def beat_grid_console_seek(self, seconds: float) -> dict:
+        """「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 소유 타임코드 커서를 세운다.
+
+        ``Set Timecode N Property 'Cursor' <초>`` 를 소유 타임코드마다 한 줄씩만 보낸다. 재생은
+        켜지 않는다(정지 중 실측: 콘솔이 OK 로 받았고 커서가 그 값에 섰다). 승인·게이트 경로는
+        미리보기와 같다 — 세션 1회 승인 뒤에는 카드 없이 보낸다. 보낸 뒤 커서를 간격을 두고
+        되읽어 목표에 섰는지 말한다. 「ok」만으로 맞췄다고 말하지 않는다."""
+        timecode_number, reason = self._beat_grid_owned_timecode()
+        if reason is not None or timecode_number is None:
+            return self._beat_grid_send_status(last_action="console_seek", ok=False, reason=reason)
+        text = _cursor_seconds_text(seconds)
+        timecodes = (timecode_number, *self._beat_grid_owned_extra_timecodes())
+        commands = tuple(f"Set Timecode {number} Property 'Cursor' {text}" for number in timecodes)
+        if self._preview_approval.is_approved:
+            refusal = self._beat_grid_send_transport_preapproved(commands)
+        else:
+            refusal = self._beat_grid_dispatch_preview(
+                "beat-grid-console-seek",
+                commands,
+                reason=(
+                    f"「콘솔 같이」 마디 이동 — 타임코드 커서를 {text}초로 옮깁니다"
+                    "(재생은 켜지 않음)"
+                ),
+            )
+        if refusal is not None:
+            return self._beat_grid_send_status(
+                last_action="console_seek",
+                ok=False,
+                reason=f"콘솔 커서 맞추기가 실행되지 않았습니다 — {refusal}",
+            )
+        notices = self._beat_grid_seek_notices(timecode_number, seconds)
+        return self._beat_grid_send_status(
+            last_action="console_seek", ok=True, extra_notices=notices
+        )
+
+    def _beat_grid_seek_notices(self, timecode_number: int, seconds: float) -> list[str]:
+        """옮긴 뒤 커서를 간격을 두고 한 번 되읽는다 — 목표(±0.05초)에 섰는지 알린다.
+        못 읽으면 「맞았는지 확인하지 못했다」고 알린다(틀렸다고 단정하지 않는다)."""
+        time.sleep(self._beat_grid_stop_check_interval_seconds)
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        cursor = self._beat_grid_timecode_cursor(f"{pool}/{timecode_number}")
+        if cursor is None:
+            return [
+                f"콘솔 Timecode {timecode_number} 커서를 다시 읽지 못해"
+                " 맞았는지 확인하지 못했어요. 콘솔 화면에서 확인해 주세요."
+            ]
+        if abs(cursor - seconds) > CURSOR_SEEK_TOLERANCE_SECONDS:
+            return [
+                f"콘솔 Timecode {timecode_number} 커서가 {cursor:.2f}초에 있어요"
+                f"(옮기려던 {seconds:.2f}초) — 콘솔에서 확인해 주세요."
+            ]
+        return []
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.

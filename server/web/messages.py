@@ -190,6 +190,8 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_pause",
     "beat_grid_console_resume",
     "beat_grid_console_stop",
+    # 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)을 싣는다(`seconds`). 정지 중 커서만 옮긴다.
+    "beat_grid_console_seek",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
@@ -512,6 +514,18 @@ def parse_client_message(raw: str) -> dict:
         if not isinstance(bar, int) or isinstance(bar, bool):
             raise ProtocolError("beat_grid_preview.bar must be an integer")
         return {"v": PROTOCOL_VERSION, "type": "beat_grid_preview", "bar": bar}
+
+    if message_type == "beat_grid_console_seek":
+        # 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초). 음수·NaN·글자·불린은 거절한다.
+        seconds = message.get("seconds")
+        if (
+            isinstance(seconds, bool)
+            or not isinstance(seconds, int | float)
+            or not math.isfinite(seconds)
+            or not 0 <= seconds <= 86400
+        ):
+            raise ProtocolError("beat_grid_console_seek.seconds must be a number from 0 to 86400")
+        return {"v": PROTOCOL_VERSION, "type": "beat_grid_console_seek", "seconds": float(seconds)}
 
     if message_type == "beat_grid_suggest":
         bar = message.get("bar")

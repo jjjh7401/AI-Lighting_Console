@@ -24,6 +24,7 @@ import {
   createConsoleFollowRelay,
   observeConsoleFollowStatus,
 } from "./beatgrid/consoleFollowRelay";
+import { CONSOLE_SEEK_DEBOUNCE_MS } from "./beatgrid/consoleSeekPlan";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -748,21 +749,61 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
     expect(app.onConsolePlay).toHaveBeenCalledTimes(2);
   });
 
-  it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 재생 중에는 보내지 않는다", () => {
+  it("재생 중 마디를 누르면 먼저 ❚❚ 로 멈추고, 멈춘 답이 온 뒤에야 콘솔 커서를 그 마디로 옮긴다", () => {
     const onPreviewBar = vi.fn();
-    const app = createApp({ props: { onPreviewBar } });
+    const onConsoleSeek = vi.fn();
+    // 마디→초 환산(박자)이 있어야 커서를 옮긴다 — 없으면 아무것도 보내지 않는다(아래 시험).
+    const app = createApp({ props: { onPreviewBar, onConsoleSeek, secondsPerBar: 2 } });
     app.open();
     connectAudio();
     pressPlayWithConsoleFollow(app);
     app.receive(status());
     advance(DELAY_SECONDS * 1000);
 
-    click(nextBarButton()); // 재생 중 — 콘솔 보기는 보내지 않는다
+    click(nextBarButton()); // 재생 중 — ❚❚ 를 보내고, 콘솔 보기·커서 이동은 멈춘 답을 기다린다
+    expect(app.onConsolePause).toHaveBeenCalledTimes(1);
     expect(onPreviewBar).not.toHaveBeenCalled();
+    expect(onConsoleSeek).not.toHaveBeenCalled();
+
+    app.receive(status({ last_action: "console_stop" })); // 멈춤 답
+    expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+  });
+
+  it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 커서 이동은 짧게 모아 마지막 마디만 한 번 보낸다", () => {
+    const onPreviewBar = vi.fn();
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onPreviewBar, onConsoleSeek, secondsPerBar: 2 } });
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
 
     click(playButton()); // ❚❚
     app.receive(status({ last_action: "console_stop" }));
+    onConsoleSeek.mockClear();
+
     click(nextBarButton()); // 일시정지 중 — 그 마디의 콘솔 보기(Goto)를 보낸다
-    expect(onPreviewBar).toHaveBeenCalledTimes(1);
+    click(nextBarButton());
+    expect(onPreviewBar).toHaveBeenCalledTimes(2);
+    expect(onConsoleSeek).not.toHaveBeenCalled(); // 아직 모으는 중
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+  });
+
+  it("박자(마디→초 환산)가 없으면 콘솔 커서를 옮기지 않는다 — 시각을 지어내지 않는다", () => {
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onConsoleSeek } }); // secondsPerBar 없음
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+
+    click(playButton()); // ❚❚
+    app.receive(status({ last_action: "console_stop" }));
+    click(nextBarButton());
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).not.toHaveBeenCalled();
   });
 });

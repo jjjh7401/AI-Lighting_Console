@@ -1007,7 +1007,7 @@ export interface BeatGridSendStatus {
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
    * 안 했으면) `null`. */
   pending_apply_count: number | null;
-  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop";
+  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop" | "console_seek";
   ok: boolean;
   reason: string | null;
   blocked_cells: BeatGridBlockedCell[];
@@ -1588,6 +1588,11 @@ export function buildBeatGridConsolePause(): string {
 /** PR 1 — 일시정지 뒤 ▶ 이어 가기. 서버가 `Go Timecode`만 보내 타임코드 커서부터 잇는다. */
 export function buildBeatGridConsoleResume(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_resume" });
+}
+
+/** 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 타임코드 커서를 세운다. 정지 중에만 쓴다(재생은 켜지 않는다). */
+export function buildBeatGridConsoleSeek(seconds: number): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_seek", seconds });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는
