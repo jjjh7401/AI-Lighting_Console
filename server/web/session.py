@@ -33,6 +33,7 @@ import re
 import tempfile
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
@@ -3934,6 +3935,36 @@ _BEAT_GRID_CONSOLE_UNREAD_MESSAGE = (
 )
 
 
+#: 승인 카드 머리 — 「콘솔 같이」 송신이 승인을 받는 동안에만 값이 있다(WT-approval-card-text).
+#: ContextVar 라서 다른 스레드·다른 요청의 승인 카드에는 보이지 않는다. 값이 없으면 기존 머리다.
+_BEAT_GRID_CARD_TITLE: ContextVar[str] = ContextVar("beat_grid_card_title", default="")
+
+
+def _beat_grid_transport_card_title(
+    kind: str, *, song: str, timecodes: Sequence[int], sequence_count: int
+) -> str:
+    """승인 카드 머리 — 앱 소유 기록으로 만든 「콘솔 같이」 묶음을 감독 말로 적는다.
+
+    ``kind`` 는 ``play``(처음부터)·``resume``(멈춘 자리부터)·``pause``(❚❚)·``stop``(■ 묶음).
+    쇼 백업 한 줄은 게이트가 승인 요청마다 맨 앞에 붙인다(gate.py ``backup_item``),
+    그래서 「쇼 백업 1」이다.
+    영어 게이트 사유는 카드의 「자세히」 안에 그대로 남는다 — 이 문구는 판정에 쓰이지 않는다.
+    """
+    tc_text = " · ".join(f"TC{number}" for number in timecodes)
+    seq_text = f"이 곡 시퀀스 {sequence_count}개 끄기" if sequence_count else ""
+    if kind == "play":
+        head, parts = "재생 시작", ["쇼 백업 1", seq_text, f"{tc_text} 처음으로·재생"]
+    elif kind == "stop":
+        head, parts = "정지", ["쇼 백업 1", seq_text, f"{tc_text} 멈춤"]
+    elif kind == "pause":
+        head, parts = "일시정지", ["쇼 백업 1", f"{tc_text} 멈춤", "시퀀스는 끄지 않음"]
+    elif kind == "resume":
+        head, parts = "이어 재생", ["쇼 백업 1", f"{tc_text} 멈춘 자리부터 재생"]
+    else:
+        raise ValueError(f"unknown transport card kind: {kind!r}")
+    return f"{song} {head} — " + " · ".join(part for part in parts if part)
+
+
 def _beat_grid_pause_card_reason(timecode_number: int | None) -> str:
     """일시정지 승인 카드의 머리 문구 — 타임코드만 세우고 시퀀스는 끄지 않는다는 것을 밝힌다.
     무대 조명이 그대로 있는지는 실측된 적이 없어(감독 실기로 확인) 문구로 약속하지 않는다."""
@@ -4843,7 +4874,9 @@ class ChatSession:
     def _notify_approval(self, request_id: str, request: ApprovalRequest) -> None:
         started = time.perf_counter()
         event = approval_request_event(
-            request_id=request_id, request=self._with_approval_advisories(request)
+            request_id=request_id,
+            request=self._with_approval_advisories(request),
+            title=_BEAT_GRID_CARD_TITLE.get(),
         )
         built = time.perf_counter()
         self._send(event)
@@ -11614,6 +11647,13 @@ class ChatSession:
             "타임코드가 아니라서 쓸 수 없어요. 비어 있는 번호를 넣어 주세요."
         ), ""
 
+    def _beat_grid_song_title(self) -> str:
+        """승인 카드 머리에 쓸 곡 이름 — 지금 곡 열쇠의 제목, 없으면 「이 곡」."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        title = timeline.get("song_title") if timeline is not None else None
+        return title.strip() if isinstance(title, str) and title.strip() else "이 곡"
+
     def _beat_grid_song_record(self) -> Mapping[str, object] | None:
         """지금 곡의 반영 소유 기록 — 열쇠가 어긋나면 격자의 원래 곡 제목 열쇠로 한 번 더 찾는다."""
         store = self._timeline_store
@@ -12831,9 +12871,8 @@ class ChatSession:
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
         # 카드 WT-track-model PR2 — 줄을 나눠 담은 곡은 타임코드들을 함께 Top/Go/Off 한다.
-        commands = transport_commands(
-            (timecode_number, *self._beat_grid_owned_extra_timecodes()), verbs
-        )
+        timecodes = (timecode_number, *self._beat_grid_owned_extra_timecodes())
+        commands = transport_commands(timecodes, verbs)
         rewind = "Top" in verbs
         # ❚❚(pause) 는 시퀀스를 끄지 않는다 — 타임코드 커서만 세운다(PR 1, 감독 지시).
         sequences = self._beat_grid_owned_sequence_numbers() if stop or rewind else ()
@@ -12856,14 +12895,27 @@ class ChatSession:
             card_reason = _beat_grid_pause_card_reason(timecode_number)
         else:
             card_reason = None
+        # 승인 카드 머리 — 감독 말로. 영어 게이트 사유는 「자세히」 안에 남는다.
+        kind = "pause" if pause else "stop" if stop else "play" if rewind else "resume"
+        card_title = _beat_grid_transport_card_title(
+            kind,
+            song=self._beat_grid_song_title(),
+            timecodes=timecodes,
+            sequence_count=len(sequences),
+        )
         if self._preview_approval.is_approved:
             refusal = self._beat_grid_send_transport_preapproved(commands)
         else:
-            refusal = self._beat_grid_dispatch_preview(
-                f"beat-grid-{action}",
-                commands,
-                reason=card_reason,
-            )
+            # 승인 카드 머리: 이 송신이 승인받는 동안만 살아 있다. 같은 스레드의 알림이 읽는다.
+            card_token = _BEAT_GRID_CARD_TITLE.set(card_title)
+            try:
+                refusal = self._beat_grid_dispatch_preview(
+                    f"beat-grid-{action}",
+                    commands,
+                    reason=card_reason if card_reason is not None else card_title,
+                )
+            finally:
+                _BEAT_GRID_CARD_TITLE.reset(card_token)
         if refusal is not None:
             return self._beat_grid_send_status(
                 last_action=action,
