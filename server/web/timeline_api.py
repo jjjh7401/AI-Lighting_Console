@@ -19,6 +19,7 @@ from server.design.beat_grid_ui_values import attach_beat_grid_ui_values
 from server.web.messages import fill_bar_map_header
 from server.web.session import (
     SongTimelineStore,
+    beat_grid_has_owned_record,
     beat_grid_recorded_sequence_numbers,
     derive_beat_grid_fields,
 )
@@ -126,6 +127,7 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
             pool_slots=deps.store.beat_grid_pool_slots,
             empty_marks={},
             pool_read_at=deps.store.beat_grid_pool_read_at,
+            has_owned_record=beat_grid_has_owned_record(deps.store, timeline),
         )
         # 화면 머리말(BPM·마디 수·박자표)도 재생(``song_timeline_event``)과 같은 함수로 채운다.
         return {

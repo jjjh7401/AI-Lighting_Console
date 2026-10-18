@@ -48,6 +48,8 @@ __all__ = [
     "merge_applied_cues_into_record",
     "merge_cell_snapshot",
     "merge_store_line",
+    "owned_record_has_tracks",
+    "partial_apply_baseline",
     "recorded_cue_conflict",
     "removed_cue_fields",
     "song_end_seconds_from_bar_map",
@@ -558,9 +560,11 @@ def recorded_cue_conflict(
     return None
 
 
-#: 「지운 항목」으로 보지 않는 키 — 서빙 때만 붙는 표시값(``_DISPLAY_ONLY_CUE_KEYS``)과,
-#: 번호에서 풀어 낸 표시 색(``color_rgb``).
-_REMOVAL_IGNORED_KEYS = _DISPLAY_ONLY_CUE_KEYS | {"color_rgb"}
+#: 「지운 항목」으로 보지 않는 키 — 서빙 때만 붙는 표시값(``_DISPLAY_ONLY_CUE_KEYS``)과, 번호에서
+#: 풀어 낸 표시 색(``color_rgb``), 앱 쪽 승인 기록(``evidence``). 승인 기록은 콘솔 값이 아니다 —
+#: 프리셋 번호를 바꾸면 그 칸의 승인이 지워져 승인 대기가 되는데, 그것을 지운 항목으로 세면
+#: 승인 대기 칸이 늘 거절된다.
+_REMOVAL_IGNORED_KEYS = _DISPLAY_ONLY_CUE_KEYS | {"color_rgb", "evidence"}
 
 
 def _is_blank(value: object) -> bool:
@@ -606,8 +610,9 @@ def removed_cue_fields(
     예컨대 ``color_preset_no`` 를 비우면 색 줄이 사라져 콘솔은 옛 색을 그대로 갖고, 앱 움직임의
     ``shape`` 만 비워도(속도·축이 남아도) 에미터가 움직임 줄을 안 내 콘솔은 옛 움직임을 그대로
     갖는다. 그런데 스냅샷은 칸이 콘솔과 같다고 말하게 된다. 새로 생긴 키와 값이 바뀌었지만 아직
-    값이 있는 키는 지운 게 아니다. 최상위의 표시값(``_DISPLAY_ONLY_CUE_KEYS``)은 보지 않고,
-    ``color_rgb`` 는 어느 깊이에서든 보지 않는다. 목록은 속으로 들어가지 않는다."""
+    값이 있는 키는 지운 게 아니다. 최상위의 표시값(``_DISPLAY_ONLY_CUE_KEYS``)과 승인 기록
+    (``evidence``)은 보지 않고, ``color_rgb`` 는 어느 깊이에서든 보지 않는다. 목록은 속으로 들어가지
+    않는다."""
     return tuple(sorted(_removed_paths(previous, current, "")))
 
 
@@ -732,16 +737,16 @@ def cell_apply_units(
 
 def cells_needing_whole_apply(
     *,
-    pending: Iterable[Mapping[str, object]],
     held: Iterable[Mapping[str, object]],
     released: Iterable[Mapping[str, object]],
 ) -> dict[BeatGridCellKey, list[str]]:
-    """칸 단위 반영이 맡을 수 없는 칸(칸 -> 이유들) — 프리셋 승인 대기·빈 프리셋 보류·이번에 새로
-    만들 프리셋을 쓰는 칸이다. 이 셋은 승인 기록과 프리셋 만들기 줄이 얽혀 있어 전체 반영으로
-    보내야 한다. 항목은 ``pending_preset_approvals`` 와 같은 모양(``group_name``·``bar``)이다."""
+    """칸 단위 반영이 맡을 수 없는 칸(칸 -> 이유들) — 빈 프리셋 보류·이번에 새로 만들 프리셋을
+    쓰는 칸이다. 이 둘은 콘솔에 프리셋을 만드는 줄(``Store Preset`` 등)이 얽혀 있어 전체 반영으로
+    보내야 한다. 이미 콘솔에 있는 프리셋 번호의 승인 대기 칸은 여기 없다 — 칸 단위 반영이 번호
+    줄만 보내고 승인을 기록한다. 항목은 ``pending_preset_approvals`` 와 같은 모양(``group_name``·
+    ``bar``)이다."""
     found: dict[BeatGridCellKey, list[str]] = {}
     for label, entries in (
-        ("승인 대기 프리셋", pending),
         ("빈 프리셋 보류", held),
         ("새로 만들 프리셋", released),
     ):
@@ -752,6 +757,24 @@ def cells_needing_whole_apply(
                 if label not in labels:
                     labels.append(label)
     return found
+
+
+def owned_record_has_tracks(record: Mapping[str, object] | None) -> bool:
+    """소유 기록(``tracks`` = 줄 이름 -> 시퀀스·큐 기록)에 줄이 하나라도 있는가 — 이 앱이 이 곡으로
+    콘솔에 시퀀스를 만든 적이 있다는 기록이다. 기록이 없거나 ``tracks`` 가 비면 거짓이다."""
+    tracks = record.get("tracks") if isinstance(record, Mapping) else None
+    return isinstance(tracks, Mapping) and bool(tracks)
+
+
+def partial_apply_baseline(*, has_snapshot: bool, has_owned_record: bool) -> str | None:
+    """칸 단위 반영이 무엇을 기준으로 삼는가 — ``"snapshot"``(마지막 반영의 칸 기록이 있어 바뀐
+    칸을 가려낸다) · ``"record"``(칸 기록은 없지만 소유 기록이 있어 고른 칸을 모두 보낸다) ·
+    ``None``(둘 다 없어 칸 단위로 보낼 수 없다). 칸 기록은 서버를 다시 띄우면 사라지지만 소유
+    기록은 파일에 남는다. 반영 경로와 격자 파생 필드(``partial_baseline``)가 같은 판정을 쓰도록
+    한 자리에 둔다."""
+    if has_snapshot:
+        return "snapshot"
+    return "record" if has_owned_record else None
 
 
 def merge_cell_snapshot(

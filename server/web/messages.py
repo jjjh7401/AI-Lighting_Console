@@ -1122,8 +1122,10 @@ def beat_grid_send_status_event(
     끝났을 때만** 실린다. ``timecode_suggestion``(1 이상의 정수)은 프리셋 저장
     성공 때 콘솔이 비어 있다고 확인한 타임코드 번호 하나를 권한다. ``subset`` 은 칸 단위
     반영(``beat_grid_apply.cells``)이 성공했을 때만 실린다 — ``{"requested": 고른 칸 수,
-    "applied": [[줄, 마디], …], "not_applied": [{group_name, bar, reason}, …]}``. 셋 다 없으면
-    키 자체를 싣지 않는다 — ``null`` 로 보내지 않아 기능이 없을 때의 바이트가 예전과 같다."""
+    "applied": [[줄, 마디], …], "not_applied": [{group_name, bar, reason}, …], "baseline":
+    "snapshot"(바뀐 칸만 보냄) 또는 "record"(칸 기록 없이 소유 기록으로 고른 칸을 모두 보냄)}``.
+    셋 다 없으면 키 자체를 싣지 않는다 — ``null`` 로 보내지 않아 기능이 없을 때의 바이트가 예전과
+    같다."""
     if completed is not None and completed not in BEAT_GRID_COMPLETED_STEPS:
         raise ValueError(
             f"beat grid completed must be one of {BEAT_GRID_COMPLETED_STEPS}, got {completed!r}"

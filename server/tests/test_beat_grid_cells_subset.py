@@ -2,8 +2,11 @@
 
 두 선택 필드를 다룬다.
 
-* ``beat_grid_apply`` 의 ``cells`` — 고른 (줄 이름, 마디) 칸 가운데 **바뀐 칸**의 큐만 콘솔에
-  ``/Merge`` 로 덧쓴다. 타임코드·프리셋 만들기·시퀀스 새로 만들기는 한 줄도 보내지 않는다.
+* ``beat_grid_apply`` 의 ``cells`` — 고른 (줄 이름, 마디) 칸의 큐를 콘솔에 ``/Merge`` 로 덧쓴다.
+  칸 기록(스냅샷)이 있으면 **바뀐 칸**만, 서버를 다시 띄워 칸 기록이 없으면 소유 기록을 기준으로
+  고른 칸을 모두 보낸다(``subset.baseline``·``beat_grid.partial_baseline``). 콘솔에 이미 있는
+  프리셋 번호의 승인 대기 칸은 번호 줄만 보내고 승인을 기록한다. 타임코드·프리셋 만들기·시퀀스
+  새로 만들기는 한 줄도 보내지 않는다.
 * ``beat_grid_edit`` 의 ``cells`` — ``bar``+``target`` 한 쌍 대신 칸 여러 개에 같은 ``changes`` 를
   한 번에 씌운다. 한 칸이라도 거절되면 아무 칸도 바꾸지 않는다.
 
@@ -44,6 +47,8 @@ from server.design.beat_grid_send import (
     merge_applied_cues_into_record,
     merge_cell_snapshot,
     merge_store_line,
+    owned_record_has_tracks,
+    partial_apply_baseline,
     recorded_cue_conflict,
     removed_cue_fields,
     subset_line_violation,
@@ -61,11 +66,13 @@ from server.web.messages import (
     beat_grid_send_status_event,
     parse_client_message,
 )
-from server.web.session import ChatSession, SongTimelineStore
+from server.web.session import ChatSession, SongTimelineStore, derive_beat_grid_fields
 from server.web.timeline_library import SongTimelineLibrary
 
 from .conftest import drain_until
 from .test_beat_grid_send_t563 import _APPROVED_EVIDENCE, _new_session, _state_tree, _timeline
+from .test_position_preset_create_t592 import _FRAMES as _POSITION_FRAMES
+from .test_position_preset_create_t592 import _RECIPE as _POSITION_RECIPE
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
 from .test_web_beat_grid_send_t563 import _approve_until, _deps, _send
@@ -658,6 +665,18 @@ class TestRemovedCueFields:
         assert removed_cue_fields({"bar": 2, key: "x"}, {"bar": 2, key: None}) == ()
         assert removed_cue_fields({"bar": 2, key: "x"}, {"bar": 2}) == ()
 
+    def test_a_cleared_approval_record_is_not_a_removal(self) -> None:
+        # 프리셋 번호를 바꾸면 그 칸의 승인(``evidence.approval``)이 지워져 승인 대기가 된다 — 승인
+        # 기록은 콘솔 값이 아니라서 지운 항목이 아니다(아니면 승인 대기 칸이 늘 거절된다).
+        approved = {"grade": "A", "approval": {"by": "supervisor", "date": "d", "source": "s"}}
+        previous = {"color_preset_no": "4.2", "evidence": approved}
+        assert removed_cue_fields(previous, {"color_preset_no": "4.5", "evidence": None}) == ()
+        assert removed_cue_fields(previous, {"color_preset_no": "4.5"}) == ()
+        # 같은 칸에서 정말 지운 색 번호는 여전히 잡힌다.
+        assert removed_cue_fields(previous, {"color_preset_no": None, "evidence": None}) == (
+            "color_preset_no",
+        )
+
     def test_the_names_come_back_sorted(self) -> None:
         previous = {"position_preset_no": "2.1", "color_preset_no": "4.2", "bar": 2}
         assert removed_cue_fields(previous, {"bar": 2}) == ("color_preset_no", "position_preset_no")
@@ -1008,23 +1027,66 @@ class TestMergeAppliedCuesIntoRecord:
 class TestCellsNeedingWholeApply:
     def test_each_kind_names_its_cells_and_labels(self) -> None:
         found = cells_needing_whole_apply(
-            pending=[{"group_name": "BACK", "bar": 2}],
             held=[{"group_name": "FOH", "bar": 1}, {"group_name": "BACK", "bar": 2}],
-            released=[{"group_name": "FOH", "bar": 4}],
+            released=[{"group_name": "BACK", "bar": 2}, {"group_name": "FOH", "bar": 4}],
         )
         assert found == {
-            ("BACK", 2): ["승인 대기 프리셋", "빈 프리셋 보류"],
             ("FOH", 1): ["빈 프리셋 보류"],
+            ("BACK", 2): ["빈 프리셋 보류", "새로 만들 프리셋"],
             ("FOH", 4): ["새로 만들 프리셋"],
         }
 
+    def test_a_pending_approval_is_not_a_reason_to_need_the_whole_apply(self) -> None:
+        # 콘솔에 이미 있는 번호의 승인 대기 칸은 칸 단위 반영이 맡는다 — 이 함수는 더 받지도 않는다.
+        with pytest.raises(TypeError):
+            cells_needing_whole_apply(  # type: ignore[call-arg]
+                pending=[{"group_name": "BACK", "bar": 2}], held=[], released=[]
+            )
+
     def test_entries_without_a_real_bar_are_skipped(self) -> None:
         found = cells_needing_whole_apply(
-            pending=[{"group_name": "BACK", "bar": None}, {"group_name": "BACK", "bar": True}],
-            held=[],
+            held=[{"group_name": "BACK", "bar": None}, {"group_name": "BACK", "bar": True}],
             released=[],
         )
         assert found == {}
+
+
+class TestOwnedRecordHasTracks:
+    def test_a_record_with_a_track_counts(self) -> None:
+        assert owned_record_has_tracks({"tracks": {"BACK": {"sequence_number": 1}}}) is True
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            pytest.param(None, id="no-record"),
+            pytest.param({}, id="empty-record"),
+            pytest.param({"tracks": {}}, id="no-tracks"),
+            pytest.param({"tracks": None}, id="tracks-null"),
+            pytest.param({"tracks": [{"sequence_number": 1}]}, id="tracks-not-a-mapping"),
+            pytest.param({"timecode_number": 20}, id="timecode-only"),
+        ],
+    )
+    def test_anything_without_a_track_does_not(self, record) -> None:
+        assert owned_record_has_tracks(record) is False
+
+
+class TestPartialApplyBaseline:
+    @pytest.mark.parametrize(
+        ("has_snapshot", "has_owned_record", "expected"),
+        [
+            (True, True, "snapshot"),
+            (True, False, "snapshot"),
+            (False, True, "record"),
+            (False, False, None),
+        ],
+    )
+    def test_the_snapshot_wins_then_the_record_then_nothing(
+        self, has_snapshot, has_owned_record, expected
+    ) -> None:
+        assert (
+            partial_apply_baseline(has_snapshot=has_snapshot, has_owned_record=has_owned_record)
+            == expected
+        )
 
 
 class TestFormatCellList:
@@ -1046,11 +1108,8 @@ SONG_KEY = ("LOVE ATTACK", 210)
 #: 칸을 "바뀐 칸"으로 만드는 가장 작은 편집 — 프리셋 번호를 건드리지 않아 승인 대기가 생기지 않는다.
 ENTRY = {"entry": {"fade_bars": 1, "mib_mode": None}}
 _FADE_STORE = re.compile(r"Store Sequence (\d+) Cue (\d+) CueFade [0-9.]+ /Merge")
-#: 이 곡의 반영 기록(스냅샷)이 없을 때의 거절 사유 — 어느 칸이 바뀌었는지 알 수 없다.
-NO_RECORD_REASON = (
-    "이 곡은 아직 반영 기록이 없어 칸 단위로 보낼 수 없어요 — "
-    "전체 「⇪ 콘솔에 반영」으로 먼저 맞춰 주세요."
-)
+#: 칸 기록(스냅샷)도 소유 기록도 없는 곡의 거절 사유 — 칸 단위로 보낼 기준이 전혀 없다.
+NO_RECORD_REASON = "이 곡은 아직 콘솔 반영 기록이 없어요 — 「전체 다시 반영」으로 먼저 맞춰 주세요."
 #: 칸에서 색을 지웠을 때 그 칸을 거절하는 사유.
 COLOR_REMOVED_REASON = (
     "지운 항목(color_preset_no)은 콘솔에 남아 있어 칸 단위로 지울 수 없습니다 — "
@@ -1215,6 +1274,7 @@ class TestSubsetApply:
             "requested": 2,
             "applied": [["BACK", 2], ["FOH", 3]],
             "not_applied": [],
+            "baseline": "snapshot",
         }
         assert status["blocked_cells"] == []
         lines = s.lines()
@@ -1311,6 +1371,7 @@ class TestSubsetApply:
             "requested": 2,
             "applied": [["FOH", 3]],
             "not_applied": [{"group_name": "BACK", "bar": 2, "reason": COLOR_REMOVED_REASON}],
+            "baseline": "snapshot",
         }
         assert status["blocked_cells"] == [
             {"group_name": "BACK", "bar": 2, "reason": COLOR_REMOVED_REASON}
@@ -1381,6 +1442,7 @@ class TestSubsetApply:
             "requested": 2,
             "applied": [["FOH", 3]],
             "not_applied": [{"group_name": "BACK", "bar": 2, "reason": reason}],
+            "baseline": "snapshot",
         }
         assert "app_movement.shape" in status["subset"]["not_applied"][0]["reason"]
         assert not any("Sequence 1" in line for line in s.lines())  # BACK 은 한 줄도 안 나갔다
@@ -1459,6 +1521,7 @@ class TestSubsetApply:
                 {"group_name": "FOH", "bar": 1, "reason": "콘솔과 같음(바뀐 칸 아님)"},
                 {"group_name": "BACK", "bar": 1, "reason": "콘솔과 같음(바뀐 칸 아님)"},
             ],
+            "baseline": "snapshot",
         }
         assert status["blocked_cells"] == []  # 같은 칸은 「막힌 칸」이 아니다
         stores = [line for line in s.lines() if line.startswith("Store Sequence")]
@@ -1667,6 +1730,20 @@ class TestSubsetApplyForbiddenLines:
         assert any(line.startswith("Store Timecode") for line in forbidden)
 
 
+def _plan_a_new_position_preset(s: Applied) -> None:
+    """BACK 2마디가 위치 풀(2)의 비어 있는 71번을 쓰고, 곡 격자에 목표 좌표 레시피가 있다 — 전체
+    반영이라면 반영 때 목표 좌표로 그 프리셋을 만드는 칸이다(``test_position_preset_create_
+    t592``)."""
+    s.mutate_tracks(
+        lambda tracks: tracks[0]["cues"][1].update({"position_preset_no": "2.71", "evidence": None})
+    )
+    timeline = copy.deepcopy(s.store.latest)
+    timeline["beat_grid"].update(_POSITION_RECIPE)
+    s.store.latest = timeline
+    s.session._beat_grid_group_members = lambda names, **_: {"BACK": [101, 102]}
+    s.session._beat_grid_pointing_frames = lambda: _POSITION_FRAMES
+
+
 class TestSubsetApplyRefusals:
     def test_a_cell_missing_from_the_grid_is_refused_before_anything_is_read(self, applied) -> None:
         s = applied
@@ -1711,17 +1788,21 @@ class TestSubsetApplyRefusals:
         _assert_refused_untouched(s, status, before=before, reason_has="BACK")
         assert "전체 「⇪ 콘솔에 반영」" in status["reason"]
 
-    def test_a_song_without_an_apply_record_is_refused_before_any_console_read(
+    def test_a_song_with_neither_a_snapshot_nor_an_owned_track_is_refused_before_any_read(
         self, applied
     ) -> None:
         s = applied
-        # 서버를 다시 띄운 것과 같다 — 칸 기록(스냅샷)은 파일에 저장하지 않지만 소유 기록은 남는다.
+        # 서버를 다시 띄운 것과 같다(칸 기록 없음). 소유 기록은 남았지만 줄이 하나도 없다 — 이 앱이
+        # 콘솔에 만들어 둔 시퀀스가 없으니 칸 단위로 덧쓸 곳이 없다.
         s.store.beat_grid_snapshots.clear()
+        s.store.set_beat_grid_allocation(
+            SONG_KEY, {**s.store.beat_grid_allocation(SONG_KEY), "tracks": {}}
+        )
         s.edit(2, "BACK", ENTRY)
         reads = _count_console_reads(s.console)
         before = s.state()
         status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 1)])
-        _assert_refused_untouched(s, status, before=before, reason_has="전체")
+        _assert_refused_untouched(s, status, before=before, reason_has="전체 다시 반영")
         assert status["reason"] == NO_RECORD_REASON
         assert reads == []  # 승인 카드는 물론 콘솔 읽기도 한 번 없이 거절했다
         # 고른 칸을 바뀐 칸으로 치고 새 기록을 시작하지 않는다.
@@ -1750,26 +1831,52 @@ class TestSubsetApplyRefusals:
             s, status, before=before, reason_has="이미 콘솔에 반영된 내용과 같아"
         )
 
-    def test_a_cell_with_a_pending_preset_approval_needs_the_whole_song_apply(
-        self, applied
-    ) -> None:
-        s = applied
-        s.edit(4, "FOH", {"color_preset_no": "4.5"})
-        s.edit(2, "BACK", ENTRY)
-        before = s.state()
-        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 4)])
-        _assert_refused_untouched(
-            s, status, before=before, reason_has="FOH 4마디(승인 대기 프리셋)"
-        )
-        assert "전체 「⇪ 콘솔에 반영」" in status["reason"]
-
     def test_a_cell_holding_an_empty_preset_needs_the_whole_song_apply(self, applied) -> None:
         s = applied
         s.edit(2, "BACK", {"color_preset_no": "4.40"})  # 콘솔 풀에 없는 번호 — 송신 보류
+        s.edit(3, "FOH", ENTRY)  # 같이 골라도 아무것도 나가지 않는다
         before = s.state()
-        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
-        _assert_refused_untouched(s, status, before=before, reason_has="BACK 2마디(")
-        assert "빈 프리셋 보류" in status["reason"] or "승인 대기 프리셋" in status["reason"]
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 3)])
+        _assert_refused_untouched(s, status, before=before, reason_has="BACK 2마디(빈 프리셋 보류)")
+        assert "FOH 3마디" not in status["reason"]
+        assert "승인 대기" not in status["reason"]
+        assert "전체 「⇪ 콘솔에 반영」" in status["reason"]
+
+    def test_a_cell_that_needs_a_new_preset_created_needs_the_whole_song_apply(
+        self, applied
+    ) -> None:
+        s = applied
+        _plan_a_new_position_preset(s)
+        s.edit(3, "FOH", ENTRY)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 3)])
+        _assert_refused_untouched(
+            s, status, before=before, reason_has="BACK 2마디(새로 만들 프리셋)"
+        )
+        assert "FOH 3마디" not in status["reason"]
+        assert "Store Preset" not in " ".join(s.console.executed)
+
+    def test_a_preset_planned_for_an_unselected_cell_is_not_created_or_approved(
+        self, applied
+    ) -> None:
+        s = applied
+        _plan_a_new_position_preset(s)  # BACK 2 가 새 프리셋을 쓴다 — 고르지 않는다
+        s.edit(3, "FOH", ENTRY)
+        status = s.session.beat_grid_apply(cells=[("FOH", 3)])
+        assert status["ok"] is True
+        assert status["subset"]["applied"] == [["FOH", 3]]
+        lines = s.lines()
+        # 프리셋을 만드는 줄(조준·저장·이름)이 한 줄도 없다 — 고른 칸의 큐 줄뿐이다.
+        assert not any(line.startswith(_FORBIDDEN_PREFIXES) for line in lines)
+        assert not any(line.startswith(("Fixture ", "Label Preset")) for line in lines)
+        assert _stored(lines) == [("2", "3")]
+        assert (
+            s.approval.requests[-1].items[0].risk_reasons[0]
+            == "박자 격자 칸 반영 — 선택한 1칸만 1회 승인"
+        )
+        # 새 프리셋을 쓰는 칸은 만들어지지도 승인되지도 않았다 — 계속 승인 대기·미반영이다.
+        assert "approval" not in (_cell(s.store, "BACK", 2)["evidence"] or {})
+        assert s.unsent() == [{"group_name": "BACK", "bar": 2}]
 
     def test_only_blocked_or_empty_cells_leave_nothing_to_send(self, applied) -> None:
         s = applied
@@ -1812,6 +1919,417 @@ class TestSubsetApplyRefusals:
         assert "completed" not in status
         assert s.state() == before  # 스냅샷·소유 기록·반영 상태 모두 그대로 — 계속 미반영이다
         assert s.unsent() == [{"group_name": "BACK", "bar": 2}]
+
+
+_STORE_ANY = re.compile(r"Store Sequence (\d+) Cue (\d+)(?: CueFade [0-9.]+)? /Merge")
+
+
+def _stored(lines: list[str]) -> list[tuple[str, str]]:
+    """보낸 줄의 저장 줄이 가리킨 (시퀀스, 큐) 쌍 — ``/Merge`` 가 없는 저장 줄이 있으면 실패한다."""
+    stores = [line for line in lines if line.startswith("Store Sequence")]
+    matches = [_STORE_ANY.fullmatch(line) for line in stores]
+    assert all(matches), stores
+    return [match.groups() for match in matches]  # type: ignore[union-attr]
+
+
+def _restart_server(s: Applied) -> None:
+    """서버를 다시 띄운 것과 같다 — 칸 기록(스냅샷)은 파일에 저장하지 않아 사라지고, 소유 기록은
+    파일에 남는다."""
+    s.store.beat_grid_snapshots.clear()
+
+
+class TestRecordBaseline:
+    """서버를 다시 띄운 뒤 — 칸 기록은 없지만 이 앱이 콘솔에 만들어 둔 시퀀스의 소유 기록이 있다.
+
+    이때 칸 단위 반영은 고른 칸을 모두 보낸다(어느 칸이 바뀌었는지는 알 수 없다). 칸 기록을 새로
+    만들지는 않는다 — 보낸 칸만 담은 기록은 나머지 칸이 콘솔과 같다는 거짓 기준이 된다."""
+
+    def test_every_selected_cell_is_sent_and_no_snapshot_is_invented(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        _restart_server(s)
+        reads = _count_console_reads(s.console)
+        # FOH 1마디는 바뀌지 않았다 — 기록 기준은 같은지 알 수 없으므로 고른 칸을 그대로 보낸다.
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 1)])
+
+        assert status["ok"] is True
+        assert status["completed"] == "reflected"
+        assert status["approval_vs_sent"]["match"] is True
+        assert status["subset"] == {
+            "requested": 2,
+            "applied": [["BACK", 2], ["FOH", 1]],
+            "not_applied": [],
+            "baseline": "record",
+        }
+        assert status["blocked_cells"] == []
+        # 소유 기록의 큐 번호 그대로 — BACK(시퀀스 1)의 큐 2, FOH(시퀀스 2)의 큐 1.
+        lines = s.lines()
+        assert _stored(lines) == [("1", "2"), ("2", "1")]
+        assert not any(line.startswith(_FORBIDDEN_PREFIXES) for line in lines)
+        assert s.approved_lines() == lines
+        assert s.approval.requests[-1].items[0].risk_reasons[0] == (
+            "박자 격자 칸 반영 — 선택한 2칸만 1회 승인"
+        )
+        assert reads  # 시퀀스 소유 확인은 콘솔을 읽는다(칸 기록 없이 소유 기록만 믿지 않는다)
+        # 칸 기록은 없는 채다 — 대기 수도 null("기록 없음")이지 0이 아니다.
+        assert s.store.beat_grid_snapshots == {}
+        assert s.unsent() is None
+        assert status["pending_apply_count"] is None
+
+    def test_the_owned_record_and_last_apply_state_still_gain_the_cue_numbers(
+        self, applied
+    ) -> None:
+        s = applied
+        s.mutate_tracks(lambda tracks: tracks[0]["cues"].append(_color_cell(5)))
+        _restart_server(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 5)])
+
+        assert status["ok"] is True
+        assert status["subset"]["baseline"] == "record"
+        assert _stored(s.lines()) == [("1", "4")]
+        record = s.store.beat_grid_allocation(SONG_KEY)
+        assert record["tracks"]["BACK"]["cues"] == {"1": 1, "2": 2, "4": 3, "5": 4}
+        assert record["tracks"]["FOH"] == before["record"]["tracks"]["FOH"]
+        assert record["timecode_number"] == before["record"]["timecode_number"]
+        assert s.store.beat_grid_applied.cue_numbers["BACK"] == {1: 1, 2: 2, 4: 3, 5: 4}
+        assert s.store.beat_grid_applied.sequence_numbers == before["applied"][0]
+        assert s.store.beat_grid_snapshots == {}
+
+    def test_the_timeline_frame_after_the_send_still_has_no_unsent_list(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        _restart_server(s)
+        s.sent.clear()
+        assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
+        grid = [e for e in s.sent if e.get("type") == "song_timeline"][-1]["timeline"]["beat_grid"]
+        assert grid["unsent_cells"] is None
+        assert grid["partial_baseline"] == "record"
+
+    def test_a_removed_value_cannot_be_told_without_a_snapshot_so_the_cell_is_sent(
+        self, applied
+    ) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        assert (
+            s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
+        )  # 페이드가 콘솔에 올라갔다
+        s.console.executed.clear()
+        s.edit(2, "BACK", {"entry": {"fade_bars": None, "mib_mode": None}})  # 페이드를 지웠다
+        _restart_server(s)
+        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+        # 칸 기록이 있었다면 이 칸은 거절된다(``test_removing_a_fade_that_an_earlier_subset_apply_
+        # sent_is_refused``). 마지막 반영 때의 칸 내용이 없으니 지운 항목을 가려낼 수 없다 — 보낸다.
+        assert status["ok"] is True
+        assert status["subset"]["applied"] == [["BACK", 2]]
+        assert status["subset"]["not_applied"] == []
+        assert status["subset"]["baseline"] == "record"
+        assert s.lines().count("Store Sequence 1 Cue 2 /Merge") == 1  # 이제 CueFade 가 없는 저장 줄
+
+    def test_a_track_the_record_does_not_know_is_still_refused(self, applied) -> None:
+        s = applied
+        s.mutate_tracks(
+            lambda tracks: tracks.append(
+                {
+                    "group_name": "SIDE",
+                    "group_no": 9,
+                    "group_no_confirmed": True,
+                    "cues": [_color_cell(1)],
+                }
+            )
+        )
+        _restart_server(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("SIDE", 1)])
+        _assert_refused_untouched(s, status, before=before, reason_has="SIDE")
+        assert "전체 「⇪ 콘솔에 반영」으로 먼저 만들어 주세요" in status["reason"]
+
+    def test_a_cell_whose_cue_number_would_overwrite_another_bar_is_still_refused(
+        self, applied
+    ) -> None:
+        s = applied
+        s.mutate_tracks(lambda tracks: tracks[0]["cues"].insert(2, _color_cell(3)))
+        _restart_server(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 3)])
+        assert status["ok"] is False
+        assert "큐 3번" in status["reason"]
+        assert s.lines() == []
+        assert s.state() == before
+
+    def test_a_console_sequence_that_is_no_longer_ours_is_still_not_written_to(
+        self, applied
+    ) -> None:
+        s = applied
+        s.console.state_tree["DataPool/Sequences"]["children"][0]["name"] = "SOMEONE ELSES SHOW"
+        _restart_server(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+        _assert_refused_untouched(s, status, before=before, reason_has="BACK")
+
+    def test_a_declined_card_leaves_the_song_without_a_snapshot(self, tmp_path) -> None:
+        s = _applied(tmp_path, decisions=(True, False))
+        s.edit(2, "BACK", ENTRY)
+        _restart_server(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+        assert status["ok"] is False
+        assert "subset" not in status
+        assert s.lines() == []
+        assert s.state() == before
+        assert s.store.beat_grid_snapshots == {}
+
+    def test_a_following_whole_song_apply_builds_the_snapshot_as_before(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        _restart_server(s)
+        assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
+        assert s.store.beat_grid_snapshots == {}
+        assert s.session.beat_grid_apply()["ok"] is True
+        assert s.unsent() == []  # 전체 반영이 칸 기록을 만든다
+
+    def test_with_a_snapshot_the_baseline_is_the_snapshot_not_the_record(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 1)])
+        assert status["subset"]["baseline"] == "snapshot"
+        # 칸 기록이 있으면 같은 칸은 그대로 보내지 않는다.
+        assert status["subset"]["applied"] == [["BACK", 2]]
+        assert status["subset"]["not_applied"][0]["reason"] == CELL_UNCHANGED_REASON
+
+
+class TestPendingPresetApproval:
+    """콘솔에 이미 있는 프리셋 번호의 승인 대기 칸 — 번호 줄만 보내고, 승인은 보낸 칸에만 적는다."""
+
+    @staticmethod
+    def pending(s: Applied) -> list[tuple[str, int]]:
+        return [
+            (p["group_name"], p["bar"])
+            for p in pending_preset_approvals(s.store.latest["beat_grid"])
+        ]
+
+    def test_a_selected_pending_cell_is_sent_and_approved_only_after_success(self, applied) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})  # 승인 대기 — 고른다
+        s.edit(3, "FOH", {"color_preset_no": "4.4"})  # 승인 대기 — 고르지 않는다
+        assert self.pending(s) == [("FOH", 3), ("FOH", 4)]
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+
+        assert status["ok"] is True
+        assert status["approval_vs_sent"]["match"] is True
+        assert status["subset"] == {
+            "requested": 1,
+            "applied": [["FOH", 4]],
+            "not_applied": [],
+            "baseline": "snapshot",
+        }
+        lines = s.lines()
+        # 번호 줄과 저장 줄뿐이다 — 프리셋을 만들거나 이름·타입·속성을 쓰는 줄은 한 줄도 없다.
+        assert "Group 8 ; At Preset 4.5" in lines
+        assert not any("Preset 4.4" in line for line in lines)
+        assert _stored(lines) == [("2", "4")]
+        assert not any(line.startswith(_FORBIDDEN_PREFIXES) for line in lines)
+        assert not any(
+            line.startswith(("Store Preset", "Label Preset", "Store Type", "Store Property"))
+            for line in lines
+        )
+        assert s.approved_lines() == lines
+        reasons = s.approval.requests[-1].items[0].risk_reasons
+        assert reasons[0] == "박자 격자 칸 반영 — 선택한 1칸만 1회 승인 · 프리셋 승인 1칸 포함"
+
+        # 승인은 보낸 칸에만 적혔고(승인 카드 묶음의 해시가 출처), 고르지 않은 칸은 그대로 대기다.
+        approval = _cell(s.store, "FOH", 4)["evidence"]["approval"]
+        assert approval["by"] == "supervisor"
+        assert approval["source"] == f"beat_grid_apply:{status['approval_vs_sent']['sha256']}"
+        assert "approval" not in (_cell(s.store, "FOH", 3)["evidence"] or {})
+        assert self.pending(s) == [("FOH", 3)]
+        # 칸 기록에는 승인까지 담긴 지금 값이 올라 보낸 칸은 미반영이 아니다.
+        assert s.unsent() == [{"group_name": "FOH", "bar": 3}]
+        assert status["pending_apply_count"] == 1
+
+    def test_the_card_counts_the_cells_that_carry_a_preset_approval(self, applied) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        s.edit(3, "FOH", {"color_preset_no": "4.4"})
+        s.edit(2, "BACK", ENTRY)  # 승인 대기가 아닌 바뀐 칸
+        status = s.session.beat_grid_apply(cells=[("FOH", 3), ("FOH", 4), ("BACK", 2)])
+        assert status["ok"] is True
+        reasons = s.approval.requests[-1].items[0].risk_reasons
+        assert reasons[0] == "박자 격자 칸 반영 — 선택한 3칸만 1회 승인 · 프리셋 승인 2칸 포함"
+        assert self.pending(s) == []
+
+    def test_the_card_text_has_no_approval_suffix_without_a_pending_cell(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})  # 승인 대기지만 고르지 않는다
+        assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
+        reasons = s.approval.requests[-1].items[0].risk_reasons
+        assert reasons[0] == "박자 격자 칸 반영 — 선택한 1칸만 1회 승인"
+        assert self.pending(s) == [("FOH", 4)]
+
+    def test_a_pending_cell_is_sent_on_the_record_baseline_too(self, applied) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        _restart_server(s)
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+        assert status["ok"] is True
+        assert status["subset"]["baseline"] == "record"
+        assert "Group 8 ; At Preset 4.5" in s.lines()
+        assert self.pending(s) == []  # 승인은 저장된 격자에 적혔다
+        assert s.store.beat_grid_snapshots == {}  # 칸 기록은 만들지 않았다
+
+    def test_the_approval_note_is_not_taken_for_a_changed_cell_afterwards(self, applied) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        assert s.session.beat_grid_apply(cells=[("FOH", 4)])["ok"] is True
+        s.console.executed.clear()
+        # 다시 보내도 이미 같은 칸이다 — 승인 기록 때문에 바뀐 칸으로 잡히지 않는다.
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+        assert status["ok"] is False
+        assert "이미 콘솔에 반영된 내용과 같아" in status["reason"]
+        assert s.lines() == []
+
+    def test_a_declined_card_records_no_approval(self, tmp_path) -> None:
+        s = _applied(tmp_path, decisions=(True, False))
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+        assert status["ok"] is False
+        assert s.lines() == []
+        assert s.state() == before
+        assert self.pending(s) == [("FOH", 4)]
+
+    def test_a_byte_mismatch_records_no_approval_and_no_snapshot_change(
+        self, applied, monkeypatch
+    ) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        before = s.state()
+        mismatch = SimpleNamespace(passed=False, sent_not_approved=("stray",), approved_not_sent=())
+        monkeypatch.setattr(
+            s.session, "_beat_grid_verify_approval_vs_sent", lambda *args, **kwargs: mismatch
+        )
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+        assert status["approval_vs_sent"]["match"] is False
+        assert "completed" not in status
+        # 승인 카드는 통과해 줄이 나갔지만 승인=송신이 어긋났으니 승인도 칸 기록도 남기지 않는다.
+        assert s.lines()
+        assert s.state() == before
+        assert self.pending(s) == [("FOH", 4)]
+
+    def test_an_edit_made_while_the_card_was_open_is_not_marked_as_sent(
+        self, applied, monkeypatch
+    ) -> None:
+        s = applied
+        s.edit(4, "FOH", {"color_preset_no": "4.5"})
+        real_dispatch = s.session._dispatch_declared
+
+        def dispatch_then_edit(*args, **kwargs):
+            executed = real_dispatch(*args, **kwargs)
+            # 승인 카드가 떠 있는 동안 감독이 같은 칸의 색 번호를 바꿨다.
+            s.edit(4, "FOH", {"color_preset_no": "4.4"})
+            return executed
+
+        monkeypatch.setattr(s.session, "_dispatch_declared", dispatch_then_edit)
+        status = s.session.beat_grid_apply(cells=[("FOH", 4)])
+        assert status["ok"] is True
+        # 보낸 것은 4.5 였다 — 4.4 로 바뀐 칸은 승인도 못 받고 미반영으로 남는다.
+        assert "Group 8 ; At Preset 4.5" in s.lines()
+        assert _cell(s.store, "FOH", 4)["color_preset_no"] == "4.4"
+        assert self.pending(s) == [("FOH", 4)]
+        assert s.unsent() == [{"group_name": "FOH", "bar": 4}]
+
+
+class TestPartialBaselineFlag:
+    """``beat_grid.partial_baseline`` — 칸 단위 반영이 무엇을 기준으로 삼는지, 모든 타임라인
+    프레임에 ``unsent_cells`` 옆에 실린다."""
+
+    @staticmethod
+    def grid_of(frame: dict) -> dict:
+        return frame["timeline"]["beat_grid"]
+
+    def test_a_never_applied_song_has_no_baseline(self, tmp_path) -> None:
+        store = SongTimelineStore()
+        store.latest = _grid_timeline()
+        session, _console, _approval, _audit = _new_session(tmp_path, store=store)
+        grid = self.grid_of(session.song_timeline_replay())
+        assert grid["unsent_cells"] is None
+        assert grid["partial_baseline"] is None
+
+    def test_after_a_whole_song_apply_the_snapshot_is_the_baseline(self, applied) -> None:
+        grid = self.grid_of(applied.session.song_timeline_replay())
+        assert grid["unsent_cells"] == []
+        assert grid["partial_baseline"] == "snapshot"
+
+    def test_after_a_restart_the_record_is_the_baseline(self, applied) -> None:
+        _restart_server(applied)
+        grid = self.grid_of(applied.session.song_timeline_replay())
+        assert grid["unsent_cells"] is None  # 의미는 그대로 — 칸 기록이 없으면 null
+        assert grid["partial_baseline"] == "record"
+
+    def test_a_record_without_tracks_is_no_baseline(self, applied) -> None:
+        _restart_server(applied)
+        applied.store.set_beat_grid_allocation(
+            SONG_KEY, {**applied.store.beat_grid_allocation(SONG_KEY), "tracks": {}}
+        )
+        grid = self.grid_of(applied.session.song_timeline_replay())
+        assert grid["unsent_cells"] is None
+        assert grid["partial_baseline"] is None
+
+    def test_every_live_frame_carries_it(self, applied) -> None:
+        s = applied
+        _restart_server(s)
+        s.sent.clear()
+        s.edit(2, "BACK", ENTRY)  # 편집 프레임
+        assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True  # 반영 프레임
+        frames = [e for e in s.sent if e.get("type") == "song_timeline"]
+        assert len(frames) >= 2
+        assert [self.grid_of(frame)["partial_baseline"] for frame in frames] == ["record"] * len(
+            frames
+        )
+
+    def test_the_whole_song_apply_moves_the_baseline_to_the_snapshot(self, applied) -> None:
+        s = applied
+        _restart_server(s)
+        s.sent.clear()
+        assert s.session.beat_grid_apply()["ok"] is True
+        frame = [e for e in s.sent if e.get("type") == "song_timeline"][-1]
+        assert self.grid_of(frame)["partial_baseline"] == "snapshot"
+
+    def test_the_pure_derivation_defaults_to_no_record(self) -> None:
+        timeline = _grid_timeline()
+        key = (timeline.get("song_title"), timeline.get("sequence_number"))
+        snapshot = {key: beat_grid_cell_snapshot(timeline["beat_grid"])}
+
+        def derived(snapshots, **extra) -> dict:
+            return derive_beat_grid_fields(
+                timeline, snapshots=snapshots, pool_slots={}, empty_marks={}, **extra
+            )["beat_grid"]
+
+        assert derived({})["partial_baseline"] is None
+        assert derived({}, has_owned_record=True)["partial_baseline"] == "record"
+        assert derived(snapshot)["partial_baseline"] == "snapshot"
+        assert derived(snapshot, has_owned_record=True)["partial_baseline"] == "snapshot"
+
+    def test_the_library_load_response_carries_it_too(self, tmp_path) -> None:
+        deps = _deps(tmp_path)
+        title = deps.song_timeline_store.latest["song_title"]
+
+        def save_and_load(client: TestClient) -> dict:
+            saved = client.post("/api/timelines", json={"name": title})
+            assert saved.status_code == 200, saved.text
+            loaded = client.post(f"/api/timelines/{saved.json()['item']['id']}/load")
+            assert loaded.status_code == 200, loaded.text
+            return loaded.json()["timeline"]["beat_grid"]
+
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            _send(ws, type="beat_grid_apply")
+            assert _approve_until(ws, "beat_grid_send_status")["ok"] is True
+            grid = save_and_load(client)
+            assert (grid["unsent_cells"], grid["partial_baseline"]) == ([], "snapshot")
+            deps.song_timeline_store.beat_grid_snapshots.clear()  # 서버를 다시 띄운 것과 같다
+            grid = save_and_load(client)
+            assert (grid["unsent_cells"], grid["partial_baseline"]) == (None, "record")
 
 
 # =============================================================================
@@ -2053,6 +2571,7 @@ class TestCellsOverTheWire:
             "not_applied": [
                 {"group_name": "FOH", "bar": 1, "reason": "콘솔과 같음(바뀐 칸 아님)"},
             ],
+            "baseline": "snapshot",
         }
         assert status["pending_apply_count"] == 0
         lines = [line for line in console.executed if line != "SaveShow"]
