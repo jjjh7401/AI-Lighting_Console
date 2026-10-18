@@ -55,7 +55,7 @@ describe("타임코드 번호 입력칸", () => {
     expect(markup).toContain('title="타임코드 번호를 넣어 주세요 — Enter 로 적기"');
   });
 
-  it("is only a small input next to 반영 — no label text, no 적기 button, no visible hint", () => {
+  it("is only a small input among the top bar buttons — no label text, no 적기 button, no visible hint", () => {
     const markup = render({ timecodeNumber: 20, onTimecodeSubmit: noop });
 
     expect(markup).toContain('class="beat-grid-timecode-input"');

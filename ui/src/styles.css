@@ -5354,6 +5354,50 @@ body {
   align-items: center;
 }
 
+/* 「⇪ 콘솔에 반영」 — 상단 바에서 큐 편집 칸 머리로 옮겼다. `.beat-grid-topbar .tbtn`·`.badge` 규칙이
+   여기까지 닿지 않아 같은 모양을 따로 건다(편집 칸의 다른 `.tbtn` 에 번지지 않게 이 줄 안으로 한정). */
+.beat-grid-console-apply {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.beat-grid-console-apply .tbtn {
+  background: #2b2b33;
+  color: inherit;
+  border: 1px solid #3a3a44;
+  border-radius: 7px;
+  padding: 4px 8px;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.beat-grid-console-apply .tbtn:hover:not(:disabled) {
+  border-color: #6a6a78;
+}
+
+.beat-grid-console-apply .tbtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 반영 흐름 — 다음 단계가 「반영」일 때 두르는 강조 테두리(`.beat-grid-topbar .tbtn.is-next` 와 같은 모양). */
+.beat-grid-cue-panel .tbtn.is-next {
+  border-color: #d97757;
+  box-shadow: 0 0 0 2px #d97757;
+}
+
+.beat-grid-console-apply .badge {
+  background: #7fc45a;
+  color: #111;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
 /* 시안 `.tg.on` — 켜진 「전환」 버튼은 노랑. */
 .beat-grid-transition-toggle.is-on {
   background: #ffd84d;

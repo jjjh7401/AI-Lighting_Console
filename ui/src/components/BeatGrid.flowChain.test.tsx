@@ -94,8 +94,17 @@ function headerButton(textPart: string): HTMLButtonElement {
   return found as HTMLButtonElement;
 }
 
+/** 큐 편집 칸(`aside.beat-grid-cue-panel`) 안의 버튼 — 「⇪ 콘솔에 반영」은 상단 바에서 이곳으로 옮겼다. */
+function panelButton(textPart: string): HTMLButtonElement {
+  const found = Array.from(container.querySelectorAll("aside.beat-grid-cue-panel button")).find((button) =>
+    (button.textContent ?? "").includes(textPart),
+  );
+  if (!found) throw new Error(`cue panel button not found: ${textPart}`);
+  return found as HTMLButtonElement;
+}
+
 const consoleFollowToggle = () => headerButton("콘솔 같이");
-const applyButton = () => headerButton("⇪");
+const applyButton = () => panelButton("⇪");
 
 describe("초안 「적용」 뒤 — 프리셋 계획 요청", () => {
   it("마운트 때 이미 있던 draft_applied 응답으로는 요청하지 않는다 — 같은 응답으로 다시 그려도, 다시 마운트해도", () => {
@@ -345,6 +354,108 @@ describe("초안 「적용」 뒤 — 프리셋 계획을 기다리는 동안 (1
     expect(waitLine()).toContain("요청을 이미 보냈어요");
     render({ sendStatus: applied, busyCount: 1 });
     expect(waitLine()).toBeNull();
+  });
+});
+
+describe("「⇪ 콘솔에 반영」 — 큐 편집 칸 머리 (상단 바에서 옮김)", () => {
+  it("상단 바가 아니라 큐 편집 칸 맨 위에 있고, 칸을 하나도 고르지 않은 상태에서도 보인다", () => {
+    const { render } = setup();
+    render({ pendingApplyCount: 2 });
+    const panel = container.querySelector("aside.beat-grid-cue-panel");
+    expect(panel?.firstElementChild?.classList.contains("beat-grid-console-apply")).toBe(true);
+    expect(panel?.firstElementChild?.querySelector("button")).toBe(applyButton());
+    expect(container.querySelector("header.beat-grid-topbar")?.textContent).not.toContain("⇪");
+    // 흐름 띠는 그대로 상단 바 아래에 있다.
+    expect(container.querySelector("header.beat-grid-topbar")?.nextElementSibling).toBe(strip());
+  });
+
+  it("누르면 반영 콜백을 한 번 부르고, 콜백이 없으면 비활성이다", () => {
+    const { handlers, render } = setup();
+    render({});
+    expect(applyButton().disabled).toBe(false);
+    act(() => applyButton().click());
+    expect(handlers.onApply).toHaveBeenCalledTimes(1);
+
+    render({ onApply: undefined }, "unwired");
+    expect(applyButton().disabled).toBe(true);
+    expect(applyButton().title).toContain("아직 배선 안 됨");
+  });
+
+  it("대기 수는 배지로, 격자 출처 안내는 배지 툴팁으로 이어지며 상단 바에는 배지가 없다", () => {
+    const { render } = setup();
+    render({ pendingApplyCount: 3, grid: { ...GRID, note: "이 곡의 기본값 없음" } });
+    const badge = applyButton().querySelector(".badge");
+    expect(badge?.textContent).toBe("3");
+    expect(badge?.getAttribute("title")).toBe("이 곡의 기본값 없음");
+    expect(container.querySelector("header.beat-grid-topbar .badge")).toBeNull();
+
+    render({ pendingApplyCount: null }, "no-record");
+    expect(applyButton().querySelector(".badge-dash")?.textContent).toBe("—");
+
+    render({ pendingApplyCount: undefined }, "unwired-count");
+    expect(applyButton().querySelector(".badge")).toBeNull();
+  });
+
+  it("반영을 누르면 진행 문구가 이 칸에 뜬다 — 상단 바에는 뜨지 않는다", () => {
+    const { render } = setup();
+    render({});
+    expect(container.querySelector(".beat-grid-apply-progress")).toBeNull();
+    act(() => applyButton().click());
+    const note = container.querySelector("aside.beat-grid-cue-panel .beat-grid-apply-progress");
+    expect(note?.textContent).toMatch(/^콘솔을 읽는 중 · \d+초$/);
+    expect(container.querySelector("header.beat-grid-topbar .beat-grid-apply-progress")).toBeNull();
+  });
+
+  it("승인 카드가 떠 있으면 진행 문구가 버튼이 되어, 누르면 승인 카드 콜백만 부른다", () => {
+    const { handlers, render } = setup();
+    const onApprovalNoteClick = vi.fn();
+    render({ approvalPending: true, onApprovalNoteClick });
+    const link = container.querySelector<HTMLButtonElement>(
+      "aside.beat-grid-cue-panel button.beat-grid-apply-progress-link",
+    );
+    expect(link?.textContent).toMatch(/^승인 카드를 기다리는 중 · \d+초 — 승인 카드 보기$/);
+    act(() => link?.click());
+    expect(onApprovalNoteClick).toHaveBeenCalledTimes(1);
+    expect(handlers.onApply).not.toHaveBeenCalled();
+
+    // 승인 콜백이 없으면 글자일 뿐이다.
+    render({ approvalPending: true }, "no-click");
+    expect(container.querySelector("button.beat-grid-apply-progress-link")).toBeNull();
+    expect(container.querySelector(".beat-grid-apply-progress")?.textContent).toMatch(/^승인 카드를 기다리는 중/);
+  });
+});
+
+describe("「⇪ 콘솔에 반영」 강조(is-next) — 단계를 따라 큐 편집 칸의 버튼에 붙는다", () => {
+  /** 서버 응답을 차례로 먹여 흐름 단계를 만든다(응답마다 새 객체). 인스턴스마다 `key` 가 달라 앞 사례의 단계가 새지 않는다. */
+  function reach(key: string, steps: Partial<BeatGridSendStatus>[]) {
+    const { render } = setup();
+    render({ sendStatus: null }, key);
+    for (const step of steps) render({ sendStatus: status(step) }, key);
+  }
+
+  it("다음 단계가 반영일 때만 is-next 가 붙는다", () => {
+    const cases: [string, Partial<BeatGridSendStatus>[], boolean][] = [
+      ["아무것도 안 끝남 → 다음 = 프리셋", [], false],
+      ["프리셋 저장 → 다음 = 반영", [{ completed: "preset_saved" }], true],
+      ["반영까지 → 다음 = 콘솔", [{ completed: "preset_saved" }, { completed: "reflected" }], false],
+      [
+        "콘솔 재생까지 → 다음 없음",
+        [{ completed: "preset_saved" }, { completed: "reflected" }, { last_action: "console_play", ok: true }],
+        false,
+      ],
+      ["반영만 끝남(프리셋 아직) → 다음 = 프리셋", [{ completed: "reflected" }], false],
+    ];
+    for (const [name, steps, expected] of cases) {
+      reach(name, steps);
+      expect(applyButton().classList.contains("is-next"), name).toBe(expected);
+    }
+  });
+
+  it("강조 클래스는 반영 버튼에만 붙는다", () => {
+    reach("only-apply", [{ completed: "preset_saved" }]);
+    expect(container.querySelectorAll(".is-next")).toHaveLength(1);
+    expect(container.querySelector(".is-next")).toBe(applyButton());
+    expect(container.querySelector("header.beat-grid-topbar .is-next")).toBeNull();
   });
 });
 

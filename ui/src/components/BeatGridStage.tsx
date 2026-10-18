@@ -171,6 +171,7 @@ export function BeatGridStage({
   tracks,
   viewBar,
   selectedTrackName,
+  selectedRows,
   onSelectTrack,
   notes,
   motion,
@@ -184,7 +185,10 @@ export function BeatGridStage({
   tracks: readonly BeatGridTrack[];
   viewBar: number;
   selectedTrackName: string | null;
-  onSelectTrack: (trackIndex: number) => void;
+  /** 무대에서 고른 줄들(트랙 번호) — 여기 든 줄은 모두 노란 점선으로 두른다. `selectedTrackName` 줄도 그대로 두른다. */
+  selectedRows?: readonly number[];
+  /** `additive` 는 Shift 를 누른 채 눌렀을 때 참 — 고른 줄에 더하거나 뺀다. */
+  onSelectTrack: (trackIndex: number, additive?: boolean) => void;
   /** 카드 t565 — 서버 무대 판독이 못 읽은 이유(그대로 보인다). */
   notes?: readonly string[];
 }) {
@@ -314,7 +318,7 @@ export function BeatGridStage({
           </text>
         ))}
         {zones
-          .filter((zone) => zone.label.toUpperCase() === selectedKey)
+          .filter((zone) => zone.label.toUpperCase() === selectedKey || (selectedRows?.includes(zone.trackIndex) ?? false))
           .map((zone) => (
             <rect
               key={`sel-${zone.trackIndex}`}
@@ -340,7 +344,7 @@ export function BeatGridStage({
             width={zone.width}
             height={zone.height}
             fill="transparent"
-            onClick={() => onSelectTrack(zone.trackIndex)}
+            onClick={(event) => onSelectTrack(zone.trackIndex, event.shiftKey)}
           >
             <title>{`${zone.label} — 눌러서 편집`}</title>
           </rect>

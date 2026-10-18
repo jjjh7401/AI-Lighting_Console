@@ -1,11 +1,12 @@
 // 박자 격자 상단 바 (SPEC-LDBEAT-001 M9 step 8, 카드 t559, REQ-LDBEAT-017).
 //
 // 시안 `ldbeat-runbook-ui-proposal-20261008.html`의 `.top` 모양: 곡·버전·BPM ·
-// ◀ 마디 ▶(←→ 키) · ▶ 이 마디 콘솔에서 보기 · ■ 끄기 · ⇪ 콘솔에 반영(대기 수) ·
-// 프리셋 서랍. 화면 폭 1450px 이상에서는 한 줄을 지키려고 「▶ 콘솔」·「⇪ 반영」·
-// 「▤」로 줄이고 풀네임은 title 로 보여 준다(REQ-LDBEAT-017(b), CSS 가 가른다).
+// ◀ 마디 ▶(←→ 키) · ▶ 이 마디 콘솔에서 보기 · ■ 끄기 · 프리셋 서랍.
+// 화면 폭 1450px 이상에서는 한 줄을 지키려고 「▶ 콘솔」·「▤」로 줄이고 풀네임은
+// title 로 보여 준다(REQ-LDBEAT-017(b), CSS 가 가른다). 「⇪ 콘솔에 반영」(대기 수·
+// 진행 문구)은 큐 편집 칸 머리로 옮겼다(`beatgrid/ConsoleApplyButton.tsx`).
 //
-// 콘솔 쓰기 경로(이 마디 미리보기·끄기·반영)는 이 카드 범위 밖이라 콜백이
+// 콘솔 쓰기 경로(이 마디 미리보기·끄기)는 이 카드 범위 밖이라 콜백이
 // 없으면 버튼이 비활성으로 남고, 그 사실을 title 로 말한다(지어낸 동작 0).
 import { useEffect, useState } from "react";
 
@@ -19,19 +20,23 @@ import {
 import { formatPlaybackClock, isPlaybackSpaceToggleKey } from "./beatgrid/playbackClock";
 
 export interface TopBarAction {
-  id: "preview" | "apply" | "drawer";
+  id: "preview" | "drawer";
   full: string;
   short: string;
 }
 
-/** 1450px 이상에서 줄여 보이는 세 버튼(시안 `:122`). */
+/** 1450px 이상에서 줄여 보이는 두 버튼(시안 `:122`). 「⇪ 반영」은 큐 편집 칸으로 옮겼다. */
 export const TOP_BAR_SHORTENED_ACTIONS: readonly TopBarAction[] = [
   { id: "preview", full: "▶ 이 마디 콘솔에서 보기", short: "▶ 콘솔" },
-  { id: "apply", full: "⇪ 콘솔에 반영", short: "⇪ 반영" },
   { id: "drawer", full: "▤ 프리셋 서랍", short: "▤" },
 ];
 
-const UNWIRED_NOTE = " — 아직 배선 안 됨(콘솔 송신 경로 없음)";
+export const UNWIRED_NOTE = " — 아직 배선 안 됨(콘솔 송신 경로 없음)";
+
+/** 배선 안 된 버튼이면 title 에 그 사실을 잇는다. */
+export function titleFor(full: string, wired: boolean): string {
+  return wired ? full : full + UNWIRED_NOTE;
+}
 
 export function stepBar(current: number, delta: number, range: { start: number; end: number }): number {
   return Math.max(range.start, Math.min(range.end, current + delta));
@@ -118,8 +123,6 @@ export interface BeatGridTopBarPlaybackProps {
 
 export interface BeatGridTopBarProps {
   songTitle: string;
-  /** 격자 출처 안내(`BeatGridView.note`) — 기존 머리줄에 있던 값을 그대로 옮긴다. */
-  note?: string | null;
   versionLabel: string | null;
   bpm: number | null | undefined;
   currentBar: number;
@@ -132,15 +135,6 @@ export interface BeatGridTopBarProps {
   onBarChange: (bar: number) => void;
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
-  onApply?: () => void;
-  /** 「⇪ 콘솔에 반영」 진행 문구 — 콘솔을 읽는 중·승인 카드를 기다리는 중(카드 apply-latency). */
-  applyProgress?: string | null;
-  /** 진행 문구를 누르면 — 승인 대기 중일 때만 주어진다(전체화면 위 승인 카드로 옮긴다). */
-  onApplyProgressClick?: () => void;
-  /** 콘솔에 아직 안 보낸 편집 수. `undefined`는 배선 전이라 배지를 생략하고,
-   * `null`은 아직 반영 기록이 없다는 뜻이라 「—」를 보이며(0으로 지어내지
-   * 않는다), 숫자는 그 개수다. */
-  pendingApplyCount?: number | null;
   onDrawerToggle?: () => void;
   /** 「자동 배치 제안」 — 서버에 초안을 한 번 요청한다(보류만 만든다). 없으면 버튼을 그리지 않는다. */
   onDraftPropose?: () => void;
@@ -153,10 +147,11 @@ export interface BeatGridTopBarProps {
    * `onTimecodeSubmit`이 없으면 입력칸은 비활성이고 title 로 그 이유를 말한다. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
-  /** 반영 흐름(프리셋 저장 → 반영 → 콘솔 재생) 띠. 넘기면 상단 바 **아래**에 별도 줄로 그리고(상단 바
-   * 한 줄 배치는 건드리지 않는다), 다음 단계가 「반영」이면 「⇪ 콘솔에 반영」 버튼을 강조한다.
+  /** 반영 흐름(프리셋 저장 → 반영 → 콘솔 재생) 띠. 넘기면 상단 바 **아래**에 별도 줄로 그린다(상단 바
+   * 한 줄 배치는 건드리지 않는다). 다음 단계가 「반영」일 때의 버튼 강조는 큐 편집 칸의
+   * `ConsoleApplyButton` 이 맡는다.
    * `done` 은 단계별 완료 여부, `timecodeSuggestion` 은 서버가 권한 타임코드 번호(없으면 `null`).
-   * 생략하거나 `null`이면 띠도 강조도 없이 기존과 바이트 동일하다. */
+   * 생략하거나 `null`이면 띠 없이 기존과 바이트 동일하다. */
   flow?: { done: FlowDone; timecodeSuggestion: number | null } | null;
 }
 
@@ -195,7 +190,7 @@ function TimecodeField({
 }
 
 /** 배지·버튼 툴팁 — 자기 말 뒤에 격자 출처 안내(감독 상태)를 잇는다. 둘 다 없으면 title 을 두지 않는다. */
-function badgeTitle(own: string | null, note: string | null): string | undefined {
+export function badgeTitle(own: string | null, note: string | null): string | undefined {
   return [own, note].filter(Boolean).join(" · ") || undefined;
 }
 
@@ -232,7 +227,6 @@ export function ApplyProgressNote({ text, onClick }: { text: string; onClick?: (
 
 export function BeatGridTopBar({
   songTitle,
-  note = null,
   versionLabel,
   bpm,
   currentBar,
@@ -241,12 +235,8 @@ export function BeatGridTopBar({
   onBarChange,
   onPreviewBar,
   onPreviewOff,
-  onApply,
-  applyProgress,
-  onApplyProgressClick,
 timecodeNumber = null,
   onTimecodeSubmit,
-  pendingApplyCount,
   onDrawerToggle,
   onDraftPropose,
   draftProposeWaiting = false,
@@ -298,8 +288,7 @@ timecodeNumber = null,
     return () => window.removeEventListener("keydown", onKey);
   }, [playback]);
 
-  const [preview, apply, drawer] = TOP_BAR_SHORTENED_ACTIONS;
-  const titleFor = (full: string, wired: boolean) => (wired ? full : full + UNWIRED_NOTE);
+  const [preview, drawer] = TOP_BAR_SHORTENED_ACTIONS;
   // 카드 t630 — 구간 이름은 1490px 이상에서만 보이고(CSS) 그보다 좁으면 마디 번호만
   // 보인다(상단 바가 두 줄로 꺾이지 않게). 전체 이름은 title 로 본다. 구분점 앞
   // 공백은 JSX 가 지우지 못하게 문자열 안에 둔다.
@@ -432,34 +421,6 @@ timecodeNumber = null,
           ■ 끄기
         </button>
         <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
-        {/* 격자 출처 안내(감독 상태)는 반영 배지 툴팁으로 옮겼다. 배지가 없는 배선 전 상태에서만 버튼 title 에 싣는다. */}
-        <button
-          type="button"
-          className={nextFlow === "reflect" ? "tbtn is-next" : "tbtn"}
-          title={
-            pendingApplyCount === undefined
-              ? badgeTitle(titleFor(apply.full, !!onApply), note)
-              : titleFor(apply.full, !!onApply)
-          }
-          disabled={!onApply}
-          onClick={() => onApply?.()}
-        >
-          <ShortenedLabel action={apply} />
-          {typeof pendingApplyCount === "number" && (
-            <span className="badge" title={badgeTitle(null, note)}>
-              {pendingApplyCount}
-            </span>
-          )}
-          {pendingApplyCount === null && (
-            <span
-              className="badge badge-dash"
-              title={badgeTitle("반영 기록 없음 — 첫 반영 뒤에 숫자가 보인다", note)}
-            >
-              —
-            </span>
-          )}
-        </button>
-        {applyProgress && <ApplyProgressNote text={applyProgress} onClick={onApplyProgressClick} />}
         {onDraftPropose && (
           <button
             type="button"
