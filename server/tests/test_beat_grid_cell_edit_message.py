@@ -73,6 +73,9 @@ class TestOnlyMovesAreAccepted:
                 {"op": "create", "group_name": "BACK", "bar": 3, "preset": 7},
                 id="create-with-a-key-this-version-does-not-know",
             ),
+            # 옮기기와 키가 똑같은 항목 — op 하나만 틀려서, 다른 검사가 대신 막아 주지 못한다.
+            pytest.param(_move(op="create"), id="create-with-every-key-a-move-has"),
+            pytest.param(_move(op="delete"), id="delete-with-every-key-a-move-has"),
             pytest.param({"group_name": "BACK", "bar": 3, "to_bar": 5}, id="op-missing"),
             pytest.param(_move(op="MOVE"), id="op-in-capitals"),
             pytest.param(_move(op=None), id="op-null"),

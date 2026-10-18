@@ -24,8 +24,8 @@ from .test_web_beat_grid_console_play_t578 import _deps
 from .test_web_beat_grid_send_t563 import _send
 
 _OPS = [{"op": "move", "group_name": "BACK", "bar": 3, "to_bar": 5}]
-#: 이 버전이 지원하지 않는 일 — 파서가 막는다.
-_CREATE_OPS = [{"op": "create", "group_name": "BACK", "bar": 3}]
+#: 이 버전이 지원하지 않는 일. 옮기기와 키가 똑같아서, 파서가 막을 이유는 op 하나뿐이다.
+_CREATE_OPS = [{"op": "create", "group_name": "BACK", "bar": 3, "to_bar": 5}]
 
 
 def test_the_frame_reaches_the_session_once_with_the_parsed_ops(tmp_path, monkeypatch):

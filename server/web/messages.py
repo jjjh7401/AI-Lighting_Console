@@ -190,6 +190,10 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_pause",
     "beat_grid_console_resume",
     "beat_grid_console_stop",
+    # SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔에 바로 반영. 위 콘솔 버튼들처럼 콘솔에 **쓴다**
+    # (run_commands -> 안전 게이트, 승인 왕복) — app.py 가 같은 백그라운드 작업 길로 돌린다.
+    # 이 버전은 옮기기 하나만 받는다. ``ui/src/protocol.ts`` 쪽 등록은 이 묶음에 없다.
+    "beat_grid_cell_edit",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
@@ -243,6 +247,10 @@ BEAT_GRID_APPLY_MODES = ("apply", "preset_plan")
 # beat_grid_apply·beat_grid_edit 의 선택 필드 ``cells`` 가 한 번에 받는 칸 수 상한
 # (받은 항목 수 기준, 중복 제거 전). 칸 = (줄 이름, 마디).
 BEAT_GRID_CELLS_MAX = 400
+# beat_grid_cell_edit 의 ``ops`` 가 한 번에 받는 항목 수 상한. 항목 하나가 칸 옮기기 하나다.
+BEAT_GRID_CELL_EDIT_OPS_MAX = 64
+# 옮기기 항목이 가질 수 있는 키 전부 — 이 밖의 키는 모르는 키라 거절한다.
+_BEAT_GRID_CELL_EDIT_MOVE_KEYS = frozenset({"op", "group_name", "bar", "to_bar"})
 # beat_grid_send_status 의 선택 필드 ``completed`` — 흐름 사슬(초안 적용 → 프리셋 저장 →
 # 콘솔 반영)에서 방금 **성공으로 끝난** 단계. 새 메시지 타입을 만들지 않고 기존 이벤트에 얹는다.
 BEAT_GRID_COMPLETED_STEPS = ("draft_applied", "preset_saved", "reflected")
@@ -331,6 +339,44 @@ def _parse_beat_grid_cells(value: object, field: str) -> list[tuple[str, int]]:
             raise ProtocolError(f"{field} bar must be a positive integer")
         cells.append((group_name, bar))
     return list(dict.fromkeys(cells))
+
+
+def _parse_beat_grid_cell_edit(payload: dict) -> dict:
+    """``beat_grid_cell_edit`` 의 ``ops`` 를 ``{"ops": [{"op": "move", ...}, ...]}`` 로 가린다.
+
+    ``ops`` 는 비지 않은 목록이고 항목은 ``BEAT_GRID_CELL_EDIT_OPS_MAX`` 개 이하다. 항목은 객체이고,
+    이 버전은 옮기기(``"move"``) 하나만 받는다 — 다른 ``op``(없는 것·만들기·지우기 포함)는 다른 키를
+    보기 전에 버전 사유로 거절한다. 옮기기 항목은 ``op``·``group_name``·``bar``·``to_bar`` 네 키만
+    갖고(모르는 키는 거절), ``group_name`` 은 비지 않은 문자열, ``bar``·``to_bar`` 는 양의 정수다.
+    bool 은 정수가 아니다(파이썬에서 ``True`` 가 1마디로 새는 것을 막는다). 한 항목이라도 어긋나면
+    전체를 거절한다 — 일부만 받지 않는다."""
+    ops = payload.get("ops")
+    if not isinstance(ops, list) or not ops:
+        raise ProtocolError("beat_grid_cell_edit.ops must be a non-empty list")
+    if len(ops) > BEAT_GRID_CELL_EDIT_OPS_MAX:
+        raise ProtocolError(
+            f"beat_grid_cell_edit.ops must have at most {BEAT_GRID_CELL_EDIT_OPS_MAX} items"
+        )
+    parsed: list[dict] = []
+    for index, entry in enumerate(ops):
+        field = f"beat_grid_cell_edit.ops[{index}]"
+        if not isinstance(entry, dict):
+            raise ProtocolError(f"{field} must be an object")
+        if entry.get("op") != "move":
+            raise ProtocolError("이 버전은 칸 옮기기만 지원합니다")
+        unknown = sorted(set(entry) - _BEAT_GRID_CELL_EDIT_MOVE_KEYS)
+        if unknown:
+            raise ProtocolError(f"{field} has unknown keys: {unknown}")
+        group_name = entry.get("group_name")
+        if not isinstance(group_name, str) or not group_name.strip():
+            raise ProtocolError(f"{field}.group_name must be a non-empty string")
+        for key in ("bar", "to_bar"):
+            if not _is_object_number(entry.get(key)):
+                raise ProtocolError(f"{field}.{key} must be a positive integer")
+        parsed.append(
+            {"op": "move", "group_name": group_name, "bar": entry["bar"], "to_bar": entry["to_bar"]}
+        )
+    return {"ops": parsed}
 
 
 def _check_song_audio_name_and_mime(file_name: object, mime_type: object) -> None:
@@ -972,6 +1018,16 @@ def parse_client_message(raw: str) -> dict:
                 raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
             parsed["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")
         return parsed
+
+    if message_type == "beat_grid_cell_edit":
+        # SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔에 바로 반영. 모양은 ``ops`` 에만 있고
+        # 이 버전은 옮기기 하나다. 이 분기가 없으면 아래 마지막 줄이 이 타입을 통째로
+        # ``status_request`` 로 바꿔치기한다.
+        return {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_cell_edit",
+            **_parse_beat_grid_cell_edit(message),
+        }
 
     if message_type in (
         "panel_pin",

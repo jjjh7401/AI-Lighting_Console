@@ -318,7 +318,11 @@ from server.design.section_palette import _arc_palette as _arc_palette
 from server.design.section_palette import _distinct_from_primary as _distinct_from_primary
 from server.design.section_palette import _hue_key as _hue_key
 from server.design.section_palette import _per_chorus_palette as _per_chorus_palette
-from server.design.send_approval import PreviewApprovalSession, build_write_approval_batch
+from server.design.send_approval import (
+    CellLiveApproval,
+    PreviewApprovalSession,
+    build_write_approval_batch,
+)
 from server.design.song_cue_composer import (
     SongCueCompositionResult,
     compose_song_cue_bundle,
@@ -4103,6 +4107,11 @@ class SongTimelineStore:
         # 떴다(점검 1회에 카드 4장). 콘솔이 하나라 서버 프로세스 단위가 맞는 수명이다 — 서버를
         # 다시 띄우면 다시 묻는다. 파일에 저장하지 않는다. 쓰기 승인과는 무관하다.
         self.preview_approval = PreviewApprovalSession()
+        # SPEC-LDRHYTHM-001 TC5 — 칸 편집을 콘솔에 바로 반영하는 일의 허락(범위별). 위
+        # 미리보기 승인과는 다른 객체다 — 미리보기를 허락했다고 칸 편집이 열리지 않는다.
+        # 콘솔이 하나라 미리보기 승인처럼 연결마다가 아니라 서버 프로세스 단위이고, 파일에
+        # 저장하지 않는다(서버를 다시 띄우면 다시 묻는다).
+        self.cell_live_approval = CellLiveApproval()
 
     @property
     def beat_grid_applied(self) -> _BeatGridAppliedState | None:
