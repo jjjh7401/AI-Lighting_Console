@@ -7,10 +7,11 @@
 (t578)은 남의 TC5 를 이 곡의 것으로 받았다 — t578 보고서가 「점유자 이름은 맞지만 다른 쇼로 바뀐
 경우」를 안 잰 것으로 적어 둔 바로 그 틈이다.
 
-안내는 「⇪ 반영으로 고쳐지는가」로 네 갈래다(``_beat_grid_record_is_stale``):
-- 기록의 시퀀스가 콘솔에서 사라짐 → 「⇪」도 거절된다 → 리드에게 넘긴다.
-- 타임코드가 이 앱의 다른 시퀀스(LDBEAT)를 가리킴 → 「⇪」이 타임코드를 다시 만든다 → 「⇪」 안내.
-- 타임코드가 이 앱이 만들지 않은 시퀀스를 가리킴 → 리드에게 넘긴다.
+안내는 갈래별이다(``_beat_grid_record_is_stale``):
+- 기록의 시퀀스가 콘솔에서 사라짐 → 「⇪」이 빈 번호에 새로 만든다(리드 지시) → 「⇪」 안내.
+- 같은 번호를 다른 이름의 시퀀스가 쓰고 있음 → 「⇪」이 그 트랙을 빈 번호에 새로 만든다(리드 지시).
+- 타임코드가 이 곡 기록 밖의 이 앱 시퀀스를 가리킴 → 「⇪」이 타임코드를 다시 짠다 → 「⇪」 안내.
+- 타임코드가 이 앱이 만들지 않은 시퀀스를 가리킴 → 리드에게 넘긴다(「⇪」 확인 안 됨).
 - 타임코드 트랙을 콘솔에서 못 읽음 → 맞다고 하지 않는다.
 
 콘솔 접촉: 0건 — ``FakeConsole`` 만 쓴다.
@@ -29,10 +30,10 @@ from .test_beat_grid_reapply_t572 import (
     _timeline,
 )
 
-#: 시퀀스 2 가 콘솔에서 사라졌다 — 옛 기록이 가리키는 것이 없다.
-OUTDATED_RECORD_GUIDANCE = "옛 기록의 시퀀스가 콘솔에 없어"
-#: 타임코드가 이 곡 기록에 없는 시퀀스를 가리킨다 — 「⇪」이 고치는지 확인 안 돼 리드에게 넘긴다.
-OTHER_APP_SEQUENCE_GUIDANCE = "이 곡 기록에 없는 시퀀스를 가리켜"
+#: 사라진 시퀀스 — 「⇪」이 빈 번호에 새로 만든다.
+MISSING_SEQUENCE_GUIDANCE = (
+    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — ⇪ 콘솔에 반영을 먼저 누르세요."
+)
 #: 타임코드가 이 앱이 만들지 않은 시퀀스를 가리킨다 — 리드에게 넘긴다.
 FOREIGN_GUIDANCE = "이 앱이 만들지 않은 시퀀스를 가리켜"
 #: 타임코드 트랙을 콘솔에서 확인하지 못했다.
@@ -85,6 +86,11 @@ def _session_with(tmp_path, *, sequences, timecode_targets):
 
 #: 시퀀스 2 가 사라졌고, 타임코드는 남은 시퀀스 1 만 가리킨다.
 _RECORD_SEQUENCE_GONE = {"sequences": {1: "LDBEAT BACK"}, "timecode_targets": ["LDBEAT BACK"]}
+#: 시퀀스 2 번호를 다른 이름(「Someone Else」)의 시퀀스가 차지했다 — 남의 것.
+_RECORD_NUMBER_TAKEN_BY_OTHER = {
+    "sequences": {1: "LDBEAT BACK", 2: "Someone Else"},
+    "timecode_targets": ["LDBEAT BACK"],
+}
 #: 기록의 시퀀스 1·2 는 있지만, 타임코드가 이 곡 기록에 없는 LDBEAT 시퀀스 3 도 가리킨다.
 _TIMECODE_POINTS_AT_OTHER_APP_SEQUENCE = {
     "sequences": {1: "LDBEAT BACK", 2: "LDBEAT SIDE-ALL", 3: "LDBEAT MOVER-U"},
@@ -116,14 +122,29 @@ class TestStaleOwnerPlay:
         event = session.beat_grid_console_play()
 
         assert event["ok"] is False
-        assert OUTDATED_RECORD_GUIDANCE in event["reason"]
-        assert "리드에게 알려 주세요" in event["reason"]
+        assert MISSING_SEQUENCE_GUIDANCE in event["reason"]
         assert approval.requests == []
         assert console.executed == []
 
-    def test_a_timecode_pointing_at_a_sequence_outside_the_record_goes_to_the_lead(
+    def test_a_number_taken_by_another_name_asks_to_press_apply_which_recreates_it(
         self, tmp_path
     ) -> None:
+        # WT-play-stale-owner(리드 지시) — 같은 번호를 다른 이름이 쓰면 「⇪」이 새로 만든다.
+        session, console, approval, _audit = _session_with(
+            tmp_path, **_RECORD_NUMBER_TAKEN_BY_OTHER
+        )
+
+        event = session.beat_grid_console_play()
+
+        assert event["ok"] is False
+        assert MISSING_SEQUENCE_GUIDANCE in event["reason"]
+        assert approval.requests == []
+        assert console.executed == []
+
+    def test_a_timecode_pointing_at_another_app_sequence_asks_to_press_apply(
+        self, tmp_path
+    ) -> None:
+        # 브라우저 확인(outside 상태): 「⇪」 승인 카드가 타임코드를 기록대로 다시 짠다.
         session, console, approval, _audit = _session_with(
             tmp_path, **_TIMECODE_POINTS_AT_OTHER_APP_SEQUENCE
         )
@@ -131,9 +152,7 @@ class TestStaleOwnerPlay:
         event = session.beat_grid_console_play()
 
         assert event["ok"] is False
-        assert OTHER_APP_SEQUENCE_GUIDANCE in event["reason"]
-        assert "리드에게 알려 주세요" in event["reason"]
-        assert "⇪" not in event["reason"]
+        assert MISSING_SEQUENCE_GUIDANCE in event["reason"]
         assert approval.requests == []
         assert console.executed == []
 
@@ -160,7 +179,7 @@ class TestStaleOwnerPlay:
         assert approval.requests == []
         assert console.executed == []
 
-    def test_stop_with_a_stale_record_does_not_switch_off_the_other_songs_timecode(
+    def test_stop_with_a_missing_record_sequence_does_not_switch_off_the_other_songs_timecode(
         self, tmp_path
     ) -> None:
         session, console, approval, _audit = _session_with(tmp_path, **_RECORD_SEQUENCE_GONE)
@@ -168,7 +187,7 @@ class TestStaleOwnerPlay:
         event = session.beat_grid_console_stop()
 
         assert event["ok"] is False
-        assert OUTDATED_RECORD_GUIDANCE in event["reason"]
+        assert MISSING_SEQUENCE_GUIDANCE in event["reason"]
         assert approval.requests == []
         assert console.executed == []
 

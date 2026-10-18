@@ -333,23 +333,33 @@ class TestReapplyRefusals:
         assert console.executed == []
         assert len(approval.requests) == 0
 
-    def test_record_exists_but_console_sequence_name_differs_is_refused(self, tmp_path) -> None:
+    def test_record_exists_but_console_sequence_name_differs_is_recreated_not_overwritten(
+        self, tmp_path
+    ) -> None:
+        # WT-play-stale-owner(리드 지시) — 같은 번호를 다른 이름의 시퀀스가 쓰고 있으면
+        # 거절하지 않는다. 그 번호는 건드리지 않고 빈 번호에 새로 만든다.
+        # 덮어쓰기는 이름이 같을 때만.
         store = SongTimelineStore()
         store.latest = _timeline()
         _seed_record(store)
         state_tree = _owned_state_tree(sequence_name="Someone Else Sequence")
-        session, console, approval, _audit = _new_session(
-            tmp_path, store=store, state_tree=state_tree
+        session, console, _approval, _audit = _new_session(
+            tmp_path, store=store, state_tree=state_tree, decisions=(True,) * 10
         )
 
         event = session.beat_grid_apply()
 
-        assert event["ok"] is False
-        assert "이름" in event["reason"]
-        assert console.executed == []
-        assert len(approval.requests) == 0
+        assert event["ok"] is True, event
+        assert not any("Sequence 1 " in c or c.endswith("Sequence 1") for c in console.executed)
+        assert not any("Delete Sequence 1" in c for c in console.executed)
+        record = store.beat_grid_allocation(_song_key())
+        assert record["tracks"]["BACK"]["sequence_number"] != 1
 
-    def test_record_exists_but_recorded_sequence_number_missing_is_refused(self, tmp_path) -> None:
+    def test_record_exists_but_recorded_sequence_number_missing_is_recreated(
+        self, tmp_path
+    ) -> None:
+        # WT-play-stale-owner(리드 지시) — 앱이 만든 시퀀스가 사라졌으면 거절하지 않고 빈 번호에
+        # 새로 만든다(예전에는 「찾지 못해 거절」로 막혔다). 세부: test_beat_grid_recreate_*.
         store = SongTimelineStore()
         store.latest = _timeline()
         _seed_record(store)
@@ -358,16 +368,14 @@ class TestReapplyRefusals:
             "children": [{"i": TIMECODE_NUMBER, "name": OWNED_TIMECODE_NAME}],
             "node": {"childCount": 1},
         }
-        session, console, approval, _audit = _new_session(
-            tmp_path, store=store, state_tree=state_tree
+        session, console, _approval, _audit = _new_session(
+            tmp_path, store=store, state_tree=state_tree, decisions=(True,) * 10
         )
 
         event = session.beat_grid_apply()
 
-        assert event["ok"] is False
-        assert "찾지 못" in event["reason"]
-        assert console.executed == []
-        assert len(approval.requests) == 0
+        assert event["ok"] is True, event
+        assert any("Store Sequence 1" in c for c in console.executed)
 
     def test_record_exists_but_console_timecode_name_differs_is_refused(self, tmp_path) -> None:
         store = SongTimelineStore()

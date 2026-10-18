@@ -3911,20 +3911,13 @@ def _console_send_refusal(payload: object) -> str:
 #: 카드 WT-play-stale-owner — 이 곡의 반영 기록이 콘솔과 안 맞을 때(다른 곡이 마지막으로
 #: 같은 번호를 썼다). 승인 카드 대신 안내만 보이고 콘솔에는 아무것도 안 보낸다.
 #: 안내는 「⇪ 반영으로 고쳐지는가」에 따라 나뉜다(``_beat_grid_record_is_stale``).
-#: ① 기록의 시퀀스가 콘솔에서 사라짐 — 「⇪」도 같은 이유로 거절된다(실측). 리드 결정.
-_BEAT_GRID_OUTDATED_RECORD_MESSAGE = (
-    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — "
-    "옛 기록의 시퀀스가 콘솔에 없어 「⇪ 콘솔에 반영」도 거절돼요. "
-    "리드에게 알려 주세요."
+#: ① 기록의 시퀀스가 콘솔에서 사라짐 — 「⇪」이 빈 번호에 새로 만들어 기록을 고친다(리드 지시).
+_BEAT_GRID_STALE_OWNER_MESSAGE = (
+    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — ⇪ 콘솔에 반영을 먼저 누르세요."
 )
-#: ② 타임코드가 이 곡 기록에 없는 이 앱의 시퀀스를 가리킴. 「⇪」으로 고쳐지는지 확인하지 못했다
-#: (브라우저 확인에서 「⇪」은 보낼 내용이 없다고 답했다). 그래서 「⇪ 반영」을 권하지 않는다.
-_BEAT_GRID_OTHER_APP_SEQUENCE_MESSAGE = (
-    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — "
-    "타임코드가 이 곡 기록에 없는 시퀀스를 가리켜 재생하지 않았습니다. "
-    "리드에게 알려 주세요."
-)
-#: ③ 타임코드가 이 앱이 만들지 않은 시퀀스를 가리킴 — 「⇪」으로 고칠 수 없다. 리드 결정.
+#: ② 타임코드가 이 곡 기록 밖의 이 앱 시퀀스를 가리킴 — 「⇪」이 타임코드를 기록대로 다시 짠다
+#: (브라우저 확인: 「⇪」 카드가 타임코드를 지우고 기록의 시퀀스로 다시 짜는 것을 보였다).
+#: ③ 이 앱이 만들지 않은 시퀀스를 가리킴 — 「⇪」으로 고쳐지는지 확인 못 했다. 리드 결정.
 _BEAT_GRID_FOREIGN_TIMECODE_MESSAGE = (
     "이 곡의 타임코드가 이 앱이 만들지 않은 시퀀스를 가리켜 "
     "재생하지 않았습니다 — 리드에게 알려 주세요."
@@ -12709,14 +12702,15 @@ class ChatSession:
     ) -> str | None:
         """카드 WT-play-stale-owner — 기록이 콘솔과 맞으면 ``None``, 아니면 안내 문장.
 
-        읽기만 한다. ① 기록의 시퀀스가 전부 콘솔에 그 이름 그대로 있는지(``verify_owned_sequences``,
-        다시 반영 때와 같은 판정) ② 타임코드의 트랙이 가리키는 시퀀스가 이 곡의 기록 안에 있는지.
-        콘솔 이름에는 곡 정보가 없어서 이 둘이 「이 곡의 객체인가」의 전부다.
+        읽기만 한다. ① 기록의 트랙 가운데 콘솔에 그 번호·그 이름으로 있는 것
+        (``verify_owned_sequences``, 다시 반영과 같은 판정) ② 타임코드의 트랙이
+        가리키는 시퀀스가 이 곡의 기록 안에 있는지. 콘솔 이름에는 곡 정보가 없어서
+        이 둘이 「이 곡의 객체인가」의 전부다.
 
-        안내는 「⇪ 반영으로 고쳐지는가」에 따라 갈린다(다시 반영은 타임코드를 지우고 새로 만든다):
-        시퀀스가 사라졌으면 다시 반영도 거절되므로 리드에게 넘긴다. 타임코드가 이 앱의 시퀀스
-        (``LDBEAT `` 접두)를 가리키기만 하면 「⇪ 콘솔에 반영」으로 고쳐진다. 어느 하나라도 확인이
-        안 되면 맞다고 하지 않는다."""
+        안내는 「⇪ 반영으로 고쳐지는가」에 따라 갈린다. 다시 반영은 빠진 트랙을 빈
+        번호에 새로 만들고 타임코드를 지우고 기록대로 다시 짠다(브라우저 확인). 그래서
+        이 앱의 시퀀스가 어긋난 경우는 모두 「⇪」 안내다. 이 앱이 만들지 않은
+        시퀀스를 가리키면 리드에게 넘긴다. 어느 하나라도 확인이 안 되면 맞다고 하지 않는다."""
         section = self._beat_grid_sequences_section()
         if (
             isinstance(section.get("reason"), str)
@@ -12734,14 +12728,19 @@ class ChatSession:
             if isinstance(tracks, Mapping)
             else {}
         )
-        _owned_numbers, reason = verify_owned_sequences(section, owned)
+        owned_numbers, reason = verify_owned_sequences(section, owned)
         if reason is not None:
-            return _BEAT_GRID_OUTDATED_RECORD_MESSAGE
+            # 기록이 손상됐거나 콘솔 풀을 다 못 읽었다 — 맞다고 하지 않는다.
+            return reason
         try:
             names = _owned_sequence_names(section)
         except Exception:  # noqa: BLE001 - 못 읽으면 맞다고 하지 않는다
             return _BEAT_GRID_UNCONFIRMED_TIMECODE_MESSAGE
-        recorded = {allocation.get("sequence_number") for allocation in owned.values()}
+        if any(group not in owned_numbers for group in owned):
+            # WT-play-stale-owner(리드 지시) — 콘솔에서 사라졌거나 다른 이름이 쓰는 번호다. 「⇪」이
+            # 그 트랙을 빈 번호에 새로 만들어 기록을 고친다. 번호는 건드리지 않는다.
+            return _BEAT_GRID_STALE_OWNER_MESSAGE
+        recorded = set(owned_numbers.values())
         foreign: list[str] = []
         assigned = False
         for item in self._beat_grid_timecode_track_targets(timecode_number):
@@ -12759,7 +12758,7 @@ class ChatSession:
         if not foreign:
             return None
         if all(name.startswith(APP_SEQUENCE_PREFIX) for name in foreign):
-            return _BEAT_GRID_OTHER_APP_SEQUENCE_MESSAGE
+            return _BEAT_GRID_STALE_OWNER_MESSAGE
         return _BEAT_GRID_FOREIGN_TIMECODE_MESSAGE
 
     def _beat_grid_title_fallback_key(

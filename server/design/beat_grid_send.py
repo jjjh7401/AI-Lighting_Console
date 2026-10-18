@@ -554,10 +554,12 @@ def verify_owned_sequences(
     number``, ``sequence_name``, ...})가 **지금** 콘솔 시퀀스 풀에
     그 번호·그 이름 그대로 있는지 확인한다.
 
-    하나라도 못 찾거나 이름이 다르면 **그 묶음 전체**를 그 사유로
-    거절한다(부분 적용 0건 — ``pick_sequence_numbers``와 같은 원칙).
-    풀 자체를 못 읽거나 잘렸으면(truncated) "있다"도 "없다"도 단정하지
-    않고 그 사유로 거절한다.
+    번호가 콘솔에 **없거나**, 있어도 **이름이 기록과 다르면** 그 트랙은 소유
+    목록에서 빠진다(WT-play-stale-owner, 리드 지시): 앱이 만든 시퀀스가 사라졌거나
+    다른 곡(남의 것)이 그 번호를 다른 이름으로 쓰고 있다. 그 번호는 건드리지
+    않고, 호출자는 그 트랙을 새 트랙으로 보고 빈 번호에 새로 만들어 기록을 고쳐 쓴다.
+    **덮어쓰기는 이름이 기록과 같을 때만**이다. 풀 자체를 못 읽거나 잘렸으면
+    (truncated) "있다"도 "없다"도 단정하지 않고 그 사유로 거절한다.
 
     ``owned``가 비어 있으면(이 곡으로 반영을 한 번도 하지 않았다) 확인할
     것이 없으므로 ``({}, None)``이다."""
@@ -582,18 +584,13 @@ def verify_owned_sequences(
                 f"'{group_name}' 트랙의 소유권 기록에 시퀀스 번호가 없어 재적용을 "
                 "거절합니다(기록 손상)."
             )
+        # 사라졌거나, 같은 번호를 다른 이름이 쓰고 있으면(남의 것 — 건드리지 않는다)
+        # 소유 목록에서 뺀다. 둘 다 빈 번호에 새로 만든다(WT-play-stale-owner).
         if recorded_no not in console_names:
-            return {}, (
-                f"'{group_name}' 트랙이 쓰던 시퀀스 {recorded_no}번을 콘솔에서 찾지 "
-                "못해 재적용을 거절합니다."
-            )
+            continue
         console_name = console_names[recorded_no]
         if not _same_owned_sequence_name(console_name, recorded_name):
-            return {}, (
-                f"'{group_name}' 트랙이 쓰던 시퀀스 {recorded_no}번의 콘솔 이름"
-                f"('{console_name}')이 기록된 이름('{recorded_name}')과 달라 재적용을 "
-                "거절합니다."
-            )
+            continue
         owned_sequences[group_name] = recorded_no
     return owned_sequences, None
 
