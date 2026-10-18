@@ -175,9 +175,10 @@ class PlanPreset:
     #: 디머만 — 속성마다 그 속성을 가진 그룹 번호. 둘째 디머(``Dimmer2``)처럼 일부 기종에만 있는
     #: 속성은 그 그룹만 골라 낸다. 비면 ``attributes`` × ``group_nos`` 한 선택이다.
     attribute_group_nos: tuple[tuple[str, tuple[int, ...]], ...] = ()
-    #: 디머만 — 단일 그룹의 저장 선택. 서브 광원에 밝기가 실린 줄이면 뒤 점 범위가 본체와
-    #: 서브를 함께 고른다(``Fixture a Thru b.``). 없으면 그룹 꼴(``Group n``)이다.
-    selection: str | None = None
+    #: 디머만 — 서브 광원에 밝기가 실린 그룹(번호)과 그 뒤 점 범위 선택(``Fixture a Thru b.``).
+    #: 범위는 본체와 서브를 함께 고른다. 단일 그룹이면 범위 줄이 그룹 꼴을 대신하고, 여러 그룹이면
+    #: 범위 줄을 그룹 꼴 줄 앞에 덧붙인다. 비면 옛 꼴 그대로다.
+    sub_selections: tuple[tuple[int, str], ...] = ()
     #: 값은 정해졌고 저장 줄만 아직 없다. 색·위치는 콘솔 판독 뒤 `preset_plan_store` 가 줄을
     #: 붙이거나 사유와 함께 「미정」으로 내리고(``resolve_preset``), 칸 쪽 색 후보는 기존 색
     #: 경로(t594)로 간다.
@@ -1779,6 +1780,22 @@ def _append_bundle(lines: list[str], bundle: Sequence[str]) -> None:
     lines.extend(bundle[start:])
 
 
+def _dimmer_range_lines(
+    pairs: Sequence[tuple[str, Sequence[int]]],
+    value_percent: int,
+    sub_selections: Sequence[tuple[int, str]],
+) -> tuple[str, ...]:
+    """서브 광원 범위가 있는 그룹마다 한 줄 — 그 그룹을 가진 속성 값을 같은 선택에 싣는다.
+    범위 여럿을 한 선택(``+``)으로 묶으면 첫 범위만 타므로, 그룹마다 줄을 나눈다."""
+    lines: list[str] = []
+    for number, selection in sub_selections:
+        attrs = [attr for attr, numbers in pairs if number in numbers]
+        if attrs:
+            values = " ; ".join(f"Attribute '{attr}' At {value_percent}" for attr in attrs)
+            lines.append(f"{selection} ; {values}")
+    return tuple(lines)
+
+
 def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
     """승인 카드에 실을 저장 줄. 준비된 기본 디머 프리셋과, 저장 줄이 붙은 색·위치 프리셋을 계획
     순서대로 싣는다(``saved_presets``).
@@ -1804,9 +1821,7 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
                 values = " ; ".join(
                     f"Attribute '{attr}' At {preset.value_percent}" for attr, _numbers in pairs
                 )
-                selection = preset.selection or (
-                    "Group " + " + ".join(str(number) for number in pairs[0][1])
-                )
+                selection = "Group " + " + ".join(str(number) for number in pairs[0][1])
                 value_lines: tuple[str, ...] = (f"{selection} ; {values}",)
             else:
                 value_lines = tuple(
@@ -1814,6 +1829,13 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
                     for attr, numbers in pairs
                     for line in _dimmer_value_lines(numbers, preset.value_percent, (attr,))
                 )
+            ranged = _dimmer_range_lines(pairs, preset.value_percent, preset.sub_selections)
+            if ranged and len(preset.group_nos) == 1:
+                # 단일 그룹: 뒤 점 범위 줄이 그룹 꼴을 대신한다(서브 광원까지 고른다).
+                value_lines = ranged
+            else:
+                # 여러 그룹: 옛 그룹 꼴 줄은 그대로 두고, 서브 광원 범위 줄을 그 앞에 덧붙인다.
+                value_lines = (*ranged, *value_lines)
             bundle: Sequence[str] = (
                 *value_lines,
                 f"Store Preset {preset.slot}",
@@ -1825,6 +1847,33 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
             bundle = preset.store
         _append_bundle(lines, bundle)
     return tuple(lines)
+
+
+def with_dimmer_sub_selections(
+    plan: LoveAttackPlan, range_by_group: Mapping[int, str]
+) -> LoveAttackPlan:
+    """준비된 디머 저장마다, 그 저장이 쓰는 그룹 가운데 서브 광원 범위가 있는 그룹을 싣는다
+    (``sub_selections``). 범위가 없는 그룹이나 준비되지 않은 저장은 그대로 둔다."""
+    if not range_by_group:
+        return plan
+    presets = tuple(
+        replace(
+            preset,
+            sub_selections=tuple(
+                sorted(
+                    (number, selection)
+                    for number, selection in range_by_group.items()
+                    if number in preset.group_nos
+                )
+            ),
+        )
+        if preset.kind == "dimmer"
+        and preset.ready
+        and any(number in preset.group_nos for number in range_by_group)
+        else preset
+        for preset in plan.presets
+    )
+    return replace(plan, presets=presets)
 
 
 def resolve_preset(
