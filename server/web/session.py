@@ -13554,7 +13554,7 @@ class ChatSession:
         대로 두고 소유 기록·칸 기록은 그대로 둔다 — 옮긴 칸이 「미반영」으로 남고 ⇪ 전체 반영이
         맞춘다. 줄이 하나라도 나갔으면(끝까지든 일부만이든) 초안 되돌리기·다시하기 기록을 비운다 —
         되돌리기는 콘솔에 닿지 않아 격자만 옛 마디로 돌아가기 때문이다. 한 줄도 나가지 않았으면 그
-        기록은 그대로다."""
+        기록은 그대로다. 송신이 예외로 끊겨 몇 줄이 나갔는지 모를 때는 나간 것으로 보고 비운다."""
         try:
             plan = self._plan_cell_moves(ops)
         except CellLiveRefused as error:
@@ -13576,6 +13576,10 @@ class ChatSession:
                 return self._commit_cell_moves(plan, partial=True)
         except Exception as error:  # noqa: BLE001 — 콘솔에 얼마나 나갔는지 모르므로 사실대로 알린다
             _LOG.exception("칸 옮기기 송신·확정 중 예외")
+            # 송신이 예외로 끊기면 몇 줄이 나갔는지 알 수 없다. 아래 사유 문장대로 나갔을 수 있으니
+            # 줄이 나간 옮기기와 같게 초안 되돌리기·다시하기 기록을 비운다 — 남겨 두면 되돌리기가
+            # 콘솔에 닿지 않고 격자만 옛 마디로 돌린다. 정상으로 돌아온 송신은 위에서 이미 비웠다.
+            self._draft_history = TimelineDraftHistory()
             return self._beat_grid_send_status(
                 last_action="cell_edit",
                 ok=False,
