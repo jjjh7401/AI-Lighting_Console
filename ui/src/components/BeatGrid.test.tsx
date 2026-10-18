@@ -1627,7 +1627,11 @@ describe("presetPickChanges — 고른 항목의 풀·효과 번호대로 저장
     expect(source).not.toMatch(/changes: buildColorPresetChanges\(/);
     expect(source).not.toMatch(/changes: buildPositionPresetChanges\(/);
     expect(source).not.toMatch(/changes: buildEffectPresetChanges\(effectPresetDraft\)/);
-    expect((source.match(/changes: presetPickChanges\(/g) ?? []).length).toBe(3);
+    // 「적용」은 무대에서 고른 줄마다 같은 changes 를 보내므로 `requestEditForTargets(필드, changes)` 로 넘긴다.
+    expect(source).not.toMatch(/requestEditForTargets\(\s*"[a-z]+",\s*build(Color|Position)PresetChanges\(/);
+    expect(source).not.toMatch(/requestEditForTargets\(\s*"[a-z]+",\s*buildEffectPresetChanges\(effectPresetDraft\)/);
+    const viaPick = source.match(/requestEditForTargets\(\s*"(?:position|color|effect)",\s*presetPickChanges\(/g) ?? [];
+    expect(viaPick.map((call) => call.match(/"(\w+)"/)?.[1]).sort()).toEqual(["color", "effect", "position"]);
   });
 });
 

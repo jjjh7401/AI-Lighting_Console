@@ -46,7 +46,6 @@ describe("필요한 프리셋 만들기", () => {
         barRange={{ start: 0, end: 4 }}
         onBarChange={() => {}}
         onDrawerToggle={() => {}}
-        onApply={() => {}}
       />,
     );
     expect(html).not.toContain("프리셋 계획");

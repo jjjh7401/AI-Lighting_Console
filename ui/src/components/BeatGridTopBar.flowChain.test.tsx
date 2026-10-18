@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// 상단 바 반영 흐름 띠 시험 — `flow` 를 넘길 때만 상단 바 **아래**에 띠가 생기고, 다음 단계가 「반영」일
-// 때만 「⇪ 콘솔에 반영」에 강조 클래스(`is-next`)가 붙는다. 번호 쓰기 버튼은 눌러야 하므로 DOM 이 필요하다
+// 상단 바 반영 흐름 띠 시험 — `flow` 를 넘길 때만 상단 바 **아래**에 띠가 생긴다(「⇪ 콘솔에 반영」의 강조는
+// 큐 편집 칸으로 옮겼다 — `BeatGrid.flowChain.test.tsx`). 번호 쓰기 버튼은 눌러야 하므로 DOM 이 필요하다
 // (`songAudioLinkRequest.test.tsx` 와 같은 방식 — jsdom + `act`).
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -39,7 +39,6 @@ function render(overrides: Partial<BeatGridTopBarProps> = {}) {
         currentBar={1}
         barRange={{ start: 0, end: 82 }}
         onBarChange={() => {}}
-        onApply={() => {}}
         {...overrides}
       />,
     ),
@@ -59,14 +58,6 @@ function stepTexts(): string[] {
     .map((span) => span.textContent ?? "");
 }
 
-function applyButton(): HTMLButtonElement {
-  const found = Array.from(container.querySelectorAll("button")).find((button) =>
-    (button.textContent ?? "").includes("⇪"),
-  );
-  if (!found) throw new Error("apply button not found");
-  return found;
-}
-
 function suggestionButton(): HTMLButtonElement | null {
   return strip()?.querySelector("button") ?? null;
 }
@@ -79,7 +70,6 @@ describe("흐름 띠 — flow 를 넘길 때만 생긴다", () => {
     expect(container.querySelector(".is-next")).toBeNull();
     expect(container.children).toHaveLength(1);
     expect(container.firstElementChild?.tagName).toBe("HEADER");
-    expect(applyButton().className).toBe("tbtn");
 
     render({ flow: null });
     expect(container.innerHTML).toBe(omitted);
@@ -103,9 +93,8 @@ describe("흐름 띠 — flow 를 넘길 때만 생긴다", () => {
     const without = container.querySelector("header")?.outerHTML;
     render({ ...common, flow: { done: done({ preset: true }), timecodeSuggestion: 12 } });
     const withFlow = container.querySelector("header")?.outerHTML;
-    // 다음 단계가 「반영」이라 반영 버튼에 강조 클래스만 더해진다 — 그 밖은 같다.
-    expect(withFlow).toContain('class="tbtn is-next"');
-    expect(withFlow?.replace('class="tbtn is-next"', 'class="tbtn"')).toBe(without);
+    // 다음 단계가 「반영」이어도 헤더는 한 글자도 안 바뀐다 — 반영 버튼 강조는 큐 편집 칸의 ConsoleApplyButton 이 맡는다.
+    expect(withFlow).toBe(without);
   });
 });
 
@@ -202,25 +191,21 @@ describe("흐름 띠 — 「N 번 쓰기」 버튼", () => {
   });
 });
 
-describe("「⇪ 콘솔에 반영」 강조", () => {
-  it("다음 단계가 반영일 때만 is-next 가 붙는다", () => {
-    const cases: [Partial<FlowDone>, boolean][] = [
-      [{}, false], // 다음 = 프리셋
-      [{ preset: true }, true], // 다음 = 반영
-      [{ preset: true, reflect: true }, false], // 다음 = 콘솔
-      [{ preset: true, reflect: true, console: true }, false], // 다음 없음
-      [{ reflect: true }, false], // 프리셋이 아직이라 다음 = 프리셋
+// 「⇪ 콘솔에 반영」이 큐 편집 칸으로 옮겨 갔다 — 어느 단계에서 강조되는지는 `BeatGrid.flowChain.test.tsx`
+// 가 잰다. 상단 바는 단계가 어디든 강조를 두르지 않는다.
+describe("상단 바는 「반영」 강조를 두르지 않는다", () => {
+  it("어느 단계에서도 is-next 가 없다", () => {
+    const cases: Partial<FlowDone>[] = [
+      {}, // 다음 = 프리셋
+      { preset: true }, // 다음 = 반영
+      { preset: true, reflect: true }, // 다음 = 콘솔
+      { preset: true, reflect: true, console: true }, // 다음 없음
+      { reflect: true }, // 프리셋이 아직이라 다음 = 프리셋
     ];
-    for (const [flags, expected] of cases) {
+    for (const flags of cases) {
       render({ flow: { done: done(flags), timecodeSuggestion: null } });
-      expect(applyButton().classList.contains("is-next"), JSON.stringify(flags)).toBe(expected);
+      expect(container.querySelector(".is-next"), JSON.stringify(flags)).toBeNull();
     }
-  });
-
-  it("강조 클래스는 반영 버튼에만 붙는다", () => {
-    render({ flow: { done: done({ preset: true }), timecodeSuggestion: null } });
-    expect(container.querySelectorAll(".is-next")).toHaveLength(1);
-    expect(container.querySelector(".is-next")).toBe(applyButton());
   });
 });
 

@@ -516,6 +516,29 @@ describe("AC-LDBEAT-022 — 2D 무대", () => {
     expect(html).toContain('data-track="BACK"');
   });
 
+  it("(b2) selectedRows 의 줄은 모두 노란 점선이고, 이름으로 짚은 줄과 겹쳐도 한 번만 두른다", () => {
+    const outlines = (selectedTrackName: string | null, selectedRows?: readonly number[]) =>
+      (
+        renderToStaticMarkup(
+          <BeatGridStage
+            fixtures={fixtures}
+            tracks={tracks}
+            viewBar={0}
+            selectedTrackName={selectedTrackName}
+            selectedRows={selectedRows}
+            onSelectTrack={() => undefined}
+          />,
+        ).match(/beat-grid-stage-selected/g) ?? []
+      ).length;
+    expect(outlines(null, [0, 1])).toBe(2);
+    expect(outlines(null, [1])).toBe(1);
+    expect(outlines("WASH", [0])).toBe(1); // 같은 줄을 이름과 번호로 둘 다 짚어도 한 번
+    expect(outlines("WASH", [1])).toBe(2); // 이름으로 짚은 줄 + 번호로 짚은 다른 줄
+    expect(outlines(null, [])).toBe(0);
+    expect(outlines(null, undefined)).toBe(0); // 안 넘기면 기존과 같다
+    expect(outlines("WASH", undefined)).toBe(1);
+  });
+
   it("(c) 높이 320px, 폭 비율 1.2", () => {
     expect(PANEL_CSS).toMatch(
       /\.beat-grid \.beat-grid-insp \.beat-grid-stage-pane \{[^}]*flex: 1\.2 1 0;[^}]*height: 320px;/,

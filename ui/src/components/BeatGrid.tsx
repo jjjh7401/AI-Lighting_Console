@@ -169,9 +169,10 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import { ConsoleApplyButton } from "./beatgrid/ConsoleApplyButton";
 import { ConsoleCoverageNotice } from "./beatgrid/ConsoleCoverageNotice";
 import { ConsoleRunningBanner } from "./beatgrid/ConsoleRunningBanner";
-import { NO_FLOW_DONE, completedStepOf, type FlowDone } from "./beatgrid/flowChain";
+import { NO_FLOW_DONE, completedStepOf, nextFlowStep, type FlowDone } from "./beatgrid/flowChain";
 import {
   audioClockSeconds,
   clampPlaybackSeconds,
@@ -621,8 +622,8 @@ export interface BeatGridProps {
   bpm?: number | null;
   barCount?: number | null;
   versionLabel?: string | null;
-  /** 카드 t559 — 상단 바 콘솔 버튼(이 마디 콘솔에서 보기·끄기·반영). 콘솔
-   * 송신 경로가 아직 없어 생략하면 버튼이 비활성으로 남는다. */
+  /** 카드 t559 — 상단 바 콘솔 버튼(이 마디 콘솔에서 보기·끄기)과 큐 편집 칸 머리의 반영 버튼
+   * (`onApply`). 콘솔 송신 경로가 아직 없어 생략하면 버튼이 비활성으로 남는다. */
   onPreviewBar?: (bar: number) => void;
   onPreviewOff?: () => void;
   onApply?: () => void;
@@ -1367,6 +1368,40 @@ export function presetPickChanges(
   return { [pool.baseField]: presetNo };
 }
 
+/** 무대에서 줄을 Shift+클릭하면 그 줄을 고른 줄에 더하거나 뺀다. 이미 든 줄이 하나뿐이면 뺄 수
+ * 없다(고른 줄이 0개가 되면 「선택 없음」과 헷갈린다). 받은 배열은 고치지 않는다. */
+export function toggleStageRow(rows: readonly number[], trackIndex: number): number[] {
+  if (!rows.includes(trackIndex)) return [...rows, trackIndex];
+  if (rows.length > 1) return rows.filter((row) => row !== trackIndex);
+  return [...rows];
+}
+
+/** 「적용」이 닿는 칸들 — 무대에서 고른 줄(`rows`)마다 지금 보는 마디(`viewBar`)에 걸친 큐 칸, 그리고
+ * 편집 칸이 펼쳐 보이는 칸(`focus`). 고른 줄이 없으면 `focus` 하나뿐이라 한 칸 편집과 같다.
+ * 지금 마디에 칸이 없는 줄이나 범위 밖 줄은 건너뛰고, 같은 (줄, 마디)는 한 번만 센다. */
+export function stageSelectionCells(
+  rows: readonly number[],
+  focus: { trackIndex: number; bar: number } | null,
+  tracks: readonly BeatGridTrack[],
+  viewBar: number,
+): { trackIndex: number; bar: number }[] {
+  const cells: { trackIndex: number; bar: number }[] = [];
+  const seen = new Set<string>();
+  const add = (trackIndex: number, bar: number) => {
+    const key = `${trackIndex}:${bar}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    cells.push({ trackIndex, bar });
+  };
+  for (const row of rows) {
+    const track = tracks[row];
+    const cue = track ? cueForBar(track, viewBar) : null;
+    if (cue) add(row, cue.bar);
+  }
+  if (focus) add(focus.trackIndex, focus.bar);
+  return cells;
+}
+
 /** 서버 `apply_beat_grid_edit`의 ``changes`` 모양 — 밝기 단일모드 중
  * "디머 효과" 직접 고르기(REQ-LDBEAT-015(c), `buildBrightnessPresetChanges`
  * 의 "디머 프리셋" 모드와 짝). */
@@ -1689,6 +1724,8 @@ export function BeatGrid({
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set());
   const [allOpen, setAllOpen] = useState(true);
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
+  // 무대에서 고른 줄들(트랙 번호) — 비면 편집은 `selected` 한 칸만 건드린다. 칸을 새로 고르면 비워진다(`selectCue`).
+  const [stageRows, setStageRows] = useState<number[]>([]);
   // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
   const [presetPlanPending, setPresetPlanPending] = useState<
     { sinceSeq: number; busyAt: number; at: number } | null
@@ -2566,6 +2603,13 @@ export function BeatGrid({
     onEditRequest(request);
     setEditPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
   };
+  // 무대에서 줄을 골랐으면 그 줄들의 지금 마디 칸 전부에, 아니면 고른 칸 하나에 같은 편집을
+  // 보낸다(칸마다 요청 하나씩).
+  const requestEditForTargets = (field: EditReplyField, changes: Record<string, unknown>) => {
+    for (const cell of stageSelectionCells(stageRows, selected, grid.tracks, viewBar)) {
+      requestEdit(field, { bar: cell.bar, target: grid.tracks[cell.trackIndex].group_name, changes });
+    }
+  };
   const renderEditReply = (field: EditReplyField) => {
     const reply = editRejectionFor(field, editPending, lastServerReply);
     return reply ? (
@@ -2574,8 +2618,15 @@ export function BeatGrid({
       </p>
     ) : null;
   };
-  const selectCue = (trackIndex: number, bar: number, transition: boolean) => {
-    setSelected({ trackIndex, bar });
+  const selectCue = (trackIndex: number, bar: number, transition: boolean, keepViewBar?: number) => {
+    const next = { trackIndex, bar };
+    setSelected(next);
+    // 칸을 고르면 보던 마디가 그 칸의 시작 마디로 옮겨 간다. 무대 클릭은 보던 마디를 그대로 둔다 — 줄을
+    // 여럿 고르는 동안 「적용」이 닿는 칸(보는 마디에 걸친 칸)이 클릭마다 흔들리지 않게.
+    if (keepViewBar !== undefined) setBarCursor({ bar: keepViewBar, anchor: next });
+    // 타임라인 등에서 칸을 새로 고르면 무대에서 고른 줄은 비운다(한 칸 편집으로 돌아간다).
+    // 무대 클릭은 이 호출 뒤에 `setStageRows` 로 다시 채운다.
+    setStageRows([]);
     setTransitionView(transition);
     setSceneBar(null);
     setFocusField(null);
@@ -2678,7 +2729,6 @@ export function BeatGrid({
       {/* 카드 t559(M9 step 8) — 상단 바, REQ-LDBEAT-017. */}
       <BeatGridTopBar
         songTitle={grid.song_title}
-        note={grid.note}
         versionLabel={versionLabel}
         bpm={bpm}
         currentBar={viewBar}
@@ -2694,12 +2744,8 @@ export function BeatGrid({
             onPreviewOff();
           })
         }
-        onApply={requestApply}
-        applyProgress={applyProgressText}
-        onApplyProgressClick={approvalPending ? onApprovalNoteClick : undefined}
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
-        pendingApplyCount={pendingApplyCount}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
         onDraftPropose={pendingDraft ? undefined : requestDraftPropose}
         draftProposeWaiting={draftState === "waiting"}
@@ -3192,6 +3238,15 @@ export function BeatGrid({
             시안 `.sidepane .ed`) — 프리셋 목록은 서랍이 읽은 카탈로그에서
             온다. */}
         <aside className="beat-grid-cue-panel" aria-label="큐 편집 칸">
+          {/* 「⇪ 콘솔에 반영」 — 상단 바에서 옮겨 왔다. 칸을 고르지 않았을 때도, 초안·제안 카드가 떠 있을 때도 보인다. */}
+          <ConsoleApplyButton
+            onApply={requestApply}
+            pendingApplyCount={pendingApplyCount}
+            note={grid.note}
+            applyProgress={applyProgressText}
+            onApplyProgressClick={approvalPending ? onApprovalNoteClick : undefined}
+            isNext={nextFlowStep(flowDone) === "reflect"}
+          />
           {pendingDraft ? (
             // SPEC-LDARRANGE-001 — 자동 배치 초안이 보류 중인 동안은 이 칸이 초안 카드가 된다.
             // 「적용」·「거절」 전까지 격자·콘솔은 바뀌지 않는다. 적용은 칸 라벨만 바꾸고 되돌리기 기록을 남긴다.
@@ -3305,7 +3360,14 @@ export function BeatGrid({
                   >
                     전환
                   </button>
-                  <button type="button" aria-label="닫기" onClick={() => setSelected(null)}>
+                  <button
+                    type="button"
+                    aria-label="닫기"
+                    onClick={() => {
+                      setSelected(null);
+                      setStageRows([]);
+                    }}
+                  >
                     ✕
                   </button>
                 </span>
@@ -3639,7 +3701,7 @@ export function BeatGrid({
                                   if (brightnessModeDraft === "value") {
                                     const changes = buildBrightnessValueChanges(Number(brightnessDraft));
                                     if (changes && selected && selectedTrack) {
-                                      requestEdit("brightness", { bar: selected.bar, target: selectedTrack.group_name, changes });
+                                      requestEditForTargets("brightness", changes);
                                     }
                                   } else if (
                                     brightnessModeDraft === "dimmer_preset" &&
@@ -3648,11 +3710,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    requestEdit("brightness", {
-                                      bar: selected.bar,
-                                      target: selectedTrack.group_name,
-                                      changes: buildBrightnessPresetChanges(brightnessPresetDraft),
-                                    });
+                                    requestEditForTargets("brightness", buildBrightnessPresetChanges(brightnessPresetDraft));
                                   } else if (
                                     brightnessModeDraft === "dimmer_effect" &&
                                     brightnessEffectDraft &&
@@ -3660,11 +3718,7 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    requestEdit("brightness", {
-                                      bar: selected.bar,
-                                      target: selectedTrack.group_name,
-                                      changes: buildBrightnessDimmerEffectChanges(brightnessEffectDraft),
-                                    });
+                                    requestEditForTargets("brightness", buildBrightnessDimmerEffectChanges(brightnessEffectDraft));
                                   }
                                   closeEdit();
                                 }}
@@ -3730,12 +3784,11 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    requestEdit("position", {
-                                      bar: selected.bar,
-                                      target: selectedTrack.group_name,
-                                      // 카드 t557 — 효과 번호대 항목이면 위치 효과로.
-                                      changes: presetPickChanges(positionSection, "Position", positionPresetDraft),
-                                    });
+                                    // 카드 t557 — 효과 번호대 항목이면 위치 효과로.
+                                    requestEditForTargets(
+                                      "position",
+                                      presetPickChanges(positionSection, "Position", positionPresetDraft),
+                                    );
                                   }
                                   closeEdit();
                                 }}
@@ -3782,12 +3835,8 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    requestEdit("color", {
-                                      bar: selected.bar,
-                                      target: selectedTrack.group_name,
-                                      // 카드 t557 — 효과 번호대 항목이면 색 효과(effect_kind color)로.
-                                      changes: presetPickChanges(colorSection, "Color", colorPresetDraft),
-                                    });
+                                    // 카드 t557 — 효과 번호대 항목이면 색 효과(effect_kind color)로.
+                                    requestEditForTargets("color", presetPickChanges(colorSection, "Color", colorPresetDraft));
                                   }
                                   closeEdit();
                                 }}
@@ -3836,12 +3885,11 @@ export function BeatGrid({
                                     selected &&
                                     selectedTrack
                                   ) {
-                                    requestEdit("effect", {
-                                      bar: selected.bar,
-                                      target: selectedTrack.group_name,
-                                      // 카드 t557 — 종류는 고른 항목의 풀이 정한다(이 목록은 위치 풀 효과).
-                                      changes: presetPickChanges(positionSection, "Position", effectPresetDraft),
-                                    });
+                                    // 카드 t557 — 종류는 고른 항목의 풀이 정한다(이 목록은 위치 풀 효과).
+                                    requestEditForTargets(
+                                      "effect",
+                                      presetPickChanges(positionSection, "Position", effectPresetDraft),
+                                    );
                                   }
                                   closeEdit();
                                 }}
@@ -4009,9 +4057,19 @@ export function BeatGrid({
             tracks={grid.tracks}
             viewBar={viewBar}
             selectedTrackName={selectedTrack?.group_name ?? null}
-            onSelectTrack={(trackIndex) => {
-              const cue = cueForBar(grid.tracks[trackIndex], viewBar);
-              if (cue) selectCue(trackIndex, cue.bar, false);
+            selectedRows={stageRows}
+            onSelectTrack={(trackIndex, additive) => {
+              // 지금 마디에 칸이 없는 줄은 눌러도 아무 일 없다.
+              if (!cueForBar(grid.tracks[trackIndex], viewBar)) return;
+              // 보통 클릭은 그 줄 하나로 바꾸고, Shift 클릭은 고른 줄에 더하거나 뺀다(마지막 한 줄은 못 뺀다).
+              const nextRows = additive ? toggleStageRow(stageRows, trackIndex) : [trackIndex];
+              // 편집 칸이 펼쳐 보이는 줄 — 방금 누른 줄, 뺐다면 남은 줄의 마지막.
+              const focusTrack = nextRows.includes(trackIndex) ? trackIndex : nextRows[nextRows.length - 1];
+              const focusCue = cueForBar(grid.tracks[focusTrack], viewBar);
+              if (!focusCue) return;
+              // `selectCue` 가 고른 줄을 비우므로 그 뒤에 다시 채운다(한 이벤트 안이라 마지막 값이 남는다).
+              selectCue(focusTrack, focusCue.bar, false, viewBar);
+              setStageRows(nextRows);
             }}
           />
           <p className="beat-grid-stage-note">
