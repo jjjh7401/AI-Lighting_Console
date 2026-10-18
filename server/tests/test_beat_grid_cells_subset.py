@@ -38,6 +38,7 @@ from server.design.beat_grid_emit import (
 )
 from server.design.beat_grid_send import (
     CELL_UNCHANGED_REASON,
+    PartialCellSnapshot,
     apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
     cell_apply_units,
@@ -51,6 +52,7 @@ from server.design.beat_grid_send import (
     partial_apply_baseline,
     recorded_cue_conflict,
     removed_cue_fields,
+    snapshot_known_cells,
     subset_line_violation,
     unsent_beat_grid_cells,
 )
@@ -961,9 +963,25 @@ class TestMergeCellSnapshot:
         merge_cell_snapshot(existing, {("BACK", 1): {"v": "new"}}, [("BACK", 1)])
         assert existing == before
 
-    def test_with_no_earlier_snapshot_it_starts_from_nothing(self) -> None:
+    def test_with_no_earlier_snapshot_it_starts_a_partial_one_from_the_sent_cells(self) -> None:
         current = {("BACK", 1): {"v": 1}, ("BACK", 2): {"v": 2}}
-        assert merge_cell_snapshot(None, current, [("BACK", 2)]) == {("BACK", 2): {"v": 2}}
+        merged = merge_cell_snapshot(None, current, [("BACK", 2)])
+        assert merged == {("BACK", 2): {"v": 2}}
+        assert isinstance(merged, PartialCellSnapshot)  # 나머지 칸은 모른다 — 전체 기록이 아니다
+
+    def test_a_full_snapshot_stays_full(self) -> None:
+        existing = {("BACK", 1): {"v": 1}, ("BACK", 2): {"v": 2}}
+        merged = merge_cell_snapshot(existing, {("BACK", 2): {"v": 9}}, [("BACK", 2)])
+        assert merged == {("BACK", 1): {"v": 1}, ("BACK", 2): {"v": 9}}
+        assert not isinstance(merged, PartialCellSnapshot)
+
+    def test_a_partial_snapshot_stays_partial_and_gains_the_sent_cells(self) -> None:
+        existing = PartialCellSnapshot({("BACK", 2): {"v": 2}})
+        current = {("BACK", 2): {"v": 2}, ("FOH", 3): {"v": 3}, ("FOH", 4): {"v": 4}}
+        merged = merge_cell_snapshot(existing, current, [("FOH", 3)])
+        assert isinstance(merged, PartialCellSnapshot)
+        assert merged == {("BACK", 2): {"v": 2}, ("FOH", 3): {"v": 3}}  # FOH 4 는 계속 모르는 칸
+        assert existing == {("BACK", 2): {"v": 2}}  # 입력은 그대로
 
     def test_an_unselected_changed_cell_stays_unsent_after_the_merge(self) -> None:
         def grid(entries: dict[int, str]) -> dict:
@@ -974,6 +992,68 @@ class TestMergeCellSnapshot:
         edited = grid({1: "2.1", 2: "2.9", 3: "2.8"})  # 2·3마디가 바뀌었다
         merged = merge_cell_snapshot(snapshot, beat_grid_cell_snapshot(edited), [("BACK", 2)])
         assert unsent_beat_grid_cells(edited, merged) == [{"group_name": "BACK", "bar": 3}]
+
+
+def _bars_grid(group: str, entries: dict[int, str]) -> dict:
+    """줄 하나에 마디마다 위치 프리셋 번호만 가진 최소 격자."""
+    cues = [{"bar": bar, "position_preset_no": no} for bar, no in entries.items()]
+    return {"tracks": [{"group_name": group, "cues": cues}]}
+
+
+def _partial_of(grid: dict, *bars: int, group: str = "BACK") -> PartialCellSnapshot:
+    """``grid`` 의 지정한 마디만 담은 부분 기록 — 나머지 칸은 모르는 칸이다."""
+    cells = beat_grid_cell_snapshot(grid)
+    return PartialCellSnapshot({key: cells[key] for key in ((group, bar) for bar in bars)})
+
+
+class TestUnsentOverAPartialSnapshot:
+    def test_cells_absent_from_the_snapshot_are_unknown_not_unsent(self) -> None:
+        grid = _bars_grid("BACK", {1: "2.1", 2: "2.2", 3: "2.3"})
+        # 2마디만 아는 기록 — 1·3마디는 콘솔과 같은지 다른지 모른다.
+        assert unsent_beat_grid_cells(grid, _partial_of(grid, 2)) == []
+
+    def test_a_known_cell_that_differs_is_unsent_and_unknown_neighbours_are_not(self) -> None:
+        then = _bars_grid("BACK", {1: "2.1", 2: "2.2", 3: "2.3"})
+        now = _bars_grid("BACK", {1: "2.9", 2: "2.8", 3: "2.7"})  # 세 칸 모두 바뀌었다
+        assert unsent_beat_grid_cells(now, _partial_of(then, 2)) == [
+            {"group_name": "BACK", "bar": 2}
+        ]
+
+    def test_a_known_cell_that_is_the_same_is_not_listed(self) -> None:
+        then = _bars_grid("BACK", {1: "2.1", 2: "2.2"})
+        now = _bars_grid("BACK", {1: "2.9", 2: "2.2"})
+        assert unsent_beat_grid_cells(now, _partial_of(then, 2)) == []
+
+    def test_a_known_cell_that_left_the_grid_is_unsent(self) -> None:
+        then = _bars_grid("BACK", {1: "2.1", 2: "2.2"})
+        now = _bars_grid("BACK", {1: "2.1"})  # 2마디가 사라졌다
+        assert unsent_beat_grid_cells(now, _partial_of(then, 2)) == [
+            {"group_name": "BACK", "bar": 2}
+        ]
+
+    def test_a_full_snapshot_still_counts_a_cell_it_never_saw(self) -> None:
+        # 대조군 — 전체 기록에 없는 칸은 새 칸(바뀐 칸)이지만, 부분 기록에서는 모르는 칸이다.
+        then = _bars_grid("BACK", {1: "2.1"})
+        now = _bars_grid("BACK", {1: "2.1", 2: "2.2"})
+        assert unsent_beat_grid_cells(now, beat_grid_cell_snapshot(then)) == [
+            {"group_name": "BACK", "bar": 2}
+        ]
+        assert unsent_beat_grid_cells(now, _partial_of(then, 1)) == []
+
+    def test_a_partial_snapshot_gives_a_list_never_none(self) -> None:
+        grid = _bars_grid("BACK", {1: "2.1"})
+        assert unsent_beat_grid_cells(grid, PartialCellSnapshot()) == []
+        assert unsent_beat_grid_cells(grid, None) is None
+
+
+class TestSnapshotKnownCells:
+    def test_only_a_partial_snapshot_lists_its_cells_sorted(self) -> None:
+        partial = PartialCellSnapshot({("FOH", 3): {}, ("BACK", 5): {}, ("BACK", 2): {}})
+        assert snapshot_known_cells(partial) == [["BACK", 2], ["BACK", 5], ["FOH", 3]]
+
+    def test_a_full_snapshot_or_none_has_nothing_to_list(self) -> None:
+        assert snapshot_known_cells({("BACK", 2): {}}) is None
+        assert snapshot_known_cells(None) is None
 
 
 class TestMergeAppliedCuesIntoRecord:
@@ -1941,10 +2021,11 @@ def _restart_server(s: Applied) -> None:
 class TestRecordBaseline:
     """서버를 다시 띄운 뒤 — 칸 기록은 없지만 이 앱이 콘솔에 만들어 둔 시퀀스의 소유 기록이 있다.
 
-    이때 칸 단위 반영은 고른 칸을 모두 보낸다(어느 칸이 바뀌었는지는 알 수 없다). 칸 기록을 새로
-    만들지는 않는다 — 보낸 칸만 담은 기록은 나머지 칸이 콘솔과 같다는 거짓 기준이 된다."""
+    이때 칸 단위 반영은 고른 칸을 모두 보낸다(어느 칸이 바뀌었는지는 알 수 없다). 첫 성공은 보낸
+    칸만 담은 **부분** 칸 기록을 남긴다 — 전체 기록으로 만들면 나머지 칸이 콘솔과 같다는 거짓 기준이
+    된다(그 뒤의 동작은 ``TestPartialSnapshot``)."""
 
-    def test_every_selected_cell_is_sent_and_no_snapshot_is_invented(self, applied) -> None:
+    def test_every_selected_cell_is_sent_and_a_partial_snapshot_is_left(self, applied) -> None:
         s = applied
         s.edit(2, "BACK", ENTRY)
         _restart_server(s)
@@ -1971,10 +2052,12 @@ class TestRecordBaseline:
             "박자 격자 칸 반영 — 선택한 2칸만 1회 승인"
         )
         assert reads  # 시퀀스 소유 확인은 콘솔을 읽는다(칸 기록 없이 소유 기록만 믿지 않는다)
-        # 칸 기록은 없는 채다 — 대기 수도 null("기록 없음")이지 0이 아니다.
-        assert s.store.beat_grid_snapshots == {}
-        assert s.unsent() is None
-        assert status["pending_apply_count"] is None
+        # 보낸 두 칸만 아는 부분 기록이 남았다 — 나머지 칸은 모르는 칸이라 대기 수에 들지 않는다.
+        snapshot = s.store.beat_grid_snapshots[SONG_KEY]
+        assert isinstance(snapshot, PartialCellSnapshot)
+        assert set(snapshot) == {("BACK", 2), ("FOH", 1)}
+        assert s.unsent() == []
+        assert status["pending_apply_count"] == 0
 
     def test_the_owned_record_and_last_apply_state_still_gain_the_cue_numbers(
         self, applied
@@ -1994,17 +2077,18 @@ class TestRecordBaseline:
         assert record["timecode_number"] == before["record"]["timecode_number"]
         assert s.store.beat_grid_applied.cue_numbers["BACK"] == {1: 1, 2: 2, 4: 3, 5: 4}
         assert s.store.beat_grid_applied.sequence_numbers == before["applied"][0]
-        assert s.store.beat_grid_snapshots == {}
+        assert set(s.store.beat_grid_snapshots[SONG_KEY]) == {("BACK", 5)}
 
-    def test_the_timeline_frame_after_the_send_still_has_no_unsent_list(self, applied) -> None:
+    def test_the_timeline_frame_after_the_send_lists_the_known_cells(self, applied) -> None:
         s = applied
         s.edit(2, "BACK", ENTRY)
         _restart_server(s)
         s.sent.clear()
         assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
         grid = [e for e in s.sent if e.get("type") == "song_timeline"][-1]["timeline"]["beat_grid"]
-        assert grid["unsent_cells"] is None
-        assert grid["partial_baseline"] == "record"
+        assert grid["unsent_cells"] == []
+        assert grid["known_cells"] == [["BACK", 2]]
+        assert grid["partial_baseline"] == "snapshot"
 
     def test_a_removed_value_cannot_be_told_without_a_snapshot_so_the_cell_is_sent(
         self, applied
@@ -2079,14 +2163,15 @@ class TestRecordBaseline:
         assert s.state() == before
         assert s.store.beat_grid_snapshots == {}
 
-    def test_a_following_whole_song_apply_builds_the_snapshot_as_before(self, applied) -> None:
+    def test_a_following_whole_song_apply_makes_the_snapshot_full(self, applied) -> None:
         s = applied
         s.edit(2, "BACK", ENTRY)
         _restart_server(s)
         assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
-        assert s.store.beat_grid_snapshots == {}
+        assert isinstance(s.store.beat_grid_snapshots[SONG_KEY], PartialCellSnapshot)
         assert s.session.beat_grid_apply()["ok"] is True
-        assert s.unsent() == []  # 전체 반영이 칸 기록을 만든다
+        assert not isinstance(s.store.beat_grid_snapshots[SONG_KEY], PartialCellSnapshot)
+        assert s.unsent() == []  # 전체 반영이 칸 기록을 전체로 갈아 끼운다
 
     def test_with_a_snapshot_the_baseline_is_the_snapshot_not_the_record(self, applied) -> None:
         s = applied
@@ -2176,7 +2261,9 @@ class TestPendingPresetApproval:
         assert status["subset"]["baseline"] == "record"
         assert "Group 8 ; At Preset 4.5" in s.lines()
         assert self.pending(s) == []  # 승인은 저장된 격자에 적혔다
-        assert s.store.beat_grid_snapshots == {}  # 칸 기록은 만들지 않았다
+        # 부분 기록에는 승인까지 담긴 값이 올라, 보낸 칸이 바뀐 칸으로 다시 잡히지 않는다.
+        assert set(s.store.beat_grid_snapshots[SONG_KEY]) == {("FOH", 4)}
+        assert s.unsent() == []
 
     def test_the_approval_note_is_not_taken_for_a_changed_cell_afterwards(self, applied) -> None:
         s = applied
@@ -2240,6 +2327,185 @@ class TestPendingPresetApproval:
         assert s.unsent() == [{"group_name": "FOH", "bar": 4}]
 
 
+_FADE_GONE = {"entry": {"fade_bars": None, "mib_mode": None}}
+
+
+def _first_partial_apply(s: Applied) -> dict:
+    """BACK 2마디를 고치고 서버를 다시 띄운 뒤 그 칸만 칸 단위로 먼저 보낸다 — 부분 칸 기록이
+    남는다. 이어지는 시험이 콘솔 줄과 승인 카드를 새로 볼 수 있게 비워 둔다."""
+    s.edit(2, "BACK", ENTRY)
+    _restart_server(s)
+    status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+    assert status["ok"] is True
+    assert status["subset"]["baseline"] == "record"
+    s.console.executed.clear()
+    s.approval.requests.clear()
+    return status
+
+
+def _replayed_grid(s: Applied) -> dict:
+    return s.session.song_timeline_replay()["timeline"]["beat_grid"]
+
+
+class TestPartialSnapshot:
+    """서버를 다시 띄운 뒤 칸 단위로 먼저 보낸 곡 — 칸 기록이 **부분**이다(보낸 칸만 안다).
+
+    기록에 없는 칸은 모르는 칸이다: 바뀐 칸으로 세지도, 콘솔과 같다고 하지도 않는다."""
+
+    def test_the_first_record_apply_stores_a_partial_snapshot_with_nothing_pending(
+        self, applied
+    ) -> None:
+        s = applied
+        status = _first_partial_apply(s)
+        snapshot = s.store.beat_grid_snapshots[SONG_KEY]
+        assert isinstance(snapshot, PartialCellSnapshot)
+        # 보낸 칸의 지금 값만 담긴다 — 나머지 칸은 모르는 칸이다.
+        current = beat_grid_cell_snapshot(s.store.latest["beat_grid"])
+        assert snapshot == {("BACK", 2): current[("BACK", 2)]}
+        # 보낸 칸은 아는 칸이고 같다 — 대기 수는 null 이 아니라 0이다.
+        assert status["pending_apply_count"] == 0
+        assert s.unsent() == []
+        grid = _replayed_grid(s)
+        assert grid["unsent_cells"] == []
+        assert grid["known_cells"] == [["BACK", 2]]
+        assert grid["partial_baseline"] == "snapshot"
+
+    def test_changing_a_sent_cell_makes_it_pending(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.edit(2, "BACK", {"entry": {"fade_bars": 2, "mib_mode": None}})
+        assert _status_events(s.sent, "edit")[-1]["pending_apply_count"] == 1
+        assert s.unsent() == [{"group_name": "BACK", "bar": 2}]
+        grid = _replayed_grid(s)
+        assert grid["unsent_cells"] == [{"group_name": "BACK", "bar": 2}]
+        assert grid["known_cells"] == [["BACK", 2]]
+
+    def test_changing_an_unknown_cell_is_not_counted(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.edit(3, "FOH", ENTRY)  # FOH 3마디는 모르는 칸이다
+        status = _status_events(s.sent, "edit")[-1]
+        assert status["ok"] is True
+        assert status["pending_apply_count"] == 0
+        assert s.unsent() == []
+        grid = _replayed_grid(s)
+        assert grid["unsent_cells"] == []
+        assert grid["known_cells"] == [["BACK", 2]]  # 모르는 칸이 아는 칸이 되지도 않는다
+
+    def test_an_unknown_selected_cell_is_sent_and_a_known_unchanged_one_is_not(
+        self, applied
+    ) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.edit(3, "FOH", ENTRY)
+        # BACK 2 는 아는 칸이고 같다 · FOH 3 은 모르는 칸이고 바뀌었다 · FOH 4 는 모르는 칸이다
+        # (내용은 같지만 같은지 알 수 없다).
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 3), ("FOH", 4)])
+
+        assert status["ok"] is True
+        assert status["subset"] == {
+            "requested": 3,
+            "applied": [["FOH", 3], ["FOH", 4]],
+            "not_applied": [{"group_name": "BACK", "bar": 2, "reason": CELL_UNCHANGED_REASON}],
+            "baseline": "snapshot",
+        }
+        assert status["blocked_cells"] == []  # 같은 칸은 「막힌 칸」이 아니다
+        assert _stored(s.lines()) == [("2", "3"), ("2", "4")]
+        assert not any(line.startswith(_FORBIDDEN_PREFIXES) for line in s.lines())
+        # 보낸 칸이 부분 기록에 더해졌고, 기록은 계속 부분이다.
+        snapshot = s.store.beat_grid_snapshots[SONG_KEY]
+        assert isinstance(snapshot, PartialCellSnapshot)
+        assert set(snapshot) == {("BACK", 2), ("FOH", 3), ("FOH", 4)}
+        assert status["pending_apply_count"] == 0
+        assert _replayed_grid(s)["known_cells"] == [["BACK", 2], ["FOH", 3], ["FOH", 4]]
+
+    def test_a_known_changed_cell_is_sent_and_the_snapshot_stays_partial(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.edit(2, "BACK", {"entry": {"fade_bars": 2, "mib_mode": None}})
+        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+        assert status["ok"] is True
+        assert status["subset"]["applied"] == [["BACK", 2]]
+        assert status["subset"]["baseline"] == "snapshot"
+        assert _stored(s.lines()) == [("1", "2")]
+        snapshot = s.store.beat_grid_snapshots[SONG_KEY]
+        assert isinstance(snapshot, PartialCellSnapshot)
+        assert snapshot == {
+            ("BACK", 2): beat_grid_cell_snapshot(s.store.latest["beat_grid"])[("BACK", 2)]
+        }
+        assert s.unsent() == []
+
+    def test_only_known_unchanged_cells_leave_nothing_to_send(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        before = s.state()
+        status = s.session.beat_grid_apply(cells=[("BACK", 2)])
+        _assert_refused_untouched(
+            s, status, before=before, reason_has="이미 콘솔에 반영된 내용과 같아"
+        )
+        assert isinstance(s.store.beat_grid_snapshots[SONG_KEY], PartialCellSnapshot)
+
+    def test_the_removal_check_is_kept_for_known_cells_only(self, applied) -> None:
+        s = applied
+        s.edit(2, "BACK", ENTRY)
+        s.edit(3, "FOH", ENTRY)
+        _restart_server(s)
+        # 기록 기준으로 BACK 2 만 보낸다 — 이 칸만 아는 칸이 된다(페이드가 콘솔에 올라갔다).
+        assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True
+        s.console.executed.clear()
+        s.edit(2, "BACK", _FADE_GONE)  # 아는 칸의 페이드를 지웠다
+        s.edit(3, "FOH", _FADE_GONE)  # 모르는 칸의 페이드를 지웠다 — 전에 무엇이 있었는지 모른다
+        status = s.session.beat_grid_apply(cells=[("BACK", 2), ("FOH", 3)])
+
+        assert status["ok"] is True
+        assert status["subset"]["applied"] == [["FOH", 3]]
+        (skipped,) = status["subset"]["not_applied"]
+        assert (skipped["group_name"], skipped["bar"]) == ("BACK", 2)
+        assert skipped["reason"].startswith("지운 항목(entry.fade_bars)은")
+        assert _stored(s.lines()) == [("2", "3")]
+        # 지운 칸은 기록이 그대로라 계속 미반영이고, 보낸 모르던 칸은 기록에 더해졌다.
+        assert s.unsent() == [{"group_name": "BACK", "bar": 2}]
+        assert set(s.store.beat_grid_snapshots[SONG_KEY]) == {("BACK", 2), ("FOH", 3)}
+
+    def test_a_known_cell_that_left_the_grid_still_counts_as_unsent(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.mutate_tracks(lambda tracks: tracks[0]["cues"].pop(1))  # BACK 의 2마디 칸을 뺐다
+        assert s.unsent() == [{"group_name": "BACK", "bar": 2}]
+
+    def test_the_flag_survives_every_frame_and_the_replay(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.sent.clear()
+        s.edit(3, "FOH", ENTRY)
+        frames = [e for e in s.sent if e.get("type") == "song_timeline"]
+        assert frames
+        for frame in frames + [s.session.song_timeline_replay()]:
+            grid = frame["timeline"]["beat_grid"]
+            assert grid["known_cells"] == [["BACK", 2]]
+            assert grid["partial_baseline"] == "snapshot"
+        status = [e for e in s.sent if e.get("type") == "beat_grid_send_status"][-1]
+        assert status["pending_apply_count"] == 0  # 상태 이벤트의 대기 수도 같은 기준이다
+
+    def test_a_whole_song_apply_replaces_it_with_a_full_snapshot(self, applied) -> None:
+        s = applied
+        _first_partial_apply(s)
+        s.sent.clear()
+        assert s.session.beat_grid_apply()["ok"] is True
+        snapshot = s.store.beat_grid_snapshots[SONG_KEY]
+        assert not isinstance(snapshot, PartialCellSnapshot)
+        assert set(snapshot) == set(beat_grid_cell_snapshot(s.store.latest["beat_grid"]))
+        grid = [e for e in s.sent if e.get("type") == "song_timeline"][-1]["timeline"]["beat_grid"]
+        assert "known_cells" not in grid
+        assert grid["unsent_cells"] == []
+        assert grid["partial_baseline"] == "snapshot"
+        assert "known_cells" not in _replayed_grid(s)
+        # 이제 모든 칸이 아는 칸이다 — 전에 모르던 칸도 같으면 보내지 않는다.
+        status = s.session.beat_grid_apply(cells=[("FOH", 1)])
+        assert status["ok"] is False
+        assert "이미 콘솔에 반영된 내용과 같아" in status["reason"]
+
+
 class TestPartialBaselineFlag:
     """``beat_grid.partial_baseline`` — 칸 단위 반영이 무엇을 기준으로 삼는지, 모든 타임라인
     프레임에 ``unsent_cells`` 옆에 실린다."""
@@ -2280,13 +2546,19 @@ class TestPartialBaselineFlag:
         s = applied
         _restart_server(s)
         s.sent.clear()
-        s.edit(2, "BACK", ENTRY)  # 편집 프레임
+        s.edit(2, "BACK", ENTRY)  # 편집 프레임 — 아직 칸 기록이 없다
+        edit_frames = [e for e in s.sent if e.get("type") == "song_timeline"]
+        assert edit_frames
+        assert [self.grid_of(frame)["partial_baseline"] for frame in edit_frames] == [
+            "record"
+        ] * len(edit_frames)
+        s.sent.clear()
         assert s.session.beat_grid_apply(cells=[("BACK", 2)])["ok"] is True  # 반영 프레임
-        frames = [e for e in s.sent if e.get("type") == "song_timeline"]
-        assert len(frames) >= 2
-        assert [self.grid_of(frame)["partial_baseline"] for frame in frames] == ["record"] * len(
-            frames
-        )
+        apply_frames = [e for e in s.sent if e.get("type") == "song_timeline"]
+        assert apply_frames  # 첫 성공이 부분 칸 기록을 남겼다 — 이제 기준은 칸 기록이다
+        assert [self.grid_of(frame)["partial_baseline"] for frame in apply_frames] == [
+            "snapshot"
+        ] * len(apply_frames)
 
     def test_the_whole_song_apply_moves_the_baseline_to_the_snapshot(self, applied) -> None:
         s = applied
@@ -2310,6 +2582,35 @@ class TestPartialBaselineFlag:
         assert derived({}, has_owned_record=True)["partial_baseline"] == "record"
         assert derived(snapshot)["partial_baseline"] == "snapshot"
         assert derived(snapshot, has_owned_record=True)["partial_baseline"] == "snapshot"
+
+    def test_the_pure_derivation_lists_known_cells_only_for_a_partial_snapshot(self) -> None:
+        timeline = _grid_timeline()
+        key = (timeline.get("song_title"), timeline.get("sequence_number"))
+        cells = beat_grid_cell_snapshot(timeline["beat_grid"])
+        full = dict(cells)
+        partial = PartialCellSnapshot(
+            {("FOH", 3): cells[("FOH", 3)], ("BACK", 2): cells[("BACK", 2)]}
+        )
+
+        def derived(snapshot, stored_extra=None) -> dict:
+            source = copy.deepcopy(timeline)
+            source["beat_grid"].update(stored_extra or {})
+            snapshots = {} if snapshot is None else {key: snapshot}
+            return derive_beat_grid_fields(
+                source, snapshots=snapshots, pool_slots={}, empty_marks={}, has_owned_record=True
+            )["beat_grid"]
+
+        grid = derived(partial)
+        assert grid["known_cells"] == [["BACK", 2], ["FOH", 3]]  # 정렬한 [줄, 마디]
+        assert grid["unsent_cells"] == []  # 아는 칸은 모두 지금과 같다 — 목록이다(null 이 아니다)
+        assert grid["partial_baseline"] == "snapshot"
+        # 전체 기록이나 기록이 없으면 키 자체가 없다 — 저장된 격자에 남은 옛 키도 싣지 않는다.
+        stale = {"known_cells": [["OLD", 1]]}
+        assert "known_cells" not in derived(full)
+        assert "known_cells" not in derived(None)
+        assert "known_cells" not in derived(full, stale)
+        assert "known_cells" not in derived(None, stale)
+        assert derived(full)["unsent_cells"] == []
 
     def test_the_library_load_response_carries_it_too(self, tmp_path) -> None:
         deps = _deps(tmp_path)
@@ -2499,6 +2800,24 @@ class TestBulkEdit:
 # =============================================================================
 
 
+def _wired_deps(tmp_path) -> tuple[WebDeps, Any]:
+    """콘솔 핸들을 쥔 웹 배선 — 시험이 가짜 콘솔에 「이 앱이 방금 만든 시퀀스」를 보여 준다."""
+    console = FakeConsole(state_tree=_state_tree())
+    audit = AuditLog(tmp_path / "audit")
+    channel = ApprovalChannel(timeout_seconds=5.0)
+    gate = SafetyGate(console=console, audit=audit, approval_port=channel)
+    deps = WebDeps(
+        gate=gate,
+        provider=ScriptedProvider([]),
+        system_prefix="PREFIX",
+        audit=audit,
+        approval_channel=channel,
+        timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+    )
+    deps.song_timeline_store.latest = _grid_timeline()
+    return deps, console
+
+
 class TestCellsOverTheWire:
     def test_apply_with_cells_reaches_the_subset_path(self, tmp_path) -> None:
         deps = _deps(tmp_path)
@@ -2540,19 +2859,7 @@ class TestCellsOverTheWire:
 
     def test_a_subset_apply_works_end_to_end_over_the_wire(self, tmp_path) -> None:
         # 전체 반영 → (콘솔에 만들어진 시퀀스 보이기) → 일괄 편집 → 칸 단위 반영, 전부 WebSocket.
-        console = FakeConsole(state_tree=_state_tree())
-        audit = AuditLog(tmp_path / "audit")
-        channel = ApprovalChannel(timeout_seconds=5.0)
-        gate = SafetyGate(console=console, audit=audit, approval_port=channel)
-        deps = WebDeps(
-            gate=gate,
-            provider=ScriptedProvider([]),
-            system_prefix="PREFIX",
-            audit=audit,
-            approval_channel=channel,
-            timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
-        )
-        deps.song_timeline_store.latest = _grid_timeline()
+        deps, console = _wired_deps(tmp_path)
         with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
             _send(ws, type="beat_grid_apply")
             assert _approve_until(ws, "beat_grid_send_status")["ok"] is True
@@ -2580,3 +2887,36 @@ class TestCellsOverTheWire:
         assert not any(
             "Timecode" in line or line.startswith(("Delete", "Set Sequence")) for line in lines
         )
+
+    def test_the_partial_snapshot_reaches_the_library_load_and_a_fresh_connection(
+        self, tmp_path
+    ) -> None:
+        # 서버를 다시 띄운 것처럼 칸 기록을 비운 뒤 칸 단위로 먼저 보낸다 — 전부 WebSocket + REST.
+        deps, console = _wired_deps(tmp_path)
+        store = deps.song_timeline_store
+        title = store.latest["song_title"]
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            _send(ws, type="beat_grid_apply")
+            assert _approve_until(ws, "beat_grid_send_status")["ok"] is True
+            _show_applied_on_console(console, store.beat_grid_allocation(SONG_KEY))
+            store.beat_grid_snapshots.clear()
+            _send(ws, type="beat_grid_edit", cells=[["BACK", 2]], changes=ENTRY)
+            assert drain_until(ws, "beat_grid_send_status")["last_action"] == "edit"
+            _send(ws, type="beat_grid_apply", cells=[["BACK", 2]])
+            status = _approve_until(ws, "beat_grid_send_status")
+            assert status["ok"] is True
+            assert status["subset"]["baseline"] == "record"
+            assert status["pending_apply_count"] == 0
+
+            saved = client.post("/api/timelines", json={"name": title})
+            assert saved.status_code == 200, saved.text
+            loaded = client.post(f"/api/timelines/{saved.json()['item']['id']}/load")
+            assert loaded.status_code == 200, loaded.text
+            load_grid = loaded.json()["timeline"]["beat_grid"]
+            with client.websocket_connect("/ws") as fresh:
+                replay_grid = drain_until(fresh, "song_timeline")["timeline"]["beat_grid"]
+
+        for grid in (load_grid, replay_grid):
+            assert grid["unsent_cells"] == []
+            assert grid["known_cells"] == [["BACK", 2]]
+            assert grid["partial_baseline"] == "snapshot"
