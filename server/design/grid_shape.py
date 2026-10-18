@@ -294,7 +294,7 @@ def cells_for_track(
     켜는 칸마다 색 번호를 붙이지만 감독은 색을 바꾸는 칸에만 번호를 적는다. 쉼 칸은 앞 색을 지우지
     않는다. 줄의 첫 색(번호·나눔·주석 가운데 처음)은 시작 상태라 세지 않는다. 무빙
     줄(``mover``)에서 쉼 칸 뒤 켜는 칸의 위치가 쉼 앞 켜는 칸의 위치와 다르면 그 쉼은
-    사전이동(MIB) 칸이다(``pre_move``).
+    사전이동(MIB) 칸이다(``pre_move``). 쉼 앞에 켜는 칸이 없으면 뒤 칸의 위치가 있는 것으로 본다.
     """
     start, end = window
     end_exclusive = end + 1
@@ -312,12 +312,13 @@ def cells_for_track(
         if color_no is not None:
             color_before = color_no
         after = ordered[index + 1] if index + 1 < len(ordered) else None
+        # 앞에 켜진 위치가 없으면(곡 첫 어둠 머리, D1)
+        # 뒤 켜는 칸이 위치를 가진 것만으로 사전이동이다.
         pre_move = (
             mover
             and is_silent(cue)
             and after is not None
             and not is_silent(after)
-            and position_before is not None
             and _position_of(after) not in (None, position_before)
         )
         if not is_silent(cue) and _position_of(cue) is not None:

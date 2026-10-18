@@ -193,6 +193,26 @@ def test_a_mover_rest_before_a_position_change_is_a_pre_move_cell() -> None:
     assert not any(cell.pre_move for cell in other)
 
 
+def test_a_dark_song_start_before_the_first_position_is_a_pre_move_cell() -> None:
+    # 곡 첫 어둠 머리(감독 결정 D1): 앞에 켜진 위치가 없어도
+    # 쉼 뒤 켜는 칸이 위치를 가지면 사전이동 칸이다.
+    cues = [
+        {"bar": 0, "label": "—"},
+        {"bar": 4, "label": "정지", "planned_position": "Home"},
+        {"bar": 8, "label": "정지", "planned_position": "Center"},
+    ]
+    cells = cells_for_track(
+        cues, (0, 25), track_name="MOVER-U", color_cells=frozenset(), mover=True
+    )
+    assert [cell.pre_move for cell in cells] == [True, False, False]
+    # 쉼 뒤 켜는 칸에 위치가 없으면 사전이동이 아니다.
+    no_position = [{"bar": 0, "label": "—"}, {"bar": 4, "label": "정지"}]
+    cells = cells_for_track(
+        no_position, (0, 25), track_name="MOVER-U", color_cells=frozenset(), mover=True
+    )
+    assert not any(cell.pre_move for cell in cells)
+
+
 def test_pre_move_cells_are_left_out_of_the_beat_pattern_on_both_sides() -> None:
     # 손설계엔 사전이동 쉼 개념이 없다. 그 칸만 다른 두 격자는 ④ 박 패턴 거리가 0 이다.
     def grid(with_pre_move: bool) -> dict:
