@@ -2,13 +2,15 @@
 
 이 파일은 순수 함수만 둔다. 콘솔에 아무것도 쓰지 않고 읽지도 않으며, 웹·안전 계층도 모른다.
 호출자가 방금 읽은 값(소유 기록 · 트랙 TARGET · 이벤트 시각)과 보내려는 명령 줄을 넘기면, 이 파일은
-다음 셋만 가려 준다.
+다음 넷만 가려 준다.
 
 - 이 곡이 쓰는 타임코드와, 그룹의 시퀀스를 가리키는 콘솔 트랙. 트랙 번호를 짐작하지 않고 읽은
   TARGET 으로만 찾는다 — 찾지 못한 그룹은 건드리지 않고, 둘 이상이면 거절한다.
 - 이벤트 시각. 유한하고 0 이상인 수만 받는다.
 - 보내려는 명령 줄. 옮기기가 허용하는 단 한 가지 꼴(이 곡이 쓰는 트랙의 이벤트 시각 고치기)과 글자
   하나까지 같을 때만 통과시킨다. 지우기·만들기(Store)·``cd`` 같은 그 밖의 줄은 모두 거절한다.
+- 옮긴 뒤의 장부. 소유 기록(``tracks[줄]["cues"]``)과 칸 기록(스냅샷)에서 옮긴 칸의 마디 열쇠만
+  새 마디로 바꾼 사본이다. 입력은 고치지 않는다.
 
 명령 줄은 ``beat_grid_tc_cell`` 이 만든다. 이 파일은 그 꼴을 믿지 않고 콘솔로 나가기 직전에 한 번 더
 걸러 내는 마지막 안전핀이다. 거절 메시지는 감독에게 그대로 보여도 되는 한국어 사유다.
@@ -16,12 +18,13 @@
 
 from __future__ import annotations
 
+import copy
 import math
 import re
 from collections.abc import Mapping, Sequence
 from typing import TypeGuard
 
-from server.design.beat_grid_send import parse_track_target
+from server.design.beat_grid_send import BeatGridCellKey, PartialCellSnapshot, parse_track_target
 
 __all__ = [
     "SCOPE_CREATE_DELETE",
@@ -30,6 +33,8 @@ __all__ = [
     "command_track_index",
     "console_tracks_for_groups",
     "move_bundle_allowed",
+    "move_record_tracks",
+    "move_snapshot_keys",
     "owned_timecode_numbers",
     "parse_event_seconds",
     "scope_covers",
@@ -199,3 +204,83 @@ def move_bundle_allowed(commands: Sequence[str], owned: Mapping[int, frozenset[i
                 f"이 곡이 쓰지 않는 타임코드 {match['timecode']} 의 트랙 {match['track']} 줄이라 "
                 f"건드릴 수 없습니다: {line!r}"
             )
+
+
+def _bar_renames(moves: Sequence[tuple[str, int, int]]) -> dict[str, dict[int, int]]:
+    """줄마다 ``{옛 마디: 새 마디}`` — 같은 칸을 두 번 옮기거나 두 칸이 한 마디로 가면 거절한다."""
+    renames: dict[str, dict[int, int]] = {}
+    for group, old_bar, new_bar in moves:
+        if not (_is_int(old_bar) and _is_int(new_bar)):
+            raise CellLiveRefused(
+                f"'{group}' 줄의 마디는 정수여야 합니다: {old_bar!r} -> {new_bar!r}"
+            )
+        row = renames.setdefault(group, {})
+        if old_bar in row:
+            raise CellLiveRefused(f"'{group}' 줄의 {old_bar}마디 칸을 두 번 옮길 수는 없습니다")
+        if new_bar in row.values():
+            raise CellLiveRefused(f"'{group}' 줄의 {new_bar}마디로 옮기는 칸이 둘 이상입니다")
+        row[old_bar] = new_bar
+    return renames
+
+
+# @MX:NOTE: [AUTO] 옮김을 쌍마다가 아니라 묶음 전체로 본다 — 새 마디가 같은 묶음의 다른 옮김이
+#   비우는 마디(5→7·7→9 의 7)면 겹침이 아니다. 격자의 ``row_move_many`` 와 같은 판정이어야 한다.
+#   격자는 받는데 기록이 거절하면 콘솔 이벤트만 옮겨진 채 장부가 어긋난다.
+def move_record_tracks(
+    record: Mapping[str, object], moves: Sequence[tuple[str, int, int]]
+) -> dict[str, object]:
+    """소유 기록의 깊은 사본 — ``moves`` (줄, 옛 마디, 새 마디)대로 ``tracks[줄]["cues"]`` 의 마디
+    열쇠(글자)만 바꾼다. 큐 번호는 그대로다(콘솔의 큐는 그대로이고 이벤트 시각만 달라진다).
+
+    줄이 기록에 없거나, 옛 마디에 큐가 없거나, 새 마디에 (같은 묶음이 비우지 않는) 다른 큐가 있거나,
+    옮김끼리 겹치면 ``CellLiveRefused``. 입력은 고치지 않고, 거절하면 아무것도 돌려주지 않는다."""
+    renames = _bar_renames(moves)
+    moved = copy.deepcopy(dict(record))
+    tracks = moved.get("tracks")
+    for group, row in renames.items():
+        track = tracks.get(group) if isinstance(tracks, dict) else None
+        if not isinstance(track, dict):
+            raise CellLiveRefused(f"소유 기록에 '{group}' 줄이 없어 칸을 옮길 수 없습니다")
+        listed = track.get("cues")
+        recorded = listed if isinstance(listed, dict) else {}
+        for old_bar in row:
+            if str(old_bar) not in recorded:
+                raise CellLiveRefused(
+                    f"소유 기록에 '{group}' 줄의 {old_bar}마디 칸이 없어 옮길 수 없습니다"
+                )
+        vacated = {str(old_bar) for old_bar in row}
+        for new_bar in row.values():
+            if str(new_bar) in recorded and str(new_bar) not in vacated:
+                raise CellLiveRefused(
+                    f"소유 기록에 '{group}' 줄의 {new_bar}마디에 이미 다른 칸이 있어 "
+                    "옮길 수 없습니다"
+                )
+        renamed = {str(old_bar): str(new_bar) for old_bar, new_bar in row.items()}
+        track["cues"] = {renamed.get(key, key): number for key, number in recorded.items()}
+    return moved
+
+
+def move_snapshot_keys(
+    snapshot: Mapping[BeatGridCellKey, object], moves: Sequence[tuple[str, int, int]]
+) -> dict[BeatGridCellKey, object]:
+    """칸 기록(스냅샷)의 새 사전 — 있는 열쇠 ``(줄, 옛 마디)`` 만 ``(줄, 새 마디)`` 로 옮긴다.
+
+    칸 사전이 ``bar`` 를 품고 있으면 그것도 새 마디로 바꾼다(안 바꾸면 옮긴 칸이 지금 격자와 달라
+    보여 계속 「미반영」으로 센다). 기록에 없는 옛 열쇠는 새로 만들지 않고, 그때 새 마디에 있던
+    기록은 건드리지 않는다. 부분 기록(``PartialCellSnapshot``)은 부분 기록으로 남는다 — 일반 사전이
+    되면 기록에 없는 칸이 전부 미반영으로 세어진다. 새 마디에 (같은 묶음이 비우지 않는) 다른 칸
+    기록이 있거나 옮김끼리 겹치면 ``CellLiveRefused``. 입력은 고치지 않는다."""
+    renames = _bar_renames(moves)
+    moved: dict[BeatGridCellKey, object] = {}
+    for (group, bar), body in snapshot.items():
+        new_bar = renames.get(group, {}).get(bar)
+        key = (group, bar if new_bar is None else new_bar)
+        value = body
+        if new_bar is not None and isinstance(body, Mapping) and "bar" in body:
+            value = {**body, "bar": new_bar}
+        if key in moved:
+            raise CellLiveRefused(
+                f"칸 기록에 '{key[0]}' 줄의 {key[1]}마디 칸이 이미 있어 옮길 수 없습니다"
+            )
+        moved[key] = value
+    return PartialCellSnapshot(moved) if isinstance(snapshot, PartialCellSnapshot) else moved
