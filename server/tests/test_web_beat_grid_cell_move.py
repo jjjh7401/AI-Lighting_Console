@@ -27,6 +27,8 @@
 8. 콘솔에 줄이 하나라도 나간 옮기기(끝까지 나간 것도 일부만 나간 것도) 뒤에는 초안 되돌리기·다시하기
    기록이 비어, 되돌리기가 격자만 옛 마디로 돌려 콘솔과 어긋나는 일이 없다. 한 줄도 나가지 않은
    옮기기는 그 기록을 건드리지 않는다.
+9. 칸 기록(스냅샷)이 손으로 지어 넣은 것이 아니라 진짜 전체 반영이 남긴 것이어도, 옮기기가 모두
+   나가면 칸 기록의 열쇠가 칸을 따라 옮겨져 옛 마디·새 마디가 거짓 「미반영」으로 뜨지 않는다.
 """
 
 from __future__ import annotations
@@ -56,7 +58,7 @@ from server.web.timeline_library import SongTimelineLibrary
 from .test_beat_grid_emit_t549 import _ALL_M1_PASS, _position_cue, _track
 from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
-from .test_web_beat_grid_send_t563 import _approve_until, _send
+from .test_web_beat_grid_send_t563 import _EXISTING_PRESET_POOLS, _approve_until, _send
 
 HANGUL = re.compile(r"[가-힣]")
 
@@ -1364,6 +1366,60 @@ class TestSongWithNoCellSnapshot:
         assert event["ok"] is True
         assert h.before["key"] not in h.store.beat_grid_snapshots
         assert event["pending_apply_count"] is None
+
+
+# == 진짜 전체 반영이 남긴 칸 기록 ========================================================
+
+
+class TestSnapshotLeftByARealFullApply:
+    """칸 기록을 손으로 지어 넣지 않고 진짜 ``beat_grid_apply`` 가 남기게 한 뒤 옮긴다.
+
+    옮기기가 모두 나가면 칸 기록의 열쇠도 칸을 따라 옮겨져야 한다. 안 옮겨지면 옛 마디(기록에만
+    있다)와 새 마디(격자에만 있다)가 둘 다 거짓 「미반영」으로 뜬다."""
+
+    #: 처음 하는 전체 반영이 읽는 콘솔 — 프리셋 풀은 있고 시퀀스·타임코드는 아직 없다.
+    _FRESH_CONSOLE = {
+        **_EXISTING_PRESET_POOLS,
+        "DataPool/Sequences": {"children": []},
+        "DataPool/Timecodes": {"children": [], "node": {"childCount": 0, "enumeration": "ok"}},
+    }
+
+    def test_a_full_move_moves_the_snapshot_the_apply_left_with_the_cell(self, tmp_path) -> None:
+        # 첫 카드는 전체 반영, 둘째 카드는 옮기기다.
+        h = _build(
+            tmp_path, answers=(True, True), tree=copy.deepcopy(self._FRESH_CONSOLE), record=None
+        )
+        key = h.before["key"]
+        # 손으로 지어 넣은 칸 기록을 걷고, 진짜 반영이 남기게 한다.
+        del h.store.beat_grid_snapshots[key]
+        applied = h.session.beat_grid_apply()
+        assert (applied["ok"], applied["completed"]) == (True, "reflected")
+        # 반영이 적은 소유 기록은 다른 시험이 손으로 쓰는 기록과 같다 — 아래 콘솔 상태가 그 기록의
+        # 것이다.
+        assert h.store.beat_grid_allocation(SONG) == _record()
+        baseline = copy.deepcopy(h.store.beat_grid_snapshots[key])
+        assert unsent_beat_grid_cells(h.store.latest["beat_grid"], baseline) == []
+        # 가짜 콘솔은 타임코드 노드를 지어 주지 않는다 — 에미터가 낸 트랙·이벤트를 채워 둔다.
+        h.console.state_tree.update(
+            _console_tree(_emitted_event_ms(h.store.latest["beat_grid"]["tracks"]))
+        )
+        sent_by_apply = len(h.console.executed)
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+
+        assert event["ok"] is True
+        assert h.console.executed[sent_by_apply:] == [LINE_BACK_5_TO_6]
+        grid = h.store.latest["beat_grid"]
+        snapshot = h.store.beat_grid_snapshots[key]
+        # 옛 마디 열쇠는 없고, 새 마디 열쇠에는 옮기기 전 칸 기록이 마디만 바뀌어 들어 있다.
+        assert ("BACK", 5) not in snapshot
+        assert snapshot[("BACK", 6)] == {**baseline[("BACK", 5)], "bar": 6}
+        # 그 칸 기록은 격자가 그 칸에 가진 내용과 같다 — 그래서 미반영 칸이 하나도 없다.
+        assert snapshot[("BACK", 6)] == beat_grid_cell_snapshot(grid)[("BACK", 6)]
+        assert unsent_beat_grid_cells(grid, snapshot) == []
+        redrawn = [e for e in h.sent if e.get("type") == "song_timeline"][-1]
+        assert redrawn["timeline"]["beat_grid"]["unsent_cells"] == []
+        assert event["pending_apply_count"] == 0
 
 
 # == 콘솔에 보낸 옮기기 뒤의 되돌리기·다시하기 ===============================================
