@@ -122,7 +122,15 @@ def _transport_session(tmp_path, monkeypatch, *, extra_name: str):
 def test_play_and_stop_send_every_owned_timecode(tmp_path, monkeypatch) -> None:
     session, sent = _transport_session(tmp_path, monkeypatch, extra_name="LDBEAT Timecode 21")
     session._beat_grid_console_transport("console_play", ("Top", "Go"))
-    assert sent[-1] == ("Top Timecode 20", "Top Timecode 21", "Go Timecode 20", "Go Timecode 21")
+    # WT-back-side-dark — 되감기 전에 그 곡 트랙 시퀀스를 끈다.
+    assert sent[-1][-4:] == (
+        "Top Timecode 20",
+        "Top Timecode 21",
+        "Go Timecode 20",
+        "Go Timecode 21",
+    )
+    assert all(line.startswith("Off Sequence ") for line in sent[-1][:-4])
+    assert "Off Sequence 300" in sent[-1]
     session._beat_grid_console_transport("console_stop", ("Off",), stop=True)
     assert sent[-1][:2] == ("Off Timecode 20", "Off Timecode 21")
     assert "Off Sequence 300" in sent[-1]
@@ -132,7 +140,8 @@ def test_an_extra_timecode_renamed_on_the_console_is_not_played(tmp_path, monkey
     # 기록에 있어도 콘솔 이름이 다르면(남이 덮어씀) 그 번호는 건드리지 않는다.
     session, sent = _transport_session(tmp_path, monkeypatch, extra_name="Someone Else")
     session._beat_grid_console_transport("console_play", ("Top", "Go"))
-    assert sent[-1] == ("Top Timecode 20", "Go Timecode 20")
+    assert sent[-1][-2:] == ("Top Timecode 20", "Go Timecode 20")
+    assert not [line for line in sent[-1] if "Timecode 21" in line]
 
 
 def test_transport_commands_run_every_timecode_together() -> None:

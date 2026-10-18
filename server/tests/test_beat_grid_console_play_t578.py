@@ -154,6 +154,8 @@ class TestSessionOnceApproval:
         assert console.executed == [
             f"Off Timecode {TIMECODE_NUMBER}",
             f"Off Sequence {FIRST_SEQUENCE_NUMBER}",
+            # WT-back-side-dark — 재생도 되감기 전에 그 곡 트랙 시퀀스를 끈다(감김 꺼짐 + Go+).
+            f"Off Sequence {FIRST_SEQUENCE_NUMBER}",
             f"Top Timecode {TIMECODE_NUMBER}",
             f"Go Timecode {TIMECODE_NUMBER}",
             f"Off Timecode {TIMECODE_NUMBER}",
