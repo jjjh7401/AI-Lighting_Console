@@ -3990,6 +3990,8 @@ _CELL_LIVE_PREMOVE_MESSAGE = (
     "움직임 준비(MIB 선행) 칸이 있는 줄은 이번 버전에서 칸 옮기기를 막습니다 "
     "— ⇪ 전체 반영을 사용해 주세요"
 )
+#: 줄 일부만 나가고 멈췄을 때 상태에 싣는 사유 — 콘솔이 소유 기록·칸 기록보다 앞서 있다.
+_CELL_LIVE_PARTIAL_MESSAGE = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요"
 #: 두 이벤트 시각을 「같다」고 보는 오차(초) — 송신 직전 재확인과 옮길 자리의 겹침 검사가 쓴다.
 #: 이벤트를 시각으로 찾는 오차(``beat_grid_tc_cell``)와 같은 값이다.
 _CELL_LIVE_SAME_TIME_SECONDS = 0.01
@@ -13547,15 +13549,22 @@ class ChatSession:
         옮기기 범위를 아직 승인받지 않았으면 승인 카드를 한 번 묻고(송신 직전에 이벤트 시각을 다시
         읽어 그대로일 때만 나간다), 줄이 모두 나가면 이 서버를 켜 둔 동안 옮기기 범위를 승인으로
         남긴다. 이미 승인된 범위면 카드 없이 같은 줄만 보낸다. 줄이 **모두** 나갔을 때만 격자·소유
-        기록·칸 기록을 함께 확정한다 — 거절·실패하면 이 셋은 그대로이고, 사유를 상태로 알린다."""
+        기록·칸 기록을 함께 확정한다 — 나간 줄이 하나도 없이 거절·실패하면 이 셋은 그대로이고,
+        사유를 상태로 알린다. 일부만 나가고 멈췄으면 콘솔이 장부보다 앞서 있으므로 격자만 옮긴
+        대로 두고 소유 기록·칸 기록은 그대로 둔다 — 옮긴 칸이 「미반영」으로 남고 ⇪ 전체 반영이
+        맞춘다."""
         try:
             plan = self._plan_cell_moves(ops)
         except CellLiveRefused as error:
             return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=str(error))
         try:
-            refusal = self._send_cell_moves(plan)
+            refusal, ran = self._send_cell_moves(plan)
             if refusal is None:
                 return self._commit_cell_moves(plan)
+            if ran:
+                # 일부만 나갔다. 상태에는 일부만 반영됐다는 사실을 싣고, 멈춘 사유는 로그에 남긴다.
+                _LOG.warning("칸 옮기기가 %d줄 나간 뒤 멈췄습니다: %s", ran, refusal)
+                return self._commit_cell_moves(plan, partial=True)
         except Exception as error:  # noqa: BLE001 — 콘솔에 얼마나 나갔는지 모르므로 사실대로 알린다
             _LOG.exception("칸 옮기기 송신·확정 중 예외")
             return self._beat_grid_send_status(
@@ -13852,13 +13861,13 @@ class ChatSession:
             snapshot=move_snapshot_keys(snapshot, moves) if snapshot is not None else None,
         )
 
-    def _send_cell_moves(self, plan: _CellMovePlan) -> str | None:
-        """계획한 줄을 콘솔에 보낸다 — 다 나갔으면 ``None``, 아니면 감독이 읽을 한국어 사유.
+    def _send_cell_moves(self, plan: _CellMovePlan) -> tuple[str | None, int]:
+        """계획한 줄을 콘솔에 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
 
-        옮기기 범위를 이미 승인받았으면 카드 없이 게이트만 거치고, 아니면 승인 카드를 한 번 묻는다.
-        줄이 모두 나간 때만 이 서버를 켜 둔 동안 옮기기 범위를 승인으로 남긴다(거절·실패는 남기지
-        않는다). 일부만 나가고 멈췄으면 사유 끝에 그 줄 수와 맞추는 길을 덧붙인다. 나간 줄은
-        되돌리지 않는다."""
+        다 나갔으면 사유가 ``None`` 이다. 옮기기 범위를 이미 승인받았으면 카드 없이 게이트만 거치고,
+        아니면 승인 카드를 한 번 묻는다. 줄이 모두 나간 때만 이 서버를 켜 둔 동안 옮기기 범위를
+        승인으로 남긴다(거절·실패는 남기지 않는다). 일부만 나가고 멈췄으면 나간 줄 수를 함께 돌려줘
+        호출자가 장부를 그에 맞춰 두게 한다. 나간 줄은 되돌리지 않는다."""
         approval = plan.store.cell_live_approval
         approved = approval.covers(frozenset({SCOPE_MOVE}))
         # 이 메서드는 ``run_instruction`` 체인 밖의 전용 진입점이라 게이트·승인 채널이 읽는 ambient
@@ -13871,16 +13880,9 @@ class ChatSession:
                 refusal, ran = self._cell_live_send_with_card(plan)
         finally:
             reset_session_key(token)
-        if refusal is not None:
-            if ran:
-                refusal = (
-                    f"{refusal.rstrip('. ')}. 이미 콘솔에 나간 {ran}줄은 되돌리지 않았습니다 — "
-                    "격자와 콘솔이 어긋났을 수 있으니 ⇪ 전체 반영으로 맞춰 주세요."
-                )
-            return refusal
-        if not approved:
+        if refusal is None and not approved:
             approval.approve(frozenset({SCOPE_MOVE}))
-        return None
+        return refusal, ran
 
     def _cell_live_send_with_card(self, plan: _CellMovePlan) -> tuple[str | None, int]:
         """승인 카드를 한 번 묻고 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
@@ -13965,17 +13967,21 @@ class ChatSession:
                 )
         return None
 
-    def _commit_cell_moves(self, plan: _CellMovePlan) -> dict:
+    def _commit_cell_moves(self, plan: _CellMovePlan, *, partial: bool = False) -> dict:
         """줄이 모두 나간 뒤 소유 기록·칸 기록·격자를 확정하고 화면을 새로 그리게 한다.
 
         장부(소유 기록·칸 기록)는 콘솔이 지금 가진 모습이라 먼저 적는다. 격자는 승인 창이 열려
         있던 사이 다른 연결이 고쳤을 수 있으므로 계획 때 본 격자가 아니라 **지금 저장된** 격자에
         같은 옮김을 다시 적용한다(``_beat_grid_record_approval`` 과 같은 이유). 그 사이 옮길 칸이
-        사라졌으면 격자는 그대로 두고 사실대로 알린다. 장부와 어긋난 칸은 「미반영」으로 센다."""
+        사라졌으면 격자는 그대로 두고 사실대로 알린다. 장부와 어긋난 칸은 「미반영」으로 센다.
+
+        ``partial`` 은 줄 일부만 나가고 멈춘 경우다. 콘솔이 장부보다 앞서 있으니 장부는 적지 않고
+        격자만 옮긴 대로 둔다 — 옮긴 칸이 「미반영」으로 남는다. 상태는 일부만 반영됐다는 실패다."""
         store = plan.store
-        store.set_beat_grid_allocation(plan.record_key, plan.record)
-        if plan.snapshot is not None:
-            self._beat_grid_snapshots[plan.song_key] = plan.snapshot
+        if not partial:
+            store.set_beat_grid_allocation(plan.record_key, plan.record)
+            if plan.snapshot is not None:
+                self._beat_grid_snapshots[plan.song_key] = plan.snapshot
         current = store.latest
         try:
             if current is None:
@@ -13986,14 +13992,14 @@ class ChatSession:
                 self._send(
                     song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(current))
                 )
-            return self._beat_grid_send_status(
-                last_action="cell_edit",
-                ok=False,
-                reason=(
+            if partial:  # 일부만 나간 쪽이 더 큰 사실이다 — 격자를 못 옮긴 사정은 그 안에 든다.
+                reason = _CELL_LIVE_PARTIAL_MESSAGE
+            else:
+                reason = (
                     "콘솔의 이벤트는 옮겼지만 그 사이 격자가 바뀌어 격자의 칸은 옮기지 못했습니다"
                     f"({error}) — 콘솔과 격자가 어긋났으니 ⇪ 전체 반영으로 맞춰 주세요"
-                ),
-            )
+                )
+            return self._beat_grid_send_status(last_action="cell_edit", ok=False, reason=reason)
         self._draft_history.record(current)
         updated = dict(current)
         updated["beat_grid"] = grid
@@ -14004,6 +14010,10 @@ class ChatSession:
         )
         store.latest = updated
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(updated)))
+        if partial:
+            return self._beat_grid_send_status(
+                last_action="cell_edit", ok=False, reason=_CELL_LIVE_PARTIAL_MESSAGE
+            )
         return self._beat_grid_send_status(last_action="cell_edit", ok=True)
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
