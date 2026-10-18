@@ -15,11 +15,17 @@
    빼도 시험이 그대로 통과한다).
 7. 거절 메시지는 감독에게 보여도 되는 한국어 사유이고, 이 모듈은 웹·안전 계층과 입출력 모듈을
    import 하지 않는다.
+8. 소유 기록 갱신 — 옮긴 칸의 마디 열쇠만 바뀌고 큐 번호는 그대로이며, 나머지는 입력과 같다. 입력은
+   고치지 않고 깊게 복사한 새 기록을 낸다. 서로 자리를 비켜 주는 옮김은 허용하고, 줄이 없거나 옛
+   마디가 없거나 새 마디에 다른 칸이 남아 있거나 옮김끼리 겹치면 거절한다.
+9. 칸 기록(스냅샷) 갱신 — 있는 열쇠만 새 마디로 옮기고(칸 사전의 ``bar`` 도 함께), 없는 열쇠는
+   만들지 않는다. 부분 기록은 부분 기록으로 남는다. 입력은 고치지 않고, 겹치면 거절한다.
 """
 
 from __future__ import annotations
 
 import ast
+import copy
 import inspect
 import re
 
@@ -37,6 +43,7 @@ from server.design.beat_grid_cell_live import (
     parse_event_seconds,
     scope_covers,
 )
+from server.design.beat_grid_send import PartialCellSnapshot
 
 HANGUL = re.compile(r"[가-힣]")
 
@@ -378,6 +385,201 @@ class TestMoveBundleAllowed:
             move_bundle_allowed([_GOOD, None], _OWNED)  # type: ignore[list-item]
 
 
+# == 칸 옮기기 — 소유 기록 갱신 ===========================================================
+
+
+def _owned_record() -> dict:
+    """옮기기 시험용 소유 기록 — 줄마다 {마디: 큐 번호} 가 있고 추가 타임코드도 있다.
+    마디 열쇠는 파일에 JSON 으로 저장되는 값이라 글자다."""
+    return {
+        "timecode_number": 5,
+        "timecode_name": "LDBEAT Timecode 5",
+        "extra_timecodes": [{"timecode_number": 6, "timecode_name": "LDBEAT Timecode 6"}],
+        "tracks": {
+            "KEY": {
+                "sequence_number": 1,
+                "sequence_name": "LDBEAT KEY",
+                "cues": {"3": 1, "5": 2, "9": 3},
+            },
+            "FOH": {
+                "sequence_number": 2,
+                "sequence_name": "LDBEAT FOH",
+                "cues": {"3": 1, "7": 2},
+            },
+        },
+    }
+
+
+class TestMoveRecordTracks:
+    def test_the_bar_key_moves_and_the_cue_number_stays(self) -> None:
+        moved = cell_live_module.move_record_tracks(_owned_record(), [("KEY", 5, 6)])
+        assert moved["tracks"]["KEY"]["cues"] == {"3": 1, "6": 2, "9": 3}
+
+    def test_nothing_but_the_moved_cue_keys_changes(self) -> None:
+        expected = _owned_record()
+        expected["tracks"]["KEY"]["cues"] = {"3": 1, "6": 2, "9": 3}
+        assert cell_live_module.move_record_tracks(_owned_record(), [("KEY", 5, 6)]) == expected
+
+    def test_moves_in_several_groups_apply_together(self) -> None:
+        moved = cell_live_module.move_record_tracks(
+            _owned_record(), [("KEY", 3, 4), ("FOH", 7, 8), ("KEY", 9, 11)]
+        )
+        assert moved["tracks"]["KEY"]["cues"] == {"4": 1, "5": 2, "11": 3}
+        assert moved["tracks"]["FOH"]["cues"] == {"3": 1, "8": 2}
+
+    def test_cells_that_make_room_for_each_other_move_together(self) -> None:
+        # 5→7 과 7→9: 7마디는 옮기는 칸이 비켜 주므로 겹치지 않는다(격자의 여럿 옮기기와 같은 판정).
+        record = _owned_record()
+        record["tracks"]["KEY"]["cues"] = {"5": 1, "7": 2}
+        moved = cell_live_module.move_record_tracks(record, [("KEY", 5, 7), ("KEY", 7, 9)])
+        assert moved["tracks"]["KEY"]["cues"] == {"7": 1, "9": 2}
+
+    def test_no_moves_gives_an_equal_copy(self) -> None:
+        record = _owned_record()
+        moved = cell_live_module.move_record_tracks(record, [])
+        assert moved == record
+        assert moved is not record
+
+    def test_the_input_record_is_left_alone(self) -> None:
+        record = _owned_record()
+        before = copy.deepcopy(record)
+        cell_live_module.move_record_tracks(record, [("KEY", 5, 6)])
+        assert record == before
+
+    def test_the_result_shares_nothing_with_the_input(self) -> None:
+        record = _owned_record()
+        before = copy.deepcopy(record)
+        moved = cell_live_module.move_record_tracks(record, [("KEY", 5, 6)])
+        moved["extra_timecodes"][0]["timecode_number"] = 99
+        moved["tracks"]["FOH"]["cues"]["3"] = 99
+        moved["tracks"]["KEY"]["sequence_name"] = "바뀜"
+        assert record == before
+
+    @pytest.mark.parametrize(
+        ("moves", "message"),
+        [
+            pytest.param([("NOPE", 5, 6)], "NOPE", id="group-not-in-the-record"),
+            pytest.param([("KEY", 4, 6)], "4마디", id="no-cue-at-the-old-bar"),
+            pytest.param([("KEY", 5, 9)], "9마디", id="another-cue-already-at-the-new-bar"),
+            pytest.param([("KEY", 3, 4), ("KEY", 5, 4)], "4마디", id="two-cues-to-one-bar"),
+            pytest.param([("KEY", 5, 6), ("KEY", 5, 7)], "5마디", id="one-cue-moved-twice"),
+            pytest.param([("KEY", 3, 4), ("NOPE", 5, 6)], "NOPE", id="one-bad-move-spoils-all"),
+        ],
+    )
+    def test_a_move_the_record_cannot_follow_is_refused(self, moves: list, message: str) -> None:
+        record = _owned_record()
+        before = copy.deepcopy(record)
+        with pytest.raises(CellLiveRefused, match=message):
+            cell_live_module.move_record_tracks(record, moves)
+        assert record == before
+
+    def test_a_record_without_tracks_is_refused(self) -> None:
+        with pytest.raises(CellLiveRefused, match="KEY"):
+            cell_live_module.move_record_tracks({"timecode_number": 5}, [("KEY", 5, 6)])
+
+    def test_a_group_without_cue_numbers_has_no_cue_to_move(self) -> None:
+        record = {"timecode_number": 5, "tracks": {"KEY": {"sequence_number": 1}}}
+        with pytest.raises(CellLiveRefused, match="5마디"):
+            cell_live_module.move_record_tracks(record, [("KEY", 5, 6)])
+
+
+# == 칸 옮기기 — 칸 기록(스냅샷) 갱신 =====================================================
+
+
+def _cell(bar: int, preset: str) -> dict:
+    """칸 기록의 값 하나 — ``beat_grid_cell_snapshot`` 이 담는 칸 사전처럼 ``bar`` 를 품고 있다."""
+    return {"bar": bar, "position_preset_no": preset, "entry": {"trigger_beat": None}}
+
+
+def _snapshot() -> dict:
+    return {
+        ("KEY", 3): _cell(3, "1.1"),
+        ("KEY", 5): _cell(5, "1.2"),
+        ("FOH", 3): _cell(3, "2.1"),
+    }
+
+
+class TestMoveSnapshotKeys:
+    def test_the_key_moves_and_the_cell_body_follows_the_new_bar(self) -> None:
+        moved = cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 5, 6)])
+        assert moved == {
+            ("KEY", 3): _cell(3, "1.1"),
+            ("KEY", 6): _cell(6, "1.2"),
+            ("FOH", 3): _cell(3, "2.1"),
+        }
+
+    def test_another_groups_cell_at_the_same_bar_stays(self) -> None:
+        moved = cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 3, 4)])
+        assert ("FOH", 3) in moved
+        assert ("KEY", 3) not in moved
+        assert ("KEY", 4) in moved
+
+    def test_a_key_the_snapshot_does_not_have_stays_absent(self) -> None:
+        moved = cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 4, 6)])
+        assert moved == _snapshot()
+        assert ("KEY", 6) not in moved
+
+    def test_moves_may_mix_present_and_absent_keys(self) -> None:
+        moved = cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 5, 6), ("KEY", 4, 7)])
+        assert set(moved) == {("KEY", 3), ("KEY", 6), ("FOH", 3)}
+
+    def test_an_unknown_old_cell_leaves_a_known_new_bar_alone(self) -> None:
+        # 옮길 칸을 기록이 모르면 아무것도 옮기지 않는다 — 새 마디에 있던 기록을 덮어쓰지 않는다.
+        known = PartialCellSnapshot({("KEY", 7): _cell(7, "1.1")})
+        assert cell_live_module.move_snapshot_keys(known, [("KEY", 5, 7)]) == known
+
+    def test_cells_that_make_room_for_each_other_move_together(self) -> None:
+        snapshot = {("KEY", 5): _cell(5, "1.1"), ("KEY", 7): _cell(7, "1.2")}
+        moved = cell_live_module.move_snapshot_keys(snapshot, [("KEY", 5, 7), ("KEY", 7, 9)])
+        assert moved == {("KEY", 7): _cell(7, "1.1"), ("KEY", 9): _cell(9, "1.2")}
+
+    def test_no_moves_gives_an_equal_new_snapshot(self) -> None:
+        snapshot = _snapshot()
+        moved = cell_live_module.move_snapshot_keys(snapshot, [])
+        assert moved == snapshot
+        assert moved is not snapshot
+
+    def test_the_input_snapshot_is_left_alone(self) -> None:
+        snapshot = _snapshot()
+        before = copy.deepcopy(snapshot)
+        moved = cell_live_module.move_snapshot_keys(snapshot, [("KEY", 5, 6)])
+        moved[("KEY", 6)]["position_preset_no"] = "바뀜"
+        assert snapshot == before
+
+    def test_a_body_that_is_not_a_cell_dictionary_is_carried_as_it_is(self) -> None:
+        moved = cell_live_module.move_snapshot_keys({("KEY", 5): "opaque"}, [("KEY", 5, 6)])
+        assert moved == {("KEY", 6): "opaque"}
+
+    def test_a_partial_snapshot_stays_partial(self) -> None:
+        # 부분 기록이 일반 사전이 되면 기록에 없는 칸이 전부 「미반영」으로 세어진다.
+        moved = cell_live_module.move_snapshot_keys(
+            PartialCellSnapshot(_snapshot()), [("KEY", 5, 6)]
+        )
+        assert isinstance(moved, PartialCellSnapshot)
+        assert set(moved) == {("KEY", 3), ("KEY", 6), ("FOH", 3)}
+
+    def test_a_whole_snapshot_stays_whole(self) -> None:
+        moved = cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 5, 6)])
+        assert not isinstance(moved, PartialCellSnapshot)
+
+    @pytest.mark.parametrize(
+        ("moves", "message"),
+        [
+            pytest.param([("KEY", 5, 3)], "3마디", id="another-cell-already-at-the-new-bar"),
+            pytest.param([("KEY", 3, 4), ("KEY", 5, 4)], "4마디", id="two-cells-to-one-bar"),
+            pytest.param([("KEY", 5, 6), ("KEY", 5, 7)], "5마디", id="one-cell-moved-twice"),
+        ],
+    )
+    def test_a_move_that_would_land_on_another_cell_is_refused(
+        self, moves: list, message: str
+    ) -> None:
+        snapshot = _snapshot()
+        before = copy.deepcopy(snapshot)
+        with pytest.raises(CellLiveRefused, match=message):
+            cell_live_module.move_snapshot_keys(snapshot, moves)
+        assert snapshot == before
+
+
 # == 거절 메시지 · 모듈 경계 ===========================================================
 
 _REFUSALS = [
@@ -401,6 +603,42 @@ _REFUSALS = [
         id="bundle-foreign-track",
     ),
     pytest.param(lambda: move_bundle_allowed([None], _OWNED), id="bundle-not-text"),
+    pytest.param(
+        lambda: cell_live_module.move_record_tracks(_owned_record(), [("NOPE", 5, 6)]),
+        id="record-group-missing",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_record_tracks(_owned_record(), [("KEY", 4, 6)]),
+        id="record-old-bar-missing",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_record_tracks(_owned_record(), [("KEY", 5, 9)]),
+        id="record-new-bar-taken",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_record_tracks(
+            _owned_record(), [("KEY", 3, 4), ("KEY", 5, 4)]
+        ),
+        id="record-moves-collide",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_record_tracks(
+            _owned_record(), [("KEY", 5, 6), ("KEY", 5, 7)]
+        ),
+        id="record-cue-moved-twice",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 5, 3)]),
+        id="snapshot-new-bar-taken",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 3, 4), ("KEY", 5, 4)]),
+        id="snapshot-moves-collide",
+    ),
+    pytest.param(
+        lambda: cell_live_module.move_snapshot_keys(_snapshot(), [("KEY", 5, 6), ("KEY", 5, 7)]),
+        id="snapshot-cell-moved-twice",
+    ),
 ]
 
 
