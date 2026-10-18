@@ -631,6 +631,10 @@ export interface BeatGridView {
   /** 카드 t568 ② (공급: t563) — 마지막 반영(승인=송신) 뒤 바뀐 칸. 반영
    * 스냅숏이 아직 없으면 `null`. 필드가 없는 옛 서버 응답이면 `undefined`. */
   unsent_cells?: BeatGridUnsentCell[] | null;
+  /** 칸 단위 반영이 무엇을 기준으로 삼는가(서버가 모든 타임라인 프레임에 싣는다). `"snapshot"` = 마지막 반영의 칸 기록이
+   * 있어 `unsent_cells` 가 목록이다 · `"record"` = 칸 기록은 없지만 이 곡의 반영 기록(소유 기록)이 있어 고른 칸을 모두
+   * 보낸다(`unsent_cells` 는 `null`) · `null` = 둘 다 없어 칸 단위로 못 보낸다. 필드가 없는 옛 서버 응답이면 `undefined`. */
+  partial_baseline?: BeatGridPartialBaseline | null;
   /** 카드 t570(REQ-LDBEAT-024(a)) — 「콘솔 같이」 토글이 쓸 음원 지연(초).
    * `server/design/beat_grid_data/console_audio_offset.yaml`(t520 실측)
    * 출처 — 코드 상수가 아니다. 출처가 없으면 `null`, 필드가 없는 옛 서버
@@ -980,12 +984,18 @@ export interface BeatGridApprovalVsSent {
  * 단계. 서버가 그 단계의 성공 응답에만 싣는다(`BeatGridSendStatus.completed`). */
 export type BeatGridCompletedStep = "draft_applied" | "preset_saved" | "reflected";
 
+/** 칸 단위 반영의 기준 — `BeatGridView.partial_baseline`(`null` 은 기준 없음)과 `BeatGridSubsetStatus.baseline`. */
+export type BeatGridPartialBaseline = "snapshot" | "record";
+
 /** 칸 단위 반영(`beat_grid_apply.cells`)이 성공했을 때만 상태 응답에 실리는 칸별 결과. `requested` 는 고른
- * 칸 수, `applied` 는 실제로 보낸 [줄 이름, 마디], `not_applied` 는 보내지 않은 칸과 그 사유(콘솔과 같음 등). */
+ * 칸 수, `applied` 는 실제로 보낸 [줄 이름, 마디], `not_applied` 는 보내지 않은 칸과 그 사유(콘솔과 같음 등).
+ * `baseline` 은 무엇을 기준으로 보냈는가 — `"snapshot"` 은 바뀐 칸만, `"record"` 는 고른 칸 모두(지운 값은 가려내지
+ * 못해 콘솔에 남을 수 있다). 옛 서버 응답이면 `undefined`. */
 export interface BeatGridSubsetStatus {
   requested: number;
   applied: [string, number][];
   not_applied: BeatGridBlockedCell[];
+  baseline?: BeatGridPartialBaseline;
 }
 
 export interface BeatGridSendStatus {

@@ -41,9 +41,8 @@ export function bulkChoiceOf(drafts: BulkDrafts, dimmerEffectNos: readonly strin
   return dimmer === null && color === null ? null : { dimmer, color };
 }
 
-/** 프리셋 번호를 바꾼 칸은 승인 대기가 되어 칸 단위 반영이 받지 않는다(서버가 거절) — 전체 반영으로 보낸다. */
-export const BULK_PRESET_NUMBER_HINT =
-  "프리셋 번호를 바꾼 칸은 칸 단위 반영이 거절해요 — 「전체 다시 반영」으로 보내 주세요.";
+/** 이 줄에서 바꾼 값을 콘솔에 보내는 길 — 프리셋 번호를 바꾼 칸도 칸 단위 반영이 보낸다(승인 대기 프리셋 포함). */
+export const BULK_GUIDE_HINT = "칸을 고르고 디머·색을 바꾼 뒤 「⇪ 콘솔에 반영」을 누르면 고른 칸만 콘솔에 보냅니다.";
 export const BULK_NOTHING_CHOSEN_HINT = "디머나 색을 먼저 고르세요";
 /** 아래 큐 편집 칸의 「적용」은 예전처럼 보이는 한 칸에만 간다 — 이 줄과 헷갈리지 않게 말해 둔다. */
 export const BULK_SCOPE_HINT = "이 줄의 「적용」은 고른 칸 전부에, 아래 편집 칸의 「적용」은 한 칸에만 가요.";
@@ -146,7 +145,7 @@ export function CellSelectionBar({
         </button>
       </div>
       <p className="beat-grid-cell-bar-hint">{BULK_SCOPE_HINT}</p>
-      <p className="beat-grid-cell-bar-hint">{BULK_PRESET_NUMBER_HINT}</p>
+      <p className="beat-grid-cell-bar-hint">{BULK_GUIDE_HINT}</p>
       {poolNote && <p className="beat-grid-cell-bar-hint">{poolNote}</p>}
       {skippedNote && <p className="beat-grid-cell-bar-hint">{skippedNote}</p>}
       {blockedReason && <p className="beat-grid-cell-bar-hint is-warn">{blockedReason}</p>}

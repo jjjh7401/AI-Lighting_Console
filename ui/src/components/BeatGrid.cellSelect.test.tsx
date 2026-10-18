@@ -16,6 +16,7 @@ import type {
   BeatGridView,
 } from "../protocol";
 import {
+  BEAT_GRID_EDIT_OK_SUMMARY,
   BEAT_GRID_REJECTION_SUMMARY,
   BeatGrid,
   buildBrightnessDimmerEffectChanges,
@@ -593,81 +594,173 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
     { group_name: "BBB", bar: 3 },
     { group_name: "CCC", bar: 5 },
   ];
+  /** 칸 기록(snapshot)이 있는 곡 — 바뀐 칸이 목록이다. */
+  const SNAPSHOT = { unsent_cells: UNSENT, partial_baseline: "snapshot" } as const;
+  /** 칸 기록은 없고 반영 기록만 있는 곡(서버를 다시 띄운 뒤) — 바뀐 칸을 모른다. */
+  const RECORD = { unsent_cells: null, partial_baseline: "record" } as const;
   const panelButtons = () => Array.from(container.querySelectorAll<HTMLButtonElement>("aside.beat-grid-cue-panel .beat-grid-console-apply button"));
   const mainApply = () => panelButtons().find((button) => button.textContent?.includes("⇪")) as HTMLButtonElement;
   const wholeApply = () => panelButtons().find((button) => button.textContent === "전체 다시 반영") as HTMLButtonElement;
   const scope = () => container.querySelector(".beat-grid-apply-scope")?.textContent ?? "";
+  const NO_RECORD_HINT = "이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요";
+  const SIX = [
+    ["AAA", 1],
+    ["AAA", 3],
+    ["BBB", 1],
+    ["BBB", 3],
+    ["CCC", 1],
+    ["CCC", 3],
+  ];
 
-  it("고른 칸이 없으면 바뀐 칸 전부를 보낸다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
-    expect(mainApply().disabled).toBe(false);
-    expect(scope()).toBe("바뀐 3칸만 보내요");
-    act(() => mainApply().click());
-    expect(handlers.onApplyCells).toHaveBeenCalledTimes(1);
-    expect(handlers.onApplyCells).toHaveBeenCalledWith([
-      ["AAA", 1],
-      ["BBB", 3],
-      ["CCC", 5],
-    ]);
-    expect(handlers.onApply).not.toHaveBeenCalled();
+  describe("칸 기록 기준(snapshot)", () => {
+    it("고른 칸이 없으면 바뀐 칸 전부를 보낸다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).toBe("바뀐 3칸만 보내요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["AAA", 1],
+        ["BBB", 3],
+        ["CCC", 5],
+      ]);
+      expect(handlers.onApply).not.toHaveBeenCalled();
+    });
+
+    it("고른 칸이 있으면 그 가운데 바뀐 칸만 보낸다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true }); // 6칸 — 바뀐 칸 가운데 AAA1·BBB3 이 든다(CCC5 는 밖)
+      expect(scope()).toBe("고른 6칸 중 바뀐 2칸만 보내요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["AAA", 1],
+        ["BBB", 3],
+      ]);
+    });
+
+    it("고른 칸 가운데 바뀐 칸이 없으면 꺼지고 그렇게 말한다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
+      clickCue(1, 0); // BBB 1마디
+      clickCue(1, 2, { ctrl: true }); // BBB 5마디를 더한다 — 둘 다 안 바뀐 칸(바뀐 BBB 칸은 3마디뿐)
+      expect(multiCount()).toBe(2);
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe("고른 칸 중 바뀐 칸이 없어요");
+      expect(scope()).toBe("고른 칸 중 바뀐 칸이 없어요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
+
+    it("바뀐 칸이 하나도 없으면(빈 배열) 「바뀐 칸이 없어요」로 꺼진다", () => {
+      setup(THREE_BY_THREE(), {}, { unsent_cells: [], partial_baseline: "snapshot" });
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe("바뀐 칸이 없어요");
+    });
   });
 
-  it("고른 칸이 있으면 그 가운데 바뀐 칸만 보낸다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
-    clickCue(0, 0);
-    clickCue(2, 1, { shift: true }); // 6칸 — 바뀐 칸 가운데 AAA1·BBB3 이 든다(CCC5 는 밖)
-    expect(scope()).toBe("고른 6칸 중 바뀐 2칸만 보내요");
-    act(() => mainApply().click());
-    expect(handlers.onApplyCells).toHaveBeenCalledWith([
-      ["AAA", 1],
-      ["BBB", 3],
-    ]);
+  describe("기록 기준(record) — 칸 기록은 없고 반영 기록만 있다", () => {
+    it("고른 칸이 없으면 꺼지고, 바뀐 칸을 알 수 없으니 먼저 고르라고 말한다 — 「전체 다시 반영 먼저」 안내가 아니다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, RECORD);
+      const hint = "고른 칸을 먼저 골라 주세요 — 기록 기준이라 바뀐 칸을 알 수 없어요";
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe(hint);
+      expect(scope()).toBe(hint);
+      expect(container.textContent).not.toContain(NO_RECORD_HINT);
+      expect(wholeApply().disabled).toBe(false);
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
+
+    it("칸을 고르면 켜지고, 누르면 고른 칸을 모두 보낸다 — 바뀐 칸으로 거르지 않는다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, RECORD);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true });
+      expect(mainApply().disabled).toBe(false);
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCells).toHaveBeenCalledWith(SIX);
+      expect(handlers.onApply).not.toHaveBeenCalled();
+    });
+
+    it("안내 줄과 버튼 title 이 기록 기준이라는 것과 지운 값이 콘솔에 남을 수 있다는 것을 말한다", () => {
+      setup(THREE_BY_THREE(), {}, RECORD);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true });
+      const note =
+        "고른 6칸을 보내요 (기록 기준) · 지운 값은 콘솔에 남을 수 있어요 — 지운 칸은 「전체 다시 반영」으로";
+      expect(scope()).toBe(note);
+      expect(mainApply().title).toBe(`⇪ 콘솔에 반영 — ${note}`);
+    });
+
+    it("칸 표시(앱에서만 바뀜 · 콘솔과 같음)는 unsent_cells 가 null 이라 여전히 없다", () => {
+      setup(THREE_BY_THREE(), {}, RECORD);
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true });
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+    });
+
+    it("선택을 풀면 다시 꺼진다", () => {
+      setup(THREE_BY_THREE(), {}, RECORD);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true });
+      expect(mainApply().disabled).toBe(false);
+      clickCue(1, 1); // 보통 클릭 = 고른 칸 비움
+      expect(mainApply().disabled).toBe(true);
+    });
   });
 
-  it("고른 칸 가운데 바뀐 칸이 없으면 꺼지고 그렇게 말한다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
-    clickCue(1, 0); // BBB 1마디
-    clickCue(1, 2, { ctrl: true }); // BBB 5마디를 더한다 — 둘 다 안 바뀐 칸(바뀐 BBB 칸은 3마디뿐)
-    expect(multiCount()).toBe(2);
-    expect(mainApply().disabled).toBe(true);
-    expect(mainApply().title).toBe("고른 칸 중 바뀐 칸이 없어요");
-    expect(scope()).toBe("고른 칸 중 바뀐 칸이 없어요");
-    act(() => mainApply().click());
-    expect(handlers.onApplyCells).not.toHaveBeenCalled();
-  });
+  describe("기준이 없을 때(partial_baseline null/undefined)", () => {
+    it("반영 기록이 없으면(unsent_cells null, 기준 null) 꺼지고, 「전체 다시 반영」을 먼저 누르라는 안내가 보인다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: null });
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe(NO_RECORD_HINT);
+      expect(scope()).toBe(NO_RECORD_HINT);
+      expect(wholeApply().disabled).toBe(false);
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
 
-  it("반영 기록이 없으면(unsent_cells null) 꺼지고, 「전체 다시 반영」을 먼저 누르라는 안내가 보인다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: null });
-    expect(mainApply().disabled).toBe(true);
-    expect(mainApply().title).toBe("이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요");
-    expect(scope()).toBe("이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요");
-    expect(wholeApply().disabled).toBe(false);
-    act(() => mainApply().click());
-    expect(handlers.onApplyCells).not.toHaveBeenCalled();
-  });
+    it("고른 칸이 있어도 같다 — 기준이 없으면 칸 단위로 보낼 수 없다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: null });
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true });
+      expect(mainApply().disabled).toBe(true);
+      expect(scope()).toBe(NO_RECORD_HINT);
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
 
-  it("옛 서버라 unsent_cells 필드가 없을 때(undefined)도 같다", () => {
-    setup(THREE_BY_THREE());
-    expect(mainApply().disabled).toBe(true);
-    expect(mainApply().title).toContain("반영 기록이 없어요");
-  });
+    it("옛 서버라 필드가 없을 때(둘 다 undefined)도 같다", () => {
+      setup(THREE_BY_THREE());
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe(NO_RECORD_HINT);
+    });
 
-  it("바뀐 칸이 하나도 없으면(빈 배열) 「바뀐 칸이 없어요」로 꺼진다", () => {
-    setup(THREE_BY_THREE(), {}, { unsent_cells: [] });
-    expect(mainApply().disabled).toBe(true);
-    expect(mainApply().title).toBe("바뀐 칸이 없어요");
+    it("기준 필드가 없으면 unsent_cells 가 목록이어도 칸 단위로 보내지 않는다", () => {
+      setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe(NO_RECORD_HINT);
+    });
   });
 
   it("「전체 다시 반영」은 칸 없이 예전 전체 반영 콜백만 한 번 부른다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
+    const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
     act(() => wholeApply().click());
     expect(handlers.onApply).toHaveBeenCalledTimes(1);
     expect(handlers.onApply).toHaveBeenCalledWith();
     expect(handlers.onApplyCells).not.toHaveBeenCalled();
   });
 
+  it("기록 기준에서도 「전체 다시 반영」은 그대로 전체 반영이다", () => {
+    const { handlers } = setup(THREE_BY_THREE(), {}, RECORD);
+    act(() => wholeApply().click());
+    expect(handlers.onApply).toHaveBeenCalledTimes(1);
+    expect(handlers.onApplyCells).not.toHaveBeenCalled();
+  });
+
   it("칸 단위 콜백이 없으면 예전 단일 버튼이다 — 「전체 다시 반영」도 안내 줄도 없다", () => {
-    const { handlers } = setup(THREE_BY_THREE(), { onApplyCells: undefined }, { unsent_cells: UNSENT });
+    const { handlers } = setup(THREE_BY_THREE(), { onApplyCells: undefined }, SNAPSHOT);
     expect(wholeApply()).toBeUndefined();
     expect(scope()).toBe("");
     act(() => mainApply().click());
@@ -675,7 +768,7 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
   });
 
   it("누르면 진행 문구가 뜬다 — 전체 반영과 같다", () => {
-    setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
+    setup(THREE_BY_THREE(), {}, SNAPSHOT);
     expect(container.querySelector(".beat-grid-apply-progress")).toBeNull();
     act(() => mainApply().click());
     expect(container.querySelector(".beat-grid-apply-progress")?.textContent).toContain("콘솔을 읽는 중");
@@ -702,6 +795,18 @@ describe("칸 단위 반영 결과", () => {
     expect(resultLine()?.title).toContain("반영한 칸: BBB 3마디, AAA 1마디");
     expect(resultLine()?.title).toContain("못 보낸 칸: CCC 5마디 — 콘솔과 같음");
     expect(failLine()).toBeNull();
+  });
+
+  it("기록 기준으로 보냈으면 요약 끝에 그 사실을 붙인다 — 칸 기록 기준에는 붙지 않는다", () => {
+    const { render } = setup(THREE_BY_THREE(), { sendStatus: null });
+    render({ sendStatus: status({ subset: { ...SUBSET, baseline: "record" } }) });
+    expect(resultLine()?.textContent).toContain(
+      "2칸 반영 · 못 보낸 칸 1개 — 콘솔과 같음 · 기록 기준으로 보냄(지운 값은 확인 못 함)",
+    );
+    // 칸 목록 title 은 그대로다.
+    expect(resultLine()?.title).toContain("반영한 칸: BBB 3마디, AAA 1마디");
+    render({ sendStatus: status({ subset: { ...SUBSET, baseline: "snapshot" } }) });
+    expect(resultLine()?.textContent).not.toContain("기록 기준");
   });
 
   it("성공하면 보낸 첫 칸의 마디를 콘솔에서 보러 간다 — 한 번만", () => {
@@ -763,7 +868,11 @@ describe("칸 단위 반영 결과", () => {
   });
 
   it("다시 누르면 앞 요약은 지워진다", () => {
-    const { render } = setup(THREE_BY_THREE(), { sendStatus: null }, { unsent_cells: [{ group_name: "AAA", bar: 1 }] });
+    const { render } = setup(
+      THREE_BY_THREE(),
+      { sendStatus: null },
+      { unsent_cells: [{ group_name: "AAA", bar: 1 }], partial_baseline: "snapshot" },
+    );
     render({ sendStatus: status({ subset: SUBSET }) });
     expect(resultLine()).not.toBeNull();
     const main = Array.from(container.querySelectorAll<HTMLButtonElement>("aside.beat-grid-cue-panel .beat-grid-console-apply button")).find(
@@ -804,7 +913,7 @@ describe("칸별 표시 — 앱에서만 바뀜 · 콘솔과 같음", () => {
   const syncOf = (index: number) => cueButtons()[index].querySelector<HTMLElement>(".beat-grid-cue-sync");
 
   it("바뀐 칸에는 「앱에서만 바뀜」이, 나머지에는 「콘솔과 같음」이 기호와 함께 붙는다", () => {
-    setup(THREE_BY_THREE(), {}, { unsent_cells: [{ group_name: "AAA", bar: 3 }] });
+    setup(THREE_BY_THREE(), {}, { unsent_cells: [{ group_name: "AAA", bar: 3 }], partial_baseline: "snapshot" });
     const changed = syncOf(1);
     expect(changed?.classList.contains("is-app-only")).toBe(true);
     expect(changed?.getAttribute("aria-label")).toBe("앱에서만 바뀜");
@@ -830,6 +939,11 @@ describe("칸별 표시 — 앱에서만 바뀜 · 콘솔과 같음", () => {
     expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
   });
 
+  it("기록 기준(record)이어도 unsent_cells 가 null 이면 아무 표시도 없다 — 칸 단위로 보낼 수 있는 것과 별개다", () => {
+    setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: "record" });
+    expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+  });
+
   it("필드가 없는 옛 서버 응답(undefined)에도 아무 표시가 없다", () => {
     setup(THREE_BY_THREE());
     expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
@@ -844,6 +958,135 @@ describe("칸별 표시 — 앱에서만 바뀜 · 콘솔과 같음", () => {
   it("위쪽 대기 수 배지는 그대로 부모가 넘긴 값이다", () => {
     setup(THREE_BY_THREE(), { pendingApplyCount: 7 }, { unsent_cells: [{ group_name: "AAA", bar: 3 }] });
     expect(container.querySelector(".beat-grid-console-apply .badge")?.textContent).toBe("7");
+  });
+});
+
+// 일괄 바꾸기가 편집 칸이 펼친 칸의 값을 바꿔도, 한 칸 편집의 고르기는 칸을 고를 때 채운 옛 값(예: 4.167)에 머물렀다.
+// 서버는 격자(song_timeline)를 먼저, 성공 답(chat_response)을 나중에 보낸다 — 성공 답이 오면 고르기를 지금 칸 값으로 다시 채운다.
+describe("일괄 바꾸기가 성공하면 한 칸 편집 고르기가 서버 값으로 다시 채워진다", () => {
+  const COLOR_DRAWER: BeatGridDrawerSection[] = [
+    DRAWER[0],
+    {
+      ...DRAWER[1],
+      entries: [
+        { preset_no: "4.167", name: "Warm", usage_count: 3, used_by: [], is_effect_band: false },
+        { preset_no: "4.168", name: "Cool", usage_count: 0, used_by: [], is_effect_band: false },
+      ],
+    },
+  ];
+  /** 세 줄 모두 칸마다 같은 색·밝기를 가진 격자. */
+  const withValues = (colorNo: string, percent: number) =>
+    THREE_BY_THREE().map((row) => ({
+      ...row,
+      cues: row.cues.map((item) => ({
+        ...item,
+        color_preset_no: colorNo,
+        brightness: { mode: "value" as const, value_percent: percent, preset_no: null },
+      })),
+    }));
+  const okReply = (seq: number) => ({ text: "AAA 1마디 … (콘솔 무접촉)", seq, summary: BEAT_GRID_EDIT_OK_SUMMARY });
+  const rejectReply = (seq: number) => ({
+    text: "박자 격자를 수정하지 않았습니다 — 선택한 6칸 중 1칸을 고칠 수 없어요",
+    seq,
+    summary: BEAT_GRID_REJECTION_SUMMARY,
+  });
+  const editorColor = () => container.querySelector<HTMLSelectElement>('select[aria-label="색 프리셋"]');
+  const editorBrightness = () => container.querySelector<HTMLSelectElement>('select[aria-label="밝기 값(%)"]');
+  const change = (target: HTMLSelectElement | null, value: string) =>
+    act(() => {
+      if (!target) throw new Error("select not found");
+      target.value = value;
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  const chooseInBar = (label: string, value: string) =>
+    change(bar()?.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`) ?? null, value);
+  const pressBulkApply = () => {
+    const found = Array.from(bar()?.querySelectorAll("button") ?? []).find((button) => button.textContent === "적용");
+    act(() => (found as HTMLButtonElement).click());
+  };
+  /** AAA 1마디를 눌러 편집 칸을 펼치고, 3줄 × 마디 1~3 = 6칸을 고른다. */
+  const openEditorAndPickSix = () => {
+    clickCue(0, 0);
+    clickCue(2, 1, { shift: true });
+  };
+
+  it("편집 칸이 펼친 칸의 색이 바뀌면 고르기가 새 값(4.168)을 보인다 — 옛 값(4.167)에 머물지 않는다", () => {
+    const { handlers, render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER });
+    openEditorAndPickSix();
+    expect(editorColor()?.value).toBe("4.167");
+    chooseInBar("일괄 색 프리셋", "4.168");
+    pressBulkApply();
+    expect(handlers.onEditCellsRequest).toHaveBeenCalledTimes(1);
+    // 서버가 보낸 순서 그대로: 새 격자 → 성공 답.
+    render({}, { tracks: withValues("4.168", 100) });
+    render({ lastServerReply: okReply(1) });
+    expect(editorColor()?.value).toBe("4.168");
+  });
+
+  it("밝기도 마찬가지다 — 고르기가 서버 값으로 바뀐다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER });
+    openEditorAndPickSix();
+    expect(editorBrightness()?.value).toBe("100");
+    chooseInBar("일괄 밝기 값(%)", "60");
+    pressBulkApply();
+    render({}, { tracks: withValues("4.167", 60) });
+    render({ lastServerReply: okReply(1) });
+    expect(editorBrightness()?.value).toBe("60");
+  });
+
+  it("거절 답이 오면 다시 채우지 않는다 — 편집 칸에서 고치던 값이 그대로 남는다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER });
+    openEditorAndPickSix();
+    change(editorColor(), "4.168"); // 한 칸 편집에서 고르는 중(아직 적용 전)
+    chooseInBar("일괄 밝기 값(%)", "60");
+    pressBulkApply();
+    render({ lastServerReply: rejectReply(1) });
+    expect(editorColor()?.value).toBe("4.168");
+    expect(bar()?.textContent).toContain("고칠 수 없어요");
+  });
+
+  it("누르기 전에 와 있던 성공 답으로는 다시 채우지 않고, 누른 뒤의 새 성공 답에만 채운다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER, lastServerReply: okReply(1) });
+    openEditorAndPickSix();
+    change(editorColor(), "4.168");
+    chooseInBar("일괄 밝기 값(%)", "60");
+    pressBulkApply();
+    render({ lastServerReply: okReply(1) }); // 같은 옛 답으로 다시 그려도
+    expect(editorColor()?.value).toBe("4.168");
+    render({ lastServerReply: okReply(2) }); // 누른 뒤의 성공 답
+    expect(editorColor()?.value).toBe("4.167"); // 격자 값(이 시험에서는 안 바뀜)으로 돌아간다
+  });
+
+  it("한 번만 다시 채운다 — 그 뒤 다른 편집의 성공 답이 와도 고치던 값을 지우지 않는다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER });
+    openEditorAndPickSix();
+    chooseInBar("일괄 색 프리셋", "4.168");
+    pressBulkApply();
+    render({}, { tracks: withValues("4.168", 100) });
+    render({ lastServerReply: okReply(1) });
+    expect(editorColor()?.value).toBe("4.168");
+    change(editorColor(), "4.167"); // 이제 편집 칸에서 다시 고르는 중
+    render({ lastServerReply: okReply(2) }); // 한 칸 편집 등 다른 성공 답
+    expect(editorColor()?.value).toBe("4.167");
+  });
+
+  it("성공한 뒤에는 앞 답 기다림을 지운다 — 늦게 온 busy 가 그 일괄 바꾸기의 거절처럼 보이지 않는다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER, busyCount: 0 });
+    openEditorAndPickSix();
+    chooseInBar("일괄 색 프리셋", "4.168");
+    pressBulkApply();
+    render({}, { tracks: withValues("4.168", 100) });
+    render({ lastServerReply: okReply(1) });
+    render({ busyCount: 1 }); // 다른 요청(서랍 등)이 바빠서 거절됐다
+    expect(bar()?.textContent).not.toContain("다른 일을 처리하는 중");
+  });
+
+  it("일괄 바꾸기를 누르지 않았다면 성공 답이 와도 고르던 값을 건드리지 않는다", () => {
+    const { render } = setup(withValues("4.167", 100), { drawerSections: COLOR_DRAWER });
+    openEditorAndPickSix();
+    change(editorColor(), "4.168");
+    render({ lastServerReply: okReply(1) });
+    expect(editorColor()?.value).toBe("4.168");
   });
 });
 

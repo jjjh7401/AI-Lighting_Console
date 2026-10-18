@@ -80,6 +80,14 @@ describe("useCellApplyResult", () => {
     expect(onPreviewBar).not.toHaveBeenCalled();
   });
 
+  it("기록 기준(baseline record)으로 보냈으면 요약 끝에 그 사실이 붙는다 — 마디도 보러 간다", () => {
+    const onPreviewBar = vi.fn();
+    render({ sendStatus: null, onPreviewBar });
+    render({ sendStatus: status({ subset: { ...SUBSET, baseline: "record" } }), onPreviewBar });
+    expect(latest.result?.text).toBe("2칸 반영 · 못 보낸 칸 0개 · 기록 기준으로 보냄(지운 값은 확인 못 함)");
+    expect(onPreviewBar).toHaveBeenCalledWith(4);
+  });
+
   it("콜백이 없어도 요약은 쥔다", () => {
     render({ sendStatus: null });
     render({ sendStatus: status({ subset: SUBSET }) });

@@ -2,7 +2,9 @@
 //
 // 서버 계약: `beat_grid_apply` 는 선택 필드 `cells` 를 받고, 없으면 예전 곡 전체 반영이다. `beat_grid_edit` 는
 // `bar`+`target` 대신 `cells` 로 주소를 줄 수 있다(둘 중 하나). 칸 단위 반영이 성공하면 `beat_grid_send_status` 에
-// `subset` 이 실린다. 리듀서는 필드를 하나씩 옮기므로 `subset` 이 조용히 버려지지 않는지 여기서 못박는다.
+// `subset`(+ 무엇을 기준으로 보냈는지 `baseline`)이 실린다. 타임라인 프레임의 `beat_grid.partial_baseline` 은 칸 단위
+// 반영이 무엇을 기준으로 삼는지(`snapshot`·`record`·`null`)를 말한다. 리듀서는 상태 응답의 필드를 하나씩 옮기므로
+// `subset` 이 조용히 버려지지 않는지 여기서 못박는다(타임라인은 통째로 보관된다).
 import { describe, expect, it } from "vitest";
 
 import {
@@ -115,5 +117,55 @@ describe("beat_grid_send_status — subset", () => {
     const preview = reduceServerEvent(withSubset, event({ ...base, last_action: "preview" }));
     expect(preview.beatGridSendStatus?.last_action).toBe("preview");
     expect("subset" in (preview.beatGridSendStatus ?? {})).toBe(false);
+  });
+
+  it("subset.baseline(snapshot·record)도 그대로 옮긴다 — 지운 값 주의를 말하는 근거다", () => {
+    for (const baseline of ["snapshot", "record"] as const) {
+      const next = reduceServerEvent(initialState, event({ ...base, subset: { ...subset, baseline } }));
+      expect(next.beatGridSendStatus?.subset?.baseline).toBe(baseline);
+      expect(next.beatGridSendStatus?.subset).toEqual({ ...subset, baseline });
+    }
+  });
+
+  it("baseline 을 안 실은 옛 응답에는 baseline 키가 없다 — 지어내지 않는다", () => {
+    const next = reduceServerEvent(initialState, event({ ...base, subset }));
+    expect("baseline" in (next.beatGridSendStatus?.subset ?? {})).toBe(false);
+  });
+});
+
+describe("song_timeline — beat_grid.partial_baseline", () => {
+  const timelineWith = (grid: Record<string, unknown>) => ({
+    type: "song_timeline",
+    timeline: {
+      song_title: "LOVE ATTACK",
+      beat_grid: { song_title: "LOVE ATTACK", bar_range: { start: 0, end: 25 }, tracks: [], ...grid },
+    },
+  });
+
+  it("서버가 모든 타임라인 프레임에 싣는 partial_baseline 을 격자째 그대로 보존한다", () => {
+    for (const [baseline, unsent] of [
+      ["snapshot", []],
+      ["record", null],
+      [null, null],
+    ] as const) {
+      const next = reduceServerEvent(
+        initialState,
+        event(timelineWith({ unsent_cells: unsent, partial_baseline: baseline })),
+      );
+      const grid = next.songTimeline.timeline?.beat_grid;
+      expect(grid?.partial_baseline).toBe(baseline);
+      expect(grid?.unsent_cells).toEqual(unsent);
+    }
+  });
+
+  it("옛 서버 응답(필드 없음)에서는 partial_baseline 이 없다 — 지어내지 않는다", () => {
+    const next = reduceServerEvent(initialState, event(timelineWith({ unsent_cells: [] })));
+    expect("partial_baseline" in (next.songTimeline.timeline?.beat_grid ?? {})).toBe(false);
+  });
+
+  it("다음 타임라인 프레임이 기준을 바꾸면 최신 값으로 바뀐다", () => {
+    const first = reduceServerEvent(initialState, event(timelineWith({ unsent_cells: null, partial_baseline: "record" })));
+    const second = reduceServerEvent(first, event(timelineWith({ unsent_cells: [], partial_baseline: "snapshot" })));
+    expect(second.songTimeline.timeline?.beat_grid?.partial_baseline).toBe("snapshot");
   });
 });

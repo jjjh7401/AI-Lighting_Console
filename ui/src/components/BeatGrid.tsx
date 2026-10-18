@@ -1104,6 +1104,9 @@ export interface BeatGridServerReply {
  * `server/web/session.py` `_beat_grid_rejection`과 같은 글자여야 한다. */
 export const BEAT_GRID_REJECTION_SUMMARY = "박자 격자 수정 거절";
 
+/** 일반 편집(`beat_grid_edit`)이 성공할 때 서버가 붙이는 요약 — `session.py` `beat_grid_edit` 성공 답과 같은 글자여야 한다. */
+export const BEAT_GRID_EDIT_OK_SUMMARY = "박자 격자 수정";
+
 /** 카드 t597 — 일반 편집을 보내는 여섯 칸. */
 export type EditReplyField = "brightness" | "position" | "color" | "effect" | "movement" | "transition";
 
@@ -2556,6 +2559,19 @@ export function BeatGrid({
   useEffect(() => {
     if (newPresetPending) seedEditDrafts(seedCue, NEW_PRESET_SEED_ROW[newPresetPending.field]);
   }, [pendingSeedValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 일괄 바꾸기가 성공한 답이 오면(누른 뒤 `seq > sinceSeq`) 한 칸 편집의 초안을 지금 칸 값으로 다시 채운다 — 일괄 바꾸기가
+  // 편집 칸이 펼친 칸의 값을 바꿔도 초안은 옛 값(예: 4.167)에 머물기 때문이다. 한 번만 하고(앞 답 기다림을 지운다) 칸을
+  // 고를 때와 같은 채우기를 쓴다. 서버는 격자(`song_timeline`)를 답보다 먼저 보내므로 이 렌더의 `seedCue` 는 새 값이다.
+  const bulkEditDone =
+    bulkPending !== null &&
+    lastServerReply !== null &&
+    lastServerReply.seq > bulkPending.sinceSeq &&
+    lastServerReply.summary === BEAT_GRID_EDIT_OK_SUMMARY;
+  useEffect(() => {
+    if (!bulkEditDone) return;
+    seedEditDrafts(seedCue);
+    setBulkPending(null);
+  }, [bulkEditDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!grid) {
     // 빈 화면은 안내와 돌아가는 길을 함께 보인다 — 격자가 없을 때 갈 곳이 없으면 막다른 화면이 된다.
@@ -2861,7 +2877,7 @@ export function BeatGrid({
       ? 0
       : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
   // 「⇪ 콘솔에 반영」 — 칸 단위 반영 배선이 있으면 바뀐 칸만(고른 칸이 있으면 그 가운데 바뀐 칸만) 보낸다.
-  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells);
+  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells, grid.partial_baseline);
 
   return (
     <section className="beat-grid" aria-label="박자 격자">

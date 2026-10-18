@@ -12,7 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PARTIAL_NOTHING_CHANGED_HINT,
+  PARTIAL_NOTHING_PICKED_HINT,
   PARTIAL_NO_RECORD_HINT,
+  PARTIAL_RECORD_WARNING,
   partialApplyPlan,
   type PartialApplyPlan,
 } from "./cellApply";
@@ -32,9 +34,21 @@ const READY: PartialApplyPlan = partialApplyPlan(
     { group_name: "FOH", bar: 3 },
   ],
   [],
+  "snapshot",
 );
-const NO_RECORD: PartialApplyPlan = partialApplyPlan(null, []);
-const NOTHING: PartialApplyPlan = partialApplyPlan([], []);
+const NO_RECORD: PartialApplyPlan = partialApplyPlan(null, [], null);
+const NOTHING: PartialApplyPlan = partialApplyPlan([], [], "snapshot");
+// 기록 기준(record) — 칸 기록은 없고 이 곡의 반영 기록만 있다: 칸을 골라야 보낼 수 있고, 고르면 고른 칸을 모두 보낸다.
+const RECORD_NOTHING_PICKED: PartialApplyPlan = partialApplyPlan(null, [], "record");
+const RECORD_READY: PartialApplyPlan = partialApplyPlan(
+  null,
+  [
+    { group_name: "BACK", bar: 1 },
+    { group_name: "FOH", bar: 3 },
+    { group_name: "SIDE", bar: 5 },
+  ],
+  "record",
+);
 
 function renderMarkup(props: Partial<ConsoleApplyButtonProps> = {}) {
   return renderToStaticMarkup(<ConsoleApplyButton {...props} />);
@@ -98,6 +112,23 @@ describe("막힐 때", () => {
   it("바뀐 칸이 없으면 주 버튼은 꺼지고 「바뀐 칸이 없어요」", () => {
     const html = renderMarkup({ onApply: noop, partial: { plan: NOTHING, onApplyCells: noop } });
     expect(html).toContain(`title="${PARTIAL_NOTHING_CHANGED_HINT}" disabled`);
+  });
+
+  it("기록 기준에서 고른 칸이 없으면 주 버튼은 꺼지고 먼저 고르라고 말한다 — 「전체 다시 반영 먼저」 안내는 아니다", () => {
+    const html = renderMarkup({ onApply: noop, partial: { plan: RECORD_NOTHING_PICKED, onApplyCells: noop } });
+    expect(html).toContain(`title="${PARTIAL_NOTHING_PICKED_HINT}" disabled`);
+    expect(html).toContain(`<small class="beat-grid-apply-scope">${PARTIAL_NOTHING_PICKED_HINT}</small>`);
+    expect(html).not.toContain(PARTIAL_NO_RECORD_HINT);
+    // 전체 다시 반영은 늘 켜져 있다.
+    expect(html).toMatch(/class="tbtn beat-grid-apply-whole" title="[^"]*">전체 다시 반영/);
+  });
+
+  it("기록 기준에서 칸을 골랐으면 주 버튼은 켜져 있고, title 과 안내 줄이 기록 기준·지운 값 주의를 말한다", () => {
+    const html = renderMarkup({ onApply: noop, partial: { plan: RECORD_READY, onApplyCells: noop } });
+    const note = `고른 3칸을 보내요 (기록 기준) · ${PARTIAL_RECORD_WARNING}`;
+    expect(html).toContain(`title="⇪ 콘솔에 반영 — ${note}"`);
+    expect(html).toContain(`<small class="beat-grid-apply-scope">${note}</small>`);
+    expect(html).not.toMatch(/class="tbtn" title="[^"]*" disabled/);
   });
 
   it("전체 반영 콜백이 없으면 보조 버튼은 꺼지고 아직 배선 안 됨을 title 로 말한다", () => {
@@ -175,6 +206,30 @@ describe("누르기", () => {
     expect(buttonWith("⇪").disabled).toBe(true);
     act(() => buttonWith("⇪").click());
     mount({ onApply, partial: { plan: NOTHING, onApplyCells } });
+    act(() => buttonWith("⇪").click());
+    expect(onApplyCells).not.toHaveBeenCalled();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("기록 기준에서 주 버튼은 고른 칸 모두를 칸 단위 콜백으로 한 번 보낸다", () => {
+    const onApply = vi.fn();
+    const onApplyCells = vi.fn();
+    mount({ onApply, partial: { plan: RECORD_READY, onApplyCells } });
+    act(() => buttonWith("⇪").click());
+    expect(onApplyCells).toHaveBeenCalledTimes(1);
+    expect(onApplyCells).toHaveBeenCalledWith([
+      ["BACK", 1],
+      ["FOH", 3],
+      ["SIDE", 5],
+    ]);
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("기록 기준에서 고른 칸이 없을 때 주 버튼을 눌러도 아무것도 안 보낸다", () => {
+    const onApply = vi.fn();
+    const onApplyCells = vi.fn();
+    mount({ onApply, partial: { plan: RECORD_NOTHING_PICKED, onApplyCells } });
+    expect(buttonWith("⇪").disabled).toBe(true);
     act(() => buttonWith("⇪").click());
     expect(onApplyCells).not.toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();

@@ -6,8 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  BULK_GUIDE_HINT,
   BULK_NOTHING_CHOSEN_HINT,
-  BULK_PRESET_NUMBER_HINT,
   BULK_SCOPE_HINT,
   CellSelectionBar,
   bulkChoiceOf,
@@ -121,11 +121,20 @@ describe("마크업", () => {
     expect(BULK_NOTHING_CHOSEN_HINT).toBe("디머나 색을 먼저 고르세요");
   });
 
-  it("프리셋 번호를 바꾸면 전체 다시 반영이 필요하다는 안내가 늘 보인다", () => {
+  it("고른 칸만 콘솔에 보내는 길을 한 줄로 안내한다 — 칸 고르기 → 디머·색 바꾸기 → 「⇪ 콘솔에 반영」", () => {
     const html = renderToStaticMarkup(<CellSelectionBar {...props()} />);
-    expect(html).toContain(BULK_PRESET_NUMBER_HINT);
-    expect(BULK_PRESET_NUMBER_HINT).toContain("「전체 다시 반영」");
-    expect(BULK_PRESET_NUMBER_HINT).toContain("프리셋 번호");
+    expect(BULK_GUIDE_HINT).toBe("칸을 고르고 디머·색을 바꾼 뒤 「⇪ 콘솔에 반영」을 누르면 고른 칸만 콘솔에 보냅니다.");
+    expect(html).toContain(`<p class="beat-grid-cell-bar-hint">${BULK_GUIDE_HINT}</p>`);
+    // 안내는 한 줄이다 — 같은 문장이 되풀이되지 않는다.
+    expect(html.split(BULK_GUIDE_HINT).length - 1).toBe(1);
+  });
+
+  it("프리셋 번호를 바꾼 칸은 전체 반영이 필요하다는 옛 안내는 없다 — 프리셋 번호도 칸 단위 반영이 보낸다", () => {
+    const html = renderToStaticMarkup(<CellSelectionBar {...props()} />);
+    expect(html).not.toContain("프리셋 번호를 바꾼 칸");
+    expect(html).not.toContain("거절해요");
+    // 「전체 다시 반영」 말은 이 줄에 나오지 않는다 — 안내가 가리키는 길은 「⇪ 콘솔에 반영」뿐이다.
+    expect(html).not.toContain("전체 다시 반영");
   });
 
   it("이 줄의 적용과 아래 한 칸 편집의 적용이 다르다는 안내가 있다", () => {
