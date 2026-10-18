@@ -136,10 +136,12 @@ class TestApply:
             track for track in store.latest["beat_grid"]["tracks"] if track["group_name"] == "BACK"
         )
         # 운영 경로는 구간 생성기다: 구간 시작에만 칸이 선다(옛 생성기는 마디마다 하나라 30 이
-        # 있었다). 구간 시작 31 에 킥 칸이 서고, 구간 안쪽 30 에는 새 칸이 없다.
+        # 있었다). 구간 시작 31 에 칸이 서고, 구간 안쪽 30 에는 새 칸이 없다. 31 의 창에서는 보조
+        # 자리가 체이스 차례라 BACK 이 쉰다(카드 WT-side-allocation) — 킥 칸은 다른 창에 선다.
         back_bars = {cue["bar"]: cue["label"] for cue in back["cues"]}
-        assert back_bars.get(31) not in (None, "—")
+        assert 31 in back_bars
         assert 30 not in back_bars
+        assert any(label not in (None, "—") for label in back_bars.values())
         assert len(back["cues"]) < 40
         assert _sent_of_type(sent, "beat_grid_draft_consumed")[-1]["draft_id"] == draft_id
         assert _sent_of_type(sent, "song_timeline")

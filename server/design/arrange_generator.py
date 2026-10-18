@@ -285,8 +285,14 @@ def _check_layout(layout: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _voices(layout: Sequence[Mapping[str, Any]]) -> list[str]:
-    """이 구성에 있는 리듬 층을 주인공 교대 순서(펄스 → 체이스 → 움직임)로 돌려준다."""
+    """이 구성에 있는 리듬 층을 주인공 교대 순서(펄스 → 체이스 → 움직임)로 돌려준다.
+
+    역할을 정하지 못한 줄(``layer_role`` 이 None)은 체이스 층이다 — 콘솔 그룹 이름이 리그마다
+    달라서 이름으로 역할을 못 정해도 장비가 곡 내내 꺼져 있으면 안 된다(카드 WT-side-allocation).
+    """
     roles = {track.get("layer_role") for track in layout}
+    if None in roles:
+        roles.add("side")
     ordered = [(_PULSE, "back"), (_CHASE, "side"), (_MOTION, "mover")]
     return [voice for voice, role in ordered if role in roles]
 
@@ -316,7 +322,8 @@ def _cell_plan(
         if _PULSE in active:
             return _CellPlan(PULSE_LABEL, lit, None, "pulse", color)
         return _rest_plan(settings)
-    if role == "side":
+    # 역할을 정하지 못한 줄도 체이스 층으로 리듬에 들어간다(``_voices`` 와 같은 판단).
+    if role == "side" or role is None:
         if _CHASE in active:
             return _CellPlan(CHASE_LABEL, lit, None, "chase", color)
         return _rest_plan(settings)
