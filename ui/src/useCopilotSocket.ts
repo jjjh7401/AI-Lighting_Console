@@ -11,6 +11,7 @@ import {
   buildBeatGridStageRequest,
   buildBeatGridTimecodeSet,
   buildBeatGridEdit,
+  buildBeatGridEditCells,
   buildBeatGridEditSentence,
   buildBeatGridNewPreset,
   buildBeatGridPreview,
@@ -248,6 +249,11 @@ export interface CopilotSocket {
   sendTimelineDraftRedo: () => void;
   /** 카드 t551(SPEC-LDBEAT-001 M3) — 편집 경로 ①(직접 고르기). */
   sendBeatGridEdit: (bar: number, target: string, changes: Record<string, unknown>) => void;
+  /** 여러 칸에 같은 변경을 한 메시지로 — `beat_grid_edit` 의 `cells` 주소 형태(전부 아니면 전무). */
+  sendBeatGridEditCells: (
+    cells: ReadonlyArray<readonly [string, number]>,
+    changes: Record<string, unknown>,
+  ) => void;
   /** 카드 t551(M3) — 편집 경로 ②(문장). */
   sendBeatGridEditSentence: (sentence: string) => void;
   /** 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. */
@@ -276,6 +282,9 @@ export interface CopilotSocket {
   ) => void;
   /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
   sendBeatGridApply: () => void;
+  /** 고른 칸 가운데 바뀐 칸만 덧쓰는 칸 단위 반영 — `beat_grid_apply` 의 `cells`. 빈 목록은 보내지 않는다
+   * (빈 `cells` 는 프레임에서 빠져 곡 전체 반영이 되어 버린다). */
+  sendBeatGridApplyCells: (cells: ReadonlyArray<readonly [string, number]>) => void;
   /** 「필요한 프리셋 만들기」 — `beat_grid_apply` 에 mode: "preset_plan". */
   sendBeatGridPresetPlan: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호 입력(서버가 초안·보관함에 적는다). */
@@ -490,6 +499,13 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
       send(buildBeatGridEdit(bar, target, changes)),
     [send],
   );
+  // 여러 칸 일괄 편집 — 칸마다 메시지를 연달아 보내면 서버 busy 가드가 둘째부터 거절하므로 한 메시지다.
+  const sendBeatGridEditCells = useCallback(
+    (cells: ReadonlyArray<readonly [string, number]>, changes: Record<string, unknown>) => {
+      if (cells.length > 0) send(buildBeatGridEditCells(cells, changes));
+    },
+    [send],
+  );
   const sendBeatGridEditSentence = useCallback(
     (sentence: string) => send(buildBeatGridEditSentence(sentence)),
     [send],
@@ -549,6 +565,13 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   // 카드 t563 — 상단 바 콘솔 버튼 셋. 콘솔에 **쓰는** 경로라
   // `beat_grid_edit` 류(콘솔 무접촉)와는 분리된 메시지 타입이다.
   const sendBeatGridApply = useCallback(() => send(buildBeatGridApply()), [send]);
+  // 칸 단위 반영 — 빈 목록이면 아무것도 보내지 않는다(빈 cells 는 전체 반영 프레임과 같아진다).
+  const sendBeatGridApplyCells = useCallback(
+    (cells: ReadonlyArray<readonly [string, number]>) => {
+      if (cells.length > 0) send(buildBeatGridApply(undefined, cells));
+    },
+    [send],
+  );
   const sendBeatGridPresetPlan = useCallback(() => send(buildBeatGridApply("preset_plan")), [send]);
   // 반영 준비 — 타임코드 번호 입력. 콘솔에 쓰지 않는다(초안·보관함에만 적힌다).
   const sendBeatGridTimecodeSet = useCallback(
@@ -674,6 +697,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendTimelineDraftUndo,
     sendTimelineDraftRedo,
     sendBeatGridEdit,
+    sendBeatGridEditCells,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
@@ -684,6 +708,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
+    sendBeatGridApplyCells,
     sendBeatGridPresetPlan,
     sendBeatGridTimecodeSet,
     sendBeatGridPreview,

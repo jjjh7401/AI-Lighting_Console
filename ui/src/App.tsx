@@ -428,6 +428,7 @@ export default function App() {
     sendTimelineDraftUndo,
     sendTimelineDraftRedo,
     sendBeatGridEdit,
+    sendBeatGridEditCells,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
@@ -438,6 +439,7 @@ export default function App() {
     sendBeatGridDrawerRequest,
     sendBeatGridNewPreset,
     sendBeatGridApply,
+    sendBeatGridApplyCells,
     sendBeatGridPresetPlan,
     sendBeatGridTimecodeSet,
     sendBeatGridPreview,
@@ -1312,6 +1314,7 @@ export default function App() {
               state.songTimeline.timeline ? SONG_TIMELINE_LIFECYCLE_LABEL[state.songTimeline.timeline.lifecycle] : null
             }
             onEditRequest={({ bar, target, changes }) => sendBeatGridEdit(bar, target, changes)}
+            onEditCellsRequest={({ cells, changes }) => sendBeatGridEditCells(cells, changes)}
             onNewPresetRequest={({ bar, target, field, label, description, aim, fx, rgb }) =>
               sendBeatGridNewPreset(bar, target, field, label, description, aim, fx, rgb)
             }
@@ -1338,6 +1341,7 @@ export default function App() {
             consoleFollowRelay={consoleFollowRelay}
             consoleFollowSeq={consoleFollowSeq}
             onApply={sendBeatGridApply}
+            onApplyCells={sendBeatGridApplyCells}
             approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}
             timecodeNumber={state.songTimeline.timeline?.timecode_number ?? null}

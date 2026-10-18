@@ -240,6 +240,9 @@ BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "co
 # beat_grid_apply 의 mode — 기존 「⇪ 콘솔에 반영」(격자 초안 전체)과, 상단 바의
 # 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드). 새 메시지 타입은 만들지 않는다.
 BEAT_GRID_APPLY_MODES = ("apply", "preset_plan")
+# beat_grid_apply·beat_grid_edit 의 선택 필드 ``cells`` 가 한 번에 받는 칸 수 상한
+# (받은 항목 수 기준, 중복 제거 전). 칸 = (줄 이름, 마디).
+BEAT_GRID_CELLS_MAX = 400
 # beat_grid_send_status 의 선택 필드 ``completed`` — 흐름 사슬(초안 적용 → 프리셋 저장 →
 # 콘솔 반영)에서 방금 **성공으로 끝난** 단계. 새 메시지 타입을 만들지 않고 기존 이벤트에 얹는다.
 BEAT_GRID_COMPLETED_STEPS = ("draft_applied", "preset_saved", "reflected")
@@ -305,6 +308,29 @@ def _is_object_number(value: object) -> bool:
     plausible-looking target.
     """
     return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _parse_beat_grid_cells(value: object, field: str) -> list[tuple[str, int]]:
+    """박자 격자 ``cells`` — ``[[줄 이름, 마디], …]`` 를 ``[(줄 이름, 마디), …]`` 로.
+
+    비지 않은 목록이고 항목은 ``BEAT_GRID_CELLS_MAX`` 개 이하, 항목마다 [비지 않은 문자열, 양의
+    정수]다. bool 은 정수가 아니다(파이썬에서 ``True`` 가 1마디로 새는 것을 막는다). 중복은 순서를
+    지키며 한 번만 남긴다."""
+    if not isinstance(value, list) or not value:
+        raise ProtocolError(f"{field} must be a non-empty list")
+    if len(value) > BEAT_GRID_CELLS_MAX:
+        raise ProtocolError(f"{field} must have at most {BEAT_GRID_CELLS_MAX} items")
+    cells: list[tuple[str, int]] = []
+    for item in value:
+        if not isinstance(item, list) or len(item) != 2:
+            raise ProtocolError(f"{field} items must be [group_name, bar] pairs")
+        group_name, bar = item
+        if not isinstance(group_name, str) or not group_name.strip():
+            raise ProtocolError(f"{field} group_name must be a non-empty string")
+        if not _is_object_number(bar):
+            raise ProtocolError(f"{field} bar must be a positive integer")
+        cells.append((group_name, bar))
+    return list(dict.fromkeys(cells))
 
 
 def _check_song_audio_name_and_mime(file_name: object, mime_type: object) -> None:
@@ -439,10 +465,28 @@ def parse_client_message(raw: str) -> dict:
         if has_changes == has_sentence:
             raise ProtocolError("beat_grid_edit must carry exactly one of changes/sentence")
         if has_sentence:
+            if "cells" in message:
+                raise ProtocolError("beat_grid_edit.cells cannot be combined with sentence")
             sentence = message.get("sentence")
             if not isinstance(sentence, str) or not sentence.strip():
                 raise ProtocolError("beat_grid_edit.sentence must be a non-empty string")
             return {"v": PROTOCOL_VERSION, "type": "beat_grid_edit", "sentence": sentence}
+        # 칸 여러 개에 같은 changes 를 씌우는 주소 형태 — (bar, target) 한 쌍과 둘 중 정확히 하나만.
+        if "cells" in message:
+            if message.get("bar") is not None or message.get("target") is not None:
+                raise ProtocolError(
+                    "beat_grid_edit must carry either cells or bar+target, not both"
+                )
+            cells = _parse_beat_grid_cells(message["cells"], "beat_grid_edit.cells")
+            changes = message.get("changes")
+            if not isinstance(changes, dict) or not changes:
+                raise ProtocolError("beat_grid_edit.changes must be a non-empty object")
+            return {
+                "v": PROTOCOL_VERSION,
+                "type": "beat_grid_edit",
+                "cells": cells,
+                "changes": changes,
+            }
         bar = message.get("bar")
         target = message.get("target")
         changes = message.get("changes")
@@ -921,7 +965,13 @@ def parse_client_message(raw: str) -> dict:
         mode = message.get("mode", "apply")
         if mode not in BEAT_GRID_APPLY_MODES:
             raise ProtocolError(f"beat_grid_apply.mode must be one of {BEAT_GRID_APPLY_MODES}")
-        return {"v": PROTOCOL_VERSION, "type": "beat_grid_apply", "mode": mode}
+        parsed: dict = {"v": PROTOCOL_VERSION, "type": "beat_grid_apply", "mode": mode}
+        if "cells" in message:
+            # 고른 칸만 반영하는 선택 필드 — 격자 초안을 쓰는 mode 'apply' 에서만 뜻이 있다.
+            if mode != "apply":
+                raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
+            parsed["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")
+        return parsed
 
     if message_type in (
         "panel_pin",
@@ -1056,6 +1106,7 @@ def beat_grid_send_status_event(
     notices: list[str] | None = None,
     completed: str | None = None,
     timecode_suggestion: int | None = None,
+    subset: dict | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -1069,9 +1120,12 @@ def beat_grid_send_status_event(
 
     ``completed``(``BEAT_GRID_COMPLETED_STEPS`` 중 하나)는 그 단계가 **성공으로
     끝났을 때만** 실린다. ``timecode_suggestion``(1 이상의 정수)은 프리셋 저장
-    성공 때 콘솔이 비어 있다고 확인한 타임코드 번호 하나를 권한다. 둘 다 없으면
-    키 자체를 싣지 않는다 — ``null`` 로 보내지 않아 기능이 없을 때의 바이트가
-    예전과 같다."""
+    성공 때 콘솔이 비어 있다고 확인한 타임코드 번호 하나를 권한다. ``subset`` 은 칸 단위
+    반영(``beat_grid_apply.cells``)이 성공했을 때만 실린다 — ``{"requested": 고른 칸 수,
+    "applied": [[줄, 마디], …], "not_applied": [{group_name, bar, reason}, …], "baseline":
+    "snapshot"(바뀐 칸만 보냄) 또는 "record"(칸 기록 없이 소유 기록으로 고른 칸을 모두 보냄)}``.
+    셋 다 없으면 키 자체를 싣지 않는다 — ``null`` 로 보내지 않아 기능이 없을 때의 바이트가 예전과
+    같다."""
     if completed is not None and completed not in BEAT_GRID_COMPLETED_STEPS:
         raise ValueError(
             f"beat grid completed must be one of {BEAT_GRID_COMPLETED_STEPS}, got {completed!r}"
@@ -1081,6 +1135,8 @@ def beat_grid_send_status_event(
         optional["completed"] = completed
     if timecode_suggestion is not None:
         optional["timecode_suggestion"] = timecode_suggestion
+    if subset is not None:
+        optional["subset"] = subset
     return _event(
         "beat_grid_send_status",
         pending_apply_count=pending_apply_count,

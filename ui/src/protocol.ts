@@ -631,6 +631,10 @@ export interface BeatGridView {
   /** 카드 t568 ② (공급: t563) — 마지막 반영(승인=송신) 뒤 바뀐 칸. 반영
    * 스냅숏이 아직 없으면 `null`. 필드가 없는 옛 서버 응답이면 `undefined`. */
   unsent_cells?: BeatGridUnsentCell[] | null;
+  /** 칸 단위 반영이 무엇을 기준으로 삼는가(서버가 모든 타임라인 프레임에 싣는다). `"snapshot"` = 마지막 반영의 칸 기록이
+   * 있어 `unsent_cells` 가 목록이다 · `"record"` = 칸 기록은 없지만 이 곡의 반영 기록(소유 기록)이 있어 고른 칸을 모두
+   * 보낸다(`unsent_cells` 는 `null`) · `null` = 둘 다 없어 칸 단위로 못 보낸다. 필드가 없는 옛 서버 응답이면 `undefined`. */
+  partial_baseline?: BeatGridPartialBaseline | null;
   /** 카드 t570(REQ-LDBEAT-024(a)) — 「콘솔 같이」 토글이 쓸 음원 지연(초).
    * `server/design/beat_grid_data/console_audio_offset.yaml`(t520 실측)
    * 출처 — 코드 상수가 아니다. 출처가 없으면 `null`, 필드가 없는 옛 서버
@@ -980,6 +984,20 @@ export interface BeatGridApprovalVsSent {
  * 단계. 서버가 그 단계의 성공 응답에만 싣는다(`BeatGridSendStatus.completed`). */
 export type BeatGridCompletedStep = "draft_applied" | "preset_saved" | "reflected";
 
+/** 칸 단위 반영의 기준 — `BeatGridView.partial_baseline`(`null` 은 기준 없음)과 `BeatGridSubsetStatus.baseline`. */
+export type BeatGridPartialBaseline = "snapshot" | "record";
+
+/** 칸 단위 반영(`beat_grid_apply.cells`)이 성공했을 때만 상태 응답에 실리는 칸별 결과. `requested` 는 고른
+ * 칸 수, `applied` 는 실제로 보낸 [줄 이름, 마디], `not_applied` 는 보내지 않은 칸과 그 사유(콘솔과 같음 등).
+ * `baseline` 은 무엇을 기준으로 보냈는가 — `"snapshot"` 은 바뀐 칸만, `"record"` 는 고른 칸 모두(지운 값은 가려내지
+ * 못해 콘솔에 남을 수 있다). 옛 서버 응답이면 `undefined`. */
+export interface BeatGridSubsetStatus {
+  requested: number;
+  applied: [string, number][];
+  not_applied: BeatGridBlockedCell[];
+  baseline?: BeatGridPartialBaseline;
+}
+
 export interface BeatGridSendStatus {
   /** 코디네이터 계약(t568과 합의) — `BeatGridView.unsent_cells`의 길이와
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
@@ -999,6 +1017,8 @@ export interface BeatGridSendStatus {
   /** 서버가 덧붙인 알림 문구(없으면 빈 배열). 2차 전체 실행 I-02 — 「콘솔 같이」 정지 뒤
    * 콘솔 타임코드가 멈췄는지 확인하지 못했거나 아직 돌고 있으면 여기에 실린다. */
   notices?: readonly string[];
+  /** 칸 단위 반영이 성공했을 때만 있다. 키가 없으면 전체 반영이거나 칸 단위가 아니다(리듀서는 키를 지어내지 않는다). */
+  subset?: BeatGridSubsetStatus;
 }
 
 export interface SongTimelineView {
@@ -1407,6 +1427,16 @@ export function buildBeatGridEdit(
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_edit", bar, target, changes });
 }
 
+/** 칸 여러 개에 같은 변경을 한 번에 씌우는 편집 — `bar`+`target` 한 쌍과 **다른 주소 형태**다(둘을 함께 싣지
+ * 않는다). 서버는 전부 아니면 전무로 적용하고, 한 칸이라도 거절되면 아무것도 바꾸지 않는다. 한꺼번에 한 메시지로
+ * 보낸다 — 칸마다 메시지를 연달아 보내면 서버가 둘째부터 `busy` 로 거절한다. */
+export function buildBeatGridEditCells(
+  cells: ReadonlyArray<readonly [string, number]>,
+  changes: Record<string, unknown>,
+): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_edit", cells, changes });
+}
+
 /** 카드 t551(M3) — 편집 경로 ②(문장). 해석은 전부 서버의
  * `beat_grid_sentence.parse_beat_grid_sentence`가 한다. */
 export function buildBeatGridEditSentence(sentence: string): string {
@@ -1500,14 +1530,19 @@ export function buildBeatGridNewPreset(
 
 /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
- * 원칙: UI는 콘솔 페이로드를 짓지 않는다). */
-export function buildBeatGridApply(mode?: "preset_plan"): string {
+ * 원칙: UI는 콘솔 페이로드를 짓지 않는다). `cells` 를 주면 그 칸 가운데
+ * 바뀐 칸만 덧쓰는 칸 단위 반영이다(선택 필드). */
+export function buildBeatGridApply(
+  mode?: "preset_plan",
+  cells?: ReadonlyArray<readonly [string, number]>,
+): string {
   // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」만 mode 를 싣는다.
-  return JSON.stringify(
-    mode === undefined
-      ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
-      : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode },
-  );
+  // cells 는 비지 않았을 때만 싣는다(고른 칸만 반영) — 없거나 비면 곡 전체 반영이다. 그래서 칸 단위 길을
+  // 부르는 쪽은 빈 목록을 이 함수에 넘기지 않는다(전체 반영으로 바뀌어 버린다).
+  const frame = mode === undefined
+    ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
+    : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode };
+  return JSON.stringify(cells !== undefined && cells.length > 0 ? { ...frame, cells } : frame);
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */
@@ -2338,6 +2373,8 @@ export function reduceServerEvent(
           completed: event.completed ?? null,
           timecode_suggestion: event.timecode_suggestion ?? null,
           notices: event.notices ?? [],
+          // 칸 단위 반영 결과 — 키가 있을 때만 옮긴다(없으면 키 자체가 없어 전체 반영과 구분된다).
+          ...(event.subset ? { subset: event.subset } : {}),
         },
       };
     case "song_audio_link":

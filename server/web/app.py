@@ -649,6 +649,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                         message.get("target"),
                         message.get("changes"),
                         message.get("sentence"),
+                        cells=message.get("cells"),
                     )
                 elif message_type == "beat_grid_suggest":
                     if current_task is not None and not current_task.done():
@@ -745,7 +746,11 @@ def create_app(deps: WebDeps) -> FastAPI:
                             if message.get("mode") == "preset_plan"
                             else session.beat_grid_apply
                         )
-                        current_task = asyncio.create_task(asyncio.to_thread(apply_fn))
+                        # 고른 칸만 반영 — 파서가 mode 'apply' 에서만 cells 를 받는다.
+                        apply_kwargs = {"cells": message["cells"]} if message.get("cells") else {}
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(apply_fn, **apply_kwargs)
+                        )
                     elif message_type == "beat_grid_preview":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_preview, message["bar"])

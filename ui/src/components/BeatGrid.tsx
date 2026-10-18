@@ -169,6 +169,21 @@ import {
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+// 칸 여러 개 고르기·일괄 바꾸기·칸 단위 반영(카드 WT-cell-apply) — 로직은 전부 아래 새 모듈에 있다.
+import { CellSelectionBar, type BulkChoice } from "./beatgrid/CellSelectionBar";
+import { cueSyncMark, partialApplyPlan, unsentKeySet } from "./beatgrid/cellApply";
+import {
+  CELL_WIRE_MAX,
+  EMPTY_CELL_SELECTION,
+  applyCellClick,
+  cellClickMode,
+  cellKey,
+  existingCells,
+  skippedBarNote,
+  wireCells,
+  type CellSelection,
+} from "./beatgrid/cellSelection";
+import { useCellApplyResult } from "./beatgrid/useCellApplyResult";
 import { ConsoleApplyButton } from "./beatgrid/ConsoleApplyButton";
 import { ConsoleCoverageNotice } from "./beatgrid/ConsoleCoverageNotice";
 import { ConsoleRunningBanner } from "./beatgrid/ConsoleRunningBanner";
@@ -676,6 +691,12 @@ export interface BeatGridProps {
     target: string;
     changes: Record<string, unknown>;
   }) => void;
+  /** 칸 여러 개에 같은 변경을 **한 메시지**로 보낸다(서버 `beat_grid_edit` 의 `cells` 주소, 전부 아니면 전무) —
+   * 고른 칸 일괄 바꾸기. 생략하면 그 줄의 「적용」은 꺼진다. */
+  onEditCellsRequest?: (request: { cells: [string, number][]; changes: Record<string, unknown> }) => void;
+  /** 고른 칸(없으면 바뀐 칸 전부) 가운데 바뀐 칸만 콘솔에 덧쓴다 — `beat_grid_apply` 의 `cells`. 생략하면
+   * 「⇪ 콘솔에 반영」은 예전처럼 곡 전체 반영 단일 버튼이다. */
+  onApplyCells?: (cells: [string, number][]) => void;
   /**
    * 카드 t589(REQ-LDBEAT-015(h)) — 「＋ 새 프리셋 만들기」 창. `onEditRequest`
    * 와 같은 이유로 UI는 콘솔 번호를 짓지 않는다 — 어느 칸(`bar`/`target`)·
@@ -1083,6 +1104,9 @@ export interface BeatGridServerReply {
  * `server/web/session.py` `_beat_grid_rejection`과 같은 글자여야 한다. */
 export const BEAT_GRID_REJECTION_SUMMARY = "박자 격자 수정 거절";
 
+/** 일반 편집(`beat_grid_edit`)이 성공할 때 서버가 붙이는 요약 — `session.py` `beat_grid_edit` 성공 답과 같은 글자여야 한다. */
+export const BEAT_GRID_EDIT_OK_SUMMARY = "박자 격자 수정";
+
 /** 카드 t597 — 일반 편집을 보내는 여섯 칸. */
 export type EditReplyField = "brightness" | "position" | "color" | "effect" | "movement" | "transition";
 
@@ -1368,6 +1392,34 @@ export function presetPickChanges(
   return { [pool.baseField]: presetNo };
 }
 
+/** 디머 섹션을 「디머 프리셋」(효과 번호대 빼고)과 「디머 효과」로 가른다 — 한 칸 편집의 디머 고르기와 고른 칸
+ * 일괄 바꾸기가 같은 목록을 쓰게 한 곳에 둔다. 섹션이 없거나 풀을 못 읽었으면(`unread`) 가르지 않는다. */
+export function splitDimmerSection(dimmerSection: BeatGridDrawerSection | null): {
+  presetSection: BeatGridDrawerSection | null;
+  effects: BeatGridDrawerEntry[];
+} {
+  if (!dimmerSection || dimmerSection.unread) return { presetSection: dimmerSection, effects: [] };
+  return {
+    presetSection: { ...dimmerSection, entries: dimmerSection.entries.filter((entry) => !entry.is_effect_band) },
+    effects: dimmerSection.entries.filter((entry) => entry.is_effect_band),
+  };
+}
+
+/** 고른 칸 일괄 바꾸기의 선택 → 서버 `changes`. 한 칸 편집이 보내는 모양(`buildBrightness*Changes`·
+ * `presetPickChanges`)을 그대로 쓴다 — 새 모양을 짓지 않는다. 디머와 색을 함께 골랐으면 한 `changes` 에 같이 담는다. */
+export function bulkEditChanges(
+  choice: BulkChoice,
+  colorSection: BeatGridDrawerSection | null,
+): Record<string, unknown> {
+  const dimmer = choice.dimmer;
+  return {
+    ...(dimmer?.kind === "value" ? buildBrightnessValueChanges(dimmer.percent) : null),
+    ...(dimmer?.kind === "preset" ? buildBrightnessPresetChanges(dimmer.no) : null),
+    ...(dimmer?.kind === "effect" ? buildBrightnessDimmerEffectChanges(dimmer.no) : null),
+    ...(choice.color ? presetPickChanges(colorSection, "Color", choice.color.no) : null),
+  };
+}
+
 /** 무대에서 줄을 Shift+클릭하면 그 줄을 고른 줄에 더하거나 뺀다. 이미 든 줄이 하나뿐이면 뺄 수
  * 없다(고른 줄이 0개가 되면 「선택 없음」과 헷갈린다). 받은 배열은 고치지 않는다. */
 export function toggleStageRow(rows: readonly number[], trackIndex: number): number[] {
@@ -1576,6 +1628,7 @@ function renderPresetOptions(
   },
   markEffect = false,
   current = "",
+  allowNew = true,
 ) {
   // 카드 t588 — 고르기가 처음부터 열려 있으므로, 값이 없는 칸이 첫 선택지(「새
   // 프리셋 만들기」)를 고른 것처럼 보이면 안 된다 → 「— 미정 —」. 지금 값이 아직
@@ -1608,7 +1661,7 @@ function renderPresetOptions(
           ))}
         </optgroup>
       )}
-      <option value={NEW_PRESET_OPTION_VALUE}>＋ 새 프리셋 만들기…</option>
+      {allowNew && <option value={NEW_PRESET_OPTION_VALUE}>＋ 새 프리셋 만들기…</option>}
     </>
   );
 }
@@ -1697,6 +1750,8 @@ export function BeatGrid({
   consoleFollowRelay,
   consoleFollowSeq = 0,
   onEditRequest,
+  onEditCellsRequest,
+  onApplyCells,
   onNewPresetRequest,
   lastServerReply = null,
   onSentenceEditRequest,
@@ -1726,6 +1781,22 @@ export function BeatGrid({
   const [selected, setSelected] = useState<{ trackIndex: number; bar: number } | null>(null);
   // 무대에서 고른 줄들(트랙 번호) — 비면 편집은 `selected` 한 칸만 건드린다. 칸을 새로 고르면 비워진다(`selectCue`).
   const [stageRows, setStageRows] = useState<number[]>([]);
+  // 타임라인에서 여럿 고른 칸(Shift 사각형·Ctrl/Cmd 토글) — 비면 일괄 바꾸기 줄이 없다. 칸을 새로 고르면 비워진다(`selectCue`).
+  // 서버가 격자를 새로 보내 사라진 칸은 `pickedCells` 에서 빠진다.
+  const [cellSel, setCellSel] = useState<CellSelection>(EMPTY_CELL_SELECTION);
+  const pickedCells = useMemo(() => existingCells(cellSel.cells, grid?.tracks ?? []), [cellSel.cells, grid?.tracks]);
+  const pickedKeys = useMemo(() => new Set(pickedCells.map(cellKey)), [pickedCells]);
+  const hasPickedCells = pickedCells.length > 0;
+  // 칸마다 「앱에서만 바뀜」/「콘솔과 같음」 — 반영 기록이 없으면(`null`) 아무 표시도 안 한다.
+  const unsentKeys = useMemo(() => unsentKeySet(grid?.unsent_cells), [grid?.unsent_cells]);
+  // 일괄 바꾸기 「적용」을 누른 뒤의 서버 답 기다림(거절 사유·바쁨 안내용).
+  const [bulkPending, setBulkPending] = useState<{ sinceSeq: number; busyAt: number } | null>(null);
+  // 곡이 바뀌면 고른 칸을 비운다(다른 곡의 같은 줄 이름·마디에 일괄 바꾸기가 가지 않게). 고른 칸이 없어지면 앞 답 기다림도 지운다.
+  const songTitle = grid?.song_title;
+  useEffect(() => setCellSel(EMPTY_CELL_SELECTION), [songTitle]);
+  useEffect(() => {
+    if (!hasPickedCells) setBulkPending(null);
+  }, [hasPickedCells]);
   // 「필요한 프리셋 만들기」 — 누른 뒤(seq > sinceSeq)에 온 「연출 프리셋 계획」 답만 계획표로 보인다.
   const [presetPlanPending, setPresetPlanPending] = useState<
     { sinceSeq: number; busyAt: number; at: number } | null
@@ -1762,7 +1833,8 @@ export function BeatGrid({
   useEffect(() => {
     if (
       shouldAutoRequestDrawer({
-        panelOpen: selected !== null,
+        // 여러 칸을 골라 일괄 바꾸기 줄이 떠도 프리셋 목록이 필요하다.
+        panelOpen: selected !== null || hasPickedCells,
         drawerSections,
         drawerAsk,
         canRequest: onDrawerRequest !== undefined,
@@ -1770,7 +1842,7 @@ export function BeatGrid({
     ) {
       requestDrawer();
     }
-  }, [selected, drawerSections, drawerAsk, onDrawerRequest]);
+  }, [selected, hasPickedCells, drawerSections, drawerAsk, onDrawerRequest]);
   // 카드 WT-true-reasons — 계획 요청이 거절되면(서버 `_beat_grid_rejection`) 「만드는 중」을 풀고
   // 사유는 상태 줄(`applyFailureNote`)이 보인다. 고치기 전에는 90초 「만드는 중」 뒤 「늦어요」만 떴다.
   const presetPlanRejected =
@@ -1962,14 +2034,30 @@ export function BeatGrid({
     const timer = window.setInterval(() => setApplyNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [applyRunStartMs, approvalSinceMs]);
+  // 칸 단위 반영 결과 알림 + 성공하면 보낸 첫 칸의 마디를 콘솔에서 본다(재생 중이거나 콘솔이 돌고 있을 수 있으면 보지 않는다).
+  const cellApplyResult = useCellApplyResult({
+    sendStatus,
+    onPreviewBar,
+    previewBlocked: playing || relay.consoleMayRun,
+  });
+  const beginApplyRun = () => {
+    const now = Date.now();
+    setApplyNowMs(now);
+    setApplyRunStartMs(now);
+    // 누르기 전에 화면에 있던 결과는 이번 반영의 결과가 아니다 — 새 결과가 올 때까지 숨긴다.
+    setStaleSendStatus(sendStatus);
+    cellApplyResult.dismiss();
+  };
   const requestApply = onApply
     ? () => {
-        const now = Date.now();
-        setApplyNowMs(now);
-        setApplyRunStartMs(now);
-        // 누르기 전에 화면에 있던 결과는 이번 반영의 결과가 아니다 — 새 결과가 올 때까지 숨긴다.
-        setStaleSendStatus(sendStatus);
+        beginApplyRun();
         onApply();
+      }
+    : undefined;
+  const requestApplyCells = onApplyCells
+    ? (cells: [string, number][]) => {
+        beginApplyRun();
+        onApplyCells(cells);
       }
     : undefined;
   const applyProgressText = applyProgressNote(
@@ -2319,7 +2407,8 @@ export function BeatGrid({
       setTimecodeSuggestion(sendStatus.timecode_suggestion ?? null);
     } else if (step === "reflect") {
       setFlowDone((done) => ({ ...done, reflect: true }));
-      if (consoleFollowAvailable) setConsoleFollow(true);
+      // 칸 단위 반영(`subset`)은 「콘솔 같이」를 건드리지 않는다 — 켜 두거나 꺼 둔 감독의 선택이 그대로 남는다.
+      if (consoleFollowAvailable && !sendStatus.subset) setConsoleFollow(true);
     } else if (step === "console") {
       setFlowDone((done) => ({ ...done, console: true }));
     }
@@ -2470,6 +2559,19 @@ export function BeatGrid({
   useEffect(() => {
     if (newPresetPending) seedEditDrafts(seedCue, NEW_PRESET_SEED_ROW[newPresetPending.field]);
   }, [pendingSeedValue]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 일괄 바꾸기가 성공한 답이 오면(누른 뒤 `seq > sinceSeq`) 한 칸 편집의 초안을 지금 칸 값으로 다시 채운다 — 일괄 바꾸기가
+  // 편집 칸이 펼친 칸의 값을 바꿔도 초안은 옛 값(예: 4.167)에 머물기 때문이다. 한 번만 하고(앞 답 기다림을 지운다) 칸을
+  // 고를 때와 같은 채우기를 쓴다. 서버는 격자(`song_timeline`)를 답보다 먼저 보내므로 이 렌더의 `seedCue` 는 새 값이다.
+  const bulkEditDone =
+    bulkPending !== null &&
+    lastServerReply !== null &&
+    lastServerReply.seq > bulkPending.sinceSeq &&
+    lastServerReply.summary === BEAT_GRID_EDIT_OK_SUMMARY;
+  useEffect(() => {
+    if (!bulkEditDone) return;
+    seedEditDrafts(seedCue);
+    setBulkPending(null);
+  }, [bulkEditDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!grid) {
     // 빈 화면은 안내와 돌아가는 길을 함께 보인다 — 격자가 없을 때 갈 곳이 없으면 막다른 화면이 된다.
@@ -2627,6 +2729,8 @@ export function BeatGrid({
     // 타임라인 등에서 칸을 새로 고르면 무대에서 고른 줄은 비운다(한 칸 편집으로 돌아간다).
     // 무대 클릭은 이 호출 뒤에 `setStageRows` 로 다시 채운다.
     setStageRows([]);
+    // 여럿 고른 칸도 한 칸 선택으로 돌아가며 비워진다.
+    setCellSel(EMPTY_CELL_SELECTION);
     setTransitionView(transition);
     setSceneBar(null);
     setFocusField(null);
@@ -2646,6 +2750,64 @@ export function BeatGrid({
   const selectLRSplitChild = (trackIndex: number, groupName: string, side: "L" | "R", startBar: number) => {
     selectCue(trackIndex, startBar, false);
     setLrSplitViewedSide({ groupName, side });
+  };
+
+  // 타임라인 칸 클릭 — 보통은 기존 한 칸 선택, Shift 는 기준 칸과 누른 칸 사이 사각형, Ctrl/Cmd 는 칸 하나 토글.
+  // 사각형은 접힌 폴더의 줄을 건너뛴다(안 보이는 칸을 몰래 고르지 않는다). 무대 줄 고르기(`onSelectTrack`)는 이 길을 타지 않는다.
+  const visibleRows = folders.flatMap((folder) => (isFolderOpen(folder.role) ? folder.tracks : []));
+  const selectedCell = selectedTrack && selectedCue ? { group_name: selectedTrack.group_name, bar: selectedCue.bar } : null;
+  const onCueBlockClick = (
+    event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean },
+    trackIndex: number,
+    bar: number,
+  ) => {
+    const mode = cellClickMode(event);
+    if (mode === "plain") {
+      selectCue(trackIndex, bar, false);
+      return;
+    }
+    const clicked = { group_name: grid.tracks[trackIndex].group_name, bar };
+    setCellSel(
+      applyCellClick({ cells: pickedCells, anchor: cellSel.anchor }, mode, clicked, {
+        rows: visibleRows,
+        selected: selectedCell,
+      }),
+    );
+  };
+
+  // 고른 칸 일괄 바꾸기 줄 — 고르기 목록과 `changes` 모양은 아래 한 칸 편집과 같은 것을 쓴다.
+  const bulkDimmerSection = findDrawerSection(drawerSections, "Dimmer");
+  const bulkColorSection = findDrawerSection(drawerSections, "Color");
+  const bulkDimmer = splitDimmerSection(bulkDimmerSection);
+  const bulkWire = wireCells(pickedCells);
+  const bulkPoolNote = (name: string, section: BeatGridDrawerSection | null) =>
+    !section
+      ? `${name}: ${drawerPoolStatusText(drawerState)}`
+      : section.unread
+        ? `${name}: 이 풀을 콘솔에서 읽지 못했습니다.`
+        : null;
+  const bulkPoolNotice =
+    [bulkPoolNote("디머", bulkDimmerSection), bulkPoolNote("색", bulkColorSection)].filter(Boolean).join(" ") || null;
+  const bulkSkippedNote =
+    bulkWire.skipped > 0 && bulkWire.cells.length > 0
+      ? `${skippedBarNote(bulkWire.skipped, "edit")} — 나머지 ${bulkWire.cells.length}칸에만 적용돼요`
+      : null;
+  const bulkBlockedReason = !onEditCellsRequest
+    ? "일괄 바꾸기는 아직 화면에 연결되지 않았어요"
+    : bulkWire.cells.length === 0
+      ? `${skippedBarNote(bulkWire.skipped, "edit")} — 그 칸은 한 칸씩 고쳐 주세요`
+      : bulkWire.cells.length > CELL_WIRE_MAX
+        ? `한 번에 ${CELL_WIRE_MAX}칸까지만 바꿀 수 있어요 — 칸을 줄여 주세요`
+        : null;
+  const bulkReplyNote = bulkPending
+    ? (editRejectionFor("brightness", { field: "brightness", sinceSeq: bulkPending.sinceSeq }, lastServerReply) ??
+      (busyCount > bulkPending.busyAt ? "서버가 다른 일을 처리하는 중이라 거절됐어요 — 잠시 뒤 다시 눌러 주세요" : null))
+    : null;
+  const requestBulkEdit = (choice: BulkChoice) => {
+    const changes = bulkEditChanges(choice, bulkColorSection);
+    if (!onEditCellsRequest || bulkBlockedReason !== null || Object.keys(changes).length === 0) return;
+    setBulkPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount });
+    onEditCellsRequest({ cells: bulkWire.cells, changes });
   };
 
   const onSelectAudio = (file: File | null) => {
@@ -2714,6 +2876,8 @@ export function BeatGrid({
     viewBar === grid.bar_range.start
       ? 0
       : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
+  // 「⇪ 콘솔에 반영」 — 칸 단위 반영 배선이 있으면 바뀐 칸만(고른 칸이 있으면 그 가운데 바뀐 칸만) 보낸다.
+  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells, grid.partial_baseline);
 
   return (
     <section className="beat-grid" aria-label="박자 격자">
@@ -2783,6 +2947,20 @@ export function BeatGrid({
       {applyFailure && (
         <p className="beat-grid-apply-fail" role="status">
           {applyFailure}
+        </p>
+      )}
+      {/* 칸 단위 반영이 성공했을 때의 요약 한 줄 — 칸마다 전부는 title. */}
+      {cellApplyResult.result && (
+        <p className="beat-grid-apply-result" role="status" title={cellApplyResult.result.title}>
+          <span>{cellApplyResult.result.text}</span>
+          <button
+            type="button"
+            className="beat-grid-apply-result-close"
+            aria-label="칸 단위 반영 결과 닫기"
+            onClick={cellApplyResult.dismiss}
+          >
+            ✕
+          </button>
         </p>
       )}
 
@@ -3047,6 +3225,9 @@ export function BeatGrid({
                             )}
                           {visibleSegments.map((segment) => {
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
+                            // 여럿 고른 칸(Shift/Ctrl) 표시와, 콘솔과 같은지(「앱에서만 바뀜」/「콘솔과 같음」).
+                            const isMulti = pickedKeys.has(cueEditKey(track.group_name, segment.cue.bar));
+                            const syncMark = cueSyncMark(unsentKeys, { group_name: track.group_name, bar: segment.cue.bar });
                             const active = cueIsActive(segment.cue.label);
                             // 칸 목록(`segments`) 안의 자리 — `visibleSegments` 는 숨긴 칸(칸 데이터로 나뉜 칸 등)이
                             // 있으면 부분집합이라 거기서의 순번으로 다음 칸을 고르면 어긋난다. 다음 칸이 숨겨져
@@ -3083,7 +3264,7 @@ export function BeatGrid({
                               <span key={segment.cue.bar} className="beat-grid-cue-slot">
                                 <button
                                   type="button"
-                                  className={`beat-grid-cue${isSelected ? " is-selected" : ""}${active ? "" : " is-off"}${
+                                  className={`beat-grid-cue${isSelected ? " is-selected" : ""}${isMulti ? " is-multi" : ""}${active ? "" : " is-off"}${
                                     active && colorFill.isColorUnset ? " is-color-unset" : ""
                                   }${isHighlighted ? " is-preset-highlighted" : ""}${
                                     displayState === "edited" ? " is-edited" : ""
@@ -3096,10 +3277,26 @@ export function BeatGrid({
                                   title={`${segment.startBar}~${segment.endBar - 1}마디${
                                     colorFill.isColorUnset && active ? " · 색 미정" : ""
                                   }${plannedTitle}`}
-                                  onClick={() => selectCue(trackIndex, segment.cue.bar, false)}
+                                  aria-pressed={isMulti ? true : undefined}
+                                  onClick={(event) => onCueBlockClick(event, trackIndex, segment.cue.bar)}
                                 >
                                   {active ? barNameText(segment.cue) : "꺼짐"}
                                   <CueBarVisual cue={segment.cue} />
+                                  {isMulti && (
+                                    <span className="beat-grid-cue-multi-mark" aria-hidden="true">
+                                      ✔
+                                    </span>
+                                  )}
+                                  {syncMark && (
+                                    <span
+                                      className={`beat-grid-cue-sync is-${syncMark.kind}`}
+                                      role="img"
+                                      aria-label={syncMark.label}
+                                      title={syncMark.label}
+                                    >
+                                      {syncMark.glyph}
+                                    </span>
+                                  )}
                                   {(() => {
                                     const terms = unverifiedCells.get(cueEditKey(track.group_name, segment.cue.bar));
                                     return terms ? (
@@ -3246,7 +3443,39 @@ export function BeatGrid({
             applyProgress={applyProgressText}
             onApplyProgressClick={approvalPending ? onApprovalNoteClick : undefined}
             isNext={nextFlowStep(flowDone) === "reflect"}
+            partial={requestApplyCells ? { plan: applyPlan, onApplyCells: requestApplyCells } : undefined}
           />
+          {/* 타임라인에서 칸을 여럿 골랐을 때만 — 같은 디머·색을 한 번에 씌운다(서버에 한 메시지). */}
+          {hasPickedCells && (
+            <CellSelectionBar
+              count={pickedCells.length}
+              onClear={() => setCellSel(EMPTY_CELL_SELECTION)}
+              dimmerOptions={
+                <>
+                  {renderPresetOptions(splitDrawerSectionEntries(bulkDimmer.presetSection), false, "", false)}
+                  {bulkDimmer.effects.length > 0 && (
+                    <optgroup label="디머 효과">
+                      {bulkDimmer.effects.map((entry) => (
+                        <option key={`fx-${entry.preset_no}`} value={entry.preset_no}>
+                          {entry.preset_no} {entry.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              }
+              colorOptions={renderPresetOptions(splitDrawerSectionEntries(bulkColorSection), true, "", false)}
+              dimmerEffectNos={bulkDimmer.effects.map((entry) => entry.preset_no)}
+              valueChoices={BRIGHTNESS_VALUE_CHOICES}
+              dimmerDisabled={!bulkDimmerSection || bulkDimmerSection.unread}
+              colorDisabled={!bulkColorSection || bulkColorSection.unread}
+              poolNote={bulkPoolNotice}
+              blockedReason={bulkBlockedReason}
+              skippedNote={bulkSkippedNote}
+              replyNote={bulkReplyNote}
+              onApply={requestBulkEdit}
+            />
+          )}
           {pendingDraft ? (
             // SPEC-LDARRANGE-001 — 자동 배치 초안이 보류 중인 동안은 이 칸이 초안 카드가 된다.
             // 「적용」·「거절」 전까지 격자·콘솔은 바뀌지 않는다. 적용은 칸 라벨만 바꾸고 되돌리기 기록을 남긴다.
@@ -3605,14 +3834,8 @@ export function BeatGrid({
                     };
                     // 밝기 두 칸(리드 결정) — 디머 섹션을 프리셋과 효과로 나눈다. 효과는 첫 칸(디머 프리셋)의
                     // 「디머 효과」 그룹에만 보인다(두 번 나오지 않게 프리셋 목록에서 뺀다).
-                    const dimmerEffects =
-                      dimmerSection && !dimmerSection.unread
-                        ? dimmerSection.entries.filter((entry) => entry.is_effect_band)
-                        : [];
-                    const dimmerPresetSection: BeatGridDrawerSection | null =
-                      dimmerSection && !dimmerSection.unread
-                        ? { ...dimmerSection, entries: dimmerSection.entries.filter((entry) => !entry.is_effect_band) }
-                        : dimmerSection;
+                    const { presetSection: dimmerPresetSection, effects: dimmerEffects } =
+                      splitDimmerSection(dimmerSection);
                     return rows.map((row) => {
                       const isBrightnessRow = row.field === "밝기";
                       const isPositionRow = row.field === "위치 프리셋";
