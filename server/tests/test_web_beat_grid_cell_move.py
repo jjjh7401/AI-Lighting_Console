@@ -29,6 +29,9 @@
    옮기기는 그 기록을 건드리지 않는다.
 9. 칸 기록(스냅샷)이 손으로 지어 넣은 것이 아니라 진짜 전체 반영이 남긴 것이어도, 옮기기가 모두
    나가면 칸 기록의 열쇠가 칸을 따라 옮겨져 옛 마디·새 마디가 거짓 「미반영」으로 뜨지 않는다.
+10. 줄 일부가 나간 뒤 송신이 예외로 끊겨 몇 줄이 나갔는지 모를 때도 아무것도 확정하지 않으면서
+    초안 되돌리기·다시하기 기록은 비운다 — 나간 줄이 있는데 되돌리기가 남으면 격자만 옛 마디로
+    돌아간다.
 """
 
 from __future__ import annotations
@@ -467,6 +470,20 @@ def _shift_event(tree: dict, group: str, event: int, delta: float) -> None:
     path = f"DataPool/Timecodes/{TIMECODE}/1/{_STATE_INDEX[group]}/1/1/{event}"
     props = tree[path]["props"]
     props["TIME"] = f"{float(props['TIME']) + delta:.6f}"
+
+
+def _raise_on_line(console: FakeConsole, line: str) -> None:
+    """콘솔이 ``line`` 을 받는 순간 실패 응답이 아니라 예외를 던지게 한다(통신이 끊긴 것 같은 일).
+
+    그 앞 줄들은 정상으로 받는다. 던진 줄은 콘솔에 적히지 않는다."""
+    receive = console.execute
+
+    def flaky(command: str):
+        if command == line:
+            raise RuntimeError("socket reset")
+        return receive(command)
+
+    console.execute = flaky  # type: ignore[method-assign]
 
 
 # == 하니스가 믿을 만한가 ================================================================
@@ -1489,6 +1506,39 @@ class TestHistoryAfterAMoveThatWentToTheConsole:
         assert NOTHING_TO_UNDO in undone["text"]
         assert h.store.latest == moved
         assert _bars(h, "BACK") == [3, 6, 11]  # 격자는 감독이 옮긴 그대로다
+
+    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
+    def test_a_move_whose_send_raised_part_way_cannot_be_undone_either(
+        self, tmp_path, preapproved: bool
+    ) -> None:
+        # 첫 줄은 콘솔에 나갔고 둘째 줄에서 실패 응답이 아니라 예외가 난다 — 몇 줄이 나갔는지 모르는
+        # 길이라 아무것도 확정하지 않지만, 나간 줄이 있으니 되돌리기 기록은 비어야 한다.
+        h = _build(tmp_path)
+        if preapproved:
+            h.store.cell_live_approval.approve(_MOVE)
+        _raise_on_line(h.console, LINE_BACK_9_TO_11)
+        _edit_a_side_cell(h)
+        edited = copy.deepcopy(h.store.latest)
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
+
+        assert h.console.executed == [LINE_BACK_5_TO_6]
+        assert event["ok"] is False
+        assert "예기치 못한 오류" in event["reason"]
+        assert "socket reset" in event["reason"]
+        assert _status(h) == event
+        # 격자·소유 기록·칸 기록은 확정되지 않았고, 옮기기 승인도 새로 남지 않았다.
+        assert h.store.latest == edited
+        assert h.store.beat_grid_allocation(SONG) == h.before["record"]
+        assert h.store.beat_grid_snapshots[h.before["key"]] == h.before["snapshot"]
+        assert h.store.cell_live_approval.covers(_MOVE) is preapproved
+        # 먼저 한 편집까지 포함해 기록이 비어, 되돌리기가 격자만 옛 모습으로 돌리지 못한다.
+        assert h.session._draft_history.depth == 0
+
+        undone = h.session.undo_timeline_draft()
+
+        assert NOTHING_TO_UNDO in undone["text"]
+        assert h.store.latest == edited
 
     def test_a_move_that_went_out_clears_redo_too(self, tmp_path) -> None:
         h = _build(tmp_path)
