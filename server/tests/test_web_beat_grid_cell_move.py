@@ -24,6 +24,9 @@
    거절한다 — 칸만 옮기면 그 큐의 이벤트가 옛 자리에 남거나 새로 필요한 큐가 빠진다.
 7. 줄 일부만 나가고 멈추면 콘솔이 장부보다 앞서 있다 — 격자는 옮긴 대로 두되 소유 기록·칸 기록은
    그대로 둬 옮긴 칸이 「미반영」으로 남고, 옮기기 승인은 줄이 모두 나갔을 때만 남긴다.
+8. 콘솔에 줄이 하나라도 나간 옮기기(끝까지 나간 것도 일부만 나간 것도) 뒤에는 초안 되돌리기·다시하기
+   기록이 비어, 되돌리기가 격자만 옛 마디로 돌려 콘솔과 어긋나는 일이 없다. 한 줄도 나가지 않은
+   옮기기는 그 기록을 건드리지 않는다.
 """
 
 from __future__ import annotations
@@ -80,6 +83,8 @@ PREMOVE_ROW = (
     "— ⇪ 전체 반영을 사용해 주세요"
 )
 PARTIAL_SEND = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요"
+NOTHING_TO_UNDO = "되돌리기할 초안 단계가 없습니다"
+NOTHING_TO_REDO = "다시하기할 초안 단계가 없습니다"
 
 # 120 BPM 4/4 — 한 박 0.5초, 한 마디 2초, 1마디 다운비트 1.5초, 콘솔 지연 3.002초.
 #   BACK: 3마디 8.502 · 5마디(3박 트리거) 13.502 · 9마디 20.502
@@ -1359,3 +1364,115 @@ class TestSongWithNoCellSnapshot:
         assert event["ok"] is True
         assert h.before["key"] not in h.store.beat_grid_snapshots
         assert event["pending_apply_count"] is None
+
+
+# == 콘솔에 보낸 옮기기 뒤의 되돌리기·다시하기 ===============================================
+
+#: 옮기지 않는 줄(SIDE)의 칸 하나에 하는 되돌릴 수 있는 편집이다. 이벤트 시각을 건드리지 않아
+#: 이어지는 옮기기 계획에 영향이 없고, 편집 직전의 격자가 되돌리기 기록에 한 단계로 쌓인다.
+_PRIOR_EDIT = {"entry": {"fade_bars": 1, "mib_mode": None}}
+
+
+def _edit_a_side_cell(h: _Harness) -> None:
+    """되돌릴 수 있는 편집을 먼저 하나 해 둔다 — 되돌리기 기록이 한 단계가 된다."""
+    h.session.beat_grid_edit(None, None, _PRIOR_EDIT, cells=[("SIDE", 3)])
+    assert h.session._draft_history.depth == 1  # 편집이 거절됐다면 0 이다
+
+
+class TestHistoryAfterAMoveThatWentToTheConsole:
+    """콘솔에 줄이 하나라도 나간 옮기기 뒤에는 초안 되돌리기·다시하기 기록이 비어 있다.
+
+    되돌리기는 격자만 옛 모습으로 돌릴 뿐 콘솔에는 아무것도 보내지 않는다 — 이미 나간 이벤트 시각은
+    새 마디에 그대로 남는다. 일부만 나간 옮기기는 칸 기록이 옛 모습이라 그 어긋남이 「미반영」으로도
+    드러나지 않는다. 그래서 나간 줄이 하나라도 있으면 먼저 한 편집까지 포함해 기록을 비운다. 한 줄도
+    나가지 않은 옮기기(격자 규칙 거절·승인 거절·첫 줄 실패)는 아무것도 바꾸지 않았으니 기록도
+    건드리지 않는다."""
+
+    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
+    def test_a_move_that_went_out_cannot_be_undone(self, tmp_path, preapproved: bool) -> None:
+        h = _build(tmp_path)
+        if preapproved:
+            h.store.cell_live_approval.approve(_MOVE)
+        _edit_a_side_cell(h)
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+
+        assert event["ok"] is True
+        assert h.console.executed == [LINE_BACK_5_TO_6]
+        moved = copy.deepcopy(h.store.latest)
+        assert h.session._draft_history.depth == 0
+        assert moved["draft"]["depth"] == 0  # 화면의 되돌리기 단계 표시도 기록과 같다
+
+        undone = h.session.undo_timeline_draft()
+
+        assert NOTHING_TO_UNDO in undone["text"]
+        assert h.store.latest == moved  # 격자는 옮긴 그대로다
+        assert _bars(h, "BACK") == [3, 6, 9]
+        assert h.console.executed == [LINE_BACK_5_TO_6]  # 되돌리기는 콘솔에 아무것도 보내지 않는다
+
+    @pytest.mark.parametrize("preapproved", [False, True], ids=["card", "session-approval"])
+    def test_a_move_that_stopped_part_way_cannot_be_undone_either(
+        self, tmp_path, preapproved: bool
+    ) -> None:
+        h = _build(tmp_path)
+        if preapproved:
+            h.store.cell_live_approval.approve(_MOVE)
+        h.console.fail_on[LINE_BACK_9_TO_11] = "no confirmation"
+        _edit_a_side_cell(h)
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("BACK", 9, 11)])
+
+        assert event["reason"] == PARTIAL_SEND  # 첫 줄은 나갔고 둘째 줄에서 멈췄다
+        assert h.console.executed == [LINE_BACK_5_TO_6, LINE_BACK_9_TO_11]
+        moved = copy.deepcopy(h.store.latest)
+        assert h.session._draft_history.depth == 0
+        assert moved["draft"]["depth"] == 0
+
+        undone = h.session.undo_timeline_draft()
+
+        assert NOTHING_TO_UNDO in undone["text"]
+        assert h.store.latest == moved
+        assert _bars(h, "BACK") == [3, 6, 11]  # 격자는 감독이 옮긴 그대로다
+
+    def test_a_move_that_went_out_clears_redo_too(self, tmp_path) -> None:
+        h = _build(tmp_path)
+        _edit_a_side_cell(h)
+        h.session.undo_timeline_draft()  # 먼저 한 편집을 물려 다시하기 가지를 만든다
+        assert h.session._draft_history.can_redo
+
+        h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
+        moved = copy.deepcopy(h.store.latest)
+        redone = h.session.redo_timeline_draft()
+
+        assert NOTHING_TO_REDO in redone["text"]
+        assert h.store.latest == moved
+        assert _bars(h, "BACK") == [3, 6, 9]
+
+    @pytest.mark.parametrize(
+        ("answers", "fail_first_line", "ops"),
+        [
+            pytest.param((True,), False, [_move("BACK", 4, 6)], id="refused-by-the-grid-rules"),
+            pytest.param((False,), False, [_move("BACK", 5, 6)], id="declined-card"),
+            pytest.param((True,), True, [_move("BACK", 5, 6)], id="first-line-fails"),
+        ],
+    )
+    def test_a_move_that_sent_nothing_leaves_the_history_alone(
+        self, tmp_path, answers: tuple[bool, ...], fail_first_line: bool, ops: list
+    ) -> None:
+        h = _build(tmp_path, answers=answers)
+        if fail_first_line:
+            h.console.fail_on[LINE_BACK_5_TO_6] = "no confirmation"
+        _edit_a_side_cell(h)
+        edited = copy.deepcopy(h.store.latest)
+
+        event = h.session.beat_grid_cell_edit(ops)
+
+        assert event["ok"] is False
+        assert _console_event_ms(h.console, "BACK") == [8502, 13502, 20502]  # 콘솔은 그대로다
+        assert h.store.latest == edited
+        assert h.session._draft_history.depth == 1  # 먼저 한 편집은 아직 되돌릴 수 있다
+
+        h.session.undo_timeline_draft()
+
+        assert h.store.latest["beat_grid"] == h.before["timeline"]["beat_grid"]
+        assert h.session._draft_history.depth == 0
