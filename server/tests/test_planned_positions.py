@@ -141,7 +141,8 @@ class TestGeneratorPlansAMoverLook:
         grid = _applied_grid()
         for group in _MOVER_GROUPS:
             looks = _planned_looks(grid, group)
-            assert looks[0] == (0, "Home"), (group, looks[:1])
+            # 곡 첫 0~3마디는 D1 대로 어둡다. 첫 켜진 칸(4마디)이 도입 위치(Home)를 잡는다.
+            assert looks[0] == (4, "Home"), (group, looks[:1])
             assert all(name in MOVER_POSITION_LADDER for _bar, name in looks), group
             assert _collapse(looks) == _PINNED_LOOKS[group], group
 

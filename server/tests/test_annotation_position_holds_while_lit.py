@@ -57,12 +57,19 @@ def test_the_floor_annotation_holds_until_the_first_dark_cell() -> None:
     plan = _plan(grid, float(bar_map["bpm"]))
     for group in _MOVERS:
         cues = _cues(grid, group)
-        # 전제: 생성기는 0마디부터 켜고, 처음 꺼지는 칸이 있다(이 전제가 바뀌면 여기서 알린다).
-        assert cues[0]["bar"] == 0 and cue_is_lit(cues[0])
-        first_dark = next(cue["bar"] for cue in cues if not cue_is_lit(cue))
-        lit_run = [cue["bar"] for cue in cues if cue["bar"] < first_dark]
+        # 전제(감독 결정 D1): 곡 첫 0~3마디는 어둡고, 4마디부터 켜진 칸이 처음 선다.
+        # 이 전제가 바뀌면 여기서 알린다.
+        assert cues[0]["bar"] == 0 and not cue_is_lit(cues[0])
+        first_lit = next(cue["bar"] for cue in cues if cue_is_lit(cue))
+        assert first_lit == 4
+        first_dark = next(
+            cue["bar"] for cue in cues if cue["bar"] > first_lit and not cue_is_lit(cue)
+        )
+        lit_run = [cue["bar"] for cue in cues if first_lit <= cue["bar"] < first_dark]
         floor = next(p for p in plan.presets if p.kind == "position" and p.name == f"FLOOR {group}")
-        assert [cell.bar for cell in floor.cells] == lit_run
+        # D1: 어둠 머리 첫 마디(0마디)에도 바닥 위치를 실어 둔다.
+        # 그래서 4마디부터 켜질 때 옮기지 않는다(어둠 속 사전이동).
+        assert [cell.bar for cell in floor.cells] == [cues[0]["bar"], *lit_run]
         # 계획 위치(Home 등)는 그 칸들을 잡지 않는다 — 한 칸에 위치가 둘이 아니다.
         others = {
             cell.bar
@@ -91,10 +98,17 @@ def test_with_the_planned_numbers_no_mover_moves_while_lit_at_the_song_start() -
     assert timing is not None
     for group in _MOVERS:
         cues = _cues(numbered, group)
-        # 전제: 첫 켜진 칸들에 위치 번호가 붙었다(안 붙으면 이 시험은 아무것도 재지 않는다).
-        assert cues[0]["position_preset_no"] is not None
-        # 반영 단계와 같은 MIB 판정(beat_grid_mib) — 첫 어둠 전 구간에 켜진 채 이동이 없다.
-        first_dark = next(cue["bar"] for cue in cues if not cue_is_lit(cue))
+        # 전제(감독 결정 D1): 0~3마디는 어둡고, 4마디부터 켜진 칸이 처음 선다.
+        # 그 칸에 위치 번호가 붙어야 잰다.
+        first_lit = next(cue for cue in cues if cue_is_lit(cue))
+        assert first_lit["position_preset_no"] is not None
+        # 반영 단계와 같은 MIB 판정(beat_grid_mib) — 처음 켜진 구간에 켜진 채 이동이 없다.
+        # 「켜진 채 움직임 시작」은 감독 결정 D3(a) 의 경고라서 이동 위반으로 세지 않는다.
+        first_dark = next(
+            cue["bar"] for cue in cues if cue["bar"] > first_lit["bar"] and not cue_is_lit(cue)
+        )
         _premoves, notes = plan_mib_premoves(cues, timing)
-        lit_moves = [n for n in notes if "켜진 채" in n and int(n.split("마디")[0]) <= first_dark]
+        lit_moves = [
+            n for n in notes if "켜진 채 이동" in n and int(n.split("마디")[0]) <= first_dark
+        ]
         assert lit_moves == [], (group, lit_moves)
