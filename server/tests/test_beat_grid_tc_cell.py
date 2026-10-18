@@ -13,6 +13,8 @@
    않는다.
 6. 초 문자열은 에미터(``beat_grid_emit``)가 쓰는 것과 같은 꼴이다 — 정수 초는 ``82``, 짧은 소수는
    ``82.5``. ``.3f`` 같은 두 번째 포매터는 ``82.142`` 에서는 티가 안 나므로 따로 잰다.
+7. 시각이 NaN·무한대·음수이면 문자열로 만들거나 이벤트를 찾기 전에 거절한다 — 번호 찾기 실패가
+   아닌 그냥 ``ValueError`` 이고, 메시지에 동작과 값이 나온다.
 """
 
 from __future__ import annotations
@@ -161,3 +163,37 @@ def test_seconds_are_written_like_the_emitter_writes_them(seconds: float, text: 
 
     assert created[1] == f"Store Property 'Time' {text} 'AbsTime' {text} 'Token' 'Go+'"
     assert moved == [f"Set Timecode 5.1.3.1.1.10 Property 'Time' {text}"]
+
+
+@pytest.mark.parametrize(
+    ("op", "events", "kwargs", "bad_name"),
+    [
+        ("create", [], {"to_seconds": -1.0}, "to_seconds"),
+        ("create", [], {"to_seconds": float("nan")}, "to_seconds"),
+        ("create", [], {"to_seconds": float("inf")}, "to_seconds"),
+        # 옮기기: 찾을 시각은 멀쩡하고 옮겨 갈 시각만 음수다.
+        ("move", [(10, 81.642)], {"from_seconds": 81.642, "to_seconds": -0.5}, "to_seconds"),
+        # 지우기: 찾을 시각이 NaN 이다 — "맞는 이벤트 0개" 라는 엉뚱한 사유로 뭉개지면 안 된다.
+        ("delete", [(10, 81.642)], {"from_seconds": float("nan")}, "from_seconds"),
+    ],
+    ids=["create-negative", "create-nan", "create-inf", "move-negative-to", "delete-nan-from"],
+)
+def test_non_finite_or_negative_seconds_are_a_plain_value_error(
+    op: str,
+    events: list[tuple[int, float]],
+    kwargs: dict[str, float],
+    bad_name: str,
+) -> None:
+    # 콘솔로 나가는 시각은 유한하고 0 이상이어야 한다 — 문자열로 만들거나 이벤트를 찾기
+    # 전에 거절한다. 검사가 없어도 NaN 은 우연히 ValueError 로 끝나므로(만들기는 round(nan),
+    # 지우기는 "맞는 이벤트 0개" 인 TcCellIndexError = ValueError) ValueError 만 봐서는
+    # 모자라다. 그래서 사유(시각 자체가 틀림)를 따로 잰다.
+    with pytest.raises(ValueError) as caught:
+        plan_tc_cell_commands(op, CONTAINER, events, **kwargs)
+
+    message = str(caught.value)
+    # 번호 찾기 실패로 뭉개지지 않고, 어느 동작의 어느 시각이 무슨 값이라 틀렸는지 나온다.
+    assert not isinstance(caught.value, TcCellIndexError)
+    assert op in message
+    assert bad_name in message
+    assert str(kwargs[bad_name]) in message
