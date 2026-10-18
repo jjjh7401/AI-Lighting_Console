@@ -55,6 +55,7 @@ import type {
   BeatGridUnverifiedCell,
   BeatGridView,
   BeatGridSendStatus,
+  WaveCustomPreset,
 } from "../protocol";
 // 카드 t561(M9 step 3·4·5) — 편집 칸·전환 화면·장면 전환·2D 무대는 새
 // 부품 파일에 있다. 이 파일은 마운트만 한다(BeatGrid.tsx 를 여러 레인이
@@ -665,6 +666,12 @@ export interface BeatGridProps {
   onPresetPlanRequest?: () => void;
   /** 「웨이브 프리셋 만들기」 — 드로어의 줄 선택으로 고른 줄 이름을 서버에 보낸다. */
   onWavePresetRequest?: (groupName: string) => void;
+  /** 「직접 만들기」 저장 — 줄 이름·값 묶음·고른 칸(체크하지 않았으면 빈 목록). */
+  onWaveCustomRequest?: (
+    groupName: string,
+    preset: WaveCustomPreset,
+    cells: ReadonlyArray<readonly [string, number]>,
+  ) => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
@@ -1771,6 +1778,7 @@ export function BeatGrid({
   onApprovalNoteClick,
   onPresetPlanRequest,
   onWavePresetRequest,
+  onWaveCustomRequest,
   timecodeNumber,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -4836,7 +4844,12 @@ export function BeatGrid({
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
           {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlanByHand} />}
           {onWavePresetRequest && (
-            <WavePresetControls tracks={grid?.tracks ?? []} onRequest={onWavePresetRequest} />
+            <WavePresetControls
+              tracks={grid?.tracks ?? []}
+              onRequest={onWavePresetRequest}
+              onCustomRequest={onWaveCustomRequest}
+              selectedCells={wireCells(pickedCells).cells}
+            />
           )}
           {presetPlanBusyRefused && (
             <p className="beat-grid-drawer-unread" role="alert">

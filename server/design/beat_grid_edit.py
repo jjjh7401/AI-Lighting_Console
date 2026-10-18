@@ -120,7 +120,7 @@ def movement_vocabulary(probe_results: Mapping[object, object]) -> dict[str, obj
 
 
 _BRIGHTNESS_MODES: tuple[str, ...] = ("value", "dimmer_preset", "dimmer_effect")
-_EFFECT_KINDS: tuple[str, ...] = ("position", "color", "dimmer", "mixed")
+_EFFECT_KINDS: tuple[str, ...] = ("position", "color", "dimmer", "mixed", "wave")
 
 _VALUE_PERCENT_MIN, _VALUE_PERCENT_MAX = 0, 100
 
@@ -131,6 +131,7 @@ _KIND_TO_POOL_KEYS: dict[str, tuple[str, ...]] = {
     "color": ("color_effect",),
     "dimmer": ("dimmer_effect_a", "dimmer_effect_b"),
     "mixed": ("mixed_all",),
+    "wave": ("wave_all",),
 }
 
 _PRESET_POOLS_PATH: Path = Path(__file__).resolve().parent / "beat_grid_data" / "preset_pools.yaml"

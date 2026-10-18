@@ -248,7 +248,7 @@ BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "co
 # beat_grid_apply 의 mode — 기존 「⇪ 콘솔에 반영」(격자 초안 전체)과, 상단 바의
 # 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드), 줄 하나의 「웨이브 프리셋 만들기」
 # (wave_presets — 고른 줄 이름 group_name 을 함께 싣는다). 새 메시지 타입은 만들지 않는다.
-BEAT_GRID_APPLY_MODES = ("apply", "preset_plan", "wave_presets")
+BEAT_GRID_APPLY_MODES = ("apply", "preset_plan", "wave_presets", "wave_custom")
 # beat_grid_apply·beat_grid_edit 의 선택 필드 ``cells`` 가 한 번에 받는 칸 수 상한
 # (받은 항목 수 기준, 중복 제거 전). 칸 = (줄 이름, 마디).
 BEAT_GRID_CELLS_MAX = 400
@@ -1037,7 +1037,7 @@ def parse_client_message(raw: str) -> dict:
         if mode not in BEAT_GRID_APPLY_MODES:
             raise ProtocolError(f"beat_grid_apply.mode must be one of {BEAT_GRID_APPLY_MODES}")
         # 고른 칸만 반영하는 선택 필드 — 격자 초안을 쓰는 mode 'apply' 에서만 뜻이 있다.
-        if "cells" in message and mode != "apply":
+        if "cells" in message and mode not in ("apply", "wave_custom"):
             raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
         if mode == "wave_presets":
             # 웨이브 프리셋 — 고른 줄 이름만 싣는다. 그룹 번호는 서버가 읽는다.
@@ -1050,6 +1050,30 @@ def parse_client_message(raw: str) -> dict:
                 "mode": mode,
                 "group_name": group_name,
             }
+        if mode == "wave_custom":
+            # 웨이브 직접 만들기 — 줄 이름과 값 묶음만 싣는다. 값 검사는 세션이 한다.
+            group_name = message.get("group_name")
+            if not isinstance(group_name, str) or not group_name.strip():
+                raise ProtocolError("beat_grid_apply.group_name must be a non-empty string")
+            preset = message.get("preset")
+            if not isinstance(preset, dict):
+                raise ProtocolError("beat_grid_apply.preset must be an object")
+            custom: dict = {
+                "v": PROTOCOL_VERSION,
+                "type": "beat_grid_apply",
+                "mode": mode,
+                "group_name": group_name,
+                "preset": {
+                    "shape": preset.get("shape"),
+                    "beats": preset.get("beats"),
+                    "label": preset.get("label"),
+                    "display_name": preset.get("display_name"),
+                },
+            }
+            if "cells" in message:
+                # 저장한 번호를 적을 칸 — 같은 줄의 칸만 적힌다(세션이 거른다).
+                custom["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")
+            return custom
         parsed: dict = {"v": PROTOCOL_VERSION, "type": "beat_grid_apply", "mode": mode}
         if "cells" in message:
             parsed["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")

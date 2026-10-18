@@ -1552,14 +1552,16 @@ export function buildBeatGridNewPreset(
  * 바뀐 칸만 덧쓰는 칸 단위 반영이다(선택 필드). `live` 는 앱 「적용」이 성공한 같은 칸을 콘솔에도
  * 바로 반영하는 표시다(`cells` 와 함께일 때만 싣는다). 「웨이브 프리셋 만들기」는 `groupName`(고른 줄 이름)을 싣는다. */
 export function buildBeatGridApply(
-  mode?: "preset_plan" | "wave_presets",
+  mode?: "preset_plan" | "wave_presets" | "wave_custom",
   options: {
     /** 칸 단위 반영 — 비지 않았을 때만 싣는다(없거나 비면 곡 전체 반영이다). */
     cells?: ReadonlyArray<readonly [string, number]>;
     /** 앱 「적용」이 성공한 칸을 콘솔에도 바로 반영 — `cells` 와 함께일 때만 싣는다. */
     live?: boolean;
-    /** 웨이브 프리셋 — 고른 줄 이름(`mode: "wave_presets"` 에서만 싣는다). */
+    /** 웨이브 프리셋 — 고른 줄 이름(`mode: "wave_presets"`·`"wave_custom"` 에서만 싣는다). */
     groupName?: string;
+    /** 직접 만든 웨이브 값 — `mode: "wave_custom"` 에서만 싣는다. */
+    preset?: WaveCustomPreset;
   } = {},
 ): string {
   // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」·「웨이브 프리셋 만들기」만 mode 를 싣는다.
@@ -1570,11 +1572,35 @@ export function buildBeatGridApply(
       ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
       : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode };
   const withGroup =
-    mode === "wave_presets" ? { ...frame, group_name: options.groupName ?? "" } : frame;
+    mode === "wave_presets" || mode === "wave_custom"
+      ? { ...frame, group_name: options.groupName ?? "" }
+      : frame;
+  const withPreset =
+    mode === "wave_custom" && options.preset !== undefined
+      ? {
+          ...withGroup,
+          preset: {
+            shape: options.preset.shape,
+            beats: options.preset.beats,
+            label: options.preset.label,
+            display_name: options.preset.displayName,
+          },
+        }
+      : withGroup;
   const { cells, live } = options;
-  if (cells === undefined || cells.length === 0) return JSON.stringify(withGroup);
+  if (cells === undefined || cells.length === 0) return JSON.stringify(withPreset);
   // live 는 참일 때만 싣는다 — 서버는 cells 없는 live 를 거절하므로 칸이 없으면 싣지 않는다.
-  return JSON.stringify(live === true ? { ...withGroup, cells, live: true } : { ...withGroup, cells });
+  return JSON.stringify(
+    live === true ? { ...withPreset, cells, live: true } : { ...withPreset, cells },
+  );
+}
+
+/** 웨이브 직접 만들기 — 감독이 고른 모양·박 수·콘솔 이름·화면 이름(`beat_grid_apply` 의 `preset`). */
+export interface WaveCustomPreset {
+  shape: string;
+  beats: number;
+  label: string;
+  displayName: string;
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */

@@ -216,6 +216,9 @@ def _template_fits(kind: str, fx: Fx) -> bool:
         return set(fx.attributes) <= {"Pan", "Tilt"}
     if kind == "color":
         return all(name.startswith("Color") for name in fx.attributes)
+    if kind == "wave":
+        # 웨이브 번호대(풀 21) — 디머 웨이브(Dimmer)와 컬러 웨이브(Color*)가 맞는다.
+        return all(name == "Dimmer" or name.startswith("Color") for name in fx.attributes)
     return False
 
 

@@ -36,3 +36,6 @@ pools:
   # 이 곡 전용 혼합 All 풀 — effect_kind == "mixed".
   # 슬롯 0은 콘솔 프리셋 자리가 아니다(Store Preset 22.0 이 다음 빈 자리에 저장됨, 카드 t619).
   mixed_all: {start: "22.1", end: "22.99"}
+  # 웨이브 번호대 — 풀 21("All 1") 전용, effect_kind == "wave"(디머·컬러 웨이브).
+  # mixed_all(22.x)과 섞지 않는다(리드 결정). 디머 웨이브도 이 번호대에서 만든다.
+  wave_all: {start: "21.1", end: "21.99"}

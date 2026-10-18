@@ -808,6 +808,13 @@ def create_app(deps: WebDeps) -> FastAPI:
                             apply_fn = functools.partial(
                                 session.beat_grid_wave_presets, message["group_name"]
                             )
+                        elif message.get("mode") == "wave_custom":
+                            # 직접 만든 웨이브 — 줄 이름과 값 묶음을 미리 묶어 넘긴다.
+                            apply_fn = functools.partial(
+                                session.beat_grid_wave_custom,
+                                message["group_name"],
+                                message["preset"],
+                            )
                         else:
                             apply_fn = (
                                 session.beat_grid_preset_plan

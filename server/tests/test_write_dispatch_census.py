@@ -195,10 +195,10 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "BatchRisk(kind='beat_grid_cell_live') 로 승인 카드 1회 + 송신 직전 재확인(recheck). "
         "승인된 범위의 송신은 run_commands 를 거치지 않고 execute_preapproved 로 간다"
     ),
-    ("server/web/session.py", "beat_grid_wave_presets", 0): (
-        "Store Preset (웨이브 디머·컬러 5개) — 고른 줄에 맞춘 웨이브 프리셋을 효과 풀 21 의 "
-        "빈 번호에 저장한다. 승인 카드 한 장 뒤 한 송신으로 나가며, risk=BatchRisk(recheck="
-        "송신 직전 풀 재판독)로 묶음 전체가 승인과 같은 줄만 나간다"
+    ("server/web/session.py", "_beat_grid_wave_send", 0): (
+        "Store Preset (웨이브 프리셋 — 기본 5개와 직접 만든 1개가 한 경로) — 고른 줄에 맞춘 "
+        "웨이브를 효과 풀 21 의 빈 번호에 저장한다. 승인 카드 한 장 뒤 한 송신으로 나가며, "
+        "risk=BatchRisk(recheck=송신 직전 풀 재판독)로 묶음 전체가 승인과 같은 줄만 나간다"
     ),
 }
 
