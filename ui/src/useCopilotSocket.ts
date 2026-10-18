@@ -7,6 +7,7 @@ import {
   buildApprovalDecision,
   buildBarMapAnalyse,
   buildBeatGridApply,
+  buildBeatGridCellEdit,
   buildBeatGridDrawerRequest,
   buildBeatGridStageRequest,
   buildBeatGridTimecodeSet,
@@ -55,6 +56,7 @@ import {
   parseStoredEntries,
   reduceServerEvent,
   serializeEntriesForStorage,
+  type BeatGridCellOp,
   type PanelTargetKind,
   type ServerEvent,
   type UiState,
@@ -254,6 +256,8 @@ export interface CopilotSocket {
     cells: ReadonlyArray<readonly [string, number]>,
     changes: Record<string, unknown>,
   ) => void;
+  /** 칸 가로 끌기로 같은 줄에서 옮기기 — `beat_grid_cell_edit` 한 메시지(전부 아니면 전무). 빈 목록은 보내지 않는다. */
+  sendBeatGridCellEdit: (ops: readonly BeatGridCellOp[]) => void;
   /** 카드 t551(M3) — 편집 경로 ②(문장). */
   sendBeatGridEditSentence: (sentence: string) => void;
   /** 카드 t551(M3) — 편집 경로 ③(AI 제안) 1단계. */
@@ -506,6 +510,13 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     },
     [send],
   );
+  // 칸 옮기기 — 칸마다 메시지를 연달아 보내면 서버 busy 가드가 둘째부터 거절하므로 한 메시지다. 빈 목록은 서버가 통째로 거절하니 보내지 않는다.
+  const sendBeatGridCellEdit = useCallback(
+    (ops: readonly BeatGridCellOp[]) => {
+      if (ops.length > 0) send(buildBeatGridCellEdit(ops));
+    },
+    [send],
+  );
   const sendBeatGridEditSentence = useCallback(
     (sentence: string) => send(buildBeatGridEditSentence(sentence)),
     [send],
@@ -698,6 +709,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendTimelineDraftRedo,
     sendBeatGridEdit,
     sendBeatGridEditCells,
+    sendBeatGridCellEdit,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
