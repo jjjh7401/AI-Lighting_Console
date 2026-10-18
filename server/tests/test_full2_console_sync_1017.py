@@ -49,6 +49,10 @@ class _CursorPort:
         return self._inner.query_state(path, **kwargs)
 
     def query_properties(self, path: str, names, **_kwargs) -> dict:
+        # WT-play-stale-owner — TARGET 읽기는 상태 나무로 넘긴다(대본은 CURSOR 만 센다).
+        # 세므로, CURSOR 가 아닌 읽기는 상태 나무(안쪽 포트)로 넘겨 대본 순서를 흩뜨리지 않는다.
+        if "CURSOR" not in names:
+            return self._inner.query_properties(path, names, **_kwargs)
         if not self._cursors:
             raise RuntimeError("no reply")
         value = self._cursors.pop(0)

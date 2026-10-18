@@ -136,6 +136,12 @@ def _owned_state_tree(
             "children": [{"i": timecode_number, "name": timecode_name}],
             "node": {"childCount": 1},
         },
+        # 카드 WT-play-stale-owner — 타임코드 트랙(TARGET)도 콘솔에 있다(재생 전 확인이 읽는다).
+        f"DataPool/Timecodes/{timecode_number}/1": {"children": [{"i": 1, "class": "Track"}]},
+        f"DataPool/Timecodes/{timecode_number}/1/1": {
+            "children": [],
+            "props": {"TARGET": sequence_name, "NAME": "Track 1"},
+        },
     }
 
 

@@ -3901,6 +3901,39 @@ def _console_send_refusal(payload: object) -> str:
     return "콘솔 명령이 실행되지 않았습니다."
 
 
+#: 카드 WT-play-stale-owner — 이 곡의 반영 기록이 콘솔과 안 맞을 때(다른 곡이 마지막으로
+#: 같은 번호를 썼다). 승인 카드 대신 안내만 보이고 콘솔에는 아무것도 안 보낸다.
+#: 안내는 「⇪ 반영으로 고쳐지는가」에 따라 나뉜다(``_beat_grid_record_is_stale``).
+#: ① 기록의 시퀀스가 콘솔에서 사라짐 — 「⇪」도 같은 이유로 거절된다(실측). 리드 결정.
+_BEAT_GRID_OUTDATED_RECORD_MESSAGE = (
+    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — "
+    "옛 기록의 시퀀스가 콘솔에 없어 「⇪ 콘솔에 반영」도 거절돼요. "
+    "리드에게 알려 주세요."
+)
+#: ② 타임코드가 이 곡 기록에 없는 이 앱의 시퀀스를 가리킴. 「⇪」으로 고쳐지는지 확인하지 못했다
+#: (브라우저 확인에서 「⇪」은 보낼 내용이 없다고 답했다). 그래서 「⇪ 반영」을 권하지 않는다.
+_BEAT_GRID_OTHER_APP_SEQUENCE_MESSAGE = (
+    "이 곡은 지금 콘솔에 반영돼 있지 않아요 — "
+    "타임코드가 이 곡 기록에 없는 시퀀스를 가리켜 재생하지 않았습니다. "
+    "리드에게 알려 주세요."
+)
+#: ③ 타임코드가 이 앱이 만들지 않은 시퀀스를 가리킴 — 「⇪」으로 고칠 수 없다. 리드 결정.
+_BEAT_GRID_FOREIGN_TIMECODE_MESSAGE = (
+    "이 곡의 타임코드가 이 앱이 만들지 않은 시퀀스를 가리켜 "
+    "재생하지 않았습니다 — 리드에게 알려 주세요."
+)
+#: ④ 타임코드 트랙을 콘솔에서 확인하지 못함 — 맞다고 하지 않는다.
+_BEAT_GRID_UNCONFIRMED_TIMECODE_MESSAGE = (
+    "콘솔에서 이 곡의 타임코드 트랙을 확인하지 못해 "
+    "재생하지 않았습니다 — 콘솔 화면을 확인해 주세요."
+)
+#: 콘솔 시퀀스 목록을 못 읽었을 때 — 「반영 안 됨」이라고 단정하지 않는다.
+_BEAT_GRID_CONSOLE_UNREAD_MESSAGE = (
+    "콘솔 시퀀스를 읽지 못해 재생·정지를 보내지 않았습니다 — "
+    "콘솔 연결을 확인한 뒤 다시 눌러 주세요."
+)
+
+
 def _beat_grid_stop_card_reason(timecode_number: int | None, sequences: Sequence[int]) -> str:
     """끄기 승인 카드의 머리 문구 — 무엇을 끄는지와 쇼 데이터를 바꾸지 않는다는 것을 밝힌다.
     2차 전체 실행: 「블랙아웃/오프」 경고만 보이는 `Off Sequence 54…` 8줄 카드를 감독이
@@ -12535,8 +12568,9 @@ class ChatSession:
         return chosen, reused, None
 
     def _beat_grid_owned_extra_timecodes(self) -> tuple[int, ...]:
-        """카드 WT-track-model PR2 — 이 곡의 소유 기록에 적힌 추가 타임코드 중 콘솔 이름이 기록과
-        같은 것(재생·정지를 함께 보낼 번호). 이름이 다르거나 사라진 것은 건드리지 않는다."""
+        """카드 WT-track-model PR2 — 이 곡의 소유 기록에 적힌 추가 타임코드 중, 콘솔 이름이 기록과
+        같고 가리키는 시퀀스도 이 곡의 것인 것(재생·정지를 함께 보낼 번호). 이름이 다르거나 사라진
+        것, 다른 곡의 시퀀스를 가리키는 것은 건드리지 않는다(WT-play-stale-owner)."""
         record = self._beat_grid_song_record()
         extras = record.get("extra_timecodes") if record else None
         numbers: list[int] = []
@@ -12546,7 +12580,11 @@ class ChatSession:
             got, _why = self._resolve_beat_grid_timecode_number(
                 entry.get("timecode_number"), recorded_name=entry["timecode_name"]
             )
-            if got is not None:
+            if (
+                got is not None
+                and record is not None
+                and not self._beat_grid_record_is_stale(record, got)
+            ):
                 numbers.append(got)
         return tuple(numbers)
 
@@ -12559,9 +12597,18 @@ class ChatSession:
         timeline = store.latest if store is not None else None
         record = self._beat_grid_song_record()
         if record:
-            return self._resolve_beat_grid_timecode_number(
+            number, reason = self._resolve_beat_grid_timecode_number(
                 record.get("timecode_number"), recorded_name=record.get("timecode_name")
             )
+            if reason is not None or number is None:
+                return number, reason
+            # 카드 WT-play-stale-owner — 타임코드 이름은 곡마다 같아서 이름만 보면 다른 곡의
+            # 마지막 반영을 이 곡 것으로 받는다. 기록과 콘솔이 맞을 때만 재생·정지를 보낸다
+            # (옛 기록이면 승인 카드 대신 안내).
+            stale = self._beat_grid_record_is_stale(record, number)
+            if stale is not None:
+                return None, stale
+            return number, None
         # 기록이 없어도(새 접속·재시작·열쇠 불일치) 격자의 타임코드 칸 번호가 콘솔에서
         # **앱 소유**(`LDBEAT Timecode N` + 그 트랙이 가리키는 시퀀스가 전부 `LDBEAT `)이면
         # 그 번호로 재생한다. 앱 소유가 아니면 거절한다(남의 타임코드를 재생하지 않는다).
@@ -12572,6 +12619,64 @@ class ChatSession:
             "이 곡을 콘솔에 반영한 기록이 없어 재생할 타임코드를 모릅니다 — "
             "먼저 「⇪ 콘솔에 반영」을 해 주세요."
         )
+
+    def _beat_grid_record_is_stale(
+        self, record: Mapping[str, object], timecode_number: int
+    ) -> str | None:
+        """카드 WT-play-stale-owner — 기록이 콘솔과 맞으면 ``None``, 아니면 안내 문장.
+
+        읽기만 한다. ① 기록의 시퀀스가 전부 콘솔에 그 이름 그대로 있는지(``verify_owned_sequences``,
+        다시 반영 때와 같은 판정) ② 타임코드의 트랙이 가리키는 시퀀스가 이 곡의 기록 안에 있는지.
+        콘솔 이름에는 곡 정보가 없어서 이 둘이 「이 곡의 객체인가」의 전부다.
+
+        안내는 「⇪ 반영으로 고쳐지는가」에 따라 갈린다(다시 반영은 타임코드를 지우고 새로 만든다):
+        시퀀스가 사라졌으면 다시 반영도 거절되므로 리드에게 넘긴다. 타임코드가 이 앱의 시퀀스
+        (``LDBEAT `` 접두)를 가리키기만 하면 「⇪ 콘솔에 반영」으로 고쳐진다. 어느 하나라도 확인이
+        안 되면 맞다고 하지 않는다."""
+        section = self._beat_grid_sequences_section()
+        if (
+            isinstance(section.get("reason"), str)
+            or section.get("ok") is False
+            or section.get("truncated")
+        ):
+            return _BEAT_GRID_CONSOLE_UNREAD_MESSAGE
+        tracks = record.get("tracks")
+        owned: dict[str, Mapping[str, object]] = (
+            {
+                str(name): allocation
+                for name, allocation in tracks.items()
+                if isinstance(allocation, Mapping)
+            }
+            if isinstance(tracks, Mapping)
+            else {}
+        )
+        _owned_numbers, reason = verify_owned_sequences(section, owned)
+        if reason is not None:
+            return _BEAT_GRID_OUTDATED_RECORD_MESSAGE
+        try:
+            names = _owned_sequence_names(section)
+        except Exception:  # noqa: BLE001 - 못 읽으면 맞다고 하지 않는다
+            return _BEAT_GRID_UNCONFIRMED_TIMECODE_MESSAGE
+        recorded = {allocation.get("sequence_number") for allocation in owned.values()}
+        foreign: list[str] = []
+        assigned = False
+        for item in self._beat_grid_timecode_track_targets(timecode_number):
+            target = item.get("target") if isinstance(item, Mapping) else item
+            number, _name = (
+                parse_track_target(target, names) if target is not None else (None, None)
+            )
+            if number is None or number not in names:
+                return _BEAT_GRID_UNCONFIRMED_TIMECODE_MESSAGE
+            assigned = True
+            if number not in recorded:
+                foreign.append(names[number] or "")
+        if not assigned:
+            return _BEAT_GRID_UNCONFIRMED_TIMECODE_MESSAGE
+        if not foreign:
+            return None
+        if all(name.startswith(APP_SEQUENCE_PREFIX) for name in foreign):
+            return _BEAT_GRID_OTHER_APP_SEQUENCE_MESSAGE
+        return _BEAT_GRID_FOREIGN_TIMECODE_MESSAGE
 
     def _beat_grid_title_fallback_key(
         self, song_key: tuple[object, object]
