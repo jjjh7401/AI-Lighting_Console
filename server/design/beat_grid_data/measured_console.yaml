@@ -12,4 +12,11 @@ source: >-
   근거 .moai/reports/WT-track-model/live/ (readback-after-assign.json, readback-after-cleanup.json,
   free.json·free-after.json, approvals-denyall-cards.json, steps-*.jsonl).
   이전 값 8 은 t553(2026-10-11, 타임코드 32, 트랙 8)·그 전 6 은 t531(타임코드 30, 트랙 6) 측정이었다.
-  16 보다 많은 트랙은 아직 안 쟀다.
+  16 보다 많은 트랙은 아직 안 쟀다 — 줄이 더 많으면 앱이 다음 타임코드에 나눠 담는다
+  (server/design/timecode_split.py, 카드 WT-track-model PR2).
+# 줄을 나눠 담을 때 **쓰지 않을** 타임코드 번호(리드 지시 2026-10-18 — 감독 쇼의 TC3·4).
+# 비어 있어도 고르지 않는다. 다른 쇼에서는 이 목록만 고친다.
+reserved_timecodes: [3, 4]
+reserved_timecodes_source: >-
+  리드 지시 2026-10-18(카드 WT-track-model PR2) 「나눌 타임코드 번호는 TC3/4를 피해 비어 있는 것만
+  쓰고, 그 규칙을 코드에 넣어 주세요」. 실측 시험에서도 늘 「TC3·4는 건드리지 않는다」가 조건이었다.

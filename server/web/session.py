@@ -109,6 +109,7 @@ from server.design.beat_grid_effect_presets import (
 )
 from server.design.beat_grid_emit import (
     M1_GATE_MARK,
+    MEASURED_MAX_TIMECODE_TRACKS,
     beat_grid_sequence_label,
     beat_grid_timecode_label,
     emit_beat_grid_write_bundle,
@@ -334,6 +335,11 @@ from server.design.song_plan import (
     UnifiedSongLightingPlan,
     apply_cue_sheet_section,
     apply_cue_sheet_view,
+)
+from server.design.timecode_split import (
+    pick_extra_timecode_numbers,
+    split_rows_by_timecode,
+    transport_commands,
 )
 from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
@@ -11799,6 +11805,28 @@ class ChatSession:
 
             apply_stage("ownership_pick")
             timecode_numbers = {name: timecode_number for name in group_names}
+            # 카드 WT-track-model PR2 — 줄 수에 고정 상한을 두지 않는다. 한 타임코드에 잰 트랙 수
+            # (``MEASURED_MAX_TIMECODE_TRACKS``)를 넘으면 격자 순서대로 다음 타임코드에 이어 담는다.
+            # 다음 번호는 이 곡이 전에 만든 추가 타임코드(이름 확인), 없으면 콘솔의 빈 번호만 쓴다.
+            row_chunks = split_rows_by_timecode(
+                group_names, per_timecode=MEASURED_MAX_TIMECODE_TRACKS
+            )
+            extra_timecode_numbers: list[int] = []
+            reused_extra_timecodes: list[int] = []
+            if len(row_chunks) > 1:
+                extra_timecode_numbers, reused_extra_timecodes, extra_reason = (
+                    self._beat_grid_extra_timecodes(timecode_number, len(row_chunks) - 1, record)
+                )
+                if extra_reason is not None:
+                    return self._beat_grid_send_status(
+                        last_action="apply", ok=False, reason=extra_reason
+                    )
+                chunk_numbers = [timecode_number, *extra_timecode_numbers]
+                timecode_numbers = {
+                    name: chunk_numbers[index]
+                    for index, chunk in enumerate(row_chunks)
+                    for name in chunk
+                }
             # 카드 tc-events — 앱이 만든 타임코드를 다시 반영하면(기록이 있거나 덮어쓰기 허용)
             # 지우고 처음부터 다시 만든다: 옛 빈 트랙이 쌓이지 않고, 새 트랙마다 Go+ 이벤트를
             # 넣을 수 있다. 그래서 「이미 있는 타임코드 줄 걷어내기」(owned_timecode)는 쓰지 않는다.
@@ -11897,6 +11925,9 @@ class ChatSession:
                 result = clear_app_timecode_before_rebuild(
                     result, timecode_number, delete_sequences=tuple(sorted(stale_app_sequences))
                 )
+            # 이 곡이 전에 만든 추가 타임코드도 같은 규칙으로 지우고 다시 만든다(옛 트랙 쌓임 방지).
+            for extra_number in reused_extra_timecodes:
+                result = clear_app_timecode_before_rebuild(result, extra_number)
             # 재실행 4 — 다시 만든 시퀀스의 옛 큐는 사라졌으므로 그 트랙의 옛 기록은 넘기지 않는다.
             rebuilt = set(result.rebuilt_sequences)
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
@@ -11984,6 +12015,18 @@ class ChatSession:
                     f" · 기존 Timecode {timecode_number} 을 지우고(Delete Timecode "
                     f"{timecode_number}) 다시 만듭니다"
                 )
+            if extra_timecode_numbers:
+                listed = ", ".join(str(n) for n in [timecode_number, *extra_timecode_numbers])
+                risk_reason += (
+                    f" · 줄 {len(group_names)}개를 타임코드 {1 + len(extra_timecode_numbers)}개"
+                    f"({listed})에 나눠 담습니다(한 타임코드 최대 {MEASURED_MAX_TIMECODE_TRACKS}줄"
+                    " — 콘솔 실측). 재생·정지는 이 타임코드들을 함께 보냅니다"
+                )
+                for extra_number in reused_extra_timecodes:
+                    risk_reason += (
+                        f" · 기존 Timecode {extra_number} 을 지우고(Delete Timecode "
+                        f"{extra_number}) 다시 만듭니다"
+                    )
             if preserved_cells:
                 listed = ", ".join(
                     f"{name} {bar}마디({reason})" for name, bar, reason in preserved_cells
@@ -12253,6 +12296,14 @@ class ChatSession:
                         {
                             "timecode_number": timecode_number,
                             "timecode_name": beat_grid_timecode_label(timecode_number),
+                            # 카드 WT-track-model PR2 — 줄을 나눠 담은 다음 타임코드들.
+                            "extra_timecodes": [
+                                {
+                                    "timecode_number": number,
+                                    "timecode_name": beat_grid_timecode_label(number),
+                                }
+                                for number in extra_timecode_numbers
+                            ],
                             "tracks": updated_tracks_record,
                         },
                     )
@@ -12407,6 +12458,72 @@ class ChatSession:
             ],
         )
 
+    def _beat_grid_extra_timecodes(
+        self, first: int, needed: int, record: Mapping[str, object] | None
+    ) -> tuple[list[int], list[int], str | None]:
+        """카드 WT-track-model PR2 — 첫 타임코드 ``first`` 다음에 줄을 이어 담을 번호 ``needed`` 개.
+        ``(번호들, 그중 이 곡이 전에 만들어 다시 쓰는 번호들, 못 고른 사유)``.
+
+        - 소유 기록의 ``extra_timecodes`` 는 콘솔 이름이 기록과 같을 때만 다시 쓴다
+          (``_resolve_beat_grid_timecode_number`` 의 재적용 판정 그대로).
+        - 나머지는 ``first`` 다음 번호부터 콘솔에서 **비어 있는** 것만 고른다
+          (``timecode_slot_verdict``).
+          남이 쓰는 번호는 건너뛰고, 점유를 확인할 수 없으면 번호를 지어내지 않고 거절한다.
+          쓰지 않을 번호(``RESERVED_TIMECODES``, 데이터 파일)는 비어 있어도 고르지 않는다."""
+        reused: list[int] = []
+        extras = record.get("extra_timecodes") if isinstance(record, Mapping) else None
+        for entry in extras if isinstance(extras, list) else []:
+            if len(reused) == needed or not isinstance(entry, Mapping):
+                continue
+            number, name = entry.get("timecode_number"), entry.get("timecode_name")
+            if not isinstance(name, str):
+                continue
+            got, _why = self._resolve_beat_grid_timecode_number(number, recorded_name=name)
+            if got is not None and got != first:
+                reused.append(got)
+        path = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        occupied: set[int] = set()
+        chosen = list(reused)
+        while len(chosen) < needed:
+            picked, reason = pick_extra_timecode_numbers(
+                first, needed=needed, used=occupied, recorded=chosen
+            )
+            fresh = [number for number in picked if number not in chosen]
+            if not fresh:
+                return [], [], reason or "줄을 나눠 담을 빈 타임코드 번호를 찾지 못했습니다"
+            candidate = fresh[0]
+            occupant, axes = timecode_slot_verdict(self._rig_capability_port, path, candidate)
+            if occupant is not None:
+                occupied.add(candidate)
+                continue
+            if not axes.timecode_go:
+                return (
+                    [],
+                    [],
+                    (
+                        axes.timecode_skip_reason
+                        or f"Timecode {candidate} 점유 여부를 몰라 줄을 나눠 담지 못했습니다"
+                    ),
+                )
+            chosen.append(candidate)
+        return chosen, reused, None
+
+    def _beat_grid_owned_extra_timecodes(self) -> tuple[int, ...]:
+        """카드 WT-track-model PR2 — 이 곡의 소유 기록에 적힌 추가 타임코드 중 콘솔 이름이 기록과
+        같은 것(재생·정지를 함께 보낼 번호). 이름이 다르거나 사라진 것은 건드리지 않는다."""
+        record = self._beat_grid_song_record()
+        extras = record.get("extra_timecodes") if record else None
+        numbers: list[int] = []
+        for entry in extras if isinstance(extras, list) else []:
+            if not isinstance(entry, Mapping) or not isinstance(entry.get("timecode_name"), str):
+                continue
+            got, _why = self._resolve_beat_grid_timecode_number(
+                entry.get("timecode_number"), recorded_name=entry["timecode_name"]
+            )
+            if got is not None:
+                numbers.append(got)
+        return tuple(numbers)
+
     def _beat_grid_owned_timecode(self) -> tuple[int | None, str | None]:
         """카드 t578 — 「콘솔 같이」가 재생할 타임코드 번호. t572 소유 기록에서만
         온다(번호를 지어내지 않음). 기록이 없으면 「아직 반영 안 함」, 콘솔의 그
@@ -12484,7 +12601,10 @@ class ChatSession:
         # 문면은 t520 실측 선례(`.moai/reports/t520/verdict.md`): `Top Timecode N` 은
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
-        commands = tuple(f"{verb} Timecode {timecode_number}" for verb in verbs)
+        # 카드 WT-track-model PR2 — 줄을 나눠 담은 곡은 타임코드들을 함께 Top/Go/Off 한다.
+        commands = transport_commands(
+            (timecode_number, *self._beat_grid_owned_extra_timecodes()), verbs
+        )
         sequences = self._beat_grid_owned_sequence_numbers() if stop else ()
         # 2차 전체 실행 G-22·I-03 — `Off Timecode` 만으로는 이미 켜진 시퀀스가 남아 곡 끝·정지
         # 뒤에도 무대가 계속 바뀌었다. 실기 해제 묶음(t506 §9, t520
