@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 
 import pytest
+from fastapi.testclient import TestClient
 
 from server.design.beat_grid_console_audio_offset import CONSOLE_AUDIO_OFFSET_SECONDS
 from server.design.beat_grid_emit import emit_beat_grid_write_bundle
@@ -40,12 +41,15 @@ from server.design.beat_grid_send import (
 )
 from server.safety.audit import AuditLog
 from server.safety.gate import SafetyGate
+from server.web.app import WebDeps, create_app
 from server.web.approval_bridge import ApprovalChannel
 from server.web.session import ChatSession, SongTimelineStore
 from server.web.timeline_library import SongTimelineLibrary
 
 from .test_beat_grid_emit_t549 import _ALL_M1_PASS, _position_cue, _track
+from .test_runner_self_correction import ScriptedProvider
 from .test_safety_gate import FakeConsole
+from .test_web_beat_grid_send_t563 import _approve_until, _send
 
 HANGUL = re.compile(r"[가-힣]")
 
@@ -1046,6 +1050,54 @@ class TestMovingEqualsApplyingAgain:
         assert _console_event_ms(h.console, "BACK") == [8502, 13502, 20502]
         assert h.store.beat_grid_allocation(SONG) == h.before["record"]
         assert h.store.beat_grid_snapshots[h.before["key"]] == h.before["snapshot"]
+
+
+# == WebSocket 층을 지나는 길 ============================================================
+
+
+def _wire_deps(tmp_path, *, record: object = _UNSET) -> tuple[WebDeps, _MovingConsole]:
+    """``create_app`` 이 짓는 실제 연결에 붙일 의존성 — 세션 시험과 같은 콘솔·격자·기록이다."""
+    timeline = _timeline()
+    console = _MovingConsole(_console_tree(_emitted_event_ms(timeline["beat_grid"]["tracks"])))
+    audit = AuditLog(tmp_path / "audit")
+    channel = ApprovalChannel(timeout_seconds=5.0)
+    deps = WebDeps(
+        gate=SafetyGate(console=console, audit=audit, approval_port=channel),
+        provider=ScriptedProvider([]),
+        system_prefix="PREFIX",
+        audit=audit,
+        approval_channel=channel,
+        timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+    )
+    store = deps.song_timeline_store
+    store.latest = timeline
+    store.beat_grid_snapshots[SONG] = beat_grid_cell_snapshot(timeline["beat_grid"])
+    record = _record() if record is _UNSET else record
+    if record is not None:
+        store.set_beat_grid_allocation(SONG, record)  # type: ignore[arg-type]
+    return deps, console
+
+
+class TestOverTheWire:
+    def test_a_move_frame_asks_the_card_moves_the_event_and_reports_success(self, tmp_path) -> None:
+        deps, console = _wire_deps(tmp_path)
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            _send(ws, type="beat_grid_cell_edit", ops=[_move("BACK", 5, 6)])
+            status = _approve_until(ws, "beat_grid_send_status")
+        assert (status["last_action"], status["ok"]) == ("cell_edit", True)
+        assert console.executed == [LINE_BACK_5_TO_6]
+        store = deps.song_timeline_store
+        assert [cue["bar"] for cue in store.latest["beat_grid"]["tracks"][0]["cues"]] == [3, 6, 9]
+        assert store.cell_live_approval.covers(_MOVE)
+
+    def test_a_refusal_reaches_the_client_as_a_status_with_its_reason(self, tmp_path) -> None:
+        deps, console = _wire_deps(tmp_path, record=None)
+        with TestClient(create_app(deps)) as client, client.websocket_connect("/ws") as ws:
+            _send(ws, type="beat_grid_cell_edit", ops=[_move("BACK", 5, 6)])
+            status = _approve_until(ws, "beat_grid_send_status")
+        assert (status["last_action"], status["ok"]) == ("cell_edit", False)
+        assert NO_RECORD in status["reason"]
+        assert console.executed == []
 
 
 # == 곡 열쇠가 어긋난 곡(라이브러리에서 불러온 곡) =========================================
