@@ -1591,8 +1591,14 @@ export function buildBeatGridConsoleResume(): string {
 }
 
 /** 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 타임코드 커서를 세운다. 정지 중에만 쓴다(재생은 켜지 않는다). */
-export function buildBeatGridConsoleSeek(seconds: number): string {
-  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_seek", seconds });
+export function buildBeatGridConsoleSeek(seconds: number, options: { playing?: boolean; resync?: boolean } = {}): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_console_seek",
+    seconds,
+    ...(options.playing ? { playing: true } : {}),
+    ...(options.resync ? { resync: true } : {}),
+  });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는

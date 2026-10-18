@@ -144,7 +144,14 @@ import {
   shouldStopConsoleAtSongEnd,
   type ConsoleFollowRelay,
 } from "./beatgrid/consoleFollowRelay";
-import { CONSOLE_SEEK_DEBOUNCE_MS, consoleSeekPlan, consoleSeekStep } from "./beatgrid/consoleSeekPlan";
+import {
+  CONSOLE_RESYNC_INTERVAL_MS,
+  CONSOLE_SEEK_DEBOUNCE_MS,
+  consoleResyncDue,
+  consoleSeekPlan,
+  consoleSeekStep,
+  consoleTimecodeSeconds,
+} from "./beatgrid/consoleSeekPlan";
 import { drawerPoolStatusText, shouldAutoRequestDrawer } from "./beatgrid/cuePanelDrawer";
 import {
   brightnessCell,
@@ -661,7 +668,7 @@ export interface BeatGridProps {
   onConsolePause?: () => void;
   onConsoleResume?: () => void;
   /** 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 콘솔 타임코드 커서를 세운다(멈춘 뒤 한 번에 하나씩). */
-  onConsoleSeek?: (seconds: number) => void;
+  onConsoleSeek?: (seconds: number, options?: { playing?: boolean; resync?: boolean }) => void;
   onConsoleStop?: () => void;
   sendStatus?: BeatGridSendStatus | null;
   /** 「콘솔 같이」 의도와 콘솔 재생 시작 시각을 이 화면 밖(`App`)에서 쥐는 중계 객체. 전체화면을 닫으면 이
@@ -2075,29 +2082,34 @@ export function BeatGrid({
     ? applyFailureNote(sendStatus)
     : null;
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const consoleFollowAvailable =
+    !!onConsolePlay && !!onConsoleStop && !!onConsolePause && !!onConsoleResume;
   // 「콘솔 같이」 마디 이동 — 보낼 시각은 하나만 쥔다(마지막 값이 이긴다). 서버는 콘솔 명령을 한 번에 하나만 처리한다.
-  const seekPendingRef = useRef<number | null>(null);
+  const seekPendingRef = useRef<{ seconds: number; playing: boolean } | null>(null);
   const seekInFlightRef = useRef(false);
   const seekPressedRef = useRef<BeatGridSendStatus | null>(null);
   const seekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 마지막으로 보낸 이동이 나간 때의 바쁨 횟수 — 바쁨이 올라가면 답 없이 거절된 것이라 대기를 푼다.
+  const seekBusyAtRef = useRef(0);
+  const busyCountRef = useRef(busyCount);
+  busyCountRef.current = busyCount;
   const flushConsoleSeek = () => {
     const step = consoleSeekStep(
-      { pendingSeconds: seekPendingRef.current, inFlight: seekInFlightRef.current },
+      { pendingSeconds: seekPendingRef.current?.seconds ?? null, inFlight: seekInFlightRef.current },
       { stopping: relay.stopping, awaiting: relay.awaiting },
     );
     if (step !== "send" || seekPendingRef.current === null || !onConsoleSeek) return;
-    const seconds = seekPendingRef.current;
+    const pending = seekPendingRef.current;
     seekPendingRef.current = null;
     seekInFlightRef.current = true;
     seekPressedRef.current = sendStatus;
-    onConsoleSeek(seconds);
+    seekBusyAtRef.current = busyCountRef.current;
+    onConsoleSeek(pending.seconds, pending.playing ? { playing: true } : undefined);
   };
-  const scheduleConsoleSeek = (seconds: number, afterPause: boolean) => {
-    seekPendingRef.current = seconds;
+  const scheduleConsoleSeek = (seconds: number, playing: boolean) => {
+    seekPendingRef.current = { seconds, playing };
     if (seekTimerRef.current !== null) clearTimeout(seekTimerRef.current);
     seekTimerRef.current = null;
-    // 멈춤(❚❚)의 답이 올 때까지는 보내지 않는다 — 응답을 받는 효과가 보낸다.
-    if (afterPause) return;
     seekTimerRef.current = setTimeout(() => {
       seekTimerRef.current = null;
       flushConsoleSeek();
@@ -2109,8 +2121,34 @@ export function BeatGrid({
     },
     [],
   );
-  const consoleFollowAvailable =
-    !!onConsolePlay && !!onConsoleStop && !!onConsolePause && !!onConsoleResume;
+  // 「콘솔 같이」 재생 중 주기 확인 — 콘솔 커서가 앱 시간과 허용 오차보다 많이 어긋나면 서버가 다시 맞춘다.
+  // 서버는 먼저 커서를 읽고, 어긋났을 때만 쓴다. 보낼 이동이 대기 중이거나 답을 기다리는 중이면 건너뛴다.
+  const sendStatusRef = useRef(sendStatus);
+  sendStatusRef.current = sendStatus;
+  useEffect(() => {
+    if (!playing || !consoleFollow || !consoleFollowAvailable) return undefined;
+    const timer = setInterval(() => {
+      const due = consoleResyncDue({
+        playing,
+        consoleFollow,
+        consoleFollowAvailable,
+        inFlight: seekInFlightRef.current,
+        pending: seekPendingRef.current !== null,
+        awaiting: relay.awaiting,
+        stopping: relay.stopping,
+      });
+      const anchor = playbackAnchorRef.current;
+      if (!due || anchor === null || !onConsoleSeek) return;
+      const songNow = elapsedPlaybackSeconds(anchor.anchorSeconds, anchor.anchorPerfMs, performance.now());
+      const consoleNow = consoleTimecodeSeconds(songNow, consoleDelayRef.current);
+      if (consoleNow === null) return;
+      seekInFlightRef.current = true;
+      seekPressedRef.current = sendStatusRef.current;
+      seekBusyAtRef.current = busyCountRef.current;
+      onConsoleSeek(consoleNow, { playing: true, resync: true });
+    }, CONSOLE_RESYNC_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [playing, consoleFollow, consoleFollowAvailable, onConsoleSeek]);
   // 전체 실행 G-22 — 재생 루프(아래 rAF effect)가 곡 끝에서 부를 최신 정지 묶음 송신.
   const onConsoleStopRef = useRef(onConsoleStop);
   onConsoleStopRef.current = onConsoleStop;
@@ -2424,6 +2462,8 @@ export function BeatGrid({
   useEffect(() => {
     if (releaseBusyRefusedPlay(relay, busyCount)) setConsoleFollowError(relay.failure);
     // 멈춤 답이 와 대기가 풀리면, 미뤄 둔 커서 이동을 정지 처리 뒤에 바로 보낸다 — 정지 뒤의 ▶ 보다 앞선다.
+    // 보낸 이동이 「처리 중」으로 거절되면 답 없이 바쁨만 올라간다 — 그때 대기를 풀어 다음 이동이 막히지 않게 한다.
+    if (busyCount !== seekBusyAtRef.current) seekInFlightRef.current = false;
     const queuedPlay = settleConsoleStop(relay, sendStatus, busyCount);
     flushConsoleSeek();
     if (queuedPlay) togglePlayRef.current();
@@ -2889,8 +2929,8 @@ export function BeatGrid({
     setBarCursor({ bar: target, anchor: selected });
     // PR 1 — 일시정지 중 마디를 누르면 그 마디의 콘솔 상태로도 간다(기존 「이 마디 콘솔에서 보기」 Goto).
     // 재생 위치는 멈춘 자리에 그대로 둔다 — 이어 가기(▶)는 타임코드 커서부터 잇는다.
-    // 「콘솔 같이」 마디 이동 — 재생 중이면 먼저 ❚❚ 로 멈추고(음원·콘솔), 옮긴 뒤 ▶ 로 이어 간다.
-    // 멈춘 뒤에는 콘솔 커서만 옮긴다. 옮긴 시각은 이어 가기 위치(`playbackSeconds`)가 된다.
+    // 「콘솔 같이」 마디 이동 — 재생 중에는 멈추지 않고 음원 자리를 옮긴 채, 콘솔 커서는 연타가 멈춘 뒤 마지막 자리로 보낸다.
+    // 멈춘 뒤에는 콘솔 커서만 옮긴다. 콘솔 타임코드 = 곡 시각 + 실측 지연(콘솔이 음원보다 앞서 있다).
     const seekPlan = consoleSeekPlan({
       consoleFollow,
       consoleFollowAvailable,
@@ -2898,15 +2938,13 @@ export function BeatGrid({
       timecodePaused: relay.timecodePaused,
     });
     const seekSeconds = barToSeconds(target, secondsPerBar, barZeroStartSeconds);
-    if (seekPlan === "pause_then_seek") togglePlay();
-    if (seekPlan !== "none" && seekSeconds !== null) {
-      setPlaybackSeconds(seekSeconds);
-      scheduleConsoleSeek(seekSeconds, seekPlan === "pause_then_seek");
-    }
+    const consoleSeconds = seekSeconds === null ? null : consoleTimecodeSeconds(seekSeconds, consoleDelayRef.current);
+    if (seekPlan === "seek" && seekSeconds !== null) setPlaybackSeconds(seekSeconds);
+    if (seekPlan !== "none" && consoleSeconds !== null) scheduleConsoleSeek(consoleSeconds, seekPlan === "live");
     if (!playing && consoleFollow && consoleFollowAvailable && relay.timecodePaused) {
       onPreviewBar?.(target);
     }
-    if (playing && seekPlan !== "pause_then_seek") {
+    if (playing) {
       const targetSeconds = barToSeconds(target, secondsPerBar, barZeroStartSeconds);
       if (targetSeconds !== null) {
         setPlaybackSeconds(targetSeconds);

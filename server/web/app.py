@@ -778,7 +778,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                     # 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
                     elif message_type == "beat_grid_console_seek":
                         current_task = asyncio.create_task(
-                            asyncio.to_thread(session.beat_grid_console_seek, message["seconds"])
+                            asyncio.to_thread(
+                                session.beat_grid_console_seek,
+                                message["seconds"],
+                                playing=message.get("playing", False),
+                                resync=message.get("resync", False),
+                            )
                         )
                     else:
                         current_task = asyncio.create_task(

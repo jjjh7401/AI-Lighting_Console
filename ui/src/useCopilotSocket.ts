@@ -300,7 +300,7 @@ export interface CopilotSocket {
   sendBeatGridConsolePause: () => void;
   sendBeatGridConsoleResume: () => void;
   /** 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 콘솔 타임코드 커서를 세운다. */
-  sendBeatGridConsoleSeek: (seconds: number) => void;
+  sendBeatGridConsoleSeek: (seconds: number, options?: { playing?: boolean; resync?: boolean }) => void;
   sendBeatGridConsoleStop: () => void;
   /** 카드 t565 — 2D 무대 판독 요청(콘솔 읽기만). */
   sendBeatGridStageRequest: () => void;
@@ -591,7 +591,8 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   const sendBeatGridConsolePause = useCallback(() => send(buildBeatGridConsolePause()), [send]);
   const sendBeatGridConsoleResume = useCallback(() => send(buildBeatGridConsoleResume()), [send]);
   const sendBeatGridConsoleSeek = useCallback(
-    (seconds: number) => send(buildBeatGridConsoleSeek(seconds)),
+    (seconds: number, options?: { playing?: boolean; resync?: boolean }) =>
+      send(buildBeatGridConsoleSeek(seconds, options)),
     [send],
   );
   const sendVectorworksExportUpload = useCallback(

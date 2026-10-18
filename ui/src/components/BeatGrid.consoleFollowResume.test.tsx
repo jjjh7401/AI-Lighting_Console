@@ -749,7 +749,7 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
     expect(app.onConsolePlay).toHaveBeenCalledTimes(2);
   });
 
-  it("재생 중 마디를 누르면 먼저 ❚❚ 로 멈추고, 멈춘 답이 온 뒤에야 콘솔 커서를 그 마디로 옮긴다", () => {
+  it("재생 중 마디를 누르면 멈추지 않고 음원 자리를 옮기며, 연타가 멈춘 뒤 마지막 자리 하나만 콘솔 커서로 보낸다", () => {
     const onPreviewBar = vi.fn();
     const onConsoleSeek = vi.fn();
     // 마디→초 환산(박자)이 있어야 커서를 옮긴다 — 없으면 아무것도 보내지 않는다(아래 시험).
@@ -760,13 +760,18 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
     app.receive(status());
     advance(DELAY_SECONDS * 1000);
 
-    click(nextBarButton()); // 재생 중 — ❚❚ 를 보내고, 콘솔 보기·커서 이동은 멈춘 답을 기다린다
-    expect(app.onConsolePause).toHaveBeenCalledTimes(1);
+    click(nextBarButton()); // 재생 중 — 멈추지 않는다(❚❚ 없음). 콘솔 보기는 보내지 않는다.
+    click(nextBarButton()); // 연타 — 아직 모으는 중
+    expect(app.onConsolePause).not.toHaveBeenCalled();
     expect(onPreviewBar).not.toHaveBeenCalled();
     expect(onConsoleSeek).not.toHaveBeenCalled();
 
-    app.receive(status({ last_action: "console_stop" })); // 멈춤 답
+    advance(CONSOLE_SEEK_DEBOUNCE_MS); // 연타가 멈춘 뒤 마지막 자리 하나만
     expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+    const [seconds, options] = onConsoleSeek.mock.calls[0] as [number, unknown];
+    expect(options).toEqual({ playing: true });
+    // 콘솔 타임코드 = 곡 시각 + 실측 지연 — 2초 간격 마디 위에서 지연만큼 앞선 값이다.
+    expect((seconds - DELAY_SECONDS) % 2).toBe(0);
   });
 
   it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 커서 이동은 짧게 모아 마지막 마디만 한 번 보낸다", () => {

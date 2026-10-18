@@ -4037,6 +4037,8 @@ def _timecode_cursor_seconds(value: object) -> float | None:
 
 #: 옮긴 커서를 되읽어 맞았다고 칠 허용 오차(초). 콘솔 CURSOR 는 소수 둘째 자리로 읽힌다.
 CURSOR_SEEK_TOLERANCE_SECONDS = 0.05
+#: 재생 중 주기 확인이 어긋남을 고치는 기준(초). UI 의 `CONSOLE_RESYNC_TOLERANCE_SECONDS` 와 같다.
+CONSOLE_RESYNC_TOLERANCE_SECONDS = 0.3
 
 
 def _cursor_seconds_text(seconds: float) -> str:
@@ -13447,7 +13449,9 @@ class ChatSession:
         처음부터 재생(``beat_grid_console_play``, ``Top`` + ``Go``)과 달리 되감지 않는다."""
         return self._beat_grid_console_transport("console_play", ("Go",))
 
-    def beat_grid_console_seek(self, seconds: float) -> dict:
+    def beat_grid_console_seek(
+        self, seconds: float, *, playing: bool = False, resync: bool = False
+    ) -> dict:
         """「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 소유 타임코드 커서를 세운다.
 
         ``Set Timecode N Property 'Cursor' <초>`` 를 소유 타임코드마다 한 줄씩만 보낸다. 재생은
@@ -13457,6 +13461,21 @@ class ChatSession:
         timecode_number, reason = self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action="console_seek", ok=False, reason=reason)
+        if resync:
+            # 주기 확인 — 먼저 읽는다. 허용 오차 안이면 아무것도 보내지 않는다.
+            # 못 읽으면 쓰지 않는다(맹목 쓰기 금지).
+            pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+            cursor = self._beat_grid_timecode_cursor(f"{pool}/{timecode_number}")
+            if cursor is None:
+                return self._beat_grid_send_status(
+                    last_action="console_seek",
+                    ok=False,
+                    reason=(
+                        "콘솔 커서를 읽지 못해 다시 맞추지 않았습니다 — 콘솔 화면을 확인해 주세요."
+                    ),
+                )
+            if abs(cursor - seconds) <= CONSOLE_RESYNC_TOLERANCE_SECONDS:
+                return self._beat_grid_send_status(last_action="console_seek", ok=True)
         text = _cursor_seconds_text(seconds)
         timecodes = (timecode_number, *self._beat_grid_owned_extra_timecodes())
         commands = tuple(f"Set Timecode {number} Property 'Cursor' {text}" for number in timecodes)
@@ -13477,6 +13496,10 @@ class ChatSession:
                 ok=False,
                 reason=f"콘솔 커서 맞추기가 실행되지 않았습니다 — {refusal}",
             )
+        if playing or resync:
+            # 재생 중 — 커서는 그 사이 흐르므로 되읽어 맞았다고 말하지 않는다.
+            # 다음 주기 확인이 다시 본다.
+            return self._beat_grid_send_status(last_action="console_seek", ok=True)
         notices = self._beat_grid_seek_notices(timecode_number, seconds)
         return self._beat_grid_send_status(
             last_action="console_seek", ok=True, extra_notices=notices

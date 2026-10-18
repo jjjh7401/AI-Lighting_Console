@@ -123,3 +123,81 @@ class TestSeekMessage:
 
         with pytest.raises(ProtocolError):
             parse_client_message(raw)
+
+    def test_the_parser_accepts_the_playing_and_resync_flags_and_refuses_non_booleans(self) -> None:
+        raw = json.dumps(
+            {
+                "v": PROTOCOL_VERSION,
+                "type": "beat_grid_console_seek",
+                "seconds": 60,
+                "playing": True,
+                "resync": True,
+            }
+        )
+
+        assert parse_client_message(raw) == {
+            "v": PROTOCOL_VERSION,
+            "type": "beat_grid_console_seek",
+            "seconds": 60.0,
+            "playing": True,
+            "resync": True,
+        }
+        bad = json.dumps(
+            {
+                "v": PROTOCOL_VERSION,
+                "type": "beat_grid_console_seek",
+                "seconds": 60,
+                "resync": "yes",
+            }
+        )
+        with pytest.raises(ProtocolError):
+            parse_client_message(bad)
+
+
+class TestLiveAndResync:
+    def test_a_seek_while_playing_says_nothing_about_landing(self, tmp_path, monkeypatch) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 83.7)
+
+        event = session.beat_grid_console_seek(82.4, playing=True)
+
+        assert event["ok"] is True
+        assert _cursor_lines(console.executed) == [
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 82.4"
+        ]
+        assert "83.70초에 있어요" not in json.dumps(event, ensure_ascii=False)
+
+    def test_resync_sends_nothing_when_the_cursor_is_within_tolerance(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 60.1)
+
+        event = session.beat_grid_console_seek(60.0, resync=True)
+
+        assert event["ok"] is True
+        assert _cursor_lines(console.executed) == []
+
+    def test_resync_corrects_a_cursor_that_drifted_past_the_tolerance(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 61.0)
+
+        event = session.beat_grid_console_seek(60.0, resync=True)
+
+        assert event["ok"] is True
+        assert _cursor_lines(console.executed) == [
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 60"
+        ]
+
+    def test_resync_does_not_write_blind_when_the_cursor_cannot_be_read(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, None)
+
+        event = session.beat_grid_console_seek(60.0, resync=True)
+
+        assert event["ok"] is False
+        assert _cursor_lines(console.executed) == []

@@ -525,7 +525,15 @@ def parse_client_message(raw: str) -> dict:
             or not 0 <= seconds <= 86400
         ):
             raise ProtocolError("beat_grid_console_seek.seconds must be a number from 0 to 86400")
-        return {"v": PROTOCOL_VERSION, "type": "beat_grid_console_seek", "seconds": float(seconds)}
+        out = {"v": PROTOCOL_VERSION, "type": "beat_grid_console_seek", "seconds": float(seconds)}
+        # 선택 플래그 `playing`(재생 중 이동)·`resync`(주기 확인). 있으면 참이어야 한다.
+        for flag in ("playing", "resync"):
+            if flag in message:
+                if not isinstance(message[flag], bool):
+                    raise ProtocolError(f"beat_grid_console_seek.{flag} must be a boolean")
+                if message[flag]:
+                    out[flag] = True
+        return out
 
     if message_type == "beat_grid_suggest":
         bar = message.get("bar")
