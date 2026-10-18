@@ -14,12 +14,16 @@
 언제나 방금 읽은 목록에서 **시각으로** 찾는다. 시각이 맞는 이벤트가 정확히 하나가 아니면(없거나
 모호하면) 엉뚱한 이벤트를 건드리지 않도록 ``TcCellIndexError`` 로 거절한다.
 
+시각은 콘솔에 나가기 전에 검사한다. NaN·무한대·음수는 문자열로 만들거나 이벤트를 찾기 전에
+``ValueError`` 로 거절한다 — 번호 찾기 실패(``TcCellIndexError``)와 사유가 섞이지 않는다.
+
 초 문자열은 에미터(``beat_grid_emit``)와 같은 ``songcue._format_seconds`` 로 만든다 — 포매터를
 둘로 나누지 않는다.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 
 from server.looks.songcue import _format_seconds
@@ -60,22 +64,24 @@ def plan_tc_cell_commands(
     ``events`` 는 그 컨테이너를 방금 읽은 ``(이벤트 번호, 시각 초)`` 목록이다. ``create`` 는
     번호가 필요 없어 읽지 않는다. ``move``·``delete`` 는 ``from_seconds`` 와 오차
     0.01 초 안에서 맞는 이벤트가 **정확히 하나**일 때만 그 번호를 쓴다 — 없거나 둘 이상이면
-    ``TcCellIndexError``. 모르는 ``op`` 나 빠진 시각은 그냥 ``ValueError`` 다.
+    ``TcCellIndexError``. 모르는 ``op``, 빠진 시각, 유한하지 않거나 음수인 시각은 번호를
+    찾기 전에 그냥 ``ValueError`` 다.
     """
     if op == "create":
-        seconds = _seconds_text(_required(to_seconds, "to_seconds", op))
+        seconds = _seconds_text(_checked_seconds(to_seconds, "to_seconds", op))
         return [
             f"cd {container}",
             f"Store Property 'Time' {seconds} 'AbsTime' {seconds} 'Token' 'Go+'",
             "cd root",
         ]
     if op == "move":
-        found_at = _required(from_seconds, "from_seconds", op)
-        seconds = _seconds_text(_required(to_seconds, "to_seconds", op))
+        found_at = _checked_seconds(from_seconds, "from_seconds", op)
+        seconds = _seconds_text(_checked_seconds(to_seconds, "to_seconds", op))
         index = _resolve_event_index(events, found_at)
         return [f"Set {container}.{index} Property 'Time' {seconds}"]
     if op == "delete":
-        index = _resolve_event_index(events, _required(from_seconds, "from_seconds", op))
+        found_at = _checked_seconds(from_seconds, "from_seconds", op)
+        index = _resolve_event_index(events, found_at)
         return [f"Delete {container}.{index}"]
     raise ValueError(f"알 수 없는 동작입니다: {op!r} — create · move · delete 중 하나여야 합니다")
 
@@ -84,6 +90,23 @@ def _required(value: float | None, name: str, op: str) -> float:
     if value is None:
         raise ValueError(f"{op} 에는 {name} 가 필요합니다")
     return value
+
+
+# @MX:ANCHOR: [AUTO] 콘솔로 나가는 시각의 단일 관문 — 만들기·옮기기·지우기가 모두 거친다.
+# @MX:REASON: 호출 4곳(만들기 to · 옮기기 from/to · 지우기 from). 하나라도 빠지면 NaN·무한대·
+#   음수가 그대로 문자열이 되거나 이벤트 찾기에 쓰여 실콘솔에 엉뚱한 명령이 나간다.
+def _checked_seconds(value: float | None, name: str, op: str) -> float:
+    """시각이 있고, 유한하고, 0 이상인지 본다 — 아니면 번호 찾기 실패가 아닌 그냥 ``ValueError``.
+
+    NaN·무한대·음수는 문자열로 만들거나 이벤트를 찾기 전에 여기서 거절한다. 거르지 않으면 음수는
+    ``Store Property 'Time' -1`` 이 되어 콘솔로 나가고, NaN·무한대는 ``round`` 가 우연히 던진
+    예외나 "맞는 이벤트 0개" 라는 엉뚱한 사유에 가려진다.
+    빠진 시각(``None``)은 ``_required`` 가 먼저 거절한다.
+    """
+    seconds = _required(value, name, op)
+    if math.isnan(seconds) or math.isinf(seconds) or seconds < 0:
+        raise ValueError(f"{op} 의 {name} 는 0 이상의 유한한 수여야 합니다: {seconds!r}")
+    return seconds
 
 
 def _seconds_text(seconds: float) -> str:
