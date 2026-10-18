@@ -71,14 +71,26 @@ export function ApprovalCard({
     if (submitted) setDecided(true);
   };
 
+  // 앱 소유 묶음(머리가 있다)은 감독 말로 머리를 쓰고, 영어 게이트 사유는 「자세히」 접기 안에 둔다.
+  // 경고는 접지 않는다(안전 신호). 머리가 없으면 기존 카드 그대로다.
+  const reasonList = (
+    <ul className="approval-reasons">
+      {approvalRiskSummary(approval.items).map((reason) => (
+        <li key={reason}>{reason}</li>
+      ))}
+    </ul>
+  );
   return (
     <div className="approval-card">
-      <div className="approval-title">승인 대기 — 위험 명령</div>
-      <ul className="approval-reasons">
-        {approvalRiskSummary(approval.items).map((reason) => (
-          <li key={reason}>{reason}</li>
-        ))}
-      </ul>
+      <div className="approval-title">{approval.title || "승인 대기 — 위험 명령"}</div>
+      {approval.title ? (
+        <details className="approval-detail">
+          <summary>자세히</summary>
+          {reasonList}
+        </details>
+      ) : (
+        reasonList
+      )}
       {approvalWarningSummary(approval.items).map((warning) => (
         <div key={warning} className="warning">
           ⚠ {warning}

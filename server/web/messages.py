@@ -1208,8 +1208,10 @@ def card_risk_reason(reason: str) -> str:
     return reason
 
 
-def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict:
+def approval_request_event(*, request_id: str, request: ApprovalRequest, title: str = "") -> dict:
     """One pending approval bundle: commands + risk reasons + warnings (REQ-MVP-021)."""
+    # 카드 머리(WT-approval-card-text) — 앱 소유 묶음만 가진다. 없으면 키 자체를 싣지 않는다.
+    head = {"title": title} if title else {}
     return _event(
         "approval_request",
         request_id=request_id,
@@ -1222,6 +1224,7 @@ def approval_request_event(*, request_id: str, request: ApprovalRequest) -> dict
             for item in request.items
         ],
         actions=["approve", "reject"],
+        **head,
     )
 
 

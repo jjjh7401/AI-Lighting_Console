@@ -1184,6 +1184,8 @@ export type ServerEvent =
       request_id: string;
       items: ApprovalItem[];
       actions: string[];
+      /** 카드 머리(WT-approval-card-text) — 앱 소유 묶음만 싣는다. 없으면 카드는 기존 머리를 쓴다. */
+      title?: string;
     }
   | ({
       v: 1;
@@ -1888,6 +1890,8 @@ export interface StatusState {
 export interface PendingApproval {
   request_id: string;
   items: ApprovalItem[];
+  /** 카드 머리 — 감독 말로 적은 한 줄. 없으면 카드는 기존 머리를 쓴다(WT-approval-card-text). */
+  title?: string;
 }
 
 /** One tile's playback state. Volatile — see `clearOnDisconnect`. */
@@ -2095,7 +2099,11 @@ export function reduceServerEvent(
         ...state,
         pendingApprovals: [
           ...state.pendingApprovals,
-          { request_id: event.request_id, items: event.items },
+          {
+            request_id: event.request_id,
+            items: event.items,
+            ...(event.title ? { title: event.title } : {}),
+          },
         ],
       };
     case "execution_preview":
