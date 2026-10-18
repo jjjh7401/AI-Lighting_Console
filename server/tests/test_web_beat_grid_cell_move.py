@@ -20,6 +20,8 @@
 4. 승인 카드 거절, 승인 창이 열린 사이 바뀐 이벤트(송신 직전 재확인), 줄 하나의 실패는 아무것도
    확정하지 않고 옮기기 승인도 남기지 않는다.
 5. 승인 창이 열린 사이 다른 연결이 격자를 고친 경우에도 그 고침을 지우지 않는다.
+6. 반영 단계(에미터)가 사전이동 큐(MIB 선행)를 끼우는 줄은 옮기기 전이든 옮긴 뒤든 콘솔을 읽기 전에
+   거절한다 — 칸만 옮기면 그 큐의 이벤트가 옛 자리에 남거나 새로 필요한 큐가 빠진다.
 """
 
 from __future__ import annotations
@@ -71,6 +73,10 @@ NO_RECORD = (
 )
 NO_TRACK = "콘솔에서 이 줄의 트랙을 찾지 못했습니다"
 NO_EVENT = "콘솔의 이벤트를 시각으로 찾지 못해 옮기지 않았습니다"
+PREMOVE_ROW = (
+    "움직임 준비(MIB 선행) 칸이 있는 줄은 이번 버전에서 칸 옮기기를 막습니다 "
+    "— ⇪ 전체 반영을 사용해 주세요"
+)
 
 # 120 BPM 4/4 — 한 박 0.5초, 한 마디 2초, 1마디 다운비트 1.5초, 콘솔 지연 3.002초.
 #   BACK: 3마디 8.502 · 5마디(3박 트리거) 13.502 · 9마디 20.502
@@ -181,6 +187,41 @@ def _emitted_event_ms(tracks: list[dict]) -> dict[str, list[int]]:
         track.group_name: sorted({cue.trigger_ms for cue in track.cues if cue.trigger_ms})
         for track in result.tracks
     }
+
+
+def _unlit(cue: dict) -> dict:
+    """꺼진 칸으로 만든다 — 이름이 대시면 반영 준비(MIB)가 「앞 칸이 꺼져 있다」고 읽는다."""
+    cue["label"] = "—"
+    return cue
+
+
+def _mib_tracks(last_bar: int) -> list[dict]:
+    """BACK 은 A(3마디, 켜짐) · B(5마디, 꺼짐) · C(``last_bar`` 마디, 켜짐, 위치가 다름)이다.
+
+    꺼진 B 뒤에서 위치가 바뀌는 C 앞의 어둠이 이동+정착 4.6초보다 길면(120 BPM 에서 한 마디 2초라
+    9·10마디의 어둠은 6·8초) 반영 단계가 B 바로 다음인 6마디에 사전이동 큐를 끼우고, 짧으면
+    (7·8마디의 어둠은 2·4초) 끼우지 않는다. SIDE 는 켜진 두 칸이다."""
+    back = _track(
+        "BACK",
+        7,
+        [
+            _lit(_position_cue(3, position_preset_no="1.1"), "A"),
+            _unlit(_position_cue(5, position_preset_no="1.2")),
+            _lit(_position_cue(last_bar, position_preset_no="1.3"), "C"),
+        ],
+    )
+    return [back, _tracks()[1]]
+
+
+def _mib_record(last_bar: int) -> dict:
+    record = _record()
+    record["tracks"]["BACK"]["cues"] = {"3": 1, "5": 2, str(last_bar): 3}
+    return record
+
+
+def _back_events(last_bar: int) -> int:
+    """에미터가 BACK 줄에 내는 콘솔 이벤트 수 — 칸 3개면 3, 사전이동 큐가 끼면 4 다."""
+    return len(_emitted_event_ms(_mib_tracks(last_bar))["BACK"])
 
 
 def _timecode_nodes(
@@ -646,6 +687,70 @@ class TestRefusedByTheOwnedRecord:
         )
         event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6)])
         _assert_refused_before_sending(h, event, "trigger_beat")
+
+
+class TestRowsWithPremoveEvents:
+    """반영 단계가 사전이동 큐를 끼우는 줄은 이번 버전에서 칸 옮기기를 막는다.
+
+    사전이동 큐는 칸이 아니라서 칸 옮기기가 그 이벤트를 따라 옮기지 못한다. 옮기기 전의 줄에
+    사전이동이 있으면 그 이벤트가 옛 자리에 남아 콘솔이 낡은 사전이동을 쏘고, 옮긴 뒤의 줄이
+    사전이동을 새로 요구하면 콘솔에 그 이벤트가 없다. 어느 쪽이든 「옮기기 = 다시 반영」이 깨지므로
+    둘 다 본다."""
+
+    @staticmethod
+    def _assert_refused(h: _Harness, event: dict) -> None:
+        _assert_refused_before_sending(h, event, PREMOVE_ROW)
+        assert event["reason"] == PREMOVE_ROW
+        assert h.console.reads == []  # 콘솔을 읽기 전에 거절한다
+
+    def test_a_row_that_already_has_a_premove_event_is_refused(self, tmp_path) -> None:
+        # 옮기기 전: C(9마디) 앞의 어둠이 6초라 6마디에 사전이동이 서 있다(콘솔 이벤트 4개).
+        # C 를 7마디로 옮기면 어둠이 2초로 줄어 옮긴 뒤에는 사전이동이 없다 —
+        # 옮기기 전을 봐야 걸린다.
+        assert (_back_events(9), _back_events(7)) == (4, 3)
+        h = _build(tmp_path, timeline=_timeline(_mib_tracks(9)), record=_mib_record(9))
+        assert len(_console_event_ms(h.console, "BACK")) == 4
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 9, 7)])
+
+        self._assert_refused(h, event)
+
+    def test_a_move_that_would_create_a_premove_event_is_refused(self, tmp_path) -> None:
+        # 옮기기 전: C(7마디) 앞의 어둠이 2초라 사전이동이 없다(콘솔 이벤트 3개).
+        # C 를 10마디로 옮기면 어둠이 8초가 되어 반영 단계는 6마디에 사전이동을 끼운다 —
+        # 옮기기만 하면 콘솔에는 그 이벤트가 없다. 옮긴 뒤를 봐야 걸린다.
+        assert (_back_events(7), _back_events(10)) == (3, 4)
+        h = _build(tmp_path, timeline=_timeline(_mib_tracks(7)), record=_mib_record(7))
+        assert len(_console_event_ms(h.console, "BACK")) == 3
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 7, 10)])
+
+        self._assert_refused(h, event)
+
+    def test_a_row_with_no_premove_before_or_after_still_moves(self, tmp_path) -> None:
+        # 꺼진 칸(B)이 있어도 C 앞의 어둠이 짧으면 사전이동은 없다 — 「MIB 불가」 안내일 뿐이다.
+        # C 를 8마디로 옮겨도 어둠이 4초라 4.6초에 못 미쳐 옮긴 뒤에도 없다.
+        assert (_back_events(7), _back_events(8)) == (3, 3)
+        h = _build(tmp_path, timeline=_timeline(_mib_tracks(7)), record=_mib_record(7))
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 7, 8)])
+
+        assert event["ok"] is True
+        assert h.console.executed == ["Set Timecode 5.1.1.1.1.3 Property 'Time' 18.502"]
+        assert _bars(h, "BACK") == [3, 5, 8]
+        fresh_apply = _emitted_event_ms(h.store.latest["beat_grid"]["tracks"])
+        assert _console_event_ms(h.console, "BACK") == fresh_apply["BACK"]
+
+    def test_a_premove_in_a_row_that_is_not_moved_does_not_block(self, tmp_path) -> None:
+        # BACK 에는 사전이동이 서 있지만 옮기는 것은 SIDE 의 칸이다.
+        assert _back_events(9) == 4
+        h = _build(tmp_path, timeline=_timeline(_mib_tracks(9)), record=_mib_record(9))
+
+        event = h.session.beat_grid_cell_edit([_move("SIDE", 7, 8)])
+
+        assert event["ok"] is True
+        assert h.console.executed == [LINE_SIDE_7_TO_8]
+        assert _bars(h, "SIDE") == [3, 8]
 
 
 class TestRefusedByTheConsole:
