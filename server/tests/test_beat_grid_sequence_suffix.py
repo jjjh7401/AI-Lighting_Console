@@ -34,10 +34,12 @@ def test_console_hash_suffix_is_the_same_owned_sequence(console_name: str) -> No
 @pytest.mark.parametrize(
     "console_name", ["LDBEAT FOHX", "LDBEAT FOH#", "LDBEAT FOH#6a", "LDBEAT FOH 6", "Other"]
 )
-def test_other_names_are_still_refused(console_name: str) -> None:
+def test_other_names_are_not_overwritten_but_recreated(console_name: str) -> None:
+    # WT-play-stale-owner(리드 지시) — 같은 번호를 다른 이름이 쓰면 거절하지 않는다. 소유 목록에서
+    # 빼고 빈 번호에 새로 만든다. 덮어쓰기는 이름이 같을 때(위 시험)만.
     owned, reason = verify_owned_sequences(_section(console_name), _OWNED)
     assert owned == {}
-    assert reason is not None and "재적용을 거절" in reason
+    assert reason is None
 
 
 _ALL_PASS = {probe_id: "통과" for probe_id in DEFAULT_PROBE_IDS}
