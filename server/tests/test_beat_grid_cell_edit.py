@@ -7,10 +7,15 @@
    줄이 비었거나 그 마디에서 이미 칸이 시작하면 거절한다. ``evidence`` 는 있는 그대로 따라가서
    복사한 칸이 새로 승인 대기가 되지 않는다.
 2. 옮기기 — 이웃 칸 사이로만 옮긴다(양 끝은 열려 있다). 다른 칸에 올라타거나 넘으면 거절한다.
-3. 지우기 — 그 마디에서 시작하는 칸만 지우고, 없으면 거절한다.
-4. 입력 순서와 상관없이 같은 결과이고(안에서 정렬한다), 입력은 고치지 않으며, 거절 메시지는
-   감독에게 보여도 되는 한국어 사유다.
-5. 이 모듈은 웹·안전 계층을 import 하지 않는다.
+3. 여럿 옮기기 — 한 줄의 칸 여럿을 전부 되거나 하나도 안 되게 옮긴다. 쌍마다가 아니라 옮긴 뒤의
+   줄 전체로 판정한다: 옮긴 뒤 마디가 모두 달라야 하고(옮긴 칸끼리도, 안 옮긴 칸과도) 칸의
+   순서가 그대로여야 한다. 옮길 칸은 옮기기 전 줄에서 시작하는 칸이어야 하고 같은 칸을 두 번
+   옮길 수 없다. 거절 사유는 문자열로 가려서 본다 — 엉뚱한 검사가 먼저 걸려도 통과하지 않게.
+4. 지우기 — 그 마디에서 시작하는 칸만 지우고, 없으면 거절한다.
+5. 입력 순서와 상관없이 같은 결과이고(안에서 정렬한다), 입력은 고치지 않으며, 결과는 안쪽 사전
+   (``entry`` 따위)까지 입력과 따로 논다(깊은 복사). 거절 메시지는 감독에게 보여도 되는 한국어
+   사유다.
+6. 이 모듈은 웹·안전 계층을 import 하지 않는다.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ from server.design.beat_grid_cell_edit import (
     row_create,
     row_delete,
     row_move,
+    row_move_many,
 )
 
 HANGUL = re.compile(r"[가-힣]")
@@ -187,6 +193,93 @@ class TestRowMove:
     def test_the_last_cell_may_move_any_distance_later(self) -> None:
         assert _bars(row_move(_row(1, 5, 9), 9, 50)) == [1, 5, 50]
 
+    def test_the_result_shares_no_nested_dict_with_the_input(self) -> None:
+        cues = _row(1, 5, 9)
+        before = copy.deepcopy(cues)
+        out = row_move(cues, 5, 7)
+        for cue in out:
+            cue["entry"]["trigger_beat"] = 99
+        assert cues == before
+
+
+# == 여럿 옮기기 ======================================================================
+
+
+class TestRowMoveMany:
+    def test_a_group_shift_moves_every_listed_cell_and_leaves_the_rest(self) -> None:
+        assert _bars(row_move_many(_row(5, 9, 13), [(5, 7), (9, 11)])) == [7, 11, 13]
+
+    def test_neighbours_shifting_together_are_judged_by_the_final_row(self) -> None:
+        # 두 칸이 함께 한 마디씩 밀린다 — 옮긴 뒤의 줄 [6, 8, 13] 은 겹침도 순서 바뀜도 없다.
+        assert _bars(row_move_many(_row(5, 7, 13), [(5, 6), (7, 8)])) == [6, 8, 13]
+
+    def test_a_bar_another_move_vacates_may_be_taken(self) -> None:
+        # 한 쌍씩 차례로 옮기면 5→7 이 막히지만, 7 의 칸도 9 로 비켜 서므로 옮긴 뒤의 줄은 멀쩡하다.
+        assert _bars(row_move_many(_row(5, 7), [(5, 7), (7, 9)])) == [7, 9]
+
+    def test_the_order_the_moves_are_listed_in_does_not_matter(self) -> None:
+        cues = _row(5, 9, 13)
+        assert row_move_many(cues, [(5, 7), (9, 11)]) == row_move_many(cues, [(9, 11), (5, 7)])
+
+    def test_move_many_sorts_whatever_order_it_is_given(self) -> None:
+        out = row_move_many([_cue(13), _cue(5), _cue(9)], [(9, 11), (5, 7)])
+        assert _bars(out) == [7, 11, 13]
+
+    def test_the_ends_of_the_row_are_open(self) -> None:
+        # 첫 칸은 앞 공백으로, 마지막 칸은 얼마든지 뒤로 — 한 칸 옮기기와 같다.
+        assert _bars(row_move_many(_row(3, 7), [(3, 1), (7, 50)])) == [1, 50]
+
+    def test_a_cell_that_stays_on_its_bar_is_not_an_error(self) -> None:
+        assert _bars(row_move_many(_row(5, 9), [(5, 5), (9, 11)])) == [5, 11]
+
+    def test_no_moves_returns_a_sorted_copy(self) -> None:
+        cues = [_cue(9), _cue(1)]
+        before = copy.deepcopy(cues)
+        out = row_move_many(cues, [])
+        assert out == sorted(before, key=lambda cue: cue["bar"])
+        assert cues == before
+
+    def test_only_the_bar_of_a_moved_cell_changes(self) -> None:
+        cues = _row(5, 9, 13)
+        before = copy.deepcopy(cues)
+        out = row_move_many(cues, [(5, 7), (9, 11)])
+        assert [_without_bar(cue) for cue in out] == [_without_bar(cue) for cue in before]
+
+    def test_the_input_is_left_alone_and_no_nested_dict_is_shared(self) -> None:
+        cues = _row(5, 9, 13)
+        before = copy.deepcopy(cues)
+        out = row_move_many(cues, [(5, 7), (9, 11)])
+        assert cues == before
+        for cue in out:
+            cue["entry"]["trigger_beat"] = 99
+        assert cues == before
+
+    @pytest.mark.parametrize(
+        ("bars", "moves", "reason"),
+        [
+            pytest.param((5, 9, 13), [(5, 9)], "둘 이상", id="onto-an-unmoved-cell"),
+            pytest.param((5, 9), [(5, 7), (9, 7)], "둘 이상", id="two-moved-cells-onto-one-bar"),
+            pytest.param((5, 9, 13), [(5, 10)], "순서", id="crossing-the-next-cell"),
+            pytest.param((5, 9, 13), [(13, 3)], "순서", id="crossing-backwards"),
+            pytest.param((5, 9, 13), [(5, 6), (9, 14)], "순서", id="fine-pair-then-crossing-pair"),
+            pytest.param((5, 9), [(6, 7)], "시작하는 칸이 없", id="source-is-not-a-cell-start"),
+            pytest.param(
+                (5, 9, 13), [(5, 6), (6, 7)], "시작하는 칸이 없", id="source-is-an-earlier-target"
+            ),
+            pytest.param((5, 9, 13), [(5, 6), (5, 7)], "두 번", id="same-source-twice"),
+            pytest.param((5, 9), [(5, 0)], "1부터", id="target-below-one"),
+            pytest.param((5, 9), [(9, -3)], "1부터", id="target-negative"),
+        ],
+    )
+    def test_a_refused_move_names_its_reason_and_leaves_the_input_alone(
+        self, bars: tuple[int, ...], moves: list[tuple[int, int]], reason: str
+    ) -> None:
+        cues = _row(*bars)
+        before = copy.deepcopy(cues)
+        with pytest.raises(BeatGridCellEditError, match=reason):
+            row_move_many(cues, moves)
+        assert cues == before
+
 
 # == 지우기 ===========================================================================
 
@@ -207,6 +300,14 @@ class TestRowDelete:
     def test_delete_sorts_whatever_order_it_is_given(self) -> None:
         assert _bars(row_delete([_cue(9), _cue(1), _cue(5)], 5)) == [1, 9]
 
+    def test_the_result_shares_no_nested_dict_with_the_input(self) -> None:
+        cues = _row(1, 5, 9)
+        before = copy.deepcopy(cues)
+        out = row_delete(cues, 5)
+        for cue in out:
+            cue["entry"]["trigger_beat"] = 99
+        assert cues == before
+
 
 # == 거절 메시지 · 모듈 경계 ===========================================================
 
@@ -220,6 +321,11 @@ _REFUSALS = [
     pytest.param(lambda: row_move(_row(1, 5, 9), 5, 9), id="move-occupied"),
     pytest.param(lambda: row_move(_row(1, 5, 9), 5, 10), id="move-crossing"),
     pytest.param(lambda: row_delete(_row(1, 5, 9), 6), id="delete-no-cell"),
+    pytest.param(lambda: row_move_many(_row(5, 9), [(5, 0)]), id="move-many-below-one"),
+    pytest.param(lambda: row_move_many(_row(5, 9), [(6, 7)]), id="move-many-no-cell"),
+    pytest.param(lambda: row_move_many(_row(5, 9), [(5, 6), (5, 7)]), id="move-many-twice"),
+    pytest.param(lambda: row_move_many(_row(5, 9, 13), [(5, 9)]), id="move-many-collision"),
+    pytest.param(lambda: row_move_many(_row(5, 9, 13), [(5, 10)]), id="move-many-crossing"),
 ]
 
 
