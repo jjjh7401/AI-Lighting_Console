@@ -13840,9 +13840,9 @@ class ChatSession:
             reset_session_key(token)
         if refusal is not None:
             if ran:
-                refusal += (
-                    f" 이미 콘솔에 나간 {ran}줄은 되돌리지 않았습니다 — 격자와 콘솔이 어긋났을 수 "
-                    "있으니 ⇪ 전체 반영으로 맞춰 주세요."
+                refusal = (
+                    f"{refusal.rstrip('. ')}. 이미 콘솔에 나간 {ran}줄은 되돌리지 않았습니다 — "
+                    "격자와 콘솔이 어긋났을 수 있으니 ⇪ 전체 반영으로 맞춰 주세요."
                 )
             return refusal
         if not approved:
@@ -13917,9 +13917,7 @@ class ChatSession:
         """송신 직전 재확인 — 계획한 이벤트마다 시각을 다시 읽어 그대로인지 본다.
         어긋나면 그 사유를, 모두 그대로면 ``None`` 을 돌려준다."""
         for event in plan.events:
-            unread = (
-                f"승인을 기다린 뒤 {event.label} 이벤트의 시각을 다시 읽지 못해 보내지 않았습니다"
-            )
+            unread = f"승인을 기다린 뒤 {event.label} 이벤트의 시각을 다시 읽지 못했습니다"
             try:
                 raw = self._cell_live_property(event.path, "TIME")
                 now = parse_event_seconds(raw) if raw is not None else None
@@ -13930,7 +13928,7 @@ class ChatSession:
             if abs(now - event.seconds) > _CELL_LIVE_SAME_TIME_SECONDS:
                 return (
                     f"승인을 기다리는 동안 콘솔의 {event.label} 이벤트 시각이 "
-                    f"{event.seconds:g}초에서 {now:g}초로 바뀌어 아무것도 보내지 않았습니다"
+                    f"{event.seconds:g}초에서 {now:g}초로 바뀌었습니다"
                 )
         return None
 
