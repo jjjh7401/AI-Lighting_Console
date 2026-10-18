@@ -710,8 +710,12 @@ def build_fx_preset_bundle(
     preset_pool: int,
     preset: int,
     label: str | None = None,
+    selection: str | None = None,
 ) -> FxInstantiation:
     """Build the bundle that stores one fx as a PRESET instead of a cue.
+
+    ``selection`` replaces the ``Group`` line when given — a sub-geometry line
+    is selected as ``Fixture a Thru b.`` (body + sub, t520), not as its group.
 
     Live-verified shape: the same capture cycle as ``build_fx_bundle`` with the
     Store line swapped for ``Store Preset <pool>.<n> '<label>' /Universal`` —
@@ -725,7 +729,7 @@ def build_fx_preset_bundle(
     text = _label_of(fx, label)
     matricks = _matricks(fx)
 
-    commands: list[str] = [_DESTINATION, _CLEAR, f"Group {group}"]
+    commands: list[str] = [_DESTINATION, _CLEAR, selection or f"Group {group}"]
     commands.extend(phaser_lines(fx))
     commands.extend(f"Set Selection MAtricks '{axis}' {_format_value(v)}" for axis, v in matricks)
     commands.append(f"Store Preset {preset_pool}.{preset} '{text}' /Universal")

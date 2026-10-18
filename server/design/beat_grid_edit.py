@@ -141,8 +141,9 @@ _PRESET_POOLS_PATH: Path = Path(__file__).resolve().parent / "beat_grid_data" / 
 
 
 def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
-    """``preset_pools.yaml``을 읽어 ``{"confirmed": bool, "pools": {...}}``를
-    돌려준다. 파일이 없거나 못 읽으면(권한·I/O·파싱 오류) **정직하게**
+    """``preset_pools.yaml``을 읽어 ``{"confirmed": bool, "pools": {...},
+    "song_speed_masters": {...}}``를 돌려준다. 파일이 없거나 못 읽으면
+    (권한·I/O·파싱 오류) **정직하게**
     ``{"confirmed": False, "pools": {}}``로 떨어진다 — 지어낸 밴드는
     0건이다(`beat_grid_probes.read_m1_probe_results`와 같은 실패-경로
     관행)."""
@@ -158,10 +159,8 @@ def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
     policy: dict[str, object] = {
         "confirmed": bool(document.get("confirmed", False)),
         "pools": dict(pools) if isinstance(pools, Mapping) else {},
+        "song_speed_masters": song_speed_masters_of(document),
     }
-    speed_master = speed_master_of(document)
-    if speed_master is not None:
-        policy["speed_master"] = speed_master
     return policy
 
 
@@ -170,12 +169,46 @@ def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
 _SPEED_MASTER_RANGE = range(1, 16)
 
 
-def speed_master_of(policy: Mapping[str, object]) -> int | None:
-    """정책(``preset_pools.yaml``)의 ``speed_master`` — 효과 프리셋 속도를 묶을 스피드 마스터 번호.
-    선언이 없거나 범위(1~15) 밖이면 ``None`` 이고, 그때 효과 프리셋은 ``At Speed`` 로 굽는다."""
-    value = policy.get("speed_master")
-    if isinstance(value, int) and not isinstance(value, bool) and value in _SPEED_MASTER_RANGE:
-        return value
+def song_key(title: str) -> str:
+    """곡 제목의 비교 열쇠 — 대소문자·공백·밑줄만 다른 제목은 같은 곡이다."""
+    return re.sub(r"[\s_]+", "", title).upper()
+
+
+def song_speed_masters_of(document: Mapping[str, object]) -> dict[str, int]:
+    """``preset_pools.yaml`` 의 ``song_speed_masters`` — 곡 제목 → 스피드 마스터 번호.
+
+    범위(1~15) 밖이거나 정수가 아닌 줄은 버린다 — 버린 곡은 마스터 없는 곡이 된다."""
+    raw = document.get("song_speed_masters")
+    if not isinstance(raw, Mapping):
+        return {}
+    return {
+        title: value
+        for title, value in raw.items()
+        if isinstance(title, str)
+        and isinstance(value, int)
+        and not isinstance(value, bool)
+        and value in _SPEED_MASTER_RANGE
+    }
+
+
+def speed_master_of(policy: Mapping[str, object], song_title: object) -> int | None:
+    """이 곡의 스피드 마스터 번호 — 효과 프리셋 속도와 웨이브를 묶을 번호.
+
+    마스터 하나는 쇼 전체가 공유하므로 번호는 곡마다 따로여야 한다(다른 곡의 BPM 줄이 덮지 않게).
+    ``song_speed_masters`` 에 없는 곡은 ``None`` — 효과는 ``At Speed``, 웨이브는 만들지 않는다."""
+    masters = policy.get("song_speed_masters")
+    if not isinstance(masters, Mapping) or not isinstance(song_title, str):
+        return None
+    wanted = song_key(song_title)
+    for title, value in masters.items():
+        if (
+            isinstance(title, str)
+            and song_key(title) == wanted
+            and isinstance(value, int)
+            and not isinstance(value, bool)
+            and value in _SPEED_MASTER_RANGE
+        ):
+            return value
     return None
 
 

@@ -351,7 +351,7 @@ def _one(
         if beats_per_bar is None or beats_per_bar <= 0:
             return None, EFFECT_TEMPO_MISSING
         beats_per_cycle *= beats_per_bar
-    master = speed_master_of(policy)
+    master = speed_master_of(policy, grid.get("song_title"))
     head: tuple[str, ...] = ()
     if master is None:
         timed = dataclasses.replace(fx, speed=bpm / beats_per_cycle, speed_master=None)
@@ -380,9 +380,9 @@ def speed_master_bpm_lines(
 
     효과 프리셋은 스피드 마스터에 묶여(``At SpeedMaster``) 콘솔에 남으므로, 다시 쓰는 프리셋은
     만들기 줄이 없다 — 그래도 마스터 BPM 은 반영마다 이 곡 BPM 으로 맞춰야 한다(4차 전체 실행
-    D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 스피드 마스터가 선언되지 않았거나 BPM 을
+    D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 이 곡에 스피드 마스터 번호가 없거나 BPM 을
     모르면 빈 묶음이다."""
-    master = speed_master_of(policy)
+    master = speed_master_of(policy, grid.get("song_title"))
     if master is None or bpm is None or not math.isfinite(bpm) or bpm <= 0:
         return ()
     uses_effect = any(

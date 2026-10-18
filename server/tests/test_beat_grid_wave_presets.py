@@ -16,7 +16,7 @@ from server.web.session import _WAVE_WHOLE_BATCH_REASON, SongTimelineStore
 
 from .test_apply_time_approval_t577 import _new_session, _state_tree, _timeline
 
-SPEED_MASTER = speed_master_of(load_preset_pool_policy())
+SPEED_MASTER = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
 POOL_ROOT = "DataPool/PresetPools"
 POOL_21 = f"{POOL_ROOT}/21"
 

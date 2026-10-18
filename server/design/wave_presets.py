@@ -100,12 +100,13 @@ def wave_preset_bundle(
     preset_pool: int,
     preset_slot: int,
     speed_master: int,
+    selection: str | None = None,
 ) -> tuple[str, ...]:
     """웨이브 프리셋 하나의 저장 줄. 마스터 BPM 줄은 ``wave_save_commands`` 가 맨 앞에 낸다.
 
     고정 속도 대신 ``Measure`` · ``SpeedMaster`` 로 묶는다(틀의 ``speed`` 는 버린다).
     줄은 ``ChangeDestination Root`` · ``ClearAll`` 로 시작하고 ``ClearAll`` 로 끝나,
-    앞뒤 프리셋의 programmer 상태가 섞이지 않는다.
+    앞뒤 프리셋의 programmer 상태가 섞이지 않는다. ``selection`` 이 있으면 ``Group`` 줄 대신 쓴다.
     """
     timed = dataclasses.replace(
         fx, speed=None, measure=float(preset.beats), speed_master=speed_master
@@ -116,6 +117,7 @@ def wave_preset_bundle(
         preset_pool=preset_pool,
         preset=preset_slot,
         label=preset.console_label,
+        selection=selection,
     )
     return tuple(bundle.commands)
 
@@ -131,8 +133,10 @@ def wave_save_commands(
     preset_pool: int,
     bpm: float,
     speed_master: int,
+    selection: str | None = None,
 ) -> tuple[str, ...]:
-    """저장할 웨이브 프리셋 전부를 한 송신 묶음으로. 마스터 BPM 줄은 맨 앞에 한 번만 있다."""
+    """저장할 웨이브 프리셋 전부를 한 송신 묶음으로. 마스터 BPM 줄은 맨 앞에 한 번만 있다.
+    ``selection`` 은 줄의 선택 꼴(서브 광원 범위 ``Fixture a Thru b.``), 없으면 ``Group``."""
     templates = wave_templates()
     lines: list[str] = [wave_master_line(bpm, speed_master)]
     for write in writes:
@@ -144,6 +148,7 @@ def wave_save_commands(
                 preset_pool=preset_pool,
                 preset_slot=write.slot,
                 speed_master=speed_master,
+                selection=selection,
             )
         )
     return tuple(lines)

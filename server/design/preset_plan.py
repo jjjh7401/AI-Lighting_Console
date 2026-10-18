@@ -821,7 +821,7 @@ def _movement_effect_presets(
                 label=name,
                 bpm=bpm,
                 beats_per_bar=beats_per_bar,
-                speed_master=speed_master_of(policy or {}),
+                speed_master=speed_master_of(policy or {}, grid.get("song_title")),
             )
         # 번호는 저장 줄이 붙는 줄에만 쓴다 — 못 붙는 줄이 번호를 먼저 잡으면 다음 줄 번호가 밀린다.
         slot: str | None = reusable
@@ -871,7 +871,7 @@ def _movement_effect_presets(
             movement = movements[key]
             cycle = _beats_per_cycle(movement, beats_per_bar)
             if bpm is not None and cycle:
-                master = speed_master_of(policy or {})
+                master = speed_master_of(policy or {}, grid.get("song_title"))
                 how = (
                     f"At Speed {bpm / cycle:g} 로 프리셋에 굽는다(SpeedMaster 아님 — "
                     "preset_pools.yaml 에 speed_master 가 없다)"

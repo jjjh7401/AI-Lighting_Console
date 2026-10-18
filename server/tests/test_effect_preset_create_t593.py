@@ -51,7 +51,7 @@ from .test_apply_time_approval_t577 import _cue_of, _new_session, _state_tree, _
 _LIBRARY = load_library_from_dir()
 _POLICY = load_preset_pool_policy()
 #: 스피드 마스터 선언이 없는 정책 — 효과 속도를 `At Speed` 로 굽는 옛 경로.
-_NO_MASTER = {key: value for key, value in _POLICY.items() if key != "speed_master"}
+_NO_MASTER = {**_POLICY, "song_speed_masters": {}}
 _BPM, _BEATS_PER_BAR = 120.0, 4
 
 
@@ -65,7 +65,11 @@ def _track(name: str, group_no: int, cues: list[dict], *, confirmed: bool = True
 
 
 def _grid(cues: list[dict], *, confirmed: bool = True, **extra: object) -> dict:
-    grid: dict = {"tracks": [_track("BACK", 7, cues, confirmed=confirmed)]}
+    # 격자는 곡 제목을 싣는다(BeatGridView) — 스피드 마스터는 이 곡의 번호로 정한다.
+    grid: dict = {
+        "song_title": "LOVE ATTACK",
+        "tracks": [_track("BACK", 7, cues, confirmed=confirmed)],
+    }
     grid.update(extra)
     return grid
 
@@ -191,11 +195,11 @@ class TestCreationLines:
 class TestSpeedMasterBinding:
     """인수 D-12 · REQ-LDRHYTHM-009 — 정책에 스피드 마스터가 있으면 효과 속도를 마스터에 묶는다."""
 
-    def test_the_rig_policy_declares_speed_master_15_and_never_16(self) -> None:
-        assert _POLICY["speed_master"] == 15
+    def test_the_rig_policy_maps_love_attack_to_15_and_never_16(self) -> None:
+        assert speed_master_of(_POLICY, "LOVE ATTACK") == 15
         for bad in (16, 0, "15", True, None):
-            policy = {**_NO_MASTER, "speed_master": bad}
-            assert speed_master_of(policy) is None, bad
+            policy = {**_NO_MASTER, "song_speed_masters": {"LOVE ATTACK": bad}}
+            assert speed_master_of(policy, "LOVE ATTACK") is None, bad
 
     def test_the_bundle_sets_the_master_bpm_then_binds_speed_master_and_measure(self) -> None:
         grid = _grid([dict(_CUE)], **_recipe())
@@ -408,6 +412,7 @@ def _apply(
     timeline = _timeline()
     timeline["beat_grid"]["tracks"][0]["cues"] = cues
     timeline["beat_grid"].update(_recipe() if grid_extra is None else grid_extra)
+    timeline["beat_grid"].setdefault("song_title", timeline["song_title"])
     tree = _state_tree()
     if pool22 is not None:
         tree["DataPool/PresetPools/22"] = _pool("DataPool/PresetPools/22", pool22)
@@ -451,7 +456,7 @@ class TestApplyCreatesTheEffect:
         """재현(4차 전체 실행 D-12) — 효과 프리셋을 다시 쓰면(콘솔에 이미 있는 번호) 만들기 줄이
         없어서 스피드 마스터 BPM 줄(``Master 3.15 At BPM``)도 함께 빠졌다(full4 0건, full3 4건).
         프리셋은 스피드 마스터에 묶여 있으니 마스터 BPM 을 곡 BPM 으로 반영마다 맞춘다."""
-        master = speed_master_of(load_preset_pool_policy())
+        master = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
         assert master is not None
         status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[1])
         assert status["ok"] is True
@@ -463,7 +468,7 @@ class TestApplyCreatesTheEffect:
         assert status["approval_vs_sent"]["match"] is True
 
     def test_a_new_effect_sends_the_speed_master_bpm_once(self, tmp_path) -> None:
-        master = speed_master_of(load_preset_pool_policy())
+        master = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
         _status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[5])
         assert _sent(approval).count(f"Master 3.{master} At BPM 112.35") == 1
 

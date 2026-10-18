@@ -4,6 +4,7 @@
 import { useState } from "react";
 
 import type { BeatGridTrack, WaveCustomPreset } from "../../protocol";
+import { skippedBarNote } from "./cellSelection";
 
 /** 고를 수 있는 줄 — 콘솔 그룹 번호가 확인된 트랙만. */
 export function waveTrackChoices(tracks: readonly BeatGridTrack[]): BeatGridTrack[] {
@@ -41,6 +42,7 @@ export function WavePresetControls({
   onRequest,
   onCustomRequest,
   selectedCells = [],
+  skippedCellCount = 0,
 }: {
   tracks: readonly BeatGridTrack[];
   onRequest: (groupName: string) => void;
@@ -51,6 +53,8 @@ export function WavePresetControls({
   ) => void;
   /** 지금 고른 칸(줄·마디 쌍) — 「선택한 칸에도 적용」을 켜면 저장이 끝난 뒤 이 칸들에 번호를 적는다. */
   selectedCells?: ReadonlyArray<readonly [string, number]>;
+  /** 고른 칸 가운데 0마디(앞박)라 칸 적용으로 보낼 수 없는 칸 수 — 빠진 이유를 서랍에 말한다. */
+  skippedCellCount?: number;
 }) {
   const choices = waveTrackChoices(tracks);
   const [picked, setPicked] = useState<string | null>(null);
@@ -138,6 +142,12 @@ export function WavePresetControls({
             />
             {`선택한 칸 ${selectedCells.length}개에도 적용`}
           </label>
+        )}
+        {skippedCellCount > 0 && (
+          <span className="wave-custom-cells-note">
+            {skippedBarNote(skippedCellCount, "edit")}
+            {selectedCells.length > 0 ? " — 나머지 칸에만 적용돼요" : ""}
+          </span>
         )}
         <button
           type="button"

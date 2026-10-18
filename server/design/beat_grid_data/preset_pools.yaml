@@ -18,12 +18,14 @@
 # (REQ-LDBEAT-015(b) — base 풀 vs effect 풀 분리, base 풀 참조는
 # 번호대 검사 대상이 아니다).
 confirmed: false
-# 효과 프리셋 속도를 묶는 스피드 마스터 번호(REQ-LDRHYTHM-009). 리그·쇼마다 다른 값이라 코드가 아니라
-# 이 파일에 둔다. 선언이 없으면 효과 프리셋은 `At Speed <곡 BPM ÷ 주기 박>` 로 굽는다.
-# 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다(REQ-LDRHYTHM-010, 1~15 만 받는다).
-# 이 리그의 실기 근거: `Master 3.15 At BPM 112.35` OK(.moai/reports/t516 live_write) ·
+# 곡마다 스피드 마스터 번호(REQ-LDRHYTHM-009) — 곡 제목 → 번호(1~15). 마스터 하나는 쇼 전체가 공유한다:
+# 두 곡이 같은 번호를 쓰면 한 곡의 `Master 3.N At BPM` 이 다른 곡의 효과·웨이브 속도를 바꾼다(리드 실기 시험 결함 3).
+# 여기 없는 곡은 마스터에 묶지 않는다 — 효과는 `At Speed <곡 BPM ÷ 주기 박>` 로 굽고, 웨이브는 만들지 않는다.
+# 새 곡을 넣기 전에 콘솔에서 그 번호의 스피드 마스터가 비어 있는지 확인한다. 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다.
+# LOVE ATTACK 15 의 실기 근거: `Master 3.15 At BPM 112.35` OK(.moai/reports/t516 live_write) ·
 # `Attribute 'Dimmer' At Measure 1` / `At SpeedMaster 15` / `Store Preset` OK(.moai/reports/t531 live P4).
-speed_master: 15
+song_speed_masters:
+  "LOVE ATTACK": 15
 pools:
   # 위치 효과 풀(기본 위치 풀 2.41~ 과 분리) — effect_kind == "position".
   position_effect: {start: "2.61", end: "2.68"}

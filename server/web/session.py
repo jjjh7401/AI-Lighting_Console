@@ -11738,10 +11738,13 @@ class ChatSession:
             return self._beat_grid_wave_refusal(
                 "곡 BPM 을 곡 데이터에서 읽지 못해 웨이브 프리셋을 만들지 않았습니다."
             ), None
-        speed_master = speed_master_of(load_preset_pool_policy())
+        song_title = timeline.get("song_title")
+        speed_master = speed_master_of(load_preset_pool_policy(), song_title)
         if speed_master is None:
+            # 마스터는 쇼 전체가 공유한다 — 번호가 없으면 다른 곡의 BPM 을 덮을 수 있다.
             return self._beat_grid_wave_refusal(
-                "preset_pools.yaml 에 speed_master 가 없어 웨이브 프리셋을 만들지 않았습니다."
+                f"「{song_title}」에 스피드 마스터 번호가 없어 웨이브 프리셋을 만들지 않았습니다. "
+                "preset_pools.yaml 의 song_speed_masters 에 이 곡의 빈 번호를 적어 주세요."
             ), None
         query = _registry_state_query(self._registry)
         pool_root = self._beat_grid_preset_pool_root()
@@ -11754,11 +11757,17 @@ class ChatSession:
                 "아무것도 보내지 않았습니다."
             ), None
         pool_no, children = effect
+        # 서브 광원 밝기가 실린 줄은 뒤 점 범위(Fixture a Thru b.)로 고른다(t520, 일반 저장과 같다).
+        subs = self._beat_grid_sub_selection_tracks([track])
+        selection = next(
+            (str(row["sub_selection"]) for row in subs if row.get("sub_selection")), None
+        )
         return None, {
             "group_name": group_name,
             "group_no": group_no,
             "bpm": bpm,
             "speed_master": speed_master,
+            "selection": selection,
             "query": query,
             "pool_root": pool_root,
             "pool_no": pool_no,
@@ -11784,11 +11793,13 @@ class ChatSession:
             preset_pool=pool_no,
             bpm=setup["bpm"],
             speed_master=setup["speed_master"],
+            selection=setup.get("selection"),
         )
         placed = " · ".join(f"{write.slot} {write.preset.console_label}" for write in writes)
         reason = (
             f"웨이브 프리셋 {len(writes)}개 저장 — 풀 {pool_no} {placed} · "
             f"줄 「{group_name}」(그룹 {group_no}) · BPM {setup['bpm']:g}"
+            + (f" · 선택 {setup['selection']}" if setup.get("selection") else "")
         )
         if skipped_text:
             reason += f" · 같은 이름이라 건너뜀: {skipped_text}"

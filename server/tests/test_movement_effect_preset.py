@@ -14,7 +14,7 @@ import copy
 
 from server.design.app_movement import movement_effect_store_commands
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
-from server.design.beat_grid_edit import load_preset_pool_policy
+from server.design.beat_grid_edit import load_preset_pool_policy, speed_master_of
 from server.design.beat_grid_emit import (
     SongTiming,
     emit_beat_grid_write_bundle,
@@ -242,7 +242,7 @@ class TestEffectPresetPlan:
         assert "Store Preset 21.8 'WAVE PAN 2 BEAT' /Universal" in preset.store
         # preset_pools.yaml 에 speed_master 가 있으니 속도는 굽지 않고 묶는다(full2 D-12 실서버
         # 결함: 계획 문구만 SpeedMaster 이고 저장 줄은 At Speed 14.0002 로 나갔다).
-        speed_master = load_preset_pool_policy()["speed_master"]
+        speed_master = speed_master_of(load_preset_pool_policy(), LOVE_ATTACK_TITLE)
         assert preset.store[0] == f"Master 3.{speed_master} At BPM 112"
         assert not any(" At Speed " in line for line in preset.store)
         assert "Attribute 'Pan' At Measure 2" in preset.store
@@ -252,7 +252,7 @@ class TestEffectPresetPlan:
         plan = build_preset_plan(
             _grid(),
             annotations=load_preset_annotations(LOVE_ATTACK_TITLE),
-            policy={**load_preset_pool_policy(), "speed_master": None},
+            policy={**load_preset_pool_policy(), "song_speed_masters": {}},
             dimmer_pool=_DIMMER,
             color_pool=_COLOR,
             position_pool=_POSITION,
@@ -461,7 +461,7 @@ class TestEffectLineThroughTheSession:
         card = list(approval.requests[0].commands)
         assert any("Store Preset 21.8 'WAVE PAN 2 BEAT' /Universal" in line for line in card)
         # 실서버(full2 D-12)가 탄 경로 — 카드의 저장 줄이 스피드 마스터에 묶여야 한다.
-        speed_master = load_preset_pool_policy()["speed_master"]
+        speed_master = speed_master_of(load_preset_pool_policy(), LOVE_ATTACK_TITLE)
         assert any(f"Master 3.{speed_master} At BPM 112.35" in line for line in card)
         assert any("Attribute 'Pan' At Measure 2" in line for line in card)
         assert any(f"Attribute 'Pan' At SpeedMaster {speed_master}" in line for line in card)

@@ -4848,7 +4848,8 @@ export function BeatGrid({
               tracks={grid?.tracks ?? []}
               onRequest={onWavePresetRequest}
               onCustomRequest={onWaveCustomRequest}
-              selectedCells={wireCells(pickedCells).cells}
+              selectedCells={bulkWire.cells}
+              skippedCellCount={bulkWire.skipped}
             />
           )}
           {presetPlanBusyRefused && (
