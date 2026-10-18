@@ -20,6 +20,8 @@
    마디가 없거나 새 마디에 다른 칸이 남아 있거나 옮김끼리 겹치면 거절한다.
 9. 칸 기록(스냅샷) 갱신 — 있는 열쇠만 새 마디로 옮기고(칸 사전의 ``bar`` 도 함께), 없는 열쇠는
    만들지 않는다. 부분 기록은 부분 기록으로 남는다. 입력은 고치지 않고, 겹치면 거절한다.
+10. 칸의 콘솔 이벤트 시각 — 에미터가 같은 칸에 내는 시각과 한 글자도 다르지 않아야 한다(실제
+   에미터를 돌려 견준다). 마디 시작 + 박 오프셋 + 콘솔 지연이고, 계산할 수 없는 입력은 거절한다.
 """
 
 from __future__ import annotations
@@ -45,7 +47,11 @@ from server.design.beat_grid_cell_live import (
     parse_event_seconds,
     scope_covers,
 )
+from server.design.beat_grid_emit import SongTiming, emit_beat_grid_write_bundle
 from server.design.beat_grid_send import PartialCellSnapshot
+from server.looks.songcue import _format_seconds
+
+from .test_beat_grid_emit_t549 import _ALL_M1_PASS, _position_cue, _track
 
 HANGUL = re.compile(r"[가-힣]")
 
@@ -578,6 +584,122 @@ class TestMoveSnapshotKeys:
         assert snapshot == before
 
 
+# == 칸의 콘솔 이벤트 시각 ===============================================================
+
+#: 120 BPM 4/4 — 한 박 0.5초, 한 마디 2초, 1마디 다운비트는 곡 1.5초. 콘솔 지연은 실측 값이다.
+_TIMING = SongTiming(bpm=120.0, beats_per_bar=4, downbeat_bar1_seconds=1.5)
+_LEAD = 3.002
+
+
+def _timed_cue(bar: int, *, trigger_beat: object = None) -> dict:
+    """에미터가 그대로 받는 위치 칸 — ``entry.trigger_beat`` 만 바꿔 가며 쓴다."""
+    cue = _position_cue(bar, position_preset_no="1.1")
+    if trigger_beat is not None:
+        cue["entry"]["trigger_beat"] = trigger_beat
+    return cue
+
+
+class TestCueEventSeconds:
+    def test_the_event_is_the_bar_start_plus_the_console_lead(self) -> None:
+        seconds = cell_live_module.cue_event_seconds(
+            _timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD
+        )
+        assert seconds == pytest.approx(1.5 + 2 * 2 + 3.002)
+
+    def test_a_trigger_beat_pushes_the_event_later_inside_the_bar(self) -> None:
+        # 3박에서 트리거 — 마디 시작에서 두 박(1초) 뒤다.
+        seconds = cell_live_module.cue_event_seconds(
+            _timed_cue(3, trigger_beat=3), 3, timing=_TIMING, lead_seconds=_LEAD
+        )
+        assert seconds == pytest.approx(1.5 + 2 * 2 + 1.0 + 3.002)
+
+    def test_the_first_beat_is_no_offset(self) -> None:
+        first = cell_live_module.cue_event_seconds(
+            _timed_cue(3, trigger_beat=1), 3, timing=_TIMING, lead_seconds=_LEAD
+        )
+        plain = cell_live_module.cue_event_seconds(
+            _timed_cue(3), 3, timing=_TIMING, lead_seconds=_LEAD
+        )
+        assert first == plain
+
+    def test_the_same_cue_is_timed_at_whichever_bar_it_is_asked_about(self) -> None:
+        # 옮긴 뒤의 시각은 같은 칸(트리거 박은 그대로)을 새 마디로 물어서 얻는다.
+        cue = _timed_cue(5, trigger_beat=2)
+        old = cell_live_module.cue_event_seconds(cue, 5, timing=_TIMING, lead_seconds=_LEAD)
+        new = cell_live_module.cue_event_seconds(cue, 6, timing=_TIMING, lead_seconds=_LEAD)
+        assert new - old == pytest.approx(2.0)
+
+    def test_the_pickup_bar_is_timed_when_its_beats_are_known(self) -> None:
+        timing = SongTiming(bpm=120.0, beats_per_bar=4, downbeat_bar1_seconds=1.5, pickup_beats=2.0)
+        seconds = cell_live_module.cue_event_seconds(
+            _timed_cue(0), 0, timing=timing, lead_seconds=_LEAD
+        )
+        assert seconds == pytest.approx(1.5 - 1.0 + 3.002)
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            pytest.param({"timing": None, "lead_seconds": _LEAD}, id="no-timing"),
+            pytest.param({"timing": _TIMING, "lead_seconds": None}, id="no-lead"),
+            pytest.param(
+                {
+                    "timing": SongTiming(bpm=0.0, beats_per_bar=4, downbeat_bar1_seconds=1.5),
+                    "lead_seconds": _LEAD,
+                },
+                id="zero-bpm",
+            ),
+            pytest.param(
+                {
+                    "timing": SongTiming(bpm=120.0, beats_per_bar=0, downbeat_bar1_seconds=1.5),
+                    "lead_seconds": _LEAD,
+                },
+                id="zero-beats-per-bar",
+            ),
+        ],
+    )
+    def test_a_timing_that_cannot_give_a_time_is_refused(self, kwargs: dict) -> None:
+        with pytest.raises(CellLiveRefused):
+            cell_live_module.cue_event_seconds(_timed_cue(3), 3, **kwargs)
+
+    def test_the_pickup_bar_without_its_beats_is_refused(self) -> None:
+        with pytest.raises(CellLiveRefused, match="0마디"):
+            cell_live_module.cue_event_seconds(_timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD)
+
+    @pytest.mark.parametrize("trigger_beat", [0, 5, -1, True, 2.0, "2"])
+    def test_a_trigger_beat_the_emitter_would_block_is_refused(self, trigger_beat: object) -> None:
+        # 에미터는 이 칸을 막아 이벤트를 만들지 않는다 — 옮길 이벤트도 없다.
+        with pytest.raises(CellLiveRefused, match="trigger_beat"):
+            cell_live_module.cue_event_seconds(
+                _timed_cue(3, trigger_beat=trigger_beat), 3, timing=_TIMING, lead_seconds=_LEAD
+            )
+
+    @pytest.mark.parametrize("bpm", [120.0, 112.35, 97.0])
+    @pytest.mark.parametrize("trigger_beat", [None, 1, 2, 4])
+    @pytest.mark.parametrize("bar", [1, 3, 17])
+    def test_it_is_the_time_the_emitter_gives_the_same_cue(
+        self, bpm: float, trigger_beat: int | None, bar: int
+    ) -> None:
+        # 실제 에미터가 이 칸 하나에 내는 이벤트 시각(ms)과 그 글자를 그대로 견준다.
+        timing = SongTiming(bpm=bpm, beats_per_bar=4, downbeat_bar1_seconds=1.5)
+        cue = _timed_cue(bar, trigger_beat=trigger_beat)
+        emitted = emit_beat_grid_write_bundle(
+            [_track("KEY", 3, [cue])],
+            timing=timing,
+            sequence_numbers={"KEY": 300},
+            timecode_numbers={"KEY": 5},
+            dimmer_attributes={},
+            probe_results=_ALL_M1_PASS,
+            timecode_lead_seconds=_LEAD,
+        )
+        emitted_ms = emitted.tracks[0].cues[0].trigger_ms
+        assert emitted_ms is not None
+        seconds = cell_live_module.cue_event_seconds(cue, bar, timing=timing, lead_seconds=_LEAD)
+        assert round(seconds * 1000) == emitted_ms
+        text = _format_seconds(round(seconds * 1000))
+        event = f"Store Property 'Time' {text} 'AbsTime' {text} 'Token' 'Go+'"
+        assert event in emitted.timecode_event_commands
+
+
 # == 거절 메시지 · 모듈 경계 ===========================================================
 
 _REFUSALS = [
@@ -632,6 +754,24 @@ _REFUSALS = [
     pytest.param(
         lambda: move_snapshot_keys(_snapshot(), [("KEY", 5, 6), ("KEY", 5, 7)]),
         id="snapshot-cell-moved-twice",
+    ),
+    pytest.param(
+        lambda: cell_live_module.cue_event_seconds(
+            _timed_cue(3), 3, timing=None, lead_seconds=_LEAD
+        ),
+        id="event-no-timing",
+    ),
+    pytest.param(
+        lambda: cell_live_module.cue_event_seconds(
+            _timed_cue(3, trigger_beat=9), 3, timing=_TIMING, lead_seconds=_LEAD
+        ),
+        id="event-bad-trigger-beat",
+    ),
+    pytest.param(
+        lambda: cell_live_module.cue_event_seconds(
+            _timed_cue(0), 0, timing=_TIMING, lead_seconds=_LEAD
+        ),
+        id="event-pickup-beats-unknown",
     ),
 ]
 
