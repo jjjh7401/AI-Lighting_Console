@@ -17,6 +17,7 @@ from server.design.beat_grid import default_beat_grid
 
 __all__ = [
     "ANALYSIS_CONFIRMED_KEY",
+    "ANALYSIS_EMPTY_ROWS_NOTE",
     "ANALYSIS_SOURCE_KEY",
     "CONSOLE_PRESET_RECORD_KEYS",
     "build_analysis_timeline",
@@ -30,6 +31,9 @@ ANALYSIS_SOURCE_KEY = "analysis_source_sha256"
 #: 이 작업본을 만든 분석 확인 시각. 같은 오디오라도 다시 분석·확인하면 시각이 달라 새 작업본이다
 #: (1차 전체 실행 B-01 — 해시만 보면 같은 곡 재분석이 옛 격자에 마디 지도만 붙였다).
 ANALYSIS_CONFIRMED_KEY = "analysis_confirmed_at"
+#: 줄이 없는 새 작업본에 보이는 안내(카드 WT-track-model, 리드 2026-10-18). 줄은 이전 곡에서
+#: 물려받지 않고 자동 배치가 콘솔 그룹으로 만든다.
+ANALYSIS_EMPTY_ROWS_NOTE = "자동 배치를 누르면 콘솔 그룹으로 줄을 만들어요."
 
 _LAYOUT_KEYS = ("group_no", "group_no_confirmed", "group_name", "layer_role")
 
@@ -215,7 +219,7 @@ def build_analysis_timeline(
             "tracks": tracks,
             "scene_memos": [],
             "source": "analysis",
-            "note": None,
+            "note": None if tracks else ANALYSIS_EMPTY_ROWS_NOTE,
         },
         ANALYSIS_SOURCE_KEY: source_sha256,
     }

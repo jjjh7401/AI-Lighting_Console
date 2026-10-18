@@ -16,7 +16,11 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from server.design.analysis_timeline import ANALYSIS_SOURCE_KEY, build_analysis_timeline
+from server.design.analysis_timeline import (
+    ANALYSIS_EMPTY_ROWS_NOTE,
+    ANALYSIS_SOURCE_KEY,
+    build_analysis_timeline,
+)
 from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_ui_values import SECTION_KIND_COLORS, attach_beat_grid_ui_values
 from server.design.profile import resolve_bpm
@@ -122,8 +126,31 @@ def _session(tmp_path, monkeypatch):
         ),
     )
     monkeypatch.setattr("server.web.session.synthesize_bar_map", lambda _audio, _offset: _bar_map())
+    _attach_console_groups(session)
     sent.clear()
     return session, store, sent, console, library
+
+
+def _attach_console_groups(session) -> None:
+    """카드 WT-track-model — 새 작업본은 줄 없이 시작하고 자동 배치가 콘솔 그룹으로 줄을 만든다.
+    그 읽기(그룹·소속 장비)만 가짜 무대 포트로 준다(읽기 전용, 쓰기 포트와 무관)."""
+    from .test_beat_grid_stage import FIXTURES, GROUPS
+    from .test_beat_grid_stage import FakeConsole as StageConsole
+
+    fixtures = [
+        {"slot": 1, "fid": 111, "name": "Foh 1", "x": 0.0, "y": 0.0, "z": 0.0, "sf": 1},
+        {"slot": 2, "fid": 201, "name": "Back 1", "x": 0.0, "y": 5.0, "z": 3.0, "sf": 2},
+        {"slot": 3, "fid": 301, "name": "Side 1", "x": -6.0, "y": 1.0, "z": 1.0, "sf": 3},
+        {"slot": 4, "fid": 501, "name": "Mover 1", "x": 0.0, "y": 6.0, "z": 5.0, "sf": 4},
+    ]
+    groups = {
+        3: ("FOH", [1]),
+        4: ("BACK", [2]),
+        7: ("SIDE-ALL", [3]),
+        11: ("MOVER-U", [4]),
+    }
+    session._stage_port = StageConsole(fixtures=fixtures, groups=groups)
+    session._rig_paths = {**session._rig_paths, "fixtures": FIXTURES, "groups": GROUPS}
 
 
 def _cells(timeline: dict) -> int:
@@ -157,9 +184,11 @@ def test_a_confirmed_new_analysis_starts_a_fresh_timeline(tmp_path, monkeypatch)
     assert fresh["song_title"] == LOVE_ATTACK_TITLE
     assert fresh["beat_grid"]["song_title"] == LOVE_ATTACK_TITLE
     assert _cells(fresh) == 0
-    assert [t["group_name"] for t in fresh["beat_grid"]["tracks"]] == [
-        t["group_name"] for t in old["beat_grid"]["tracks"]
-    ]
+    # 카드 WT-track-model(2026-10-18) — 옛 작업본의 줄 구성을 물려받지 않는다(예전엔 이전 곡의
+    # 8줄을 그대로 썼다). 줄은 자동 배치가 콘솔 그룹으로 만든다 — 그동안 화면에 그렇게 안내한다.
+    assert old["beat_grid"]["tracks"]
+    assert fresh["beat_grid"]["tracks"] == []
+    assert fresh["beat_grid"]["note"] == ANALYSIS_EMPTY_ROWS_NOTE
     assert "timecode_number" not in fresh
     assert fresh[ANALYSIS_SOURCE_KEY] == session._song_audio.sha256
     # 옛 작업본은 라이브러리에 그대로 백업되고, 되돌리기로도 돌아갈 수 있다.

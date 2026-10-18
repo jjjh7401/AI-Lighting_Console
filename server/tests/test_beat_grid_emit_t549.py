@@ -391,7 +391,9 @@ class TestEmitBeatGridWriteBundleHappyPath:
         )
         assert any("Store Timecode 30" in cmd for cmd in result.commands)
 
-    def test_exceeding_measured_max_timecode_tracks_refuses_the_whole_timecode_group(self) -> None:
+    def test_exceeding_measured_max_timecode_tracks_refuses_only_the_overflow(self) -> None:
+        # 카드 WT-track-model(2026-10-18) — 예전엔 타임코드 묶음 전부를 거절했다(명령 0개).
+        # 이제 잰 수를 넘는 줄만 막고 앞의 줄은 그대로 배정한다.
         group_names = [f"G{i}" for i in range(MEASURED_MAX_TIMECODE_TRACKS + 1)]
         tracks = [_track(name, idx + 1, []) for idx, name in enumerate(group_names)]
         sequence_numbers = {name: 300 + idx for idx, name in enumerate(group_names)}
@@ -404,10 +406,16 @@ class TestEmitBeatGridWriteBundleHappyPath:
             dimmer_attributes={},
             probe_results=_ALL_M1_PASS,
         )
-        for track_result in result.tracks:
-            assert track_result.assign_timecode_commands == ()
-            assert track_result.blocked_reason is not None
-            assert str(MEASURED_MAX_TIMECODE_TRACKS) in track_result.blocked_reason
+        *kept, overflow = result.tracks
+        assert overflow.assign_timecode_commands == ()
+        assert overflow.blocked_reason is not None
+        assert str(MEASURED_MAX_TIMECODE_TRACKS) in overflow.blocked_reason
+        for track_result in kept:
+            # 앞의 줄은 상한으로 막히지 않는다(칸이 없는 줄이라 다른 이유로 안 나갈 수는 있다).
+            assert not (
+                track_result.blocked_reason
+                and str(MEASURED_MAX_TIMECODE_TRACKS) in track_result.blocked_reason
+            )
 
     def test_zero_rig_literals_in_module_source(self) -> None:
         import inspect
@@ -505,12 +513,14 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
         }
         assert expected_allowed <= allowed_with_content
 
-    def test_one_track_beyond_the_measured_max_still_refuses_the_whole_timecode(self) -> None:
+    def test_one_track_beyond_the_measured_max_refuses_only_that_track(self) -> None:
         # 2026-10-11 대체 고지(카드 t553): 이 시험은 원래 「LOVE ATTACK 8트랙을
         # 한 타임코드에 몰면 측정 최대 6을 넘어 전부 거절」을 확인했다. t553
         # 실기 되읽기(타임코드 32, 트랙 8)로 상한이 8이 되어 8트랙은 이제
-        # 들어간다(test_beat_grid_timecode_cap_t553.py). 같은 경계 — 측정한 수를
-        # 하나라도 넘으면 그 타임코드 트랙 전부 거절 — 를 9번째 가짜 트랙으로 잰다.
+        # 들어간다(test_beat_grid_timecode_cap_t553.py).
+        # 2026-10-18 대체 고지(카드 WT-track-model): 측정한 수를 하나라도 넘으면 전부 거절하던
+        # 규칙이 반영을 0개로 만들었다(새 곡 점검, 줄 9개). 이제 넘친 줄만 막는다 — 같은 경계를
+        # 측정 최대 +1 번째 가짜 트랙으로 잰다.
         from server.design.beat_grid import LOVE_ATTACK_TITLE
         from server.design.beat_grid_probes import read_m1_probe_results_from_path
 
@@ -533,10 +543,14 @@ class TestLoveAttackIntegrationAgainstLiveM1Status:
             dimmer_attributes=dimmer_attributes,
             probe_results=probe_results,
         )
-        assert all(track.blocked_reason is not None for track in result.tracks)
-        assert all(
-            str(MEASURED_MAX_TIMECODE_TRACKS) in track.blocked_reason for track in result.tracks
+        *kept, overflow = result.tracks
+        assert overflow.blocked_reason is not None
+        assert str(MEASURED_MAX_TIMECODE_TRACKS) in overflow.blocked_reason
+        assert not any(
+            track.blocked_reason and str(MEASURED_MAX_TIMECODE_TRACKS) in track.blocked_reason
+            for track in kept
         )
+        assert result.commands
 
 
 class TestGate4PassedOnRealConsole:

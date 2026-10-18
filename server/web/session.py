@@ -9948,7 +9948,9 @@ class ChatSession:
             song_title=song_title,
             sections=record.accepted,
             bar_map=bar_map,
-            layout=self._beat_grid_view(current)["tracks"],
+            # 카드 WT-track-model — 이전 작업본(다른 곡·다른 무대일 수 있다)의 줄을 물려받지 않는다.
+            # 줄은 자동 배치가 콘솔 그룹으로 만든다(#817). 그동안 격자에 그 안내가 보인다.
+            layout=[],
             source_sha256=record.source_sha256,
             bpm=record.bpm.bpm,
             confirmed_at=record.confirmed_at,
