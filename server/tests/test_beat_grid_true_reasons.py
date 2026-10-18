@@ -56,7 +56,10 @@ def _nine_track_grid() -> dict:
 
 
 class TestApplyNamesTheBlockedTracks:
-    def test_a_track_over_the_timecode_limit_is_named_and_the_rest_are_sent(self, tmp_path) -> None:
+    def test_rows_over_one_timecode_are_split_and_none_is_left_unsent(self, tmp_path) -> None:
+        # 고치기 전(1081d374): 9트랙이 전부 막혀 "콘솔에 반영할 내용이 없습니다." 였다.
+        # 카드 WT-track-model PR2 — 이제 상한 +1 줄은 다음 타임코드로 나뉘어 막히는 줄이 없다.
+        # 넘친 줄의 사유 문면(에미터 단독 경로)은 아래 emit 시험이 그대로 잰다.
         status, _store, approval, _console = _apply_session(
             tmp_path,
             _nine_track_grid(),
@@ -64,11 +67,10 @@ class TestApplyNamesTheBlockedTracks:
             members={name: [101] for name in _NAMES},
         )
 
-        # 고치기 전(1081d374): 9트랙이 전부 막혀 "콘솔에 반영할 내용이 없습니다." 였다.
-        notice = f"보내지 않은 트랙 1개({_OVERFLOW}): {_OVER_LIMIT.format(tc=20)}"
         assert status["ok"] is True, status
-        assert notice in status["notices"]
-        assert notice in " ".join(approval.requests[0].items[0].risk_reasons)
+        assert not any("보내지 않은 트랙" in notice for notice in status.get("notices") or [])
+        risk = " ".join(approval.requests[0].items[0].risk_reasons)
+        assert "타임코드 2개(20, 21)에 나눠 담습니다" in risk
 
     def test_a_partly_blocked_apply_names_the_unsent_track_on_card_and_result(
         self, tmp_path
