@@ -98,6 +98,27 @@ function press(target: Element, shift = false) {
   });
 }
 
+/** 그림 한 개의 가운데 — 원(점)과 사각형(무빙·블라인드 칸) 모두. */
+function centreOf(el: Element): { x: number; y: number } {
+  if (el.tagName === "circle") return { x: Number(el.getAttribute("cx")), y: Number(el.getAttribute("cy")) };
+  return {
+    x: Number(el.getAttribute("x")) + Number(el.getAttribute("width")) / 2,
+    y: Number(el.getAttribute("y")) + Number(el.getAttribute("height")) / 2,
+  };
+}
+
+/** 누르는 칸이 이 점을 덮는가. */
+function covers(hit: Element, p: { x: number; y: number }): boolean {
+  const x = Number(hit.getAttribute("x"));
+  const y = Number(hit.getAttribute("y"));
+  return (
+    p.x >= x &&
+    p.x <= x + Number(hit.getAttribute("width")) &&
+    p.y >= y &&
+    p.y <= y + Number(hit.getAttribute("height"))
+  );
+}
+
 describe("무대 개념도 — 이름표와 자리를 누르면 그 자리의 줄을 고른다", () => {
   it("이름표를 누르면 그 자리를 맡는 줄을 고른다(보통 클릭은 shiftKey 가 거짓)", () => {
     const onSelectTrack = vi.fn();
@@ -147,5 +168,36 @@ describe("무대 개념도 — 이름표와 자리를 누르면 그 자리의 �
     expect(slotOf("BACK").querySelector("title")?.textContent).toBe("BACK — 눌러서 편집");
     render({ tracks: [track("BACK", "back", [4])] });
     expect(slotOf("BACK").querySelector("title")?.textContent).toBe("BACK — 이 마디에는 칸이 없어요");
+  });
+
+  it("맡는 줄이 있는 자리마다 누르는 칸이 있고, 맡는 줄이 없는 자리에는 없다", () => {
+    render({ onSelectTrack: vi.fn() });
+    expect(slotOf("BACK").querySelector("rect.beat-grid-concept-hit")).not.toBeNull();
+    render({ onSelectTrack: vi.fn(), tracks: [track("BACK", "back", [0])] });
+    expect(slotOf("SIDE-L").querySelector("rect.beat-grid-concept-hit")).toBeNull();
+  });
+
+  it("누르는 칸을 누르면(점 사이 빈 곳이어도) 그 줄을 고른다", () => {
+    const onSelectTrack = vi.fn();
+    render({ onSelectTrack });
+    press(slotOf("BACK").querySelector("rect.beat-grid-concept-hit") as Element);
+    expect(onSelectTrack).toHaveBeenCalledWith(0, false);
+  });
+
+  it("점과 장비 그림은 모두 그 줄의 누르는 칸 안에 있다 — 줄 가운데는 그 줄이다", () => {
+    render({ onSelectTrack: vi.fn() });
+    const groups = Array.from(container.querySelectorAll<SVGGElement>("g.beat-grid-stage-slot")).filter((g) =>
+      g.querySelector("rect.beat-grid-concept-hit"),
+    );
+    // BACK · U · D · SIDE-L · SIDE-R 다섯 자리에 줄이 있다(WASH·FOH·BLIND 는 맡는 줄이 없다).
+    expect(groups).toHaveLength(5);
+    for (const group of groups) {
+      const hit = group.querySelector("rect.beat-grid-concept-hit") as Element;
+      const figures = Array.from(group.querySelectorAll("circle, rect")).filter(
+        (el) => el !== hit && el.getAttribute("fill") !== "none",
+      );
+      expect(figures.length).toBeGreaterThan(0);
+      for (const figure of figures) expect(covers(hit, centreOf(figure))).toBe(true);
+    }
   });
 });

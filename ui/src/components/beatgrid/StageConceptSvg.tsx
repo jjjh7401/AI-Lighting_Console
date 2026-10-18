@@ -92,6 +92,8 @@ export function StageConceptSvg({
   const L0 = 60;
   const R0 = W - 60;
   const SW = R0 - L0;
+  // 줄의 누르는 칸 — 그 줄의 점과 이름표를 덮는 사각형(모서리 두 점). 칠한 곳이 없으면 점 사이는 배경이 받는다.
+  const area = (x1: number, y1: number, x2: number, y2: number) => ({ x: x1, y: y1, width: x2 - x1, height: y2 - y1 });
   const slots = conceptSlots(tracks, viewBar);
   const stateOf = (slot: ConceptSlot): ConceptSlotState =>
     slots.find((s) => s.slot === slot) ?? { slot, trackIndex: null, lit: false, color: OFF_FIXTURE_COLOR };
@@ -136,6 +138,7 @@ export function StageConceptSvg({
   const slotGroup = (
     slot: ConceptSlot,
     box: { x: number; y: number; width: number; height: number },
+    hit: { x: number; y: number; width: number; height: number },
     children: ReactNode,
   ) => {
     const state = stateOf(slot);
@@ -155,6 +158,18 @@ export function StageConceptSvg({
         onClick={onClick}
         style={onClick ? { cursor: "pointer" } : undefined}
       >
+        {/* 누르는 칸 — 점 사이의 빈 곳을 눌러도 이 줄이 받는다(칠이 없는 그룹은 점과 글자만 받았다). 점은 이 위에 그린다. */}
+        {onClick && (
+          <rect
+            className="beat-grid-concept-hit"
+            x={hit.x}
+            y={hit.y}
+            width={hit.width}
+            height={hit.height}
+            fill="transparent"
+            pointerEvents="all"
+          />
+        )}
         {track && <title>{`${track.group_name} — ${hint}`}</title>}
         {children}
         {selected && (
@@ -178,36 +193,36 @@ export function StageConceptSvg({
       <rect width={W} height={H} fill="#101014" />
       {/* 워시 면 — 시안 `ZB.wash` 자리 */}
       <rect x={L0} y={70} width={SW} height={170} fill="#1b1b22" stroke="#333" />
-      {slotGroup("wash", { x: L0 - 4, y: 66, width: SW + 8, height: 178 }, [
+      {slotGroup("wash", { x: L0 - 4, y: 66, width: SW + 8, height: 178 }, area(L0 + 12, 76, R0 - 12, 236), [
         ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 226, 5, `wf${i}`, stateOf("wash").color)),
         ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 86, 5, `wb${i}`, stateOf("wash").color)),
         label(L0 + 6, 250, "WASH"),
       ])}
-      {slotGroup("foh", { x: L0 + 30, y: 252, width: SW - 60, height: 24 }, [
+      {slotGroup("foh", { x: L0 + 30, y: 252, width: SW - 60, height: 24 }, area(L0 + 52, 256, R0 - 52, 290), [
         ...row(8, L0 + 60, R0 - 60).map((x, i) => lamp(x, 264, 5, `fo${i}`, stateOf("foh").color)),
         label(L0 + 44, 284, "FOH"),
       ])}
-      {slotGroup("back", { x: L0 - 10, y: 18, width: SW + 20, height: 24 }, [
+      {slotGroup("back", { x: L0 - 10, y: 18, width: SW + 20, height: 24 }, area(L0 + 4, 6, R0 - 4, 38), [
         ...row(12, L0 + 10, R0 - 10).map((x, i) => lamp(x, 30, 6, `ba${i}`, stateOf("back").color)),
         label(L0, 16, "BACK"),
       ])}
-      {slotGroup("side-l", { x: 14, y: 84, width: 28, height: 136 }, [
+      {slotGroup("side-l", { x: 14, y: 84, width: 28, height: 136 }, area(10, 66, 40, 220), [
         ...row(6, 92, 212).map((y, i) => lamp(28, y, 6, `sl${i}`, stateOf("side-l").color)),
         label(14, 76, "SIDE-L"),
       ])}
-      {slotGroup("side-r", { x: W - 42, y: 84, width: 28, height: 136 }, [
+      {slotGroup("side-r", { x: W - 42, y: 84, width: 28, height: 136 }, area(W - 50, 66, W - 8, 220), [
         ...row(6, 92, 212).map((y, i) => lamp(W - 28, y, 6, `sr${i}`, stateOf("side-r").color)),
         label(W - 14, 76, "SIDE-R", "end"),
       ])}
-      {slotGroup("u", { x: L0 + 18, y: 44, width: SW - 36, height: 22 }, [
+      {slotGroup("u", { x: L0 + 18, y: 44, width: SW - 36, height: 22 }, area(L0 - 16, 44, R0 + 10, 64), [
         ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("u", x, 54, i)),
         label(L0 - 14, 58, "U", "end"),
       ])}
-      {slotGroup("d", { x: L0 + 18, y: 110, width: SW - 36, height: 22 }, [
+      {slotGroup("d", { x: L0 + 18, y: 110, width: SW - 36, height: 22 }, area(L0 - 16, 110, R0 + 10, 130), [
         ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("d", x, 120, i)),
         label(L0 - 14, 124, "D", "end"),
       ])}
-      {slotGroup("blind", { x: W / 2 - 120, y: 33, width: 240, height: 16 }, [
+      {slotGroup("blind", { x: W / 2 - 120, y: 33, width: 240, height: 16 }, area(W / 2 - 120, 39, W / 2 + 120, 47), [
         ...row(6, W / 2 - 110, W / 2 + 110).map((x, i) => (
           <rect key={`bl${i}`} x={x - 9} y={41} width={18} height={8} fill={stateOf("blind").color} />
         )),
