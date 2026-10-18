@@ -108,6 +108,22 @@ function click(target: Element, keys: { shift?: boolean } = {}) {
     target.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey: !!keys.shift }));
   });
 }
+/** `run` 을 도는 동안 window 까지 올라온 잡히지 않은 오류. 이벤트 처리기가 던진 오류는 `dispatchEvent` 밖으로 나오지 않고
+ * jsdom 이 삼켜 `error` 이벤트로만 알리므로, `toThrow` 로는 보이지 않는다. */
+function uncaughtErrors(run: () => void): unknown[] {
+  const errors: unknown[] = [];
+  const onError = (event: ErrorEvent) => {
+    errors.push(event.error);
+    event.preventDefault();
+  };
+  window.addEventListener("error", onError);
+  try {
+    run();
+  } finally {
+    window.removeEventListener("error", onError);
+  }
+  return errors;
+}
 
 describe("칸 가로 끌기 — 올리는 옮기기 목록", () => {
   it("[보정] 이 DOM 에서 마디 한 칸은 42px 다 — 아래 끌기 거리의 근거", () => {
@@ -291,10 +307,11 @@ describe("onMoveCells 가 없으면", () => {
   it("끌어도 아무 일도 없다 — 던지지 않고, 포인터를 붙들지도 않고, 클릭은 예전처럼 칸을 고른다", () => {
     setup(TWO_ROWS(), { onMoveCells: undefined });
     const target = cellAt(0, 1);
-    expect(() => {
+    const errors = uncaughtErrors(() => {
       drag(target, 84);
       click(target);
-    }).not.toThrow();
+    });
+    expect(errors).toEqual([]);
     expect(setPointerCapture).not.toHaveBeenCalled();
     expect(selectedIndex()).toBe(1);
   });
@@ -313,7 +330,8 @@ describe("포인터 캡처", () => {
   it("setPointerCapture 가 없는 환경에서도 끌 수 있다", () => {
     delete (HTMLElement.prototype as unknown as Record<string, unknown>).setPointerCapture;
     const { onMoveCells } = setup(TWO_ROWS());
-    expect(() => drag(cellAt(0, 1), 84)).not.toThrow();
+    const errors = uncaughtErrors(() => drag(cellAt(0, 1), 84));
+    expect(errors).toEqual([]);
     expect(onMoveCells).toHaveBeenCalledWith([{ op: "move", group_name: "AAA", bar: 5, to_bar: 7 }]);
   });
 });
