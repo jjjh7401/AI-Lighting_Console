@@ -18,7 +18,7 @@ export const PARTIAL_RECORD_WARNING = "지운 값은 콘솔에 남을 수 있어
 export type PartialApplyPlan =
   | {
       kind: "ready";
-      /** 서버로 보낼 `[줄 이름, 마디]` — 칸 기록 기준이면 바뀐 칸만, 기록 기준이면 고른 칸 모두. */
+      /** 서버로 보낼 `[줄 이름, 마디]` — 칸 기록 기준이면 바뀐 칸과 콘솔 상태를 모르는 칸(콘솔과 같은 칸은 뺀다), 기록 기준이면 고른 칸 모두. */
       cells: [string, number][];
       /** 화면에 보이는 한 줄: 무엇을 보내는지(+ 못 보내는 칸이 있으면 그 사실). */
       note: string;
@@ -30,11 +30,23 @@ export type PartialApplyPlan =
       why: "no-record" | "nothing-picked" | "nothing-changed" | "too-many" | "bar-zero";
     };
 
+/** 서버 `known_cells`(`BeatGridView`) — 부분 칸 기록이 아는 칸 `[줄 이름, 마디]` 전수. `null`/`undefined` 는 모든 칸을 안다는 뜻이다
+ * (전체 기록이거나 기록이 없다). 빈 배열은 아는 칸이 하나도 없다는 뜻이라 모든 칸이 모르는 칸이다. */
+export type KnownCells = readonly (readonly [string, number])[] | null | undefined;
+
+/** `known_cells` → 칸 키 집합. `null` 이면 모든 칸을 안다(집합으로 거를 것이 없다). */
+export function knownKeySet(known: KnownCells): Set<string> | null {
+  return known === null || known === undefined
+    ? null
+    : new Set(known.map(([group_name, bar]) => cellKey({ group_name, bar })));
+}
+
 /** 서버로 보낼 칸 목록이 서버가 받는 꼴인지 거른다 — 0마디(앞박)는 빼고, 비었거나 상한을 넘으면 막는다. 칸 기록 기준과 기록
- * 기준이 같이 쓴다. 비어 있는 칸 목록은 절대 `ready` 로 내보내지 않는다(빈 `cells` 는 프레임에서 빠져 곡 전체 반영이 된다). */
+ * 기준이 같이 쓴다. 비어 있는 칸 목록은 절대 `ready` 로 내보내지 않는다(빈 `cells` 는 프레임에서 빠져 곡 전체 반영이 된다).
+ * `readyNote` 는 실제로 보낼 칸 목록과 (뺀 칸이 있으면) 그 안내를 받아 화면에 보일 한 줄을 만든다. */
 function wirePlan(
   cells: readonly CueCell[],
-  readyNote: (sent: number, skippedNote: string | null) => string,
+  readyNote: (sent: readonly (readonly [string, number])[], skippedNote: string | null) => string,
 ): PartialApplyPlan {
   const wire = wireCells(cells);
   if (wire.cells.length === 0) {
@@ -54,27 +66,36 @@ function wirePlan(
   return {
     kind: "ready",
     cells: wire.cells,
-    note: readyNote(wire.cells.length, wire.skipped > 0 ? skippedBarNote(wire.skipped) : null),
+    note: readyNote(wire.cells, wire.skipped > 0 ? skippedBarNote(wire.skipped) : null),
   };
+}
+
+/** 칸 기록 기준에서 고른 칸 가운데 콘솔과 같아 보내지 않고 뺀 칸이 있을 때 안내 끝에 붙는 말. */
+export function leftOutNote(count: number): string {
+  return `콘솔과 같아 뺀 ${count}칸`;
 }
 
 /** 「⇪ 콘솔에 반영」이 보낼 칸. 무엇을 기준으로 삼는지는 서버가 정한다(`baseline` = `beat_grid.partial_baseline`):
  * - `null`/`undefined`: 기준이 없어 막는다 — 「전체 다시 반영」을 먼저 눌러야 한다.
- * - `"record"`: 칸 기록이 없어 바뀐 칸을 모른다. 고른 칸을 **모두** 보낸다(`unsent` 로 거르지 않는다). 고른 칸이 없으면 막는다.
- *   지운 값은 가려내지 못해 콘솔에 남을 수 있다 — 안내에 그렇게 적는다.
- * - `"snapshot"`: `unsent`(마지막 반영 뒤 바뀐 칸)가 목록이다. 고른 칸이 있으면 그 칸들, 없으면 바뀐 칸 전부 중에서
- *   **바뀐 칸만** 보낸다. */
+ * - `"record"`: 칸 기록이 없어 바뀐 칸을 모른다. 고른 칸을 **모두** 보낸다(`unsent`·`known` 으로 거르지 않는다). 고른 칸이
+ *   없으면 막는다. 지운 값은 가려내지 못해 콘솔에 남을 수 있다 — 안내에 그렇게 적는다.
+ * - `"snapshot"`: `unsent`(마지막 반영 뒤 바뀐 칸)가 목록이다. `known` 은 칸 기록이 **부분**일 때 그 기록이 아는 칸이다
+ *   (없으면 모든 칸을 안다). 고른 칸이 있으면 갈라서: 아는 칸인데 안 바뀐 칸은 콘솔과 같아 **뺀다**(안내에 몇 칸 뺐는지 적는다).
+ *   바뀐 칸과 모르는 칸(`known` 에 없는 칸 — 콘솔과 같은지 알 수 없다)은 **보낸다**. 고른 칸이 없으면 바뀐 아는 칸 전부다.
+ *   보낼 칸이 하나도 없으면 막는다. */
 export function partialApplyPlan(
   unsent: readonly CueCell[] | null | undefined,
   picks: readonly CueCell[],
   baseline: BeatGridPartialBaseline | null | undefined,
+  known?: KnownCells,
 ): PartialApplyPlan {
   if (baseline === "record") {
     if (picks.length === 0) {
       return { kind: "blocked", reason: PARTIAL_NOTHING_PICKED_HINT, why: "nothing-picked" };
     }
     const unique = [...new Map(picks.map((cell) => [cellKey(cell), cell] as const)).values()];
-    return wirePlan(unique, (sent, skippedNote) => {
+    return wirePlan(unique, (sentCells, skippedNote) => {
+      const sent = sentCells.length;
       const picked = skippedNote === null ? `고른 ${sent}칸` : `고른 ${unique.length}칸 중 ${sent}칸`;
       return [`${picked}을 보내요 (기록 기준)`, PARTIAL_RECORD_WARNING, skippedNote].filter((part) => part !== null).join(" · ");
     });
@@ -82,25 +103,43 @@ export function partialApplyPlan(
   if (baseline !== "snapshot" || unsent === null || unsent === undefined) {
     return { kind: "blocked", reason: PARTIAL_NO_RECORD_HINT, why: "no-record" };
   }
+  const knownKeys = knownKeySet(known);
+  const isKnown = (cell: CueCell) => knownKeys === null || knownKeys.has(cellKey(cell));
   const changedKeys = new Set(unsent.map(cellKey));
-  const wanted = picks.length > 0 ? picks : unsent;
+  // 고른 칸이 없으면 바뀐 아는 칸 전부, 있으면 고른 칸들(같은 칸은 한 번만).
+  const wanted = picks.length > 0 ? picks : unsent.filter(isKnown);
   const seen = new Set<string>();
-  const changed = wanted.filter((cell) => {
+  const sendable: CueCell[] = [];
+  let same = 0;
+  for (const cell of wanted) {
     const key = cellKey(cell);
-    if (!changedKeys.has(key) || seen.has(key)) return false;
+    if (seen.has(key)) continue;
     seen.add(key);
-    return true;
-  });
-  if (changed.length === 0) {
+    // 바뀐 칸과 모르는 칸은 보내고, 아는데 안 바뀐 칸은 콘솔과 같으니 뺀다.
+    if (changedKeys.has(key) || !isKnown(cell)) sendable.push(cell);
+    else same += 1;
+  }
+  if (sendable.length === 0) {
     return {
       kind: "blocked",
       reason: picks.length > 0 ? PARTIAL_PICKED_NOTHING_CHANGED_HINT : PARTIAL_NOTHING_CHANGED_HINT,
       why: "nothing-changed",
     };
   }
-  return wirePlan(changed, (sent, skippedNote) => {
-    const scope = picks.length > 0 ? `고른 ${picks.length}칸 중 바뀐 ${sent}칸만 보내요` : `바뀐 ${sent}칸만 보내요`;
-    return skippedNote === null ? scope : `${scope} · ${skippedNote}`;
+  return wirePlan(sendable, (sentCells, skippedNote) => {
+    const sent = sentCells.length;
+    const changedSent = sentCells.filter(([group_name, bar]) => changedKeys.has(cellKey({ group_name, bar }))).length;
+    const unknownSent = sent - changedSent;
+    let scope: string;
+    if (picks.length === 0) {
+      scope = `바뀐 ${sent}칸만 보내요`;
+    } else if (unknownSent === 0) {
+      scope = `고른 ${seen.size}칸 중 바뀐 ${sent}칸만 보내요`;
+    } else {
+      const detail = [changedSent > 0 ? `바뀐 ${changedSent}칸` : null, `콘솔 상태를 모르는 ${unknownSent}칸`];
+      scope = `고른 ${seen.size}칸 중 ${sent}칸을 보내요 (${detail.filter((part) => part !== null).join(" · ")})`;
+    }
+    return [scope, same > 0 ? leftOutNote(same) : null, skippedNote].filter((part) => part !== null).join(" · ");
   });
 }
 
@@ -158,9 +197,16 @@ export function unsentKeySet(unsent: readonly CueCell[] | null | undefined): Set
   return unsent === null || unsent === undefined ? null : new Set(unsent.map(cellKey));
 }
 
-/** 칸 하나가 콘솔과 같은지: 바뀐 칸 집합에 있으면 앱에서만 바뀜, 집합은 있는데 없으면 콘솔과 같음, 집합이 없으면 표시 없음. */
-export function cueSyncMark(unsentKeys: ReadonlySet<string> | null, cell: CueCell): CueSyncMark | null {
+/** 칸 하나가 콘솔과 같은지: 바뀐 칸 집합에 있으면 앱에서만 바뀜, 집합은 있는데 없으면 콘솔과 같음, 집합이 없으면 표시 없음.
+ * `knownKeys`(`knownKeySet(known_cells)`)가 집합이고 그 칸이 거기 없으면 콘솔과 같은지 **모르는** 칸이라 표시하지 않는다 —
+ * 같다고도 다르다고도 말하지 않는다. `null`(생략)이면 모든 칸을 안다. */
+export function cueSyncMark(
+  unsentKeys: ReadonlySet<string> | null,
+  cell: CueCell,
+  knownKeys: ReadonlySet<string> | null = null,
+): CueSyncMark | null {
   if (unsentKeys === null) return null;
+  if (knownKeys !== null && !knownKeys.has(cellKey(cell))) return null;
   return unsentKeys.has(cellKey(cell))
     ? { kind: "app-only", glyph: "✎", label: CUE_SYNC_APP_ONLY_LABEL }
     : { kind: "in-sync", glyph: "✓", label: CUE_SYNC_IN_SYNC_LABEL };
