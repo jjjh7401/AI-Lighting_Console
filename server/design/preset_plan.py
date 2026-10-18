@@ -463,17 +463,38 @@ def _planned_base_names(annotations: Mapping[str, object]) -> dict[tuple[int, in
     return names
 
 
+def _members_covered(
+    members: Mapping[str, Sequence[int]] | None, group: str, stored_for: Sequence[str]
+) -> bool:
+    """``group`` 의 장비가 전부 ``stored_for`` 그룹들의 장비 안에 있는가(소속 판독 기준).
+    이 그룹 소속을 못 읽었으면 거짓이다. 못 읽은 저장 그룹은 덮는 쪽에 넣지 않는다."""
+    if not members:
+        return False
+    by_name = {name.casefold(): fids for name, fids in members.items()}
+    wanted = set(by_name.get(group.casefold()) or ())
+    if not wanted:
+        return False
+    stored: set[int] = set()
+    for name in stored_for:
+        stored.update(by_name.get(name.casefold()) or ())
+    return wanted <= stored
+
+
 def _reusable_color_slot(
     grid: Mapping[str, object],
     color_pool: PoolRead,
     rgb: tuple[int, int, int] | None,
     group: str,
+    *,
+    members: Mapping[str, Sequence[int]] | None = None,
 ) -> str | None:
     """콘솔에 이미 있는 같은 RGB·같은 그룹의 색 번호(「pool.slot」).
     격자가 그 번호의 RGB 를 기록하고 있고, 그 번호에 **이 그룹의 값이 담겨 있어야** 한다.
 
     - 저장할 때 담은 그룹이 기록돼 있으면(``preset_colors[...]["group"/"groups"]``) 그 그룹들만
-      쓴다.
+      쓴다. 이름이 달라도 ``members``(콘솔 그룹 소속 판독)로 이 그룹의 장비가 전부 그 그룹들
+      안에 있으면 같은 번호를 쓴다(WT-back-side-dark — SIDE-L 은 SIDE-ALL 로 저장한 색에 담겨
+      있는데 이름만 보고 4.162 에 다시 저장했다).
     - 기록이 없는 옛 번호는 누가 담겼는지 모른다 — 그 번호를 쓰는 칸이 있고 전부 이 그룹일
       때만 쓴다. 쓰는 칸이 없으면 쓰지 않는다(1차 전체 실행: 4.106 은 WASH-ALL 만 담겼는데,
       새 분석으로 격자가 비자 무빙 그룹들이 같은 RGB 라며 재사용해 색이 안 들어갈 수 있었다).
@@ -497,6 +518,8 @@ def _reusable_color_slot(
         if stored_for is not None:
             # 대화 상자 대상은 손 입력일 수 있다 — 대소문자는 가리지 않는다.
             if group.casefold() in {name.casefold() for name in stored_for}:
+                return number
+            if _members_covered(members, group, stored_for):
                 return number
             continue
         users = {
@@ -880,6 +903,7 @@ def _planned_color_presets(
     reserved: list[str],
     unresolved: list[str],
     fixes: list[str],
+    group_members: Mapping[str, Sequence[int]] | None = None,
 ) -> None:
     """자동 배치가 칸에 실은 계획 색(``planned_color``)을 색 후보로 센다. 결과는 ``presets`` 에
     새 후보·재사용으로 더하거나, 같은 그룹의 주석 색 후보에 칸을 보탠다.
@@ -964,7 +988,7 @@ def _planned_color_presets(
         # 그룹마다 그 그룹을 담아 저장한 번호가 있으면 재사용한다 — 번호별로 칸을 모은다.
         reuse_groups: dict[str, list[str]] = {}
         for group in remaining:
-            reused_slot = _reusable_color_slot(grid, color_pool, rgb, group)
+            reused_slot = _reusable_color_slot(grid, color_pool, rgb, group, members=group_members)
             if reused_slot is not None:
                 reuse_groups.setdefault(reused_slot, []).append(group)
         for reused_slot, groups in reuse_groups.items():
@@ -1213,6 +1237,7 @@ def build_preset_plan(
     effect_pool: PoolRead = None,
     bpm: float | None = None,
     beats_per_bar: int | None = None,
+    group_members: Mapping[str, Sequence[int]] | None = None,
 ) -> LoveAttackPlan:
     """격자 칸에서 새로 만들 프리셋 계획을 만든다(콘솔 무접촉, 순수 함수).
 
@@ -1390,7 +1415,10 @@ def build_preset_plan(
         # 쓴다. 그룹마다 번호가 다르면 한 번호로 묶을 수 없으니 새로 저장한다.
         reused = None
         if cells:
-            slots = {_reusable_color_slot(grid, color_pool, _rgb_key(rgb), g) for g in groups}
+            slots = {
+                _reusable_color_slot(grid, color_pool, _rgb_key(rgb), g, members=group_members)
+                for g in groups
+            }
             if len(slots) == 1:
                 (reused,) = slots
         # 칸이 없는 색은 번호를 잡지 않는다 — 쓰지 않을 빈 번호를 점유하지 않으려고.
@@ -1485,6 +1513,7 @@ def build_preset_plan(
         reserved=reserved,
         unresolved=unresolved,
         fixes=fixes,
+        group_members=group_members,
     )
 
     # -- 칸 하나의 왼쪽·오른쪽 따로 색: 색이 정해진 쪽마다 색 후보 한 줄 ------------------

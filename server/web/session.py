@@ -77,6 +77,7 @@ from server.design.beat_grid import (
 )
 from server.design.beat_grid_color_presets import (
     attach_color_rgb_to_drawer,
+    color_preset_groups,
     color_preset_outcomes,
     color_preset_rgb,
     record_color_preset_rgb,
@@ -915,6 +916,14 @@ def _color_failure_note(failures: Mapping[str, str]) -> str:
     if not failures:
         return ""
     return " 색 미반영: " + "; ".join(failures.values()) + "."
+
+
+def _recorded_color_groups(grid: Mapping[str, object]) -> set[str]:
+    """격자 색 기록(``preset_colors``)이 「담아 저장했다」고 적은 그룹 이름 전부."""
+    records = grid.get("preset_colors")
+    if not isinstance(records, Mapping):
+        return set()
+    return {name for number in records for name in color_preset_groups(grid, str(number)) or ()}
 
 
 def _registry_state_query(registry):
@@ -11057,8 +11066,21 @@ class ChatSession:
         # BPM·마디당 박 수는 곡 데이터(bar_map)에서만 읽는다 — 못 읽으면 효과 줄은 「미정」이다.
         bpm, beats_per_bar = effect_plan_timing(timeline)
         group_names = [str(track.get("group_name")) for track in grid.get("tracks") or []]
+        # WT-back-side-dark ③ — 색 재사용은 그룹 이름이 달라도 소속 장비가 덮이면 같은 번호를 쓴다
+        # (SIDE-L 은 SIDE-ALL 로 저장한 색에 담겨 있다). 트랙 그룹 소속은 디머 단계가 캐시에 넣은
+        # 것을 쓰고, 색 기록에만 있는 그룹이 있고 색 풀을 읽었을 때만 소속을 더 읽는다.
         dimmer_attributes = self._beat_grid_preset_dimmer_attributes(group_names)
         apply_stage("plan_dimmer_attributes")
+        tracks_upper = {name.upper() for name in group_names}
+        extra_groups = sorted(
+            name for name in _recorded_color_groups(grid) if name.upper() not in tracks_upper
+        )
+        if extra_groups and color_pool is not None:
+            group_members = self._beat_grid_group_members([*group_names, *extra_groups])
+        else:
+            group_members = (
+                self._rig_read_cache.get(KIND_MEMBERS, self._group_members_key(group_names)) or {}
+            )
         plan = build_preset_plan(
             grid,
             annotations=load_preset_annotations(timeline.get("song_title")),
@@ -11070,6 +11092,7 @@ class ChatSession:
             effect_pool=effect_pool,
             bpm=bpm,
             beats_per_bar=beats_per_bar,
+            group_members=group_members,
         )
         apply_stage("plan_build")
         plan = self._beat_grid_preset_plan_stores(plan, grid, all_groups=group_names)
@@ -12605,11 +12628,19 @@ class ChatSession:
         commands = transport_commands(
             (timecode_number, *self._beat_grid_owned_extra_timecodes()), verbs
         )
-        sequences = self._beat_grid_owned_sequence_numbers() if stop else ()
-        # 2차 전체 실행 G-22·I-03 — `Off Timecode` 만으로는 이미 켜진 시퀀스가 남아 곡 끝·정지
-        # 뒤에도 무대가 계속 바뀌었다. 실기 해제 묶음(t506 §9, t520
-        # `approval_m2a_play_b2.txt`)대로 타임코드를 끈 다음 그 트랙의 시퀀스를 하나씩 끈다.
-        commands += tuple(f"Off Sequence {number}" for number in sequences)
+        rewind = "Top" in verbs
+        sequences = self._beat_grid_owned_sequence_numbers() if stop or rewind else ()
+        offs = tuple(f"Off Sequence {number}" for number in sequences)
+        if rewind:
+            # WT-back-side-dark — 트랙 이벤트는 ``Go+`` 이고 시퀀스는 감김이 꺼져 있다(#816).
+            # 지난 재생의 마지막 큐에 선 시퀀스는 ``Go+`` 로 큐 1 에 돌아가지 않아 두 번째 ▶ 부터
+            # 곡 내내 꺼져 있었다(실기 2026-10-18). 되감기 전에 시퀀스를 꺼서 큐 1 부터 시작한다.
+            commands = offs + commands
+        else:
+            # 2차 전체 실행 G-22·I-03 — `Off Timecode` 만으로는 이미 켜진 시퀀스가 남아 곡 끝·정지
+            # 뒤에도 무대가 계속 바뀌었다. 실기 해제 묶음(t506 §9, t520
+            # `approval_m2a_play_b2.txt`)대로 타임코드를 끈 다음 그 트랙의 시퀀스를 하나씩 끈다.
+            commands += offs
         if self._preview_approval.is_approved:
             refusal = self._beat_grid_send_transport_preapproved(commands)
         else:
