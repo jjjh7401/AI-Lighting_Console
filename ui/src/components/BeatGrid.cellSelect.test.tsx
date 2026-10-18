@@ -631,7 +631,7 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
       const { handlers } = setup(THREE_BY_THREE(), {}, SNAPSHOT);
       clickCue(0, 0);
       clickCue(2, 1, { shift: true }); // 6칸 — 바뀐 칸 가운데 AAA1·BBB3 이 든다(CCC5 는 밖)
-      expect(scope()).toBe("고른 6칸 중 바뀐 2칸만 보내요");
+      expect(scope()).toBe("고른 6칸 중 바뀐 2칸만 보내요 · 콘솔과 같아 뺀 4칸");
       act(() => mainApply().click());
       expect(handlers.onApplyCells).toHaveBeenCalledWith([
         ["AAA", 1],
@@ -655,6 +655,82 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
       setup(THREE_BY_THREE(), {}, { unsent_cells: [], partial_baseline: "snapshot" });
       expect(mainApply().disabled).toBe(true);
       expect(mainApply().title).toBe("바뀐 칸이 없어요");
+    });
+  });
+
+  // 칸 단위 반영만 한 곡의 칸 기록은 부분이다 — 서버가 아는 칸을 known_cells 로 싣는다(unsent_cells 는 그 가운데 바뀐 칸).
+  // 아는데 안 바뀐 칸은 콘솔과 같아 빼고, 바뀐 칸과 모르는 칸은 보낸다.
+  describe("칸 기록이 부분일 때(known_cells)", () => {
+    // 아는 칸: AAA1 · AAA3 · BBB1 / 그 가운데 바뀐 칸: AAA3 / 나머지 여섯 칸은 모르는 칸.
+    const PARTIAL: Partial<BeatGridView> = {
+      unsent_cells: [{ group_name: "AAA", bar: 3 }],
+      known_cells: [
+        ["AAA", 1],
+        ["AAA", 3],
+        ["BBB", 1],
+      ],
+      partial_baseline: "snapshot",
+    };
+
+    it("고른 칸을 갈라 — 아는데 안 바뀐 칸은 빼고, 바뀐 칸과 모르는 칸은 보낸다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, PARTIAL);
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true }); // AAA1 AAA3 BBB1 BBB3 CCC1 CCC3
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).toBe(
+        "고른 6칸 중 4칸을 보내요 (바뀐 1칸 · 콘솔 상태를 모르는 3칸) · 콘솔과 같아 뺀 2칸",
+      );
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["AAA", 3], // 바뀐 칸
+        ["BBB", 3], // 모르는 칸
+        ["CCC", 1], // 모르는 칸
+        ["CCC", 3], // 모르는 칸
+      ]);
+    });
+
+    it("고른 칸이 없으면 바뀐 아는 칸만 보낸다 — 모르는 칸은 고르지 않으면 안 보낸다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, PARTIAL);
+      expect(scope()).toBe("바뀐 1칸만 보내요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([["AAA", 3]]);
+    });
+
+    it("아는데 안 바뀐 칸만 골랐으면 꺼지고 「고른 칸 중 바뀐 칸이 없어요」", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, PARTIAL);
+      clickCue(0, 0); // AAA1
+      clickCue(1, 0, { ctrl: true }); // BBB1 을 더한다 — 둘 다 아는데 안 바뀐 칸
+      expect(multiCount()).toBe(2);
+      expect(mainApply().disabled).toBe(true);
+      expect(mainApply().title).toBe("고른 칸 중 바뀐 칸이 없어요");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
+    });
+
+    it("모르는 칸만 골라도 켜지고 모두 보낸다 — 같다고 보지 않는다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, PARTIAL);
+      clickCue(2, 0); // CCC1
+      clickCue(2, 1, { ctrl: true }); // CCC3 을 더한다 — 둘 다 모르는 칸
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).toBe("고른 2칸 중 2칸을 보내요 (콘솔 상태를 모르는 2칸)");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["CCC", 1],
+        ["CCC", 3],
+      ]);
+    });
+
+    it("known_cells 가 없는 전체 기록이면 예전처럼 안 바뀐 칸은 모두 뺀다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT, partial_baseline: "snapshot" });
+      clickCue(0, 0);
+      clickCue(2, 1, { shift: true }); // 6칸 가운데 바뀐 칸은 AAA1·BBB3 뿐 — 모르는 칸은 없다
+      expect(scope()).toBe("고른 6칸 중 바뀐 2칸만 보내요 · 콘솔과 같아 뺀 4칸");
+      act(() => mainApply().click());
+      expect(handlers.onApplyCells).toHaveBeenCalledWith([
+        ["AAA", 1],
+        ["BBB", 3],
+      ]);
     });
   });
 
@@ -942,6 +1018,57 @@ describe("칸별 표시 — 앱에서만 바뀜 · 콘솔과 같음", () => {
   it("기록 기준(record)이어도 unsent_cells 가 null 이면 아무 표시도 없다 — 칸 단위로 보낼 수 있는 것과 별개다", () => {
     setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: "record" });
     expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+  });
+
+  describe("칸 기록이 부분일 때(known_cells) — 모르는 칸에는 표시가 없다", () => {
+    // 아는 칸: AAA1(0번) · AAA3(1번) · BBB1(3번) / 그 가운데 바뀐 칸: AAA3 / 나머지 여섯 칸(2·4~8번)은 모르는 칸.
+    const PARTIAL: Partial<BeatGridView> = {
+      unsent_cells: [{ group_name: "AAA", bar: 3 }],
+      known_cells: [
+        ["AAA", 1],
+        ["AAA", 3],
+        ["BBB", 1],
+      ],
+      partial_baseline: "snapshot",
+    };
+
+    it("아는 칸만 표시한다 — 바뀐 칸은 앱에서만 바뀜, 안 바뀐 칸은 콘솔과 같음, 모르는 칸은 없음", () => {
+      setup(THREE_BY_THREE(), {}, PARTIAL);
+      expect(syncOf(1)?.classList.contains("is-app-only")).toBe(true); // AAA3
+      expect(syncOf(0)?.classList.contains("is-in-sync")).toBe(true); // AAA1
+      expect(syncOf(3)?.classList.contains("is-in-sync")).toBe(true); // BBB1
+      for (const unknown of [2, 4, 5, 6, 7, 8]) expect(syncOf(unknown)).toBeNull();
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(3);
+    });
+
+    it("known_cells 가 없으면(전체 기록) 모든 칸이 아는 칸이라 아홉 칸 모두 표시한다", () => {
+      setup(THREE_BY_THREE(), {}, { unsent_cells: [{ group_name: "AAA", bar: 3 }], partial_baseline: "snapshot" });
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(9);
+    });
+
+    it("아는 칸이 하나도 없으면(빈 배열) 아무 표시도 없다", () => {
+      setup(THREE_BY_THREE(), {}, { unsent_cells: [], known_cells: [], partial_baseline: "snapshot" });
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+    });
+
+    it("known_cells 가 있어도 unsent_cells 가 null 이면 아무 표시도 없다", () => {
+      setup(THREE_BY_THREE(), {}, { unsent_cells: null, known_cells: [["AAA", 1]], partial_baseline: "snapshot" });
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(0);
+    });
+
+    it("격자가 새로 오면 아는 칸이 늘어난 대로 표시가 따라온다", () => {
+      const { render } = setup(THREE_BY_THREE(), {}, PARTIAL);
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(3);
+      render({}, { known_cells: [...(PARTIAL.known_cells ?? []), ["CCC", 1]] });
+      expect(container.querySelectorAll(".beat-grid-cue-sync").length).toBe(4);
+      expect(syncOf(6)?.classList.contains("is-in-sync")).toBe(true); // CCC1
+    });
+
+    it("고친 칸의 초록 강조(is-edited)는 아는 칸 여부와 상관없이 unsent_cells 를 따른다", () => {
+      setup(THREE_BY_THREE(), {}, PARTIAL);
+      expect(cueButtons()[1].classList.contains("is-edited")).toBe(true); // AAA3
+      expect(cueButtons()[0].classList.contains("is-edited")).toBe(false);
+    });
   });
 
   it("필드가 없는 옛 서버 응답(undefined)에도 아무 표시가 없다", () => {

@@ -38,6 +38,7 @@ __all__ = [
     "BeatGridCellKey",
     "CELL_UNCHANGED_REASON",
     "CellApplyUnits",
+    "PartialCellSnapshot",
     "SUBSET_FORBIDDEN_PREFIXES",
     "apply_beat_grid_ownership_reuse",
     "cell_apply_units",
@@ -52,6 +53,7 @@ __all__ = [
     "partial_apply_baseline",
     "recorded_cue_conflict",
     "removed_cue_fields",
+    "snapshot_known_cells",
     "song_end_seconds_from_bar_map",
     "beat_grid_cell_snapshot",
     "beat_grid_reapply_summary",
@@ -394,6 +396,14 @@ def beat_grid_cell_snapshot(grid: Mapping[str, object]) -> dict[BeatGridCellKey,
     return snapshot
 
 
+class PartialCellSnapshot(dict[BeatGridCellKey, object]):
+    """칸 단위 반영만 한 곡의 **부분** 칸 기록 — 보낸 칸의 값만 담는다(서버를 다시 띄워 칸 기록이
+    없어진 뒤 칸 단위로 먼저 보낸 곡). 기록에 없는 칸은 콘솔과 같은지 다른지 **모른다** — 바뀐
+    칸으로 세지도, 같다고 하지도 않는다(:func:`unsent_beat_grid_cells`). 부분 표지는 이 클래스
+    자체다 — 기록 객체와 따로 놓일 수 없어서 어느 읽는 자리에서도 빠지지 않고, 전체 반영이 기록을
+    일반 사전으로 통째로 갈아 끼우면 표지도 함께 사라진다."""
+
+
 def unsent_beat_grid_cells(
     grid: Mapping[str, object], snapshot: Mapping[BeatGridCellKey, object] | None
 ) -> list[dict[str, object]] | None:
@@ -402,17 +412,32 @@ def unsent_beat_grid_cells(
 
     ``snapshot``이 ``None``이면(이 곡으로 반영을 한 번도 하지 않았다)
     ``None``을 돌려준다 — **빈 리스트와 다른 사실**이다("반영 기록이
-    없다" vs "반영 기록과 지금이 일치한다", 코디네이터 계약 2항)."""
+    없다" vs "반영 기록과 지금이 일치한다", 코디네이터 계약 2항).
+
+    ``snapshot`` 이 부분 기록(:class:`PartialCellSnapshot`)이면 기록에 있는 칸만 비교한다 — 기록에
+    없는 칸은 모르는 칸이라 목록에 넣지 않는다. 기록에는 있는데 격자에서 사라진 칸은 바뀐 칸이다."""
     if snapshot is None:
         return None
     current = beat_grid_cell_snapshot(grid)
-    keys = set(current) | set(snapshot)
+    keys = (
+        set(snapshot) if isinstance(snapshot, PartialCellSnapshot) else set(current) | set(snapshot)
+    )
     unsent = [
         {"group_name": group_name, "bar": bar}
         for group_name, bar in sorted(keys)
         if _cell_differs(current.get((group_name, bar)), snapshot.get((group_name, bar)))
     ]
     return unsent
+
+
+def snapshot_known_cells(
+    snapshot: Mapping[BeatGridCellKey, object] | None,
+) -> list[list[object]] | None:
+    """부분 기록이 아는 칸 — 정렬한 ``[[줄 이름, 마디], …]``. 부분 기록이 아니면(기록이 없거나 전체
+    기록) ``None``이다 — 전체 기록은 모든 칸을 알아서 따로 적을 것이 없다."""
+    if not isinstance(snapshot, PartialCellSnapshot):
+        return None
+    return [[group_name, bar] for group_name, bar in sorted(snapshot)]
 
 
 def _cell_differs(now: object, then: object) -> bool:
@@ -784,8 +809,15 @@ def merge_cell_snapshot(
 ) -> dict[BeatGridCellKey, object]:
     """칸 단위 반영 뒤의 「콘솔에 반영」 스냅샷 — 기존 기록의 사본에서 반영한 칸만 지금 값
     (``current``)으로 갈아 끼운다. 반영하지 않은 칸은 옛 기록 그대로라 계속 미반영으로 남는다.
-    기존 기록이 없으면 빈 기록에서 시작한다(그러면 나머지 칸은 모두 미반영이다)."""
-    merged = dict(existing) if existing is not None else {}
+    기록의 종류는 그대로 잇는다 — 전체 기록은 일반 사전으로, 부분 기록은 부분 기록으로. 기존 기록이
+    없으면(서버를 다시 띄운 뒤 첫 칸 단위 반영) 보낸 칸만 담은 **부분** 기록
+    (:class:`PartialCellSnapshot`)을 만든다 — 나머지 칸은 콘솔과 같은지 모르므로 전체 기록이
+    아니다."""
+    merged: dict[BeatGridCellKey, object]
+    if existing is None or isinstance(existing, PartialCellSnapshot):
+        merged = PartialCellSnapshot(existing or {})
+    else:
+        merged = dict(existing)
     for key in applied:
         merged[key] = current[key]
     return merged

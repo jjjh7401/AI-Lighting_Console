@@ -635,6 +635,10 @@ export interface BeatGridView {
    * 있어 `unsent_cells` 가 목록이다 · `"record"` = 칸 기록은 없지만 이 곡의 반영 기록(소유 기록)이 있어 고른 칸을 모두
    * 보낸다(`unsent_cells` 는 `null`) · `null` = 둘 다 없어 칸 단위로 못 보낸다. 필드가 없는 옛 서버 응답이면 `undefined`. */
   partial_baseline?: BeatGridPartialBaseline | null;
+  /** 칸 기록이 **부분**일 때만 있다 — 기록 기준 칸 단위 반영이 만든 기록이 아는 칸 전수(`[줄 이름, 마디]`). 목록에 없는
+   * 칸은 콘솔과 같은지 다른지 모른다(`unsent_cells` 에도 안 센다). 키가 없으면(전체 기록이거나 기록이 없다) 모든 칸을 안다.
+   * `unsent_cells` 는 이 가운데 바뀐 칸이다. */
+  known_cells?: [string, number][] | null;
   /** 카드 t570(REQ-LDBEAT-024(a)) — 「콘솔 같이」 토글이 쓸 음원 지연(초).
    * `server/design/beat_grid_data/console_audio_offset.yaml`(t520 실측)
    * 출처 — 코드 상수가 아니다. 출처가 없으면 `null`, 필드가 없는 옛 서버

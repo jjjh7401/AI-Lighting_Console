@@ -153,6 +153,7 @@ from server.design.beat_grid_send import (
     CELL_UNCHANGED_REASON,
     BeatGridCellKey,
     CellApplyUnits,
+    PartialCellSnapshot,
     _owned_sequence_names,
     _same_owned_sequence_name,
     apply_beat_grid_ownership_reuse,
@@ -172,6 +173,7 @@ from server.design.beat_grid_send import (
     partial_apply_baseline,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
+    snapshot_known_cells,
     song_end_seconds_from_bar_map,
     timecode_overwrite_note,
     unsent_beat_grid_cells,
@@ -4078,7 +4080,10 @@ class SongTimelineStore:
         # 카드 t635 — 「콘솔에 반영」 스냅샷(곡별 칸 기록). ``ChatSession._beat_grid_snapshots``
         # 와 같은 사전을 여기서 공유한다. ChatSession 은 연결마다 새로 만들어지므로 연결 안에
         # 두면 새로고침·두 번째 탭이 기록을 잃는다. 콘솔이 하나라 저장소(프로세스 단위)가 맞는
-        # 수명이다. 파일에 저장하지 않는다 — 재시작하면 빈 상태(지금과 같다).
+        # 수명이다. 파일에 저장하지 않는다 — 재시작하면 빈 상태(지금과 같다). 값은 전체 반영이 만든
+        # 일반 사전(모든 칸을 안다) 또는 칸 단위 반영이 만든 ``PartialCellSnapshot``(보낸 칸만
+        # 안다)이다 — 부분 표지는 값의 클래스라서 읽는 자리마다 따로 넘길 필요가 없고, 전체 반영이
+        # 값을 갈아 끼우면 함께 사라진다.
         self.beat_grid_snapshots: dict[tuple[object, object], dict[BeatGridCellKey, object]] = {}
         # 카드 t651 — 콘솔 프리셋 풀의 마지막 「완전 판독」(풀 번호 → {slot: 이름}, 못 읽었으면
         # None). ``ChatSession._beat_grid_pool_slots`` 와 같은 사전을 여기서 공유한다. 연결마다
@@ -4431,7 +4436,9 @@ def derive_beat_grid_fields(
     계속 넘겨야 한다. ``pool_read_at`` 은 풀 번호 -> 그 풀을 콘솔에서 마지막으로 읽은
     시각이다(카드 t651) — 있으면 ``empty_preset_read_at`` 으로 함께 싣는다.
     ``has_owned_record`` 는 이 곡의 반영 기록(소유 기록)에 줄이 있는가다 — 칸 기록이 없을 때
-    칸 단위 반영이 기록을 기준으로 삼을 수 있는지를 ``partial_baseline`` 으로 싣는다."""
+    칸 단위 반영이 기록을 기준으로 삼을 수 있는지를 ``partial_baseline`` 으로 싣는다. 칸 기록이
+    부분 기록(``PartialCellSnapshot``)이면 ``unsent_cells`` 는 아는 칸 가운데 바뀐 칸이고, 아는 칸
+    전수는 ``known_cells`` 로 싣는다."""
     grid = timeline.get("beat_grid")
     if not isinstance(grid, Mapping):
         return timeline
@@ -4443,11 +4450,20 @@ def derive_beat_grid_fields(
     grid = {**grid, "probe_results": read_m1_probe_results_from_path(default_progress_md_path())}
     updated_grid = dict(grid)
     updated_grid["unsent_cells"] = unsent_beat_grid_cells(grid, snapshot)
-    # 칸 단위 반영의 기준 — "snapshot"(unsent_cells 가 목록) · "record"(칸 기록은 없고 소유 기록이
-    # 있다 — unsent_cells 는 null 이지만 고른 칸을 보낼 수 있다) · null(둘 다 없다).
+    # 칸 단위 반영의 기준 — "snapshot"(칸 기록이 있다: unsent_cells 가 목록) · "record"(칸 기록은
+    # 없고 소유 기록이 있다 — unsent_cells 는 null 이지만 고른 칸을 보낼 수 있다) · null(둘 다
+    # 없다).
     updated_grid["partial_baseline"] = partial_apply_baseline(
         has_snapshot=snapshot is not None, has_owned_record=has_owned_record
     )
+    # 칸 기록이 **부분**(칸 단위 반영만 한 곡)일 때만 아는 칸을 싣는다. 목록에 없는 칸은 콘솔과
+    # 같은지 모른다 — 전체 기록이거나 기록이 없으면 키를 싣지 않는다(저장된 격자에 남은 옛 키도
+    # 걷는다).
+    known_cells = snapshot_known_cells(snapshot)
+    if known_cells is not None:
+        updated_grid["known_cells"] = known_cells
+    else:
+        updated_grid.pop("known_cells", None)
     # 카드 t579(REQ-LDBEAT-010) — 편집으로 모양이 바뀐 칸도 배지가 따라오게
     # 같은 자리에서 다시 계산한다(격자의 ``probe_results`` = 서빙 때 읽은 M1 표).
     updated_grid["unverified_cells"] = unverified_beat_grid_cells(grid)
@@ -11978,14 +11994,16 @@ class ChatSession:
         ``cells``(고른 (줄 이름, 마디) 칸)가 있으면 **칸 단위 반영**이다 — 계획은 위와 똑같이 세우고
         (큐 번호도 전체 반영과 같다) 고른 칸의 큐만 남겨, 콘솔에 이미 있는 시퀀스에 ``/Merge`` 로
         덧쓴다. 타임코드·프리셋 만들기·시퀀스 새로 만들기는 한 줄도 보내지 않는다. 기준은 둘이다 —
-        마지막 반영의 칸 기록(스냅샷)이 있으면 바뀐 칸만 보내고(같은 칸은 ``not_applied``, 지운
-        항목이 있는 칸도 ``/Merge`` 가 지우지 못해 ``not_applied``), 칸 기록이 없어도(서버를 다시
-        띄운 뒤) 소유 기록이 있으면 고른 칸을 모두 보낸다(``subset.baseline`` = ``"record"`` —
-        지운 항목은 가려낼 수 없고, 칸 기록은 새로 만들지 않는다). 둘 다 없는 곡·콘솔에 아직 없는
-        줄·이미 콘솔과 같은 칸뿐인 선택·빈 프리셋 보류/새로 만들 프리셋과 얽힌 칸은 아무것도 보내지
-        않고 거절한다(전체 반영이 맡는다). 콘솔에 이미 있는 프리셋 번호의 승인 대기 칸은 번호 줄만
-        보내고, 승인(``evidence.approval``)은 보낸 칸에만 성공 확인 뒤 적는다.
-        ``cells`` 가 없으면 위 전체 반영 그대로다."""
+        마지막 반영의 칸 기록(스냅샷)이 있으면 아는 칸 가운데 바뀐 칸만 보내고(같은 칸은
+        ``not_applied``, 지운 항목이 있는 칸도 ``/Merge`` 가 지우지 못해 ``not_applied``), 칸 기록이
+        없어도(서버를 다시 띄운 뒤) 소유 기록이 있으면 고른 칸을 모두 보낸다(``subset.baseline`` =
+        ``"record"`` — 지운 항목은 가려낼 수 없다). 그 첫 성공은 보낸 칸만 담은 **부분** 칸 기록
+        (``PartialCellSnapshot``)을 남긴다. 부분 기록 아래에서 기록에 없는 칸은 모르는 칸이라 같다고
+        보지 않고 보내며, 보낸 칸이 부분 기록에 더해진다. 전체 반영만 이 기록을 전체로 바꾼다.
+        둘 다 없는 곡·콘솔에 아직 없는 줄·이미 콘솔과 같은 칸뿐인 선택·빈 프리셋 보류/새로 만들
+        프리셋과 얽힌 칸은 아무것도 보내지 않고 거절한다(전체 반영이 맡는다). 콘솔에 이미 있는
+        프리셋 번호의 승인 대기 칸은 번호 줄만 보내고, 승인(``evidence.approval``)은 보낸 칸에만
+        성공 확인 뒤 적는다. ``cells`` 가 없으면 위 전체 반영 그대로다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -12037,11 +12055,18 @@ class ChatSession:
                     reason=f"선택한 칸이 지금 격자에 없습니다: {format_cell_list(absent)}.",
                 )
             if unsent is not None:
-                # 바뀐 칸만 보낸다 — 마지막 반영과 같은 칸은 다시 보내지 않는다. 바뀐 칸 가운데
-                # 마지막 반영 때 값이 있던 항목을 지운 칸은 ``/Merge`` 로 지울 수 없어서 따로
-                # 거절한다. 기록 기준에는 칸 내용이 없어 둘 다 가릴 수 없다 — 고른 칸을 모두 보낸다.
+                # 아는 칸 가운데 바뀐 칸만 보낸다 — 마지막 반영과 같은 칸은 다시 보내지 않는다.
+                # 바뀐 칸 가운데 마지막 반영 때 값이 있던 항목을 지운 칸은 ``/Merge`` 로 지울 수
+                # 없어서 따로 거절한다. 칸 기록이 부분 기록이면 기록에 없는 칸은 콘솔과 같은지
+                # 모른다 — 같다고 보지 않고 보내며(기록 기준과 같다), 지운 항목도 가릴 수 없어
+                # 검사하지 않는다.
                 unsent_keys = {(entry["group_name"], entry["bar"]) for entry in unsent}
-                unchanged = tuple(cell for cell in selected if cell not in unsent_keys)
+                partial_snapshot = isinstance(last_snapshot, PartialCellSnapshot)
+                unchanged = tuple(
+                    cell
+                    for cell in selected
+                    if cell not in unsent_keys and (not partial_snapshot or cell in last_snapshot)
+                )
                 removed_cells = cells_with_removed_fields(
                     last_snapshot, grid_cells, (cell for cell in selected if cell in unsent_keys)
                 )
@@ -12132,9 +12157,9 @@ class ChatSession:
                             "전체 「⇪ 콘솔에 반영」으로 먼저 만들어 주세요."
                         ),
                     )
-                # 칸 기록 기준에서 고른 칸이 전부 마지막 반영과 같으면 보낼 것이 없다(바뀐 칸은
-                # 위에서 가려 두었다). 기록 기준은 같은지 알 수 없어 고른 칸을 모두 보낸다.
-                if baseline == "snapshot" and unsent_keys.isdisjoint(selected):
+                # 고른 칸이 전부 아는 칸이고 마지막 반영과 같으면 보낼 것이 없다(같은 칸은 위에서
+                # 가려 두었다). 기록 기준과 부분 기록의 모르는 칸은 같은지 알 수 없어 보낸다.
+                if set(selected) <= set(unchanged):
                     return self._beat_grid_send_status(
                         last_action="apply",
                         ok=False,
@@ -12707,7 +12732,6 @@ class ChatSession:
                     grid=sent_grid,
                     record=record,
                     applied=subset_plan.cue_numbers,
-                    baseline=baseline,
                 )
             elif verdict.passed:
                 self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
@@ -12838,21 +12862,19 @@ class ChatSession:
         grid: Mapping[str, object],
         record: Mapping[str, object] | None,
         applied: Mapping[BeatGridCellKey, int],
-        baseline: str | None,
     ) -> None:
         """칸 단위 반영이 승인=송신까지 확인된 성공일 때의 기록 갱신 — 전체 반영과 달리 기존 기록에
-        **병합**한다. 스냅샷은 보낸 칸만 지금 값으로 바꾸고(나머지는 계속 미반영), 소유권 기록은 그
+        **병합**한다. 스냅샷은 보낸 칸만 지금 값으로 바꾸고(나머지는 그대로), 소유권 기록은 그
         칸의 큐 번호만 더하고(다른 줄·시퀀스/타임코드 번호와 이름은 그대로, 사라진 줄 정리도 안
         한다), 마지막 반영 상태는 그 칸의 큐 번호만 더한다(시퀀스 번호는 그대로, 상태가 없으면
         만들지 않는다). 프리셋을 만들지 않았으므로 빈 프리셋 표식은 건드리지 않는다.
 
-        ``baseline`` 이 ``"record"`` 면 칸 기록(스냅샷)이 원래 없던 곡이다 — 보낸 칸만 담은 기록을
-        새로 만들면 나머지 칸이 전부 미반영으로 보이고 「콘솔과 같다」는 거짓 기준이 생기므로
-        스냅샷은 그대로 없는 채로 둔다."""
-        if baseline == "snapshot":
-            self._beat_grid_snapshots[song_key] = merge_cell_snapshot(
-                self._beat_grid_snapshots.get(song_key), beat_grid_cell_snapshot(grid), applied
-            )
+        칸 기록(스냅샷)이 원래 없던 곡(서버를 다시 띄운 뒤)은 보낸 칸만 담은 **부분** 기록
+        (``PartialCellSnapshot``)이 새로 생긴다 — 나머지 칸은 모르는 칸이라 미반영으로도, 반영됨으로
+        도 세지 않는다. 기존 기록이 전체면 전체로, 부분이면 부분으로 남는다."""
+        self._beat_grid_snapshots[song_key] = merge_cell_snapshot(
+            self._beat_grid_snapshots.get(song_key), beat_grid_cell_snapshot(grid), applied
+        )
         by_track: dict[str, dict[int, int]] = {}
         for (name, bar), number in applied.items():
             by_track.setdefault(name, {})[bar] = number
