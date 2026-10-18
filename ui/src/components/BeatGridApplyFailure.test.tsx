@@ -59,6 +59,16 @@ describe("applyFailureNote", () => {
     expect(applyFailureNote(status({ last_action: "edit", ok: true, reason }))).toBeNull();
   });
 
+  it("칸 옮기기 실패(cell_edit)도 반영·격자 적용처럼 서버 사유를 실패 줄로 보인다(카드 WT-cell-edit-live)", () => {
+    const reason = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요";
+    // 종류 이름이 `BeatGridSendStatus.last_action` 에 없으면 이 리터럴을 tsc 가 거절한다(이 파일은 tsc 검사 대상이다).
+    const failed: BeatGridSendStatus = { ...status(), last_action: "cell_edit", reason };
+    expect(applyFailureNote(failed)).toBe(`⚠ 칸 옮기기 안 됨 — ${reason}`);
+    // 성공이거나 사유가 없으면 줄이 없다 — 옮겨진 칸은 새 격자가 보여 준다.
+    expect(applyFailureNote(status({ last_action: "cell_edit", ok: true, reason: null }))).toBeNull();
+    expect(applyFailureNote(status({ last_action: "cell_edit", reason: null }))).toBeNull();
+  });
+
   it("「콘솔 같이」 정지 — 멈췄는지 확인 못 한 알림·정지 실패 사유를 보인다(2차 전체 실행 I-02)", () => {
     const unverified = "콘솔 Timecode 5이(가) 멈췄는지 확인하지 못했어요 — 콘솔 화면에서 확인해 주세요.";
     expect(
@@ -123,6 +133,18 @@ describe("BeatGrid — 반영 실패 사유 줄", () => {
     );
     expect(html).toContain("beat-grid-apply-fail");
     expect(html).toContain("격자에 적용 안 됨");
+  });
+
+  it("칸 옮기기 실패도 격자 화면에 줄이 보인다", () => {
+    const html = renderToStaticMarkup(
+      <BeatGrid
+        grid={GRID}
+        sendStatus={status({ last_action: "cell_edit", reason: "BACK 5마디 — 7마디에서는 이미 다른 칸이 시작합니다" })}
+      />,
+    );
+    expect(html).toContain("beat-grid-apply-fail");
+    expect(html).toContain("칸 옮기기 안 됨");
+    expect(html).toContain("이미 다른 칸이 시작합니다");
   });
 
   it("성공 상태면 줄이 없다", () => {

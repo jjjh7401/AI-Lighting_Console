@@ -9,11 +9,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildBeatGridApply,
+  buildBeatGridCellEdit,
   buildBeatGridEdit,
   buildBeatGridEditCells,
   initialState,
   parseServerEvent,
   reduceServerEvent,
+  type BeatGridCellOp,
   type ServerEvent,
 } from "./protocol";
 
@@ -79,6 +81,54 @@ describe("buildBeatGridEditCells", () => {
     const single = JSON.parse(buildBeatGridEdit(11, "MOVER-U", changes));
     expect(single).toEqual({ v: 1, type: "beat_grid_edit", bar: 11, target: "MOVER-U", changes });
     expect("cells" in single).toBe(false);
+  });
+});
+
+// 칸 옮기기(카드 WT-cell-edit-live) — 한 줄 안에서 칸을 마디 단위로 옮기는 `beat_grid_cell_edit` 프레임과 그 응답.
+// 서버는 항목을 `op`·`group_name`·`bar`·`to_bar` 네 키로만 받고(모르는 키는 통째로 거절), 이 버전은 `"move"` 하나만 받는다.
+describe("buildBeatGridCellEdit", () => {
+  const move = (bar: number, toBar: number): BeatGridCellOp => ({
+    op: "move",
+    group_name: "BACK",
+    bar,
+    to_bar: toBar,
+  });
+
+  it("프레임은 v·type·ops 셋뿐이고 항목은 네 키 그대로다", () => {
+    const frame = buildBeatGridCellEdit([move(5, 7)]);
+    expect(frame).toBe(
+      '{"v":1,"type":"beat_grid_cell_edit","ops":[{"op":"move","group_name":"BACK","bar":5,"to_bar":7}]}',
+    );
+    expect(Object.keys(JSON.parse(frame)).sort()).toEqual(["ops", "type", "v"]);
+  });
+
+  it("여러 칸은 한 프레임에 받은 순서대로 싣는다 — 칸마다 프레임을 만들지 않는다", () => {
+    const frame = buildBeatGridCellEdit([move(1, 3), move(2, 4), move(9, 11)]);
+    expect(JSON.parse(frame).ops).toEqual([move(1, 3), move(2, 4), move(9, 11)]);
+  });
+
+  it("다른 주소 형태(bar·target·cells·changes)를 함께 싣지 않는다", () => {
+    const parsed = JSON.parse(buildBeatGridCellEdit([move(1, 3)]));
+    for (const key of ["bar", "target", "cells", "changes"]) expect(key in parsed).toBe(false);
+  });
+});
+
+describe("beat_grid_send_status — last_action: cell_edit", () => {
+  it("칸 옮기기 응답의 종류와 한국어 사유를 리듀서가 그대로 옮긴다", () => {
+    const reason = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요";
+    const next = reduceServerEvent(
+      initialState,
+      event({
+        type: "beat_grid_send_status",
+        pending_apply_count: 1,
+        last_action: "cell_edit",
+        ok: false,
+        reason,
+        blocked_cells: [],
+        approval_vs_sent: null,
+      }),
+    );
+    expect(next.beatGridSendStatus).toMatchObject({ last_action: "cell_edit", ok: false, reason });
   });
 });
 
