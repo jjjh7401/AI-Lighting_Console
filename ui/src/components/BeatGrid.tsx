@@ -2801,7 +2801,14 @@ export function BeatGrid({
     const outcome = reduceCellMove(cellMoveRef.current, event);
     cellMoveRef.current = outcome.state;
     if (outcome.suppressClick) suppressCellClickRef.current = true;
-    if (outcome.ops !== null) onMoveCells?.(outcome.ops);
+    if (outcome.ops !== null) {
+      onMoveCells?.(outcome.ops);
+      // 보낸 옮기기는 칸을 옮기기 전 마디 번호로 가리킨다. 서버가 새 격자를 보내기 전까지 남은 고르기(여럿 고른 칸·편집 칸·무대에서
+      // 고른 줄)는 옛 칸을 쥐고 있어, 뒤따르는 끌기나 Shift+클릭이 옛 칸 목록에 닿는다 — 「닫기」·「선택 해제」와 같은 길로 모두 비운다.
+      setCellSel(EMPTY_CELL_SELECTION);
+      setSelected(null);
+      setStageRows([]);
+    }
   };
   const cellMoveHandlers = (groupName: string, bar: number) =>
     onMoveCells === undefined

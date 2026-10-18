@@ -245,7 +245,7 @@ describe("칸 가로 끌기 — 올리지 않는 경우", () => {
 });
 
 describe("고른 칸을 끌 때", () => {
-  it("같은 줄에서 Shift 로 고른 두 칸 가운데 하나를 끌면 둘 다 같은 마디 수만큼 옮기고, 뒤따르는 클릭은 고르기를 건드리지 않는다", () => {
+  it("같은 줄에서 Shift 로 고른 두 칸 가운데 하나를 끌면 둘 다 같은 마디 수만큼 옮기고, 보낸 뒤 고르기는 비워지며 뒤따르는 클릭은 칸을 새로 고르지 않는다", () => {
     const { onMoveCells } = setup(ADJACENT());
     click(cellAt(0, 0));
     click(cellAt(0, 1), { shift: true }); // AAA 1·2마디 고름
@@ -257,10 +257,13 @@ describe("고른 칸을 끌 때", () => {
       { op: "move", group_name: "AAA", bar: 1, to_bar: 3 },
       { op: "move", group_name: "AAA", bar: 2, to_bar: 4 },
     ]);
-    // 끌고 난 뒤 브라우저가 보내는 클릭 — 보통 클릭으로 처리되면 고른 칸이 비워지고 이 칸 하나만 남는다.
+    // 보낸 뒤에는 고른 칸도 편집 칸에 열린 칸도 비워진다 — 옛 마디 번호로 남지 않는다.
+    expect(multiCount()).toBe(0);
+    expect(selectedIndex()).toBe(-1);
+    // 끌고 난 뒤 브라우저가 보내는 클릭 — 보통 클릭으로 처리되면 끈 칸(막대 순서 1번)이 편집 칸에 새로 열린다.
     click(dragged);
-    expect(multiCount()).toBe(2);
-    expect(selectedIndex()).toBe(0);
+    expect(multiCount()).toBe(0);
+    expect(selectedIndex()).toBe(-1);
   });
 
   it("다른 줄의 칸이 같이 골라져 있어도 끈 줄의 칸만 옮긴다", () => {
@@ -287,7 +290,7 @@ describe("고른 칸을 끌 때", () => {
     ]);
   });
 
-  it("끈 칸이 고른 칸에 없으면 그 칸 하나만 옮기고 고른 칸은 그대로다", () => {
+  it("끈 칸이 고른 칸에 없으면 그 칸 하나만 옮기고, 보낸 뒤에는 이때도 고르기를 비운다", () => {
     const { onMoveCells } = setup(ADJACENT());
     click(cellAt(0, 0));
     click(cellAt(0, 1), { shift: true }); // AAA 1·2마디 고름
@@ -296,10 +299,32 @@ describe("고른 칸을 끌 때", () => {
     click(outside);
     expect(onMoveCells).toHaveBeenCalledTimes(1);
     expect(onMoveCells).toHaveBeenLastCalledWith([{ op: "move", group_name: "AAA", bar: 9, to_bar: 11 }]);
-    expect(multiCount()).toBe(2);
-    // 다른 줄의 고르지 않은 칸도 마찬가지다.
+    // 옮긴 칸이 고른 칸이 아니어도 보낸 뒤에는 옛 고르기를 비운다 — 격자가 바뀌면 옛 마디 번호가 다른 칸을 가리킬 수 있다.
+    expect(multiCount()).toBe(0);
+    // 다른 줄의 고르지 않은 칸도 마찬가지다 — 다시 골라 놓고 끈다.
+    click(cellAt(0, 0));
+    click(cellAt(0, 1), { shift: true });
     drag(cellAt(1, 0), 84);
     expect(onMoveCells).toHaveBeenLastCalledWith([{ op: "move", group_name: "BBB", bar: 1, to_bar: 3 }]);
+  });
+});
+
+describe("옮기기를 보낸 뒤", () => {
+  it("옛 고르기를 비운다 — 같은 칸을 다시 끌면 옛 고른 짝이 아니라 그 칸 하나만 옮긴다", () => {
+    const { onMoveCells } = setup(ADJACENT());
+    click(cellAt(0, 0));
+    click(cellAt(0, 1), { shift: true }); // AAA 1·2마디 고름
+    drag(cellAt(0, 1), 84); // +2마디 — 고른 둘이 같이 간다
+    expect(onMoveCells).toHaveBeenCalledTimes(1);
+    expect(onMoveCells).toHaveBeenLastCalledWith([
+      { op: "move", group_name: "AAA", bar: 1, to_bar: 3 },
+      { op: "move", group_name: "AAA", bar: 2, to_bar: 4 },
+    ]);
+    // 이 시험은 서버 답을 흉내 내지 않아 격자가 그대로다 — 같은 칸이 옛 마디에 있다. 보낸 뒤에도 옛 고르기가 남아 있으면
+    // 이 끌기도 옛 고른 둘을 옮긴다(옛 마디 번호가 옮긴 뒤의 다른 칸을 가리킬 수 있다).
+    drag(cellAt(0, 1), 42); // +1마디
+    expect(onMoveCells).toHaveBeenCalledTimes(2);
+    expect(onMoveCells).toHaveBeenLastCalledWith([{ op: "move", group_name: "AAA", bar: 2, to_bar: 3 }]);
   });
 });
 
