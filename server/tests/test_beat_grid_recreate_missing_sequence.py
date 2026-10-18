@@ -62,6 +62,26 @@ LOVE_GRID = {
     "FOH": (3, "4.1"),
     "KEY": (2, "4.2"),
 }
+#: 이번 격자 — WASH-ALL·SIDE-ALL 은 격자에서 빠졌다(WT-owned-record-grid).
+NOW_GRID = {name: LOVE_GRID[name] for name in ("BACK", "SIDE-L", "MOVER-U", "MOVER-D")}
+#: 옛 기록 — 격자에 없는 WASH-ALL(55)·SIDE-ALL(57) 항목이 남아 있다.
+STALE_RECORD = {
+    "BACK": {"sequence_number": 54, "sequence_name": "LDBEAT BACK", "cues": {"1": 1}},
+    "WASH-ALL": {"sequence_number": 55, "sequence_name": "LDBEAT WASH-ALL", "cues": {"1": 1}},
+    "SIDE-L": {"sequence_number": 56, "sequence_name": "LDBEAT SIDE-L", "cues": {"1": 1}},
+    "SIDE-ALL": {"sequence_number": 57, "sequence_name": "LDBEAT SIDE-ALL", "cues": {"1": 1}},
+    "MOVER-U": {"sequence_number": 58, "sequence_name": "LDBEAT MOVER-U", "cues": {"1": 1}},
+    "MOVER-D": {"sequence_number": 59, "sequence_name": "LDBEAT MOVER-D", "cues": {"1": 1}},
+}
+#: 지금 콘솔 — 55 는 다른 곡의 「LDBEAT BACK#7」, 57 은 「LDBEAT SIDE-R」이다. 60·61 없음.
+NOW_CONSOLE_SEQUENCES = {
+    54: "LDBEAT BACK",
+    55: "LDBEAT BACK#7",
+    56: "LDBEAT SIDE-L",
+    57: "LDBEAT SIDE-R",
+    58: "LDBEAT MOVER-U",
+    59: "LDBEAT MOVER-D",
+}
 
 
 def _two_track_timeline():
@@ -86,7 +106,7 @@ def _two_track_timeline():
     )
 
 
-def _love_timeline():
+def _love_timeline(grid: dict = LOVE_GRID):
     tracks = [
         {
             "group_name": name,
@@ -94,7 +114,7 @@ def _love_timeline():
             "group_no_confirmed": True,
             "cues": [_cue(1, preset)],
         }
-        for name, (number, preset) in LOVE_GRID.items()
+        for name, (number, preset) in grid.items()
     ]
     return _timeline(
         beat_grid={
@@ -104,10 +124,10 @@ def _love_timeline():
     )
 
 
-def _love_console_tree() -> dict:
+def _love_console_tree(sequences: dict = LOVE_CONSOLE_SEQUENCES) -> dict:
     tree = _owned_state_tree()
     tree["DataPool/Sequences"] = {
-        "children": [{"i": n, "name": name} for n, name in LOVE_CONSOLE_SEQUENCES.items()]
+        "children": [{"i": n, "name": name} for n, name in sequences.items()]
     }
     return tree
 
@@ -168,3 +188,26 @@ class TestRecreateMissingSequence:
         assert not (fresh & set(LOVE_CONSOLE_SEQUENCES))
         for number in fresh:
             assert any(c.startswith(f"Store Sequence {number} ") for c in console.executed), number
+
+    def test_a_successful_apply_keeps_only_this_grids_tracks_in_the_record(self, tmp_path) -> None:
+        # WT-owned-record-grid(리드 지시) — 「⇪」이 성공하면 소유 기록은
+        # 이번 격자의 트랙만 담는다. 격자에서 빠진 옛 트랙을 남기면 그 번호를
+        # 다른 곡이 쓰는 동안 「▶」가 이 곡을 콘솔에 없다고 막는다.
+        # 콘솔 시퀀스(55·57)는 건드리지 않는다.
+        store = SongTimelineStore()
+        store.latest = _love_timeline(NOW_GRID)
+        _seed_record(store, tracks=STALE_RECORD)
+        session, console, _approval, _audit = _new_session(
+            tmp_path,
+            store=store,
+            state_tree=_love_console_tree(NOW_CONSOLE_SEQUENCES),
+            decisions=(True,) * 10,
+        )
+
+        event = session.beat_grid_apply()
+
+        assert event["ok"] is True, event
+        assert not any(re.search(r"Sequence (55|57)\b", c) for c in console.executed)
+        record = store.beat_grid_allocation(_song_key())
+        assert set(record["tracks"]) == set(NOW_GRID)
+        assert record["tracks"]["SIDE-L"]["sequence_number"] == 56
