@@ -220,12 +220,14 @@ def test_unknown_layer_role_is_rejected() -> None:
         generate_arrangement_draft(_bar_map(), layout)
 
 
-def test_track_without_a_role_stays_at_rest() -> None:
+def test_track_without_a_role_joins_the_chase_layer() -> None:
+    # 카드 WT-side-allocation — 이름으로 역할을 못 정한 줄도 곡 내내 꺼져 있지 않고 체이스 층으로
+    # 리듬에 들어간다(예전에는 늘 쉼이었다). 체이스가 유일한 층이라 모든 마디가 체이스다.
     layout = [
         {"group_no": 1, "group_no_confirmed": True, "group_name": "EXTRA", "layer_role": None}
     ]
     draft = generate_arrangement_draft(_bar_map(), layout)
-    assert set(_labels(draft, "EXTRA").values()) == {arrange_generator.REST_LABEL}
+    assert set(_labels(draft, "EXTRA").values()) == {arrange_generator.CHASE_LABEL}
 
 
 def test_ac016_policy_is_per_song_and_has_no_numeric_module_constants() -> None:

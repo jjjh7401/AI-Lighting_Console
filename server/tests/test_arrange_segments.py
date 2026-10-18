@@ -361,21 +361,24 @@ def test_a_constant_lane_over_a_seven_bar_verse_has_exactly_one_row() -> None:
 
 
 def test_a_lit_rhythm_lane_gets_a_new_cell_at_every_phrase() -> None:
-    # 이벤트가 없으면 1~40 마디가 도입 한 구간이고 4마디 창이 열 개다. 켜는 층은 구간 종류가 정하고
-    # 창마다 돌리지 않는다(도입: 움직임 + 펄스). 펄스 층(BACK)은 내내 켜져 있고, 값이 같아도
-    # 창(프레이즈) 시작마다 새 칸이 선다 — 기본 격자도 같은 「킥 1·2·4박」을 4마디마다 다시 찍는다.
+    # 이벤트가 없으면 1~40 마디가 도입 한 구간이고 4마디 창이 열 개다. 주인공(움직임)은 구간 종류가
+    # 정하고, 보조층은 창마다 펄스(BACK)와 체이스(SIDE)를 번갈아 맡는다(카드 WT-side-allocation).
+    # 켜는 칸은 창(프레이즈) 시작마다 선다 — 기본 격자도 「킥 1·2·4박」을 4마디마다 다시 찍는다.
     draft = _draft([])
     back = _cues(draft, "BACK")
+    side = _cues(draft, "SIDE-ALL")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
-        (bar, PULSE_LABEL) for bar in range(1, BARS + 1, 4)
+        (bar, PULSE_LABEL if bar % 8 == 1 else REST_LABEL) for bar in range(1, BARS + 1, 4)
     ]
-    # 쉬는 줄은 창을 몇 번 넘어도 한 칸이다.
-    assert _rows(draft, "SIDE-ALL") == [1]
+    assert [(bar, side[bar]["label"]) for bar in sorted(side)] == [
+        (bar, CHASE_LABEL if bar % 8 == 5 else REST_LABEL) for bar in range(1, BARS + 1, 4)
+    ]
 
 
 def test_back_lane_over_the_synthetic_song_is_the_hand_derived_run_list() -> None:
     # 창은 구간 시작부터 4마디씩이고 창 길이에 못 미치는 끝 창은 앞 창에 붙는다(1-6, 7-8, 9-13,
-    # 14-17, 18-21, 22-25, 26-32, …). 펄스는 빌드·브릿지(체이스 + 움직임)에서만 쉰다.
+    # 14-17, 18-21, 22-25, 26-32, …). 펄스는 빌드·브릿지(체이스 + 움직임)에서 쉬고, 후렴 18~32 의
+    # 둘째 창(22~25)에서는 보조 자리를 체이스에 넘겨 쉰다(카드 WT-side-allocation).
     back = _cues(_draft(SYNTHETIC_EVENTS), "BACK")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
         (1, PULSE_LABEL),
@@ -383,7 +386,7 @@ def test_back_lane_over_the_synthetic_song_is_the_hand_derived_run_list() -> Non
         (9, PULSE_LABEL),
         (14, REST_LABEL),
         (18, PULSE_LABEL),
-        (22, PULSE_LABEL),
+        (22, REST_LABEL),
         (26, PULSE_LABEL),
         (33, REST_LABEL),
         (36, PULSE_LABEL),
@@ -532,12 +535,16 @@ def test_the_draft_is_much_sparser_than_one_row_per_bar() -> None:
     assert rows < len(draft["tracks"]) * BARS / 2
 
 
-def test_track_without_a_role_stays_at_rest_with_one_row() -> None:
+def test_track_without_a_role_joins_the_chase_layer_with_its_own_label() -> None:
+    # 카드 WT-side-allocation — 역할을 못 정한 줄도 체이스 층으로 리듬에 들어간다(예전에는 곡 내내
+    # 쉼 한 칸이었다). 그 줄은 SIDE 가 아니라서 칸 이름에 SIDE 를 쓰지 않는다.
     layout = [
         {"group_no": 1, "group_no_confirmed": True, "group_name": "EXTRA", "layer_role": None}
     ]
     draft = _draft(SYNTHETIC_EVENTS, layout=layout)
-    assert [(bar, cue["label"]) for bar, cue in _cues(draft, "EXTRA").items()] == [(1, REST_LABEL)]
+    labels = {cue["label"] for cue in _cues(draft, "EXTRA").values()}
+    assert "2·4박 번갈이" in labels
+    assert not any("SIDE" in label for label in labels)
 
 
 # -- 강조 ------------------------------------------------------------------------------------
@@ -602,8 +609,14 @@ def test_windows_are_four_bar_blocks_counted_from_each_section_start() -> None:
 def test_window_bars_come_from_the_policy() -> None:
     draft = _draft([], policy=ArrangementPolicy(window_bars=8))
     back = _cues(draft, "BACK")
-    assert sorted(back) == [1, 9, 17, 25, 33]
-    assert {cue["label"] for cue in back.values()} == {PULSE_LABEL}
+    # 8마디 창마다 칸이 서고, 보조층이 창마다 번갈아 펄스가 켜졌다 쉰다.
+    assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
+        (1, PULSE_LABEL),
+        (9, REST_LABEL),
+        (17, PULSE_LABEL),
+        (25, REST_LABEL),
+        (33, PULSE_LABEL),
+    ]
 
 
 def test_same_kind_sections_get_the_same_layers_and_the_same_moving_mover() -> None:
@@ -617,8 +630,10 @@ def test_same_kind_sections_get_the_same_layers_and_the_same_moving_mover() -> N
     assert len({tuple(firsts[bar]["active"]) for bar in chorus_starts}) == 1
     assert {_state(draft, "MOVER-U", bar)["label"] for bar in chorus_starts} == {MOTION_LABEL}
     assert {_state(draft, "MOVER-D", bar)["label"] for bar in chorus_starts} == {HOLD_LABEL}
-    # 켜는 층은 구간 안에서 창마다 돌지 않는다.
-    assert firsts[22]["active"] == firsts[18]["active"] == firsts[26]["active"]
+    # 주인공은 구간 안에서 돌지 않고, 보조층만 창마다 번갈아 든다(카드 WT-side-allocation — 예전에는
+    # 보조층도 고정이라 후렴에서 SIDE 가 한 번도 켜지지 않았다).
+    assert firsts[18]["active"][0] == firsts[22]["active"][0] == firsts[26]["active"][0]
+    assert firsts[18]["active"] == firsts[26]["active"] != firsts[22]["active"]
 
 
 def test_a_kick_straight_out_of_the_intro_is_a_verse() -> None:

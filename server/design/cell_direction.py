@@ -71,6 +71,8 @@ SEGMENT_WORDS: dict[str, str] = {
     "static:wash": "워시",
     "pulse": "킥 1·2·4박",
     "chase": "SIDE-L/R 2·4박 번갈이",
+    #: 역할을 정하지 못한 줄의 체이스 칸 — 그 줄은 SIDE 가 아니다(카드 WT-side-allocation).
+    "chase:other": "2·4박 번갈이",
     "motion": "팬 웨이브(한 바퀴 2마디)",
     "motion:Tilt": "틸트 웨이브(한 바퀴 2마디)",
     "blind": "BLIND 2박",
@@ -275,6 +277,8 @@ def direction_label(
         return None
     if kind == "static":
         return words.get(f"static:{layer_role}") or words.get("static")
+    if kind == "chase" and layer_role != "side":
+        return words.get("chase:other") or words.get(kind)
     movement = direction.get("movement")
     if kind == "motion" and isinstance(movement, Mapping) and movement.get("axes") == ["Tilt"]:
         return words.get("motion:Tilt") or words.get(kind)

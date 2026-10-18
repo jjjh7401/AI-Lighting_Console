@@ -21,10 +21,12 @@
   (``planned_colors``)은 둘보다 앞선다.
 - 칸 안의 규칙(밝기·움직임)은 기존 생성기의 ``_cell_plan`` 을 그대로 쓴다. 라벨만 기본 격자
   (``love_attack.yaml``)와 배치 규칙서의 말로 바꾼다(BACK 펄스는 「킥 1·2·4박」이다). 같은 종류
-  구간은 같은 처리다: 켜는 리듬 층은 구간 종류가 정하고(``_LEAD_OF_KIND``) 구간 안에서 돌리지
+  구간은 같은 처리다: 주인공 리듬 층은 구간 종류가 정하고(``_LEAD_OF_KIND``) 구간 안에서 돌리지
   않는다. 창(``policy.window_bars`` 마디, 구간 시작부터 세고 짧은 끝 창은 앞 창에 붙임)마다
-  바뀌는 것은 움직이는 무빙뿐이고 그 차례는 구간마다 처음부터 센다. BACK·SIDE·무빙의 켜는 칸은
-  값이 같아도 창 시작마다 새 칸이다.
+  바뀌는 것은 주인공 옆의 보조층과 움직이는 무빙이고, 두 차례 모두 구간마다 처음부터 센다(카드
+  WT-side-allocation — 보조층을 고정하면 도입·벌스·후렴에서 SIDE 가 한 번도 켜지지 않았다).
+  역할을 정하지 못한 줄은 체이스 층이다. BACK·SIDE·무빙의 켜는 칸은 값이 같아도 창 시작마다
+  새 칸이다.
 - 무빙이 위치를 바꾸기 전에는 어둠 속 사전이동(MIB)이 가능한 길이만큼 쉼 칸을 둔다(마디 시각으로
   잼). 후렴·드롭 안이나 앞 위치가 남지 않아 쉼을 둘 수 없으면 그 구간에서는 위치를 바꾸지 않는다.
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
@@ -490,9 +492,12 @@ def _plan_windows(
     """구간을 구간 시작부터 ``window_bars`` 마디씩 창으로 쪼개 창마다 주인공·움직이는 층을 정한다.
 
     같은 종류 구간은 같은 처리를 받는다. 주인공은 구간 종류가 정하고(``_LEAD_OF_KIND``) 구간 안
-    에서 돌리지 않는다. 창마다 바뀌는 것은 움직이는 무빙뿐이고, 그 차례는 구간마다 처음부터 센다.
-    그래서 후렴 1·2·3 은 같은 창 순서에서 같은 층이 켜지고 같은 무빙이 움직인다. 켜는 층의 수는
-    드롭 구간이면 드롭 상한, 아니면 보통 상한이다. 창 길이에 못 미치는 끝 창은 앞 창에 붙인다.
+    에서 돌리지 않는다. 주인공 옆의 보조층은 창마다 다음 층으로 돌린다(규칙서 4번 「4마디마다
+    교대」) — 예전에는 보조층도 구간 종류로 고정해서 도입·벌스·후렴에서는 체이스(SIDE)가 한 번도
+    켜지지 않았다(새 곡 실측, 카드 WT-side-allocation). 보조층 차례와 움직이는 무빙 차례는 구간
+    마다 처음부터 센다. 그래서 후렴 1·2·3 은 같은 창 순서에서 같은 층이 켜지고 같은 무빙이
+    움직인다. 켜는 층의 수는 드롭 구간이면 드롭 상한, 아니면 보통 상한이다(상한이 층 수 이상이면
+    모든 층이 켜져 돌릴 것이 없다). 창 길이에 못 미치는 끝 창은 앞 창에 붙인다.
     """
     voices = _voices(layout)
     movers = [str(track["group_name"]) for track in layout if track.get("layer_role") == "mover"]
@@ -506,16 +511,26 @@ def _plan_windows(
         cap = settings.drop_layer_cap if section.kind == _SECTION_DROP else settings.base_layer_cap
         lead = _LEAD_OF_KIND.get(section.kind)
         lead_index = voices.index(lead) if lead in voices else 0
-        active = [
-            voices[(lead_index + offset) % len(voices)] for offset in range(min(cap, len(voices)))
-        ]
+        # 주인공 다음 순서의 층들 — 보조 자리(상한 − 1개)를 창마다 이 목록에서 돌려 채운다.
+        others = [voices[(lead_index + offset) % len(voices)] for offset in range(1, len(voices))]
+        support = max(0, min(cap, len(voices)) - 1)
         motion_turn = 0
         # 창 길이에 못 미치는 끝 창은 따로 세우지 않고 앞 창에 붙인다
         # (구간 끝 2마디짜리 칸을 막는다).
         starts = list(range(section.start_bar, section.end_bar + 1, settings.window_bars))
         if len(starts) > 1 and section.end_bar - starts[-1] + 1 < settings.window_bars:
             starts.pop()
-        for start, after in zip(starts, [*starts[1:], section.end_bar + 1], strict=True):
+        for turn, (start, after) in enumerate(
+            zip(starts, [*starts[1:], section.end_bar + 1], strict=True)
+        ):
+            active = (
+                [
+                    voices[lead_index],
+                    *(others[(turn * support + k) % len(others)] for k in range(support)),
+                ]
+                if voices and support < len(others)
+                else voices[lead_index:] + voices[:lead_index]
+            )
             moving: str | None = None
             if _MOTION in active:
                 moving = movers[motion_turn % len(movers)]
