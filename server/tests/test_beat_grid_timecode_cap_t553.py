@@ -26,8 +26,9 @@ def test_cap_comes_from_the_measured_console_data_file() -> None:
     assert document["source"]
 
 
-def test_cap_reflects_the_eight_track_measurement() -> None:
-    assert MEASURED_MAX_TIMECODE_TRACKS == 8
+def test_cap_reflects_the_latest_track_measurement() -> None:
+    # 2026-10-18 카드 WT-track-model — 타임코드 33 에 트랙 16개 되읽기 PASS 로 8 → 16.
+    assert MEASURED_MAX_TIMECODE_TRACKS == 16
 
 
 def test_all_eight_love_attack_tracks_fit_on_one_timecode() -> None:

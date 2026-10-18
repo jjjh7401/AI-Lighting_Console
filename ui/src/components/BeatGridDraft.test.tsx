@@ -65,6 +65,20 @@ describe("자동 배치 초안 카드", () => {
   });
 });
 
+describe("분석 직후 줄 없는 새 작업본(카드 WT-track-model)", () => {
+  it("줄이 없으면 서버 안내 「자동 배치를 누르면 콘솔 그룹으로 줄을 만들어요」와 자동 배치 버튼을 보인다", () => {
+    const grid = {
+      ...emptyGrid(),
+      source: "analysis",
+      note: "자동 배치를 누르면 콘솔 그룹으로 줄을 만들어요.",
+    } as unknown as BeatGridView;
+    const html = plain(renderToStaticMarkup(<BeatGrid grid={grid} onDraftPropose={() => {}} />));
+    expect(html).toContain("자동 배치를 누르면 콘솔 그룹으로 줄을 만들어요.");
+    expect(html).toContain(">자동 배치<");
+    expect(html).not.toContain("표시할 트랙이 없습니다.");
+  });
+});
+
 describe("「자동 배치 제안」 버튼", () => {
   it("보류 초안이 없고 제안 핸들러가 있으면 버튼을 보인다", () => {
     const html = plain(renderToStaticMarkup(<BeatGrid grid={emptyGrid()} onDraftPropose={() => {}} />));

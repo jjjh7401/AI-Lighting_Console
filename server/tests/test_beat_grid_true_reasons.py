@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from server.design.beat_grid_emit import emit_beat_grid_write_bundle
+from server.design.beat_grid_emit import MEASURED_MAX_TIMECODE_TRACKS, emit_beat_grid_write_bundle
 from server.web.session import SongTimelineStore
 
 from .test_beat_grid_reapply_t572 import (
@@ -27,11 +27,17 @@ from .test_beat_grid_reapply_t572 import (
 )
 from .test_new_color_preset_t594 import _apply_session
 
+# 카드 WT-track-model(2026-10-18) — 상한을 넘으면 그 타임코드 트랙 **전부**를 막던 규칙이
+# 넘친 줄만 막는 규칙으로 바뀌었고, 상한도 실측으로 8 → 16 이 됐다. 그래서 이 시험의 상황은
+# 「9트랙이 전부 막힘」에서 「상한 +1 줄 중 넘친 한 줄만 막힘」으로 바뀌었다 — 시험의 목적
+# (막힌 줄의 진짜 사유가 상태·카드까지 간다)은 그대로다.
+_COUNT = MEASURED_MAX_TIMECODE_TRACKS + 1
 _OVER_LIMIT = (
-    "타임코드 {tc}에 트랙 9개 — ①이 구조로 확인한 최대 8개"
-    "(beat_grid_data/measured_console.yaml)를 넘습니다"
+    f"타임코드 {{tc}}에 트랙 {_COUNT}개 — 콘솔에서 확인한 최대 {MEASURED_MAX_TIMECODE_TRACKS}개"
+    "(beat_grid_data/measured_console.yaml)를 넘는 줄이라 이 줄만 보내지 않았습니다"
 )
-_NAMES = [f"T{i}" for i in range(1, 10)]
+_NAMES = [f"T{i}" for i in range(1, _COUNT + 1)]
+_OVERFLOW = _NAMES[-1]
 
 
 def _nine_track_grid() -> dict:
@@ -50,7 +56,7 @@ def _nine_track_grid() -> dict:
 
 
 class TestApplyNamesTheBlockedTracks:
-    def test_all_tracks_over_the_timecode_limit_say_so(self, tmp_path) -> None:
+    def test_a_track_over_the_timecode_limit_is_named_and_the_rest_are_sent(self, tmp_path) -> None:
         status, _store, approval, _console = _apply_session(
             tmp_path,
             _nine_track_grid(),
@@ -58,13 +64,11 @@ class TestApplyNamesTheBlockedTracks:
             members={name: [101] for name in _NAMES},
         )
 
-        assert status["ok"] is False
-        assert approval.requests == []
-        # 고치기 전(1081d374): "콘솔에 반영할 내용이 없습니다." — 트랙째 막힌 사유가 사라졌다.
-        assert status["reason"] == (
-            "콘솔에 반영할 내용이 없습니다 — 보내지 않은 트랙 9개"
-            f"({', '.join(_NAMES)}): {_OVER_LIMIT.format(tc=20)}"
-        )
+        # 고치기 전(1081d374): 9트랙이 전부 막혀 "콘솔에 반영할 내용이 없습니다." 였다.
+        notice = f"보내지 않은 트랙 1개({_OVERFLOW}): {_OVER_LIMIT.format(tc=20)}"
+        assert status["ok"] is True, status
+        assert notice in status["notices"]
+        assert notice in " ".join(approval.requests[0].items[0].risk_reasons)
 
     def test_a_partly_blocked_apply_names_the_unsent_track_on_card_and_result(
         self, tmp_path
@@ -98,10 +102,11 @@ class TestApplyNamesTheBlockedTracks:
         )
 
         assert result.blocked_track_notices == (
-            f"보내지 않은 트랙 9개({', '.join(_NAMES)}): {_OVER_LIMIT.format(tc=5)}",
+            f"보내지 않은 트랙 1개({_OVERFLOW}): {_OVER_LIMIT.format(tc=5)}",
         )
-        # 칸 목록(blocked_cells)은 칸 단위 그대로 — 트랙째 막힘은 여기 없다.
-        assert result.blocked_cells == ()
+        # 칸 목록(blocked_cells)은 칸 단위 그대로 — 트랙째 막힌 줄(넘친 줄)은 여기 없다.
+        # 보내는 줄의 칸은 칸 단위 검사를 받는다(이 시험의 칸은 승인 증거가 없어 칸째 막힌다).
+        assert _OVERFLOW not in {cell[0] for cell in result.blocked_cells}
 
 
 def _transport_session(tmp_path, *, decisions=(True,), fail_on=None):

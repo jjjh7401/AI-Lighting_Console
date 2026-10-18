@@ -737,11 +737,10 @@ def emit_beat_grid_write_bundle(
         if timecode_number is not None:
             timecode_groups.setdefault(timecode_number, []).append(group_name)
 
+    # 카드 WT-track-model — 잰 수를 넘는 줄만 막는다(넘친 줄, 격자 순서로 뒤쪽). 예전엔 하나라도
+    # 넘으면 그 타임코드의 트랙 전부를 막아 반영 명령이 0개가 됐다(새 곡 점검 2026-10-18).
     over_limit_groups: set[str] = {
-        name
-        for names in timecode_groups.values()
-        if len(names) > MEASURED_MAX_TIMECODE_TRACKS
-        for name in names
+        name for names in timecode_groups.values() for name in names[MEASURED_MAX_TIMECODE_TRACKS:]
     }
 
     track_results: list[TrackEmitResult] = []
@@ -759,9 +758,9 @@ def emit_beat_grid_write_bundle(
             timecode_number = timecode_numbers.get(group_name)
             track_count = len(timecode_groups.get(timecode_number, []))
             reason = (
-                f"타임코드 {timecode_number}에 트랙 {track_count}개 — ①이 구조로 확인한 "
+                f"타임코드 {timecode_number}에 트랙 {track_count}개 — 콘솔에서 확인한 "
                 f"최대 {MEASURED_MAX_TIMECODE_TRACKS}개"
-                "(beat_grid_data/measured_console.yaml)를 넘습니다"
+                "(beat_grid_data/measured_console.yaml)를 넘는 줄이라 이 줄만 보내지 않았습니다"
             )
             track_results.append(
                 _blocked_track(
