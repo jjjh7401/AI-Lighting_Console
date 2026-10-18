@@ -59,6 +59,7 @@ def brightness_value_commands(
     group_no: int,
     value_percent: int,
     dimmer_attributes: Sequence[str],
+    selection: str | None = None,
 ) -> tuple[str, ...]:
     """``brightness.mode == "value"``인 칸의 퍼센트를 ``dimmer_attributes``의
     **모든** 속성 각각에 한 줄씩 낸다 — Dimmer만 있는 기구는 한 줄(Dimmer2
@@ -66,8 +67,9 @@ def brightness_value_commands(
     프로브 인용 참조 — 그 기구군은 두 디머 속성을 모두 내야 빛난다).
     ``dimmer_attributes``가 비어 있으면 아무것도 내지 않는다(이 함수는
     "속성이 없다"를 단정하지 않는다 — 그 판정은 호출자의 몫,
-    :func:`dimmer_attribute_names`의 whole/gaps 주의 참조)."""
-    selection = f"Group {group_no}"
+    :func:`dimmer_attribute_names`의 whole/gaps 주의 참조).
+    ``selection`` 을 주면 그룹 꼴 대신 그 선택(서브 광원까지 고르는 뒤 점 범위)을 쓴다."""
+    selection = selection or f"Group {group_no}"
     return tuple(
         f"{selection} ; Attribute '{attr}' At {value_percent}" for attr in dimmer_attributes
     )

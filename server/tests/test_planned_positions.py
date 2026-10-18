@@ -18,7 +18,7 @@ from pathlib import Path
 from server.design.arrange_apply import apply_arrangement_draft
 from server.design.arrange_policy import MOVER_POSITION_LADDER
 from server.design.arrange_segments import generate_segment_draft
-from server.design.beat_grid import LOVE_ATTACK_TITLE
+from server.design.beat_grid import LOVE_ATTACK_TITLE, default_beat_grid
 from server.design.beat_grid_edit import load_preset_pool_policy
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import POSITION_UNAIMABLE, PointingFrames
@@ -234,6 +234,45 @@ class TestPlanPositionCandidates:
             lines = [fix for fix in plan.supervisor_fixes if fix.startswith(preset.name)]
             assert len(lines) == 1, (preset.name, plan.supervisor_fixes)
             assert "감독이 고칠 값" in lines[0]
+
+
+def _aimed_grid(*lines: str) -> dict:
+    """``_applied_grid`` 와 같되, ``lines`` 의 줄만 조준할 수 있다(``pan_tilt``)."""
+    timeline = json.loads(SHAPE_TIMELINE.read_text(encoding="utf-8"))
+    base = copy.deepcopy(default_beat_grid(LOVE_ATTACK_TITLE))
+    for track in base["tracks"]:
+        if track["group_name"] in lines:
+            track["pan_tilt"] = True
+    planned = annotated_cell_colors(load_preset_annotations(LOVE_ATTACK_TITLE))
+    draft = generate_segment_draft(timeline["bar_map"], base["tracks"], planned_colors=planned)
+    assert draft["note"] is None, draft["note"]
+    grid, _report = apply_arrangement_draft(base, draft)
+    return grid
+
+
+class TestAimingLinesGetAStageFacingPosition:
+    def test_a_line_that_can_aim_gets_one_center_candidate(self) -> None:
+        grid = _aimed_grid("BACK")
+        centers = [
+            preset
+            for preset in _look_presets(_position_plan(grid))
+            if preset.groups == ("BACK",) and preset.aim == "Center"
+        ]
+        assert len(centers) == 1, [(p.name, p.groups, p.aim) for p in centers]
+        assert centers[0].name == "CENTER BACK"
+        planned = {("BACK", bar) for bar, _name in _planned_looks(grid, "BACK")}
+        assert _cells_of(centers[0]) and _cells_of(centers[0]) <= planned
+
+    def test_a_line_without_pan_tilt_gets_no_candidate(self) -> None:
+        grid = _applied_grid()
+        plan = _position_plan(grid)
+        assert not [preset for preset in _position_presets(plan) if preset.groups == ("BACK",)]
+
+    def test_the_movers_keep_their_planned_looks_when_a_back_line_can_aim(self) -> None:
+        plain = _applied_grid()
+        aimed = _aimed_grid("BACK")
+        for group in _MOVER_GROUPS:
+            assert _planned_looks(aimed, group) == _planned_looks(plain, group)
 
 
 class TestStoreAimsFromTheBasicLooks:

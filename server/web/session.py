@@ -61,6 +61,7 @@ from server.design.arrange_apply import (
     apply_arrangement_draft,
 )
 from server.design.arrange_draft_store import PendingDraftStore
+from server.design.arrange_policy import AIMING_LINE_ROLES
 from server.design.arrange_segments import generate_segment_draft
 from server.design.beat_grid import (
     CELL_HOLD,
@@ -166,7 +167,12 @@ from server.design.beat_grid_send import (
     verify_owned_sequences,
 )
 from server.design.beat_grid_sentence import parse_beat_grid_sentence
-from server.design.beat_grid_stage import fixture_pan_tilt, read_beat_grid_stage
+from server.design.beat_grid_stage import (
+    fixture_pan_tilt,
+    mark_pan_tilt_tracks,
+    mark_sub_selection_tracks,
+    read_beat_grid_stage,
+)
 from server.design.beat_grid_suggestion import (
     BeatGridSuggestion,
     PendingSuggestionStore,
@@ -10240,6 +10246,80 @@ class ChatSession:
         )
         return plan, unread
 
+    def _beat_grid_plan_with_sub_selections(
+        self, plan: LoveAttackPlan, group_names: list[str]
+    ) -> LoveAttackPlan:
+        """단일 그룹 디머 저장에 뒤 점 범위 선택(서브 광원 포함)을 싣는다. 저장할 디머 프리셋이 있을
+        때만 장비를 읽는다 — 저장 후보가 없으면 장비를 읽지 않는다."""
+        single = {
+            preset.groups[0]
+            for preset in plan.presets
+            if preset.kind == "dimmer" and preset.ready and len(preset.groups) == 1
+        }
+        if not single:
+            return plan
+        marks = mark_sub_selection_tracks(
+            [{"group_name": name} for name in sorted(single)],
+            self._beat_grid_group_members(group_names),
+            self._rig_fixture_capabilities(),
+        )
+        selection_of = {
+            str(mark["group_name"]): str(mark["sub_selection"])
+            for mark in marks
+            if "sub_selection" in mark
+        }
+        if not selection_of:
+            return plan
+        return replace(
+            plan,
+            presets=tuple(
+                replace(preset, selection=selection_of[preset.groups[0]])
+                if preset.kind == "dimmer"
+                and preset.ready
+                and len(preset.groups) == 1
+                and preset.groups[0] in selection_of
+                else preset
+                for preset in plan.presets
+            ),
+        )
+
+    def _beat_grid_preset_grid(
+        self, grid: Mapping[str, object], group_names: list[str]
+    ) -> Mapping[str, object]:
+        """계획 위치를 받은 뒤·옆 줄이 있을 때만 줄마다 조준 표시를 단 격자 사본을 돌려준다.
+        그런 줄이 없으면 격자를 그대로 두고 장비를 읽지 않는다(저장 후보가 없으면 읽지 않는다)."""
+        tracks = list(grid.get("tracks") or [])
+        if not any(
+            track.get("layer_role") in AIMING_LINE_ROLES
+            and any(isinstance(cue.get("planned_position"), str) for cue in track.get("cues") or [])
+            for track in tracks
+        ):
+            return grid
+        marked = mark_pan_tilt_tracks(
+            tracks, self._beat_grid_group_members(group_names), self._rig_fixture_capabilities()
+        )
+        return {**grid, "tracks": marked}
+
+    def _beat_grid_sub_selection_tracks(self, tracks: Sequence[Mapping[str, object]]) -> list[dict]:
+        """서브 광원에 밝기가 실린 줄마다 뒤 점 범위 선택(``sub_selection``)을 단 사본을 돌려준다.
+        소속·기종을 판독으로 알 때만 달린다 — 모르면 줄을 그대로 둔다(그룹 꼴)."""
+        if not tracks:
+            return []
+        names = [str(track["group_name"]) for track in tracks]
+        return mark_sub_selection_tracks(
+            tracks, self._beat_grid_group_members(names), self._rig_fixture_capabilities()
+        )
+
+    def _rig_fixture_capabilities(self) -> dict[int, object]:
+        """장비 번호 → 능력 판독. 기종을 못 읽으면 빈 표 — 조준 표시를 달지 않는다."""
+        try:
+            capabilities = self._try_rig_capabilities().capabilities
+        except Exception:  # noqa: BLE001 — 기종을 모르면 조준 표시를 달지 않는다
+            return {}
+        if capabilities is None:
+            return {}
+        return dict(capabilities.fixtures)
+
     def _beat_grid_attach_pan_tilt(self, payload: dict) -> None:
         """무대 장비마다 ``pan_tilt``(참/거짓)를 단다 — 리그 능력 판독으로 알 때만.
         모르면(판독 실패·그 fid 미판독·부분 판독에서 속성 안 보임) 키를 뺀다."""
@@ -11085,7 +11165,7 @@ class ChatSession:
                 self._rig_read_cache.get(KIND_MEMBERS, self._group_members_key(group_names)) or {}
             )
         plan = build_preset_plan(
-            grid,
+            self._beat_grid_preset_grid(grid, group_names),
             annotations=load_preset_annotations(timeline.get("song_title")),
             policy=load_preset_pool_policy(),
             dimmer_pool=dimmer_pool,
@@ -11098,6 +11178,7 @@ class ChatSession:
             group_members=group_members,
         )
         apply_stage("plan_build")
+        plan = self._beat_grid_plan_with_sub_selections(plan, group_names)
         plan = self._beat_grid_preset_plan_stores(plan, grid, all_groups=group_names)
         apply_stage("plan_stores")
         commands = save_commands(plan)
@@ -11893,7 +11974,9 @@ class ChatSession:
             # 카드 t615 (A) — 승인 대기 칸의 줄은 미리보기 사본으로 방출해 승인 카드에 싣는다.
             # 승인이 통과하면 그 줄이 그대로 나가고, 증거는 아래에서 같은 칸에 적힌다.
             result = emit_beat_grid_write_bundle(
-                approval_preview_tracks(tracks, pending_before, held_presets),
+                approval_preview_tracks(
+                    self._beat_grid_sub_selection_tracks(tracks), pending_before, held_presets
+                ),
                 timing=timing,
                 sequence_numbers=sequence_numbers,
                 timecode_numbers=timecode_numbers,
@@ -12841,6 +12924,12 @@ class ChatSession:
         plan, console_unread = self._beat_grid_console_track_plan(layout)
         if plan is not None:
             layout.extend(plan.added)
+        # 조준할 수 있는 뒤·옆 줄에 기본 위치를 준다 — 소속 장비의 Pan·Tilt 능력으로만 가른다.
+        layout = mark_pan_tilt_tracks(
+            layout,
+            self._beat_grid_group_members([str(track["group_name"]) for track in layout]),
+            self._rig_fixture_capabilities(),
+        )
         coverage = coverage_payload(plan, unread=console_unread)
         if not layout:
             reason = "; ".join(coverage["unread"]) or "콘솔 그룹에 장비가 없습니다"

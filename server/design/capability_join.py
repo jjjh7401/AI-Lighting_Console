@@ -107,6 +107,15 @@ class FixtureTypeRef:
     mode_raw: str | None
 
 
+def _geometry(axis: AxisRange) -> str:
+    """채널 이름의 지오메트리 접두 — ``Aura_ColorRGB_R`` → ``Aura``, ``Main Module#2_Dimmer`` →
+    ``Main Module#2``. 속성 이름이 붙은 꼬리가 없으면 지오메트리를 모르므로 빈 문자열이다."""
+    tail = f"_{axis.attribute}"
+    if axis.channel_name.endswith(tail):
+        return axis.channel_name[: -len(tail)]
+    return ""
+
+
 @dataclass(frozen=True)
 class FixtureCapability:
     """한 fid 가 조정할 수 있는 것 — 그리고 **못 읽은 것**.
@@ -144,6 +153,22 @@ class FixtureCapability:
         """
         wanted = attribute.strip().casefold()
         return any(axis.attribute.casefold() == wanted for axis in self.axes)
+
+    @property
+    def sub_geometry_dimmer(self) -> bool:
+        """밝기(Dimmer) 채널이 본체가 아닌 지오메트리(서브 광원)에 실렸는가.
+
+        본체는 Pan·Tilt 가 실린 지오메트리로 본다. 본체를 가릴 수 없으면 거짓 — 「서브에 밝기가
+        있다」는 판정은 본체와 서브가 갈릴 때만 한다.
+        """
+        body = {_geometry(axis) for axis in self.axes if axis.attribute in ("Pan", "Tilt")}
+        body.discard("")
+        if not body:
+            return False
+        return any(
+            axis.attribute.casefold() == "dimmer" and _geometry(axis) not in ("", *body)
+            for axis in self.axes
+        )
 
     def axis(self, attribute: str) -> AxisRange | None:
         """그 속성의 물리 범위. 목록에 없으면 ``None``.

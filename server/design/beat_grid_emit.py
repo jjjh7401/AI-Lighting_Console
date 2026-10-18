@@ -387,6 +387,7 @@ def _cue_attribute_commands(
     timing: SongTiming,
     dimmer_attributes: Mapping[str, Sequence[str]],
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
+    brightness_selection: str | None = None,
 ) -> tuple[tuple[str, ...], str | None]:
     """칸 내용(선택+속성 설정) 줄만 — ``Store Cue``/트리거 시각 줄은 뺀다.
     ``(명령 튜플, 사유)`` — 사유가 있으면 명령은 항상 빈 튜플이다(부분
@@ -444,14 +445,17 @@ def _cue_attribute_commands(
             )
         commands.extend(
             brightness_value_commands(
-                group_no=group_no, value_percent=value_percent, dimmer_attributes=attrs
+                group_no=group_no,
+                value_percent=value_percent,
+                dimmer_attributes=attrs,
+                selection=brightness_selection,
             )
         )
     elif mode in ("dimmer_preset", "dimmer_effect"):
         preset_no = brightness.get("preset_no")
         if preset_no is None:
             return (), f"brightness.mode == {mode!r} 인데 preset_no 가 없습니다(지어내지 않음)"
-        commands.append(f"{selection} ; At Preset {preset_no}")
+        commands.append(f"{brightness_selection or selection} ; At Preset {preset_no}")
 
     return tuple(commands), None
 
@@ -572,6 +576,7 @@ def _emit_cue(
     dimmer_attribute_reasons: Mapping[str, str] | None = None,
     sequence_name_command: str | None = None,
     timecode_lead_seconds: float = 0.0,
+    brightness_selection: str | None = None,
 ) -> CueEmitResult:
     bar = int(cue["bar"])  # type: ignore[arg-type]
 
@@ -596,6 +601,7 @@ def _emit_cue(
         timing=timing,
         dimmer_attributes=dimmer_attributes,
         dimmer_attribute_reasons=dimmer_attribute_reasons,
+        brightness_selection=brightness_selection,
     )
     if reason is not None:
         return CueEmitResult(bar=bar, commands=(), blocked_reason=reason)
@@ -850,6 +856,9 @@ def emit_beat_grid_write_bundle(
                 dimmer_attribute_reasons=dimmer_attribute_reasons,
                 sequence_name_command=name_command if name_pending else None,
                 timecode_lead_seconds=timecode_lead_seconds,
+                brightness_selection=(
+                    str(track["sub_selection"]) if track.get("sub_selection") else None
+                ),
             )
             if cue.get("mib_premove") is True:
                 result = replace(result, premove=True)

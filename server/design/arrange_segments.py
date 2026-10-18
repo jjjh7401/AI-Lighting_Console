@@ -73,7 +73,12 @@ from server.design.arrange_generator import (
     _section_color,
     _voices,
 )
-from server.design.arrange_policy import MOVER_POSITION_LADDER, ArrangementPolicy
+from server.design.arrange_policy import (
+    AIMING_LINE_ROLES,
+    MOVER_POSITION_LADDER,
+    STAGE_FACING_POSITION,
+    ArrangementPolicy,
+)
 from server.design.beat_grid import BeatGridCue, BeatGridTrack
 from server.design.beat_grid_measured import visible_axes
 from server.design.beat_grid_mib import MIB_MIN_DARK_SECONDS
@@ -270,6 +275,12 @@ def generate_segment_draft(
                 )
                 if track.get("layer_role") == "mover" and plan.kind in _MOVER_LIT_KINDS:
                     plan = plan._replace(position=mover_at.get((name, section.start_bar)))
+                elif (
+                    track.get("pan_tilt") is True
+                    and track.get("layer_role") in AIMING_LINE_ROLES
+                    and plan.brightness_percent > 0
+                ):
+                    plan = plan._replace(position=STAGE_FACING_POSITION)
                 plans[name][bar] = plan
 
     bar_ms = {int(entry["bar"]): int(entry["start_ms"]) for entry in bar_map["bars"]}
