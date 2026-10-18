@@ -187,6 +187,14 @@ SHOWFILE_WRITE_DISPATCHES: dict[tuple[str, str, int], str] = {
         "Store Preset (색·디머·포지션) — 앱이 만든 프리셋을 승인 카드 뒤에 콘솔에 "
         "굳힌다. risk=BatchRisk 로 한 번에 1개 승인(Store preset commands)"
     ),
+    # SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔 타임코드 이벤트에 바로 반영. `run_instruction`
+    # 체인 밖의 전용 진입점이라 ambient 세션 키를 직접 묶는다(bind_session_key).
+    ("server/web/session.py", "_cell_live_send_with_card", 0): (
+        "Set Timecode T.1.K.1.1.N Property 'Time' S — 타임코드 이벤트 시각 고치기(허용 목록 "
+        "move_bundle_allowed 를 통과한 줄만). 옮기기 범위를 아직 승인받지 않았을 때 "
+        "BatchRisk(kind='beat_grid_cell_live') 로 승인 카드 1회 + 송신 직전 재확인(recheck). "
+        "승인된 범위의 송신은 run_commands 를 거치지 않고 execute_preapproved 로 간다"
+    ),
 }
 
 #: ② 쇼파일을 고치는데 봉합이 없는 자리 — 각자 후속 카드다.
