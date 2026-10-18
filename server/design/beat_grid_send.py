@@ -23,9 +23,10 @@ section``·``design_rig``·``bar_map``을 호출자가 이미 읽어 넘긴다).
 
 from __future__ import annotations
 
+import copy
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from collections.abc import Collection, Iterable, Mapping, Sequence
+from dataclasses import dataclass, replace
 
 from server.design.app_movement import dimmer_attribute_names
 from server.design.beat_grid_emit import BeatGridEmitResult, SongTiming
@@ -35,8 +36,20 @@ from server.looks.songcue import SequenceNumberError, select_sequence_number
 
 __all__ = [
     "BeatGridCellKey",
+    "CELL_UNCHANGED_REASON",
+    "CellApplyUnits",
+    "SUBSET_FORBIDDEN_PREFIXES",
     "apply_beat_grid_ownership_reuse",
+    "cell_apply_units",
+    "cells_needing_whole_apply",
+    "cells_with_removed_fields",
     "clear_app_timecode_before_rebuild",
+    "format_cell_list",
+    "merge_applied_cues_into_record",
+    "merge_cell_snapshot",
+    "merge_store_line",
+    "recorded_cue_conflict",
+    "removed_cue_fields",
     "song_end_seconds_from_bar_map",
     "beat_grid_cell_snapshot",
     "beat_grid_reapply_summary",
@@ -44,6 +57,7 @@ __all__ = [
     "dimmer_unread_notices",
     "pick_sequence_numbers",
     "resolve_dimmer_attributes",
+    "subset_line_violation",
     "timecode_overwrite_note",
     "resolve_group_dimmer_attributes",
     "unsent_beat_grid_cells",
@@ -415,6 +429,366 @@ def _cell_differs(now: object, then: object) -> bool:
         now = {key: value for key, value in now.items() if key != "direction"}
         then = {key: value for key, value in then.items() if key != "direction"}
     return now != then
+
+
+# =============================================================================
+# 칸 단위 반영 — 고른 칸의 큐만 콘솔에 덧쓴다. 아래는 전부 순수 변환이다(콘솔 접촉 0건).
+# 타임코드·프리셋 만들기·BPM 줄은 큐 줄 밖에 있어서 여기로 들어오지 않는다.
+# =============================================================================
+
+#: 에미터가 낸 저장 줄 — 머리 ``Store Sequence S Cue N [CueFade x]`` 와 그 뒤 옵션들.
+_STORE_LINE = re.compile(r"^(Store Sequence \d+ Cue \d+(?: CueFade \S+)?)((?: .*)?)$")
+
+#: 콘솔에 이미 있는 시퀀스에 칸 하나를 덧쓸 때 큐 줄에서 뺄 줄의 머리 — 재반영이 첫 큐 앞에 붙이는
+#: 시퀀스 통째 삭제(``Delete Sequence``)와, 에미터가 새 시퀀스의 첫 큐에만 붙이는 이름·WrapAround
+#: 설정(``Set Sequence``).
+_REBUILD_LINE_PREFIXES = ("Delete Sequence ", "Set Sequence ")
+
+#: 칸 단위 반영 묶음에 한 줄도 들어가면 안 되는 줄의 머리 — 시퀀스·타임코드·프리셋·타입·속성을
+#: 만들거나 지우는 줄이다. 묶음에 허용되는 것은 고른 큐의 값 줄·``Store Sequence … /Merge``·
+#: ``ClearAll``·``Set Cue …`` 줄뿐이다.
+SUBSET_FORBIDDEN_PREFIXES = (
+    "Delete",
+    "Store Timecode",
+    "Store Preset",
+    "Label Preset",
+    "Store Type",
+    "Store Property",
+    "Set Sequence",
+)
+
+#: 줄 안의 ``Sequence <번호>`` 참조, 그리고 ``Store Sequence <번호> Cue <번호>`` 저장 줄의 머리.
+_SEQUENCE_REF = re.compile(r"\bSequence (\d+)\b")
+_STORE_CUE_REF = re.compile(r"^Store Sequence (\d+) Cue (\d+)\b")
+
+_CELL_HAS_NO_LINES = "구조화 값이 없어 보낼 줄이 없습니다"
+_CELL_STORE_LINE_UNKNOWN = "큐 저장 줄 모양을 알 수 없어 보내지 않습니다"
+_CELL_SEQUENCE_NOT_OWNED = "콘솔에 만들어진 시퀀스가 아니라서 보내지 않습니다"
+#: 고른 칸이 마지막 반영과 같아 보내지 않는 칸의 사유 — 바뀐 칸만 보낸다.
+CELL_UNCHANGED_REASON = "콘솔과 같음(바뀐 칸 아님)"
+
+
+def merge_store_line(line: str) -> str:
+    """큐 저장 줄에 ``/Merge`` 를 단다. 자리는 ``cue_sheet_apply`` 의
+    ``f"{store} /Merge{options}"`` 와 같다(``CueFade`` 뒤, ``/CueOnly`` 같은 옵션 앞). 이미 있는
+    큐에 덧쓰는 줄은 옵션 없이 저장하면 콘솔이 거절한다. 이미 ``/Merge`` 가 있으면 그대로다.
+    저장 줄 모양이 아니면 ``ValueError`` — 모르는 줄을 그대로 보내지 않는다."""
+    match = _STORE_LINE.match(line)
+    if match is None:
+        raise ValueError(f"큐 저장 줄이 아닙니다: {line!r}")
+    head, options = match.groups()
+    if "/Merge" in options.split():
+        return line
+    return f"{head} /Merge{options}"
+
+
+def _cell_lines(commands: Sequence[str]) -> tuple[str, ...]:
+    """큐 하나의 줄에서 시퀀스를 다시 만드는 줄을 빼고 저장 줄에 ``/Merge`` 를 단다."""
+    lines = [line for line in commands if not line.startswith(_REBUILD_LINE_PREFIXES)]
+    stores = [index for index, line in enumerate(lines) if line.startswith("Store Sequence")]
+    if len(stores) != 1:
+        raise ValueError("큐 저장 줄이 하나가 아닙니다")
+    lines[stores[0]] = merge_store_line(lines[stores[0]])
+    return tuple(lines)
+
+
+def subset_line_violation(
+    lines: Iterable[str],
+    *,
+    sequence_numbers: Collection[int],
+    store_cues: Collection[tuple[int, int]],
+) -> str | None:
+    """칸 단위 반영 묶음에 들어갈 수 없는 첫 줄과 그 이유(없으면 ``None``).
+
+    금지 머리(:data:`SUBSET_FORBIDDEN_PREFIXES`)의 줄, 콘솔에 만들어진 시퀀스
+    (``sequence_numbers``)가 아닌 시퀀스를 건드리는 줄, 보내기로 한 큐(``store_cues`` 의
+    (시퀀스, 큐))가 아닌 큐를 저장하는 줄이 걸린다."""
+    for line in lines:
+        if line.startswith(SUBSET_FORBIDDEN_PREFIXES):
+            return f"{line!r} — 시퀀스·타임코드·프리셋·타입·속성을 만들거나 지우는 줄입니다"
+        for number in _SEQUENCE_REF.findall(line):
+            if int(number) not in sequence_numbers:
+                return f"{line!r} — 콘솔에 만들어진 시퀀스가 아닌 시퀀스를 건드립니다"
+        store = _STORE_CUE_REF.match(line)
+        if store is not None and (int(store[1]), int(store[2])) not in store_cues:
+            return f"{line!r} — 고르지 않은 칸의 큐를 저장합니다"
+    return None
+
+
+def format_cell_list(cells: Iterable[BeatGridCellKey], *, limit: int | None = None) -> str:
+    """``BACK 3마디, FOH 7마디`` — 거절 사유에 칸을 이름으로 적는다. ``limit`` 을 넘는 칸은
+    ``외 N칸`` 으로 줄인다(수백 칸을 한 번에 고른 사유가 화면을 덮지 않게)."""
+    names = [f"{group_name} {bar}마디" for group_name, bar in cells]
+    if limit is not None and len(names) > limit:
+        return ", ".join(names[:limit]) + f" 외 {len(names) - limit}칸"
+    return ", ".join(names)
+
+
+def recorded_cue_conflict(
+    recorded_cues: Mapping[str, object], bar: int, cue_number: int
+) -> str | None:
+    """이번 계획의 큐 번호가 콘솔에 남은 기록(``{마디: 큐 번호}``, 키는 문자열)과 어긋나면 사유,
+    맞으면 ``None``. 칸 단위 반영은 큐를 번호로 덧쓰므로, 칸을 넣거나 빼서 번호가 밀린 뒤에 쓰면
+    다른 마디의 큐를 망가뜨린다 — 그런 칸은 전체 반영으로 시퀀스를 다시 만들어야 한다.
+
+    기록에 이 마디가 있고 번호가 다르면 어긋남, 기록에 이 마디가 없는데(새 칸) 그 번호를 다른
+    마디가 쓰고 있으면 겹침이다. 기록에 이 마디가 없고 번호도 비어 있으면(끝에 붙는 새 칸) 맞다."""
+    recorded: dict[int, int] = {}
+    for key, number in recorded_cues.items():
+        try:
+            recorded[int(key)] = int(number)  # type: ignore[call-overload]
+        except (TypeError, ValueError):
+            continue
+    known = recorded.get(bar)
+    if known is not None:
+        if known == cue_number:
+            return None
+        return (
+            f"콘솔에는 {bar}마디가 큐 {known}번인데 이번 계획은 큐 {cue_number}번이라 칸 단위로 "
+            "덧쓸 수 없습니다(칸을 넣거나 빼서 큐 번호가 밀렸습니다)"
+        )
+    owner = next(
+        (other for other, number in sorted(recorded.items()) if number == cue_number), None
+    )
+    if owner is not None:
+        return (
+            f"큐 {cue_number}번은 콘솔에서 {owner}마디가 이미 쓰고 있어 새 칸을 칸 단위로 덧쓸 수 "
+            "없습니다(칸을 넣거나 빼서 큐 번호가 밀렸습니다)"
+        )
+    return None
+
+
+#: 「지운 항목」으로 보지 않는 키 — 서빙 때만 붙는 표시값(``_DISPLAY_ONLY_CUE_KEYS``)과,
+#: 번호에서 풀어 낸 표시 색(``color_rgb``).
+_REMOVAL_IGNORED_KEYS = _DISPLAY_ONLY_CUE_KEYS | {"color_rgb"}
+
+
+def _is_blank(value: object) -> bool:
+    """값이 없는가 — ``None``·빈 글·빈 목록/사전, 그리고 그런 것만 담은 목록/사전이다. 정규화된 칸의
+    ``brightness``·``entry`` 는 값이 전부 ``None`` 인 사전으로 남으므로 속까지 본다. 0·``False`` 는
+    값이다(밝기 0%는 지운 게 아니다)."""
+    if value is None or value == "":
+        return True
+    if isinstance(value, Mapping):
+        return all(_is_blank(member) for member in value.values())
+    if isinstance(value, (list, tuple)):
+        return all(_is_blank(member) for member in value)
+    return False
+
+
+def _removed_paths(
+    previous: Mapping[str, object], current: Mapping[str, object], prefix: str
+) -> list[str]:
+    """``previous`` 에서 값이 있던 잎이 ``current`` 에서 비게 된 자리의 점 경로 목록. 사전은 속으로
+    들어가고, 목록은 들어가지 않는다 — 비지 않은 목록이 비게 되면 그 키 하나가 지움이다."""
+    found: list[str] = []
+    for key, before in previous.items():
+        # 최상위에서는 표시값·``color_rgb`` 를, 어느 깊이에서든 ``color_rgb`` 를 건너뛴다.
+        if key == "color_rgb" or (not prefix and key in _REMOVAL_IGNORED_KEYS):
+            continue
+        path = f"{prefix}{key}"
+        now = current.get(key)
+        if isinstance(before, Mapping) and isinstance(now, Mapping):
+            found.extend(_removed_paths(before, now, f"{path}."))
+        elif not _is_blank(before) and _is_blank(now):
+            found.append(path)  # 잎이거나, 사전·목록이 통째로 사라진 경우(그 키 하나)
+    return found
+
+
+def removed_cue_fields(
+    previous: Mapping[str, object], current: Mapping[str, object]
+) -> tuple[str, ...]:
+    """마지막 반영 때는 값이 있었는데 지금은 없는(없거나 비어 있는) 항목 이름을 정렬해 돌려준다.
+    속이 있는 항목은 점 경로(``app_movement.shape``·``brightness.value_percent``·
+    ``entry.fade_bars``)로 적는다.
+
+    ``/Merge`` 로 덧쓰는 칸 단위 반영은 새 큐가 더는 내지 않는 값을 콘솔 큐에서 지우지 못한다 —
+    예컨대 ``color_preset_no`` 를 비우면 색 줄이 사라져 콘솔은 옛 색을 그대로 갖고, 앱 움직임의
+    ``shape`` 만 비워도(속도·축이 남아도) 에미터가 움직임 줄을 안 내 콘솔은 옛 움직임을 그대로
+    갖는다. 그런데 스냅샷은 칸이 콘솔과 같다고 말하게 된다. 새로 생긴 키와 값이 바뀌었지만 아직
+    값이 있는 키는 지운 게 아니다. 최상위의 표시값(``_DISPLAY_ONLY_CUE_KEYS``)은 보지 않고,
+    ``color_rgb`` 는 어느 깊이에서든 보지 않는다. 목록은 속으로 들어가지 않는다."""
+    return tuple(sorted(_removed_paths(previous, current, "")))
+
+
+def cells_with_removed_fields(
+    previous: Mapping[BeatGridCellKey, object] | None,
+    current: Mapping[BeatGridCellKey, object],
+    cells: Iterable[BeatGridCellKey],
+) -> dict[BeatGridCellKey, str]:
+    """``cells`` 가운데 마지막 반영(``previous`` 스냅샷) 뒤에 항목을 지운 칸(칸 -> 사유). 스냅샷에
+    없던 칸(새 칸)은 지울 항목이 없다."""
+    reasons: dict[BeatGridCellKey, str] = {}
+    for cell in cells:
+        before = (previous or {}).get(cell)
+        now = current.get(cell)
+        if not (isinstance(before, Mapping) and isinstance(now, Mapping)):
+            continue
+        gone = removed_cue_fields(before, now)
+        if gone:
+            reasons[cell] = (
+                f"지운 항목({', '.join(gone)})은 콘솔에 남아 있어 칸 단위로 지울 수 없습니다 — "
+                "전체 「⇪ 콘솔에 반영」으로 지워 주세요"
+            )
+    return reasons
+
+
+@dataclass(frozen=True)
+class CellApplyUnits:
+    """고른 칸마다의 송신 단위. ``units``(칸 -> 줄)와 ``cue_numbers``(칸 -> 저장할 큐 번호)는 보내는
+    칸이고(전체 반영 순서), ``not_applied``(칸 -> 사유)는 보내지 못하는 칸이다(고른 순서)."""
+
+    units: dict[BeatGridCellKey, tuple[str, ...]]
+    cue_numbers: dict[BeatGridCellKey, int]
+    not_applied: dict[BeatGridCellKey, str]
+
+
+def cell_apply_units(
+    result: BeatGridEmitResult,
+    cells: Sequence[BeatGridCellKey],
+    *,
+    owned_sequences: Mapping[str, int],
+    recorded_tracks: Mapping[str, Mapping[str, object]] | None = None,
+    unchanged: Collection[BeatGridCellKey] = (),
+    refused: Mapping[BeatGridCellKey, str] | None = None,
+) -> CellApplyUnits:
+    """전체 반영과 같은 계획(``result``)에서 고른 ``cells`` 의 큐만 남긴다.
+
+    큐 번호는 ``result`` 가 매긴 그대로라 전체 반영과 같다. 단위 줄은 그 큐 줄에서 시퀀스를 다시
+    만드는 줄을 빼고 저장 줄에 ``/Merge`` 를 단 것이다(시퀀스는 콘솔에 이미 있다). 보내지 못하는
+    칸은 ``not_applied`` 에 사유와 함께 담는다 — ``unchanged``(마지막 반영과 같은 칸)·``refused``
+    (호출자가 사유를 달아 미리 거절한 칸, 예: 지운 항목이 있는 칸)·막힌 칸·줄이 없는 칸·
+    ``owned_sequences``(그룹 -> 콘솔에 만들어 둔 시퀀스 번호)에 없는 줄의 칸·저장 줄을 알 수 없는
+    칸·금지 줄(:func:`subset_line_violation`)이 있는 칸. ``recorded_tracks``(소유권 기록의
+    ``tracks``)를 주면 기록한 큐 번호와 어긋나는 칸(:func:`recorded_cue_conflict`)도 뺀다. 어둠 속
+    미리 이동 큐(MIB)는 격자 칸이 아니라서 고를 수도, 보내지도 않는다."""
+    wanted = dict.fromkeys(cells)
+    same_as_console = set(unchanged)
+    units: dict[BeatGridCellKey, tuple[str, ...]] = {}
+    cue_numbers: dict[BeatGridCellKey, int] = {}
+    reasons: dict[BeatGridCellKey, str] = {
+        key: CELL_UNCHANGED_REASON for key in wanted if key in same_as_console
+    }
+    for key, why in (refused or {}).items():
+        if key in wanted and key not in reasons:
+            reasons[key] = why
+    for track in result.tracks:
+        owned_number = owned_sequences.get(track.group_name)
+        recorded = (recorded_tracks or {}).get(track.group_name) or {}
+        recorded_cues = recorded.get("cues")
+        for cue in track.cues:
+            key = (track.group_name, cue.bar)
+            if key not in wanted or key in reasons or cue.premove:
+                continue
+            if cue.blocked_reason is not None:
+                reasons[key] = cue.blocked_reason
+                continue
+            if not cue.commands or cue.cue_number is None:
+                reasons[key] = _CELL_HAS_NO_LINES
+                continue
+            if owned_number is None or owned_number != track.sequence_number:
+                reasons[key] = _CELL_SEQUENCE_NOT_OWNED
+                continue
+            conflict = (
+                recorded_cue_conflict(
+                    recorded_cues if isinstance(recorded_cues, Mapping) else {},
+                    cue.bar,
+                    cue.cue_number,
+                )
+                if recorded_tracks is not None
+                else None
+            )
+            if conflict is not None:
+                reasons[key] = conflict
+                continue
+            try:
+                lines = _cell_lines(cue.commands)
+            except ValueError:
+                reasons[key] = _CELL_STORE_LINE_UNKNOWN
+                continue
+            stray = subset_line_violation(
+                lines, sequence_numbers={owned_number}, store_cues={(owned_number, cue.cue_number)}
+            )
+            if stray is not None:
+                reasons[key] = f"칸 단위 반영에 쓸 수 없는 줄이 있어 보내지 않습니다: {stray}"
+                continue
+            units[key] = lines
+            cue_numbers[key] = cue.cue_number
+    by_name = {track.group_name: track for track in result.tracks}
+    for key in wanted:
+        if key in units or key in reasons:
+            continue
+        track = by_name.get(key[0])
+        if track is None:
+            reasons[key] = "격자에 그 줄이 없습니다"
+        else:
+            reasons[key] = track.blocked_reason or "이 줄에 그 마디 칸이 없습니다"
+    return CellApplyUnits(
+        units=units,
+        cue_numbers=cue_numbers,
+        not_applied={key: reasons[key] for key in wanted if key in reasons},
+    )
+
+
+def cells_needing_whole_apply(
+    *,
+    pending: Iterable[Mapping[str, object]],
+    held: Iterable[Mapping[str, object]],
+    released: Iterable[Mapping[str, object]],
+) -> dict[BeatGridCellKey, list[str]]:
+    """칸 단위 반영이 맡을 수 없는 칸(칸 -> 이유들) — 프리셋 승인 대기·빈 프리셋 보류·이번에 새로
+    만들 프리셋을 쓰는 칸이다. 이 셋은 승인 기록과 프리셋 만들기 줄이 얽혀 있어 전체 반영으로
+    보내야 한다. 항목은 ``pending_preset_approvals`` 와 같은 모양(``group_name``·``bar``)이다."""
+    found: dict[BeatGridCellKey, list[str]] = {}
+    for label, entries in (
+        ("승인 대기 프리셋", pending),
+        ("빈 프리셋 보류", held),
+        ("새로 만들 프리셋", released),
+    ):
+        for entry in entries:
+            bar = entry.get("bar")
+            if isinstance(bar, int) and not isinstance(bar, bool):
+                labels = found.setdefault((str(entry.get("group_name")), bar), [])
+                if label not in labels:
+                    labels.append(label)
+    return found
+
+
+def merge_cell_snapshot(
+    existing: Mapping[BeatGridCellKey, object] | None,
+    current: Mapping[BeatGridCellKey, object],
+    applied: Iterable[BeatGridCellKey],
+) -> dict[BeatGridCellKey, object]:
+    """칸 단위 반영 뒤의 「콘솔에 반영」 스냅샷 — 기존 기록의 사본에서 반영한 칸만 지금 값
+    (``current``)으로 갈아 끼운다. 반영하지 않은 칸은 옛 기록 그대로라 계속 미반영으로 남는다.
+    기존 기록이 없으면 빈 기록에서 시작한다(그러면 나머지 칸은 모두 미반영이다)."""
+    merged = dict(existing) if existing is not None else {}
+    for key in applied:
+        merged[key] = current[key]
+    return merged
+
+
+def merge_applied_cues_into_record(
+    record: Mapping[str, object], applied: Mapping[str, Mapping[int, int]]
+) -> dict[str, object]:
+    """소유권 기록 사본에 칸 단위 반영이 쓴 큐 번호만 더한다
+    (``tracks[줄]["cues"][마디] = 큐 번호``). 다른 줄·다른 마디, 시퀀스·타임코드의 번호와 이름,
+    추가 타임코드는 그대로다. 기록에 없는 줄은 만들지 않는다 — 소유를 확인한 줄만 여기까지 온다."""
+    merged = copy.deepcopy(dict(record))
+    tracks = merged.get("tracks")
+    if not isinstance(tracks, dict):
+        return merged
+    for group_name, cues in applied.items():
+        track = tracks.get(group_name)
+        if not isinstance(track, dict):
+            continue
+        recorded = track.get("cues")
+        if not isinstance(recorded, dict):
+            recorded = {}
+            track["cues"] = recorded
+        for bar, number in cues.items():
+            recorded[str(bar)] = number
+    return merged
 
 
 # =============================================================================

@@ -149,15 +149,23 @@ from server.design.beat_grid_probes import (
 from server.design.beat_grid_send import (
     APP_SEQUENCE_PREFIX,
     APP_TIMECODE_PREFIX,
+    CELL_UNCHANGED_REASON,
     BeatGridCellKey,
+    CellApplyUnits,
     _owned_sequence_names,
     _same_owned_sequence_name,
     apply_beat_grid_ownership_reuse,
     beat_grid_cell_snapshot,
     beat_grid_reapply_summary,
     build_song_timing_from_bar_map,
+    cell_apply_units,
+    cells_needing_whole_apply,
+    cells_with_removed_fields,
     clear_app_timecode_before_rebuild,
     dimmer_unread_notices,
+    format_cell_list,
+    merge_applied_cues_into_record,
+    merge_cell_snapshot,
     parse_track_target,
     pick_sequence_numbers,
     resolve_group_dimmer_attributes,
@@ -10477,12 +10485,19 @@ class ChatSession:
         target: str | None,
         changes: dict[str, object] | None,
         sentence: str | None = None,
+        cells: Sequence[BeatGridCellKey] | None = None,
     ) -> dict:
         """편집 경로 ①(직접 고르기, ``changes``) 또는 ②(문장, ``sentence``)
         가 수렴하는 단일 진입점 — 둘 다 결국
         ``beat_grid_edit.apply_beat_grid_edit``를 부른다(REQ-LDBEAT-007/008).
         경로 ③(AI 제안)은 ``beat_grid_suggestion_apply``를 통해 이 메서드를
         재사용한다(같은 편집 요청을 보낸다).
+
+        ``cells``(고른 (줄 이름, 마디) 칸 여러 개)는 ``bar``+``target`` 한 쌍과 **다른 주소
+        형태**다 — 같은 ``changes`` 를 그 칸 모두에 한 번에 씌운다(둘을 함께 주면 거절).
+        먼저 모든 칸이 지금 격자에 있는지 보고, 한 격자 사본 위에서 칸마다 같은
+        ``apply_beat_grid_edit`` 를 부른다. 한 칸이라도 거절되면 아무 칸도 바꾸지 않고(거절한
+        칸을 이름으로 적는다), 모두 통과해야 한 번 저장한다(되돌리기도 한 단계).
 
         ``sentence``가 있으면 그 문장이 ``bar``(및 범위가 있으면
         ``bar_end``)/``target``/``changes``를 전부 정하고(파서가 돌려준
@@ -10498,6 +10513,11 @@ class ChatSession:
         if timeline is None:
             return self._beat_grid_rejection(
                 "수정할 박자 격자가 아직 없습니다. 곡을 먼저 설계하거나 불러오세요."
+            )
+
+        if cells is not None and (bar is not None or target is not None or sentence is not None):
+            return self._beat_grid_rejection(
+                "칸 목록(cells)은 마디·트랙·문장과 함께 쓸 수 없습니다 — 주소는 한 가지만 주세요."
             )
 
         bar_end: int | None = None
@@ -10525,7 +10545,8 @@ class ChatSession:
             else:
                 changes = parsed["changes"]  # type: ignore[assignment]
 
-        if bar is None or target is None or not changes:
+        unaddressed = not cells if cells is not None else bar is None or target is None
+        if unaddressed or not changes:
             return self._beat_grid_rejection(
                 "어느 마디·트랙을 고칠지 또는 무엇을 고칠지 못 읽었습니다."
             )
@@ -10534,7 +10555,11 @@ class ChatSession:
         # 카드 t574 — 트리거 박 범위 검증에 쓰는 마디당 박 수는 곡 데이터에서만.
         beats_per_bar = beats_per_bar_from_timeline(timeline)
         try:
-            if bar_end is not None and bar_end != bar:
+            if cells is not None:
+                updated_grid, report = self._apply_beat_grid_edit_cells(
+                    grid, cells, changes, beats_per_bar
+                )
+            elif bar_end is not None and bar_end != bar:
                 updated_grid, report = apply_beat_grid_edit_range(
                     grid,
                     bar_start=bar,
@@ -10583,6 +10608,50 @@ class ChatSession:
         )
         self._send(event)
         return event
+
+    @staticmethod
+    def _apply_beat_grid_edit_cells(
+        grid: Mapping[str, object],
+        cells: Sequence[BeatGridCellKey],
+        changes: Mapping[str, object],
+        beats_per_bar: int | None,
+    ) -> tuple[dict[str, object], list[str]]:
+        """고른 칸 모두에 같은 ``changes`` 를 씌운 격자 사본과 변경 보고 — 전부 아니면 전무다.
+
+        모든 칸이 지금 격자에 있어야 하고(없는 칸을 새로 만들지 않는다), 한 격자 사본 위에서 칸마다
+        ``apply_beat_grid_edit`` 를 차례로 부른다. 한 칸이라도 거절되면 사본을 버리고
+        ``BeatGridEditError`` 로 거절한 칸을 모두 이름으로 적는다(같은 사유는 한 번만). 입력 격자는
+        어느 경우에도 바뀌지 않는다."""
+        ordered = tuple(dict.fromkeys((str(name), int(bar)) for name, bar in cells))
+        present = beat_grid_cell_snapshot(grid)
+        absent = [cell for cell in ordered if cell not in present]
+        if absent:
+            raise BeatGridEditError(
+                f"선택한 칸이 지금 격자에 없습니다: {format_cell_list(absent, limit=8)}."
+            )
+        working: Mapping[str, object] = grid
+        report: list[str] = []
+        refused: dict[str, list[BeatGridCellKey]] = {}
+        for name, bar in ordered:
+            try:
+                working, lines = apply_beat_grid_edit(
+                    working, bar=bar, target=name, changes=changes, beats_per_bar=beats_per_bar
+                )
+            except BeatGridEditError as error:
+                refused.setdefault(str(error), []).append((name, bar))
+                continue
+            report.extend(lines)
+        if refused:
+            count = sum(len(refused_cells) for refused_cells in refused.values())
+            listed = " · ".join(
+                f"{format_cell_list(refused_cells, limit=8)}: {why}"
+                for why, refused_cells in refused.items()
+            )
+            raise BeatGridEditError(
+                f"선택한 {len(ordered)}칸 중 {count}칸을 고칠 수 없어 "
+                f"아무 칸도 바꾸지 않았습니다 — {listed}"
+            )
+        return dict(working), report
 
     # -- 카드 t589(REQ-LDBEAT-015(h)) — "+ 새 프리셋 만들기" 다이얼로그 ------
 
@@ -11489,6 +11558,7 @@ class ChatSession:
         extra_notices: Sequence[str] = (),
         completed: str | None = None,
         timecode_suggestion: int | None = None,
+        subset: dict | None = None,
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
@@ -11497,7 +11567,8 @@ class ChatSession:
         있지만 지금 격자에는 없는 트랙 이름이다. 반영이 성공하면 콘솔
         시퀀스는 건드리지 않고 기록에서만 뺀 뒤 감독에게 알린다.
         ``completed``·``timecode_suggestion`` 은 성공한
-        단계가 직접 넘길 때만 이벤트에 실린다(없으면 키 자체가 없다)."""
+        단계가 직접 넘길 때만 이벤트에 실린다(없으면 키 자체가 없다).
+        ``subset`` 은 칸 단위 반영이 성공했을 때만 넘긴다(고른 칸·보낸 칸·못 보낸 칸)."""
         unsent = self._beat_grid_current_unsent_cells()
         event = beat_grid_send_status_event(
             pending_apply_count=len(unsent) if unsent is not None else None,
@@ -11512,6 +11583,7 @@ class ChatSession:
             notices=[*dimmer_unread_notices(blocked_cells), *extra_notices],
             completed=completed,
             timecode_suggestion=timecode_suggestion,
+            subset=subset,
         )
         self._send(event)
         return event
@@ -11827,7 +11899,7 @@ class ChatSession:
                 Path(handle.name).unlink()
 
     @timed_apply
-    def beat_grid_apply(self) -> dict:
+    def beat_grid_apply(self, cells: Sequence[BeatGridCellKey] | None = None) -> dict:
         """상단 바 「⇪ 콘솔에 반영」 — 격자의 미반영 편집을 **구간 단위
         1개** 승인으로 콘솔에 쓴다(REQ-LDBEAT-012(a), 칸마다 따로 승인받지
         않는다). 입력 넷(순서 번호·타임코드 번호·디머 속성·곡 타이밍)을
@@ -11840,7 +11912,16 @@ class ChatSession:
         앱이 저번에 쓴** 번호를 먼저 콘솔에서 확인하고(이름까지 같아야
         한다), 확인된 번호만 재사용한다. 레코드에 없는 트랙(새 트랙)만
         새 번호를 받는다. 소유권 확인이 하나라도 실패하면 명령 0줄 —
-        부분 재적용은 없다."""
+        부분 재적용은 없다.
+
+        ``cells``(고른 (줄 이름, 마디) 칸)가 있으면 **칸 단위 반영**이다 — 계획은 위와 똑같이 세우고
+        (큐 번호도 전체 반영과 같다) 고른 칸의 큐만 남겨, 콘솔에 이미 있는 시퀀스에 ``/Merge`` 로
+        덧쓴다. 타임코드·프리셋 만들기·시퀀스 새로 만들기는 한 줄도 보내지 않고, 승인 대기 프리셋을
+        승인 기록으로 넘기지도 않는다. 바뀐 칸만 보내고(마지막 반영과 같은 칸은 ``not_applied``),
+        마지막 반영 때 있던 항목을 지운 칸도 ``/Merge`` 가 지우지 못해 ``not_applied`` 로 둔다.
+        이 곡의 반영 기록이 없는 경우·콘솔에 아직 없는 줄·이미 콘솔과 같은 칸뿐인 선택·프리셋
+        승인/보류/만들기와 얽힌 칸은 아무것도 보내지 않고 거절한다(전체 반영이 맡는다).
+        ``cells`` 가 없으면 위 전체 반영 그대로다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -11850,6 +11931,47 @@ class ChatSession:
         grid = self._beat_grid_view(timeline)
         tracks = list(grid.get("tracks") or [])
         group_names = [str(track.get("group_name")) for track in tracks]
+        # 칸 단위 반영 — 고른 칸을 중복 없이(순서 유지) 고정한다. 아래 거절(고른 칸이 없다 · 이 곡의
+        # 반영 기록이 없다 · 지금 격자에 없는 칸이 있다)은 모두 콘솔을 읽기 전에 한다.
+        subset = cells is not None
+        selected: tuple[BeatGridCellKey, ...] = ()
+        unchanged: tuple[BeatGridCellKey, ...] = ()
+        unsent_keys: set[BeatGridCellKey] = set()
+        removed_cells: dict[BeatGridCellKey, str] = {}
+        if cells is not None:
+            selected = tuple(dict.fromkeys((str(name), int(bar)) for name, bar in cells))
+            if not selected:
+                return self._beat_grid_send_status(
+                    last_action="apply", ok=False, reason="반영할 칸을 고르지 않았습니다."
+                )
+            # 마지막 반영의 칸 기록(스냅샷)이 없으면 어느 칸이 바뀌었는지 알 수 없다 —
+            # 고른 칸을 바뀐 칸으로 치지 않고 거절한다.
+            last_snapshot = self._beat_grid_snapshots.get(self._beat_grid_song_key(timeline))
+            unsent = unsent_beat_grid_cells(grid, last_snapshot)
+            if unsent is None:
+                return self._beat_grid_send_status(
+                    last_action="apply",
+                    ok=False,
+                    reason=(
+                        "이 곡은 아직 반영 기록이 없어 칸 단위로 보낼 수 없어요 — "
+                        "전체 「⇪ 콘솔에 반영」으로 먼저 맞춰 주세요."
+                    ),
+                )
+            grid_cells = beat_grid_cell_snapshot(grid)
+            absent = [cell for cell in selected if cell not in grid_cells]
+            if absent:
+                return self._beat_grid_send_status(
+                    last_action="apply",
+                    ok=False,
+                    reason=f"선택한 칸이 지금 격자에 없습니다: {format_cell_list(absent)}.",
+                )
+            # 바뀐 칸만 보낸다 — 마지막 반영과 같은 칸은 다시 보내지 않는다. 바뀐 칸 가운데 마지막
+            # 반영 때 값이 있던 항목을 지운 칸은 ``/Merge`` 로 지울 수 없어 따로 거절한다.
+            unsent_keys = {(entry["group_name"], entry["bar"]) for entry in unsent}
+            unchanged = tuple(cell for cell in selected if cell not in unsent_keys)
+            removed_cells = cells_with_removed_fields(
+                last_snapshot, grid_cells, (cell for cell in selected if cell in unsent_keys)
+            )
         # 카드 t577(REQ-LDBEAT-015(h-2)) — 이 호출 시점의 초안(``grid``)을
         # 기준으로 승인 대기 칸·필드를 모은다. 이 집합이 승인 카드가 보여줄
         # "새로 만드는 프리셋 N개" 그 자체이고, 승인 뒤 `evidence.approval`을
@@ -11878,6 +12000,15 @@ class ChatSession:
             entry for entry in [*checked, *position_plan.released] if not entry.get("approved")
         ]
         held_presets = position_plan.held
+        # 칸 단위 반영이 맡을 수 없는 칸(프리셋 승인 대기·빈 프리셋 보류·이번에 새로 만들 프리셋을
+        # 쓰는 칸) — 아래에서 고른 칸과 겹치면 거절한다. 전체 반영에는 쓰이지 않는다.
+        whole_only_cells = (
+            cells_needing_whole_apply(
+                pending=pending_before, held=held_presets, released=position_plan.released
+            )
+            if subset
+            else {}
+        )
         # 승인 대기 보류 칸은 에미터가 승인 없음으로 이미 막는다. 승인된 보류 칸은
         # 에미터가 모르므로 칸 단위 보류 목록으로 넘긴다(커맨드 0줄·큐 번호 안 씀).
         approved_held_cells: dict[tuple[str, int], str] = {}
@@ -11914,6 +12045,44 @@ class ChatSession:
                 return self._beat_grid_send_status(
                     last_action="apply", ok=False, reason=ownership_reason
                 )
+
+            if subset:
+                # 칸 단위 반영은 이미 콘솔에 있는 시퀀스에 덧쓸 뿐이다 — 새로 만들지 않는다.
+                no_sequence = sorted(
+                    {name for name, _bar in selected if name not in owned_sequences}
+                )
+                if no_sequence:
+                    return self._beat_grid_send_status(
+                        last_action="apply",
+                        ok=False,
+                        reason=(
+                            "칸 단위 반영은 콘솔에 이미 만들어진 줄에만 쓸 수 있습니다 — "
+                            f"아직 콘솔 시퀀스가 없는 줄: {', '.join(no_sequence)}. "
+                            "전체 「⇪ 콘솔에 반영」으로 먼저 만들어 주세요."
+                        ),
+                    )
+                # 고른 칸이 전부 마지막 반영과 같으면 보낼 것이 없다(바뀐 칸은 위에서 가려 두었다).
+                if unsent_keys.isdisjoint(selected):
+                    return self._beat_grid_send_status(
+                        last_action="apply",
+                        ok=False,
+                        reason="선택한 칸은 이미 콘솔에 반영된 내용과 같아 보낼 것이 없습니다.",
+                    )
+                needs_whole = [cell for cell in selected if cell in whole_only_cells]
+                if needs_whole:
+                    listed = ", ".join(
+                        f"{name} {bar}마디({'·'.join(whole_only_cells[(name, bar)])})"
+                        for name, bar in needs_whole
+                    )
+                    return self._beat_grid_send_status(
+                        last_action="apply",
+                        ok=False,
+                        reason=(
+                            f"선택한 칸 중 전체 반영이 필요한 칸이 있습니다: {listed}. 프리셋 승인 "
+                            "대기·빈 프리셋 보류·새로 만드는 프리셋을 쓰는 칸은 전체 「⇪ 콘솔에 "
+                            "반영」으로 보내 주세요."
+                        ),
+                    )
 
             # 카드 apply-safety(D14) — 타임코드를 먼저 정한다: 앱이 만든 옛 타임코드를 덮어쓰면
             # 그 트랙이 가리키던 앱 시퀀스('LDBEAT …')를 재사용해 새 번호를 쌓지 않는다.
@@ -12068,13 +12237,46 @@ class ChatSession:
                     overwrite_all_groups=frozenset(reused_from_timecode),
                 )
 
-            if clear_timecode:
-                result = clear_app_timecode_before_rebuild(
-                    result, timecode_number, delete_sequences=tuple(sorted(stale_app_sequences))
+            # 칸 단위 반영은 타임코드를 지우지도 다시 만들지도 않는다(타임코드 줄을 보내지 않는다).
+            if not subset:
+                if clear_timecode:
+                    result = clear_app_timecode_before_rebuild(
+                        result, timecode_number, delete_sequences=tuple(sorted(stale_app_sequences))
+                    )
+                # 이 곡이 전에 만든 추가 타임코드도 같은 규칙으로 지우고 다시 만든다
+                # (옛 트랙 쌓임 방지).
+                for extra_number in reused_extra_timecodes:
+                    result = clear_app_timecode_before_rebuild(result, extra_number)
+            # 칸 단위 반영 — 위 계획에서 고른 칸 가운데 바뀐 칸의 큐만 남긴다(큐 번호는 전체 반영과
+            # 같다). 보낼 칸이 하나도 없으면 아무것도 보내지 않고 칸마다의 사유로 거절한다.
+            subset_plan: CellApplyUnits | None = None
+            subset_blocked: list[tuple[str, int, str]] = []
+            if subset:
+                subset_plan = cell_apply_units(
+                    result,
+                    selected,
+                    owned_sequences=owned_sequences,
+                    recorded_tracks=owned_tracks_record,
+                    unchanged=unchanged,
+                    refused=removed_cells,
                 )
-            # 이 곡이 전에 만든 추가 타임코드도 같은 규칙으로 지우고 다시 만든다(옛 트랙 쌓임 방지).
-            for extra_number in reused_extra_timecodes:
-                result = clear_app_timecode_before_rebuild(result, extra_number)
+                # 마지막 반영과 같아 보내지 않은 칸은 「막힌 칸」이 아니다 — 사유만 남긴다.
+                subset_blocked = [
+                    (name, bar, reason)
+                    for (name, bar), reason in subset_plan.not_applied.items()
+                    if reason != CELL_UNCHANGED_REASON
+                ]
+                if not subset_plan.units:
+                    why = " · ".join(
+                        f"{name} {bar}마디: {reason}"
+                        for (name, bar), reason in subset_plan.not_applied.items()
+                    )
+                    return self._beat_grid_send_status(
+                        last_action="apply",
+                        ok=False,
+                        reason=f"칸 단위로 보낼 수 있는 칸이 없습니다 — {why}",
+                        blocked_cells=subset_blocked,
+                    )
             # 재실행 4 — 다시 만든 시퀀스의 옛 큐는 사라졌으므로 그 트랙의 옛 기록은 넘기지 않는다.
             rebuilt = set(result.rebuilt_sequences)
             next_cue_record, preserved_cells, out_of_order = beat_grid_reapply_summary(
@@ -12088,7 +12290,7 @@ class ChatSession:
             # 카드 t592 — 새 위치 프리셋 만들기 줄(조준 → Store → Label → ClearAll)은
             # 큐 줄보다 **앞**에 둔다: 끝의 ClearAll 이 프로그래머를 비운 뒤 에미터의
             # 큐 줄이 시작한다(t474 run3 실기 선례와 같은 꼴).
-            cells = [
+            batch_cells = [
                 *position_plan.creations.values(),
                 *self._beat_grid_apply_cells(result),
             ]
@@ -12103,7 +12305,10 @@ class ChatSession:
             if bpm_lines and not any(
                 bpm_lines[0] in creation for creation in position_plan.creations.values()
             ):
-                cells.insert(0, bpm_lines)
+                batch_cells.insert(0, bpm_lines)
+            if subset_plan is not None:
+                # 칸 단위 반영은 고른 큐의 줄만 보낸다 — 프리셋 만들기·BPM·타임코드 줄은 없다.
+                batch_cells = list(subset_plan.units.values())
             # 카드 t593 은 여기에 효과 만들기 줄이 같은 묶음의 다른 줄과 겹치면 반영을
             # 멈추는 가드를 뒀다 — 당시엔 송신 중복 제거가 묶음 안 반복 줄을 건너뛰어
             # 빈 효과가 저장됐기 때문이다(카드 t601). 카드 t601 이 그 중복 제거를
@@ -12111,7 +12316,7 @@ class ChatSession:
             # 겹쳐도 전부 승인된 그대로 나간다(`run_commands`가 한 호출 안에서 두 번
             # 이상 쓰이는 ``already_executed`` 를 더는 쌓지 않는다) — 가드가 막던 결함
             # 자체가 없어졌으므로 가드도 걷었다(카드 t605).
-            batch = build_write_approval_batch(cells)
+            batch = build_write_approval_batch(batch_cells)
             # 카드 t572 — 승인 카드에 「막혀서 그대로 둔 칸」과 「번호 순서와
             # 시간 순서가 다른 큐」를 적는다(리드 결정). 둘 다 0이면 문구는
             # t563 그대로다.
@@ -12130,7 +12335,7 @@ class ChatSession:
                 )
                 + " · "
                 + _beat_grid_cell_breakdown(
-                    cells,
+                    batch_cells,
                     creation_count=len(position_plan.creations),
                     cue_count=emitted_cue_count,
                     result=result,
@@ -12308,6 +12513,16 @@ class ChatSession:
                     for entry in held_presets
                 )
                 risk_reason += f" · {EMPTY_PRESET_HOLD}(송신 보류) {len(held_presets)}개: {listed}"
+            if subset_plan is not None:
+                # 칸 단위 반영의 승인 카드는 전체 반영의 요약(타임코드·시퀀스 범위)을 쓰지 않는다 —
+                # 타임코드를 건드리지 않는다. 보내는 칸 수를 적고, 못 보내는 칸은 사유를 덧붙인다.
+                risk_reason = f"박자 격자 칸 반영 — 선택한 {len(subset_plan.units)}칸만 1회 승인"
+                if subset_plan.not_applied:
+                    skipped = ", ".join(
+                        f"{name} {bar}마디({reason})"
+                        for (name, bar), reason in subset_plan.not_applied.items()
+                    )
+                    risk_reason += f" · 보내지 않는 칸 {len(subset_plan.not_applied)}개: {skipped}"
             # 카드 t598 — 위치 풀은 반영 버튼 때 읽었고 ``Store Preset``은 승인 **뒤** 나간다.
             # 승인 창이 떠 있는 사이 콘솔에서 그 번호가 채워지면 경고 없이 덮어쓰므로,
             # 게이트가 승인 직후·실행 직전에 같은 풀을 다시 읽게 한다(못 읽어도 중단).
@@ -12319,10 +12534,13 @@ class ChatSession:
                     presend_reasons.append(reason)
                 return reason
 
+            # 칸 단위 반영은 새 프리셋을 만들지 않으므로 송신 직전 재확인이 필요 없다.
             risk = BatchRisk(
                 reason=risk_reason,
                 kind="beat_grid_apply",
-                recheck=_presend_recheck if position_plan.creations else None,
+                recheck=(
+                    _presend_recheck if position_plan.creations and subset_plan is None else None
+                ),
             )
             since = datetime.now(UTC).isoformat()
             apply_stage("precheck")
@@ -12363,6 +12581,9 @@ class ChatSession:
             # 승인 창이 떠 있는 동안 들어온 편집을 지우지 않도록, 카드 구성
             # 시점의 스냅샷이 아니라 **지금** 저장된 격자 위에 적는다 — 그
             # 사이 번호가 바뀐 칸은 `apply_pending_approval`이 값 대조로 건너뛴다.
+            if subset_plan is not None:
+                # 칸 단위 반영은 승인 대기 프리셋을 보낸 적이 없다 — 승인 기록으로 넘기지 않는다.
+                pending_before = []
             if pending_before:
                 current = store.latest if store is not None else None
                 if current is not None:
@@ -12387,7 +12608,8 @@ class ChatSession:
                 for cue in track.cues:
                     if cue.cue_number is not None:
                         cue_numbers.setdefault(track.group_name, {})[cue.bar] = cue.cue_number
-            if store is not None:
+            # 칸 단위 반영은 마지막 반영 상태를 통째로 갈지 않는다 — 아래에서 보낸 칸만 병합한다.
+            if store is not None and subset_plan is None:
                 store.beat_grid_applied = _BeatGridAppliedState(
                     sequence_numbers=dict(sequence_numbers), cue_numbers=cue_numbers
                 )
@@ -12398,7 +12620,11 @@ class ChatSession:
             # — 스냅샷을 그대로 두어 unsent_cells 가 계속 "미반영"으로
             # 남게 한다(거짓 초록 방지).
             stale_tracks: list[str] = []
-            if verdict.passed:
+            if verdict.passed and subset_plan is not None:
+                self._beat_grid_commit_cells(
+                    song_key=song_key, grid=grid, record=record, applied=subset_plan.cue_numbers
+                )
+            elif verdict.passed:
                 self._beat_grid_snapshots[self._beat_grid_song_key(timeline)] = (
                     beat_grid_cell_snapshot(grid)
                 )
@@ -12455,15 +12681,29 @@ class ChatSession:
                             "tracks": updated_tracks_record,
                         },
                     )
+            subset_status = None
+            if subset_plan is not None:
+                subset_status = {
+                    "requested": len(selected),
+                    "applied": [[name, bar] for name, bar in subset_plan.units],
+                    "not_applied": [
+                        {"group_name": name, "bar": bar, "reason": reason}
+                        for (name, bar), reason in subset_plan.not_applied.items()
+                    ],
+                }
             return self._beat_grid_send_status(
                 last_action="apply",
                 ok=True,
-                blocked_cells=result.blocked_cells,
-                extra_notices=[
-                    *result.blocked_track_notices,
-                    *result.mib_notes,
-                    *result.unsent_notices,
-                ],
+                blocked_cells=subset_blocked if subset_plan is not None else result.blocked_cells,
+                extra_notices=(
+                    []
+                    if subset_plan is not None
+                    else [
+                        *result.blocked_track_notices,
+                        *result.mib_notes,
+                        *result.unsent_notices,
+                    ]
+                ),
                 approval_vs_sent={
                     "sha256": batch.sha256,
                     "cell_count": batch.cell_count,
@@ -12474,9 +12714,51 @@ class ChatSession:
                 stale_tracks=stale_tracks,
                 # 반영 완료 표지도 위 스냅샷과 같은 기준이다 — 승인=송신 대조가 맞을 때만 단다.
                 completed="reflected" if verdict.passed else None,
+                subset=subset_status,
             )
         finally:
             reset_session_key(token)
+
+    def _beat_grid_commit_cells(
+        self,
+        *,
+        song_key: tuple[object, object],
+        grid: Mapping[str, object],
+        record: Mapping[str, object] | None,
+        applied: Mapping[BeatGridCellKey, int],
+    ) -> None:
+        """칸 단위 반영이 승인=송신까지 확인된 성공일 때의 기록 갱신 — 전체 반영과 달리 기존 기록에
+        **병합**한다. 스냅샷은 보낸 칸만 지금 값으로 바꾸고(나머지는 계속 미반영), 소유권 기록은 그
+        칸의 큐 번호만 더하고(다른 줄·시퀀스/타임코드 번호와 이름은 그대로, 사라진 줄 정리도 안
+        한다), 마지막 반영 상태는 그 칸의 큐 번호만 더한다(시퀀스 번호는 그대로, 상태가 없으면
+        만들지 않는다). 프리셋을 만들지 않았으므로 빈 프리셋 표식은 건드리지 않는다."""
+        self._beat_grid_snapshots[song_key] = merge_cell_snapshot(
+            self._beat_grid_snapshots.get(song_key), beat_grid_cell_snapshot(grid), applied
+        )
+        by_track: dict[str, dict[int, int]] = {}
+        for (name, bar), number in applied.items():
+            by_track.setdefault(name, {})[bar] = number
+        store = self._timeline_store
+        if store is not None:
+            if record is not None:
+                store.set_beat_grid_allocation(
+                    song_key, merge_applied_cues_into_record(record, by_track)
+                )
+            state = store.beat_grid_applied
+            if state is not None:
+                store.beat_grid_applied = _BeatGridAppliedState(
+                    sequence_numbers=state.sequence_numbers,
+                    cue_numbers={
+                        **state.cue_numbers,
+                        **{
+                            name: {**state.cue_numbers.get(name, {}), **cues}
+                            for name, cues in by_track.items()
+                        },
+                    },
+                )
+        latest = store.latest if store is not None else None
+        if latest is not None:
+            self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest)))
 
     def _beat_grid_preview_commands(self, verb: str, bar: int | None) -> tuple[str, ...] | None:
         """``verb``가 "goto"면 ``bar``를 담은 최신 큐로 — 가장 최근 반영(저장소의
