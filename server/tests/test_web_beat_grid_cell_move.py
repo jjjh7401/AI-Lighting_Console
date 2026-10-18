@@ -184,21 +184,27 @@ def _emitted_event_ms(tracks: list[dict]) -> dict[str, list[int]]:
 
 
 def _timecode_nodes(
-    timecode: int, event_ms: dict[str, list[int]], targets: dict[str, str] | None = None
+    timecode: int,
+    event_ms: dict[str, list[int]],
+    targets: dict[str, str] | None = None,
+    rows: dict[str, int] | None = None,
 ) -> dict:
-    """콘솔 상태 나무에서 타임코드 하나의 노드들 — 트랙(1번 자리는 마커)과 그 이벤트 컨테이너."""
+    """콘솔 상태 나무에서 타임코드 하나의 노드들 — 트랙(1번 자리는 마커)과 그 이벤트 컨테이너.
+
+    ``rows`` 는 이 타임코드가 가진 줄 -> 트랙 상태 자리다(생략하면 두 줄 모두)."""
     targets = targets or _TARGETS
+    rows = rows or _STATE_INDEX
     base = f"DataPool/Timecodes/{timecode}/1"
     nodes: dict = {
         base: {
             "children": [
                 {"i": 1, "class": "Marker"},
-                *({"i": index, "class": "Track"} for index in _STATE_INDEX.values()),
+                *({"i": index, "class": "Track"} for index in rows.values()),
             ]
         },
         f"{base}/1": {"children": [], "props": {}},
     }
-    for group, index in _STATE_INDEX.items():
+    for group, index in rows.items():
         nodes[f"{base}/{index}"] = {
             "children": [],
             "props": {"TARGET": targets[group], "NAME": f"Track {index - 1}"},
@@ -1050,6 +1056,46 @@ class TestMovingEqualsApplyingAgain:
         assert _console_event_ms(h.console, "BACK") == [8502, 13502, 20502]
         assert h.store.beat_grid_allocation(SONG) == h.before["record"]
         assert h.store.beat_grid_snapshots[h.before["key"]] == h.before["snapshot"]
+
+
+# == 줄이 여러 타임코드에 나뉘어 담긴 곡 ===================================================
+
+
+class TestRowsSplitAcrossTimecodes:
+    """줄이 많으면 반영이 다음 타임코드에 이어 담는다.
+    그 번호가 소유 기록의 ``extra_timecodes`` 다."""
+
+    @staticmethod
+    def _split_tree() -> dict:
+        # BACK 은 TC5 의 1번 트랙, SIDE 는 TC6 의 1번 트랙이다(트랙 번호는 타임코드마다 1부터).
+        event_ms = _emitted_event_ms(_tracks())
+        return {
+            "DataPool/Timecodes": {"children": [], "node": {"childCount": 0}},
+            **_timecode_nodes(5, event_ms, rows={"BACK": 2}),
+            **_timecode_nodes(6, event_ms, rows={"SIDE": 2}),
+        }
+
+    @staticmethod
+    def _split_record() -> dict:
+        record = _record()
+        record["extra_timecodes"] = [{"timecode_number": 6, "timecode_name": "LDBEAT Timecode 6"}]
+        return record
+
+    def test_each_row_is_moved_on_the_timecode_that_holds_its_track(self, tmp_path) -> None:
+        h = _build(tmp_path, tree=self._split_tree(), record=self._split_record())
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 6), _move("SIDE", 7, 8)])
+        assert event["ok"] is True
+        assert h.console.executed == [
+            LINE_BACK_5_TO_6,
+            "Set Timecode 6.1.1.1.1.2 Property 'Time' 18.502",
+        ]
+        assert (_bars(h, "BACK"), _bars(h, "SIDE")) == ([3, 6, 9], [3, 8])
+
+    def test_a_timecode_the_record_does_not_list_is_not_searched(self, tmp_path) -> None:
+        h = _build(tmp_path, tree=self._split_tree())  # 기록에 TC6 이 없다
+        event = h.session.beat_grid_cell_edit([_move("SIDE", 7, 8)])
+        _assert_refused_before_sending(h, event, NO_TRACK, "SIDE")
+        assert [path for path in h.console.reads if path.startswith("DataPool/Timecodes/6/")] == []
 
 
 # == WebSocket 층을 지나는 길 ============================================================
