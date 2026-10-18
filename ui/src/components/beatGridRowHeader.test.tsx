@@ -90,9 +90,9 @@ describe("줄 머리 폭 — 설명 길이와 관계없이 한 폭 (감독 실�
   it("줄 머리 칸은 모든 줄·마디 눈금 머리가 같은 고정 폭을 쓴다(설명 길이로 늘지 않는다)", () => {
     const label = cssBody(STYLES, ".beat-grid-track-label");
     expect(label).toMatch(/box-sizing:\s*border-box/);
-    expect(label).toMatch(/(?<![-\w])width:\s*200px/);
-    expect(label).toMatch(/min-width:\s*200px/);
-    expect(label).toMatch(/max-width:\s*200px/);
+    expect(label).toMatch(/(?<![-\w])width:\s*130px/);
+    expect(label).toMatch(/min-width:\s*130px/);
+    expect(label).toMatch(/max-width:\s*130px/);
     expect(label).not.toMatch(/90px/);
   });
 

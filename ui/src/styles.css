@@ -4799,9 +4799,9 @@ body {
   /* 줄 머리 폭 하나 — 줄 머리·마디 눈금 머리·장면 전환 머리가 같은 폭을 써서 타임라인이 같은 x 에서 시작한다.
      넘치는 설명은 말줄임(…)으로 줄이고, 전체 글은 툴팁(title)으로 본다. */
   box-sizing: border-box;
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
+  width: 130px;
+  min-width: 130px;
+  max-width: 130px;
   overflow: hidden;
   font-size: 12px;
   color: var(--muted);
