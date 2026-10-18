@@ -11484,8 +11484,9 @@ class ChatSession:
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
         출처로 삼는다(코디네이터 계약 5항 — "단일 출처") — 별도 카운터는
         더 이상 없다. ``stale_tracks``(카드 t572)는 소유권 레코드에는
-        있지만 지금 격자에는 없는 트랙 이름 — 지우지 않고 그대로 두되
-        감독에게 알린다. ``completed``·``timecode_suggestion`` 은 성공한
+        있지만 지금 격자에는 없는 트랙 이름이다. 반영이 성공하면 콘솔
+        시퀀스는 건드리지 않고 기록에서만 뺀 뒤 감독에게 알린다.
+        ``completed``·``timecode_suggestion`` 은 성공한
         단계가 직접 넘길 때만 이벤트에 실린다(없으면 키 자체가 없다)."""
         unsent = self._beat_grid_current_unsent_cells()
         event = beat_grid_send_status_event(
@@ -12399,14 +12400,15 @@ class ChatSession:
                     self._send(
                         song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(latest))
                     )
-                # 카드 t572 — 소유권 레코드 갈아 끼우기. 레코드에는 있지만
-                # 지금 격자에는 없는 트랙(stale)은 건드리지 않고 그대로
-                # 들고 간다(지우지 않는다) — 이번에 쓴 트랙만 새 값으로
-                # 갱신한다.
+                # 카드 t572 — 소유권 레코드 갈아 끼우기. 기록은 이번 반영에서
+                # 실제로 쓴 트랙만 담는다. 격자에서 빠진 옛 트랙(stale)은
+                # 콘솔 시퀀스를 건드리지 않고 기록에서만 뺀다. 남겨 두면 그
+                # 번호를 다른 곡이 쓸 때 「▶」가 이 곡을 콘솔에 없다고 막는다
+                # (WT-owned-record-grid, 리드 지시).
                 stale_tracks = sorted(
                     name for name in owned_tracks_record if name not in group_names
                 )
-                updated_tracks_record = dict(owned_tracks_record)
+                updated_tracks_record: dict[str, dict] = {}
                 # 기록하는 트랙은 「원래 소유한 트랙」과 「이번에 실제로 만든
                 # 트랙」뿐이다. 통째로 막힌 새 트랙은 콘솔에 시퀀스가 생기지
                 # 않았으므로 적지 않는다 — 적으면 다음 반영이 「기록한 시퀀스가
