@@ -215,6 +215,7 @@ export function BeatGridStage({
           tracks={tracks}
           viewBar={viewBar}
           selectedTrackName={selectedTrackName}
+          selectedRows={selectedRows}
           onSelectTrack={onSelectTrack}
           motion={motion}
           presetBook={presetBook}

@@ -4,9 +4,9 @@
  * 자리는 줄의 층 역할로 정한다(BACK 원 줄 · BLIND 사각 · U/D 무빙 두 줄 · SIDE-L/R 원 세로줄 ·
  * WASH 점 · FOH 점). 무빙은 첫 줄이 위(U), 둘째 줄이 아래(D) — 이름 규칙은 쓰지 않는다(리드 결정).
  * 색은 지금 마디의 그 줄 색(켜짐 = 칸 색, 꺼짐 = #333), 빔은 켜진 무빙만, 고른 줄은 노란 점선 테두리.
- * 자리를 누르면 그 자리를 맡는 줄을 고른다(줄 편집).
+ * 자리나 이름표를 누르면 그 자리를 맡는 줄을 고른다(줄 편집). Shift 를 누르면 고른 줄에 더하거나 뺀다.
  */
-import type { ReactNode } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
 import type { BeatGridTrack } from "../../protocol";
 import { OFF_FIXTURE_COLOR, cueForBar, trackIsLitAt, trackStageColor } from "../BeatGrid";
@@ -67,6 +67,7 @@ export function StageConceptSvg({
   tracks = [],
   viewBar = 0,
   selectedTrackName = null,
+  selectedRows = [],
   onSelectTrack,
   motion,
   presetBook,
@@ -81,8 +82,10 @@ export function StageConceptSvg({
   tracks?: readonly BeatGridTrack[];
   viewBar?: number;
   selectedTrackName?: string | null;
-  /** 자리를 누르면 그 자리를 맡는 줄을 고른다(줄 편집). */
-  onSelectTrack?: (trackIndex: number) => void;
+  /** 무대에서 고른 줄들(트랙 번호) — 여기 든 자리는 모두 노란 점선으로 둘린다. */
+  selectedRows?: readonly number[];
+  /** 자리나 이름표를 누르면 그 자리를 맡는 줄을 고른다(줄 편집). `additive` 는 Shift 를 누른 채 눌렀을 때 참 — 고른 줄에 더하거나 뺀다. */
+  onSelectTrack?: (trackIndex: number, additive?: boolean) => void;
 }) {
   const W = width;
   const H = height;
@@ -128,7 +131,8 @@ export function StageConceptSvg({
       {text}
     </text>
   );
-  // 자리 하나의 묶음 — 맡는 줄이 있으면 누를 수 있고, 고른 줄이면 노란 점선 테두리를 두른다.
+  // 자리 하나의 묶음 — 맡는 줄이 있으면 누를 수 있고(이름표도), 고른 줄이면 노란 점선 테두리를 두른다.
+  // 고른 줄 = 편집 칸의 줄(`selectedIndex`)이거나 무대에서 고른 줄(`selectedRows`).
   const slotGroup = (
     slot: ConceptSlot,
     box: { x: number; y: number; width: number; height: number },
@@ -136,10 +140,22 @@ export function StageConceptSvg({
   ) => {
     const state = stateOf(slot);
     const index = state.trackIndex;
-    const selected = index !== null && index === selectedIndex;
-    const onClick = index !== null && onSelectTrack ? () => onSelectTrack(index) : undefined;
+    const track = index === null ? null : tracks[index];
+    const selected = index !== null && (index === selectedIndex || selectedRows.includes(index));
+    const onClick =
+      index !== null && onSelectTrack
+        ? (event: ReactMouseEvent<SVGGElement>) => onSelectTrack(index, event.shiftKey)
+        : undefined;
+    // 맡는 줄이 이 마디에 칸이 없으면 눌러도 아무 일이 없다 — 그 사실을 이름표 대신 말한다.
+    const hint = track && cueForBar(track, viewBar) ? "눌러서 편집" : "이 마디에는 칸이 없어요";
     return (
-      <g key={`slot-${slot}`} className={`beat-grid-stage-slot${selected ? " on" : ""}`} onClick={onClick}>
+      <g
+        key={`slot-${slot}`}
+        className={`beat-grid-stage-slot${selected ? " on" : ""}`}
+        onClick={onClick}
+        style={onClick ? { cursor: "pointer" } : undefined}
+      >
+        {track && <title>{`${track.group_name} — ${hint}`}</title>}
         {children}
         {selected && (
           <rect
@@ -165,38 +181,38 @@ export function StageConceptSvg({
       {slotGroup("wash", { x: L0 - 4, y: 66, width: SW + 8, height: 178 }, [
         ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 226, 5, `wf${i}`, stateOf("wash").color)),
         ...row(10, L0 + 22, R0 - 22).map((x, i) => lamp(x, 86, 5, `wb${i}`, stateOf("wash").color)),
+        label(L0 + 6, 250, "WASH"),
       ])}
       {slotGroup("foh", { x: L0 + 30, y: 252, width: SW - 60, height: 24 }, [
         ...row(8, L0 + 60, R0 - 60).map((x, i) => lamp(x, 264, 5, `fo${i}`, stateOf("foh").color)),
+        label(L0 + 44, 284, "FOH"),
       ])}
       {slotGroup("back", { x: L0 - 10, y: 18, width: SW + 20, height: 24 }, [
         ...row(12, L0 + 10, R0 - 10).map((x, i) => lamp(x, 30, 6, `ba${i}`, stateOf("back").color)),
+        label(L0, 16, "BACK"),
       ])}
       {slotGroup("side-l", { x: 14, y: 84, width: 28, height: 136 }, [
         ...row(6, 92, 212).map((y, i) => lamp(28, y, 6, `sl${i}`, stateOf("side-l").color)),
+        label(14, 76, "SIDE-L"),
       ])}
       {slotGroup("side-r", { x: W - 42, y: 84, width: 28, height: 136 }, [
         ...row(6, 92, 212).map((y, i) => lamp(W - 28, y, 6, `sr${i}`, stateOf("side-r").color)),
+        label(W - 14, 76, "SIDE-R", "end"),
       ])}
       {slotGroup("u", { x: L0 + 18, y: 44, width: SW - 36, height: 22 }, [
         ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("u", x, 54, i)),
+        label(L0 - 14, 58, "U", "end"),
       ])}
       {slotGroup("d", { x: L0 + 18, y: 110, width: SW - 36, height: 22 }, [
         ...row(CONCEPT_MOVERS_PER_ROW, L0 + 30, R0 - 30).map((x, i) => movingHead("d", x, 120, i)),
+        label(L0 - 14, 124, "D", "end"),
       ])}
       {slotGroup("blind", { x: W / 2 - 120, y: 33, width: 240, height: 16 }, [
         ...row(6, W / 2 - 110, W / 2 + 110).map((x, i) => (
           <rect key={`bl${i}`} x={x - 9} y={41} width={18} height={8} fill={stateOf("blind").color} />
         )),
+        label(W / 2, 36, "BLIND", "middle"),
       ])}
-      {label(L0 + 44, 284, "FOH")}
-      {label(L0 + 6, 250, "WASH")}
-      {label(L0, 16, "BACK")}
-      {label(W / 2, 36, "BLIND", "middle")}
-      {label(14, 76, "SIDE-L")}
-      {label(W - 14, 76, "SIDE-R", "end")}
-      {label(L0 - 14, 58, "U", "end")}
-      {label(L0 - 14, 124, "D", "end")}
     </svg>
   );
 }
