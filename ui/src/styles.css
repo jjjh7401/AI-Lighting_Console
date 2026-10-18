@@ -4780,11 +4780,13 @@ body {
   display: block;
 }
 
+/* 줄 한 줄 — 줄 머리(`.beat-grid-track-label`)와 타임라인 열이 이어 붙는다. 행에는 여백·간격을 두지 않는다:
+   마디 눈금 줄(`.beat-grid-ruler-row`)과 타임라인이 같은 x 에서 시작해야 하고, 머리 안쪽 여백은 머리가 지닌다.
+   (감독 실측: 설명 길이에 따라 줄마다 칸이 위아래로 어긋났다.) */
 .beat-grid-track {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 0 2px 14px;
+  padding: 2px 0;
   white-space: nowrap;
   min-height: 30px;
 }
@@ -4794,7 +4796,13 @@ body {
    비쳐 보였다. 줄 높이 전체로 늘려(`align-self: stretch`) 고정 칸이 막대를
    완전히 가린다. */
 .beat-grid-track-label {
-  min-width: 90px;
+  /* 줄 머리 폭 하나 — 줄 머리·마디 눈금 머리·장면 전환 머리가 같은 폭을 써서 타임라인이 같은 x 에서 시작한다.
+     넘치는 설명은 말줄임(…)으로 줄이고, 전체 글은 툴팁(title)으로 본다. */
+  box-sizing: border-box;
+  width: 200px;
+  min-width: 200px;
+  max-width: 200px;
+  overflow: hidden;
   font-size: 12px;
   color: var(--muted);
   flex-shrink: 0;
@@ -4809,11 +4817,33 @@ body {
   background: var(--panel);
 }
 
-/* 카드 t586 — 시안 `.lhead small{color:var(--uim);font-size:10.5px}`. */
+/* 카드 t586 — 시안 `.lhead small{color:var(--uim);font-size:10.5px}`. 넘치면 말줄임(…). */
 .beat-grid-track-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--muted);
   font-size: 10.5px;
   line-height: 1.2;
+}
+
+/* 줄 이름 글 — 머리 폭을 넘치면 말줄임(…). 전체 이름은 툴팁(title)으로 본다. */
+.beat-grid-track-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 머리 안쪽 여백은 줄(행) 안의 머리에만 준다 — 마디 눈금 머리·장면 전환 머리는 여백 없이 그 폭을 쓴다. */
+.beat-grid-track > .beat-grid-track-label {
+  padding: 0 8px 0 14px;
+}
+
+/* 자식 줄(└ 들여쓰기)의 글은 줄 머리 여백 14px 에 16px 을 더한 30px 에 선다(행 여백이 있던 때와 같다). */
+.beat-grid-track > .beat-grid-track-label.beat-grid-track-label-child {
+  padding-left: 30px;
 }
 
 .beat-grid-unconfirmed-badge {

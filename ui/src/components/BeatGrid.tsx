@@ -2901,7 +2901,7 @@ export function BeatGrid({
                     return (
                       <Fragment key={`${track.group_name}-${trackIndex}`}>
                       <div className="beat-grid-track" role="row">
-                        <span className="beat-grid-track-label">
+                        <span className="beat-grid-track-label" title={track.group_name}>
                           <span className="beat-grid-track-name">
                             {track.group_name}
                             {!track.group_no_confirmed && (
@@ -2915,7 +2915,12 @@ export function BeatGrid({
                             // #726 — 둘째 줄은 서버가 준 `sub_info.text`(콘솔 판독)가 있으면 그것, 없으면 기존 요약.
                             const summary =
                               track.sub_info?.text || trackFixtureSummary(track.group_no, track.group_name, fixtures);
-                            return summary ? <small className="beat-grid-track-meta">{summary}</small> : null;
+                            // 머리 폭을 넘치면 말줄임(…) — 전체 글은 툴팁으로 본다(감독 실측 2026-10-18).
+                            return summary ? (
+                              <small className="beat-grid-track-meta" title={summary}>
+                                {summary}
+                              </small>
+                            ) : null;
                           })()}
                         </span>
                         <div className="beat-grid-track-cues" style={{ width: laneContentWidth }}>
