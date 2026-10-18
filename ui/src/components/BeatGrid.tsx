@@ -979,6 +979,8 @@ export function applyFailureNote(status: BeatGridSendStatus | null | undefined):
   if (status.last_action === "apply") return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
   // 격자 편집 실패(자동 배치 적용이 바꾼 칸 0개 등) — 채팅에만 두면 전체화면에서 성공처럼 보인다.
   if (status.last_action === "edit") return `⚠ 격자에 적용 안 됨 — ${status.reason}`;
+  // 칸 가로 끌기로 옮기기(카드 WT-cell-edit-live) — 서버 사유는 한국어 문장이라 그대로 보인다.
+  if (status.last_action === "cell_edit") return `⚠ 칸 옮기기 안 됨 — ${status.reason}`;
   // 카드 WT-true-reasons — 「▶ 이 마디 콘솔에서 보기」 실패도 무반응으로 두지 않는다.
   if (status.last_action === "preview") return `⚠ 콘솔 미리보기 안 됨 — ${status.reason}`;
   return null;
