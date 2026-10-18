@@ -107,6 +107,38 @@ class TestAutomaticAssignment:
         assert assign_speed_master(path, "B") is None
 
 
+class TestTheRigsLegacyMasterIsKept:
+    """LOVE ATTACK 의 효과 프리셋은 이미 콘솔에서 마스터 15 에 묶여 있다.
+
+    처음 배정이 15 를 가져가면 두 곡의 BPM 줄이 서로 덮는다.
+    """
+
+    def test_another_song_asking_first_on_an_empty_record_never_gets_fifteen(
+        self, tmp_path: Path
+    ) -> None:
+        assert assign_speed_master(_registry(tmp_path), "OTHER SONG") == 14
+        assert _recorded(_registry(tmp_path)) == {"LOVE ATTACK": 15, "OTHER SONG": 14}
+
+    def test_love_attack_is_recorded_on_fifteen_on_its_first_encounter(
+        self, tmp_path: Path
+    ) -> None:
+        assert assign_speed_master(_registry(tmp_path), "LOVE ATTACK") == 15
+        assert _recorded(_registry(tmp_path)) == {"LOVE ATTACK": 15}
+
+    def test_a_wave_of_another_song_on_an_empty_record_never_writes_fifteen(
+        self, tmp_path: Path
+    ) -> None:
+        session, console, _approval = _session(tmp_path, tree=_tree({}))
+        _retitle(session, "OTHER SONG")
+
+        status = session.beat_grid_wave_custom("BACK", _SINE_2B)
+
+        assert status["ok"] is True
+        assert "Master 3.14 At BPM 112.35" in console.executed
+        assert not any(line.startswith("Master 3.15") for line in console.executed)
+        assert _recorded(_registry(tmp_path)) == {"LOVE ATTACK": 15, "OTHER SONG": 14}
+
+
 class TestTheConfigNamesNoSongAndNoMaster:
     def test_the_shipped_policy_has_no_master_and_the_file_has_no_master_key(self) -> None:
         policy = load_preset_pool_policy()

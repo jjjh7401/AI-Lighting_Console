@@ -5,14 +5,17 @@
 
 - 기록: 앱 데이터 폴더의 ``speed_masters.json`` — ``{"version": 1, "songs": [...]}``,
   항목은 ``{"title", "master"}``.
+- 시드: 이 앱이 이미 콘솔에 쓴 번호(``LEGACY_SPEED_MASTERS``)는 기록이 비어 있어도 먼저 적힌다.
+  처음 만나는 다른 곡이 그 번호를 가져가 겹치는 일을 막는다.
 - 배정: 기록이 없는 곡은 아직 어느 곡에도 없는 번호 가운데 **가장 큰 번호**를 골라 적는다.
   15 부터 — 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다(REQ-LDRHYTHM-010).
 - 곡 이름은 설정 파일(preset_pools.yaml)에 적지 않는다. 곡이 늘어도 설정을 고칠 일이 없다.
 - 기록을 읽지 못했거나 모양이 틀리면 배정하지 않는다(번호를 지어내지 않는다).
   번호가 모두 찼어도 배정하지 않는다.
 
-한계: 기록은 이 앱이 배정한 번호만 안다. 콘솔에 다른 경로로 묶인 스피드 마스터는 읽지 않는다.
-배정된 번호가 콘솔에서 비어 있는지는 승인 카드의 ``Master 3.N At BPM`` 줄로 리드가 확인한다.
+한계: 기록과 시드는 이 앱이 쓴 번호만 안다. 효과·시퀀스가 묶은 스피드 마스터는 콘솔에서 읽지 않는다.
+그 상태를 알려 주는 경로를 저장소에서 확인하지 못했다. 배정된 번호가 콘솔에서 비어 있는지는
+승인 카드의 ``Master 3.N At BPM`` 줄로 리드가 확인한다.
 """
 
 from __future__ import annotations
@@ -27,6 +30,12 @@ REGISTRY_FILE_NAME = "speed_masters.json"
 
 #: 배정할 수 있는 스피드 마스터 번호. 16 은 오디오 입력 BPM 마스터라 쓰지 않는다(REQ-LDRHYTHM-010).
 SPEED_MASTER_NUMBERS = range(1, 16)
+
+#: 이 앱이 콘솔에 이미 쓴 번호 — 곡 제목 → 번호. LOVE ATTACK 의 효과는 마스터 15 에 묶여 있다.
+#: 실기 근거: ``Master 3.15 At BPM 112.35`` OK · ``At SpeedMaster 15`` OK
+#: (.moai/reports/t516 live_write, t531 live P4). 이 앱이 지금까지 쓴 스피드 마스터는 15 하나뿐이다.
+#: 그래서 기록이 비어 있어도 LOVE ATTACK 은 15 를 받고, 다른 곡은 15 를 받지 않는다.
+LEGACY_SPEED_MASTERS: dict[str, int] = {"LOVE ATTACK": 15}
 
 _REGISTRY_VERSION = 1
 
@@ -82,6 +91,23 @@ def _write_registry(path: Path, songs: list[dict[str, object]]) -> None:
     os.replace(temporary, path)
 
 
+def _with_legacy_entries(songs: list[dict[str, object]]) -> tuple[list[dict[str, object]], bool]:
+    """이미 쓴 번호(``LEGACY_SPEED_MASTERS``)를 기록에 채운다. 새로 채운 것이 있으면 참.
+
+    번호가 다른 곡에 이미 적혀 있으면 채우지 않는다(기록이 어긋난 것을 덮어쓰지 않는다)."""
+    recorded = {song_key(str(entry["title"])) for entry in songs}
+    taken = {int(entry["master"]) for entry in songs}  # type: ignore[call-overload]
+    seeded = False
+    for title, master in LEGACY_SPEED_MASTERS.items():
+        if song_key(title) in recorded or master in taken:
+            continue
+        songs = [*songs, {"title": title, "master": master}]
+        recorded.add(song_key(title))
+        taken.add(master)
+        seeded = True
+    return songs, seeded
+
+
 def assign_speed_master(path: Path, song_title: str) -> int | None:
     """이 곡의 스피드 마스터 번호.
 
@@ -95,6 +121,12 @@ def assign_speed_master(path: Path, song_title: str) -> int | None:
         songs = read_registry(path)
     except RegistryError:
         return None
+    songs, seeded = _with_legacy_entries(songs)
+    if seeded:
+        try:
+            _write_registry(path, songs)
+        except OSError:
+            return None
     for entry in songs:
         if song_key(str(entry["title"])) == wanted:
             return int(entry["master"])  # type: ignore[call-overload]
