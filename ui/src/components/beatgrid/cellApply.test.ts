@@ -12,6 +12,8 @@ import {
   PARTIAL_RECORD_WARNING,
   SUBSET_RECORD_BASELINE_NOTE,
   cueSyncMark,
+  knownKeySet,
+  leftOutNote,
   partialApplyPlan,
   subsetSummary,
   unsentKeySet,
@@ -83,7 +85,8 @@ describe("partialApplyPlan — 「⇪ 콘솔에 반영」이 보낼 칸", () => 
           ["C", 3],
           ["A", 1],
         ],
-        note: "고른 3칸 중 바뀐 2칸만 보내요",
+        // 안 바뀐 B@2 는 콘솔과 같아 뺐다 — 몇 칸 뺐는지 안내에 적는다.
+        note: "고른 3칸 중 바뀐 2칸만 보내요 · 콘솔과 같아 뺀 1칸",
       });
     });
 
@@ -127,6 +130,181 @@ describe("partialApplyPlan — 「⇪ 콘솔에 반영」이 보낼 칸", () => 
       partialApplyPlan(unsent, picks, "snapshot");
       expect(unsent).toEqual([cellOf("A", 1)]);
       expect(picks).toEqual([cellOf("A", 1)]);
+    });
+  });
+
+  // 칸 단위 반영만 한 곡의 칸 기록은 **부분**이다 — 서버가 아는 칸을 `known_cells` 로 싣는다. 아는 칸인데 안 바뀐 칸은 콘솔과
+  // 같아 빼고, 바뀐 칸과 모르는 칸(`known_cells` 에 없는 칸 — 콘솔과 같은지 알 수 없다)은 보낸다.
+  describe("칸 기록이 부분일 때(known_cells) — 아는 칸·모르는 칸을 가른다", () => {
+    // 아는 칸: A1 · B2 · D4. 그 가운데 바뀐 칸: A1 · D4.
+    const KNOWN: [string, number][] = [
+      ["A", 1],
+      ["B", 2],
+      ["D", 4],
+    ];
+    const UNSENT = [cellOf("A", 1), cellOf("D", 4)];
+
+    it("아는데 안 바뀐 칸은 빼고, 바뀐 칸과 모르는 칸은 고른 순서대로 보낸다", () => {
+      // A1 바뀜 · B2 아는데 안 바뀜 · C3 모름 · D4 바뀜
+      const picks = [cellOf("A", 1), cellOf("B", 2), cellOf("C", 3), cellOf("D", 4)];
+      expect(partialApplyPlan(UNSENT, picks, "snapshot", KNOWN)).toEqual({
+        kind: "ready",
+        cells: [
+          ["A", 1],
+          ["C", 3],
+          ["D", 4],
+        ],
+        note: "고른 4칸 중 3칸을 보내요 (바뀐 2칸 · 콘솔 상태를 모르는 1칸) · 콘솔과 같아 뺀 1칸",
+      });
+    });
+
+    it("아는데 안 바뀐 칸만 골랐으면 보낼 것이 없어 막는다 — 고른 칸 기준으로 말한다", () => {
+      expect(partialApplyPlan(UNSENT, [cellOf("B", 2)], "snapshot", KNOWN)).toEqual({
+        kind: "blocked",
+        reason: PARTIAL_PICKED_NOTHING_CHANGED_HINT,
+        why: "nothing-changed",
+      });
+    });
+
+    it("모르는 칸만 골라도 보낸다 — 같다고 보지 않는다", () => {
+      const plan = partialApplyPlan(UNSENT, [cellOf("C", 3), cellOf("E", 5)], "snapshot", KNOWN);
+      expect(plan).toEqual({
+        kind: "ready",
+        cells: [
+          ["C", 3],
+          ["E", 5],
+        ],
+        note: "고른 2칸 중 2칸을 보내요 (콘솔 상태를 모르는 2칸)",
+      });
+    });
+
+    it("바뀐 칸 + 아는데 안 바뀐 칸만 고르면 모르는 칸 설명 없이 뺀 칸만 말한다", () => {
+      const plan = partialApplyPlan(UNSENT, [cellOf("A", 1), cellOf("B", 2)], "snapshot", KNOWN);
+      expect(plan).toEqual({
+        kind: "ready",
+        cells: [["A", 1]],
+        note: "고른 2칸 중 바뀐 1칸만 보내요 · 콘솔과 같아 뺀 1칸",
+      });
+      expect(leftOutNote(1)).toBe("콘솔과 같아 뺀 1칸");
+    });
+
+    it("아는 칸이 하나도 없는 부분 기록(빈 배열)이면 고른 칸은 전부 모르는 칸이라 모두 보낸다", () => {
+      const plan = partialApplyPlan([], [cellOf("A", 1), cellOf("B", 2)], "snapshot", []);
+      expect(plan.kind === "ready" && plan.cells).toEqual([
+        ["A", 1],
+        ["B", 2],
+      ]);
+    });
+
+    it("고른 칸이 없으면 바뀐 아는 칸 전부를 보낸다 — 예전과 같다(모르는 칸은 고르지 않으면 안 보낸다)", () => {
+      expect(partialApplyPlan(UNSENT, [], "snapshot", KNOWN)).toEqual({
+        kind: "ready",
+        cells: [
+          ["A", 1],
+          ["D", 4],
+        ],
+        note: "바뀐 2칸만 보내요",
+      });
+    });
+
+    it("고른 칸이 없고 바뀐 칸도 없으면 「바뀐 칸이 없어요」다", () => {
+      expect(partialApplyPlan([], [], "snapshot", KNOWN)).toEqual({
+        kind: "blocked",
+        reason: PARTIAL_NOTHING_CHANGED_HINT,
+        why: "nothing-changed",
+      });
+    });
+
+    it("고른 칸이 없을 때 unsent 에 있어도 아는 칸이 아니면(어긋난 응답) 보내지 않는다", () => {
+      const plan = partialApplyPlan([cellOf("A", 1), cellOf("Z", 9)], [], "snapshot", KNOWN);
+      expect(plan.kind === "ready" && plan.cells).toEqual([["A", 1]]);
+    });
+
+    it("known_cells 가 없으면(null/undefined) 모든 칸을 안다 — 안 바뀐 칸은 모두 뺀다", () => {
+      const picks = [cellOf("A", 1), cellOf("B", 2), cellOf("C", 3)];
+      const expected = {
+        kind: "ready",
+        cells: [["A", 1]],
+        note: "고른 3칸 중 바뀐 1칸만 보내요 · 콘솔과 같아 뺀 2칸",
+      };
+      expect(partialApplyPlan([cellOf("A", 1)], picks, "snapshot")).toEqual(expected);
+      expect(partialApplyPlan([cellOf("A", 1)], picks, "snapshot", null)).toEqual(expected);
+      expect(partialApplyPlan([cellOf("A", 1)], picks, "snapshot", undefined)).toEqual(expected);
+    });
+
+    it("0마디(앞박)인 모르는 칸은 서버가 못 받아 빼고 그 사실을 말한다", () => {
+      const plan = partialApplyPlan(UNSENT, [cellOf("A", 1), cellOf("C", 0), cellOf("E", 5)], "snapshot", KNOWN);
+      expect(plan.kind).toBe("ready");
+      if (plan.kind !== "ready") return;
+      expect(plan.cells).toEqual([
+        ["A", 1],
+        ["E", 5],
+      ]);
+      expect(plan.note).toBe(
+        "고른 3칸 중 2칸을 보내요 (바뀐 1칸 · 콘솔 상태를 모르는 1칸) · 0마디(앞박) 칸 1개는 칸 단위로 보낼 수 없어요",
+      );
+    });
+
+    it("보낼 칸이 전부 0마디면 칸 목록이 비므로 막는다", () => {
+      expect(partialApplyPlan(UNSENT, [cellOf("C", 0)], "snapshot", KNOWN)).toMatchObject({
+        kind: "blocked",
+        why: "bar-zero",
+      });
+    });
+
+    it("보낼 칸이 상한(400)을 넘으면 막고, 뺀 칸은 상한에 세지 않는다", () => {
+      const many = (count: number) => Array.from({ length: count }, (_, index) => cellOf("Z", index + 1));
+      expect(partialApplyPlan([], many(CELL_WIRE_MAX), "snapshot", [])).toMatchObject({ kind: "ready" });
+      expect(partialApplyPlan([], many(CELL_WIRE_MAX + 1), "snapshot", [])).toMatchObject({
+        kind: "blocked",
+        why: "too-many",
+      });
+      // 아는데 안 바뀐 칸 401개는 하나도 안 보내므로 상한과 무관하게 「바뀐 칸 없음」이다.
+      const knownSame = many(CELL_WIRE_MAX + 1).map((cell) => [cell.group_name, cell.bar] as [string, number]);
+      expect(partialApplyPlan([], many(CELL_WIRE_MAX + 1), "snapshot", knownSame)).toMatchObject({
+        kind: "blocked",
+        why: "nothing-changed",
+      });
+    });
+
+    it("같은 칸을 두 번 골라 둬도 한 번만 센다 — 안내의 고른 칸 수도 한 번씩", () => {
+      const plan = partialApplyPlan(UNSENT, [cellOf("A", 1), cellOf("A", 1), cellOf("C", 3), cellOf("C", 3)], "snapshot", KNOWN);
+      expect(plan.kind === "ready" && plan.cells).toEqual([
+        ["A", 1],
+        ["C", 3],
+      ]);
+      expect(plan.kind === "ready" && plan.note).toBe("고른 2칸 중 2칸을 보내요 (바뀐 1칸 · 콘솔 상태를 모르는 1칸)");
+    });
+
+    it("기록 기준(record)은 known_cells 를 보지 않는다 — 고른 칸 모두", () => {
+      const picks = [cellOf("A", 1), cellOf("B", 2), cellOf("C", 3)];
+      const plan = partialApplyPlan(null, picks, "record", KNOWN);
+      expect(plan.kind === "ready" && plan.cells).toEqual([
+        ["A", 1],
+        ["B", 2],
+        ["C", 3],
+      ]);
+      expect(plan.kind === "ready" && plan.note).toBe(
+        `고른 3칸을 보내요 (기록 기준) · ${PARTIAL_RECORD_WARNING}`,
+      );
+    });
+
+    it("기준이 없으면(null/undefined) known_cells 가 있어도 같은 막힘이다", () => {
+      for (const baseline of [null, undefined]) {
+        expect(partialApplyPlan(UNSENT, [cellOf("A", 1)], baseline, KNOWN)).toEqual({
+          kind: "blocked",
+          reason: PARTIAL_NO_RECORD_HINT,
+          why: "no-record",
+        });
+      }
+    });
+
+    it("받은 목록은 고치지 않는다", () => {
+      const known = KNOWN.map(([group, bar]) => [group, bar] as [string, number]);
+      const picks = [cellOf("A", 1), cellOf("B", 2)];
+      partialApplyPlan(UNSENT, picks, "snapshot", known);
+      expect(known).toEqual(KNOWN);
+      expect(picks).toEqual([cellOf("A", 1), cellOf("B", 2)]);
     });
   });
 
@@ -312,6 +490,65 @@ describe("cueSyncMark — 칸마다 콘솔과 같은지", () => {
 
   it("빈 배열(기록은 있고 바뀐 칸이 없음)이면 모든 칸이 콘솔과 같다", () => {
     expect(cueSyncMark(unsentKeySet([]), cellOf("BACK", 3))?.kind).toBe("in-sync");
+  });
+
+  // 칸 단위 반영만 한 곡의 칸 기록은 부분이다 — 서버가 아는 칸을 `known_cells` 로 싣고, 거기 없는 칸은 콘솔과 같은지 모른다.
+  describe("known_cells — 모르는 칸에는 표시하지 않는다", () => {
+    const unsent = unsentKeySet([cellOf("BACK", 3)]);
+    const known = knownKeySet([
+      ["BACK", 1],
+      ["BACK", 3],
+      ["FOH", 2],
+    ]);
+
+    it("known_cells 가 없으면(null/undefined) 모든 칸을 안다 — 예전 규칙 그대로다", () => {
+      expect(knownKeySet(null)).toBeNull();
+      expect(knownKeySet(undefined)).toBeNull();
+      for (const noKnown of [null, undefined]) {
+        expect(cueSyncMark(unsent, cellOf("BACK", 3), noKnown)?.kind).toBe("app-only");
+        expect(cueSyncMark(unsent, cellOf("ZZZ", 9), noKnown)?.kind).toBe("in-sync");
+      }
+      // 인자를 아예 안 줘도 같다.
+      expect(cueSyncMark(unsent, cellOf("ZZZ", 9))?.kind).toBe("in-sync");
+    });
+
+    it("목록에 있는 칸은 아는 칸이라 예전 규칙을 따른다 — 바뀌었으면 앱에서만 바뀜, 아니면 콘솔과 같음", () => {
+      expect(cueSyncMark(unsent, cellOf("BACK", 3), known)?.kind).toBe("app-only");
+      expect(cueSyncMark(unsent, cellOf("BACK", 1), known)?.kind).toBe("in-sync");
+      expect(cueSyncMark(unsent, cellOf("FOH", 2), known)?.kind).toBe("in-sync");
+    });
+
+    it("목록에 없는 칸은 모르는 칸이라 표시가 없다 — 같다고도 다르다고도 하지 않는다", () => {
+      expect(cueSyncMark(unsent, cellOf("BACK", 4), known)).toBeNull();
+      expect(cueSyncMark(unsent, cellOf("FOH", 3), known)).toBeNull();
+      expect(cueSyncMark(unsent, cellOf("SIDE", 1), known)).toBeNull();
+    });
+
+    it("줄과 마디가 둘 다 맞아야 아는 칸이다", () => {
+      expect(cueSyncMark(unsent, cellOf("FOH", 1), known)).toBeNull(); // 마디만 BACK 의 것
+      expect(cueSyncMark(unsent, cellOf("BACK", 2), known)).toBeNull(); // 줄만 맞다
+    });
+
+    it("unsent_cells 가 null 이면 아는 칸이어도 표시가 없다", () => {
+      expect(cueSyncMark(unsentKeySet(null), cellOf("BACK", 1), known)).toBeNull();
+      expect(cueSyncMark(unsentKeySet(undefined), cellOf("BACK", 1), known)).toBeNull();
+    });
+
+    it("아는 칸이 하나도 없는 부분 기록(빈 배열)이면 모든 칸이 모르는 칸이다", () => {
+      const none = knownKeySet([]);
+      expect(none).not.toBeNull();
+      expect(cueSyncMark(unsent, cellOf("BACK", 3), none)).toBeNull();
+      expect(cueSyncMark(unsentKeySet([]), cellOf("BACK", 3), none)).toBeNull();
+    });
+
+    it("unsent 에 있어도 아는 칸이 아니면(어긋난 응답) 표시하지 않는다 — 모르는 칸이 먼저다", () => {
+      expect(cueSyncMark(unsentKeySet([cellOf("SIDE", 1)]), cellOf("SIDE", 1), known)).toBeNull();
+    });
+
+    it("known_cells 는 [줄 이름, 마디] 쌍을 칸 키로 바꾼다 — unsent 의 칸과 같은 키다", () => {
+      expect([...(known ?? [])]).toEqual(["BACK|1", "BACK|3", "FOH|2"]);
+      expect([...(unsent ?? [])]).toEqual(["BACK|3"]);
+    });
   });
 
   it("글자와 기호가 늘 함께 있어 색에만 기대지 않는다", () => {

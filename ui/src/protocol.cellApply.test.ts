@@ -163,6 +163,24 @@ describe("song_timeline — beat_grid.partial_baseline", () => {
     expect("partial_baseline" in (next.songTimeline.timeline?.beat_grid ?? {})).toBe(false);
   });
 
+  it("부분 칸 기록일 때만 오는 known_cells 를 [줄 이름, 마디] 쌍 그대로 보존하고, 없으면 키를 만들지 않는다", () => {
+    const known = [
+      ["BACK", 1],
+      ["FOH", 3],
+    ];
+    const partial = reduceServerEvent(
+      initialState,
+      event(timelineWith({ unsent_cells: [{ group_name: "BACK", bar: 1 }], known_cells: known, partial_baseline: "snapshot" })),
+    );
+    expect(partial.songTimeline.timeline?.beat_grid?.known_cells).toEqual(known);
+    // 전체 기록이 되면 서버는 키를 싣지 않는다 — 앞 프레임의 목록이 남지 않는다(최신 프레임으로 교체).
+    const full = reduceServerEvent(
+      partial,
+      event(timelineWith({ unsent_cells: [], partial_baseline: "snapshot" })),
+    );
+    expect("known_cells" in (full.songTimeline.timeline?.beat_grid ?? {})).toBe(false);
+  });
+
   it("다음 타임라인 프레임이 기준을 바꾸면 최신 값으로 바뀐다", () => {
     const first = reduceServerEvent(initialState, event(timelineWith({ unsent_cells: null, partial_baseline: "record" })));
     const second = reduceServerEvent(first, event(timelineWith({ unsent_cells: [], partial_baseline: "snapshot" })));

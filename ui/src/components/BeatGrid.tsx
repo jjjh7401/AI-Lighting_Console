@@ -171,7 +171,7 @@ import {
 import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
 // 칸 여러 개 고르기·일괄 바꾸기·칸 단위 반영(카드 WT-cell-apply) — 로직은 전부 아래 새 모듈에 있다.
 import { CellSelectionBar, type BulkChoice } from "./beatgrid/CellSelectionBar";
-import { cueSyncMark, partialApplyPlan, unsentKeySet } from "./beatgrid/cellApply";
+import { cueSyncMark, knownKeySet, partialApplyPlan, unsentKeySet } from "./beatgrid/cellApply";
 import {
   CELL_WIRE_MAX,
   EMPTY_CELL_SELECTION,
@@ -1787,8 +1787,10 @@ export function BeatGrid({
   const pickedCells = useMemo(() => existingCells(cellSel.cells, grid?.tracks ?? []), [cellSel.cells, grid?.tracks]);
   const pickedKeys = useMemo(() => new Set(pickedCells.map(cellKey)), [pickedCells]);
   const hasPickedCells = pickedCells.length > 0;
-  // 칸마다 「앱에서만 바뀜」/「콘솔과 같음」 — 반영 기록이 없으면(`null`) 아무 표시도 안 한다.
+  // 칸마다 「앱에서만 바뀜」/「콘솔과 같음」 — 반영 기록이 없으면(`null`) 아무 표시도 안 한다. 칸 기록이 부분이면
+  // (`known_cells` 가 목록) 그 목록에 없는 칸도 콘솔과 같은지 모르니 표시하지 않는다.
   const unsentKeys = useMemo(() => unsentKeySet(grid?.unsent_cells), [grid?.unsent_cells]);
+  const knownKeys = useMemo(() => knownKeySet(grid?.known_cells), [grid?.known_cells]);
   // 일괄 바꾸기 「적용」을 누른 뒤의 서버 답 기다림(거절 사유·바쁨 안내용).
   const [bulkPending, setBulkPending] = useState<{ sinceSeq: number; busyAt: number } | null>(null);
   // 곡이 바뀌면 고른 칸을 비운다(다른 곡의 같은 줄 이름·마디에 일괄 바꾸기가 가지 않게). 고른 칸이 없어지면 앞 답 기다림도 지운다.
@@ -2877,7 +2879,7 @@ export function BeatGrid({
       ? 0
       : tracks.filter((track) => trackCueSegments(track, maxBar).some((segment) => segment.startBar === viewBar)).length;
   // 「⇪ 콘솔에 반영」 — 칸 단위 반영 배선이 있으면 바뀐 칸만(고른 칸이 있으면 그 가운데 바뀐 칸만) 보낸다.
-  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells, grid.partial_baseline);
+  const applyPlan = partialApplyPlan(grid.unsent_cells, pickedCells, grid.partial_baseline, grid.known_cells);
 
   return (
     <section className="beat-grid" aria-label="박자 격자">
@@ -3227,7 +3229,11 @@ export function BeatGrid({
                             const isSelected = selected?.trackIndex === trackIndex && selected.bar === segment.cue.bar;
                             // 여럿 고른 칸(Shift/Ctrl) 표시와, 콘솔과 같은지(「앱에서만 바뀜」/「콘솔과 같음」).
                             const isMulti = pickedKeys.has(cueEditKey(track.group_name, segment.cue.bar));
-                            const syncMark = cueSyncMark(unsentKeys, { group_name: track.group_name, bar: segment.cue.bar });
+                            const syncMark = cueSyncMark(
+                              unsentKeys,
+                              { group_name: track.group_name, bar: segment.cue.bar },
+                              knownKeys,
+                            );
                             const active = cueIsActive(segment.cue.label);
                             // 칸 목록(`segments`) 안의 자리 — `visibleSegments` 는 숨긴 칸(칸 데이터로 나뉜 칸 등)이
                             // 있으면 부분집합이라 거기서의 순번으로 다음 칸을 고르면 어긋난다. 다음 칸이 숨겨져
