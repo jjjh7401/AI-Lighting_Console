@@ -37,7 +37,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-__all__ = ["SongAudioLinkResult", "SongAudioLinkStore"]
+__all__ = ["UNBOUND_SONG_KEY", "SongAudioLinkResult", "SongAudioLinkStore"]
+
+#: 아직 곡 작업본이 없는 업로드(새 곡을 올렸고 분석 전)를 보관하는 열쇠. 분석이 새 작업본을
+#: 열면 그 곡 열쇠로 다시 묶고, 그 전에도 해시(``resolve_sha``)로 찾을 수 있다
+#: (카드 WT-audio-other-browser).
+UNBOUND_SONG_KEY: tuple[object, object] = (None, "unbound-upload")
 
 _INDEX_FILE_VERSION = 1
 # 색인 파일 바로 곁에 두는 오디오 보관 디렉터리 이름. ``pin_store_path`` 가
@@ -97,6 +102,24 @@ class SongAudioLinkStore:
         entry = self._find(song_key)
         if entry is None:
             return SongAudioLinkResult(status="none")
+        return self._resolve_entry(entry)
+
+    def resolve_sha(self, sha256: str) -> SongAudioLinkResult:
+        """바이트 해시로 보관된 음원을 찾는다 — 어느 곡 열쇠에 묶였든 상관없다(가장 최근 기록부터).
+
+        카드 WT-audio-other-browser — 분석한 곡은 작업본이 그 음원의 해시를 들고 있다. 업로드가
+        엉뚱한 곡 열쇠에 묶였어도(새 곡을 올릴 때 열려 있던 앞 곡) 해시로 바른 음원을 찾는다.
+        """
+        found = SongAudioLinkResult(status="none")
+        for entry in reversed(self._entries):
+            if entry.get("sha256") != sha256:
+                continue
+            found = self._resolve_entry(entry)
+            if found.status == "found":
+                return found
+        return found
+
+    def _resolve_entry(self, entry: dict) -> SongAudioLinkResult:
         sha256 = entry.get("sha256")
         data = self._read_blob(sha256, str(entry.get("file_name", "")))
         if data is None:

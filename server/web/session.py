@@ -468,7 +468,7 @@ from server.web.question import (
     section_label,
 )
 from server.web.reply_discovery import ReplyPortMismatch
-from server.web.song_audio_store import SongAudioLinkStore
+from server.web.song_audio_store import UNBOUND_SONG_KEY, SongAudioLinkStore
 from server.web.timeline_draft import TimelineDraftHistory
 from server.web.timeline_library import SongTimelineLibrary
 
@@ -10009,6 +10009,9 @@ class ChatSession:
         if isinstance(previous_grid, Mapping):
             fresh = carry_console_preset_records(previous_grid, fresh)
         store.latest = fresh
+        # 카드 WT-audio-other-browser — 새 곡 작업본이 생긴 지금에야 그 곡 열쇠가 있다.
+        # 분석한 음원을 이 곡에 묶어 다른 브라우저·다른 기기도 받아 가게 한다.
+        self._link_session_audio_to_open_song()
         self._send(song_timeline_event(timeline=self._beat_grid_refresh_unsent_cells(fresh)))
         bars = fresh["beat_grid"]["bar_range"]
         rows = len(fresh["beat_grid"]["tracks"])
@@ -15606,6 +15609,11 @@ class ChatSession:
         # 이미 끝난 뒤이므로 운영자가 방금 올린 파일을 잃지 않는다 —
         # 영구 링크만 조용히 비게 둔다.
         song_key = self._current_song_audio_key()
+        # 카드 WT-audio-other-browser — 열린 곡이 다른 음원으로 분석한 곡이면 이 업로드는 새 곡이다.
+        # 그 곡 열쇠에 묶으면 앞 곡의 음원을 덮어쓰고 새 곡에는 연결이 안 생긴다(실측: 업로드마다
+        # 앞 곡에 묶였다). 곡이 없는 보관 열쇠에 두고, 분석이 새 작업본을 열 때 그 곡에 묶는다.
+        if song_key is not None and self._open_song_was_analysed_from_other_audio(audio.sha256):
+            song_key = UNBOUND_SONG_KEY
         if song_key is not None and self._song_audio_link_store is not None:
             with contextlib.suppress(OSError):
                 self._song_audio_link_store.link(
@@ -15631,6 +15639,31 @@ class ChatSession:
         if timeline is None:
             return None
         return self._beat_grid_song_key(timeline)
+
+    def _open_song_was_analysed_from_other_audio(self, sha256: str) -> bool:
+        """열린 작업본이 분석한 음원의 해시를 들고 있고, 그 해시가 ``sha256`` 과 다른가."""
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        source = timeline.get(ANALYSIS_SOURCE_KEY) if timeline is not None else None
+        return isinstance(source, str) and bool(source) and source != sha256
+
+    def _link_session_audio_to_open_song(self) -> None:
+        """이 세션이 올린 음원이 열린 작업본의 분석 음원이면 그 곡 열쇠로 보관한다.
+
+        쓰기 실패는 조용히 넘긴다 — 업로드 때와 같은 규약(세션 첨부는 이미 끝났다)."""
+        audio = self._song_audio
+        song_key = self._current_song_audio_key()
+        if audio is None or song_key is None or self._song_audio_link_store is None:
+            return
+        if self._open_song_was_analysed_from_other_audio(audio.sha256):
+            return
+        with contextlib.suppress(OSError, ValueError):
+            self._song_audio_link_store.link(
+                song_key,
+                file_name=audio.file_name,
+                mime_type=audio.mime_type,
+                data=base64.b64decode(audio.content_base64),
+            )
 
     def _song_audio_fallback_key(
         self, song_key: tuple[object, object]
@@ -15668,7 +15701,30 @@ class ChatSession:
         if song_key is None or store is None:
             self._send(song_audio_link_event(status="none"))
             return {"status": "none"}
-        result = store.resolve(song_key)
+        # 카드 WT-audio-other-browser — 분석한 곡은 그 음원의 해시가 정본이다. 곡 열쇠의 기록은
+        # 예전 업로드가 엉뚱한 곡에 묶어 덮었을 수 있어서 해시로 먼저 찾는다.
+        timeline = self._timeline_store.latest if self._timeline_store is not None else None
+        source = timeline.get(ANALYSIS_SOURCE_KEY) if timeline is not None else None
+        result = (
+            store.resolve_sha(source)
+            if isinstance(source, str) and source
+            else store.resolve(song_key)
+        )
+        if result.status == "found" and isinstance(source, str) and source:
+            # 곡 열쇠가 다른 음원을 가리키거나(앞 업로드가 덮음) 비어 있으면 분석 음원으로 다시
+            # 묶는다 — 앱의 보통 저장 경로다. 쓰기가 실패해도 이번 재생은 해시로 찾은 음원으로 간다.
+            current = store.resolve(song_key)
+            if current.status != "found" or (current.record or {}).get("sha256") != source:
+                record = result.record or {}
+                with contextlib.suppress(OSError):
+                    store.link(
+                        song_key,
+                        file_name=str(record.get("file_name", "")),
+                        mime_type=str(record.get("mime_type", "")),
+                        data=result.data or b"",
+                    )
+        if result.status != "found":
+            result = store.resolve(song_key)
         if result.status != "found":
             # 라이브러리 불러오기가 song_title 을 저장 이름으로 바꾸면 원래
             # 제목 열쇠의 링크를 못 찾는다 — 격자(beat_grid.song_title)가
