@@ -6,10 +6,17 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from server.design.beat_grid_emit import SongTiming, _cue_attribute_commands
 from server.design.beat_grid_stage import mark_sub_selection_tracks
 from server.design.capability_join import FixtureCapability
-from server.design.preset_plan import LoveAttackPlan, PlanPreset, save_commands
+from server.design.preset_plan import (
+    LoveAttackPlan,
+    PlanPreset,
+    save_commands,
+    with_dimmer_sub_selections,
+)
 from server.prechk.capability_read import AxisRange
 
 
@@ -116,7 +123,7 @@ def test_channels_without_a_geometry_prefix_never_make_a_sub_geometry_dimmer() -
     assert _cap(201, (("Pan", "Pan"), ("Dimmer", "Dimmer"))).sub_geometry_dimmer is False
 
 
-def _dimmer_store(selection: str | None) -> PlanPreset:
+def _dimmer_store(sub_selections: tuple[tuple[int, str], ...] = ()) -> PlanPreset:
     return PlanPreset(
         kind="dimmer",
         value="60%",
@@ -130,17 +137,55 @@ def _dimmer_store(selection: str | None) -> PlanPreset:
         group_no=4,
         attributes=("Dimmer",),
         group_nos=(4,),
-        selection=selection,
+        sub_selections=sub_selections,
     )
 
 
-def test_a_single_group_dimmer_store_selects_the_dot_range_when_it_has_one() -> None:
-    plan = LoveAttackPlan(presets=(_dimmer_store("Fixture 201 Thru 212."),), unresolved=(), kept=())
+def test_a_single_group_dimmer_store_uses_only_the_dot_range_when_it_has_one() -> None:
+    plan = LoveAttackPlan(
+        presets=(_dimmer_store(((4, "Fixture 201 Thru 212."),)),), unresolved=(), kept=()
+    )
     lines = save_commands(plan)
     assert "Fixture 201 Thru 212. ; Attribute 'Dimmer' At 60" in lines
     assert not any(line.startswith("Group 4 ; Attribute") for line in lines)
 
 
-def test_a_single_group_dimmer_store_keeps_the_group_form_without_a_selection() -> None:
-    plan = LoveAttackPlan(presets=(_dimmer_store(None),), unresolved=(), kept=())
+def test_a_single_group_dimmer_store_keeps_the_group_form_without_a_sub_selection() -> None:
+    plan = LoveAttackPlan(presets=(_dimmer_store(),), unresolved=(), kept=())
     assert "Group 4 ; Attribute 'Dimmer' At 60" in save_commands(plan)
+
+
+def test_a_multi_group_dimmer_store_puts_the_dot_range_line_before_the_group_line() -> None:
+    # 여러 그룹 저장은 옛 그룹 꼴 줄을 그대로 두고, 서브 광원 범위 줄을 그 앞에 덧붙인다.
+    # 저장 직전 선택은 옛 꼴이 남으므로, 저장 범위가 어떻든 옛 동작을 해치지 않는다.
+    preset = PlanPreset(
+        kind="dimmer",
+        value="100%",
+        name="DIM-100",
+        slot="1.925",
+        cells=(),
+        groups=("FOH", "BACK"),
+        ready=True,
+        hold=None,
+        value_percent=100,
+        attributes=("Dimmer",),
+        group_nos=(2, 4),
+        sub_selections=((4, "Fixture 201 Thru 212."),),
+    )
+    lines = save_commands(LoveAttackPlan(presets=(preset,), unresolved=(), kept=()))
+    range_line = lines.index("Fixture 201 Thru 212. ; Attribute 'Dimmer' At 100")
+    group_line = lines.index("Group 2 + 4 ; Attribute 'Dimmer' At 100")
+    assert range_line < group_line < lines.index("Store Preset 1.925")
+
+
+def test_the_sub_selection_reaches_only_the_ready_dimmer_stores_that_hold_the_group() -> None:
+    back = _dimmer_store()
+    foh_only = replace(back, name="DIM-50", groups=("FOH",), group_nos=(2,), group_no=2)
+    held = replace(back, name="DIM-0", ready=False, hold="미정")
+    plan = LoveAttackPlan(presets=(back, foh_only, held), unresolved=(), kept=())
+    marked = with_dimmer_sub_selections(plan, {4: "Fixture 201 Thru 212."})
+    assert [preset.sub_selections for preset in marked.presets] == [
+        ((4, "Fixture 201 Thru 212."),),
+        (),
+        (),
+    ]

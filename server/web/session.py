@@ -261,6 +261,7 @@ from server.design.preset_plan import (
     save_commands,
     saved_presets,
     saved_summary,
+    with_dimmer_sub_selections,
 )
 from server.design.preset_plan_store import (
     attach_color_store,
@@ -10280,44 +10281,46 @@ class ChatSession:
         return plan, unread
 
     def _beat_grid_plan_with_sub_selections(
-        self, plan: LoveAttackPlan, group_names: list[str]
+        self,
+        plan: LoveAttackPlan,
+        grid: Mapping[str, object],
+        group_members: Mapping[str, Sequence[int]],
     ) -> LoveAttackPlan:
-        """단일 그룹 디머 저장에 뒤 점 범위 선택(서브 광원 포함)을 싣는다. 저장할 디머 프리셋이 있을
-        때만 장비를 읽는다 — 저장 후보가 없으면 장비를 읽지 않는다."""
-        single = {
-            preset.groups[0]
+        """준비된 디머 저장이 쓰는 그룹 가운데 서브 광원 범위가 있는 그룹에 뒤 점 범위를 싣는다.
+        소속은 저장 줄 단계가 이미 읽은 표를 쓰고(다시 읽지 않는다), 장비 능력은 준비된 저장이
+        있을 때만 읽는다 — 저장 후보가 없으면 장비를 읽지 않는다."""
+        dimmer_groups = {
+            name
             for preset in plan.presets
-            if preset.kind == "dimmer" and preset.ready and len(preset.groups) == 1
+            if preset.kind == "dimmer" and preset.ready
+            for name in preset.groups
         }
-        if not single:
+        if not dimmer_groups:
             return plan
         marks = mark_sub_selection_tracks(
-            [{"group_name": name} for name in sorted(single)],
-            self._beat_grid_group_members(group_names),
+            [{"group_name": name} for name in sorted(dimmer_groups)],
+            group_members,
             self._rig_fixture_capabilities(),
         )
-        selection_of = {
+        range_of_name = {
             str(mark["group_name"]): str(mark["sub_selection"])
             for mark in marks
             if "sub_selection" in mark
         }
-        if not selection_of:
-            return plan
-        return replace(
-            plan,
-            presets=tuple(
-                replace(preset, selection=selection_of[preset.groups[0]])
-                if preset.kind == "dimmer"
-                and preset.ready
-                and len(preset.groups) == 1
-                and preset.groups[0] in selection_of
-                else preset
-                for preset in plan.presets
-            ),
-        )
+        number_of_name = {
+            str(track["group_name"]): int(track["group_no"])
+            for track in grid.get("tracks") or []
+            if isinstance(track.get("group_no"), int)
+        }
+        range_by_group = {
+            number_of_name[name]: text
+            for name, text in range_of_name.items()
+            if name in number_of_name
+        }
+        return with_dimmer_sub_selections(plan, range_by_group)
 
     def _beat_grid_preset_grid(
-        self, grid: Mapping[str, object], group_names: list[str]
+        self, grid: Mapping[str, object], group_members: Mapping[str, Sequence[int]]
     ) -> Mapping[str, object]:
         """계획 위치를 받은 뒤·옆 줄이 있을 때만 줄마다 조준 표시를 단 격자 사본을 돌려준다.
         그런 줄이 없으면 격자를 그대로 두고 장비를 읽지 않는다(저장 후보가 없으면 읽지 않는다)."""
@@ -10328,9 +10331,7 @@ class ChatSession:
             for track in tracks
         ):
             return grid
-        marked = mark_pan_tilt_tracks(
-            tracks, self._beat_grid_group_members(group_names), self._rig_fixture_capabilities()
-        )
+        marked = mark_pan_tilt_tracks(tracks, group_members, self._rig_fixture_capabilities())
         return {**grid, "tracks": marked}
 
     def _beat_grid_sub_selection_tracks(self, tracks: Sequence[Mapping[str, object]]) -> list[dict]:
@@ -11198,7 +11199,7 @@ class ChatSession:
                 self._rig_read_cache.get(KIND_MEMBERS, self._group_members_key(group_names)) or {}
             )
         plan = build_preset_plan(
-            self._beat_grid_preset_grid(grid, group_names),
+            self._beat_grid_preset_grid(grid, group_members),
             annotations=load_preset_annotations(timeline.get("song_title")),
             policy=load_preset_pool_policy(),
             dimmer_pool=dimmer_pool,
@@ -11211,7 +11212,7 @@ class ChatSession:
             group_members=group_members,
         )
         apply_stage("plan_build")
-        plan = self._beat_grid_plan_with_sub_selections(plan, group_names)
+        plan = self._beat_grid_plan_with_sub_selections(plan, grid, group_members)
         plan = self._beat_grid_preset_plan_stores(plan, grid, all_groups=group_names)
         apply_stage("plan_stores")
         commands = save_commands(plan)
