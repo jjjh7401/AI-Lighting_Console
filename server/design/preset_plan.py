@@ -36,7 +36,7 @@ from pathlib import Path
 import yaml
 
 from server.design.app_movement import movement_effect_store_commands
-from server.design.arrange_policy import MOVER_POSITION_LADDER
+from server.design.arrange_policy import AIMING_LINE_ROLES, MOVER_POSITION_LADDER
 from server.design.beat_grid import (
     apply_pending_approval,
     check_evidence_approval,
@@ -175,6 +175,9 @@ class PlanPreset:
     #: 디머만 — 속성마다 그 속성을 가진 그룹 번호. 둘째 디머(``Dimmer2``)처럼 일부 기종에만 있는
     #: 속성은 그 그룹만 골라 낸다. 비면 ``attributes`` × ``group_nos`` 한 선택이다.
     attribute_group_nos: tuple[tuple[str, tuple[int, ...]], ...] = ()
+    #: 디머만 — 단일 그룹의 저장 선택. 서브 광원에 밝기가 실린 줄이면 뒤 점 범위가 본체와
+    #: 서브를 함께 고른다(``Fixture a Thru b.``). 없으면 그룹 꼴(``Group n``)이다.
+    selection: str | None = None
     #: 값은 정해졌고 저장 줄만 아직 없다. 색·위치는 콘솔 판독 뒤 `preset_plan_store` 가 줄을
     #: 붙이거나 사유와 함께 「미정」으로 내리고(``resolve_preset``), 칸 쪽 색 후보는 기존 색
     #: 경로(t594)로 간다.
@@ -1125,10 +1128,12 @@ def _planned_position_presets(
         if preset.kind == "position" and (preset.deferred or preset.ready)
         for cell in preset.cells
     }
-    movers = {
+    # 무빙 줄과, 조준할 수 있는 뒤·옆 줄(``pan_tilt`` 참 — 1018 aura 기록)이 계획 위치를 받는다.
+    aiming = {
         str(track.get("group_name"))
         for track in grid.get("tracks") or []
         if track.get("layer_role") == "mover"
+        or (track.get("pan_tilt") is True and track.get("layer_role") in AIMING_LINE_ROLES)
     }
     order: list[tuple[str, str]] = []
     cells_of: dict[tuple[str, str], list[PlanCell]] = {}
@@ -1137,7 +1142,7 @@ def _planned_position_presets(
         bar = cue.get("bar")
         if not isinstance(look, str) or not isinstance(bar, int) or isinstance(bar, bool):
             continue
-        if group not in movers or cue.get("position_preset_no") is not None:
+        if group not in aiming or cue.get("position_preset_no") is not None:
             continue
         if (group, bar) in taken:
             continue
@@ -1799,7 +1804,9 @@ def save_commands(plan: LoveAttackPlan) -> tuple[str, ...]:
                 values = " ; ".join(
                     f"Attribute '{attr}' At {preset.value_percent}" for attr, _numbers in pairs
                 )
-                selection = "Group " + " + ".join(str(number) for number in pairs[0][1])
+                selection = preset.selection or (
+                    "Group " + " + ".join(str(number) for number in pairs[0][1])
+                )
                 value_lines: tuple[str, ...] = (f"{selection} ; {values}",)
             else:
                 value_lines = tuple(

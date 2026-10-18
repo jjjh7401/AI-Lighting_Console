@@ -1497,3 +1497,35 @@ def test_tracking_survives_applying_the_draft_to_the_grid() -> None:
         }
         for cue in track["cues"]:
             assert applied[int(cue["bar"])] == (cue.get("entry") or {}).get("tracking")
+
+
+# 1018 기록(aura): BACK·SIDE 줄에 계획 위치가 없으면 헤드가 가운데에 머물러 빔이 천장으로 간다.
+# 조준할 수 있는 줄(기종에 Pan·Tilt 있음 — 줄의 ``pan_tilt``)의 켜진 칸에만
+# 무대 중앙 기본 위치를 준다.
+def _with_pan_tilt(layout: list[dict], names: set[str]) -> list[dict]:
+    return [
+        {**track, "pan_tilt": True} if track["group_name"] in names else track for track in layout
+    ]
+
+
+def test_a_back_or_side_line_that_can_aim_gets_the_stage_facing_default_position() -> None:
+    plain = _draft(SYNTHETIC_EVENTS)
+    aimed = _draft(SYNTHETIC_EVENTS, layout=_with_pan_tilt(_layout(), {"BACK", "SIDE-ALL"}))
+    for name in ("BACK", "SIDE-ALL"):
+        assert all(cue.get("planned_position") is None for cue in _cues(plain, name).values())
+        cues = list(_cues(aimed, name).values())
+        lit = [cue for cue in cues if cue["brightness"]["value_percent"] > 0]
+        assert lit, f"{name} 줄에 켜진 칸이 없어 시험이 빈 말이 된다"
+        assert {cue.get("planned_position") for cue in lit} == {"Center"}
+        assert all(
+            cue.get("planned_position") is None
+            for cue in cues
+            if cue["brightness"]["value_percent"] == 0
+        )
+
+
+def test_lines_that_cannot_aim_and_the_other_moving_lines_keep_their_positions() -> None:
+    plain = _draft(SYNTHETIC_EVENTS)
+    aimed = _draft(SYNTHETIC_EVENTS, layout=_with_pan_tilt(_layout(), {"BACK", "SIDE-ALL"}))
+    for name in ("MOVER-U", "MOVER-D", "FOH", "WASH-ALL", "BLIND", "STROBE"):
+        assert _cues(aimed, name) == _cues(plain, name)

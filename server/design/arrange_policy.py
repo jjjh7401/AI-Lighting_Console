@@ -12,8 +12,10 @@ from dataclasses import dataclass, field
 from server.design.color_names import COLOR_PALETTE_SEQUENCE
 
 __all__ = [
+    "AIMING_LINE_ROLES",
     "ARRANGEMENT_COLOR_NAMES",
     "MOVER_POSITION_LADDER",
+    "STAGE_FACING_POSITION",
     "ArrangementPalette",
     "ArrangementPolicy",
 ]
@@ -24,6 +26,11 @@ _Rgb = tuple[int, int, int]
 #: (``server/spatial/pointing.py`` ``BASIC_POSITION_SEQUENCE``)의 이름이고, 리그에서 조준값을 그대로
 #: 읽는다(지어낸 좌표가 없다). 상대 이동(「한 칸 올림」「새 자리」)은 사다리에서 한 칸씩만 옮긴다.
 MOVER_POSITION_LADDER: tuple[str, ...] = ("Home", "Center", "Ring In", "Audience")
+#: 조준할 수 있는 뒤·옆 줄(``pan_tilt`` 참)이 켜진 칸의 기본 위치 — 무대 중앙(사다리 둘째 칸).
+#: 감독이 칸별로 바꿀 수 있다. 조준값은 장비 3D 좌표·방향에서 읽는다(``preset_plan_store``).
+STAGE_FACING_POSITION: str = "Center"
+#: 기본 위치를 받는 리듬 층 역할. 무빙 역할(mover)은 사다리 위치를 따로 받으므로 뺀다.
+AIMING_LINE_ROLES: frozenset[str] = frozenset({"back", "side"})
 
 
 #: 배치 팔레트가 낼 수 있는 모든 RGB 의 콘솔 영문 이름(대문자·ASCII) — 이름의 단일 출처다.

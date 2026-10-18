@@ -224,6 +224,54 @@ def fixture_pan_tilt(capability: object) -> bool | None:
     return False if getattr(capability, "whole", False) is True else None
 
 
+def mark_pan_tilt_tracks(
+    tracks: Iterable[Mapping[str, object]],
+    group_members: Mapping[str, Sequence[int]],
+    capabilities: Mapping[int, object],
+) -> list[dict]:
+    """줄마다 ``pan_tilt`` 를 단 사본을 돌려준다(입력은 바꾸지 않는다).
+
+    소속 장비 가운데 Pan·Tilt 가 읽힌 장비가 하나라도 있으면 참. 소속 장비가 모두 전수로 읽혔고
+    Pan·Tilt 가 없을 때만 거짓이다. 하나라도 못 읽었거나 소속을 모르면 키를 빼서, 조준할 줄이라고
+    짐작하지 않는다(``fixture_pan_tilt`` 와 같은 규율)."""
+    marked: list[dict] = []
+    for track in tracks:
+        row = dict(track)
+        values = [
+            fixture_pan_tilt(capabilities.get(fid))
+            for fid in group_members.get(str(track.get("group_name")), ())
+        ]
+        if any(value is True for value in values):
+            row["pan_tilt"] = True
+        elif values and all(value is False for value in values):
+            row["pan_tilt"] = False
+        marked.append(row)
+    return marked
+
+
+def mark_sub_selection_tracks(
+    tracks: Iterable[Mapping[str, object]],
+    group_members: Mapping[str, Sequence[int]],
+    capabilities: Mapping[int, object],
+) -> list[dict]:
+    """서브 광원에 밝기가 실린 줄에 ``sub_selection`` 을 단 사본을 돌려준다(입력은 바꾸지 않는다).
+
+    소속 장비 번호가 한 이어진 구간(둘 이상)이고 그 가운데 서브 광원에 밝기가 있는 장비가 있으면
+    ``Fixture a Thru b.`` — 뒤 점 범위는 본체와 서브를 함께 고른다(t520 실기). 아니면 키를 빼서
+    그룹 꼴을 그대로 둔다. 여러 구간으로 끊긴 줄은 한 선택으로 묶을 수 없어 손대지 않는다."""
+    marked: list[dict] = []
+    for track in tracks:
+        row = dict(track)
+        fids = sorted(set(group_members.get(str(track.get("group_name")), ())))
+        has_sub_dimmer = any(
+            getattr(capabilities.get(fid), "sub_geometry_dimmer", False) is True for fid in fids
+        )
+        if len(fids) >= 2 and fids == list(range(fids[0], fids[-1] + 1)) and has_sub_dimmer:
+            row["sub_selection"] = f"Fixture {fids[0]} Thru {fids[-1]}."
+        marked.append(row)
+    return marked
+
+
 def read_beat_grid_stage(
     port: StageReadPort,
     *,
