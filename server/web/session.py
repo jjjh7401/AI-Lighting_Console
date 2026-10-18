@@ -50,6 +50,7 @@ from server.audio.bar_map_entry import (
 from server.audio.bar_map_store import attach_bar_map, read_bar_map, validate_bar_map
 from server.concept.session_bridge import build_concept_report, concept_bullet
 from server.deploy.review import ReviewRequest
+from server.deploy.settings import user_data_dir
 from server.design import color_names as _COLOR_NAMES
 from server.design.analysis_timeline import (
     ANALYSIS_CONFIRMED_KEY,
@@ -387,6 +388,7 @@ from server.design.song_plan import (
     apply_cue_sheet_section,
     apply_cue_sheet_view,
 )
+from server.design.speed_master_registry import REGISTRY_FILE_NAME, with_song_speed_master
 from server.design.timecode_split import (
     pick_extra_timecode_numbers,
     split_rows_by_timecode,
@@ -11537,7 +11539,7 @@ class ChatSession:
         plan = build_preset_plan(
             self._beat_grid_preset_grid(grid, group_members),
             annotations=load_preset_annotations(timeline.get("song_title")),
-            policy=load_preset_pool_policy(),
+            policy=self._beat_grid_song_policy(timeline.get("song_title")),
             dimmer_pool=dimmer_pool,
             color_pool=color_pool,
             position_pool=position_pool,
@@ -11697,6 +11699,18 @@ class ChatSession:
             timecode_suggestion=self._beat_grid_timecode_suggestion(),
         )
 
+    def _speed_master_registry_path(self) -> Path:
+        """곡별 스피드 마스터 기록 — 앱 데이터 폴더의 ``speed_masters.json``."""
+        return user_data_dir() / REGISTRY_FILE_NAME
+
+    def _beat_grid_song_policy(self, song_title: object) -> dict[str, object]:
+        """보정 정책 + 이 곡의 스피드 마스터 번호. 기록이 없는 곡은 빈 번호를 골라 적는다."""
+        return with_song_speed_master(
+            load_preset_pool_policy(),
+            song_title,
+            registry_path=self._speed_master_registry_path(),
+        )
+
     def _beat_grid_wave_refusal(self, message: str) -> dict:
         """웨이브 프리셋 거절 — 상태 줄에만 사유를 싣는다. 콘솔에는 아무것도 나가지 않는다."""
         return self._beat_grid_send_status(last_action="apply", ok=False, reason=message)
@@ -11739,12 +11753,12 @@ class ChatSession:
                 "곡 BPM 을 곡 데이터에서 읽지 못해 웨이브 프리셋을 만들지 않았습니다."
             ), None
         song_title = timeline.get("song_title")
-        speed_master = speed_master_of(load_preset_pool_policy(), song_title)
+        speed_master = speed_master_of(self._beat_grid_song_policy(song_title))
         if speed_master is None:
-            # 마스터는 쇼 전체가 공유한다 — 번호가 없으면 다른 곡의 BPM 을 덮을 수 있다.
+            # 마스터는 쇼 전체가 공유한다 — 번호를 못 정하면 다른 곡의 BPM 을 덮을 수 있다.
             return self._beat_grid_wave_refusal(
-                f"「{song_title}」에 스피드 마스터 번호가 없어 웨이브 프리셋을 만들지 않았습니다. "
-                "preset_pools.yaml 의 song_speed_masters 에 이 곡의 빈 번호를 적어 주세요."
+                f"「{song_title}」의 스피드 마스터 번호를 정하지 못해 웨이브를 만들지 않았습니다. "
+                "기록 파일을 읽거나 쓰지 못했거나, 빈 번호가 모두 다른 곡에 적혀 있습니다."
             ), None
         query = _registry_state_query(self._registry)
         pool_root = self._beat_grid_preset_pool_root()
@@ -12894,7 +12908,7 @@ class ChatSession:
             # 그 줄을 실었으면 다시 넣지 않는다).
             bpm_lines = speed_master_bpm_lines(
                 grid,
-                policy=load_preset_pool_policy(),
+                policy=self._beat_grid_song_policy(grid.get("song_title")),
                 bpm=timing.bpm if timing is not None else None,
             )
             if bpm_lines and not any(
@@ -15292,7 +15306,7 @@ class ChatSession:
                 grid,
                 effect_numbers,
                 library=default_effect_library(),
-                policy=load_preset_pool_policy(),
+                policy=self._beat_grid_song_policy(timeline.get("song_title")),
                 bpm=timing.bpm if timing is not None else None,
                 beats_per_bar=timing.beats_per_bar if timing is not None else None,
             ).items():

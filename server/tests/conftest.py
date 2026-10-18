@@ -112,6 +112,15 @@ def _refuse_live_console_port(monkeypatch):
         )
 
 
+@pytest.fixture(autouse=True)
+def _isolate_speed_master_record(tmp_path, monkeypatch):
+    """Autouse — 곡별 스피드 마스터 기록(speed_masters.json)을 테스트마다 임시 폴더로 돌린다.
+
+    실제 앱 저장소에 번호를 남기지 않고, 테스트끼리 번호 배정이 섞이지 않게 한다.
+    """
+    monkeypatch.setattr("server.web.session.user_data_dir", lambda *_args, **_kwargs: tmp_path)
+
+
 class _InMemoryKeyring(KeyringBackend):
     """Deterministic in-memory keyring backend — never touches the real OS store."""
 

@@ -351,7 +351,7 @@ def _one(
         if beats_per_bar is None or beats_per_bar <= 0:
             return None, EFFECT_TEMPO_MISSING
         beats_per_cycle *= beats_per_bar
-    master = speed_master_of(policy, grid.get("song_title"))
+    master = speed_master_of(policy)
     head: tuple[str, ...] = ()
     if master is None:
         timed = dataclasses.replace(fx, speed=bpm / beats_per_cycle, speed_master=None)
@@ -382,8 +382,7 @@ def speed_master_bpm_lines(
     만들기 줄이 없다 — 그래도 마스터 BPM 은 반영마다 이 곡 BPM 으로 맞춰야 한다(4차 전체 실행
     D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 이 곡에 스피드 마스터 번호가 없거나 BPM 을
     모르면 빈 묶음이다."""
-    master = speed_master_of(policy, grid.get("song_title"))
-    if master is None or bpm is None or not math.isfinite(bpm) or bpm <= 0:
+    if bpm is None or not math.isfinite(bpm) or bpm <= 0:
         return ()
     uses_effect = any(
         _is_pool_slot(cue.get("effect_preset_no"))
@@ -392,7 +391,11 @@ def speed_master_bpm_lines(
         for cue in track.get("cues") or []
         if isinstance(cue, Mapping)
     )
-    return (f"Master 3.{master} At BPM {bpm:g}",) if uses_effect else ()
+    if not uses_effect:
+        # 효과를 쓰지 않는 격자는 스피드 마스터 번호를 정하지 않는다(배정은 필요할 때만).
+        return ()
+    master = speed_master_of(policy)
+    return (f"Master 3.{master} At BPM {bpm:g}",) if master is not None else ()
 
 
 def effect_preset_outcomes(

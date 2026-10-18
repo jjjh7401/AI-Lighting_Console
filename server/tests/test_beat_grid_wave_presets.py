@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import json
 
-from server.design.beat_grid_edit import load_preset_pool_policy, speed_master_of
 from server.design.wave_presets import WAVE_PRESETS
 from server.web.messages import PROTOCOL_VERSION, ProtocolError, parse_client_message
 from server.web.session import _WAVE_WHOLE_BATCH_REASON, SongTimelineStore
 
 from .test_apply_time_approval_t577 import _new_session, _state_tree, _timeline
 
-SPEED_MASTER = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
+#: 빈 기록에서 처음 배정되는 곡(LOVE ATTACK)의 스피드 마스터 — 가장 큰 빈 번호.
+SPEED_MASTER = 15
 POOL_ROOT = "DataPool/PresetPools"
 POOL_21 = f"{POOL_ROOT}/21"
 

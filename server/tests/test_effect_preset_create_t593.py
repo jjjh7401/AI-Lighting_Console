@@ -49,9 +49,10 @@ from .test_apply_time_approval_t577 import _cue_of, _new_session, _state_tree, _
 # -- 픽스처 -------------------------------------------------------------------
 
 _LIBRARY = load_library_from_dir()
-_POLICY = load_preset_pool_policy()
-#: 스피드 마스터 선언이 없는 정책 — 효과 속도를 `At Speed` 로 굽는 옛 경로.
-_NO_MASTER = {**_POLICY, "song_speed_masters": {}}
+#: 곡에 묶인 스피드 마스터 — 빈 기록의 첫 곡은 가장 큰 빈 번호 15 를 받는다.
+_POLICY = {**load_preset_pool_policy(), "speed_master": 15}
+#: 스피드 마스터가 없는 정책 — 효과 속도를 `At Speed` 로 굽는 옛 경로.
+_NO_MASTER = {key: value for key, value in _POLICY.items() if key != "speed_master"}
 _BPM, _BEATS_PER_BAR = 120.0, 4
 
 
@@ -195,11 +196,10 @@ class TestCreationLines:
 class TestSpeedMasterBinding:
     """인수 D-12 · REQ-LDRHYTHM-009 — 정책에 스피드 마스터가 있으면 효과 속도를 마스터에 묶는다."""
 
-    def test_the_rig_policy_maps_love_attack_to_15_and_never_16(self) -> None:
-        assert speed_master_of(_POLICY, "LOVE ATTACK") == 15
+    def test_a_master_number_is_only_read_within_1_to_15(self) -> None:
+        assert speed_master_of(_POLICY) == 15
         for bad in (16, 0, "15", True, None):
-            policy = {**_NO_MASTER, "song_speed_masters": {"LOVE ATTACK": bad}}
-            assert speed_master_of(policy, "LOVE ATTACK") is None, bad
+            assert speed_master_of({**_NO_MASTER, "speed_master": bad}) is None, bad
 
     def test_the_bundle_sets_the_master_bpm_then_binds_speed_master_and_measure(self) -> None:
         grid = _grid([dict(_CUE)], **_recipe())
@@ -456,7 +456,7 @@ class TestApplyCreatesTheEffect:
         """재현(4차 전체 실행 D-12) — 효과 프리셋을 다시 쓰면(콘솔에 이미 있는 번호) 만들기 줄이
         없어서 스피드 마스터 BPM 줄(``Master 3.15 At BPM``)도 함께 빠졌다(full4 0건, full3 4건).
         프리셋은 스피드 마스터에 묶여 있으니 마스터 BPM 을 곡 BPM 으로 반영마다 맞춘다."""
-        master = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
+        master = 15  # 빈 기록에서 처음 배정되는 곡(LOVE ATTACK)의 번호
         assert master is not None
         status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[1])
         assert status["ok"] is True
@@ -468,7 +468,7 @@ class TestApplyCreatesTheEffect:
         assert status["approval_vs_sent"]["match"] is True
 
     def test_a_new_effect_sends_the_speed_master_bpm_once(self, tmp_path) -> None:
-        master = speed_master_of(load_preset_pool_policy(), "LOVE ATTACK")
+        master = 15  # 빈 기록에서 처음 배정되는 곡(LOVE ATTACK)의 번호
         _status, _store, approval, _console = _apply(tmp_path, [dict(_CUE)], pool22=[5])
         assert _sent(approval).count(f"Master 3.{master} At BPM 112.35") == 1
 
