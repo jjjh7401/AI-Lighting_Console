@@ -144,6 +144,7 @@ function setup(tracks: BeatGridTrack[], initial: Partial<BeatGridProps> = {}, gr
     onEditCellsRequest: vi.fn(),
     onApply: vi.fn(),
     onApplyCells: vi.fn(),
+    onApplyCellsLive: vi.fn(),
     onPreviewBar: vi.fn(),
   };
   let current: Partial<BeatGridProps> = { ...initial };
@@ -520,6 +521,71 @@ describe("고른 칸 일괄 바꾸기 줄", () => {
     expect(bar()?.textContent).not.toContain("다른 일을 처리하는 중");
     render({ busyCount: 1 });
     expect(bar()?.textContent).toContain("다른 일을 처리하는 중이라 거절됐어요");
+  });
+
+  describe("적용 뒤 콘솔 반영(onApplyCellsLive)", () => {
+    const okReply = (seq: number) => ({ text: "박자 격자를 수정했습니다", seq, summary: BEAT_GRID_EDIT_OK_SUMMARY });
+
+    it("앱 편집이 성공한 답이 오면 보낸 칸 그대로 한 번 부른다", () => {
+      const { handlers, render } = setup(THREE_BY_THREE());
+      selectSixCells();
+      choose("일괄 밝기 값(%)", "60");
+      applyBulk();
+      expect(handlers.onApplyCellsLive).not.toHaveBeenCalled(); // 답이 오기 전에는 보내지 않는다
+      render({ lastServerReply: okReply(1) });
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledWith(SIX);
+      // 같은 답이 다시 그려져도, 다른 속성이 바뀌어도 두 번 부르지 않는다.
+      render({ lastServerReply: okReply(1) });
+      render({ busyCount: 3 });
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledTimes(1);
+    });
+
+    it("거절된 답에는 부르지 않는다", () => {
+      const { handlers, render } = setup(THREE_BY_THREE());
+      selectSixCells();
+      choose("일괄 밝기 값(%)", "60");
+      applyBulk();
+      render({ lastServerReply: { text: "고칠 수 없는 칸이 있어요", seq: 1, summary: BEAT_GRID_REJECTION_SUMMARY } });
+      render({ lastServerReply: { text: "고칠 수 없는 칸이 있어요", seq: 2, summary: BEAT_GRID_REJECTION_SUMMARY } });
+      expect(handlers.onApplyCellsLive).not.toHaveBeenCalled();
+    });
+
+    it("누르기 전에 온 옛 성공 답으로는 부르지 않는다", () => {
+      const { handlers, render } = setup(THREE_BY_THREE(), { lastServerReply: okReply(4) });
+      selectSixCells();
+      choose("일괄 밝기 값(%)", "60");
+      applyBulk();
+      render({ lastServerReply: okReply(4) });
+      expect(handlers.onApplyCellsLive).not.toHaveBeenCalled();
+      render({ lastServerReply: okReply(5) });
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledTimes(1);
+    });
+
+    it("0마디 칸은 서버로 보내지 않았으니 콘솔 반영에도 싣지 않는다 — 보낸 칸만이다", () => {
+      const tracks = [track("AAA", [0, 2]), track("BBB", [0, 2])];
+      const { handlers, render } = setup(tracks);
+      clickCue(0, 0, {}, 2);
+      clickCue(1, 1, { shift: true }, 2);
+      choose("일괄 밝기 값(%)", "60");
+      applyBulk();
+      render({ lastServerReply: okReply(1) });
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCellsLive).toHaveBeenCalledWith([
+        ["AAA", 2],
+        ["BBB", 2],
+      ]);
+    });
+
+    it("콜백이 없으면 예전과 같이 아무 일도 없다", () => {
+      const { handlers, render } = setup(THREE_BY_THREE(), { onApplyCellsLive: undefined });
+      selectSixCells();
+      choose("일괄 밝기 값(%)", "60");
+      applyBulk();
+      render({ lastServerReply: okReply(1) });
+      expect(handlers.onEditCellsRequest).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCellsLive).not.toHaveBeenCalled();
+    });
   });
 });
 

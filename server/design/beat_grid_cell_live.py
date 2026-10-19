@@ -28,6 +28,7 @@ from typing import Protocol, TypeGuard
 from server.design.beat_grid_send import BeatGridCellKey, PartialCellSnapshot, parse_track_target
 
 __all__ = [
+    "SCOPE_APPLY",
     "SCOPE_CREATE_DELETE",
     "SCOPE_MOVE",
     "CellLiveRefused",
@@ -45,6 +46,8 @@ __all__ = [
 #: 감독이 허락할 수 있는 일의 범위. 허락한 범위가 이번 일에 필요한 범위를 덮어야 한다.
 SCOPE_MOVE = "move"
 SCOPE_CREATE_DELETE = "create_delete"
+#: 앱의 「적용」 뒤 같은 칸을 콘솔에 바로 반영하는 일 — 옮기기·만들기·지우기와 따로 허락받는다.
+SCOPE_APPLY = "apply"
 
 #: 옮기기가 허용하는 명령 줄의 유일한 꼴 — ``Set Timecode <tc>.1.<k>.1.1.<N> Property 'Time' <S>``.
 #: 숫자는 ASCII ``[0-9]`` 만 받는다(``\d`` 는 다른 문자 체계의 숫자까지 받는다).

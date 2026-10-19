@@ -784,6 +784,10 @@ def create_app(deps: WebDeps) -> FastAPI:
                         )
                         # 고른 칸만 반영 — 파서가 mode 'apply' 에서만 cells 를 받는다.
                         apply_kwargs = {"cells": message["cells"]} if message.get("cells") else {}
+                        # 앱 「적용」 뒤 같은 칸을 콘솔에 바로 반영 — 파서가 cells 와 함께일
+                        # 때만 live 를 남긴다.
+                        if message.get("live") and apply_kwargs:
+                            apply_kwargs["live"] = True
                         current_task = asyncio.create_task(
                             asyncio.to_thread(apply_fn, **apply_kwargs)
                         )

@@ -79,6 +79,7 @@ from server.design.beat_grid import (
 )
 from server.design.beat_grid_cell_edit import BeatGridCellEditError, row_move_many
 from server.design.beat_grid_cell_live import (
+    SCOPE_APPLY,
     SCOPE_MOVE,
     CellLiveRefused,
     console_tracks_for_groups,
@@ -3983,6 +3984,10 @@ _CELL_LIVE_CARD_TEXT = (
 #: 이미 승인된 범위로 보낼 때 감사 기록에 남는 사유(이때는 카드가 뜨지 않는다).
 _CELL_LIVE_SESSION_REASON = (
     "칸 옮기기 — 이 서버를 켜 둔 동안 옮기기에만 쓰는 승인(SPEC-LDRHYTHM-001)"
+)
+#: 앱 「적용」 뒤 콘솔 반영을 이미 승인된 범위로 보낼 때 감사 기록에 남는 사유(카드가 뜨지 않는다).
+_CELL_LIVE_APPLY_SESSION_REASON = (
+    "칸 적용 뒤 콘솔 반영 — 이 서버를 켜 둔 동안 「적용」 반영에만 쓰는 승인(SPEC-LDRHYTHM-001)"
 )
 _CELL_LIVE_NO_GRID_MESSAGE = "이 곡의 격자가 없습니다"
 _CELL_LIVE_NO_RECORD_MESSAGE = (
@@ -12118,14 +12123,19 @@ class ChatSession:
         attached = getattr(self._gate, "showfile_backup_attached", False)
         return (BACKUP_COMMAND,) if attached is True else ()
 
-    def _beat_grid_verify_approval_vs_sent(self, batch, *, since: str, until: str):
+    def _beat_grid_verify_approval_vs_sent(
+        self, batch, *, since: str, until: str, with_backup: bool = True
+    ):
         """``REQ-LDBEAT-011`` — 승인=송신 바이트 대조. 승인 아티팩트를
         임시 파일 하나에 쓰고, 이 세션의 감사 로그 디렉터리를 「보낸
         기록」소스로 넘긴다 — 새 비교 로직을 짓지 않고
-        ``verify_approval_vs_sent``를 그대로 재사용한다(REQ-LDBEAT-011(b))."""
-        approval_text = "".join(
-            f"{line}\n" for line in (*self._beat_grid_gate_backup_lines(), *batch.commands)
-        )
+        ``verify_approval_vs_sent``를 그대로 재사용한다(REQ-LDBEAT-011(b)).
+
+        ``with_backup`` 이 거짓이면 승인 쪽 목록에 쇼 백업 줄을 넣지 않는다 — 카드 없이 이미
+        승인된 범위로 보낸 길은 백업을 하지 않으므로(``_cell_live_send_preapproved``)
+        그 줄은 보내지 않는다."""
+        backup_lines = self._beat_grid_gate_backup_lines() if with_backup else ()
+        approval_text = "".join(f"{line}\n" for line in (*backup_lines, *batch.commands))
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".txt", delete=False, encoding="utf-8"
         ) as handle:
@@ -12140,7 +12150,9 @@ class ChatSession:
                 Path(handle.name).unlink()
 
     @timed_apply
-    def beat_grid_apply(self, cells: Sequence[BeatGridCellKey] | None = None) -> dict:
+    def beat_grid_apply(
+        self, cells: Sequence[BeatGridCellKey] | None = None, live: bool = False
+    ) -> dict:
         """상단 바 「⇪ 콘솔에 반영」 — 격자의 미반영 편집을 **구간 단위
         1개** 승인으로 콘솔에 쓴다(REQ-LDBEAT-012(a), 칸마다 따로 승인받지
         않는다). 입력 넷(순서 번호·타임코드 번호·디머 속성·곡 타이밍)을
@@ -12167,7 +12179,13 @@ class ChatSession:
         둘 다 없는 곡·콘솔에 아직 없는 줄·이미 콘솔과 같은 칸뿐인 선택·빈 프리셋 보류/새로 만들
         프리셋과 얽힌 칸은 아무것도 보내지 않고 거절한다(전체 반영이 맡는다). 콘솔에 이미 있는
         프리셋 번호의 승인 대기 칸은 번호 줄만 보내고, 승인(``evidence.approval``)은 보낸 칸에만
-        성공 확인 뒤 적는다. ``cells`` 가 없으면 위 전체 반영 그대로다."""
+        성공 확인 뒤 적는다. ``cells`` 가 없으면 위 전체 반영 그대로다.
+
+        ``live``(``cells`` 와 함께일 때만 뜻이 있다)는 앱의 「적용」이 성공한 같은 칸을 바로 콘솔에
+        반영하는 길이다. 보내는 줄·계획·검증은 칸 단위 반영과 똑같고 승인만 다르다 — 이 서버를 켜 둔
+        동안 첫 반영은 ⇪ 와 같은 승인 카드를 묻고, 그 카드가 성공하면 ``SCOPE_APPLY`` 를 남겨 이후의
+        live 반영은 카드 없이 게이트(문법·분류·잠금·감사)만 거쳐 나간다. 거절·실패한 카드는 승인을
+        남기지 않는다. ``live`` 가 아니면 이 승인을 읽지도 쓰지도 않아 ⇪ 는 예전 그대로다."""
         store = self._timeline_store
         timeline = store.latest if store is not None else None
         if timeline is None:
@@ -12817,24 +12835,45 @@ class ChatSession:
             )
             since = datetime.now(UTC).isoformat()
             apply_stage("precheck")
-            executed = self._dispatch_declared(
-                ToolCall(
-                    id="beat-grid-apply",
-                    name="run_commands",
-                    arguments={"commands": list(batch.commands)},
-                ),
-                risk=risk,
+            # 앱 「적용」 뒤 반영(live)은 칸 단위 반영에서만 쓴다. 이 서버에서 「적용」 반영을 이미
+            # 승인받았으면 카드 없이 게이트만 거쳐 보내고, 아니면 아래 카드 길 그대로다.
+            apply_approval = store.cell_live_approval if store is not None else None
+            live_gate = live and subset_plan is not None
+            send_preapproved = (
+                live_gate
+                and apply_approval is not None
+                and apply_approval.covers(frozenset({SCOPE_APPLY}))
             )
+            if send_preapproved:
+                # 두 길이 같은 실패 갈래를 타도록 결과를 (실패 여부, 사유 내용) 으로 맞춘다.
+                refusal, _ran = self._cell_live_send_preapproved(
+                    batch.commands,
+                    reason=_CELL_LIVE_APPLY_SESSION_REASON,
+                    kind="beat_grid_apply_live_session",
+                )
+                send_failed = refusal is not None
+                send_detail = refusal or ""
+            else:
+                executed = self._dispatch_declared(
+                    ToolCall(
+                        id="beat-grid-apply",
+                        name="run_commands",
+                        arguments={"commands": list(batch.commands)},
+                    ),
+                    risk=risk,
+                )
+                send_failed = executed.result.is_error
+                send_detail = str(executed.result.content or "")
             apply_stage("gate_return")
             until = datetime.now(UTC).isoformat()
-            if executed.result.is_error and presend_reasons:
+            if send_failed and presend_reasons:
                 return self._beat_grid_send_status(
                     last_action="apply", ok=False, reason=presend_reasons[0]
                 )
-            if executed.result.is_error:
+            if send_failed:
                 # 승인 거절만이 아니라 게이트 차단·콘솔 무응답도 이 갈래로 온다 —
                 # 원인을 하나로 단정하지 않고 결과 내용을 그대로 붙인다.
-                detail = str(executed.result.content or "").strip()[:300]
+                detail = send_detail.strip()[:300]
                 return self._beat_grid_send_status(
                     last_action="apply",
                     ok=False,
@@ -12843,6 +12882,11 @@ class ChatSession:
                     )
                     + (f": {detail}" if detail else "."),
                 )
+            # 「적용」 뒤 반영의 카드가 성공했으면 이 서버를 켜 둔 동안 이 범위를 승인으로 남긴다.
+            # 거절·게이트 차단·송신 실패는 위에서 이미 돌아갔으므로 여기 오지 않는다
+            # (``_send_cell_moves`` 와 같다).
+            if live_gate and not send_preapproved and apply_approval is not None:
+                apply_approval.approve(frozenset({SCOPE_APPLY}))
 
             # 카드 t577(REQ-LDBEAT-015(h-3)(h-4)) — 승인이 통과한 뒤에만,
             # 그 카드가 열거한(``pending_before``) 칸·필드에 한해 정확히
@@ -12861,7 +12905,11 @@ class ChatSession:
                     timeline, pending_before, date=until, source=f"beat_grid_apply:{batch.sha256}"
                 )
 
-            verdict = self._beat_grid_verify_approval_vs_sent(batch, since=since, until=until)
+            # 카드 없이 보낸 길은 쇼 백업을 하지 않았으니 같은 창에서 백업 줄을 뺀 승인 목록과
+            # 대조한다.
+            verdict = self._beat_grid_verify_approval_vs_sent(
+                batch, since=since, until=until, with_backup=not send_preapproved
+            )
             cue_numbers: dict[str, dict[int, int]] = {}
             for track in result.tracks:
                 for cue in track.cues:
@@ -14067,15 +14115,23 @@ class ChatSession:
         ran = sum(1 for outcome in executed.command_outcomes if outcome.status == "executed_ok")
         return _console_send_refusal(executed.result.content), ran
 
-    def _cell_live_send_preapproved(self, commands: Sequence[str]) -> tuple[str | None, int]:
-        """이미 승인받은 옮기기 범위로 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
+    def _cell_live_send_preapproved(
+        self,
+        commands: Sequence[str],
+        *,
+        reason: str = _CELL_LIVE_SESSION_REASON,
+        kind: str = "beat_grid_cell_live_session",
+    ) -> tuple[str | None, int]:
+        """이미 승인받은 범위로 보낸다 — ``(거절 사유 또는 None, 이미 나간 줄 수)``.
 
         게이트는 그대로 거친다(``execute_preapproved``: 문법·분류·잠금·감사). 일반 승인 창만 다시
         묻지 않는다. 결과 처리는 ``_beat_grid_send_transport_preapproved`` 와 같다 — 첫 실패에서
-        멈춘다. 이 길은 쇼 백업을 하지 않는다(첫 승인 카드의 송신이 이미 백업했다)."""
+        멈춘다. 이 길은 쇼 백업을 하지 않는다(첫 승인 카드의 송신이 이미 백업했다).
+        ``reason``·``kind`` 는 감사 기록에 남는 사유와 갈래다 — 기본은 칸 옮기기이고,
+        「적용」 뒤 반영은 자기 것을 넘긴다."""
         decision = self._gate.execute_preapproved(
             list(commands),
-            risk=BatchRisk(reason=_CELL_LIVE_SESSION_REASON, kind="beat_grid_cell_live_session"),
+            risk=BatchRisk(reason=reason, kind=kind),
             showfile_backup=False,
         )
         if not decision.cleared:

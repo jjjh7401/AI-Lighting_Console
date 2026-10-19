@@ -81,6 +81,25 @@ describe("sendBeatGridApplyCells", () => {
     expect(buildBeatGridApply(undefined, [])).toBe('{"v":1,"type":"beat_grid_apply"}');
   });
 
+  it("live 를 주면 live:true 를 실은 프레임 하나를 보낸다", () => {
+    act(() => socket.sendBeatGridApplyCells([["BACK", 2]], true));
+    expect(beatGridFrames()).toEqual(['{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]],"live":true}']);
+  });
+
+  it("live 를 주지 않거나 거짓이면 예전 칸 단위 프레임과 바이트가 같다", () => {
+    act(() => socket.sendBeatGridApplyCells([["BACK", 2]]));
+    act(() => socket.sendBeatGridApplyCells([["BACK", 2]], false));
+    expect(beatGridFrames()).toEqual([
+      '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
+      '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
+    ]);
+  });
+
+  it("live 여도 빈 목록은 아무것도 보내지 않는다", () => {
+    act(() => socket.sendBeatGridApplyCells([], true));
+    expect(beatGridFrames()).toEqual([]);
+  });
+
   it("예전 전체 반영 sendBeatGridApply 는 그대로 cells 없는 프레임이다", () => {
     act(() => socket.sendBeatGridApply());
     expect(beatGridFrames()).toEqual(['{"v":1,"type":"beat_grid_apply"}']);

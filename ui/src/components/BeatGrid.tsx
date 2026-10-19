@@ -714,6 +714,10 @@ export interface BeatGridProps {
   /** 고른 칸(없으면 바뀐 칸 전부) 가운데 바뀐 칸만 콘솔에 덧쓴다 — `beat_grid_apply` 의 `cells`. 생략하면
    * 「⇪ 콘솔에 반영」은 예전처럼 곡 전체 반영 단일 버튼이다. */
   onApplyCells?: (cells: [string, number][]) => void;
+  /** 앱의 「적용」(일괄 바꾸기 줄 · 큐 편집 칸의 한 칸 「적용」)이 **성공한 답을 받은 뒤** 같은 칸을 콘솔에도 바로
+   * 반영한다 — 서버는 `beat_grid_apply` 의 `cells`+`live`. 편집 한 번에 한 번만 부르고, 거절·답 없음·옛 답에는
+   * 부르지 않는다. 무대에서 여러 줄을 골라 보낸 편집은 아직 부르지 않는다. 생략하면 예전과 같다(앱 편집만). */
+  onApplyCellsLive?: (cells: [string, number][]) => void;
   /** 칸 막대를 가로로 끌어 같은 줄 안에서 옮길 때 — 옮길 칸 목록을 **한 번에** 올린다(서버 `beat_grid_cell_edit`, 전부 아니면 전무).
    * 끌기를 놓는 순간에만 부르고, 옮길 마디가 0 이거나 1마디 미만으로 가면 부르지 않는다. 끈 칸이 고른 칸(Shift/Ctrl)에
    * 들어 있으면 같은 줄의 고른 칸 전부가 함께 옮겨진다. 생략하면 끌어도 아무 일도 없다(칸 고르기는 예전 그대로). */
@@ -1777,6 +1781,7 @@ export function BeatGrid({
   onEditRequest,
   onEditCellsRequest,
   onApplyCells,
+  onApplyCellsLive,
   onMoveCells,
   onNewPresetRequest,
   lastServerReply = null,
@@ -1821,7 +1826,12 @@ export function BeatGrid({
   const unsentKeys = useMemo(() => unsentKeySet(grid?.unsent_cells), [grid?.unsent_cells]);
   const knownKeys = useMemo(() => knownKeySet(grid?.known_cells), [grid?.known_cells]);
   // 일괄 바꾸기 「적용」을 누른 뒤의 서버 답 기다림(거절 사유·바쁨 안내용).
-  const [bulkPending, setBulkPending] = useState<{ sinceSeq: number; busyAt: number } | null>(null);
+  // `cells` 는 이 「적용」이 서버로 실제로 보낸 칸 — 성공한 답이 오면 같은 칸을 콘솔에도 반영한다.
+  const [bulkPending, setBulkPending] = useState<{
+    sinceSeq: number;
+    busyAt: number;
+    cells: [string, number][];
+  } | null>(null);
   // 곡이 바뀌면 고른 칸을 비운다(다른 곡의 같은 줄 이름·마디에 일괄 바꾸기가 가지 않게). 고른 칸이 없어지면 앞 답 기다림도 지운다.
   const songTitle = grid?.song_title;
   useEffect(() => setCellSel(EMPTY_CELL_SELECTION), [songTitle]);
@@ -1980,7 +1990,12 @@ export function BeatGrid({
     sinceSeq: number;
   } | null>(null);
   // 카드 t597 — 일반 편집 「적용」을 누른 칸과 그때의 서버 답 순번.
-  const [editPending, setEditPending] = useState<{ field: EditReplyField; sinceSeq: number } | null>(null);
+  // `liveCell` 은 「적용」 뒤 콘솔 반영을 기다리는 칸([줄 이름, 마디]) — 성공한 답이 오면 한 번 올리고 지운다.
+  const [editPending, setEditPending] = useState<{
+    field: EditReplyField;
+    sinceSeq: number;
+    liveCell?: [string, number];
+  } | null>(null);
   const [newPresetDrafts, setNewPresetDrafts] = useState<
     Partial<
       Record<
@@ -2701,8 +2716,24 @@ export function BeatGrid({
   useEffect(() => {
     if (!bulkEditDone) return;
     seedEditDrafts(seedCue);
+    // 앱 편집이 성공했으니 같은 칸을 콘솔에도 반영한다 — 지우기 전에 읽어 한 번만 부른다.
+    const liveCells = bulkPending?.cells ?? [];
     setBulkPending(null);
+    if (liveCells.length > 0) onApplyCellsLive?.(liveCells);
   }, [bulkEditDone]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 한 칸 「적용」도 같다 — 누른 뒤(`seq > sinceSeq`)에 성공한 답이 오면 그 칸 하나를 콘솔에 반영한다. 거절 사유를
+  // 보이는 `editPending` 은 그대로 두고 `liveCell` 만 지워(한 번만 부르고) 거절 표시는 예전과 같게 한다.
+  const liveEditDone =
+    editPending?.liveCell !== undefined &&
+    lastServerReply !== null &&
+    lastServerReply.seq > editPending.sinceSeq &&
+    lastServerReply.summary === BEAT_GRID_EDIT_OK_SUMMARY;
+  useEffect(() => {
+    if (!liveEditDone || !editPending?.liveCell) return;
+    const liveCell = editPending.liveCell;
+    setEditPending({ field: editPending.field, sinceSeq: editPending.sinceSeq });
+    onApplyCellsLive?.([liveCell]);
+  }, [liveEditDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!grid) {
     // 빈 화면은 안내와 돌아가는 길을 함께 보인다 — 격자가 없을 때 갈 곳이 없으면 막다른 화면이 된다.
@@ -2828,19 +2859,33 @@ export function BeatGrid({
     ? fixtures.filter((f) => fixtureBelongsTo(f, selectedTrack.group_name)).length
     : 0;
   // 카드 t597 — 일반 편집을 보내고, 그 칸에 뒤따라 올 거절 사유를 기다린다.
+  // `live` 는 「적용」 버튼으로 낸 한 칸 편집일 때만 준다 — 성공한 답이 오면 그 칸을 콘솔에도 바로 반영한다
+  // (`onApplyCellsLive`). 서버 `cells` 는 1마디부터라 앞박(0마디) 칸은 반영하지 않는다. 이음매 끌기·전환 화면
+  // 같은 다른 편집 길은 `live` 를 주지 않아 예전 그대로다.
   const requestEdit = (
     field: EditReplyField,
     request: Parameters<NonNullable<BeatGridProps["onEditRequest"]>>[0],
+    live = false,
   ) => {
     if (!onEditRequest) return;
     onEditRequest(request);
-    setEditPending({ field, sinceSeq: lastServerReply?.seq ?? -1 });
+    const liveCell: [string, number] | undefined =
+      live && onApplyCellsLive && Number.isInteger(request.bar) && request.bar >= 1
+        ? [request.target, request.bar]
+        : undefined;
+    setEditPending({ field, sinceSeq: lastServerReply?.seq ?? -1, ...(liveCell ? { liveCell } : {}) });
   };
   // 무대에서 줄을 골랐으면 그 줄들의 지금 마디 칸 전부에, 아니면 고른 칸 하나에 같은 편집을
-  // 보낸다(칸마다 요청 하나씩).
+  // 보낸다(칸마다 요청 하나씩). 칸이 하나일 때만 콘솔 반영을 단다 — 줄을 여럿 골라 보낸 편집은 칸마다 요청이
+  // 따로 가서 한 번에 한 반영만 받는 서버가 나머지를 바쁘다고 거절하므로, 이 길은 아직 콘솔에 반영하지 않는다.
   const requestEditForTargets = (field: EditReplyField, changes: Record<string, unknown>) => {
-    for (const cell of stageSelectionCells(stageRows, selected, grid.tracks, viewBar)) {
-      requestEdit(field, { bar: cell.bar, target: grid.tracks[cell.trackIndex].group_name, changes });
+    const cells = stageSelectionCells(stageRows, selected, grid.tracks, viewBar);
+    for (const cell of cells) {
+      requestEdit(
+        field,
+        { bar: cell.bar, target: grid.tracks[cell.trackIndex].group_name, changes },
+        cells.length === 1,
+      );
     }
   };
   const renderEditReply = (field: EditReplyField) => {
@@ -2990,7 +3035,8 @@ export function BeatGrid({
   const requestBulkEdit = (choice: BulkChoice) => {
     const changes = bulkEditChanges(choice, bulkColorSection);
     if (!onEditCellsRequest || bulkBlockedReason !== null || Object.keys(changes).length === 0) return;
-    setBulkPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount });
+    // 서버로 실제로 보낸 칸을 적어 둔다 — 성공한 답이 오면 같은 칸을 콘솔에도 반영한다.
+    setBulkPending({ sinceSeq: lastServerReply?.seq ?? -1, busyAt: busyCount, cells: bulkWire.cells });
     onEditCellsRequest({ cells: bulkWire.cells, changes });
   };
 
@@ -4400,11 +4446,15 @@ export function BeatGrid({
                               editing: true,
                               onOpen: () => undefined,
                               onApply: (movement) => {
-                                requestEdit("movement", {
-                                  bar: selected.bar,
-                                  target: selectedTrack.group_name,
-                                  changes: { app_movement: movement },
-                                });
+                                requestEdit(
+                                  "movement",
+                                  {
+                                    bar: selected.bar,
+                                    target: selectedTrack.group_name,
+                                    changes: { app_movement: movement },
+                                  },
+                                  true,
+                                );
                               },
                               onCancel: () => setMovementResetNonce((n) => n + 1),
                             }
