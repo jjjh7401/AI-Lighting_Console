@@ -11641,6 +11641,7 @@ class ChatSession:
         completed: str | None = None,
         timecode_suggestion: int | None = None,
         subset: dict | None = None,
+        console_started_at_ms: int | None = None,
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
@@ -11666,6 +11667,7 @@ class ChatSession:
             completed=completed,
             timecode_suggestion=timecode_suggestion,
             subset=subset,
+            console_started_at_ms=console_started_at_ms,
         )
         self._send(event)
         return event
@@ -13297,8 +13299,9 @@ class ChatSession:
             timecodes=timecodes,
             sequence_count=len(sequences),
         )
+        go_started: list[int] = []
         if self._preview_approval.is_approved:
-            refusal = self._beat_grid_send_transport_preapproved(commands)
+            refusal = self._beat_grid_send_transport_preapproved(commands, go_started_ms=go_started)
         else:
             # 승인 카드 머리: 이 송신이 승인받는 동안만 살아 있다. 같은 스레드의 알림이 읽는다.
             card_token = _BEAT_GRID_CARD_TITLE.set(card_title)
@@ -13325,7 +13328,12 @@ class ChatSession:
                 ),
             )
         notices = self._beat_grid_stop_notices(timecode_number) if halting else []
-        return self._beat_grid_send_status(last_action=action, ok=True, extra_notices=notices)
+        # 재생 성공이면 콘솔이 흐르기 시작한 시각을 싣는다.
+        # 승인 카드 경로는 싣지 않아 응답 도착 시각을 쓴다.
+        started_ms = go_started[0] if go_started else None
+        return self._beat_grid_send_status(
+            last_action=action, ok=True, extra_notices=notices, console_started_at_ms=started_ms
+        )
 
     def _beat_grid_owned_sequence_numbers(self) -> tuple[int, ...]:
         """정지 때 끌 시퀀스 — 이 곡의 반영 소유 기록에 적힌 트랙 시퀀스, 없으면 가장 최근
@@ -13347,6 +13355,8 @@ class ChatSession:
 
     #: 정지 확인 때 커서를 두 번 읽는 간격(초). 시험은 0 으로 줄인다.
     _beat_grid_stop_check_interval_seconds = 0.4
+    #: 주기 확인이 요청을 받은 뒤 흘러간 시간을 재는 시계. 시험은 고정 시계로 바꾼다.
+    _beat_grid_clock = staticmethod(time.monotonic)
 
     def _beat_grid_stop_notices(self, timecode_number: int) -> list[str]:
         """2차 전체 실행 I-02 — 끄기를 보낸 뒤 타임코드 커서(``CURSOR``)를 간격을 두고 두 번
@@ -13382,7 +13392,9 @@ class ChatSession:
                 return _timecode_cursor_seconds(read.get("v"))
         return None
 
-    def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> str | None:
+    def _beat_grid_send_transport_preapproved(
+        self, commands: tuple[str, ...], go_started_ms: list[int] | None = None
+    ) -> str | None:
         """전체 실행 J-09 — 이 세션에서 미리보기·재생 승인을 이미 받았으면(REQ-LDBEAT-012(b)
         「세션 시작 1회」) 앱 소유 타임코드의 ``Top/Go/Off Timecode N`` 을 다시 묻지 않고 보낸다.
 
@@ -13391,7 +13403,9 @@ class ChatSession:
         않으므로 백업 규칙 ③ 을 건너뛴다(카드 없는 SaveShow 를 내지 않는다).
 
         보냈으면 ``None``, 못 보냈으면 사유다(``_beat_grid_dispatch_preview`` 와 같은 문구).
-        첫 실패에서 멈춘다(뒤 줄은 보내지 않는다 — 고치기 전 ``all(...)`` 과 같다)."""
+        첫 실패에서 멈춘다(뒤 줄은 보내지 않는다 — 고치기 전 ``all(...)`` 과 같다).
+        ``go_started_ms`` 를 넘기면 첫 ``Go Timecode`` 를 보내기 직전의 벽시계(ms)를 담는다.
+        콘솔 타임코드가 실제로 흐르기 시작한 시각이라, 응답이 도착한 시각보다 앞선다."""
         token = bind_session_key(self._session_key)
         try:
             decision = self._gate.execute_preapproved(
@@ -13413,7 +13427,11 @@ class ChatSession:
                         ],
                     }
                 )
+            go_pending = go_started_ms is not None
             for command in commands:
+                if go_pending and command.startswith("Go Timecode"):
+                    go_started_ms.append(int(time.time() * 1000))
+                    go_pending = False
                 outcome = self._gate.execution_port.execute(command)
                 if not outcome.ok:
                     return _console_send_refusal(
@@ -13458,6 +13476,7 @@ class ChatSession:
         켜지 않는다(정지 중 실측: 콘솔이 OK 로 받았고 커서가 그 값에 섰다). 승인·게이트 경로는
         미리보기와 같다 — 세션 1회 승인 뒤에는 카드 없이 보낸다. 보낸 뒤 커서를 간격을 두고
         되읽어 목표에 섰는지 말한다. 「ok」만으로 맞췄다고 말하지 않는다."""
+        requested_at = self._beat_grid_clock()
         timecode_number, reason = self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action="console_seek", ok=False, reason=reason)
@@ -13474,6 +13493,9 @@ class ChatSession:
                         "콘솔 커서를 읽지 못해 다시 맞추지 않았습니다 — 콘솔 화면을 확인해 주세요."
                     ),
                 )
+            # 읽는 데 걸린 시간만큼 콘솔은 흘렀다. 요청 때의 값을 지금 자리로 옮겨
+            # 비교하고 쓴다 — 그대로 쓰면 읽기 동안 흐른 만큼 콘솔이 뒤져 다음 주기에 또 고친다.
+            seconds += self._beat_grid_clock() - requested_at
             if abs(cursor - seconds) <= CONSOLE_RESYNC_TOLERANCE_SECONDS:
                 return self._beat_grid_send_status(last_action="console_seek", ok=True)
         text = _cursor_seconds_text(seconds)

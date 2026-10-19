@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import time
 
 import pytest
 
@@ -39,6 +40,8 @@ def _cursor_lines(executed: list[str]) -> list[str]:
 def _quiet_reads(monkeypatch, session, cursor):
     monkeypatch.setattr(session, "_beat_grid_stop_check_interval_seconds", 0.0)
     monkeypatch.setattr(session, "_beat_grid_timecode_cursor", lambda path: cursor)
+    # 읽기·쓰기 사이 시간이 0 이어야 값이 요청 그대로 나간다.
+    monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
 
 
 class TestConsoleSeek:
@@ -201,3 +204,62 @@ class TestLiveAndResync:
 
         assert event["ok"] is False
         assert _cursor_lines(console.executed) == []
+
+    def test_resync_writes_where_the_console_is_when_the_write_lands_not_where_it_was_asked(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        clock = {"now": 0.0}
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: clock["now"])
+        monkeypatch.setattr(session, "_beat_grid_stop_check_interval_seconds", 0.0)
+
+        def slow_read(path):
+            clock["now"] += 1.0  # 읽는 데 1초 — 그동안 콘솔은 흐른다
+            return 63.0
+
+        monkeypatch.setattr(session, "_beat_grid_timecode_cursor", slow_read)
+
+        session.beat_grid_console_seek(60.0, playing=True, resync=True)
+
+        # 요청 때 60.0 이던 자리는 1초 뒤 61.0 이다 — 쓰는 값은 그 자리여야 한다.
+        assert _cursor_lines(console.executed) == [
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 61"
+        ]
+
+    def test_resync_stays_quiet_when_the_console_is_on_track_at_the_moment_it_was_read(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        clock = {"now": 0.0}
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: clock["now"])
+        monkeypatch.setattr(session, "_beat_grid_stop_check_interval_seconds", 0.0)
+
+        def slow_read(path):
+            clock["now"] += 1.0
+            return 61.1  # 읽은 자리(61.0)와 0.1초 차이 — 허용 안이다
+
+        monkeypatch.setattr(session, "_beat_grid_timecode_cursor", slow_read)
+
+        event = session.beat_grid_console_seek(60.0, playing=True, resync=True)
+
+        assert event["ok"] is True
+        assert _cursor_lines(console.executed) == []
+
+
+class TestPlayStartClock:
+    def test_a_play_reports_when_the_console_started_so_the_audio_clock_starts_there(
+        self, tmp_path
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        session.beat_grid_console_play()  # 첫 재생은 세션 승인을 거친다
+        before = int(time.time() * 1000)
+
+        event = session.beat_grid_console_play()
+
+        after = int(time.time() * 1000)
+        assert event["ok"] is True
+        assert before <= event["console_started_at_ms"] <= after
+        # 시작 시각은 되감기(Top) 뒤, 재생(Go) 직전이다.
+        assert console.executed.index(f"Top Timecode {TIMECODE_NUMBER}") < console.executed.index(
+            f"Go Timecode {TIMECODE_NUMBER}"
+        )

@@ -1023,6 +1023,9 @@ export interface BeatGridSendStatus {
   notices?: readonly string[];
   /** 칸 단위 반영이 성공했을 때만 있다. 키가 없으면 전체 반영이거나 칸 단위가 아니다(리듀서는 키를 지어내지 않는다). */
   subset?: BeatGridSubsetStatus;
+  /** 「콘솔 같이」 재생 성공 때만 실린다 — 콘솔 타임코드가 실제로 흐르기 시작한 벽시계(ms, `Date.now()` 와 같은 기준).
+   * 응답이 도착한 시각보다 앞설 수 있다. 없으면 응답을 본 시각을 쓴다(승인 카드 경로). */
+  console_started_at_ms?: number | null;
 }
 
 export interface SongTimelineView {

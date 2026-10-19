@@ -1129,6 +1129,7 @@ def beat_grid_send_status_event(
     completed: str | None = None,
     timecode_suggestion: int | None = None,
     subset: dict | None = None,
+    console_started_at_ms: int | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -1159,6 +1160,10 @@ def beat_grid_send_status_event(
         optional["timecode_suggestion"] = timecode_suggestion
     if subset is not None:
         optional["subset"] = subset
+    # 「콘솔 같이」 재생 성공 때 콘솔 타임코드가 실제로 흐르기 시작한 벽시계(ms).
+    # 응답 도착 시각보다 앞설 수 있다.
+    if console_started_at_ms is not None:
+        optional["console_started_at_ms"] = console_started_at_ms
     return _event(
         "beat_grid_send_status",
         pending_apply_count=pending_apply_count,

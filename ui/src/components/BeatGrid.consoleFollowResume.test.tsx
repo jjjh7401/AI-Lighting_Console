@@ -752,6 +752,9 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
   it("재생 중 마디를 누르면 멈추지 않고 음원 자리를 옮기며, 연타가 멈춘 뒤 마지막 자리 하나만 콘솔 커서로 보낸다", () => {
     const onPreviewBar = vi.fn();
     const onConsoleSeek = vi.fn();
+    // 재생 시계(`performance.now`)는 손으로 돌린다 — 보내는 순간의 음원 자리를 정확히 잰다.
+    let perfMs = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => perfMs);
     // 마디→초 환산(박자)이 있어야 커서를 옮긴다 — 없으면 아무것도 보내지 않는다(아래 시험).
     const app = createApp({ props: { onPreviewBar, onConsoleSeek, secondsPerBar: 2 } });
     app.open();
@@ -766,12 +769,13 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
     expect(onPreviewBar).not.toHaveBeenCalled();
     expect(onConsoleSeek).not.toHaveBeenCalled();
 
+    perfMs += CONSOLE_SEEK_DEBOUNCE_MS;
     advance(CONSOLE_SEEK_DEBOUNCE_MS); // 연타가 멈춘 뒤 마지막 자리 하나만
     expect(onConsoleSeek).toHaveBeenCalledTimes(1);
     const [seconds, options] = onConsoleSeek.mock.calls[0] as [number, unknown];
     expect(options).toEqual({ playing: true });
-    // 콘솔 타임코드 = 곡 시각 + 실측 지연 — 2초 간격 마디 위에서 지연만큼 앞선 값이다.
-    expect((seconds - DELAY_SECONDS) % 2).toBe(0);
+    // 보내는 순간의 음원 자리 = 마지막 마디 + 누른 뒤 흐른 시간. 콘솔 값은 거기에 실측 지연을 더한 것이다.
+    expect((seconds - DELAY_SECONDS - CONSOLE_SEEK_DEBOUNCE_MS / 1000) % 2).toBeCloseTo(0, 6);
   });
 
   it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 커서 이동은 짧게 모아 마지막 마디만 한 번 보낸다", () => {

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { buildBeatGridConsoleSeek } from "../../protocol";
-import { consoleResyncDue, consoleSeekPlan, consoleSeekStep, consoleTimecodeSeconds } from "./consoleSeekPlan";
+import {
+  consoleLiveSeekSeconds,
+  consoleResyncDue,
+  consoleSeekPlan,
+  consoleSeekStep,
+  consoleTimecodeSeconds,
+} from "./consoleSeekPlan";
 
 const paused = { consoleFollow: true, consoleFollowAvailable: true, playing: false, timecodePaused: true };
 const quiet = { stopping: false, awaiting: false };
@@ -75,6 +81,7 @@ describe("consoleResyncDue", () => {
     pending: false,
     awaiting: false,
     stopping: false,
+    audioStartPending: false,
   };
 
   it("is due while playing with 콘솔 같이 on and nothing else in progress", () => {
@@ -87,6 +94,24 @@ describe("consoleResyncDue", () => {
     expect(consoleResyncDue({ ...playingFollow, pending: true })).toBe(false);
     expect(consoleResyncDue({ ...playingFollow, inFlight: true })).toBe(false);
     expect(consoleResyncDue({ ...playingFollow, stopping: true })).toBe(false);
+  });
+
+  it("is not due while the audio still waits out the console delay, because there is no song position yet", () => {
+    expect(consoleResyncDue({ ...playingFollow, audioStartPending: true })).toBe(false);
+  });
+});
+
+describe("consoleLiveSeekSeconds", () => {
+  const anchor = { anchorSeconds: 12.212, anchorPerfMs: 1000 };
+
+  it("reads the song clock when the move is sent, not when the bar was pressed", () => {
+    // 누른 뒤 2.16초 지나 보낸다 — 음원은 14.372에 있고, 콘솔 값은 거기에 지연 3.002를 더한 자리다.
+    expect(consoleLiveSeekSeconds(anchor, 3160, 3.002)).toBeCloseTo(17.374, 3);
+  });
+
+  it("refuses to pick a value without an anchor or a measured delay", () => {
+    expect(consoleLiveSeekSeconds(null, 3160, 3.002)).toBeNull();
+    expect(consoleLiveSeekSeconds(anchor, 3160, null)).toBeNull();
   });
 });
 

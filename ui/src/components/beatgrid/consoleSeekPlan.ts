@@ -3,7 +3,8 @@
 // 마디를 옮기면 콘솔 커서도 그 마디의 시각으로 옮긴다. 멈춘 뒤(❚❚)에는 커서만 옮긴다 — 정지 중 실측으로
 // `Set Timecode N Property 'Cursor' <초>` 는 재생을 켜지 않았다. 재생 중에는 멈추지 않고, 연타가 멈춘 뒤 마지막
 // 자리만 보내며 주기적으로 다시 맞춘다(실측: 재생 중 Set 이 바로 먹고 재생은 이어진다). 서버는 콘솔 명령을 한 번에 하나만
-// 처리하므로, 언제 보낼지는 `consoleSeekStep` 이 정한다.
+// 처리하므로, 언제 보낼지는 `consoleSeekStep` 이 정한다. 값은 보내는 순간에 정한다(`consoleLiveSeekSeconds`).
+import { elapsedPlaybackSeconds } from "./playbackClock";
 
 /** 마디 이동을 짧게 모으는 시간(ms) — 방향키를 연달아 누르면 마지막 마디만 보낸다. */
 export const CONSOLE_SEEK_DEBOUNCE_MS = 250;
@@ -19,7 +20,22 @@ export function consoleTimecodeSeconds(songSeconds: number, delaySeconds: number
   return Math.max(0, songSeconds + delaySeconds);
 }
 
-/** 재생 중 주기 확인을 지금 보낼지. 「콘솔 같이」가 켜진 재생 중이고, 보낼 이동이 없고 답을 기다리는 중이 아닐 때만. */
+/** 지금 음원 시계가 가리키는 자리를 콘솔 타임코드 값으로 정한다. 마디를 누른 뒤 보내기까지 기다린 시간만큼 음원은
+ * 흘러 있으므로, 누른 순간의 값을 쓰면 콘솔이 그만큼 뒤진다. 앵커가 없으면 `null`. */
+export function consoleLiveSeekSeconds(
+  anchor: { anchorSeconds: number; anchorPerfMs: number } | null,
+  nowPerfMs: number,
+  delaySeconds: number | null,
+): number | null {
+  if (anchor === null) return null;
+  return consoleTimecodeSeconds(
+    elapsedPlaybackSeconds(anchor.anchorSeconds, anchor.anchorPerfMs, nowPerfMs),
+    delaySeconds,
+  );
+}
+
+/** 재생 중 주기 확인을 지금 보낼지. 「콘솔 같이」가 켜진 재생 중이고, 보낼 이동이 없고 답을 기다리는 중이 아닐 때만.
+ * 음원이 지연을 기다리며 아직 안 튼 동안(`audioStartPending`)에는 음원 자리가 없으므로 보내지 않는다. */
 export function consoleResyncDue(input: {
   playing: boolean;
   consoleFollow: boolean;
@@ -28,6 +44,7 @@ export function consoleResyncDue(input: {
   pending: boolean;
   awaiting: boolean;
   stopping: boolean;
+  audioStartPending: boolean;
 }): boolean {
   return (
     input.playing &&
@@ -36,7 +53,8 @@ export function consoleResyncDue(input: {
     !input.inFlight &&
     !input.pending &&
     !input.awaiting &&
-    !input.stopping
+    !input.stopping &&
+    !input.audioStartPending
   );
 }
 

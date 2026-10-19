@@ -93,6 +93,13 @@ describe("observeConsoleFollowStatus — 이번 요청의 답인가", () => {
     expect(observeConsoleFollowStatus(relay, status(), 1000)).toBe(true);
   });
 
+  it("서버가 콘솔이 돌기 시작한 시각을 실었으면 응답 도착 시각 대신 그 시각을 기록한다", () => {
+    // 콘솔 응답이 1.75초 늦게 왔다 — 음원은 콘솔이 실제로 출발한 시각(4000)에 맞춰 잰다.
+    const relay = { ...createConsoleFollowRelay(), awaiting: true, pressedAgainst: null };
+    expect(observeConsoleFollowStatus(relay, status({ console_started_at_ms: 4000 }), 5750)).toBe(true);
+    expect(relay.responseAtMs).toBe(4000);
+  });
+
   it("성공 응답이면 기다림을 끝내고 받은 시각을 기록한다", () => {
     const old = status();
     const relay = { ...createConsoleFollowRelay(), awaiting: true, pressedAgainst: old };

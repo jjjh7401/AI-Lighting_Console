@@ -147,6 +147,7 @@ import {
 import {
   CONSOLE_RESYNC_INTERVAL_MS,
   CONSOLE_SEEK_DEBOUNCE_MS,
+  consoleLiveSeekSeconds,
   consoleResyncDue,
   consoleSeekPlan,
   consoleSeekStep,
@@ -2093,6 +2094,11 @@ export function BeatGrid({
   const seekBusyAtRef = useRef(0);
   const busyCountRef = useRef(busyCount);
   busyCountRef.current = busyCount;
+  // 예약을 낸 뒤 멈췄는지 보려고 쥔다 — 멈췄으면 옮긴 마디 그대로 보낸다(음원 시계는 이미 멎었다).
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+  // 보낼 시각(곡 시각)은 예약 때 쥐고, 콘솔 값은 여기서 보내는 순간에 정한다. 기다리는 동안 음원은 흘러
+  // 예약 때 값으로 보내면 콘솔이 그만큼 뒤진다.
   const flushConsoleSeek = () => {
     const step = consoleSeekStep(
       { pendingSeconds: seekPendingRef.current?.seconds ?? null, inFlight: seekInFlightRef.current },
@@ -2101,10 +2107,15 @@ export function BeatGrid({
     if (step !== "send" || seekPendingRef.current === null || !onConsoleSeek) return;
     const pending = seekPendingRef.current;
     seekPendingRef.current = null;
+    const consoleSeconds =
+      pending.playing && playingRef.current
+        ? consoleLiveSeekSeconds(playbackAnchorRef.current, performance.now(), consoleDelayRef.current)
+        : consoleTimecodeSeconds(pending.seconds, consoleDelayRef.current);
+    if (consoleSeconds === null) return;
     seekInFlightRef.current = true;
     seekPressedRef.current = sendStatus;
     seekBusyAtRef.current = busyCountRef.current;
-    onConsoleSeek(pending.seconds, pending.playing ? { playing: true } : undefined);
+    onConsoleSeek(consoleSeconds, pending.playing ? { playing: true } : undefined);
   };
   const scheduleConsoleSeek = (seconds: number, playing: boolean) => {
     seekPendingRef.current = { seconds, playing };
@@ -2136,6 +2147,8 @@ export function BeatGrid({
         pending: seekPendingRef.current !== null,
         awaiting: relay.awaiting,
         stopping: relay.stopping,
+        // 콘솔은 돌았어도 음원이 지연을 기다리는 동안에는 음원 자리가 없다 — 그때는 다시 맞추지 않는다.
+        audioStartPending: relay.responseAtMs !== null && !relay.audioStarted && audioStatusRef.current === "connected",
       });
       const anchor = playbackAnchorRef.current;
       if (!due || anchor === null || !onConsoleSeek) return;
@@ -2938,9 +2951,11 @@ export function BeatGrid({
       timecodePaused: relay.timecodePaused,
     });
     const seekSeconds = barToSeconds(target, secondsPerBar, barZeroStartSeconds);
-    const consoleSeconds = seekSeconds === null ? null : consoleTimecodeSeconds(seekSeconds, consoleDelayRef.current);
     if (seekPlan === "seek" && seekSeconds !== null) setPlaybackSeconds(seekSeconds);
-    if (seekPlan !== "none" && consoleSeconds !== null) scheduleConsoleSeek(consoleSeconds, seekPlan === "live");
+    // 콘솔 값은 보내는 순간에 정한다(`flushConsoleSeek`). 여기서 정하면 연타·순서 대기 동안 음원 시계가 흘러 뒤진다.
+    if (seekPlan !== "none" && seekSeconds !== null && consoleDelayRef.current !== null) {
+      scheduleConsoleSeek(seekSeconds, seekPlan === "live");
+    }
     if (!playing && consoleFollow && consoleFollowAvailable && relay.timecodePaused) {
       onPreviewBar?.(target);
     }
