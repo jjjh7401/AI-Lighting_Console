@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Protocol
+from typing import NamedTuple, Protocol
 
 from server.concept.resolver import MOVE_SECONDS, SETTLE_SECONDS
 
@@ -61,6 +61,97 @@ def movement_lit_starts(cues: Sequence[Mapping[str, object]]) -> list[int]:
     ]
 
 
+# 안내 갈래다. 「켜진 채 움직임 시작」과 「켜진 채 이동」은
+# 칸의 순서·켜짐·위치로 정해져 옮겨도 달라지지 않는다.
+# 「앞 큐 바로 다음 마디」와 「어두운 시간 짧음」은 마디에 따라 정해져
+# 옮기면 새로 생길 수 있다(``beat_grid_cell_mib`` 가 그 차이로 거절한다).
+MIB_LIT_START = "lit_start"
+MIB_LIT_MOVE = "lit_move"
+MIB_NO_GAP = "no_gap"
+MIB_DARK_SHORT = "dark_short"
+
+
+class MibNote(NamedTuple):
+    """반영 준비 안내 하나. ``index`` 는 뒤 칸의 자리, ``kind`` 는 갈래, ``text`` 는 화면 문장."""
+
+    index: int
+    kind: str
+    text: str
+
+
+class MibPlan(NamedTuple):
+    """마디순 칸의 반영 준비 판정 — ``premoves`` 는 ``(뒤 칸의 자리, 사전이동 큐)`` 의 목록이다."""
+
+    premoves: list[tuple[int, dict[str, object]]]
+    notes: list[MibNote]
+
+
+def mib_plan(cues: Sequence[Mapping[str, object]], timing: BarClock) -> MibPlan:
+    """마디순으로 정렬된 칸의 반영 준비 판정. ``plan_mib_premoves`` 와 같되 자리를 함께 준다.
+
+    자리는 뒤 칸의 자리(``cues`` 의 index)다. 칸의 순서는 옮기기로 바뀌지 않으므로,
+    옮기기 전과 옮긴 뒤의 판정을 같은 자리끼리 짝지을 수 있다.
+    """
+    premoves: list[tuple[int, dict[str, object]]] = []
+    notes: list[MibNote] = []
+    for index, (prev, cur) in enumerate(zip(cues, cues[1:], strict=False), start=1):
+        cur_bar = int(cur["bar"])  # type: ignore[arg-type]
+        if _starts_movement_lit(prev, cur):
+            notes.append(
+                MibNote(
+                    index,
+                    MIB_LIT_START,
+                    f"{cur_bar}마디 켜진 채 움직임 시작 — "
+                    "앞 큐가 켜져 있어 웨이브가 켜진 채 시작합니다",
+                )
+            )
+        target = cur.get("position_preset_no")
+        if target is None or prev.get("position_preset_no") == target:
+            continue  # 위치가 안 바뀜 — MIB 필요 없음
+        if cue_is_lit(prev):
+            notes.append(
+                MibNote(
+                    index,
+                    MIB_LIT_MOVE,
+                    f"{cur_bar}마디 MIB 불가 — 앞 큐가 켜져 있어 켜진 채 이동합니다",
+                )
+            )
+            continue
+        premove_bar = int(prev["bar"]) + 1  # type: ignore[arg-type]
+        if premove_bar >= cur_bar:
+            notes.append(
+                MibNote(
+                    index,
+                    MIB_NO_GAP,
+                    f"{cur_bar}마디 MIB 불가 — 앞 큐 바로 다음 마디라 어두운 시간이 없습니다",
+                )
+            )
+            continue
+        cur_at = timing.bar_start_seconds(cur_bar)
+        premove_at = timing.bar_start_seconds(premove_bar)
+        dark = 0.0 if cur_at is None or premove_at is None else cur_at - premove_at
+        if dark < MIB_MIN_DARK_SECONDS:
+            notes.append(
+                MibNote(
+                    index,
+                    MIB_DARK_SHORT,
+                    f"{cur_bar}마디 MIB 불가 — 어두운 시간 {dark:.1f}초가 "
+                    f"이동 시간 {MIB_MIN_DARK_SECONDS:.1f}초보다 짧습니다",
+                )
+            )
+            continue
+        premove = {
+            "bar": premove_bar,
+            "position_preset_no": target,
+            "evidence": cur.get("evidence"),
+            "label": "",
+            # 전체 실행 C-11 — 격자 칸이 아닌 큐다. 카드가 격자 칸 수와 큐 수의 차이를 센다.
+            "mib_premove": True,
+        }
+        premoves.append((index, premove))
+    return MibPlan(premoves, notes)
+
+
 def plan_mib_premoves(
     cues: Sequence[Mapping[str, object]], timing: BarClock
 ) -> tuple[list[dict[str, object]], list[str]]:
@@ -69,42 +160,5 @@ def plan_mib_premoves(
     사전이동 큐는 앞 칸 바로 다음 마디에 놓는다. 그 마디에는 칸이 없다(앞 칸이 바로 앞이다).
     위치는 뒤 칸의 위치 프리셋이고, 증거(``evidence``)도 뒤 칸의 것을 그대로 쓴다.
     """
-    premoves: list[dict[str, object]] = []
-    notes: list[str] = []
-    for prev, cur in zip(cues, cues[1:], strict=False):
-        if _starts_movement_lit(prev, cur):
-            notes.append(
-                f"{int(cur['bar'])}마디 켜진 채 움직임 시작 — "  # type: ignore[arg-type]
-                "앞 큐가 켜져 있어 웨이브가 켜진 채 시작합니다"
-            )
-        target = cur.get("position_preset_no")
-        if target is None or prev.get("position_preset_no") == target:
-            continue  # 위치가 안 바뀜 — MIB 필요 없음
-        cur_bar = int(cur["bar"])  # type: ignore[arg-type]
-        if cue_is_lit(prev):
-            notes.append(f"{cur_bar}마디 MIB 불가 — 앞 큐가 켜져 있어 켜진 채 이동합니다")
-            continue
-        premove_bar = int(prev["bar"]) + 1  # type: ignore[arg-type]
-        if premove_bar >= cur_bar:
-            notes.append(f"{cur_bar}마디 MIB 불가 — 앞 큐 바로 다음 마디라 어두운 시간이 없습니다")
-            continue
-        cur_at = timing.bar_start_seconds(cur_bar)
-        premove_at = timing.bar_start_seconds(premove_bar)
-        dark = 0.0 if cur_at is None or premove_at is None else cur_at - premove_at
-        if dark < MIB_MIN_DARK_SECONDS:
-            notes.append(
-                f"{cur_bar}마디 MIB 불가 — 어두운 시간 {dark:.1f}초가 "
-                f"이동 시간 {MIB_MIN_DARK_SECONDS:.1f}초보다 짧습니다"
-            )
-            continue
-        premoves.append(
-            {
-                "bar": premove_bar,
-                "position_preset_no": target,
-                "evidence": cur.get("evidence"),
-                "label": "",
-                # 전체 실행 C-11 — 격자 칸이 아닌 큐다. 카드가 격자 칸 수와 큐 수의 차이를 센다.
-                "mib_premove": True,
-            }
-        )
-    return premoves, notes
+    plan = mib_plan(cues, timing)
+    return [premove for _, premove in plan.premoves], [note.text for note in plan.notes]

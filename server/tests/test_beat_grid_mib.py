@@ -10,7 +10,13 @@
 from __future__ import annotations
 
 from server.design.beat_grid_emit import SongTiming
-from server.design.beat_grid_mib import MIB_MIN_DARK_SECONDS, cue_is_lit, plan_mib_premoves
+from server.design.beat_grid_mib import (
+    MIB_MIN_DARK_SECONDS,
+    MIB_NO_GAP,
+    cue_is_lit,
+    mib_plan,
+    plan_mib_premoves,
+)
 from server.web.session import SongTimelineStore
 
 from .test_beat_grid_send_t563 import _APPROVED_EVIDENCE, _new_session, _timeline
@@ -125,3 +131,26 @@ def test_apply_shows_the_reason_when_the_dark_stretch_is_too_short(tmp_path):
     assert event["notices"][0].startswith("16마디 MIB 불가 — 어두운 시간")
     # 짧은 어둠에서는 사전이동이 빠진다 — 16마디의 위치 명령 한 줄만 나간다.
     assert sum(1 for line in console.executed if line.endswith("At Preset 1.2")) == 1
+
+
+def test_mib_plan_gives_each_queue_and_note_the_position_of_the_cell_after_it():
+    # 3마디(꺼짐) 뒤 9마디 칸은 4마디에 큐가 서고, 4마디 칸 뒤는 큐가 설 자리가 없어 안내로 남는다.
+    queued = mib_plan(
+        [
+            _cue(3, label="—", position_preset_no="1.1"),
+            _cue(9, label="FOH", position_preset_no="1.2"),
+        ],
+        TIMING,
+    )
+    assert [(index, premove["bar"]) for index, premove in queued.premoves] == [(1, 4)]
+    assert queued.notes == []
+
+    no_gap = mib_plan(
+        [
+            _cue(3, label="—", position_preset_no="1.1"),
+            _cue(4, label="FOH", position_preset_no="1.2"),
+        ],
+        TIMING,
+    )
+    assert no_gap.premoves == []
+    assert [(note.index, note.kind) for note in no_gap.notes] == [(1, MIB_NO_GAP)]
