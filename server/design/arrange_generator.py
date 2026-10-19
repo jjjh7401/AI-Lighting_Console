@@ -428,22 +428,26 @@ def _draft_cue(
     words: Mapping[str, str] = BASIC_WORDS,
     color_names: Mapping[tuple[int, int, int], str] | None = None,
     axes: Sequence[str] = _MOTION_AXES,
+    period: tuple[str, int] | None = None,
 ) -> BeatGridCue:
     """규칙 결정 하나를 격자 칸으로 옮긴다. 값은 이 결정에서만 온다.
+
+    ``period`` 는 움직임 한 바퀴의 (단위, 값)이다. 없으면 ``("bar", motion_period_bars)`` 다.
 
     결정에서 방향 값(``direction``)을 한 번 만들고, 라벨과 옛 필드(밝기·진입·움직임·계획 색·계획
     위치)는 전부 그 방향 값에서 파생한다 — 같은 자리에서 같은 결정으로 나오므로 서로 어긋날 수 없다.
     ``words`` 는 라벨 말 표(기존 생성기 말이 기본, 구간 단위 생성기는 구간 말을 넘긴다),
     ``color_names`` 는 초안 전체에서 정한 RGB → 이름이다(없으면 이 칸의 색만으로 정한다).
     """
+    period_unit, period_value = period or ("bar", settings.motion_period_bars)
     movement = (
         None
         if plan.movement_shape is None
         else {
             "shape": plan.movement_shape,
             "axes": list(axes),
-            "period_unit": "bar",
-            "period_value": settings.motion_period_bars,
+            "period_unit": period_unit,
+            "period_value": period_value,
             "phase_spread": None,
         }
     )

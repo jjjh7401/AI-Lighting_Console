@@ -44,10 +44,11 @@ PALETTE = ArrangementPalette()
 #: 시험이 따로 들고 있어서 구현의 상수를 바꿔도 시험이 따라 바뀌지 않는다.
 PULSE_LABEL = "킥 1·2·4박"  # BACK 펄스. 예전 「펄스 1·2·4박」이 아니다.
 CHASE_LABEL = "SIDE-L/R 2·4박 번갈이"
-MOTION_LABEL = "팬 웨이브(한 바퀴 2마디)"
+#: 박 나누기 규칙(``motion_period_beats`` 4)으로 4/4 곡의 웨이브는 한 바퀴 4박 = 1마디다.
+MOTION_LABEL = "팬 웨이브(한 바퀴 1마디)"
 #: 실측 기록(measured_movements.yaml)이 팬 웨이브를 닫고 틸트 웨이브를 연 무빙
 #: (이 리그의 MOVER-D)의 말.
-TILT_MOTION_LABEL = "틸트 웨이브(한 바퀴 2마디)"
+TILT_MOTION_LABEL = "틸트 웨이브(한 바퀴 1마디)"
 MOVING_LABELS = frozenset({MOTION_LABEL, TILT_MOTION_LABEL})
 HOLD_LABEL = "정지"
 FOH_LABEL = "FOH 켬"
@@ -720,10 +721,11 @@ def test_rows_carry_the_structured_fields_of_the_dense_generator() -> None:
             assert len(cue["planned_color"]) == 3
         if cue["label"] in MOVING_LABELS:
             movement = cue["app_movement"]
+            # 박 나누기 규칙: 4/4 합성 곡의 웨이브 한 바퀴 4박 = 1마디.
             assert (movement["shape"], movement["period_unit"], movement["period_value"]) == (
                 "wave",
                 "bar",
-                2,
+                1,
             )
         else:
             assert cue["app_movement"] is None
@@ -1591,3 +1593,112 @@ def test_real_love_attack_break_bars_hold_the_wash() -> None:
             if track["layer_role"] in ("back", "side", "effect"):
                 cell = _state(draft, track["group_name"], event["start_bar"])
                 assert cell["label"] == REST_LABEL, (track["group_name"], event["start_bar"])
+
+
+# -- 박 나누기 규칙(무빙 웨이브 한 바퀴 2~4박) ----------------------------------------------
+
+
+def _movements(draft: dict) -> list[dict]:
+    return [
+        cue["app_movement"]
+        for track in draft["tracks"]
+        for cue in track["cues"]
+        if cue.get("app_movement")
+    ]
+
+
+def _beats_per_cycle(movement: dict, beats_per_bar: int = 4) -> int:
+    value = int(movement["period_value"])
+    return value * beats_per_bar if movement["period_unit"] == "bar" else value
+
+
+def _without_movement(draft: dict) -> list[list[dict]]:
+    """움직임 주기와 그 라벨을 뺀 칸 — 규칙이 주기 말고 바꾼 것이 있는지 본다."""
+    rows = []
+    for track in draft["tracks"]:
+        cues = []
+        for cue in track["cues"]:
+            cues.append(
+                {
+                    **cue,
+                    "label": None if cue.get("app_movement") else cue["label"],
+                    "app_movement": None,
+                    "direction": {**cue["direction"], "movement": None},
+                }
+            )
+        rows.append(cues)
+    return rows
+
+
+def _mib_notes(bar_map: dict, policy: ArrangementPolicy) -> list[str]:
+    draft = generate_segment_draft(bar_map, _layout(), policy)
+    notes: list[str] = []
+    for track in draft["tracks"]:
+        if track["layer_role"] == "mover":
+            cues = [
+                {**cue, "position_preset_no": cue.get("planned_position")} for cue in track["cues"]
+            ]
+            notes += plan_mib_premoves(cues, _Clock(bar_map))[1]
+    return notes
+
+
+def test_real_love_attack_mover_waves_turn_once_every_four_beats() -> None:
+    # 원본 LOVE ATTACK 자동 배치의 무빙 웨이브는 한 바퀴 8박(2마디)이었다 — 규칙(2~4박) 밖이다.
+    # 규칙을 켠 기본값에서는 모든 웨이브가 4박(4/4 곡의 1마디)에 한 바퀴다.
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    movements = _movements(draft)
+    assert movements
+    assert {(m["period_unit"], m["period_value"]) for m in movements} == {("bar", 1)}
+    assert {_beats_per_cycle(m) for m in movements} == {4}
+
+
+def test_beat_division_rule_can_be_turned_off_per_song() -> None:
+    # 끄면 예전 그대로 ``motion_period_bars`` 마디(2마디)이고 라벨도 그 주기를 말한다.
+    draft = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(motion_period_beats=None))
+    assert {(m["period_unit"], m["period_value"]) for m in _movements(draft)} == {("bar", 2)}
+    labels = {cue["label"] for track in draft["tracks"] for cue in track["cues"]}
+    assert "팬 웨이브(한 바퀴 2마디)" in labels
+    assert MOTION_LABEL not in labels
+
+
+def test_a_rule_beat_count_off_the_bar_length_is_written_in_beats() -> None:
+    # 3/4 곡에서 4박 웨이브는 한 마디가 아니다 — 박으로 적고 라벨도 박으로 말한다.
+    beats = [index * 500 for index in range(BARS * 3)]
+    bar_map = build_bar_map_payload(
+        beats, 0, bpm=120.0, time_signature=(3, 4), events=SYNTHETIC_EVENTS
+    )
+    draft = generate_segment_draft(bar_map, _layout())
+    assert draft["note"] is None
+    assert {(m["period_unit"], m["period_value"]) for m in _movements(draft)} == {("beat", 4)}
+    labels = {cue["label"] for track in draft["tracks"] for cue in track["cues"]}
+    assert "팬 웨이브(한 바퀴 4박)" in labels
+
+
+def test_two_or_three_beat_waves_follow_the_song_policy() -> None:
+    for beats in (2, 3):
+        draft = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(motion_period_beats=beats))
+        assert {_beats_per_cycle(m) for m in _movements(draft)} == {beats}
+
+
+@pytest.mark.parametrize("beats", [0, 1, 5, 8, True])
+def test_a_wave_outside_two_to_four_beats_is_refused(beats: object) -> None:
+    with pytest.raises(ValueError, match="2~4박"):
+        ArrangementPolicy(motion_period_beats=beats)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("song", ["real", "synthetic"])
+def test_beat_division_changes_only_the_wave_period(song: str) -> None:
+    # 규칙은 웨이브 주기만 바꾼다 — 스트로브·블라인드·쉼·위치·칸 경계는 켜고 끈 두 초안이 같다.
+    bar_map = _real_love_attack() if song == "real" else _bar_map(SYNTHETIC_EVENTS)
+    on = generate_segment_draft(bar_map, _layout())
+    off = generate_segment_draft(bar_map, _layout(), ArrangementPolicy(motion_period_beats=None))
+    assert _without_movement(on) == _without_movement(off)
+
+
+def test_beat_division_adds_no_lit_starts_or_impossible_premoves() -> None:
+    # 반영 단계 MIB 계획기의 안내(「켜진 채 움직임 시작」·「불가」)가 규칙을 켜도 늘지 않는다.
+    bar_map = _real_love_attack()
+    on = _mib_notes(bar_map, ArrangementPolicy())
+    off = _mib_notes(bar_map, ArrangementPolicy(motion_period_beats=None))
+    assert len(on) <= len(off)
+    assert [note for note in on if "불가" in note] == []

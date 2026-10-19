@@ -73,8 +73,9 @@ SEGMENT_WORDS: dict[str, str] = {
     "chase": "SIDE-L/R 2·4박 번갈이",
     #: 역할을 정하지 못한 줄의 체이스 칸 — 그 줄은 SIDE 가 아니다(카드 WT-side-allocation).
     "chase:other": "2·4박 번갈이",
-    "motion": "팬 웨이브(한 바퀴 2마디)",
-    "motion:Tilt": "틸트 웨이브(한 바퀴 2마디)",
+    #: ``{period}`` 는 칸의 움직임 주기다(「2마디」「4박」) — 라벨이 실제 주기와 어긋나지 않는다.
+    "motion": "팬 웨이브(한 바퀴 {period})",
+    "motion:Tilt": "틸트 웨이브(한 바퀴 {period})",
     "blind": "BLIND 2박",
     "strobe": "STROBE 1마디 박마다",
     "pre_hit": "3·4박 전부 비움(예고)",
@@ -279,10 +280,21 @@ def direction_label(
         return words.get(f"static:{layer_role}") or words.get("static")
     if kind == "chase" and layer_role != "side":
         return words.get("chase:other") or words.get(kind)
-    movement = direction.get("movement")
-    if kind == "motion" and isinstance(movement, Mapping) and movement.get("axes") == ["Tilt"]:
-        return words.get("motion:Tilt") or words.get(kind)
-    return words.get(kind)
+    raw = direction.get("movement")
+    movement: Mapping[str, object] = raw if isinstance(raw, Mapping) else {}
+    if kind == "motion" and movement.get("axes") == ["Tilt"]:
+        return _with_period(words.get("motion:Tilt") or words.get(kind), movement)
+    return _with_period(words.get(kind), movement)
+
+
+def _with_period(word: str | None, movement: Mapping[str, object]) -> str | None:
+    """말의 ``{period}`` 자리에 움직임 주기(「2마디」「4박」)를 넣는다. 못 읽으면 ``None``."""
+    if word is None or "{period}" not in word:
+        return word
+    unit, value = movement.get("period_unit"), movement.get("period_value")
+    if unit not in _PERIOD_UNITS or not isinstance(value, int) or isinstance(value, bool):
+        return None
+    return word.replace("{period}", f"{value}{'마디' if unit == 'bar' else '박'}")
 
 
 # --- 색 이름 --------------------------------------------------------------------------------------
