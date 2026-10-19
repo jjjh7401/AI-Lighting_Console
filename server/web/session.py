@@ -4035,6 +4035,32 @@ def _timecode_cursor_seconds(value: object) -> float | None:
     return int(hours or 0) * 3600 + int(minutes or 0) * 60 + float(seconds)
 
 
+#: 재생 중 소유 확인을 기억하는 최대 시간(초). 넘으면 다음 쓰기 때 다시 확인한다.
+BEAT_GRID_OWNER_VERDICT_MAX_SECONDS = 30.0
+
+
+@dataclass(frozen=True)
+class _BeatGridOwnerVerdict:
+    """이번 재생에서 확인한 소유. 정지·재생·다른 소유 쓰기·시간 초과 때 버린다."""
+
+    primary: int
+    extras: tuple[int, ...]
+    verified_at: float
+    epoch: int
+
+
+#: 옮긴 커서를 되읽어 맞았다고 칠 허용 오차(초). 콘솔 CURSOR 는 소수 둘째 자리로 읽힌다.
+CURSOR_SEEK_TOLERANCE_SECONDS = 0.05
+#: 재생 중 주기 확인이 어긋남을 고치는 기준(초). UI 의 `CONSOLE_RESYNC_TOLERANCE_SECONDS` 와 같다.
+CONSOLE_RESYNC_TOLERANCE_SECONDS = 0.3
+
+
+def _cursor_seconds_text(seconds: float) -> str:
+    """콘솔 명령에 넣는 초 글자 — 소수 셋째 자리까지, 뒤의 0 은 뗀다(82.4 · 83 · 0.5)."""
+    text = f"{seconds:.3f}".rstrip("0").rstrip(".")
+    return text or "0"
+
+
 class SongTimelineStore:
     """Process-wide LAST director-timeline payload (runbook UI). Song-timeline
     events are otherwise push-only within one WebSocket session — the app
@@ -11629,6 +11655,7 @@ class ChatSession:
         completed: str | None = None,
         timecode_suggestion: int | None = None,
         subset: dict | None = None,
+        console_started_at_ms: int | None = None,
     ) -> dict:
         """세 메서드(반영·미리보기·끄기)와, 편집 성공 때마다 보내는 공용
         상태 이벤트. 대기 수는 **unsent_cells 길이 하나**를 유일한
@@ -11654,6 +11681,7 @@ class ChatSession:
             completed=completed,
             timecode_suggestion=timecode_suggestion,
             subset=subset,
+            console_started_at_ms=console_started_at_ms,
         )
         self._send(event)
         return event
@@ -13246,9 +13274,14 @@ class ChatSession:
         멈췄는지는 같은 방식으로 확인한다.
         ``owned`` 는 호출자가 이미 찾은 ``_beat_grid_owned_timecode()`` 결과다
         (콘솔을 다시 읽지 않는다)."""
+        # 재생·정지·일시정지는 이번 재생의 소유 확인을 버린다.
+        self._beat_grid_owner_verdict = None
         timecode_number, reason = owned if owned is not None else self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action=action, ok=False, reason=reason)
+        # 확인한 시각과 쓰기 횟수 — 재생 뒤 다른 쓰기가 없었는지 나중에 본다.
+        verified_at = self._beat_grid_clock()
+        epoch_verified = self._beat_grid_console_epoch()
         # 문면은 t520 실측 선례(`.moai/reports/t520/verdict.md`): `Top Timecode N` 은
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
@@ -13285,8 +13318,9 @@ class ChatSession:
             timecodes=timecodes,
             sequence_count=len(sequences),
         )
+        go_started: list[int] = []
         if self._preview_approval.is_approved:
-            refusal = self._beat_grid_send_transport_preapproved(commands)
+            refusal = self._beat_grid_send_transport_preapproved(commands, go_started_ms=go_started)
         else:
             # 승인 카드 머리: 이 송신이 승인받는 동안만 살아 있다. 같은 스레드의 알림이 읽는다.
             card_token = _BEAT_GRID_CARD_TITLE.set(card_title)
@@ -13312,8 +13346,20 @@ class ChatSession:
                     )
                 ),
             )
+        # 재생이 나갔으면 확인한 소유를 기억한다. 확인 뒤 다른 쓰기가 없었을 때만이다.
+        if action == "console_play":
+            epoch_after = self._beat_grid_console_epoch()
+            if epoch_verified is not None and epoch_after == epoch_verified + len(commands):
+                self._beat_grid_owner_verdict = _BeatGridOwnerVerdict(
+                    timecode_number, tuple(timecodes[1:]), verified_at, epoch_after
+                )
         notices = self._beat_grid_stop_notices(timecode_number) if halting else []
-        return self._beat_grid_send_status(last_action=action, ok=True, extra_notices=notices)
+        # 재생 성공이면 콘솔이 흐르기 시작한 시각을 싣는다.
+        # 승인 카드 경로는 싣지 않아 응답 도착 시각을 쓴다.
+        started_ms = go_started[0] if go_started else None
+        return self._beat_grid_send_status(
+            last_action=action, ok=True, extra_notices=notices, console_started_at_ms=started_ms
+        )
 
     def _beat_grid_owned_sequence_numbers(self) -> tuple[int, ...]:
         """정지 때 끌 시퀀스 — 이 곡의 반영 소유 기록에 적힌 트랙 시퀀스, 없으면 가장 최근
@@ -13335,6 +13381,10 @@ class ChatSession:
 
     #: 정지 확인 때 커서를 두 번 읽는 간격(초). 시험은 0 으로 줄인다.
     _beat_grid_stop_check_interval_seconds = 0.4
+    #: 주기 확인이 요청을 받은 뒤 흘러간 시간을 재는 시계. 시험은 고정 시계로 바꾼다.
+    _beat_grid_clock = staticmethod(time.monotonic)
+    #: 이번 재생의 소유 확인 결과(없으면 None). 쓰기 횟수가 그대로일 때만 쓴다.
+    _beat_grid_owner_verdict: _BeatGridOwnerVerdict | None = None
 
     def _beat_grid_stop_notices(self, timecode_number: int) -> list[str]:
         """2차 전체 실행 I-02 — 끄기를 보낸 뒤 타임코드 커서(``CURSOR``)를 간격을 두고 두 번
@@ -13358,6 +13408,49 @@ class ChatSession:
             ]
         return []
 
+    def _beat_grid_record_timecode_number(self) -> int | None:
+        """이 곡의 소유 기록에 적힌 타임코드 번호 — 기록만 읽는다(콘솔을 읽지 않는다)."""
+        record = self._beat_grid_song_record()
+        number = record.get("timecode_number") if record else None
+        if isinstance(number, int) and not isinstance(number, bool) and number >= 1:
+            return number
+        return None
+
+    def _beat_grid_projected(self, seconds: float, requested_at: float, *, playing: bool) -> float:
+        """요청 때 값을 지금 자리로 옮긴다. 재생 중에만 흐른다."""
+        if not playing:
+            return seconds
+        return seconds + (self._beat_grid_clock() - requested_at)
+
+    def _beat_grid_console_epoch(self) -> int | None:
+        """콘솔에 소유를 바꿀 수 있는 쓰기를 보낸 횟수(게이트가 센다). 못 읽으면 ``None``."""
+        epoch = getattr(self._gate, "console_write_epoch", None)
+        return epoch if isinstance(epoch, int) else None
+
+    def _beat_grid_owner_remembered(self) -> _BeatGridOwnerVerdict | None:
+        """이번 재생의 소유 확인. 소유를 바꾸는 쓰기가 있었거나 30초가 지나면 버린다."""
+        verdict = self._beat_grid_owner_verdict
+        if verdict is None:
+            return None
+        fresh = (
+            self._beat_grid_console_epoch() == verdict.epoch
+            and self._beat_grid_clock() - verdict.verified_at <= BEAT_GRID_OWNER_VERDICT_MAX_SECONDS
+        )
+        if fresh:
+            return verdict
+        self._beat_grid_owner_verdict = None
+        return None
+
+    def _beat_grid_remember_owner(self, primary: int, extras: tuple[int, ...]) -> None:
+        """방금 확인한 소유를 이번 재생 동안 기억한다. 쓰기 횟수를 못 읽으면 기억하지 않는다."""
+        epoch = self._beat_grid_console_epoch()
+        if epoch is None:
+            self._beat_grid_owner_verdict = None
+            return
+        self._beat_grid_owner_verdict = _BeatGridOwnerVerdict(
+            primary, extras, self._beat_grid_clock(), epoch
+        )
+
     def _beat_grid_timecode_cursor(self, path: str) -> float | None:
         """타임코드 커서를 초로 — 읽기만 한다. 못 읽거나 모양을 모르면 ``None``."""
         try:
@@ -13370,7 +13463,9 @@ class ChatSession:
                 return _timecode_cursor_seconds(read.get("v"))
         return None
 
-    def _beat_grid_send_transport_preapproved(self, commands: tuple[str, ...]) -> str | None:
+    def _beat_grid_send_transport_preapproved(
+        self, commands: tuple[str, ...], go_started_ms: list[int] | None = None
+    ) -> str | None:
         """전체 실행 J-09 — 이 세션에서 미리보기·재생 승인을 이미 받았으면(REQ-LDBEAT-012(b)
         「세션 시작 1회」) 앱 소유 타임코드의 ``Top/Go/Off Timecode N`` 을 다시 묻지 않고 보낸다.
 
@@ -13379,7 +13474,9 @@ class ChatSession:
         않으므로 백업 규칙 ③ 을 건너뛴다(카드 없는 SaveShow 를 내지 않는다).
 
         보냈으면 ``None``, 못 보냈으면 사유다(``_beat_grid_dispatch_preview`` 와 같은 문구).
-        첫 실패에서 멈춘다(뒤 줄은 보내지 않는다 — 고치기 전 ``all(...)`` 과 같다)."""
+        첫 실패에서 멈춘다(뒤 줄은 보내지 않는다 — 고치기 전 ``all(...)`` 과 같다).
+        ``go_started_ms`` 를 넘기면 첫 ``Go Timecode`` 를 보내기 직전의 벽시계(ms)를 담는다.
+        콘솔 타임코드가 실제로 흐르기 시작한 시각이라, 응답이 도착한 시각보다 앞선다."""
         token = bind_session_key(self._session_key)
         try:
             decision = self._gate.execute_preapproved(
@@ -13401,7 +13498,11 @@ class ChatSession:
                         ],
                     }
                 )
+            go_pending = go_started_ms is not None
             for command in commands:
+                if go_pending and command.startswith("Go Timecode"):
+                    go_started_ms.append(int(time.time() * 1000))
+                    go_pending = False
                 outcome = self._gate.execution_port.execute(command)
                 if not outcome.ok:
                     return _console_send_refusal(
@@ -13436,6 +13537,113 @@ class ChatSession:
         """PR 1 ▶(일시정지 뒤) — ``Go Timecode N`` 만 보내 타임코드 커서부터 잇는다.
         처음부터 재생(``beat_grid_console_play``, ``Top`` + ``Go``)과 달리 되감지 않는다."""
         return self._beat_grid_console_transport("console_play", ("Go",))
+
+    def beat_grid_console_seek(
+        self, seconds: float, *, playing: bool = False, resync: bool = False
+    ) -> dict:
+        """「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 소유 타임코드 커서를 세운다.
+
+        ``Set Timecode N Property 'Cursor' <초>`` 를 소유 타임코드마다 한 줄씩만 보낸다. 재생은
+        켜지 않는다(정지 중 실측: 콘솔이 OK 로 받았고 커서가 그 값에 섰다). 승인·게이트 경로는
+        미리보기와 같다 — 세션 1회 승인 뒤에는 카드 없이 보낸다. 보낸 뒤 커서를 간격을 두고
+        되읽어 목표에 섰는지 말한다. 「ok」만으로 맞췄다고 말하지 않는다."""
+        requested_at = self._beat_grid_clock()
+        # 재생 중이면 이번 재생에서 확인한 소유를 쓴다. 멈춘 자리는 늘 확인한다.
+        remembered = self._beat_grid_owner_remembered() if (playing or resync) else None
+        timecode_number: int | None = remembered.primary if remembered is not None else None
+        checked = False  # 이번 요청에서 소유를 새로 확인했는가
+        if resync:
+            # 주기 확인 — 커서만 먼저 읽는다. 허용 오차 안이면 소유를 확인하지 않는다.
+            # 소유 확인은 칸을 여럿 읽어 0.7초쯤 걸린다. 맞는 틱마다 돌리면
+            # 움직임 명령이 그 뒤에 줄을 선다. 읽는 번호는 이 곡의 기록 번호다.
+            known = timecode_number
+            if known is None:
+                known = self._beat_grid_record_timecode_number()
+            if known is None:
+                timecode_number, reason = self._beat_grid_owned_timecode()
+                checked = True
+                if reason is not None or timecode_number is None:
+                    return self._beat_grid_send_status(
+                        last_action="console_seek", ok=False, reason=reason
+                    )
+                known = timecode_number
+            pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+            cursor = self._beat_grid_timecode_cursor(f"{pool}/{known}")
+            if cursor is None:
+                return self._beat_grid_send_status(
+                    last_action="console_seek",
+                    ok=False,
+                    reason=(
+                        "콘솔 커서를 읽지 못해 다시 맞추지 않았습니다 — 콘솔 화면을 확인해 주세요."
+                    ),
+                )
+            # 읽는 데 걸린 시간만큼 콘솔은 흘렀다 — 요청 때의 값을 읽은 자리로 옮겨 비교한다.
+            now_seconds = self._beat_grid_projected(seconds, requested_at, playing=True)
+            if abs(cursor - now_seconds) <= CONSOLE_RESYNC_TOLERANCE_SECONDS:
+                return self._beat_grid_send_status(last_action="console_seek", ok=True)
+        if timecode_number is None:
+            # 쓰기 전 소유 확인(움직임은 늘 여기서 확인한다).
+            timecode_number, reason = self._beat_grid_owned_timecode()
+            checked = True
+            if reason is not None or timecode_number is None:
+                return self._beat_grid_send_status(
+                    last_action="console_seek", ok=False, reason=reason
+                )
+        if remembered is not None:
+            extras = remembered.extras
+        else:
+            extras = self._beat_grid_owned_extra_timecodes()
+            if checked and (playing or resync):
+                self._beat_grid_remember_owner(timecode_number, extras)
+        timecodes = (timecode_number, *extras)
+        # 쓰는 값은 명령이 닿을 때의 자리다. 확인에 걸린 시간만큼 재생 중이면 흘려 보낸다.
+        text = _cursor_seconds_text(
+            self._beat_grid_projected(seconds, requested_at, playing=playing or resync)
+        )
+        commands = tuple(f"Set Timecode {number} Property 'Cursor' {text}" for number in timecodes)
+        if self._preview_approval.is_approved:
+            refusal = self._beat_grid_send_transport_preapproved(commands)
+        else:
+            refusal = self._beat_grid_dispatch_preview(
+                "beat-grid-console-seek",
+                commands,
+                reason=(
+                    f"「콘솔 같이」 마디 이동 — 타임코드 커서를 {text}초로 옮깁니다"
+                    "(재생은 켜지 않음)"
+                ),
+            )
+        if refusal is not None:
+            return self._beat_grid_send_status(
+                last_action="console_seek",
+                ok=False,
+                reason=f"콘솔 커서 맞추기가 실행되지 않았습니다 — {refusal}",
+            )
+        if playing or resync:
+            # 재생 중 — 커서는 그 사이 흐르므로 되읽어 맞았다고 말하지 않는다.
+            # 다음 주기 확인이 다시 본다.
+            return self._beat_grid_send_status(last_action="console_seek", ok=True)
+        notices = self._beat_grid_seek_notices(timecode_number, seconds)
+        return self._beat_grid_send_status(
+            last_action="console_seek", ok=True, extra_notices=notices
+        )
+
+    def _beat_grid_seek_notices(self, timecode_number: int, seconds: float) -> list[str]:
+        """옮긴 뒤 커서를 간격을 두고 한 번 되읽는다 — 목표(±0.05초)에 섰는지 알린다.
+        못 읽으면 「맞았는지 확인하지 못했다」고 알린다(틀렸다고 단정하지 않는다)."""
+        time.sleep(self._beat_grid_stop_check_interval_seconds)
+        pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
+        cursor = self._beat_grid_timecode_cursor(f"{pool}/{timecode_number}")
+        if cursor is None:
+            return [
+                f"콘솔 Timecode {timecode_number} 커서를 다시 읽지 못해"
+                " 맞았는지 확인하지 못했어요. 콘솔 화면에서 확인해 주세요."
+            ]
+        if abs(cursor - seconds) > CURSOR_SEEK_TOLERANCE_SECONDS:
+            return [
+                f"콘솔 Timecode {timecode_number} 커서가 {cursor:.2f}초에 있어요"
+                f"(옮기려던 {seconds:.2f}초) — 콘솔에서 확인해 주세요."
+            ]
+        return []
 
     def beat_grid_suggest(self, bar: int, target: str) -> dict:
         """편집 경로 ③(AI 제안) 1단계 — 제안을 **보류 상태로만** 만든다.

@@ -190,6 +190,8 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_pause",
     "beat_grid_console_resume",
     "beat_grid_console_stop",
+    # 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)을 싣는다(`seconds`). 정지 중 커서만 옮긴다.
+    "beat_grid_console_seek",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
@@ -512,6 +514,26 @@ def parse_client_message(raw: str) -> dict:
         if not isinstance(bar, int) or isinstance(bar, bool):
             raise ProtocolError("beat_grid_preview.bar must be an integer")
         return {"v": PROTOCOL_VERSION, "type": "beat_grid_preview", "bar": bar}
+
+    if message_type == "beat_grid_console_seek":
+        # 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초). 음수·NaN·글자·불린은 거절한다.
+        seconds = message.get("seconds")
+        if (
+            isinstance(seconds, bool)
+            or not isinstance(seconds, int | float)
+            or not math.isfinite(seconds)
+            or not 0 <= seconds <= 86400
+        ):
+            raise ProtocolError("beat_grid_console_seek.seconds must be a number from 0 to 86400")
+        out = {"v": PROTOCOL_VERSION, "type": "beat_grid_console_seek", "seconds": float(seconds)}
+        # 선택 플래그 `playing`(재생 중 이동)·`resync`(주기 확인). 있으면 참이어야 한다.
+        for flag in ("playing", "resync"):
+            if flag in message:
+                if not isinstance(message[flag], bool):
+                    raise ProtocolError(f"beat_grid_console_seek.{flag} must be a boolean")
+                if message[flag]:
+                    out[flag] = True
+        return out
 
     if message_type == "beat_grid_suggest":
         bar = message.get("bar")
@@ -1107,6 +1129,7 @@ def beat_grid_send_status_event(
     completed: str | None = None,
     timecode_suggestion: int | None = None,
     subset: dict | None = None,
+    console_started_at_ms: int | None = None,
 ) -> dict:
     """카드 t563(REQ-LDBEAT-011~013/017) — 상단 바 콘솔 버튼 셋
     (``beat_grid_apply``/``beat_grid_preview``/``beat_grid_preview_off``)과,
@@ -1137,6 +1160,10 @@ def beat_grid_send_status_event(
         optional["timecode_suggestion"] = timecode_suggestion
     if subset is not None:
         optional["subset"] = subset
+    # 「콘솔 같이」 재생 성공 때 콘솔 타임코드가 실제로 흐르기 시작한 벽시계(ms).
+    # 응답 도착 시각보다 앞설 수 있다.
+    if console_started_at_ms is not None:
+        optional["console_started_at_ms"] = console_started_at_ms
     return _event(
         "beat_grid_send_status",
         pending_apply_count=pending_apply_count,

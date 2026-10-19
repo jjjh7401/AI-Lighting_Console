@@ -187,6 +187,11 @@ class _GateStatePort:
         return self._gate._query_properties(path, property_names)
 
 
+def _moves_only_the_cursor(command: str) -> bool:
+    """커서만 옮기는 쓰기는 타임코드의 소유(이름·트랙)를 바꾸지 않는다."""
+    return command.startswith("Set Timecode ") and " Property 'Cursor' " in command
+
+
 class SafetyGate:
     """3-stage safety gate + live lock + backup + health + audit (M4)."""
 
@@ -228,6 +233,9 @@ class SafetyGate:
         # so concurrent ChatSessions never invalidate each other's clearances.
         self._clearances: dict[SessionKey, Counter[str]] = {}
         self._clearances_lock = threading.Lock()
+        # 소유(이름·트랙)를 바꿀 수 있는 콘솔 쓰기마다 1씩 올린다.
+        # 커서만 옮긴 쓰기는 세지 않는다(``_moves_only_the_cursor``).
+        self.console_write_epoch = 0
         # @MX:DEBT: [AUTO] bounded-LRU ordered set (OrderedDict[str, None]),
         #   NOT an unbounded set — a command once unconfirmed always
         #   re-requires human approval (REQ-MVP-032), but only within the
@@ -986,6 +994,8 @@ class SafetyGate:
                     outcome="failed",
                 )
             clearances[command] -= 1
+            if not _moves_only_the_cursor(command):
+                self.console_write_epoch += 1
         outcome = self._console.execute(command)
         self._audit.log_executed(
             command,

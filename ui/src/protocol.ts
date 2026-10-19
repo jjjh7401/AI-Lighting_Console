@@ -1007,7 +1007,7 @@ export interface BeatGridSendStatus {
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
    * 안 했으면) `null`. */
   pending_apply_count: number | null;
-  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop";
+  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop" | "console_seek";
   ok: boolean;
   reason: string | null;
   blocked_cells: BeatGridBlockedCell[];
@@ -1023,6 +1023,9 @@ export interface BeatGridSendStatus {
   notices?: readonly string[];
   /** 칸 단위 반영이 성공했을 때만 있다. 키가 없으면 전체 반영이거나 칸 단위가 아니다(리듀서는 키를 지어내지 않는다). */
   subset?: BeatGridSubsetStatus;
+  /** 「콘솔 같이」 재생 성공 때만 실린다 — 콘솔 타임코드가 실제로 흐르기 시작한 벽시계(ms, `Date.now()` 와 같은 기준).
+   * 응답이 도착한 시각보다 앞설 수 있다. 없으면 응답을 본 시각을 쓴다(승인 카드 경로). */
+  console_started_at_ms?: number | null;
 }
 
 export interface SongTimelineView {
@@ -1588,6 +1591,17 @@ export function buildBeatGridConsolePause(): string {
 /** PR 1 — 일시정지 뒤 ▶ 이어 가기. 서버가 `Go Timecode`만 보내 타임코드 커서부터 잇는다. */
 export function buildBeatGridConsoleResume(): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_console_resume" });
+}
+
+/** 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 타임코드 커서를 세운다. 정지 중에만 쓴다(재생은 켜지 않는다). */
+export function buildBeatGridConsoleSeek(seconds: number, options: { playing?: boolean; resync?: boolean } = {}): string {
+  return JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type: "beat_grid_console_seek",
+    seconds,
+    ...(options.playing ? { playing: true } : {}),
+    ...(options.resync ? { resync: true } : {}),
+  });
 }
 
 /** 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙과 패치·그룹 경로는

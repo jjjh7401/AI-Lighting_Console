@@ -1268,6 +1268,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_pause",
     "beat_grid_console_play",
     "beat_grid_console_resume",
+    # SPEC-LDBEAT-001 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
+    # 콘솔에 쓴다(미리보기와 같은 세션 1회 승인 경로). 재생은 켜지 않는다.
+    "beat_grid_console_seek",
     "beat_grid_console_stop",
     # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 제안·적용·거절(화면이 보내는 요청).
     # 같은 사유의 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
