@@ -13,6 +13,16 @@ export const CONSOLE_SEEK_DEBOUNCE_MS = 250;
 export const CONSOLE_RESYNC_INTERVAL_MS = 2000;
 export const CONSOLE_RESYNC_TOLERANCE_SECONDS = 0.3;
 
+/** 연타 중에도 콘솔이 따라오게 하는 보내기 간격 상한(ms). 마지막으로 보낸 뒤 이 간격이 지나면 그 사이 마지막 자리를 보낸다. */
+export const CONSOLE_SEEK_MAX_GAP_MS = 400;
+
+/** 이동을 보낼 때까지 기다릴 시간(ms). 아직 한 번도 안 보냈으면 디바운스만큼, 보낸 지 상한 간격이 지났으면 바로(0),
+ * 그 사이면 상한까지 남은 만큼. 디바운스를 넘지 않는다. */
+export function consoleSeekSendDelayMs(sinceLastSendMs: number | null, debounceMs: number): number {
+  if (sinceLastSendMs === null) return debounceMs;
+  return Math.max(0, Math.min(debounceMs, CONSOLE_SEEK_MAX_GAP_MS - sinceLastSendMs));
+}
+
 /** 곡 시각(음원 자리)을 콘솔 타임코드 시각으로. 콘솔은 음원보다 실측 지연만큼 앞서 있다(음원은 그 뒤에 튼다).
  * 지연 측정값이 없으면 `null` — 시각을 지어내지 않는다. */
 export function consoleTimecodeSeconds(songSeconds: number, delaySeconds: number | null): number | null {

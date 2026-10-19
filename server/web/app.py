@@ -582,6 +582,9 @@ def create_app(deps: WebDeps) -> FastAPI:
                     )
 
         current_task: asyncio.Task | None = None
+        # 「콘솔 같이」 이동 작업 — 이동끼리는 거절하지 않고 기다린다(세션이 가장 새 이동만 보낸다).
+        seek_tasks: set[asyncio.Task] = set()
+        seek_arrival = 0  # 이동이 받아진 순서(이벤트 루프가 센다)
         # REQ-MUSICSYNC-027 — 분할 곡 전송의 조립 버퍼. **이 연결의 지역 상태**이고
         # 세션 첨부가 아니다: end 가 검증을 통과해야만 session 으로 넘어간다.
         song_audio_assembly = SongAudioAssembly()
@@ -754,6 +757,29 @@ def create_app(deps: WebDeps) -> FastAPI:
                     current_task = asyncio.create_task(
                         asyncio.to_thread(session.beat_grid_rig_refresh)
                     )
+                elif message_type == "beat_grid_console_seek":
+                    # 「콘솔 같이」 마디 이동 — 이동끼리는 거절하지 않는다.
+                    # 세션이 가장 새 이동만 보낸다. 다른 콘솔 작업(적용·재생 등)이
+                    # 도는 중에는 여전히 바쁨이다.
+                    if (
+                        current_task is not None
+                        and not current_task.done()
+                        and current_task not in seek_tasks
+                    ):
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    seek_arrival += 1
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(
+                            session.beat_grid_console_seek,
+                            message["seconds"],
+                            playing=message.get("playing", False),
+                            resync=message.get("resync", False),
+                            arrival=seek_arrival,
+                        )
+                    )
+                    seek_tasks.add(current_task)
+                    current_task.add_done_callback(seek_tasks.discard)
                 elif message_type in (
                     "beat_grid_apply",
                     "beat_grid_preview",
@@ -763,7 +789,6 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_console_resume",
                     "beat_grid_console_stop",
                     "beat_grid_cell_edit",
-                    "beat_grid_console_seek",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
                     # `beat_grid_edit`과 달리 이 셋은 `run_commands` ->
@@ -819,16 +844,6 @@ def create_app(deps: WebDeps) -> FastAPI:
                     elif message_type == "beat_grid_cell_edit":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_cell_edit, message["ops"])
-                        )
-                    # 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
-                    elif message_type == "beat_grid_console_seek":
-                        current_task = asyncio.create_task(
-                            asyncio.to_thread(
-                                session.beat_grid_console_seek,
-                                message["seconds"],
-                                playing=message.get("playing", False),
-                                resync=message.get("resync", False),
-                            )
                         )
                     else:
                         current_task = asyncio.create_task(
@@ -1239,6 +1254,10 @@ def create_app(deps: WebDeps) -> FastAPI:
                 # The worker was denied by close(); give it a bounded finish.
                 with contextlib.suppress(Exception):
                     await asyncio.wait_for(asyncio.shield(current_task), timeout=10.0)
+            for seek_task in tuple(seek_tasks):
+                if not seek_task.done():
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(asyncio.shield(seek_task), timeout=10.0)
 
     # In-app settings/key REST API (M3) + responder provisioning API (M4).
     # Registered BEFORE the catch-all static mount at "/" so /api/* resolves to
