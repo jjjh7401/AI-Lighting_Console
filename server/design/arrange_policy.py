@@ -113,6 +113,9 @@ class ArrangementPolicy:
       0, 가장 큰 구간을 1로 둔 그 구간의 위치가 이 값보다 크면 후렴으로 본다(같으면 벌스).
       절대 에너지 값으로 가르면 전 구간이 크게 나오는 곡에서 벌스가 사라져서 곡 안 상대 위치로
       본다. 마디 지도에 구간 이름이 없어서 정한 어림값이라 감독이 고친다.
+    - ``break_hold_wash``: 브레이크 마디(마디 지도 ``break`` 사건)에서 워시·FOH 만 켜 두고 리듬·
+      강조 줄은 쉬는 기본 규칙(무빙 줄은 그대로). 영상 33편 분석에서 저음이 빠지는 마디는
+      암전이나 단색 워시였다(``server/fx/effect_library_data``). 끄면 구간 규칙대로 켠다.
     """
 
     slow_song: bool = False
@@ -125,6 +128,7 @@ class ArrangementPolicy:
     motion_period_bars: int = 2
     palette: ArrangementPalette = field(default_factory=ArrangementPalette)
     chorus_energy_cut: float = 0.5
+    break_hold_wash: bool = True
 
     def __post_init__(self) -> None:
         if self.window_bars < 1:
