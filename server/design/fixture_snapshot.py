@@ -29,6 +29,9 @@ FIXTURE_SNAPSHOT_PROPERTIES: tuple[str, ...] = (
 )
 
 
+#: 장비 트리 — 장비·기종 목록이 사는 곳(``Patch/...``). 이 아래 목록 읽기의 답은 기억해도 된다.
+PATCH_TREE_PREFIX = "Patch/"
+
 #: 묶음 판독에 답이 없었다는 사실 — 세션 캐시에 두어 다음 반영이 다시 묻지 않게 한다.
 _NO_ANSWER = object()
 
@@ -79,9 +82,9 @@ class FixtureSnapshotPort:
 
     # -- 읽기 세 가지 (포트 프로토콜 그대로) -----------------------------------
     def query_state(self, path: str, *, offset: int = 0) -> dict:
-        if offset:
-            return self._inner.query_state(path, offset=offset)
-        return self._inner.query_state(path)
+        return _remembered_state(
+            self._inner, self._cache, path, offset, absent_is_answer=self._is_fixture(path)
+        )
 
     def query_property(self, path: str, property_name: str) -> dict:
         if self._is_fixture(path):
@@ -188,6 +191,29 @@ class FixtureSnapshotPort:
         return items
 
 
+def _remembered_state(
+    inner: Any, cache: RigReadCache | None, path: str, offset: int, *, absent_is_answer: bool
+) -> dict:
+    """장비 트리 목록 읽기(``query_state``)의 답을 세션 캐시에 둔다.
+
+    루트 목록이 잘려 돌아오면 리그 판독은 1..childCount 슬롯을 하나씩 훑는다
+    (``inventory._probe_slot``). 이 목록 읽기는 묶음 판독이 아니어서 기억하지 않으면
+    반영마다 콘솔에 다시 나갔다(실기: 한 번에 rig 71·bundle 71). 성공한 답은 기억한다.
+    「없음」(``ok: false``)은 장비 슬롯에서만 답이다 — 그 밖의 실패(기종 채널 목록 등)는
+    전수가 아니므로 다음 반영이 다시 묻는다. 장비 트리 밖(그룹·풀 목록)은 기억하지 않는다.
+    """
+    if cache is None or not path.startswith(PATCH_TREE_PREFIX):
+        return inner.query_state(path, offset=offset) if offset else inner.query_state(path)
+    key = ("state", path, offset)
+    hit = cache.get(KIND_SINGLE, key)
+    if hit is not None:
+        return hit
+    reply = inner.query_state(path, offset=offset) if offset else inner.query_state(path)
+    if isinstance(reply, Mapping) and (reply.get("ok") or absent_is_answer):
+        cache.put(KIND_SINGLE, key, reply)
+    return reply
+
+
 def _single_reply(item: Mapping[str, Any]) -> dict:
     """단건 판독 답의 모양 — 받아 둔 성공 항목은 문자열 값을, 실패 항목은 ``ok: False`` 를 준다."""
     if item.get("ok"):
@@ -223,9 +249,9 @@ class RememberingFixturePort:
         self._observer = observer
 
     def query_state(self, path: str, *, offset: int = 0) -> dict:
-        if offset:
-            return self._inner.query_state(path, offset=offset)
-        return self._inner.query_state(path)
+        return _remembered_state(
+            self._inner, self._cache, path, offset, absent_is_answer=self._is_fixture(path)
+        )
 
     def query_property(self, path: str, property_name: str) -> dict:
         if not self._is_fixture(path):

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
@@ -22,6 +23,13 @@ from server.design.rig_read_cache import RigReadCache, follow_patch_epoch
 from server.orchestrator.tools import DEFAULT_RIG_CONTEXT_PATHS
 
 _LOG = logging.getLogger(__name__)
+if not _LOG.handlers:
+    # uvicorn 은 루트 로거에 핸들러를 달지 않아 INFO 가 버려진다. 예열 줄(답 받은 장비 수)은
+    # 성공이어도 실기 로그에 남아야 하므로 이 로거에 표준 오류 핸들러만 단다.
+    _handler = logging.StreamHandler(sys.stderr)
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    _LOG.addHandler(_handler)
+    _LOG.setLevel(logging.INFO)
 
 #: 예열 재시도 간격(초). 서버를 막 띄우면 콘솔이 아직 응답하지 않을 수 있어 한 번에 포기하지 않는다.
 WARM_RETRY_DELAYS_SECONDS = (0.0, 5.0, 15.0, 30.0, 60.0)
