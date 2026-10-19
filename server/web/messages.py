@@ -1041,6 +1041,16 @@ def parse_client_message(raw: str) -> dict:
             if mode != "apply":
                 raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
             parsed["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")
+        if "live" in message:
+            # 앱 「적용」 뒤 같은 칸을 콘솔에 바로 반영 — 칸 단위 반영(cells)에만 뜻이 있다.
+            # 참/거짓만 받고(1·"true" 같은 값은 거절), 참일 때만 키를 싣는다 — 거짓이면 live 가
+            # 없는 메시지와 같다.
+            if "cells" not in message:
+                raise ProtocolError("beat_grid_apply.live is only valid together with cells")
+            if not isinstance(message["live"], bool):
+                raise ProtocolError("beat_grid_apply.live must be a boolean")
+            if message["live"]:
+                parsed["live"] = True
         return parsed
 
     if message_type == "beat_grid_cell_edit":

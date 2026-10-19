@@ -1549,10 +1549,12 @@ export function buildBeatGridNewPreset(
 /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. 페이로드 없음(지금 격자 초안
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
  * 원칙: UI는 콘솔 페이로드를 짓지 않는다). `cells` 를 주면 그 칸 가운데
- * 바뀐 칸만 덧쓰는 칸 단위 반영이다(선택 필드). */
+ * 바뀐 칸만 덧쓰는 칸 단위 반영이다(선택 필드). `live` 는 앱 「적용」이 성공한 같은 칸을 콘솔에도
+ * 바로 반영하는 표시다(`cells` 와 함께일 때만 싣는다). */
 export function buildBeatGridApply(
   mode?: "preset_plan",
   cells?: ReadonlyArray<readonly [string, number]>,
+  live?: boolean,
 ): string {
   // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」만 mode 를 싣는다.
   // cells 는 비지 않았을 때만 싣는다(고른 칸만 반영) — 없거나 비면 곡 전체 반영이다. 그래서 칸 단위 길을
@@ -1560,7 +1562,9 @@ export function buildBeatGridApply(
   const frame = mode === undefined
     ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
     : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode };
-  return JSON.stringify(cells !== undefined && cells.length > 0 ? { ...frame, cells } : frame);
+  if (cells === undefined || cells.length === 0) return JSON.stringify(frame);
+  // live 는 참일 때만 싣는다 — 서버는 cells 없는 live 를 거절하므로 칸이 없으면 싣지 않는다.
+  return JSON.stringify(live === true ? { ...frame, cells, live: true } : { ...frame, cells });
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */

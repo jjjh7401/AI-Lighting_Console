@@ -289,8 +289,9 @@ export interface CopilotSocket {
   /** 카드 t563 — 상단 바 「⇪ 콘솔에 반영」. */
   sendBeatGridApply: () => void;
   /** 고른 칸 가운데 바뀐 칸만 덧쓰는 칸 단위 반영 — `beat_grid_apply` 의 `cells`. 빈 목록은 보내지 않는다
-   * (빈 `cells` 는 프레임에서 빠져 곡 전체 반영이 되어 버린다). */
-  sendBeatGridApplyCells: (cells: ReadonlyArray<readonly [string, number]>) => void;
+   * (빈 `cells` 는 프레임에서 빠져 곡 전체 반영이 되어 버린다). `live` 를 주면 앱 「적용」이 성공한 같은
+   * 칸을 콘솔에 바로 반영하는 길이다(서버가 첫 반영에만 승인 카드를 묻는다). */
+  sendBeatGridApplyCells: (cells: ReadonlyArray<readonly [string, number]>, live?: boolean) => void;
   /** 「필요한 프리셋 만들기」 — `beat_grid_apply` 에 mode: "preset_plan". */
   sendBeatGridPresetPlan: () => void;
   /** 반영 준비 — 상단 바 타임코드 번호 입력(서버가 초안·보관함에 적는다). */
@@ -583,8 +584,8 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   const sendBeatGridApply = useCallback(() => send(buildBeatGridApply()), [send]);
   // 칸 단위 반영 — 빈 목록이면 아무것도 보내지 않는다(빈 cells 는 전체 반영 프레임과 같아진다).
   const sendBeatGridApplyCells = useCallback(
-    (cells: ReadonlyArray<readonly [string, number]>) => {
-      if (cells.length > 0) send(buildBeatGridApply(undefined, cells));
+    (cells: ReadonlyArray<readonly [string, number]>, live?: boolean) => {
+      if (cells.length > 0) send(buildBeatGridApply(undefined, cells, live));
     },
     [send],
   );

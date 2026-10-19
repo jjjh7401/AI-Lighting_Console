@@ -1347,6 +1347,7 @@ export default function App() {
             consoleFollowSeq={consoleFollowSeq}
             onApply={sendBeatGridApply}
             onApplyCells={sendBeatGridApplyCells}
+            onApplyCellsLive={(cells) => sendBeatGridApplyCells(cells, true)}
             onMoveCells={sendBeatGridCellEdit}
             approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}

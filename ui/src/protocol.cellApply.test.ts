@@ -58,6 +58,31 @@ describe("buildBeatGridApply — cells", () => {
   });
 });
 
+describe("buildBeatGridApply — live (「적용」 뒤 콘솔 반영)", () => {
+  it("live 와 비지 않은 cells 가 함께면 live:true 를 cells 뒤에 싣는다", () => {
+    const frame = buildBeatGridApply(undefined, [["BACK", 2]], true);
+    expect(frame).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]],"live":true}');
+    expect(JSON.parse(frame)).toEqual({ v: 1, type: "beat_grid_apply", cells: [["BACK", 2]], live: true });
+  });
+
+  it("cells 가 없거나 비면 live 를 싣지 않는다 — 서버는 cells 없는 live 를 거절한다", () => {
+    expect(buildBeatGridApply(undefined, undefined, true)).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply(undefined, [], true)).toBe('{"v":1,"type":"beat_grid_apply"}');
+  });
+
+  it("live 가 거짓이거나 없으면 예전과 바이트가 같다", () => {
+    expect(buildBeatGridApply(undefined, [["BACK", 2]])).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}');
+    expect(buildBeatGridApply(undefined, [["BACK", 2]], false)).toBe(
+      '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
+    );
+    expect(buildBeatGridApply(undefined, [["BACK", 2]], undefined)).toBe(
+      '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
+    );
+    expect(buildBeatGridApply()).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply("preset_plan")).toBe('{"v":1,"type":"beat_grid_apply","mode":"preset_plan"}');
+  });
+});
+
 describe("buildBeatGridEditCells", () => {
   const changes = { brightness: { mode: "value", value_percent: 60, preset_no: null } };
 
