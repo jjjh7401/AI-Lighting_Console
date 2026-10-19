@@ -4569,6 +4569,7 @@ class ChatSession:
         spatial_memory: SpatialMemory | None = None,
         beat_grid_suggestion_source: SuggestionSource | None = None,
         song_audio_link_store: SongAudioLinkStore | None = None,
+        rig_read_cache: RigReadCache | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -4789,8 +4790,9 @@ class ChatSession:
         # 탄다(읽기 세 가지만 쓴다). 테스트는 이 속성을 직접 스텁한다.
         self._stage_port = gate.state_port
         # 카드 rig-cache — 기종·모드·채널 배치(정적)와 장비 판독·그룹 소속(짧은 수명)을
-        # 세션 안에서 재사용한다. 첫 반영만 전부 읽고 두 번째부터는 거의 읽지 않는다.
-        self._rig_read_cache = RigReadCache()
+        # 재사용한다. 서버가 넘긴 수명 캐시가 있으면 연결이 바뀌어도 그것을 쓴다(기종 배치는
+        # 서버가 살아 있는 동안 한 번만 읽는다). 없으면 이 연결 안에서만 쓴다.
+        self._rig_read_cache = rig_read_cache if rig_read_cache is not None else RigReadCache()
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -11259,11 +11261,13 @@ class ChatSession:
         types_root = str(
             self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
         )
+        # 리그 단계와 같은 스냅샷을 쓴다 — 장비 전수 판독을 반영 한 번에 한 번만 한다.
+        snapshot = self._beat_grid_fixture_snapshot()
         rig_read = read_design_rig(
-            self._rig_capability_port, fixture_types_root=types_root, cache=self._rig_read_cache
+            snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
         )
         attributes, _reasons = resolve_group_dimmer_attributes(
-            rig_read, names, self._beat_grid_group_members(names)
+            rig_read, names, self._beat_grid_group_members(names, port=snapshot)
         )
         return {group: tuple(attrs) for group, attrs in attributes.items()}
 

@@ -329,6 +329,7 @@ def _new_session(
     decisions=(True, True, True, True, True),
     state_tree: dict | None = None,
     sent: list[dict] | None = None,
+    rig_read_cache=None,
 ):
     console = FakeConsole(state_tree=state_tree if state_tree is not None else _state_tree())
     audit = AuditLog(tmp_path / "audit")
@@ -344,6 +345,7 @@ def _new_session(
         approval_channel=channel,
         timeline_store=store,
         timeline_library=SongTimelineLibrary(tmp_path / "library.json"),
+        rig_read_cache=rig_read_cache,
     )
     return session, console, approval, audit
 

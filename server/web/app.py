@@ -29,6 +29,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
+from server.design.rig_read_cache import RigReadCache
 from server.director.director_api import DirectorApiDeps, build_director_router
 from server.llm.types import LLMProvider
 from server.orchestrator.spatial_memory import SpatialMemory
@@ -304,6 +305,10 @@ def create_app(deps: WebDeps) -> FastAPI:
     """Build the FastAPI app around one composed dependency set."""
     from contextlib import asynccontextmanager
 
+    # 기종·모드 배치는 서버 수명 동안 한 번만 읽는다 — 연결(ChatSession)마다 새로 만들면
+    # 「⇪ 콘솔에 반영」 때마다 채널 걷기가 다시 난다. 모든 연결이 이 하나를 함께 쓴다.
+    rig_read_cache = RigReadCache()
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         tasks: list[asyncio.Task] = []
@@ -431,6 +436,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             pending_plan_store=deps.pending_plan_store,
             spatial_memory=deps.spatial_memory,
             song_audio_link_store=deps.song_audio_link_store,
+            rig_read_cache=rig_read_cache,
         )
 
         def push_status() -> None:
