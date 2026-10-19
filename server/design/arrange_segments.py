@@ -35,6 +35,9 @@
 - 브레이크 마디(``break`` 사건이 덮는 마디)에서는 리듬·강조 줄이 쉬고 FOH(역할 key)·워시·무빙
   줄은 그대로다 — 저음이 빠지는 마디는 단색 워시로 버틴다는 영상 분석 규칙이다. 기본값이고 곡별
   정책(``break_hold_wash``)으로 끈다.
+- 박 나누기 규칙: 무빙 웨이브 한 바퀴는 ``policy.motion_period_beats`` 박(기본 4)이다. 곡 박자표의
+  한 마디 박 수와 같으면 「1마디」로 적는다. 규칙을 끄면(None) ``motion_period_bars`` 마디다. 디머·
+  컬러 칸은 초안에 주기 값이 없다(라벨의 박만 있고 효과 주기는 프리셋 계획이 붙인다).
 - 예고는 강조가 아니다. 강조 구간(후렴·마지막 후렴·드롭)이 시작하기 바로 앞 마디, 곧 큰 히트
   직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는 쉼과 같다).
 - 칸은 값이 같은 연속 마디의 묶음이고 첫 마디에만 낸다. 값은 라벨·밝기·움직임이고 구간 종류와
@@ -346,6 +349,7 @@ def generate_segment_draft(
         plan.color_rgb for by_bar in plans.values() for plan in by_bar.values() if plan.color_rgb
     )
     tail_bar = _tail_bar(bar_map)
+    period = _motion_period(bar_map, settings)
     tracks = []
     for track in layout:
         name = str(track["group_name"])
@@ -389,6 +393,7 @@ def generate_segment_draft(
                             role=track.get("layer_role"),
                             color_names=color_names,
                             axes=_motion_axes(track),
+                            period=period,
                         )
                         for bar, plan in runs
                     ],
@@ -954,6 +959,22 @@ def _motion_axes(track: Mapping[str, Any]) -> tuple[str, ...]:
     return visible_axes(group_no if isinstance(group_no, int) else None, "wave", _MOTION_AXES)
 
 
+def _motion_period(
+    bar_map: Mapping[str, Any], settings: ArrangementPolicy
+) -> tuple[str, int] | None:
+    """무빙 웨이브 한 바퀴의 (단위, 값). 박 나누기 규칙이 꺼져 있으면 ``None``(기존 마디 주기).
+
+    규칙 박 수가 박자표의 한 마디 박 수와 같으면 ``("bar", 1)``, 아니면 ``("beat", 박 수)`` 다.
+    박자표를 못 읽어도 박으로 적는다 — 박 수는 박자표 없이도 정해져 있다."""
+    beats = settings.motion_period_beats
+    if beats is None:
+        return None
+    signature = bar_map.get("time_signature")
+    if isinstance(signature, Sequence) and signature and signature[0] == beats:
+        return ("bar", 1)
+    return ("beat", beats)
+
+
 def _segment_cue(
     bar: int,
     plan: _CellPlan,
@@ -962,11 +983,19 @@ def _segment_cue(
     role: object,
     color_names: Mapping[tuple[int, int, int], str],
     axes: Sequence[str] = _MOTION_AXES,
+    period: tuple[str, int] | None = None,
 ) -> BeatGridCue:
     """칸 하나를 기존 생성기의 ``_draft_cue`` 로 만든다 — 라벨은 구간 단위 말 표로, 출처 표식은 이
     생성기의 것으로 한다. 계획 위치는 ``_draft_cue`` 가 방향 값에서 파생한다."""
     cue = _draft_cue(
-        bar, plan, settings, role=role, words=SEGMENT_WORDS, color_names=color_names, axes=axes
+        bar,
+        plan,
+        settings,
+        role=role,
+        words=SEGMENT_WORDS,
+        color_names=color_names,
+        axes=axes,
+        period=period,
     )
     cue["source_ref"] = f"{SOURCE}:{plan.kind}"
     return cue

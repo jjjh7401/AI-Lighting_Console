@@ -116,6 +116,9 @@ class ArrangementPolicy:
     - ``break_hold_wash``: 브레이크 마디(마디 지도 ``break`` 사건)에서 워시·FOH 만 켜 두고 리듬·
       강조 줄은 쉬는 기본 규칙(무빙 줄은 그대로). 영상 33편 분석에서 저음이 빠지는 마디는
       암전이나 단색 워시였다(``server/fx/effect_library_data``). 끄면 구간 규칙대로 켠다.
+    - ``motion_period_beats``: 박 나누기 규칙 — 구간 생성기 무빙 웨이브의 한 바퀴 박 수(2~4).
+      영상 분석에서 박에 맞춘 움직임은 2~4박에 한 바퀴였다(``server/fx/effect_library_data``).
+      ``None`` 이면 규칙을 끄고 ``motion_period_bars`` 마디를 쓴다.
     """
 
     slow_song: bool = False
@@ -129,6 +132,7 @@ class ArrangementPolicy:
     palette: ArrangementPalette = field(default_factory=ArrangementPalette)
     chorus_energy_cut: float = 0.5
     break_hold_wash: bool = True
+    motion_period_beats: int | None = 4
 
     def __post_init__(self) -> None:
         if self.window_bars < 1:
@@ -141,5 +145,9 @@ class ArrangementPolicy:
             raise ValueError("트리거 박은 1 이상이어야 합니다.")
         if self.motion_period_bars < 1:
             raise ValueError("움직임 주기는 1마디 이상이어야 합니다.")
+        if self.motion_period_beats is not None and (
+            isinstance(self.motion_period_beats, bool) or self.motion_period_beats not in (2, 3, 4)
+        ):
+            raise ValueError("무빙 웨이브 한 바퀴는 2~4박이어야 합니다(끄려면 None).")
         if isinstance(self.chorus_energy_cut, bool) or not 0 <= self.chorus_energy_cut <= 1:
             raise ValueError("후렴 에너지 기준(곡 안 상대 위치)은 0~1 사이여야 합니다.")

@@ -166,6 +166,19 @@ def test_basic_wording_is_a_separate_word_set_of_the_same_function() -> None:
     assert set(SEGMENT_WORDS) >= set(BASIC_WORDS)
 
 
+def test_the_wave_label_says_the_period_the_cell_actually_has() -> None:
+    # 라벨의 주기는 칸의 움직임 값에서 온다 — 박 나누기 규칙으로 주기가 바뀌어도 어긋나지 않는다.
+    direction = _direction("motion", movement=True)
+    for unit, value, text in (("bar", 1, "1마디"), ("bar", 2, "2마디"), ("beat", 4, "4박")):
+        moved = {
+            **direction,
+            "movement": {**direction["movement"], "period_unit": unit, "period_value": value},
+        }
+        assert direction_label(moved, "mover") == f"팬 웨이브(한 바퀴 {text})"
+    broken = {**direction, "movement": {**direction["movement"], "period_unit": "second"}}
+    assert direction_label(broken, "mover") is None
+
+
 # --- 값 정규화(모양이 틀린 부분은 버린다, 라벨은 읽지 않는다) ---------------------------------
 
 
