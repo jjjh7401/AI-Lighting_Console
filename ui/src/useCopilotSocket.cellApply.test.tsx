@@ -6,7 +6,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildBeatGridApply, buildBeatGridEditCells } from "./protocol";
+import { buildBeatGridApply, buildBeatGridCellEdit, buildBeatGridEditCells, type BeatGridCellOp } from "./protocol";
 import { useCopilotSocket, type CopilotSocket } from "./useCopilotSocket";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -110,5 +110,39 @@ describe("sendBeatGridEditCells", () => {
     expect(beatGridFrames()).toEqual([
       '{"v":1,"type":"beat_grid_edit","bar":7,"target":"BACK","changes":{"brightness":{"mode":"value","value_percent":60,"preset_no":null}}}',
     ]);
+  });
+});
+
+// 칸 가로 끌기로 같은 줄에서 옮기기(카드 WT-cell-edit-live) — 서버의 `beat_grid_cell_edit` 한 메시지.
+describe("sendBeatGridCellEdit", () => {
+  const move = (bar: number, toBar: number): BeatGridCellOp => ({
+    op: "move",
+    group_name: "BACK",
+    bar,
+    to_bar: toBar,
+  });
+
+  it("칸 하나를 옮기면 type 이 beat_grid_cell_edit 인 프레임을 정확히 하나 보낸다", () => {
+    act(() => socket.sendBeatGridCellEdit([move(5, 7)]));
+    const frames = beatGridFrames();
+    expect(frames).toHaveLength(1);
+    expect(JSON.parse(frames[0])).toEqual({ v: 1, type: "beat_grid_cell_edit", ops: [move(5, 7)] });
+  });
+
+  it("여러 칸도 한 프레임이다 — 칸마다 보내면 서버 busy 가드가 둘째부터 거절한다", () => {
+    const ops = [move(1, 3), move(2, 4), move(9, 11)];
+    act(() => socket.sendBeatGridCellEdit(ops));
+    expect(beatGridFrames()).toEqual([buildBeatGridCellEdit(ops)]);
+  });
+
+  it("빈 목록은 보내지 않는다 — 서버가 빈 ops 를 통째로 거절한다", () => {
+    act(() => socket.sendBeatGridCellEdit([]));
+    expect(beatGridFrames()).toEqual([]);
+  });
+
+  it("소켓이 열려 있지 않으면 아무것도 보내지 않는다 — 다른 격자 편집 송신과 같은 길이다", () => {
+    FakeSocket.instances[0].readyState = FakeSocket.CLOSED;
+    act(() => socket.sendBeatGridCellEdit([move(5, 7)]));
+    expect(beatGridFrames()).toEqual([]);
   });
 });

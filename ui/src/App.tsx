@@ -429,6 +429,7 @@ export default function App() {
     sendTimelineDraftRedo,
     sendBeatGridEdit,
     sendBeatGridEditCells,
+    sendBeatGridCellEdit,
     sendBeatGridEditSentence,
     sendBeatGridSuggest,
     sendBeatGridSuggestionApply,
@@ -1346,6 +1347,7 @@ export default function App() {
             consoleFollowSeq={consoleFollowSeq}
             onApply={sendBeatGridApply}
             onApplyCells={sendBeatGridApplyCells}
+            onMoveCells={sendBeatGridCellEdit}
             approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}
             timecodeNumber={state.songTimeline.timeline?.timecode_number ?? null}

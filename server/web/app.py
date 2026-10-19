@@ -762,6 +762,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_console_pause",
                     "beat_grid_console_resume",
                     "beat_grid_console_stop",
+                    "beat_grid_cell_edit",
                     "beat_grid_console_seek",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
@@ -808,6 +809,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                     elif message_type == "beat_grid_console_resume":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_console_resume)
+                        )
+                    # SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔에 바로 반영. 같은 승인 왕복이라
+                    # 같은 백그라운드 task 패턴이다. 아래 ``else`` 는 콘솔 끄기라 그 앞에 둔다.
+                    elif message_type == "beat_grid_cell_edit":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(session.beat_grid_cell_edit, message["ops"])
                         )
                     # 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
                     elif message_type == "beat_grid_console_seek":

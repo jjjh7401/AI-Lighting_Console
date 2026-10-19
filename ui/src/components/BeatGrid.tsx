@@ -21,7 +21,7 @@
 // 가능해졌다 — mockup "프리셋 서랍"/"AI 제안" 절 그대로(아래 각 함수의
 // 주석이 인용 절을 단다). 그 콜백들이 미제공이면 이 컴포넌트는 기존과
 // 바이트 동일하게 동작한다(additive).
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { PresetPlanButton, PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
 import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./beatgrid/presetPlan";
@@ -39,6 +39,7 @@ import {
 import type {
   BeatGridAppMovement,
   BeatGridBrightness,
+  BeatGridCellOp,
   BeatGridCue,
   BeatGridDrawerEntry,
   BeatGridDrawerSection,
@@ -194,6 +195,7 @@ import {
   wireCells,
   type CellSelection,
 } from "./beatgrid/cellSelection";
+import { IDLE_CELL_MOVE, reduceCellMove, type CellMoveEvent, type CellMoveState } from "./beatgrid/cellMove";
 import { useCellApplyResult } from "./beatgrid/useCellApplyResult";
 import { ConsoleApplyButton } from "./beatgrid/ConsoleApplyButton";
 import { ConsoleCoverageNotice } from "./beatgrid/ConsoleCoverageNotice";
@@ -712,6 +714,10 @@ export interface BeatGridProps {
   /** 고른 칸(없으면 바뀐 칸 전부) 가운데 바뀐 칸만 콘솔에 덧쓴다 — `beat_grid_apply` 의 `cells`. 생략하면
    * 「⇪ 콘솔에 반영」은 예전처럼 곡 전체 반영 단일 버튼이다. */
   onApplyCells?: (cells: [string, number][]) => void;
+  /** 칸 막대를 가로로 끌어 같은 줄 안에서 옮길 때 — 옮길 칸 목록을 **한 번에** 올린다(서버 `beat_grid_cell_edit`, 전부 아니면 전무).
+   * 끌기를 놓는 순간에만 부르고, 옮길 마디가 0 이거나 1마디 미만으로 가면 부르지 않는다. 끈 칸이 고른 칸(Shift/Ctrl)에
+   * 들어 있으면 같은 줄의 고른 칸 전부가 함께 옮겨진다. 생략하면 끌어도 아무 일도 없다(칸 고르기는 예전 그대로). */
+  onMoveCells?: (ops: readonly BeatGridCellOp[]) => void;
   /**
    * 카드 t589(REQ-LDBEAT-015(h)) — 「＋ 새 프리셋 만들기」 창. `onEditRequest`
    * 와 같은 이유로 UI는 콘솔 번호를 짓지 않는다 — 어느 칸(`bar`/`target`)·
@@ -994,6 +1000,8 @@ export function applyFailureNote(status: BeatGridSendStatus | null | undefined):
   if (status.last_action === "apply") return `⚠ 콘솔에 반영 안 됨 — ${status.reason}`;
   // 격자 편집 실패(자동 배치 적용이 바꾼 칸 0개 등) — 채팅에만 두면 전체화면에서 성공처럼 보인다.
   if (status.last_action === "edit") return `⚠ 격자에 적용 안 됨 — ${status.reason}`;
+  // 칸 가로 끌기로 옮기기(카드 WT-cell-edit-live) — 서버 사유는 한국어 문장이라 그대로 보인다.
+  if (status.last_action === "cell_edit") return `⚠ 칸 옮기기 안 됨 — ${status.reason}`;
   // 카드 WT-true-reasons — 「▶ 이 마디 콘솔에서 보기」 실패도 무반응으로 두지 않는다.
   if (status.last_action === "preview") return `⚠ 콘솔 미리보기 안 됨 — ${status.reason}`;
   return null;
@@ -1769,6 +1777,7 @@ export function BeatGrid({
   onEditRequest,
   onEditCellsRequest,
   onApplyCells,
+  onMoveCells,
   onNewPresetRequest,
   lastServerReply = null,
   onSentenceEditRequest,
@@ -1804,6 +1813,9 @@ export function BeatGrid({
   const pickedCells = useMemo(() => existingCells(cellSel.cells, grid?.tracks ?? []), [cellSel.cells, grid?.tracks]);
   const pickedKeys = useMemo(() => new Set(pickedCells.map(cellKey)), [pickedCells]);
   const hasPickedCells = pickedCells.length > 0;
+  // 칸 막대 가로 끌기(`beatgrid/cellMove.ts`) — 끌기 상태와, 끌고 난 뒤 따라오는 클릭 하나를 무시하는 표시. 둘 다 그림에 쓰이지 않아 ref 다.
+  const cellMoveRef = useRef<CellMoveState>(IDLE_CELL_MOVE);
+  const suppressCellClickRef = useRef(false);
   // 칸마다 「앱에서만 바뀜」/「콘솔과 같음」 — 반영 기록이 없으면(`null`) 아무 표시도 안 한다. 칸 기록이 부분이면
   // (`known_cells` 가 목록) 그 목록에 없는 칸도 콘솔과 같은지 모르니 표시하지 않는다.
   const unsentKeys = useMemo(() => unsentKeySet(grid?.unsent_cells), [grid?.unsent_cells]);
@@ -2880,6 +2892,11 @@ export function BeatGrid({
     trackIndex: number,
     bar: number,
   ) => {
+    // 칸을 끌었으면 뒤따르는 클릭은 칸 고르기가 아니다 — 포인터를 놓으면 브라우저가 곧바로 클릭을 만든다.
+    if (suppressCellClickRef.current) {
+      suppressCellClickRef.current = false;
+      return;
+    }
     const mode = cellClickMode(event);
     if (mode === "plain") {
       selectCue(trackIndex, bar, false);
@@ -2893,6 +2910,54 @@ export function BeatGrid({
       }),
     );
   };
+
+  // 칸 막대 가로 끌기 — 포인터 이벤트는 끌기 계산(`reduceCellMove`)에 넘기고, 놓을 때만 옮길 칸 목록을 올린다. 마디 폭은 칸을 그리는
+  // `pxPerBar` 와 같은 값이고, 끈 칸이 고른 칸(`pickedCells`)에 들어 있으면 같은 줄의 고른 칸이 함께 옮겨진다.
+  // `onMoveCells` 가 없으면 이벤트 짝을 달지 않으므로 칸은 예전과 똑같이 눌리기만 한다.
+  const feedCellMove = (event: CellMoveEvent) => {
+    const outcome = reduceCellMove(cellMoveRef.current, event);
+    cellMoveRef.current = outcome.state;
+    if (outcome.suppressClick) suppressCellClickRef.current = true;
+    if (outcome.ops !== null) {
+      onMoveCells?.(outcome.ops);
+      // 보낸 옮기기는 칸을 옮기기 전 마디 번호로 가리킨다. 서버가 새 격자를 보내기 전까지 남은 고르기(여럿 고른 칸·편집 칸·무대에서
+      // 고른 줄)는 옛 칸을 쥐고 있어, 뒤따르는 끌기나 Shift+클릭이 옛 칸 목록에 닿는다 — 「닫기」·「선택 해제」와 같은 길로 모두 비운다.
+      setCellSel(EMPTY_CELL_SELECTION);
+      setSelected(null);
+      setStageRows([]);
+    }
+  };
+  const cellMoveHandlers = (groupName: string, bar: number) =>
+    onMoveCells === undefined
+      ? {}
+      : {
+          onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+            if (event.button !== 0) return;
+            suppressCellClickRef.current = false;
+            feedCellMove({
+              type: "down",
+              pointerId: event.pointerId,
+              x: event.clientX,
+              cell: { group_name: groupName, bar },
+            });
+            // 끌다가 칸 밖으로 나가도 놓는 순간을 이 칸이 받게 붙든다. 포인터 캡처가 없는 환경(jsdom)에서는 건너뛴다.
+            if (typeof event.currentTarget.setPointerCapture === "function") {
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }
+          },
+          onPointerMove: (event: ReactPointerEvent<HTMLButtonElement>) =>
+            feedCellMove({ type: "move", pointerId: event.pointerId, x: event.clientX }),
+          onPointerUp: (event: ReactPointerEvent<HTMLButtonElement>) =>
+            feedCellMove({
+              type: "up",
+              pointerId: event.pointerId,
+              x: event.clientX,
+              pxPerBar,
+              picked: pickedCells,
+            }),
+          onPointerCancel: (event: ReactPointerEvent<HTMLButtonElement>) =>
+            feedCellMove({ type: "cancel", pointerId: event.pointerId }),
+        };
 
   // 고른 칸 일괄 바꾸기 줄 — 고르기 목록과 `changes` 모양은 아래 한 칸 편집과 같은 것을 쓴다.
   const bulkDimmerSection = findDrawerSection(drawerSections, "Dimmer");
@@ -3419,6 +3484,7 @@ export function BeatGrid({
                                   }${plannedTitle}`}
                                   aria-pressed={isMulti ? true : undefined}
                                   onClick={(event) => onCueBlockClick(event, trackIndex, segment.cue.bar)}
+                                  {...cellMoveHandlers(track.group_name, segment.cue.bar)}
                                 >
                                   {active ? barNameText(segment.cue) : "꺼짐"}
                                   <CueBarVisual cue={segment.cue} />

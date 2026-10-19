@@ -1007,7 +1007,7 @@ export interface BeatGridSendStatus {
    * **항상 같다**(단일 출처). 스냅샷이 없으면(이 곡으로 반영을 한 번도
    * 안 했으면) `null`. */
   pending_apply_count: number | null;
-  last_action: "apply" | "preview" | "preview_off" | "edit" | "console_play" | "console_stop" | "console_seek";
+  last_action: "apply" | "preview" | "preview_off" | "edit" | "cell_edit" | "console_play" | "console_stop" | "console_seek";
   ok: boolean;
   reason: string | null;
   blocked_cells: BeatGridBlockedCell[];
@@ -1442,6 +1442,17 @@ export function buildBeatGridEditCells(
   changes: Record<string, unknown>,
 ): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_edit", cells, changes });
+}
+
+/** 칸 옮기기 한 건 — `beat_grid_cell_edit` 의 `ops` 항목(카드 WT-cell-edit-live). 한 줄(`group_name`) 안에서 `bar` 마디에서
+ * 시작하는 칸을 `to_bar` 마디로 옮긴다. 서버는 이 네 키만 받고, 마디는 1 이상의 정수여야 하며, 이 버전은 `"move"` 하나만 안다. */
+export type BeatGridCellOp = { op: "move"; group_name: string; bar: number; to_bar: number };
+
+/** 칸 옮기기 — 칸 여러 개를 **한 메시지**로 옮긴다(전부 아니면 전무). 칸마다 메시지를 연달아 보내면 서버가 둘째부터
+ * `busy` 로 거절한다. 서버는 한 번에 64건까지 받는다. 이 빌더는 항목을 검사하지 않는다 — 어느 칸을 어떻게 보낼지(같은 줄의
+ * 칸만, 마디 1 미만 제외)는 호출부가 정한다. 결과는 `beat_grid_send_status` 의 `last_action: "cell_edit"` 로 온다. */
+export function buildBeatGridCellEdit(ops: readonly BeatGridCellOp[]): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_cell_edit", ops });
 }
 
 /** 카드 t551(M3) — 편집 경로 ②(문장). 해석은 전부 서버의
