@@ -153,6 +153,7 @@ import {
   consoleLiveSeekSeconds,
   consoleResyncDue,
   consoleSeekPlan,
+  consoleSeekSendDelayMs,
   consoleSeekStep,
   consoleTimecodeSeconds,
 } from "./beatgrid/consoleSeekPlan";
@@ -2124,6 +2125,8 @@ export function BeatGrid({
   const seekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 마지막으로 보낸 이동이 나간 때의 바쁨 횟수 — 바쁨이 올라가면 답 없이 거절된 것이라 대기를 푼다.
   const seekBusyAtRef = useRef(0);
+  // 마지막으로 콘솔에 보낸 시각(ms). 0 이면 아직 한 번도 안 보냈다 — 연타 중 보내는 간격 상한을 잴 때 쓴다.
+  const seekLastSentAtRef = useRef(0);
   const busyCountRef = useRef(busyCount);
   busyCountRef.current = busyCount;
   // 예약을 낸 뒤 멈췄는지 보려고 쥔다 — 멈췄으면 옮긴 마디 그대로 보낸다(음원 시계는 이미 멎었다).
@@ -2156,16 +2159,19 @@ export function BeatGrid({
     seekInFlightRef.current = true;
     seekPressedRef.current = sendStatus;
     seekBusyAtRef.current = busyCountRef.current;
+    seekLastSentAtRef.current = Date.now();
     onConsoleSeek(consoleSeconds, pending.playing ? { playing: true } : undefined);
   };
   const scheduleConsoleSeek = (seconds: number, playing: boolean) => {
     seekPendingRef.current = { seconds, playing };
-    if (seekTimerRef.current !== null) clearTimeout(seekTimerRef.current);
-    seekTimerRef.current = null;
+    // 이미 보낼 때를 재고 있으면 값만 새것으로 바꾼다 — 연타 중에도 간격 상한마다 마지막 자리를 보낸다.
+    if (seekTimerRef.current !== null) return;
+    const lastSentAt = seekLastSentAtRef.current;
+    const sinceLastSendMs = lastSentAt === 0 ? null : Date.now() - lastSentAt;
     seekTimerRef.current = setTimeout(() => {
       seekTimerRef.current = null;
       flushConsoleSeek();
-    }, CONSOLE_SEEK_DEBOUNCE_MS);
+    }, consoleSeekSendDelayMs(sinceLastSendMs, CONSOLE_SEEK_DEBOUNCE_MS));
   };
   useEffect(
     () => () => {

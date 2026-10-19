@@ -31,6 +31,7 @@ import math
 import os
 import re
 import tempfile
+import threading
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextvars import ContextVar
@@ -4893,6 +4894,11 @@ class ChatSession:
         # 재사용한다. 서버가 넘긴 수명 캐시가 있으면 연결이 바뀌어도 그것을 쓴다(기종 배치는
         # 서버가 살아 있는 동안 한 번만 읽는다). 없으면 이 연결 안에서만 쓴다.
         self._rig_read_cache = rig_read_cache if rig_read_cache is not None else RigReadCache()
+        # 「콘솔 같이」 이동은 한 번에 하나만 콘솔에 쓴다.
+        # 기다리는 사이 더 새 이동이 오면 옛 것은 보내지 않는다.
+        self._seek_lock = threading.Lock()
+        self._seek_generation_lock = threading.Lock()
+        self._seek_generation = 0
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -14237,6 +14243,37 @@ class ChatSession:
         return self._beat_grid_send_status(last_action="cell_edit", ok=True)
 
     def beat_grid_console_seek(
+        self,
+        seconds: float,
+        *,
+        playing: bool = False,
+        resync: bool = False,
+        arrival: int | None = None,
+    ) -> dict:
+        """「콘솔 같이」 이동 요청 — 답을 버리지 않고 가장 새 이동만 콘솔에 보낸다.
+
+        ``arrival`` 은 연결이 받은 순서다. 없으면 이 호출의 순서를 여기서 정한다.
+
+        앞선 이동이 쓰는 중이면 이 요청은 기다린다.
+        기다리는 사이 더 새 요청이 오면 이 요청은 보내지 않고
+        답만 한다(옛 이동). 연타하던 이동이 「처리 중」
+        거절로 사라져 콘솔이 앞 자리에 남던 결함을 막는다
+        (회귀 시험: test_web_console_seek_queue).
+        """
+        with self._seek_generation_lock:
+            if arrival is None:
+                self._seek_generation += 1
+                mine = self._seek_generation
+            else:
+                self._seek_generation = max(self._seek_generation, arrival)
+                mine = arrival
+        with self._seek_lock:
+            if mine < self._seek_generation:
+                # 기다리는 사이 더 새 이동이 왔다 — 이 옛 이동은 콘솔에 쓰지 않는다.
+                return self._beat_grid_send_status(last_action="console_seek", ok=True)
+            return self._beat_grid_console_seek_now(seconds, playing=playing, resync=resync)
+
+    def _beat_grid_console_seek_now(
         self, seconds: float, *, playing: bool = False, resync: bool = False
     ) -> dict:
         """「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)으로 소유 타임코드 커서를 세운다.
