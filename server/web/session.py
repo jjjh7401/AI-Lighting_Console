@@ -13279,6 +13279,9 @@ class ChatSession:
         timecode_number, reason = owned if owned is not None else self._beat_grid_owned_timecode()
         if reason is not None or timecode_number is None:
             return self._beat_grid_send_status(last_action=action, ok=False, reason=reason)
+        # 확인한 시각과 쓰기 횟수 — 재생 뒤 다른 쓰기가 없었는지 나중에 본다.
+        verified_at = self._beat_grid_clock()
+        epoch_verified = self._beat_grid_console_epoch()
         # 문면은 t520 실측 선례(`.moai/reports/t520/verdict.md`): `Top Timecode N` 은
         # 커서를 0.00 으로 되감고, `Off Timecode N` 은 되감지 않는다 — 그래서 재생은
         # 늘 Top 다음 Go 다.
@@ -13317,20 +13320,7 @@ class ChatSession:
         )
         go_started: list[int] = []
         if self._preview_approval.is_approved:
-            epoch_before = self._beat_grid_console_epoch()
             refusal = self._beat_grid_send_transport_preapproved(commands, go_started_ms=go_started)
-            epoch_after = self._beat_grid_console_epoch()
-            # 바로 나간 재생이면 방금 확인한 소유를 기억한다.
-            # 그 사이 다른 쓰기가 없었을 때(쓰기 횟수가 우리 명령만큼만 오른 때)만이다.
-            if (
-                action == "console_play"
-                and refusal is None
-                and epoch_before is not None
-                and epoch_after == epoch_before + len(commands)
-            ):
-                self._beat_grid_owner_verdict = _BeatGridOwnerVerdict(
-                    timecode_number, tuple(timecodes[1:]), self._beat_grid_clock(), epoch_after
-                )
         else:
             # 승인 카드 머리: 이 송신이 승인받는 동안만 살아 있다. 같은 스레드의 알림이 읽는다.
             card_token = _BEAT_GRID_CARD_TITLE.set(card_title)
@@ -13356,6 +13346,13 @@ class ChatSession:
                     )
                 ),
             )
+        # 재생이 나갔으면 확인한 소유를 기억한다. 확인 뒤 다른 쓰기가 없었을 때만이다.
+        if action == "console_play":
+            epoch_after = self._beat_grid_console_epoch()
+            if epoch_verified is not None and epoch_after == epoch_verified + len(commands):
+                self._beat_grid_owner_verdict = _BeatGridOwnerVerdict(
+                    timecode_number, tuple(timecodes[1:]), verified_at, epoch_after
+                )
         notices = self._beat_grid_stop_notices(timecode_number) if halting else []
         # 재생 성공이면 콘솔이 흐르기 시작한 시각을 싣는다.
         # 승인 카드 경로는 싣지 않아 응답 도착 시각을 쓴다.

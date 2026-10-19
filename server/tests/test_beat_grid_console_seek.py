@@ -432,3 +432,35 @@ class TestOwnerRememberedDuringPlay:
         session.beat_grid_console_seek(60.0, playing=True)
 
         assert checks == []  # 재생이 확인한 소유를 첫 움직임이 그대로 쓴다
+
+    def test_a_play_that_waited_for_its_card_remembers_the_owner_once_go_succeeded(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
+        assert session._preview_approval.is_approved is False  # 카드 경로로 나간다
+        assert session.beat_grid_console_play()["ok"] is True
+        checks = _count_owner_checks(monkeypatch, session)
+
+        session.beat_grid_console_seek(60.0, playing=True)
+
+        assert checks == []  # 카드로 나간 재생도 Go 가 성공하면 확인한 소유를 기억한다
+
+    def test_a_write_that_lands_while_the_card_waits_leaves_the_owner_unremembered(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
+        dispatch = session._beat_grid_dispatch_preview
+
+        def dispatch_with_a_foreign_write(tool_id, commands, *, reason=None):
+            session._gate.console_write_epoch += 1  # 카드가 기다리는 사이 다른 소유 쓰기가 있었다
+            return dispatch(tool_id, commands, reason=reason)
+
+        monkeypatch.setattr(session, "_beat_grid_dispatch_preview", dispatch_with_a_foreign_write)
+        assert session.beat_grid_console_play()["ok"] is True
+        checks = _count_owner_checks(monkeypatch, session)
+
+        session.beat_grid_console_seek(60.0, playing=True)
+
+        assert checks == ["owner"]  # 사이에 쓰기가 있었으면 확인한 소유를 기억하지 않는다
