@@ -224,7 +224,7 @@ from server.design.cue_sheet_edit import (
     apply_cue_sheet_edit,
     parse_cue_sheet_edit_request,
 )
-from server.design.fixture_snapshot import FixtureSnapshotPort
+from server.design.fixture_snapshot import FixtureSnapshotPort, RememberingFixturePort
 from server.design.interview import (
     Q1_CONCEPT,
     Q2_PALETTE,
@@ -5297,9 +5297,19 @@ class ChatSession:
         port = getattr(self, "_rig_capability_port", None)
         if port is None:
             return DesignRigRead()
-        return read_design_rig(
-            port, fixture_types_root=_FIXTURE_TYPES_ROOT, cache=self._rig_read_cache
-        )
+        # 반영 경로가 이 판독을 여러 번 부른다. 장비 스냅샷을 거쳐 한 번 읽은 것을 재사용하고,
+        # 판독 중에는 감시 틱을 뒤로 미룬다(리드 재측정: 장비 전수 읽기가 반영마다 세 번 났다).
+        fixtures = self._rig_paths.get("fixtures")
+        if fixtures:
+            # 장비마다 한 번 묻고 성공 답을 기억한다(반영마다 세 번 묻던 것을 막는다).
+            port = RememberingFixturePort(
+                port, fixture_root=str(fixtures), cache=self._rig_read_cache
+            )
+        # 판독 중에는 감시 틱을 뒤로 미룬다(리그 판독은 콘솔을 여러 번 묻는다).
+        with self._rig_read_cache.reading():
+            return read_design_rig(
+                port, fixture_types_root=_FIXTURE_TYPES_ROOT, cache=self._rig_read_cache
+            )
 
     def _try_pointing_coordinates(
         self, call_id: str

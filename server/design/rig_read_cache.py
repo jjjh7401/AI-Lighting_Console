@@ -62,6 +62,8 @@ class RigReadCache:
         self.invalidations = 0
         #: 마지막으로 맞춰 본 게이트의 패치 epoch. 게이트 값과 다르면 장비 판독을 버린다.
         self.synced_patch_epoch: int | None = None
+        #: 예열 한 번에 하나만 — 서버 시작과 곡 열기가 겹쳐도 콘솔 읽기가 두 줄로 서지 않는다.
+        self.warm_lock = threading.Lock()
 
     def get(self, kind: str, key: Hashable) -> Any | None:
         with self._lock:

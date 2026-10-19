@@ -154,3 +154,55 @@ def _single_reply(item: Mapping[str, Any]) -> dict:
 def _relabel(item: Mapping[str, Any], name: str) -> dict:
     """묶음 답의 항목을 호출자가 부른 이름으로 바꿔 돌려준다(읽는 쪽이 이름으로 찾는다)."""
     return {**item, "n": name}
+
+
+class RememberingFixturePort:
+    """장비 한 대의 성공 답을 세션 캐시에 기억하는 포트 래퍼 — **성공 답만**.
+
+    묶음 판독을 쪼개지 않는다. 응답은 원시 읽기와 똑같이 돌려주고, 같은 장비에
+    같은 질의를 반복할 때만 기억한 답을 준다. 키 모양은 ``FixtureSnapshotPort`` 의
+    단건 기억과 같아서 두 포트가 항목을 나눠 쓴다. 반영 경로의 기종 판독이 같은
+    장비를 여러 번 묻는 것을 막는다.
+    """
+
+    def __init__(self, inner: Any, *, fixture_root: str, cache: RigReadCache) -> None:
+        self._inner = inner
+        self._root = fixture_root.rstrip("/")
+        self._cache = cache
+
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        if offset:
+            return self._inner.query_state(path, offset=offset)
+        return self._inner.query_state(path)
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        if not self._is_fixture(path):
+            return self._inner.query_property(path, property_name)
+        return self._remembered(
+            (path, property_name.upper()),
+            lambda: self._inner.query_property(path, property_name),
+        )
+
+    def query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
+        names = tuple(property_names)
+        if offset is not None:
+            return self._inner.query_properties(path, names, offset=offset)
+        if not self._is_fixture(path):
+            return self._inner.query_properties(path, names)
+        key = (path, tuple(name.upper() for name in names))
+        return self._remembered(key, lambda: self._inner.query_properties(path, names))
+
+    def _is_fixture(self, path: str) -> bool:
+        prefix = self._root + "/"
+        return path.startswith(prefix) and path[len(prefix) :].isdigit()
+
+    def _remembered(self, key: tuple[Any, ...], read: Callable[[], dict]) -> dict:
+        hit = self._cache.get(KIND_SINGLE, key)
+        if hit is not None:
+            return hit
+        reply = read()
+        if isinstance(reply, Mapping) and reply.get("ok"):
+            self._cache.put(KIND_SINGLE, key, reply)
+        return reply

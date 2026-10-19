@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 
 from server.design.love_attack_timeline import LOVE_ATTACK_ENTRY_ID, love_attack_library_entry
 from server.design.rig_read_cache import RigReadCache, wait_while_reading
-from server.web import rig_warm
 from server.web.rig_warm import warm_device_layers
 from server.web.session import SongTimelineStore
 from server.web.timeline_api import TimelineLibraryDeps, build_timeline_router
@@ -74,11 +73,12 @@ def test_no_fixture_path_means_no_warm_and_no_console_read() -> None:
 
 def test_a_warm_while_another_runs_returns_at_once() -> None:
     port, _ = _apply_rig()
-    rig_warm._WARM_LOCK.acquire()
+    cache = RigReadCache()
+    cache.warm_lock.acquire()
     try:
-        assert warm_device_layers(_gate(port), rig_paths=RIG_PATHS, cache=RigReadCache()) is False
+        assert warm_device_layers(_gate(port), rig_paths=RIG_PATHS, cache=cache) is False
     finally:
-        rig_warm._WARM_LOCK.release()
+        cache.warm_lock.release()
 
 
 @pytest.mark.usefixtures("show_scale_types")
