@@ -61,6 +61,14 @@ export const CONSOLE_DELAY_MISSING_MESSAGE = "콘솔→음원 지연 측정값�
 /** 음원을 틀 때가 됐는데 이 곡에 연결된 음원이 아예 없을 때. 콘솔 타임코드는 이미 돌고 있다. */
 export const CONSOLE_NO_SONG_AUDIO_MESSAGE = "이 곡에 연결된 음원이 없어 콘솔 타임코드만 재생 중입니다.";
 
+/** 마디를 콘솔 커서로 보내려는데 박자 정보(마디 길이)가 없을 때. 조용히 버리지 않고 알린다. */
+export const CONSOLE_SEEK_TIMING_MISSING_MESSAGE =
+  "박자 정보가 없어 이 마디를 콘솔 커서에 보내지 못했어요 — 콘솔 화면을 확인해 주세요.";
+
+/** 커서 값을 정하는 데 콘솔 지연이 아직 없을 때. 예약은 지우지 않고 잠시 뒤 다시 본다. */
+export const CONSOLE_SEEK_DELAY_MISSING_MESSAGE =
+  "콘솔 지연 측정값을 아직 몰라 커서를 옮기지 못했어요 — 값이 생기면 다시 맞춥니다.";
+
 /** 감독 실기(WT-director-play) — 새 탭은 「콘솔 같이 끔」으로 시작해 ▶ 가 음원만 튼다. 그걸 모르고 콘솔을
  *  기다리지 않게 알린다. */
 export const CONSOLE_PLAY_WAITING_MESSAGE = "콘솔 타임코드 재생 요청을 보냈어요 — 콘솔 응답을 기다리는 중(음원은 콘솔이 출발한 뒤 시작합니다).";
