@@ -192,6 +192,8 @@ CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_stop",
     # 「콘솔 같이」 마디 이동 — 옮긴 마디의 시각(초)을 싣는다(`seconds`). 정지 중 커서만 옮긴다.
     "beat_grid_console_seek",
+    # 「장비 다시 읽기」 — 페이로드 없음. 장비·기종 판독을 버리고 다시 읽는다(읽기 전용).
+    "beat_grid_rig_refresh",
     # 카드 t565 — 2D 무대 판독 요청. 페이로드 없음(곡 트랙 이름과 패치·그룹
     # 경로는 서버가 안다). 콘솔 읽기만 한다.
     "beat_grid_stage_request",
@@ -1022,6 +1024,8 @@ def parse_client_message(raw: str) -> dict:
         "beat_grid_console_stop",
         # 카드 t565 — 무대 판독 요청도 페이로드가 없다.
         "beat_grid_stage_request",
+        # 「장비 다시 읽기」도 페이로드가 없다.
+        "beat_grid_rig_refresh",
         # 카드 t571 — 곡 오디오 링크 요청도 페이로드가 없다(지금 곡은
         # 서버가 이미 안다).
         "song_audio_link_request",

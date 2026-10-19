@@ -665,6 +665,8 @@ export interface BeatGridProps {
    * 응답(`beat_grid_send_status`). 둘 다 넘겨야 토글이 켜진다 — 생략하면 기존처럼
    * 늘 비활성이다. */
   onConsolePlay?: () => void;
+  /** 「장비 다시 읽기」 — 상단 바 버튼. 서버가 장비·기종 판독을 버리고 콘솔에서 다시 읽는다. */
+  onRigRefresh?: () => void;
   /** PR 1 — ❚❚ 일시정지(타임코드만)·일시정지 뒤 ▶ 이어 가기. */
   onConsolePause?: () => void;
   onConsoleResume?: () => void;
@@ -1754,6 +1756,7 @@ export function BeatGrid({
   onTimecodeSubmit,
   pendingApplyCount,
   onConsolePlay,
+  onRigRefresh,
   onConsolePause,
   onConsoleResume,
   onConsoleSeek,
@@ -3029,6 +3032,7 @@ export function BeatGrid({
         }
         timecodeNumber={timecodeNumber}
         onTimecodeSubmit={onTimecodeSubmit}
+        onRigRefresh={onRigRefresh}
         onDrawerToggle={onDrawerRequest ? toggleDrawer : undefined}
         onDraftPropose={pendingDraft ? undefined : requestDraftPropose}
         draftProposeWaiting={draftState === "waiting"}

@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from server.design.rig_read_cache import (
@@ -19,6 +21,7 @@ from server.design.rig_read_cache import (
     RigReadCache,
 )
 from server.safety.gate import _alters_patch
+from server.web.messages import PROTOCOL_VERSION, parse_client_message
 
 from .test_apply_rig_round_trips import _apply_rig
 from .test_beat_grid_stage_round_trips import TRACKS
@@ -84,3 +87,8 @@ def test_refresh_button_rereads_the_device_layers_and_the_next_apply_reads_none(
     _rig_and_members(session, names)
     reread = {k: v for k, v in _delta(before, port.calls).items() if k.endswith("type-mode")}
     assert reread == {}
+
+
+def test_the_refresh_message_parses_without_a_payload() -> None:
+    raw = json.dumps({"v": PROTOCOL_VERSION, "type": "beat_grid_rig_refresh"})
+    assert parse_client_message(raw) == {"v": PROTOCOL_VERSION, "type": "beat_grid_rig_refresh"}

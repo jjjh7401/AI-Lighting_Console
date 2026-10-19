@@ -726,6 +726,14 @@ def create_app(deps: WebDeps) -> FastAPI:
                     await asyncio.to_thread(
                         session.beat_grid_timecode_set, message.get("timecode_number")
                     )
+                elif message_type == "beat_grid_rig_refresh":
+                    # 「장비 다시 읽기」 — 콘솔 읽기가 길어서(장비 재판독) 백그라운드 task 로 돈다.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(session.beat_grid_rig_refresh)
+                    )
                 elif message_type in (
                     "beat_grid_apply",
                     "beat_grid_preview",
