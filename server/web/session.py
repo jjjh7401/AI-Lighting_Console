@@ -13380,6 +13380,20 @@ class ChatSession:
             ]
         return []
 
+    def _beat_grid_record_timecode_number(self) -> int | None:
+        """이 곡의 소유 기록에 적힌 타임코드 번호 — 기록만 읽는다(콘솔을 읽지 않는다)."""
+        record = self._beat_grid_song_record()
+        number = record.get("timecode_number") if record else None
+        if isinstance(number, int) and not isinstance(number, bool) and number >= 1:
+            return number
+        return None
+
+    def _beat_grid_projected(self, seconds: float, requested_at: float, *, playing: bool) -> float:
+        """요청 때 값을 지금 자리로 옮긴다. 재생 중에만 흐른다."""
+        if not playing:
+            return seconds
+        return seconds + (self._beat_grid_clock() - requested_at)
+
     def _beat_grid_timecode_cursor(self, path: str) -> float | None:
         """타임코드 커서를 초로 — 읽기만 한다. 못 읽거나 모양을 모르면 ``None``."""
         try:
@@ -13477,14 +13491,22 @@ class ChatSession:
         미리보기와 같다 — 세션 1회 승인 뒤에는 카드 없이 보낸다. 보낸 뒤 커서를 간격을 두고
         되읽어 목표에 섰는지 말한다. 「ok」만으로 맞췄다고 말하지 않는다."""
         requested_at = self._beat_grid_clock()
-        timecode_number, reason = self._beat_grid_owned_timecode()
-        if reason is not None or timecode_number is None:
-            return self._beat_grid_send_status(last_action="console_seek", ok=False, reason=reason)
+        # 소유 확인을 마친 번호 — 쓰기는 이 번호로만 한다. 소유를 확인하지 않은 채로는 쓰지 않는다.
+        timecode_number: int | None = None
         if resync:
-            # 주기 확인 — 먼저 읽는다. 허용 오차 안이면 아무것도 보내지 않는다.
-            # 못 읽으면 쓰지 않는다(맹목 쓰기 금지).
+            # 주기 확인 — 커서만 먼저 읽는다. 허용 오차 안이면 소유를 확인하지 않는다.
+            # 소유 확인은 칸을 여럿 읽어 0.7초쯤 걸린다. 맞는 틱마다 돌리면
+            # 움직임 명령이 그 뒤에 줄을 선다. 읽는 번호는 이 곡의 기록 번호다.
+            known = self._beat_grid_record_timecode_number()
+            if known is None:
+                timecode_number, reason = self._beat_grid_owned_timecode()
+                if reason is not None or timecode_number is None:
+                    return self._beat_grid_send_status(
+                        last_action="console_seek", ok=False, reason=reason
+                    )
+                known = timecode_number
             pool = self._rig_paths.get("timecodes", TIMECODE_POOL_PATH)
-            cursor = self._beat_grid_timecode_cursor(f"{pool}/{timecode_number}")
+            cursor = self._beat_grid_timecode_cursor(f"{pool}/{known}")
             if cursor is None:
                 return self._beat_grid_send_status(
                     last_action="console_seek",
@@ -13493,13 +13515,22 @@ class ChatSession:
                         "콘솔 커서를 읽지 못해 다시 맞추지 않았습니다 — 콘솔 화면을 확인해 주세요."
                     ),
                 )
-            # 읽는 데 걸린 시간만큼 콘솔은 흘렀다. 요청 때의 값을 지금 자리로 옮겨
-            # 비교하고 쓴다 — 그대로 쓰면 읽기 동안 흐른 만큼 콘솔이 뒤져 다음 주기에 또 고친다.
-            seconds += self._beat_grid_clock() - requested_at
-            if abs(cursor - seconds) <= CONSOLE_RESYNC_TOLERANCE_SECONDS:
+            # 읽는 데 걸린 시간만큼 콘솔은 흘렀다 — 요청 때의 값을 읽은 자리로 옮겨 비교한다.
+            now_seconds = self._beat_grid_projected(seconds, requested_at, playing=True)
+            if abs(cursor - now_seconds) <= CONSOLE_RESYNC_TOLERANCE_SECONDS:
                 return self._beat_grid_send_status(last_action="console_seek", ok=True)
-        text = _cursor_seconds_text(seconds)
+        if timecode_number is None:
+            # 쓰기 전 소유 확인(움직임은 늘 여기서 확인한다).
+            timecode_number, reason = self._beat_grid_owned_timecode()
+            if reason is not None or timecode_number is None:
+                return self._beat_grid_send_status(
+                    last_action="console_seek", ok=False, reason=reason
+                )
         timecodes = (timecode_number, *self._beat_grid_owned_extra_timecodes())
+        # 쓰는 값은 명령이 닿을 때의 자리다. 확인에 걸린 시간만큼 재생 중이면 흘려 보낸다.
+        text = _cursor_seconds_text(
+            self._beat_grid_projected(seconds, requested_at, playing=playing or resync)
+        )
         commands = tuple(f"Set Timecode {number} Property 'Cursor' {text}" for number in timecodes)
         if self._preview_approval.is_approved:
             refusal = self._beat_grid_send_transport_preapproved(commands)

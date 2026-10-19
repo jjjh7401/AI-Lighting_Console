@@ -263,3 +263,67 @@ class TestPlayStartClock:
         assert console.executed.index(f"Top Timecode {TIMECODE_NUMBER}") < console.executed.index(
             f"Go Timecode {TIMECODE_NUMBER}"
         )
+
+
+def _count_console_reads(monkeypatch, session) -> list[str]:
+    """콘솔을 읽는 호출을 센다 — 읽기 함수만 감싸고 값은 그대로 돌려준다."""
+    port = session._rig_capability_port
+    seen: list[str] = []
+    for name in ("query_state", "query_properties"):
+        original = getattr(port, name)
+
+        def counted(*args, _original=original, _name=name, **kwargs):
+            seen.append(f"{_name} {args[0] if args else ''}")
+            return _original(*args, **kwargs)
+
+        monkeypatch.setattr(port, name, counted)
+    return seen
+
+
+class TestTickCostAndLandingValue:
+    def test_a_resync_tick_inside_the_tolerance_checks_no_ownership(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 60.1)
+        reads = _count_console_reads(monkeypatch, session)
+
+        event = session.beat_grid_console_seek(60.0, playing=True, resync=True)
+
+        assert event["ok"] is True
+        # 맞는 주기 확인은 커서만 읽는다. 소유 확인(칸 읽기)은 맞지 않아 써야 할 때만 돈다.
+        assert reads == []
+
+    def test_a_live_move_is_set_to_where_the_song_clock_is_when_the_command_runs(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        clock = {"now": 0.0}
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: clock["now"])
+        owner_check = session._beat_grid_owned_timecode
+
+        def slow_owner_check():
+            clock["now"] += 0.7  # 소유 확인이 콘솔을 읽는 0.7초 — 그 사이에도 콘솔은 흐른다
+            return owner_check()
+
+        monkeypatch.setattr(session, "_beat_grid_owned_timecode", slow_owner_check)
+
+        session.beat_grid_console_seek(60.0, playing=True)
+
+        assert _cursor_lines(console.executed) == [
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 60.7"
+        ]
+
+    def test_a_resync_that_has_to_write_checks_the_owner_before_it_writes(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 61.0)
+        monkeypatch.setattr(
+            session, "_beat_grid_owned_timecode", lambda: (None, "옛 기록이라 멈췄어요")
+        )
+
+        event = session.beat_grid_console_seek(60.0, playing=True, resync=True)
+
+        assert event["ok"] is False
+        assert _cursor_lines(console.executed) == []
