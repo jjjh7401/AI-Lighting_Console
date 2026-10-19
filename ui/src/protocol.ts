@@ -1550,21 +1550,31 @@ export function buildBeatGridNewPreset(
  * 전체를 쓴다 — 서버가 무엇을 보낼지 전부 정한다, AC-LDBEAT-005와 같은
  * 원칙: UI는 콘솔 페이로드를 짓지 않는다). `cells` 를 주면 그 칸 가운데
  * 바뀐 칸만 덧쓰는 칸 단위 반영이다(선택 필드). `live` 는 앱 「적용」이 성공한 같은 칸을 콘솔에도
- * 바로 반영하는 표시다(`cells` 와 함께일 때만 싣는다). */
+ * 바로 반영하는 표시다(`cells` 와 함께일 때만 싣는다). 「웨이브 프리셋 만들기」는 `groupName`(고른 줄 이름)을 싣는다. */
 export function buildBeatGridApply(
-  mode?: "preset_plan",
-  cells?: ReadonlyArray<readonly [string, number]>,
-  live?: boolean,
+  mode?: "preset_plan" | "wave_presets",
+  options: {
+    /** 칸 단위 반영 — 비지 않았을 때만 싣는다(없거나 비면 곡 전체 반영이다). */
+    cells?: ReadonlyArray<readonly [string, number]>;
+    /** 앱 「적용」이 성공한 칸을 콘솔에도 바로 반영 — `cells` 와 함께일 때만 싣는다. */
+    live?: boolean;
+    /** 웨이브 프리셋 — 고른 줄 이름(`mode: "wave_presets"` 에서만 싣는다). */
+    groupName?: string;
+  } = {},
 ): string {
-  // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」만 mode 를 싣는다.
+  // mode 가 없으면 기존 「콘솔에 반영」과 바이트 동일. 「필요한 프리셋 만들기」·「웨이브 프리셋 만들기」만 mode 를 싣는다.
   // cells 는 비지 않았을 때만 싣는다(고른 칸만 반영) — 없거나 비면 곡 전체 반영이다. 그래서 칸 단위 길을
   // 부르는 쪽은 빈 목록을 이 함수에 넘기지 않는다(전체 반영으로 바뀌어 버린다).
-  const frame = mode === undefined
-    ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
-    : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode };
-  if (cells === undefined || cells.length === 0) return JSON.stringify(frame);
+  const frame =
+    mode === undefined
+      ? { v: PROTOCOL_VERSION, type: "beat_grid_apply" }
+      : { v: PROTOCOL_VERSION, type: "beat_grid_apply", mode };
+  const withGroup =
+    mode === "wave_presets" ? { ...frame, group_name: options.groupName ?? "" } : frame;
+  const { cells, live } = options;
+  if (cells === undefined || cells.length === 0) return JSON.stringify(withGroup);
   // live 는 참일 때만 싣는다 — 서버는 cells 없는 live 를 거절하므로 칸이 없으면 싣지 않는다.
-  return JSON.stringify(live === true ? { ...frame, cells, live: true } : { ...frame, cells });
+  return JSON.stringify(live === true ? { ...withGroup, cells, live: true } : { ...withGroup, cells });
 }
 
 /** 반영 준비 — 상단 바 타임코드 번호 입력. 서버가 곡 초안과 보관함에만 적고, 콘솔에는 쓰지 않는다. */

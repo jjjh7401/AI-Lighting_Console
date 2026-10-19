@@ -246,8 +246,9 @@ PANEL_ITEM_SOURCES = ("pin", "auto")
 # `ChatSession.beat_grid_new_preset`이 이 값을 보고 칸 필드로 번역한다.
 BEAT_GRID_NEW_PRESET_FIELDS = ("dimmer_preset", "dimmer_effect", "position", "color", "effect")
 # beat_grid_apply 의 mode — 기존 「⇪ 콘솔에 반영」(격자 초안 전체)과, 상단 바의
-# 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드). 새 메시지 타입은 만들지 않는다.
-BEAT_GRID_APPLY_MODES = ("apply", "preset_plan")
+# 「필요한 프리셋 만들기」(연출 프리셋 계획 → 기존 승인 카드), 줄 하나의 「웨이브 프리셋 만들기」
+# (wave_presets — 고른 줄 이름 group_name 을 함께 싣는다). 새 메시지 타입은 만들지 않는다.
+BEAT_GRID_APPLY_MODES = ("apply", "preset_plan", "wave_presets")
 # beat_grid_apply·beat_grid_edit 의 선택 필드 ``cells`` 가 한 번에 받는 칸 수 상한
 # (받은 항목 수 기준, 중복 제거 전). 칸 = (줄 이름, 마디).
 BEAT_GRID_CELLS_MAX = 400
@@ -1035,11 +1036,22 @@ def parse_client_message(raw: str) -> dict:
         mode = message.get("mode", "apply")
         if mode not in BEAT_GRID_APPLY_MODES:
             raise ProtocolError(f"beat_grid_apply.mode must be one of {BEAT_GRID_APPLY_MODES}")
+        # 고른 칸만 반영하는 선택 필드 — 격자 초안을 쓰는 mode 'apply' 에서만 뜻이 있다.
+        if "cells" in message and mode != "apply":
+            raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
+        if mode == "wave_presets":
+            # 웨이브 프리셋 — 고른 줄 이름만 싣는다. 그룹 번호는 서버가 읽는다.
+            group_name = message.get("group_name")
+            if not isinstance(group_name, str) or not group_name.strip():
+                raise ProtocolError("beat_grid_apply.group_name must be a non-empty string")
+            return {
+                "v": PROTOCOL_VERSION,
+                "type": "beat_grid_apply",
+                "mode": mode,
+                "group_name": group_name,
+            }
         parsed: dict = {"v": PROTOCOL_VERSION, "type": "beat_grid_apply", "mode": mode}
         if "cells" in message:
-            # 고른 칸만 반영하는 선택 필드 — 격자 초안을 쓰는 mode 'apply' 에서만 뜻이 있다.
-            if mode != "apply":
-                raise ProtocolError("beat_grid_apply.cells is only valid with mode 'apply'")
             parsed["cells"] = _parse_beat_grid_cells(message["cells"], "beat_grid_apply.cells")
         if "live" in message:
             # 앱 「적용」 뒤 같은 칸을 콘솔에 바로 반영 — 칸 단위 반영(cells)에만 뜻이 있다.

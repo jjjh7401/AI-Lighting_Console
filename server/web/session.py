@@ -114,6 +114,7 @@ from server.design.beat_grid_edit import (
     movement_vocabulary,
     resolve_track_scope,
     skipped_range_bars,
+    speed_master_of,
 )
 from server.design.beat_grid_effect_presets import (
     default_effect_library,
@@ -391,6 +392,7 @@ from server.design.timecode_split import (
     split_rows_by_timecode,
     transport_commands,
 )
+from server.design.wave_presets import plan_wave_writes, wave_save_commands
 from server.fx.instantiate import FxInstantiationError  # SPEC-LDRENDER-001 M6(REQ-LDRENDER-011)
 from server.llm.types import LLMProvider, ModelTurn, ToolCall, Usage, UserMessage
 from server.looks.instantiate import LookInstantiation
@@ -3544,6 +3546,16 @@ _WHOLE_BATCH_REASON = (
     "승인 창이 떠 있는 사이 콘솔의 프리셋 번호가 바뀌었거나 읽히지 않아 아무것도 "
     "보내지 않았습니다 — 해당 프리셋을 빼고 나머지를 새 승인 카드로 다시 올립니다"
 )
+#: 웨이브 프리셋 저장의 송신 직전 재확인이 묶음을 멈출 때의 사유. 두 번째 카드는 올리지 않는다.
+_WAVE_WHOLE_BATCH_REASON = (
+    "승인 창이 떠 있는 사이 효과 풀의 빈 번호가 찼거나 풀을 다시 읽지 못해 아무것도 "
+    "보내지 않았습니다 — 「웨이브 프리셋 만들기」를 다시 눌러 새 빈 번호로 계획해 주세요"
+)
+
+
+def _beat_grid_wave_card_title(group_name: str, count: int) -> str:
+    """승인 카드 머리 — 웨이브 저장을 감독 말로 적는다(영어 사유는 「자세히」 안)."""
+    return f"웨이브 프리셋 {count}개 저장 — 「{group_name}」 줄"
 
 
 def _preset_release_command(fids: Sequence[int]) -> str:
@@ -11673,6 +11685,136 @@ class ChatSession:
             reason=saved,
             completed="preset_saved",
             timecode_suggestion=self._beat_grid_timecode_suggestion(),
+        )
+
+    def _beat_grid_wave_refusal(self, message: str) -> dict:
+        """웨이브 프리셋 거절 — 상태 줄에만 사유를 싣는다. 콘솔에는 아무것도 나가지 않는다."""
+        return self._beat_grid_send_status(last_action="apply", ok=False, reason=message)
+
+    def beat_grid_wave_presets(self, group_name: str) -> dict:
+        """디머·컬러 웨이브 효과 프리셋 다섯 개를 「All 1」 효과 풀(풀 21)에 저장한다.
+
+        승인 카드는 한 장이다. 고른 줄(``group_name`` 트랙)의 확인된 콘솔 그룹에 맞춰 만든다.
+        순서: 격자·줄 확인 → 곡 BPM · 스피드 마스터 → 효과 풀 판독(읽기만) → 같은 이름은
+        건너뛰고 빈 번호 배정 → 묶음 한 송신 → 승인 카드(게이트).
+
+        송신 직전 재확인(``BatchRisk.recheck``)이 풀을 다시 읽는다. 승인 창 사이 배정한 번호가
+        찼거나 풀을 못 읽으면 묶음 전체를 0줄로 막는다. 두 번째 카드는 올리지 않고, 다시
+        누르게 한다. 칸에 번호를 적는 일은 이 메서드가 하지 않는다(다음 단계).
+        """
+        store = self._timeline_store
+        timeline = store.latest if store is not None else None
+        if timeline is None:
+            return self._beat_grid_wave_refusal("수정할 박자 격자가 아직 없습니다.")
+        grid = timeline.get("beat_grid")
+        tracks = grid.get("tracks") if isinstance(grid, Mapping) else None
+        track = next(
+            (
+                t
+                for t in tracks or ()
+                if isinstance(t, Mapping) and t.get("group_name") == group_name
+            ),
+            None,
+        )
+        if track is None:
+            return self._beat_grid_wave_refusal(
+                f"줄 「{group_name}」을(를) 격자에서 찾지 못했습니다."
+            )
+        group_no = track.get("group_no")
+        if (
+            not track.get("group_no_confirmed")
+            or not isinstance(group_no, int)
+            or isinstance(group_no, bool)
+        ):
+            return self._beat_grid_wave_refusal(
+                f"줄 「{group_name}」의 콘솔 그룹 번호가 아직 확인되지 않아 보내지 않았습니다."
+            )
+        bpm, _beats_per_bar = effect_plan_timing(timeline)
+        if bpm is None:
+            return self._beat_grid_wave_refusal(
+                "곡 BPM 을 곡 데이터에서 읽지 못해 웨이브 프리셋을 만들지 않았습니다."
+            )
+        speed_master = speed_master_of(load_preset_pool_policy())
+        if speed_master is None:
+            return self._beat_grid_wave_refusal(
+                "preset_pools.yaml 에 speed_master 가 없어 웨이브 프리셋을 만들지 않았습니다."
+            )
+        query = _registry_state_query(self._registry)
+        pool_root = self._beat_grid_preset_pool_root()
+        effect = read_named_pool(
+            query, pool_root, MOVEMENT_EFFECT_POOL_NAME, probe_prefix="wave-preset"
+        )
+        if effect is None:
+            return self._beat_grid_wave_refusal(
+                f"효과 풀「{MOVEMENT_EFFECT_POOL_NAME}」을 읽지 못해 빈 번호를 정하지 못했습니다. "
+                "아무것도 보내지 않았습니다."
+            )
+        pool_no, children = effect
+        writes, skipped = plan_wave_writes(children)
+        skipped_text = ", ".join(preset.console_label for preset in skipped)
+        if not writes:
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=True,
+                reason=(
+                    f"웨이브 프리셋: 같은 이름이 풀 {pool_no}에 이미 있어 "
+                    f"새로 저장할 것이 없습니다({skipped_text}). "
+                    "내용은 확인하지 않았습니다."
+                ),
+            )
+        commands = wave_save_commands(
+            writes, group_no=group_no, preset_pool=pool_no, bpm=bpm, speed_master=speed_master
+        )
+        placed = " · ".join(f"{write.slot} {write.preset.console_label}" for write in writes)
+        reason = (
+            f"웨이브 프리셋 {len(writes)}개 저장 — 풀 {pool_no} {placed} · "
+            f"줄 「{group_name}」(그룹 {group_no}) · BPM {bpm:g}"
+        )
+        if skipped:
+            reason += f" · 같은 이름이라 건너뜀: {skipped_text}"
+
+        def _recheck() -> str | None:
+            fresh = read_named_pool(
+                query, pool_root, MOVEMENT_EFFECT_POOL_NAME, probe_prefix="wave-preset-recheck"
+            )
+            if fresh is None or fresh[0] != pool_no:
+                return _WAVE_WHOLE_BATCH_REASON
+            taken = any(write.slot in fresh[1] for write in writes)
+            return _WAVE_WHOLE_BATCH_REASON if taken else None
+
+        card_token = _BEAT_GRID_CARD_TITLE.set(_beat_grid_wave_card_title(group_name, len(writes)))
+        token = bind_session_key(self._session_key)
+        try:
+            executed = self._dispatch_declared(
+                ToolCall(
+                    id="wave-presets",
+                    name="run_commands",
+                    arguments={"commands": list(commands)},
+                ),
+                risk=BatchRisk(reason=reason, kind="beat_grid_wave_preset", recheck=_recheck),
+            )
+        finally:
+            reset_session_key(token)
+            _BEAT_GRID_CARD_TITLE.reset(card_token)
+        outcomes = executed.command_outcomes
+        done = sum(1 for outcome in outcomes if outcome.status == "executed_ok")
+        if not executed.result.is_error and done == len(commands) == len(outcomes):
+            note = f" · 같은 이름이라 건너뜀: {skipped_text}" if skipped else ""
+            return self._beat_grid_send_status(
+                last_action="apply",
+                ok=True,
+                reason=(
+                    f"웨이브 프리셋 {len(writes)}개를 풀 {pool_no}에 저장했습니다 — {placed} "
+                    f"(줄 {done}개 실행 확인){note}. 칸에는 아직 적지 않았습니다."
+                ),
+            )
+        return self._beat_grid_send_status(
+            last_action="apply",
+            ok=False,
+            reason=(
+                f"웨이브 프리셋 저장이 끝까지 나가지 않았습니다 — {done}/{len(commands)}줄 실행. "
+                "승인 거절·송신 직전 확인·콘솔 무응답 중 하나일 수 있습니다. 격자는 그대로입니다."
+            ),
         )
 
     # -- 카드 t563 — 상단 바 콘솔 버튼 셋: 이 마디 콘솔에서 보기 · 끄기 ·

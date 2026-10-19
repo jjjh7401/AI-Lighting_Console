@@ -442,6 +442,7 @@ export default function App() {
     sendBeatGridApply,
     sendBeatGridApplyCells,
     sendBeatGridPresetPlan,
+    sendBeatGridWavePresets,
     sendBeatGridTimecodeSet,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
@@ -1351,6 +1352,7 @@ export default function App() {
             onMoveCells={sendBeatGridCellEdit}
             approvalPending={state.pendingApprovals.length > 0}
             onPresetPlanRequest={sendBeatGridPresetPlan}
+            onWavePresetRequest={sendBeatGridWavePresets}
             timecodeNumber={state.songTimeline.timeline?.timecode_number ?? null}
             onTimecodeSubmit={sendBeatGridTimecodeSet}
             pendingApplyCount={pendingApplyCountOf(state.songTimeline.timeline?.beat_grid?.unsent_cells)}

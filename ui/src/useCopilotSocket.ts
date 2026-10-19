@@ -294,6 +294,8 @@ export interface CopilotSocket {
   sendBeatGridApplyCells: (cells: ReadonlyArray<readonly [string, number]>, live?: boolean) => void;
   /** 「필요한 프리셋 만들기」 — `beat_grid_apply` 에 mode: "preset_plan". */
   sendBeatGridPresetPlan: () => void;
+  /** 「웨이브 프리셋 만들기」 — `beat_grid_apply` 에 mode: "wave_presets" 와 고른 줄 이름. */
+  sendBeatGridWavePresets: (groupName: string) => void;
   /** 반영 준비 — 상단 바 타임코드 번호 입력(서버가 초안·보관함에 적는다). */
   sendBeatGridTimecodeSet: (timecodeNumber: number) => void;
   /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
@@ -585,11 +587,15 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   // 칸 단위 반영 — 빈 목록이면 아무것도 보내지 않는다(빈 cells 는 전체 반영 프레임과 같아진다).
   const sendBeatGridApplyCells = useCallback(
     (cells: ReadonlyArray<readonly [string, number]>, live?: boolean) => {
-      if (cells.length > 0) send(buildBeatGridApply(undefined, cells, live));
+      if (cells.length > 0) send(buildBeatGridApply(undefined, { cells, live }));
     },
     [send],
   );
   const sendBeatGridPresetPlan = useCallback(() => send(buildBeatGridApply("preset_plan")), [send]);
+  const sendBeatGridWavePresets = useCallback(
+    (groupName: string) => send(buildBeatGridApply("wave_presets", { groupName })),
+    [send],
+  );
   // 반영 준비 — 타임코드 번호 입력. 콘솔에 쓰지 않는다(초안·보관함에만 적힌다).
   const sendBeatGridTimecodeSet = useCallback(
     (timecodeNumber: number) => send(buildBeatGridTimecodeSet(timecodeNumber)),
@@ -734,6 +740,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridApply,
     sendBeatGridApplyCells,
     sendBeatGridPresetPlan,
+    sendBeatGridWavePresets,
     sendBeatGridTimecodeSet,
     sendBeatGridPreview,
     sendBeatGridPreviewOff,

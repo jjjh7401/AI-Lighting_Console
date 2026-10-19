@@ -78,7 +78,7 @@ describe("sendBeatGridApplyCells", () => {
     act(() => socket.sendBeatGridApplyCells([]));
     expect(beatGridFrames()).toEqual([]);
     // 대조군: 같은 빈 목록을 빌더에 그대로 넘기면 전체 반영 프레임이 된다 — 그래서 위 가드가 필요하다.
-    expect(buildBeatGridApply(undefined, [])).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply(undefined, { cells: [] })).toBe('{"v":1,"type":"beat_grid_apply"}');
   });
 
   it("live 를 주면 live:true 를 실은 프레임 하나를 보낸다", () => {

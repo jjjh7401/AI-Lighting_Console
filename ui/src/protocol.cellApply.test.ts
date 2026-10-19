@@ -29,19 +29,23 @@ describe("buildBeatGridApply — cells", () => {
   it("cells 가 없으면 예전과 바이트가 같다", () => {
     expect(buildBeatGridApply()).toBe('{"v":1,"type":"beat_grid_apply"}');
     expect(buildBeatGridApply("preset_plan")).toBe('{"v":1,"type":"beat_grid_apply","mode":"preset_plan"}');
-    expect(buildBeatGridApply(undefined, undefined)).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply(undefined, {})).toBe('{"v":1,"type":"beat_grid_apply"}');
   });
 
   it("cells 가 비어 있어도 키를 싣지 않는다 — 비면 예전 전체 반영과 같다", () => {
-    expect(buildBeatGridApply(undefined, [])).toBe('{"v":1,"type":"beat_grid_apply"}');
-    expect(buildBeatGridApply("preset_plan", [])).toBe('{"v":1,"type":"beat_grid_apply","mode":"preset_plan"}');
+    expect(buildBeatGridApply(undefined, { cells: [] })).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply("preset_plan", { cells: [] })).toBe(
+      '{"v":1,"type":"beat_grid_apply","mode":"preset_plan"}',
+    );
   });
 
   it("비지 않은 cells 는 [줄 이름, 마디] 쌍 그대로 싣는다", () => {
-    const frame = buildBeatGridApply(undefined, [
-      ["BACK", 1],
-      ["FOH", 3],
-    ]);
+    const frame = buildBeatGridApply(undefined, {
+      cells: [
+        ["BACK", 1],
+        ["FOH", 3],
+      ],
+    });
     expect(frame).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",1],["FOH",3]]}');
     expect(JSON.parse(frame)).toEqual({
       v: 1,
@@ -54,28 +58,28 @@ describe("buildBeatGridApply — cells", () => {
   });
 
   it("cells 프레임에는 mode 키가 없다 — 서버는 mode 'apply' 에서만 cells 를 받는다", () => {
-    expect("mode" in JSON.parse(buildBeatGridApply(undefined, [["BACK", 1]]))).toBe(false);
+    expect("mode" in JSON.parse(buildBeatGridApply(undefined, { cells: [["BACK", 1]] }))).toBe(false);
   });
 });
 
 describe("buildBeatGridApply — live (「적용」 뒤 콘솔 반영)", () => {
   it("live 와 비지 않은 cells 가 함께면 live:true 를 cells 뒤에 싣는다", () => {
-    const frame = buildBeatGridApply(undefined, [["BACK", 2]], true);
+    const frame = buildBeatGridApply(undefined, { cells: [["BACK", 2]], live: true });
     expect(frame).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]],"live":true}');
     expect(JSON.parse(frame)).toEqual({ v: 1, type: "beat_grid_apply", cells: [["BACK", 2]], live: true });
   });
 
   it("cells 가 없거나 비면 live 를 싣지 않는다 — 서버는 cells 없는 live 를 거절한다", () => {
-    expect(buildBeatGridApply(undefined, undefined, true)).toBe('{"v":1,"type":"beat_grid_apply"}');
-    expect(buildBeatGridApply(undefined, [], true)).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply(undefined, { live: true })).toBe('{"v":1,"type":"beat_grid_apply"}');
+    expect(buildBeatGridApply(undefined, { cells: [], live: true })).toBe('{"v":1,"type":"beat_grid_apply"}');
   });
 
   it("live 가 거짓이거나 없으면 예전과 바이트가 같다", () => {
-    expect(buildBeatGridApply(undefined, [["BACK", 2]])).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}');
-    expect(buildBeatGridApply(undefined, [["BACK", 2]], false)).toBe(
+    expect(buildBeatGridApply(undefined, { cells: [["BACK", 2]] })).toBe('{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}');
+    expect(buildBeatGridApply(undefined, { cells: [["BACK", 2]], live: false })).toBe(
       '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
     );
-    expect(buildBeatGridApply(undefined, [["BACK", 2]], undefined)).toBe(
+    expect(buildBeatGridApply(undefined, { cells: [["BACK", 2]], live: undefined })).toBe(
       '{"v":1,"type":"beat_grid_apply","cells":[["BACK",2]]}',
     );
     expect(buildBeatGridApply()).toBe('{"v":1,"type":"beat_grid_apply"}');
