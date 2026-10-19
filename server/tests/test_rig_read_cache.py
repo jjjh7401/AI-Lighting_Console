@@ -14,7 +14,6 @@ from server.design.fixture_snapshot import FixtureSnapshotPort
 from server.design.rig_capability_read import read_design_rig
 from server.design.rig_read_cache import (
     LIVE_TTL_SECONDS,
-    STATIC_TTL_SECONDS,
     RigReadCache,
 )
 from server.web.session import ChatSession, SongTimelineStore
@@ -160,19 +159,19 @@ def test_invalidate_forces_a_full_reread(tmp_path, show_scale_types):
     assert port.reads == first_reads
 
 
-def test_static_and_live_layers_expire_independently() -> None:
+def test_device_layers_outlive_the_old_ttls_while_group_members_still_expire() -> None:
     clock = _Clock()
     cache = RigReadCache(clock=clock)
     cache.put("mode_caps", ("k",), "static")
     cache.put("fixture", ("p",), "live")
+    cache.put("members", ("m",), "members")
     clock.now += LIVE_TTL_SECONDS + 1
-    assert cache.get("fixture", ("p",)) is None  # 장비 판독은 짧게 산다.
+    assert cache.get("fixture", ("p",)) == "live"  # 장비 판독은 시간으로 끊지 않는다(리드 결정).
     assert cache.get("mode_caps", ("k",)) == "static"
-    clock.now += STATIC_TTL_SECONDS
-    assert cache.get("mode_caps", ("k",)) is None
+    assert cache.get("members", ("m",)) is None  # 그룹 소속만 짧게 산다.
 
 
-def test_expired_fixture_reads_are_reread_but_type_layout_is_not(tmp_path, show_scale_types):
+def test_a_long_gap_rereads_no_device_layer_only_group_membership(tmp_path, show_scale_types):
     clock = _Clock()
     port, _ = _apply_rig()
     port = _LatencyPort(port._inner)
@@ -181,11 +180,11 @@ def test_expired_fixture_reads_are_reread_but_type_layout_is_not(tmp_path, show_
     names = [name for name, _, _ in TRACKS]
     _rig_and_members(session, names)
     port.reads = 0
-    clock.now += LIVE_TTL_SECONDS + 1
+    clock.now += 10_000_000.0  # 시간이 아무리 지나도 장비·기종은 다시 읽지 않는다.
     rig, _ = _rig_and_members(session, names)
     assert rig.whole
-    # 장비 80대 + 그룹 판독은 다시 읽지만, 기종 채널 걷기(수백 건)는 다시 읽지 않는다.
-    assert 80 <= port.reads < 200
+    # 남는 것은 목록 읽기와 그룹 소속(짧은 수명)뿐이다. 장비 80대·기종 채널 걷기는 없다.
+    assert port.reads < 20
 
 
 def test_partial_reads_are_never_cached() -> None:

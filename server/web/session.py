@@ -10514,6 +10514,7 @@ class ChatSession:
     def _beat_grid_fixture_snapshot(self) -> object:
         """이번 반영 안에서만 쓰는 장비 판독 재사용 포트(``FixtureSnapshotPort``). 장비 경로가
         없으면 원래 상태 포트를 그대로 준다(읽기는 같고, 묻는 횟수만 줄어든다)."""
+        self._rig_cache_follow_patch()
         fixtures_path = self._rig_paths.get("fixtures")
         if not fixtures_path:
             return self._rig_capability_port
@@ -10522,6 +10523,34 @@ class ChatSession:
             fixture_root=str(fixtures_path),
             cache=self._rig_read_cache,
         )
+
+    def _rig_cache_follow_patch(self) -> None:
+        """앱의 패치 쓰기(게이트 epoch)가 있었으면 장비 판독을 버린다 — 옛 패치로 반영하지 않게."""
+        epoch = self._gate.patch_write_epoch
+        if self._rig_read_cache.synced_patch_epoch != epoch:
+            self._rig_read_cache.invalidate()
+            self._rig_read_cache.synced_patch_epoch = epoch
+
+    def beat_grid_rig_refresh(self) -> dict:
+        """「장비 다시 읽기」 — 장비·기종 판독을 버리고 콘솔에서 다시 읽는다(읽기 전용)."""
+        self._rig_read_cache.invalidate()
+        types_root = str(
+            self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
+        )
+        with self._rig_read_cache.reading():
+            rig_read = read_design_rig(
+                self._beat_grid_fixture_snapshot(),
+                fixture_types_root=types_root,
+                cache=self._rig_read_cache,
+            )
+        if rig_read.whole:
+            text = "장비와 기종 배치를 콘솔에서 다시 읽었어요. 다음 「⇪」부터 이 값을 씁니다."
+        else:
+            text = f"장비를 다시 읽었지만 일부만 읽혔어요: {rig_read.detail or rig_read.gap}"
+        self._send(
+            chat_response_event(status="ok", summary="장비 다시 읽기", text=text, commands=[])
+        )
+        return {"ok": True, "whole": rig_read.whole}
 
     def invalidate_rig_read_cache(self) -> None:
         """리그 판독 캐시를 전부 비운다 — 콘솔 재연결·패치/그룹을 고친 직후·명시적 새로고침에서."""
@@ -11263,9 +11292,10 @@ class ChatSession:
         )
         # 리그 단계와 같은 스냅샷을 쓴다 — 장비 전수 판독을 반영 한 번에 한 번만 한다.
         snapshot = self._beat_grid_fixture_snapshot()
-        rig_read = read_design_rig(
-            snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
-        )
+        with self._rig_read_cache.reading():
+            rig_read = read_design_rig(
+                snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
+            )
         attributes, _reasons = resolve_group_dimmer_attributes(
             rig_read, names, self._beat_grid_group_members(names, port=snapshot)
         )
@@ -12283,9 +12313,10 @@ class ChatSession:
             # 속성을 함께 쓰므로, 장비마다 질의 한 번으로 받아 두고 뒤의 읽기는 그 값으로 답한다.
             apply_stage("timecode")
             snapshot = self._beat_grid_fixture_snapshot()
-            rig_read = read_design_rig(
-                snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
-            )
+            with self._rig_read_cache.reading():
+                rig_read = read_design_rig(
+                    snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
+                )
             apply_stage("rig")
             # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
             # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.
