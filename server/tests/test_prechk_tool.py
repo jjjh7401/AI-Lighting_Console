@@ -1272,6 +1272,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_console_pause",
     "beat_grid_console_play",
     "beat_grid_console_resume",
+    # SPEC-LDBEAT-001 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
+    # 콘솔에 쓴다(미리보기와 같은 세션 1회 승인 경로). 재생은 켜지 않는다.
+    "beat_grid_console_seek",
     "beat_grid_console_stop",
     # SPEC-LDARRANGE-001 두 번째 묶음 — 자동 배치 초안 제안·적용·거절(화면이 보내는 요청).
     # 같은 사유의 정당한 확장이고, 손으로 올려야 통과한다는 것이 이 게이트의 전부다.
@@ -1287,6 +1290,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_new_preset",
     "beat_grid_preview",
     "beat_grid_preview_off",
+    # 「장비 다시 읽기」 (2026-10-19, SPEC-LDRHYTHM-001 PR #845) — 상단 바 버튼. 콘솔 읽기만 한다
+    # (장비·기종 판독을 버리고 다시 읽는다). PRECHK/OVERLAP 축과 무관한 정당한 확장이다.
+    "beat_grid_rig_refresh",
     # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.
     # 콘솔 읽기만(좌표 + 그룹 소속). 같은 사유의 정당한 확장이다.
     "beat_grid_stage_request",

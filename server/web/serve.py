@@ -410,6 +410,7 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
         ui_dist=ui_dist if ui_dist.is_dir() else None,
         backup_manager=stack.backup,
         heartbeat_interval_seconds=args.heartbeat_interval,
+        warm_device_layers_on_start=True,
         backup_poll_seconds=args.backup_poll,
         settings=SettingsDeps(
             seed_path=config_path,

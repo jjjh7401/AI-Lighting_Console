@@ -133,7 +133,7 @@ def _transport_session(tmp_path, monkeypatch, *, extra_name: str, extra_target: 
     monkeypatch.setattr(
         session,
         "_beat_grid_send_transport_preapproved",
-        lambda commands: sent.append(tuple(commands)) or True,
+        lambda commands, **_kw: sent.append(tuple(commands)) or True,
     )
     return session, sent
 

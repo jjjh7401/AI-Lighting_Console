@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -29,6 +30,11 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
+from server.design.rig_read_cache import (
+    CUE_MONITOR_DEFER_CAP_SECONDS,
+    RigReadCache,
+    wait_while_reading,
+)
 from server.director.director_api import DirectorApiDeps, build_director_router
 from server.llm.types import LLMProvider
 from server.orchestrator.spatial_memory import SpatialMemory
@@ -79,6 +85,7 @@ from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
+from server.web.rig_warm import warm_until_answered
 from server.web.session import (
     _BAR_MAP_ENTRY_FAILED_TEXT,
     _BAR_MAP_ENTRY_REJECTED_SUMMARY,
@@ -192,6 +199,8 @@ class WebDeps:
     backup_manager: BackupManager | None = None
     heartbeat_interval_seconds: float | None = None
     backup_poll_seconds: float | None = None
+    # 운영 실행에서만 켠다 — 서버를 띄울 때 장비 판독을 미리 채운다(리드 결정, 2026-10-19).
+    warm_device_layers_on_start: bool = False
     settings: SettingsDeps | None = None
     provision: ProvisionDeps | None = None
     # W3 (P0 paperwork UI exposure): the read-only patch-sheet/cue-sheet/
@@ -304,9 +313,25 @@ def create_app(deps: WebDeps) -> FastAPI:
     """Build the FastAPI app around one composed dependency set."""
     from contextlib import asynccontextmanager
 
+    # 기종·모드 배치는 서버 수명 동안 한 번만 읽는다 — 연결(ChatSession)마다 새로 만들면
+    # 「⇪ 콘솔에 반영」 때마다 채널 걷기가 다시 난다. 모든 연결이 이 하나를 함께 쓴다.
+    rig_read_cache = RigReadCache()
+
+    def _warm_device_layers_in_background() -> None:
+        """장비 판독 예열을 백그라운드 스레드로 돌린다 — 서버를 띄울 때와 곡을 열 때 쓴다."""
+        threading.Thread(
+            target=warm_until_answered,
+            args=(deps.gate,),
+            kwargs={"rig_paths": deps.rig_paths, "cache": rig_read_cache},
+            daemon=True,
+            name="rig-warm",
+        ).start()
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         tasks: list[asyncio.Task] = []
+        if deps.warm_device_layers_on_start:
+            _warm_device_layers_in_background()
         if deps.heartbeat_interval_seconds:
             tasks.append(
                 asyncio.create_task(_heartbeat_loop(deps, deps.heartbeat_interval_seconds))
@@ -431,6 +456,7 @@ def create_app(deps: WebDeps) -> FastAPI:
             pending_plan_store=deps.pending_plan_store,
             spatial_memory=deps.spatial_memory,
             song_audio_link_store=deps.song_audio_link_store,
+            rig_read_cache=rig_read_cache,
         )
 
         def push_status() -> None:
@@ -720,6 +746,14 @@ def create_app(deps: WebDeps) -> FastAPI:
                     await asyncio.to_thread(
                         session.beat_grid_timecode_set, message.get("timecode_number")
                     )
+                elif message_type == "beat_grid_rig_refresh":
+                    # 「장비 다시 읽기」 — 콘솔 읽기가 길어서(장비 재판독) 백그라운드 task 로 돈다.
+                    if current_task is not None and not current_task.done():
+                        await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
+                        continue
+                    current_task = asyncio.create_task(
+                        asyncio.to_thread(session.beat_grid_rig_refresh)
+                    )
                 elif message_type in (
                     "beat_grid_apply",
                     "beat_grid_preview",
@@ -729,6 +763,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                     "beat_grid_console_resume",
                     "beat_grid_console_stop",
                     "beat_grid_cell_edit",
+                    "beat_grid_console_seek",
                 ):
                     # 카드 t563(SPEC-LDBEAT-001 M4) — 상단 바 콘솔 버튼 셋.
                     # `beat_grid_edit`과 달리 이 셋은 `run_commands` ->
@@ -780,6 +815,16 @@ def create_app(deps: WebDeps) -> FastAPI:
                     elif message_type == "beat_grid_cell_edit":
                         current_task = asyncio.create_task(
                             asyncio.to_thread(session.beat_grid_cell_edit, message["ops"])
+                        )
+                    # 「콘솔 같이」 마디 이동 — 정지 중 옮긴 마디의 시각으로 타임코드 커서를 세운다.
+                    elif message_type == "beat_grid_console_seek":
+                        current_task = asyncio.create_task(
+                            asyncio.to_thread(
+                                session.beat_grid_console_seek,
+                                message["seconds"],
+                                playing=message.get("playing", False),
+                                resync=message.get("resync", False),
+                            )
                         )
                     else:
                         current_task = asyncio.create_task(
@@ -1123,6 +1168,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
 
                     def _cue_monitor() -> None:
+                        # 장비 판독(예열·「⇪」·「장비 다시 읽기」) 동안 감시 틱을 뒤로 미룬다.
+                        # 콘솔은 한 번에 한 명령만 받는다(리드 결정, 2026-10-19). 상한이 있어서
+                        # 판독이 길어도 감시가 영영 멈추지 않는다.
+                        wait_while_reading(
+                            rig_read_cache, cap_seconds=CUE_MONITOR_DEFER_CAP_SECONDS
+                        )
                         # latency-1-3: the tick needs the executor NUMBERS and
                         # nothing else, and those change only when the operator
                         # re-patches. Rebuilding the whole dash catalog here
@@ -1215,6 +1266,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 store=deps.song_timeline_store,
                 library=deps.timeline_library,
                 song_audio_link_store=deps.song_audio_link_store,
+                on_open=_warm_device_layers_in_background,
             )
         )
     )

@@ -20,10 +20,13 @@ import {
   CONSOLE_DELAY_MISSING_MESSAGE,
   CONSOLE_FOLLOW_OFF_MESSAGE,
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
+  CONSOLE_SEEK_DELAY_MISSING_MESSAGE,
+  CONSOLE_SEEK_TIMING_MISSING_MESSAGE,
   CONSOLE_PLAY_WAITING_MESSAGE,
   createConsoleFollowRelay,
   observeConsoleFollowStatus,
 } from "./beatgrid/consoleFollowRelay";
+import { CONSOLE_SEEK_DEBOUNCE_MS } from "./beatgrid/consoleSeekPlan";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -108,7 +111,7 @@ interface AppOptions {
 
 /** `App` 흉내 — 중계 객체·응답·순번은 `BeatGrid` 가 사라져도 남는다. */
 function createApp(options: AppOptions = {}) {
-  const grid = options.grid ?? gridWithDelay(DELAY_SECONDS);
+  let grid = options.grid ?? gridWithDelay(DELAY_SECONDS);
   const relay = createConsoleFollowRelay();
   const onConsolePlay = vi.fn();
   const onConsolePause = vi.fn();
@@ -144,6 +147,11 @@ function createApp(options: AppOptions = {}) {
     onConsolePause,
     onConsoleResume,
     onConsoleStop,
+    /** 격자 데이터를 바꾼다(지연 측정값이 없다가 생기는 경우 등). */
+    setGrid(next: BeatGridView) {
+      grid = next;
+      draw();
+    },
     /** 전체화면을 연다 — 새 `BeatGrid` 인스턴스가 마운트된다. */
     open() {
       shown = true;
@@ -748,21 +756,106 @@ describe("PR 1 — 일시정지(❚❚)는 타임코드만 세우고, 이어 가
     expect(app.onConsolePlay).toHaveBeenCalledTimes(2);
   });
 
-  it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 재생 중에는 보내지 않는다", () => {
+  it("재생 중 마디를 누르면 멈추지 않고 음원 자리를 옮기며, 연타가 멈춘 뒤 마지막 자리 하나만 콘솔 커서로 보낸다", () => {
     const onPreviewBar = vi.fn();
-    const app = createApp({ props: { onPreviewBar } });
+    const onConsoleSeek = vi.fn();
+    // 재생 시계(`performance.now`)는 손으로 돌린다 — 보내는 순간의 음원 자리를 정확히 잰다.
+    let perfMs = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => perfMs);
+    // 마디→초 환산(박자)이 있어야 커서를 옮긴다 — 없으면 아무것도 보내지 않는다(아래 시험).
+    const app = createApp({ props: { onPreviewBar, onConsoleSeek, secondsPerBar: 2 } });
     app.open();
     connectAudio();
     pressPlayWithConsoleFollow(app);
     app.receive(status());
     advance(DELAY_SECONDS * 1000);
 
-    click(nextBarButton()); // 재생 중 — 콘솔 보기는 보내지 않는다
+    click(nextBarButton()); // 재생 중 — 멈추지 않는다(❚❚ 없음). 콘솔 보기는 보내지 않는다.
+    click(nextBarButton()); // 연타 — 아직 모으는 중
+    expect(app.onConsolePause).not.toHaveBeenCalled();
     expect(onPreviewBar).not.toHaveBeenCalled();
+    expect(onConsoleSeek).not.toHaveBeenCalled();
+
+    perfMs += CONSOLE_SEEK_DEBOUNCE_MS;
+    advance(CONSOLE_SEEK_DEBOUNCE_MS); // 연타가 멈춘 뒤 마지막 자리 하나만
+    expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+    const [seconds, options] = onConsoleSeek.mock.calls[0] as [number, unknown];
+    expect(options).toEqual({ playing: true });
+    // 보내는 순간의 음원 자리 = 마지막 마디 + 누른 뒤 흐른 시간. 콘솔 값은 거기에 실측 지연을 더한 것이다.
+    expect((seconds - DELAY_SECONDS - CONSOLE_SEEK_DEBOUNCE_MS / 1000) % 2).toBeCloseTo(0, 6);
+  });
+
+  it("박자 정보가 없으면 재생 중 마디 이동을 조용히 건너뛰지 않고 알린다", () => {
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onConsoleSeek } }); // 마디 길이(secondsPerBar)를 주지 않는다
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+
+    click(nextBarButton());
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+
+    expect(onConsoleSeek).not.toHaveBeenCalled();
+    expect(errorTexts()).toContain(CONSOLE_SEEK_TIMING_MISSING_MESSAGE);
+  });
+
+  it("콘솔 지연을 아직 모르면 커서 이동을 버리지 않고, 값이 생기면 그때 보낸다", () => {
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onConsoleSeek, secondsPerBar: 2 } });
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+
+    click(nextBarButton()); // 예약한다
+    app.setGrid(gridWithDelay(null)); // 보내기 전에 지연 측정값이 사라진다
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).not.toHaveBeenCalled();
+    expect(errorTexts()).toContain(CONSOLE_SEEK_DELAY_MISSING_MESSAGE);
+
+    app.setGrid(gridWithDelay(DELAY_SECONDS));
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+  });
+
+  it("일시정지 중 마디를 누르면 그 마디의 콘솔 보기를 보내고, 커서 이동은 짧게 모아 마지막 마디만 한 번 보낸다", () => {
+    const onPreviewBar = vi.fn();
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onPreviewBar, onConsoleSeek, secondsPerBar: 2 } });
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
 
     click(playButton()); // ❚❚
     app.receive(status({ last_action: "console_stop" }));
+    onConsoleSeek.mockClear();
+
     click(nextBarButton()); // 일시정지 중 — 그 마디의 콘솔 보기(Goto)를 보낸다
-    expect(onPreviewBar).toHaveBeenCalledTimes(1);
+    click(nextBarButton());
+    expect(onPreviewBar).toHaveBeenCalledTimes(2);
+    expect(onConsoleSeek).not.toHaveBeenCalled(); // 아직 모으는 중
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).toHaveBeenCalledTimes(1);
+  });
+
+  it("박자(마디→초 환산)가 없으면 콘솔 커서를 옮기지 않는다 — 시각을 지어내지 않는다", () => {
+    const onConsoleSeek = vi.fn();
+    const app = createApp({ props: { onConsoleSeek } }); // secondsPerBar 없음
+    app.open();
+    connectAudio();
+    pressPlayWithConsoleFollow(app);
+    app.receive(status());
+    advance(DELAY_SECONDS * 1000);
+
+    click(playButton()); // ❚❚
+    app.receive(status({ last_action: "console_stop" }));
+    click(nextBarButton());
+    advance(CONSOLE_SEEK_DEBOUNCE_MS);
+    expect(onConsoleSeek).not.toHaveBeenCalled();
   });
 });

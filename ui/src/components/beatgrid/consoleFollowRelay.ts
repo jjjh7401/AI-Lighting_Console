@@ -19,7 +19,8 @@ export interface ConsoleFollowRelay {
   /** ▶ 를 누를 때 화면에 있던 응답 객체. 이것과 **다른** 객체가 와야 이번 요청의 답이다(앞 응답을 새 답으로
    * 오인하지 않는다). 그때 화면에 응답이 없었으면 `null`. */
   pressedAgainst: BeatGridSendStatus | null;
-  /** 성공한 콘솔 재생 응답을 본 시각(`Date.now()`). `null` 이면 이어 갈 콘솔 실행이 없다. */
+  /** 콘솔이 돌기 시작한 시각(`Date.now()`) — 서버가 실은 시작 시각, 없으면 성공 응답을 본 시각.
+   * `null` 이면 이어 갈 콘솔 실행이 없다. */
   responseAtMs: number | null;
   /** 지금 마운트된 `BeatGrid` 가 이미 음원을 시작했는가(마운트마다 한 번만 튼다). */
   audioStarted: boolean;
@@ -59,6 +60,14 @@ export const CONSOLE_DELAY_MISSING_MESSAGE = "콘솔→음원 지연 측정값�
 
 /** 음원을 틀 때가 됐는데 이 곡에 연결된 음원이 아예 없을 때. 콘솔 타임코드는 이미 돌고 있다. */
 export const CONSOLE_NO_SONG_AUDIO_MESSAGE = "이 곡에 연결된 음원이 없어 콘솔 타임코드만 재생 중입니다.";
+
+/** 마디를 콘솔 커서로 보내려는데 박자 정보(마디 길이)가 없을 때. 조용히 버리지 않고 알린다. */
+export const CONSOLE_SEEK_TIMING_MISSING_MESSAGE =
+  "박자 정보가 없어 이 마디를 콘솔 커서에 보내지 못했어요 — 콘솔 화면을 확인해 주세요.";
+
+/** 커서 값을 정하는 데 콘솔 지연이 아직 없을 때. 예약은 지우지 않고 잠시 뒤 다시 본다. */
+export const CONSOLE_SEEK_DELAY_MISSING_MESSAGE =
+  "콘솔 지연 측정값을 아직 몰라 커서를 옮기지 못했어요 — 값이 생기면 다시 맞춥니다.";
 
 /** 감독 실기(WT-director-play) — 새 탭은 「콘솔 같이 끔」으로 시작해 ▶ 가 음원만 튼다. 그걸 모르고 콘솔을
  *  기다리지 않게 알린다. */
@@ -136,7 +145,7 @@ export function observeConsoleRunStatus(relay: ConsoleFollowRelay, status: BeatG
  * - 기다리는 중이 아니거나, 응답이 없거나, ▶ 를 누를 때 이미 있던 객체이거나, 콘솔 재생 응답이 아니면
  *   답이 아니다.
  * - 거절이면 이유를 남긴다(음원은 틀지 않는다).
- * - 성공이면 지금 시각을 콘솔 시작 시각으로 기록한다 — 이 시각에서 음원 위치를 계산한다. */
+ * - 성공이면 콘솔 시작 시각을 기록한다 — 서버가 실었으면 그 시각, 없으면 지금. 이 시각에서 음원 위치를 계산한다. */
 export function observeConsoleFollowStatus(
   relay: ConsoleFollowRelay,
   status: BeatGridSendStatus | null,
@@ -151,7 +160,8 @@ export function observeConsoleFollowStatus(
     return true;
   }
   relay.failure = null;
-  relay.responseAtMs = nowMs;
+  // 서버가 콘솔이 돌기 시작한 시각을 실었으면 그 시각으로 잰다. 응답이 늦게 와도 음원은 콘솔과 같은 자리에서 튼다.
+  relay.responseAtMs = status.console_started_at_ms ?? nowMs;
   return true;
 }
 
