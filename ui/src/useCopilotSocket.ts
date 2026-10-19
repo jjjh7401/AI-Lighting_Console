@@ -17,6 +17,7 @@ import {
   buildBeatGridPreview,
   buildBeatGridPreviewOff,
   buildBeatGridConsolePlay,
+  buildBeatGridRigRefresh,
   buildBeatGridConsolePause,
   buildBeatGridConsoleResume,
   buildBeatGridConsoleSeek,
@@ -296,6 +297,7 @@ export interface CopilotSocket {
   sendBeatGridPreviewOff: () => void;
   /** 카드 t578 — 「콘솔 같이」 타임코드 재생·정지. */
   sendBeatGridConsolePlay: () => void;
+  sendBeatGridRigRefresh: () => void;
   /** PR 1 — ❚❚ 일시정지(타임코드만) · 일시정지 뒤 ▶ 이어 가기. */
   sendBeatGridConsolePause: () => void;
   sendBeatGridConsoleResume: () => void;
@@ -587,6 +589,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
   );
   const sendBeatGridPreviewOff = useCallback(() => send(buildBeatGridPreviewOff()), [send]);
   const sendBeatGridConsolePlay = useCallback(() => send(buildBeatGridConsolePlay()), [send]);
+  const sendBeatGridRigRefresh = useCallback(() => send(buildBeatGridRigRefresh()), [send]);
   const sendBeatGridConsoleStop = useCallback(() => send(buildBeatGridConsoleStop()), [send]);
   const sendBeatGridConsolePause = useCallback(() => send(buildBeatGridConsolePause()), [send]);
   const sendBeatGridConsoleResume = useCallback(() => send(buildBeatGridConsoleResume()), [send]);
@@ -722,6 +725,7 @@ export function useCopilotSocket(url?: string, options?: CopilotSocketOptions): 
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridConsolePlay,
+    sendBeatGridRigRefresh,
     sendBeatGridConsolePause,
     sendBeatGridConsoleResume,
     sendBeatGridConsoleSeek,

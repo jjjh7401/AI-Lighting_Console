@@ -1286,6 +1286,9 @@ _EXPECTED_CLIENT_MESSAGE_TYPES = (
     "beat_grid_new_preset",
     "beat_grid_preview",
     "beat_grid_preview_off",
+    # 「장비 다시 읽기」 (2026-10-19, SPEC-LDRHYTHM-001 PR #845) — 상단 바 버튼. 콘솔 읽기만 한다
+    # (장비·기종 판독을 버리고 다시 읽는다). PRECHK/OVERLAP 축과 무관한 정당한 확장이다.
+    "beat_grid_rig_refresh",
     # 카드 t565 (2026-10-11, SPEC-LDBEAT-001 REQ-022) — 2D 무대 판독 요청.
     # 콘솔 읽기만(좌표 + 그룹 소속). 같은 사유의 정당한 확장이다.
     "beat_grid_stage_request",

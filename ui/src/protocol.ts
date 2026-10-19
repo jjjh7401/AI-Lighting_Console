@@ -1561,6 +1561,11 @@ export function buildBeatGridTimecodeSet(timecodeNumber: number): string {
   });
 }
 
+/** 「장비 다시 읽기」 — 상단 바 버튼. 서버가 장비·기종 판독을 버리고 콘솔에서 다시 읽는다. 페이로드 없음. */
+export function buildBeatGridRigRefresh(): string {
+  return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_rig_refresh" });
+}
+
 /** 카드 t563 — 상단 바 「▶ 이 마디 콘솔에서 보기」. */
 export function buildBeatGridPreview(bar: number): string {
   return JSON.stringify({ v: PROTOCOL_VERSION, type: "beat_grid_preview", bar });

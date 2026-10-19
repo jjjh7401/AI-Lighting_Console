@@ -147,6 +147,8 @@ export interface BeatGridTopBarProps {
    * `onTimecodeSubmit`이 없으면 입력칸은 비활성이고 title 로 그 이유를 말한다. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
+  /** 「장비 다시 읽기」 — 장비·기종 판독을 버리고 콘솔에서 다시 읽는다. 콘솔에는 쓰지 않는다. */
+  onRigRefresh?: () => void;
   /** 반영 흐름(프리셋 저장 → 반영 → 콘솔 재생) 띠. 넘기면 상단 바 **아래**에 별도 줄로 그린다(상단 바
    * 한 줄 배치는 건드리지 않는다). 다음 단계가 「반영」일 때의 버튼 강조는 큐 편집 칸의
    * `ConsoleApplyButton` 이 맡는다.
@@ -237,6 +239,7 @@ export function BeatGridTopBar({
   onPreviewOff,
 timecodeNumber = null,
   onTimecodeSubmit,
+  onRigRefresh,
   onDrawerToggle,
   onDraftPropose,
   draftProposeWaiting = false,
@@ -421,6 +424,16 @@ timecodeNumber = null,
           ■ 끄기
         </button>
         <TimecodeField value={timecodeNumber} onSubmit={onTimecodeSubmit} />
+        {onRigRefresh && (
+          <button
+            type="button"
+            className="tbtn"
+            title="장비·기종 판독을 버리고 콘솔에서 다시 읽습니다 — 콘솔에서 패치를 고친 뒤 누르세요. 콘솔에는 쓰지 않습니다"
+            onClick={() => onRigRefresh()}
+          >
+            장비 다시 읽기
+          </button>
+        )}
         {onDraftPropose && (
           <button
             type="button"

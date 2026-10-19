@@ -224,7 +224,7 @@ from server.design.cue_sheet_edit import (
     apply_cue_sheet_edit,
     parse_cue_sheet_edit_request,
 )
-from server.design.fixture_snapshot import FixtureSnapshotPort
+from server.design.fixture_snapshot import FixtureSnapshotPort, RememberingFixturePort
 from server.design.interview import (
     Q1_CONCEPT,
     Q2_PALETTE,
@@ -298,7 +298,12 @@ from server.design.rig_capability_read import (
     notice_for as rig_capability_notice,
 )
 from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
-from server.design.rig_read_cache import KIND_FIXTURE, KIND_MEMBERS, RigReadCache
+from server.design.rig_read_cache import (
+    KIND_FIXTURE,
+    KIND_MEMBERS,
+    RigReadCache,
+    follow_patch_epoch,
+)
 
 # 카드 t441 — 아래 다섯은 (재수출 전용, 이 파일 안에서는 안 쓴다 —
 # `as <같은 이름>` 은 ruff 가 인식하는 명시 재수출 표시다. 값·동작은
@@ -4569,6 +4574,7 @@ class ChatSession:
         spatial_memory: SpatialMemory | None = None,
         beat_grid_suggestion_source: SuggestionSource | None = None,
         song_audio_link_store: SongAudioLinkStore | None = None,
+        rig_read_cache: RigReadCache | None = None,
     ) -> None:
         self._gate = gate
         # Injected so the status surface owns the I/O and the health state
@@ -4789,8 +4795,9 @@ class ChatSession:
         # 탄다(읽기 세 가지만 쓴다). 테스트는 이 속성을 직접 스텁한다.
         self._stage_port = gate.state_port
         # 카드 rig-cache — 기종·모드·채널 배치(정적)와 장비 판독·그룹 소속(짧은 수명)을
-        # 세션 안에서 재사용한다. 첫 반영만 전부 읽고 두 번째부터는 거의 읽지 않는다.
-        self._rig_read_cache = RigReadCache()
+        # 재사용한다. 서버가 넘긴 수명 캐시가 있으면 연결이 바뀌어도 그것을 쓴다(기종 배치는
+        # 서버가 살아 있는 동안 한 번만 읽는다). 없으면 이 연결 안에서만 쓴다.
+        self._rig_read_cache = rig_read_cache if rig_read_cache is not None else RigReadCache()
         registry = build_toolset(
             execution_port=_MeasuredExecutionPort(gate.execution_port, recorder),
             state_port=gate.state_port,
@@ -5290,9 +5297,19 @@ class ChatSession:
         port = getattr(self, "_rig_capability_port", None)
         if port is None:
             return DesignRigRead()
-        return read_design_rig(
-            port, fixture_types_root=_FIXTURE_TYPES_ROOT, cache=self._rig_read_cache
-        )
+        # 반영 경로가 이 판독을 여러 번 부른다. 장비 스냅샷을 거쳐 한 번 읽은 것을 재사용하고,
+        # 판독 중에는 감시 틱을 뒤로 미룬다(리드 재측정: 장비 전수 읽기가 반영마다 세 번 났다).
+        fixtures = self._rig_paths.get("fixtures")
+        if fixtures:
+            # 장비마다 한 번 묻고 성공 답을 기억한다(반영마다 세 번 묻던 것을 막는다).
+            port = RememberingFixturePort(
+                port, fixture_root=str(fixtures), cache=self._rig_read_cache
+            )
+        # 판독 중에는 감시 틱을 뒤로 미룬다(리그 판독은 콘솔을 여러 번 묻는다).
+        with self._rig_read_cache.reading():
+            return read_design_rig(
+                port, fixture_types_root=_FIXTURE_TYPES_ROOT, cache=self._rig_read_cache
+            )
 
     def _try_pointing_coordinates(
         self, call_id: str
@@ -10512,6 +10529,7 @@ class ChatSession:
     def _beat_grid_fixture_snapshot(self) -> object:
         """이번 반영 안에서만 쓰는 장비 판독 재사용 포트(``FixtureSnapshotPort``). 장비 경로가
         없으면 원래 상태 포트를 그대로 준다(읽기는 같고, 묻는 횟수만 줄어든다)."""
+        self._rig_cache_follow_patch()
         fixtures_path = self._rig_paths.get("fixtures")
         if not fixtures_path:
             return self._rig_capability_port
@@ -10520,6 +10538,31 @@ class ChatSession:
             fixture_root=str(fixtures_path),
             cache=self._rig_read_cache,
         )
+
+    def _rig_cache_follow_patch(self) -> None:
+        """앱의 패치 쓰기(게이트 epoch)가 있었으면 장비 판독을 버린다 — 옛 패치로 반영하지 않게."""
+        follow_patch_epoch(self._rig_read_cache, self._gate.patch_write_epoch)
+
+    def beat_grid_rig_refresh(self) -> dict:
+        """「장비 다시 읽기」 — 장비·기종 판독을 버리고 콘솔에서 다시 읽는다(읽기 전용)."""
+        self._rig_read_cache.invalidate()
+        types_root = str(
+            self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
+        )
+        with self._rig_read_cache.reading():
+            rig_read = read_design_rig(
+                self._beat_grid_fixture_snapshot(),
+                fixture_types_root=types_root,
+                cache=self._rig_read_cache,
+            )
+        if rig_read.whole:
+            text = "장비와 기종 배치를 콘솔에서 다시 읽었어요. 다음 「⇪」부터 이 값을 씁니다."
+        else:
+            text = f"장비를 다시 읽었지만 일부만 읽혔어요: {rig_read.detail or rig_read.gap}"
+        self._send(
+            chat_response_event(status="ok", summary="장비 다시 읽기", text=text, commands=[])
+        )
+        return {"ok": True, "whole": rig_read.whole}
 
     def invalidate_rig_read_cache(self) -> None:
         """리그 판독 캐시를 전부 비운다 — 콘솔 재연결·패치/그룹을 고친 직후·명시적 새로고침에서."""
@@ -11259,11 +11302,14 @@ class ChatSession:
         types_root = str(
             self._rig_paths.get("fixture_types", DEFAULT_RIG_CONTEXT_PATHS["fixture_types"])
         )
-        rig_read = read_design_rig(
-            self._rig_capability_port, fixture_types_root=types_root, cache=self._rig_read_cache
-        )
+        # 리그 단계와 같은 스냅샷을 쓴다 — 장비 전수 판독을 반영 한 번에 한 번만 한다.
+        snapshot = self._beat_grid_fixture_snapshot()
+        with self._rig_read_cache.reading():
+            rig_read = read_design_rig(
+                snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
+            )
         attributes, _reasons = resolve_group_dimmer_attributes(
-            rig_read, names, self._beat_grid_group_members(names)
+            rig_read, names, self._beat_grid_group_members(names, port=snapshot)
         )
         return {group: tuple(attrs) for group, attrs in attributes.items()}
 
@@ -12279,9 +12325,10 @@ class ChatSession:
             # 속성을 함께 쓰므로, 장비마다 질의 한 번으로 받아 두고 뒤의 읽기는 그 값으로 답한다.
             apply_stage("timecode")
             snapshot = self._beat_grid_fixture_snapshot()
-            rig_read = read_design_rig(
-                snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
-            )
+            with self._rig_read_cache.reading():
+                rig_read = read_design_rig(
+                    snapshot, fixture_types_root=types_root, cache=self._rig_read_cache
+                )
             apply_stage("rig")
             # 카드 t573 — 트랙 그룹마다 디머 속성을 고른다. 소속은 무대 칸이
             # 이미 쓰는 판독(``read_beat_grid_stage``)을 그대로 다시 부른다.
@@ -14295,8 +14342,9 @@ class ChatSession:
         outcomes``)가 「못 읽음」으로 다룬다(지어내지 않는다)."""
         if not fids:
             return {}
-        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 같은 장비를 바로 다시 계획·반영하면 패치 열거와
-        # 채널 판독(재실행 1 감사로그 약 10 초)을 건너뛴다. 모든 fid 가 읽혔을 때만 기억한다.
+        # 장비 판독 캐시(KIND_FIXTURE, 서버 수명 — 「장비 다시 읽기」·패치 쓰기 때만 버린다).
+        # 같은 장비를 바로 다시 계획·반영하면 패치 열거와 채널 판독(재실행 1 감사로그 약 10 초)을
+        # 건너뛴다. 모든 fid 가 읽혔을 때만 기억한다.
         cache_key = ("beat_grid_color_channels", tuple(sorted(set(fids))))
         cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)
         if cached is not None:
@@ -14321,7 +14369,7 @@ class ChatSession:
     def _beat_grid_pointing_frames(self) -> PointingFrames | None:
         """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만
         읽혀도) ``None`` — 일부 장비만 조준한 프리셋을 만들지 않는다."""
-        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 좌표·회전 판독(재실행 1 약 6 초)을 바로 다시
+        # 장비 판독 캐시(KIND_FIXTURE, 서버 수명) — 좌표·회전 판독(재실행 1 약 6 초)을 바로 다시
         # 계획·반영할 때 건너뛴다. 다 읽힌 판독만 기억한다(못 읽으면 None 이라 기억하지 않는다).
         cache_key = ("beat_grid_pointing_frames",)
         cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)

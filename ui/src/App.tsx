@@ -445,6 +445,7 @@ export default function App() {
     sendBeatGridPreview,
     sendBeatGridPreviewOff,
     sendBeatGridConsolePlay,
+    sendBeatGridRigRefresh,
     sendBeatGridConsolePause,
     sendBeatGridConsoleResume,
     sendBeatGridConsoleSeek,
@@ -1335,6 +1336,7 @@ export default function App() {
             onPreviewBar={sendBeatGridPreview}
             onPreviewOff={sendBeatGridPreviewOff}
             onConsolePlay={sendBeatGridConsolePlay}
+            onRigRefresh={sendBeatGridRigRefresh}
             onConsolePause={sendBeatGridConsolePause}
             onConsoleResume={sendBeatGridConsoleResume}
             onConsoleSeek={sendBeatGridConsoleSeek}

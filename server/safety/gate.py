@@ -192,6 +192,15 @@ def _moves_only_the_cursor(command: str) -> bool:
     return command.startswith("Set Timecode ") and " Property 'Cursor' " in command
 
 
+#: 패치·기종 라이브러리를 바꾸는 명령의 표지. 장비 판독 캐시를 버릴 신호다(리드 결정, 2026-10-19).
+_PATCH_WRITE_MARKERS = ("Patch", "FixtureType", "DMXMode", "AddFixtures")
+
+
+def _alters_patch(command: str) -> bool:
+    """패치나 기종 라이브러리를 건드리는 명령인가. 거짓 양성은 다시 읽기뿐이라 넓게 본다."""
+    return any(marker in command for marker in _PATCH_WRITE_MARKERS)
+
+
 class SafetyGate:
     """3-stage safety gate + live lock + backup + health + audit (M4)."""
 
@@ -236,6 +245,9 @@ class SafetyGate:
         # 소유(이름·트랙)를 바꿀 수 있는 콘솔 쓰기마다 1씩 올린다.
         # 커서만 옮긴 쓰기는 세지 않는다(``_moves_only_the_cursor``).
         self.console_write_epoch = 0
+        # 패치·기종 라이브러리를 바꾼 쓰기마다 1씩 올린다(``_alters_patch``). 장비 판독 캐시가
+        # 이 값을 보고 옛 패치로 반영하지 않게 버린다.
+        self.patch_write_epoch = 0
         # @MX:DEBT: [AUTO] bounded-LRU ordered set (OrderedDict[str, None]),
         #   NOT an unbounded set — a command once unconfirmed always
         #   re-requires human approval (REQ-MVP-032), but only within the
@@ -996,6 +1008,8 @@ class SafetyGate:
             clearances[command] -= 1
             if not _moves_only_the_cursor(command):
                 self.console_write_epoch += 1
+            if _alters_patch(command):
+                self.patch_write_epoch += 1
         outcome = self._console.execute(command)
         self._audit.log_executed(
             command,

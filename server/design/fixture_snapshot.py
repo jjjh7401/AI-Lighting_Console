@@ -29,6 +29,33 @@ FIXTURE_SNAPSHOT_PROPERTIES: tuple[str, ...] = (
 )
 
 
+#: 장비 트리 — 장비·기종 목록이 사는 곳(``Patch/...``). 이 아래 목록 읽기의 답은 기억해도 된다.
+PATCH_TREE_PREFIX = "Patch/"
+
+#: 묶음 판독에 답이 없었다는 사실 — 세션 캐시에 두어 다음 반영이 다시 묻지 않게 한다.
+_NO_ANSWER = object()
+
+
+class FixtureAnswerLog:
+    """예열 중 장비마다 답이 왔는지 센다 — 로그가 「답 없음 N대」를 말하게 한다."""
+
+    def __init__(self) -> None:
+        self.answered: set[str] = set()
+        self.silent: dict[str, Any] = {}
+
+    def note(self, path: str, reply: Any) -> None:
+        if not isinstance(path, str):
+            return
+        if isinstance(reply, Mapping) and reply.get("ok"):
+            self.answered.add(path)
+        else:
+            self.silent.setdefault(path, reply)
+
+    def counts(self) -> tuple[int, int]:
+        """``(답을 준 장비 수, 답 없는 장비 수)`` — 두 수는 겹치지 않는다."""
+        return len(self.answered - set(self.silent)), len(self.silent)
+
+
 class FixtureSnapshotPort:
     """같은 반영 안에서 장비 판독을 한 번만 묻는 읽기 전용 포트 래퍼."""
 
@@ -39,6 +66,7 @@ class FixtureSnapshotPort:
         fixture_root: str,
         names: Sequence[str] = FIXTURE_SNAPSHOT_PROPERTIES,
         cache: RigReadCache | None = None,
+        observer: FixtureAnswerLog | None = None,
     ) -> None:
         self._inner = inner
         self._root = fixture_root.rstrip("/")
@@ -47,14 +75,16 @@ class FixtureSnapshotPort:
         self._by_path: dict[str, dict[str, dict[str, Any]]] = {}
         #: 묶음 판독이 실패한 장비 경로 — 같은 반영 안에서 다시 묻지 않는다.
         self._unavailable: set[str] = set()
-        #: 주면 반영 사이에도 장비 판독을 재사용한다(짧은 수명 — ``rig_read_cache``).
+        #: 주면 반영 사이에도 장비 판독을 재사용한다(``rig_read_cache`` — 시간으로 끊지 않는다).
         self._cache = cache
+        #: 주면 장비마다 답이 왔는지 센다(예열 로그용).
+        self._observer = observer
 
     # -- 읽기 세 가지 (포트 프로토콜 그대로) -----------------------------------
     def query_state(self, path: str, *, offset: int = 0) -> dict:
-        if offset:
-            return self._inner.query_state(path, offset=offset)
-        return self._inner.query_state(path)
+        return _remembered_state(
+            self._inner, self._cache, path, offset, absent_is_answer=self._is_fixture(path)
+        )
 
     def query_property(self, path: str, property_name: str) -> dict:
         if self._is_fixture(path):
@@ -94,16 +124,28 @@ class FixtureSnapshotPort:
         return path.startswith(prefix) and path[len(prefix) :].isdigit()
 
     def _remembered(self, key: tuple[Any, ...], read: Callable[[], dict]) -> dict:
-        """묶음에서 못 받은 장비 읽기의 답을 세션 캐시에 둔다 — **성공 답만**."""
-        if self._cache is None:
-            return read()
-        hit = self._cache.get(KIND_SINGLE, key)
-        if hit is not None:
-            return hit
+        """묶음에서 못 받은 장비 읽기의 답을 세션 캐시에 둔다 — 답이 왔으면(성공이든 「없음」이든).
+
+        예외로 답을 못 받은 것은 두지 않는다. 그 장비는 다음 반영에 다시 묻는다.
+        """
+        if self._cache is not None:
+            hit = self._cache.get(KIND_SINGLE, key)
+            if hit is not None:
+                return hit
         reply = read()
-        if isinstance(reply, Mapping) and reply.get("ok"):
+        if self._cache is not None and isinstance(reply, Mapping):
             self._cache.put(KIND_SINGLE, key, reply)
+        if self._observer is not None:
+            self._observer.note(key[0], reply)
         return reply
+
+    def _no_bulk_answer(self, path: str, cache_key: tuple[Any, ...], payload: Any) -> None:
+        """묶음 판독에 답이 없었다 — 이 반영은 장비를 단건으로 묻고, 세션에는 「답 없음」을 둔다."""
+        self._unavailable.add(path)
+        if self._cache is not None and isinstance(payload, Mapping):
+            self._cache.put(KIND_FIXTURE, cache_key, _NO_ANSWER)
+        if self._observer is not None:
+            self._observer.note(path, payload)
 
     def _load(self, path: str) -> dict[str, dict[str, Any]] | None:
         """장비 하나의 속성을 한 질의로 받아 둔다. 실패하면 ``None`` — 호출자는 원래 포트로 간다."""
@@ -114,6 +156,9 @@ class FixtureSnapshotPort:
         cache_key = (path, self._names)
         if self._cache is not None:
             cached = self._cache.get(KIND_FIXTURE, cache_key)
+            if cached is _NO_ANSWER:
+                self._unavailable.add(path)
+                return None
             if cached is not None:
                 self._by_path[path] = cached
                 return cached
@@ -123,12 +168,14 @@ class FixtureSnapshotPort:
             self._unavailable.add(path)
             return None
         if not isinstance(payload, Mapping) or not payload.get("ok"):
-            self._unavailable.add(path)
+            self._no_bulk_answer(path, cache_key, payload)
             return None
         reads = payload.get("reads")
         if not isinstance(reads, list):
-            self._unavailable.add(path)
+            self._no_bulk_answer(path, cache_key, payload)
             return None
+        if self._observer is not None:
+            self._observer.note(path, {"ok": True})
         items: dict[str, dict[str, Any]] = {}
         for item in reads:
             if not isinstance(item, Mapping) or not isinstance(item.get("n"), str):
@@ -144,6 +191,29 @@ class FixtureSnapshotPort:
         return items
 
 
+def _remembered_state(
+    inner: Any, cache: RigReadCache | None, path: str, offset: int, *, absent_is_answer: bool
+) -> dict:
+    """장비 트리 목록 읽기(``query_state``)의 답을 세션 캐시에 둔다.
+
+    루트 목록이 잘려 돌아오면 리그 판독은 1..childCount 슬롯을 하나씩 훑는다
+    (``inventory._probe_slot``). 이 목록 읽기는 묶음 판독이 아니어서 기억하지 않으면
+    반영마다 콘솔에 다시 나갔다(실기: 한 번에 rig 71·bundle 71). 성공한 답은 기억한다.
+    「없음」(``ok: false``)은 장비 슬롯에서만 답이다 — 그 밖의 실패(기종 채널 목록 등)는
+    전수가 아니므로 다음 반영이 다시 묻는다. 장비 트리 밖(그룹·풀 목록)은 기억하지 않는다.
+    """
+    if cache is None or not path.startswith(PATCH_TREE_PREFIX):
+        return inner.query_state(path, offset=offset) if offset else inner.query_state(path)
+    key = ("state", path, offset)
+    hit = cache.get(KIND_SINGLE, key)
+    if hit is not None:
+        return hit
+    reply = inner.query_state(path, offset=offset) if offset else inner.query_state(path)
+    if isinstance(reply, Mapping) and (reply.get("ok") or absent_is_answer):
+        cache.put(KIND_SINGLE, key, reply)
+    return reply
+
+
 def _single_reply(item: Mapping[str, Any]) -> dict:
     """단건 판독 답의 모양 — 받아 둔 성공 항목은 문자열 값을, 실패 항목은 ``ok: False`` 를 준다."""
     if item.get("ok"):
@@ -154,3 +224,65 @@ def _single_reply(item: Mapping[str, Any]) -> dict:
 def _relabel(item: Mapping[str, Any], name: str) -> dict:
     """묶음 답의 항목을 호출자가 부른 이름으로 바꿔 돌려준다(읽는 쪽이 이름으로 찾는다)."""
     return {**item, "n": name}
+
+
+class RememberingFixturePort:
+    """장비 한 대의 성공 답을 세션 캐시에 기억하는 포트 래퍼 — **성공 답만**.
+
+    묶음 판독을 쪼개지 않는다. 응답은 원시 읽기와 똑같이 돌려주고, 같은 장비에
+    같은 질의를 반복할 때만 기억한 답을 준다. 키 모양은 ``FixtureSnapshotPort`` 의
+    단건 기억과 같아서 두 포트가 항목을 나눠 쓴다. 반영 경로의 기종 판독이 같은
+    장비를 여러 번 묻는 것을 막는다.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        fixture_root: str,
+        cache: RigReadCache,
+        observer: FixtureAnswerLog | None = None,
+    ) -> None:
+        self._inner = inner
+        self._root = fixture_root.rstrip("/")
+        self._cache = cache
+        self._observer = observer
+
+    def query_state(self, path: str, *, offset: int = 0) -> dict:
+        return _remembered_state(
+            self._inner, self._cache, path, offset, absent_is_answer=self._is_fixture(path)
+        )
+
+    def query_property(self, path: str, property_name: str) -> dict:
+        if not self._is_fixture(path):
+            return self._inner.query_property(path, property_name)
+        return self._remembered(
+            (path, property_name.upper()),
+            lambda: self._inner.query_property(path, property_name),
+        )
+
+    def query_properties(
+        self, path: str, property_names: Sequence[str], *, offset: int | None = None
+    ) -> dict:
+        names = tuple(property_names)
+        if offset is not None:
+            return self._inner.query_properties(path, names, offset=offset)
+        if not self._is_fixture(path):
+            return self._inner.query_properties(path, names)
+        key = (path, tuple(name.upper() for name in names))
+        return self._remembered(key, lambda: self._inner.query_properties(path, names))
+
+    def _is_fixture(self, path: str) -> bool:
+        prefix = self._root + "/"
+        return path.startswith(prefix) and path[len(prefix) :].isdigit()
+
+    def _remembered(self, key: tuple[Any, ...], read: Callable[[], dict]) -> dict:
+        hit = self._cache.get(KIND_SINGLE, key)
+        if hit is not None:
+            return hit
+        reply = read()
+        if isinstance(reply, Mapping):
+            self._cache.put(KIND_SINGLE, key, reply)
+        if self._observer is not None:
+            self._observer.note(key[0], reply)
+        return reply
