@@ -29,6 +29,30 @@ FIXTURE_SNAPSHOT_PROPERTIES: tuple[str, ...] = (
 )
 
 
+#: 묶음 판독에 답이 없었다는 사실 — 세션 캐시에 두어 다음 반영이 다시 묻지 않게 한다.
+_NO_ANSWER = object()
+
+
+class FixtureAnswerLog:
+    """예열 중 장비마다 답이 왔는지 센다 — 로그가 「답 없음 N대」를 말하게 한다."""
+
+    def __init__(self) -> None:
+        self.answered: set[str] = set()
+        self.silent: dict[str, Any] = {}
+
+    def note(self, path: str, reply: Any) -> None:
+        if not isinstance(path, str):
+            return
+        if isinstance(reply, Mapping) and reply.get("ok"):
+            self.answered.add(path)
+        else:
+            self.silent.setdefault(path, reply)
+
+    def counts(self) -> tuple[int, int]:
+        """``(답을 준 장비 수, 답 없는 장비 수)`` — 두 수는 겹치지 않는다."""
+        return len(self.answered - set(self.silent)), len(self.silent)
+
+
 class FixtureSnapshotPort:
     """같은 반영 안에서 장비 판독을 한 번만 묻는 읽기 전용 포트 래퍼."""
 
@@ -39,6 +63,7 @@ class FixtureSnapshotPort:
         fixture_root: str,
         names: Sequence[str] = FIXTURE_SNAPSHOT_PROPERTIES,
         cache: RigReadCache | None = None,
+        observer: FixtureAnswerLog | None = None,
     ) -> None:
         self._inner = inner
         self._root = fixture_root.rstrip("/")
@@ -47,8 +72,10 @@ class FixtureSnapshotPort:
         self._by_path: dict[str, dict[str, dict[str, Any]]] = {}
         #: 묶음 판독이 실패한 장비 경로 — 같은 반영 안에서 다시 묻지 않는다.
         self._unavailable: set[str] = set()
-        #: 주면 반영 사이에도 장비 판독을 재사용한다(짧은 수명 — ``rig_read_cache``).
+        #: 주면 반영 사이에도 장비 판독을 재사용한다(``rig_read_cache`` — 시간으로 끊지 않는다).
         self._cache = cache
+        #: 주면 장비마다 답이 왔는지 센다(예열 로그용).
+        self._observer = observer
 
     # -- 읽기 세 가지 (포트 프로토콜 그대로) -----------------------------------
     def query_state(self, path: str, *, offset: int = 0) -> dict:
@@ -94,16 +121,28 @@ class FixtureSnapshotPort:
         return path.startswith(prefix) and path[len(prefix) :].isdigit()
 
     def _remembered(self, key: tuple[Any, ...], read: Callable[[], dict]) -> dict:
-        """묶음에서 못 받은 장비 읽기의 답을 세션 캐시에 둔다 — **성공 답만**."""
-        if self._cache is None:
-            return read()
-        hit = self._cache.get(KIND_SINGLE, key)
-        if hit is not None:
-            return hit
+        """묶음에서 못 받은 장비 읽기의 답을 세션 캐시에 둔다 — 답이 왔으면(성공이든 「없음」이든).
+
+        예외로 답을 못 받은 것은 두지 않는다. 그 장비는 다음 반영에 다시 묻는다.
+        """
+        if self._cache is not None:
+            hit = self._cache.get(KIND_SINGLE, key)
+            if hit is not None:
+                return hit
         reply = read()
-        if isinstance(reply, Mapping) and reply.get("ok"):
+        if self._cache is not None and isinstance(reply, Mapping):
             self._cache.put(KIND_SINGLE, key, reply)
+        if self._observer is not None:
+            self._observer.note(key[0], reply)
         return reply
+
+    def _no_bulk_answer(self, path: str, cache_key: tuple[Any, ...], payload: Any) -> None:
+        """묶음 판독에 답이 없었다 — 이 반영은 장비를 단건으로 묻고, 세션에는 「답 없음」을 둔다."""
+        self._unavailable.add(path)
+        if self._cache is not None and isinstance(payload, Mapping):
+            self._cache.put(KIND_FIXTURE, cache_key, _NO_ANSWER)
+        if self._observer is not None:
+            self._observer.note(path, payload)
 
     def _load(self, path: str) -> dict[str, dict[str, Any]] | None:
         """장비 하나의 속성을 한 질의로 받아 둔다. 실패하면 ``None`` — 호출자는 원래 포트로 간다."""
@@ -114,6 +153,9 @@ class FixtureSnapshotPort:
         cache_key = (path, self._names)
         if self._cache is not None:
             cached = self._cache.get(KIND_FIXTURE, cache_key)
+            if cached is _NO_ANSWER:
+                self._unavailable.add(path)
+                return None
             if cached is not None:
                 self._by_path[path] = cached
                 return cached
@@ -123,12 +165,14 @@ class FixtureSnapshotPort:
             self._unavailable.add(path)
             return None
         if not isinstance(payload, Mapping) or not payload.get("ok"):
-            self._unavailable.add(path)
+            self._no_bulk_answer(path, cache_key, payload)
             return None
         reads = payload.get("reads")
         if not isinstance(reads, list):
-            self._unavailable.add(path)
+            self._no_bulk_answer(path, cache_key, payload)
             return None
+        if self._observer is not None:
+            self._observer.note(path, {"ok": True})
         items: dict[str, dict[str, Any]] = {}
         for item in reads:
             if not isinstance(item, Mapping) or not isinstance(item.get("n"), str):
@@ -165,10 +209,18 @@ class RememberingFixturePort:
     장비를 여러 번 묻는 것을 막는다.
     """
 
-    def __init__(self, inner: Any, *, fixture_root: str, cache: RigReadCache) -> None:
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        fixture_root: str,
+        cache: RigReadCache,
+        observer: FixtureAnswerLog | None = None,
+    ) -> None:
         self._inner = inner
         self._root = fixture_root.rstrip("/")
         self._cache = cache
+        self._observer = observer
 
     def query_state(self, path: str, *, offset: int = 0) -> dict:
         if offset:
@@ -203,6 +255,8 @@ class RememberingFixturePort:
         if hit is not None:
             return hit
         reply = read()
-        if isinstance(reply, Mapping) and reply.get("ok"):
+        if isinstance(reply, Mapping):
             self._cache.put(KIND_SINGLE, key, reply)
+        if self._observer is not None:
+            self._observer.note(key[0], reply)
         return reply

@@ -14342,8 +14342,9 @@ class ChatSession:
         outcomes``)가 「못 읽음」으로 다룬다(지어내지 않는다)."""
         if not fids:
             return {}
-        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 같은 장비를 바로 다시 계획·반영하면 패치 열거와
-        # 채널 판독(재실행 1 감사로그 약 10 초)을 건너뛴다. 모든 fid 가 읽혔을 때만 기억한다.
+        # 장비 판독 캐시(KIND_FIXTURE, 서버 수명 — 「장비 다시 읽기」·패치 쓰기 때만 버린다).
+        # 같은 장비를 바로 다시 계획·반영하면 패치 열거와 채널 판독(재실행 1 감사로그 약 10 초)을
+        # 건너뛴다. 모든 fid 가 읽혔을 때만 기억한다.
         cache_key = ("beat_grid_color_channels", tuple(sorted(set(fids))))
         cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)
         if cached is not None:
@@ -14368,7 +14369,7 @@ class ChatSession:
     def _beat_grid_pointing_frames(self) -> PointingFrames | None:
         """카드 t592 — 조준 경로가 쓰는 장비 좌표·회전 판독. 못 읽으면(일부만
         읽혀도) ``None`` — 일부 장비만 조준한 프리셋을 만들지 않는다."""
-        # 장비 판독 캐시(KIND_FIXTURE, 120 초) — 좌표·회전 판독(재실행 1 약 6 초)을 바로 다시
+        # 장비 판독 캐시(KIND_FIXTURE, 서버 수명) — 좌표·회전 판독(재실행 1 약 6 초)을 바로 다시
         # 계획·반영할 때 건너뛴다. 다 읽힌 판독만 기억한다(못 읽으면 None 이라 기억하지 않는다).
         cache_key = ("beat_grid_pointing_frames",)
         cached = self._rig_read_cache.get(KIND_FIXTURE, cache_key)

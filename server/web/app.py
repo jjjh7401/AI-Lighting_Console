@@ -85,7 +85,7 @@ from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
-from server.web.rig_warm import warm_until_whole
+from server.web.rig_warm import warm_until_answered
 from server.web.session import (
     _BAR_MAP_ENTRY_FAILED_TEXT,
     _BAR_MAP_ENTRY_REJECTED_SUMMARY,
@@ -320,7 +320,7 @@ def create_app(deps: WebDeps) -> FastAPI:
     def _warm_device_layers_in_background() -> None:
         """장비 판독 예열을 백그라운드 스레드로 돌린다 — 서버를 띄울 때와 곡을 열 때 쓴다."""
         threading.Thread(
-            target=warm_until_whole,
+            target=warm_until_answered,
             args=(deps.gate,),
             kwargs={"rig_paths": deps.rig_paths, "cache": rig_read_cache},
             daemon=True,
