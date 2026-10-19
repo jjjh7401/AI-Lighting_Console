@@ -92,6 +92,7 @@ from server.design.beat_grid_cell_live import (
     owned_timecode_numbers,
     parse_event_seconds,
 )
+from server.design.beat_grid_cell_mib import move_mib_premoves
 from server.design.beat_grid_color_presets import (
     attach_color_rgb_to_drawer,
     color_preset_groups,
@@ -134,7 +135,6 @@ from server.design.beat_grid_emit import (
     emit_beat_grid_write_bundle,
     m1_held_cells,
 )
-from server.design.beat_grid_mib import BarClock, plan_mib_premoves
 from server.design.beat_grid_planned import annotated_cell_colors
 from server.design.beat_grid_position_presets import (
     PointingFrames,
@@ -4020,11 +4020,6 @@ _CELL_LIVE_NO_RECORD_MESSAGE = (
 )
 _CELL_LIVE_NO_TRACK_MESSAGE = "콘솔에서 이 줄의 트랙을 찾지 못했습니다"
 _CELL_LIVE_NO_EVENT_MESSAGE = "콘솔의 이벤트를 시각으로 찾지 못해 옮기지 않았습니다"
-#: 반영 단계가 사전이동 큐(MIB 선행)를 끼우는 줄 — 칸만 옮기면 그 큐의 이벤트가 옛 자리에 남는다.
-_CELL_LIVE_PREMOVE_MESSAGE = (
-    "움직임 준비(MIB 선행) 칸이 있는 줄은 이번 버전에서 칸 옮기기를 막습니다 "
-    "— ⇪ 전체 반영을 사용해 주세요"
-)
 #: 줄 일부만 나가고 멈췄을 때 상태에 싣는 사유 — 콘솔이 소유 기록·칸 기록보다 앞서 있다.
 _CELL_LIVE_PARTIAL_MESSAGE = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요"
 #: 두 이벤트 시각을 「같다」고 보는 오차(초) — 송신 직전 재확인과 옮길 자리의 겹침 검사가 쓴다.
@@ -14046,7 +14041,7 @@ class ChatSession:
 
     # -- SPEC-LDRHYTHM-001 TC5 — 칸 옮기기를 콘솔 타임코드 이벤트에 바로 반영 -----------------
     #
-    # 순서: 격자 규칙 → 소유 기록 → 칸의 콘솔 시각 계산 → 사전이동(MIB 선행) 줄 거절 →
+    # 순서: 격자 규칙 → 소유 기록 → 칸의 콘솔 시각 계산 → 사전이동(MIB 선행) 큐 짝짓기 →
     # 콘솔 읽기(트랙·이벤트) → 줄 계획 → 허용 목록 → 옮긴 뒤의 기록 만들기 →
     # (승인 카드 또는 승인된 범위로) 송신 → 다 나갔을 때만 확정.
     # 송신 앞의 단계는 읽기뿐이라 거절하면 아무것도 바뀌지 않는다. 확정에 쓸 새 기록은 송신 전에
@@ -14059,9 +14054,11 @@ class ChatSession:
         ``ops`` 는 ``{"op": "move", "group_name", "bar", "to_bar"}`` 목록이다. 칸이 서는 시각은
         에미터와 같은 식으로 계산하고(``cue_event_seconds``), 이벤트 번호는 읽은 목록에서
         **시각으로** 찾는다. 보낼 줄은 ``Set Timecode T.1.K.1.1.N Property 'Time' S`` 한 꼴뿐이고,
-        이 곡이 소유한 타임코드·트랙이 아니면 보내지 않는다(``move_bundle_allowed``). 반영 단계가
-        사전이동 큐(MIB 선행)를 끼우는 줄은 옮기기 전이든 옮긴 뒤든 이번 버전에서 막는다 — 사전이동
-        큐의 이벤트는 칸을 따라 옮겨지지 않는다.
+        이 곡이 소유한 타임코드·트랙이 아니면 보내지 않는다(``move_bundle_allowed``).
+        반영 단계가 사전이동 큐(MIB 선행)를 끼우는 줄이면 그 큐도 옮긴 자리에 맞춰
+        같이 옮긴다. 옮긴 뒤의 줄에서 큐를 다시 짓고 같은 자리의 옛 큐와 짝지어
+        이벤트 시각만 고친다. 큐를 새로 세우거나 지워야 하거나 옮긴 뒤 켜진 채
+        시작하면 거절한다(``move_mib_premoves``).
 
         옮기기 범위를 아직 승인받지 않았으면 승인 카드를 한 번 묻고(송신 직전에 이벤트 시각을 다시
         읽어 그대로일 때만 나간다), 줄이 모두 나가면 이 서버를 켜 둔 동안 옮기기 범위를 승인으로
@@ -14171,20 +14168,13 @@ class ChatSession:
         return {**grid, "tracks": tracks}
 
     @staticmethod
-    def _cell_rows_have_premoves(
-        grid: Mapping[str, object], groups: Sequence[str], timing: BarClock
-    ) -> bool:
-        """``grid`` 의 ``groups`` 줄 가운데 반영 단계가 사전이동 큐(MIB 선행)를 끼우는 줄이 있는가.
-
-        에미터가 쓰는 계획기(``plan_mib_premoves``)를 마디순으로 놓은 칸에 그대로 돌려, 지은
-        사전이동 큐가 하나라도 있으면 참이다. 「MIB 불가」 안내만 있는 줄에는 사전이동 큐가
-        없으니 거짓이다. 입력은 고치지 않는다."""
+    def _row_cues(grid: Mapping[str, object], group: str) -> list[Mapping[str, object]]:
+        """``grid`` 의 ``group`` 줄 칸을 마디순으로 — 사전이동 큐를 옮기기 전후로 짝짓는 데 쓴다.
+        입력은 고치지 않는다. 줄이 없으면 빈 목록이다."""
         for track in grid.get("tracks") or []:  # type: ignore[attr-defined]
-            if isinstance(track, Mapping) and str(track.get("group_name")) in groups:
-                cues = sorted(track.get("cues") or [], key=lambda cue: int(cue["bar"]))
-                if plan_mib_premoves(cues, timing)[0]:
-                    return True
-        return False
+            if isinstance(track, Mapping) and str(track.get("group_name")) == group:
+                return sorted(track.get("cues") or [], key=lambda cue: int(cue["bar"]))
+        return []
 
     def _cell_live_property(self, path: str, name: str) -> object | None:
         """콘솔 속성 하나의 값 — 콘솔이 못 읽었다고 답하면 ``None``. 읽기 자체가 실패하면
@@ -14286,7 +14276,7 @@ class ChatSession:
             for track in grid.get("tracks") or []
             if isinstance(track, Mapping)
         }
-        rows: list[tuple[str, int, float, float]] = []
+        rows: list[tuple[str, str, float, float]] = []  # (표시 이름, 줄, 옛 시각, 새 시각)
         for group, bar, to_bar in moves:
             cue = cues_at[group][bar]
             try:
@@ -14298,16 +14288,36 @@ class ChatSession:
                 )
             except CellLiveRefused as error:
                 raise CellLiveRefused(f"{group} {bar}마디 — {error}") from error
-            rows.append((group, bar, from_seconds, to_seconds))
+            rows.append((f"{group} {bar}마디", group, from_seconds, to_seconds))
 
-        # 움직임 준비(MIB 선행) 큐가 서는 줄은 이번 버전에서 막는다 — 사전이동 큐는 칸이 아니라서
-        # 칸을 옮겨도 그 이벤트는 따라 옮겨지지 않는다. 옮기기 전의 줄에 있으면 낡은 사전이동이
-        # 옛 자리에 남고, 옮긴 뒤의 줄이 새로 요구하면 콘솔에 그 이벤트가 없다 — 그래서 둘 다 본다.
+        # 사전이동(MIB 선행) 큐는 칸이 아니라서 칸을 따라 옮겨지지 않는다.
+        # 옮긴 뒤의 줄에서 큐를 다시 짓고, 같은 자리의 옛 큐와 짝지어
+        # 마디가 바뀐 큐만 이벤트 시각을 옮긴다(옮기기 = 다시 반영).
+        # 큐를 새로 세우거나 지워야 하거나 옮긴 뒤 켜진 채 시작하면 거절한다.
         # 콘솔을 읽기 전에 끝낸다.
         groups = list(dict.fromkeys(group for group, *_ in moves))
         assert timing is not None  # 위 시각 계산이 타이밍 없음을 이미 거절했다.
-        if any(self._cell_rows_have_premoves(view, groups, timing) for view in (grid, moved_grid)):
-            raise CellLiveRefused(_CELL_LIVE_PREMOVE_MESSAGE)
+        # (줄, 옛 마디, 새 마디) — 소유 기록의 열쇠를 따라 옮긴다.
+        queue_moves: list[tuple[str, int, int]] = []
+        for group in groups:
+            try:
+                relocated = move_mib_premoves(
+                    self._row_cues(grid, group), self._row_cues(moved_grid, group), timing
+                )
+            except CellLiveRefused as error:
+                raise CellLiveRefused(f"'{group}' 줄 — {error}") from error
+            for old_queue, new_queue in relocated:
+                old_bar = int(old_queue["bar"])  # type: ignore[arg-type]
+                new_bar = int(new_queue["bar"])  # type: ignore[arg-type]
+                from_seconds = cue_event_seconds(
+                    old_queue, old_bar, timing=timing, lead_seconds=CONSOLE_AUDIO_OFFSET_SECONDS
+                )
+                to_seconds = cue_event_seconds(
+                    new_queue, new_bar, timing=timing, lead_seconds=CONSOLE_AUDIO_OFFSET_SECONDS
+                )
+                rows.append((f"{group} {old_bar}마디 사전이동", group, from_seconds, to_seconds))
+                queue_moves.append((group, old_bar, new_bar))
+        record_moves = [*moves, *queue_moves]
 
         # 콘솔 읽기 — 소유한 타임코드의 트랙만. 옮길 줄마다 그 줄의 시퀀스를 가리키는 트랙을 찾는다.
         owned_timecodes = owned_timecode_numbers(record)
@@ -14321,7 +14331,7 @@ class ChatSession:
         commands: list[str] = []
         labels: list[str] = []
         targets: list[float] = []
-        for group, bar, from_seconds, to_seconds in rows:
+        for label, group, from_seconds, to_seconds in rows:
             timecode, track_number = mapping[group]
             try:
                 lines = plan_tc_cell_commands(
@@ -14333,14 +14343,14 @@ class ChatSession:
                 )
             except TcCellIndexError as error:
                 raise CellLiveRefused(
-                    f"{_CELL_LIVE_NO_EVENT_MESSAGE} — {group} {bar}마디: {error}"
+                    f"{_CELL_LIVE_NO_EVENT_MESSAGE} — {label}: {error}"
                 ) from error
             except ValueError as error:
                 raise CellLiveRefused(
-                    f"{group} {bar}마디의 이벤트 시각을 계산할 수 없습니다: {error}"
+                    f"{label}의 이벤트 시각을 계산할 수 없습니다: {error}"
                 ) from error
             commands.extend(lines)
-            labels.extend([f"{group} {bar}마디"] * len(lines))
+            labels.extend([label] * len(lines))
             targets.extend([to_seconds] * len(lines))
 
         # 마지막 안전핀 — 이 곡이 소유한 타임코드 가운데, 옮길 줄이 가리키는 트랙의
@@ -14387,7 +14397,7 @@ class ChatSession:
             events=tuple(events),
             song_key=song_key,
             record_key=record_key,
-            record=move_record_tracks(record, moves),
+            record=move_record_tracks(record, record_moves),
             snapshot=move_snapshot_keys(snapshot, moves) if snapshot is not None else None,
         )
 
