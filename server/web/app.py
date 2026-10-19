@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -80,6 +81,7 @@ from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
+from server.web.rig_warm import warm_device_layers
 from server.web.session import (
     _BAR_MAP_ENTRY_FAILED_TEXT,
     _BAR_MAP_ENTRY_REJECTED_SUMMARY,
@@ -193,6 +195,8 @@ class WebDeps:
     backup_manager: BackupManager | None = None
     heartbeat_interval_seconds: float | None = None
     backup_poll_seconds: float | None = None
+    # 운영 실행에서만 켠다 — 서버를 띄울 때 장비 판독을 미리 채운다(리드 결정, 2026-10-19).
+    warm_device_layers_on_start: bool = False
     settings: SettingsDeps | None = None
     provision: ProvisionDeps | None = None
     # W3 (P0 paperwork UI exposure): the read-only patch-sheet/cue-sheet/
@@ -309,9 +313,21 @@ def create_app(deps: WebDeps) -> FastAPI:
     # 「⇪ 콘솔에 반영」 때마다 채널 걷기가 다시 난다. 모든 연결이 이 하나를 함께 쓴다.
     rig_read_cache = RigReadCache()
 
+    def _warm_device_layers_in_background() -> None:
+        """장비 판독 예열을 백그라운드 스레드로 돌린다 — 서버를 띄울 때와 곡을 열 때 쓴다."""
+        threading.Thread(
+            target=warm_device_layers,
+            args=(deps.gate,),
+            kwargs={"rig_paths": deps.rig_paths, "cache": rig_read_cache},
+            daemon=True,
+            name="rig-warm",
+        ).start()
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         tasks: list[asyncio.Task] = []
+        if deps.warm_device_layers_on_start:
+            _warm_device_layers_in_background()
         if deps.heartbeat_interval_seconds:
             tasks.append(
                 asyncio.create_task(_heartbeat_loop(deps, deps.heartbeat_interval_seconds))
@@ -1233,6 +1249,7 @@ def create_app(deps: WebDeps) -> FastAPI:
                 store=deps.song_timeline_store,
                 library=deps.timeline_library,
                 song_audio_link_store=deps.song_audio_link_store,
+                on_open=_warm_device_layers_in_background,
             )
         )
     )

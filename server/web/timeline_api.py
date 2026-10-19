@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
@@ -40,6 +41,8 @@ class TimelineLibraryDeps:
     library: SongTimelineLibrary
     # 불러오기로 제목이 바뀌면 음원 링크를 새 열쇠로 복제하는 데 쓴다(``None`` 이면 건너뜀).
     song_audio_link_store: SongAudioLinkStore | None = None
+    # 곡을 열 때 부른다 — 장비 판독 예열(리드 결정, 2026-10-19). ``None`` 이면 아무것도 하지 않는다.
+    on_open: Callable[[], None] | None = None
 
 
 def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
@@ -109,6 +112,8 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
                         data=found.data,
                     )
         deps.store.latest = timeline
+        if deps.on_open is not None:
+            deps.on_open()
         # 카드 t644 — 응답도 재생(``ChatSession.song_timeline_replay``)과 같은 함수로 파생
         # 필드를 채운다. 카드 t651 — 풀 기억은 저장소의 것을 쓴다(재생 프레임과 같은 값). 이 요청은
         # 콘솔을 읽지 않는다. 저장소에는 원본을 그대로 둔다(보낼 때마다 파생).

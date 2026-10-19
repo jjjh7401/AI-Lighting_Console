@@ -298,7 +298,12 @@ from server.design.rig_capability_read import (
     notice_for as rig_capability_notice,
 )
 from server.design.rig_preflight import plan_rig_preflight, render_rig_preflight
-from server.design.rig_read_cache import KIND_FIXTURE, KIND_MEMBERS, RigReadCache
+from server.design.rig_read_cache import (
+    KIND_FIXTURE,
+    KIND_MEMBERS,
+    RigReadCache,
+    follow_patch_epoch,
+)
 
 # 카드 t441 — 아래 다섯은 (재수출 전용, 이 파일 안에서는 안 쓴다 —
 # `as <같은 이름>` 은 ruff 가 인식하는 명시 재수출 표시다. 값·동작은
@@ -10526,10 +10531,7 @@ class ChatSession:
 
     def _rig_cache_follow_patch(self) -> None:
         """앱의 패치 쓰기(게이트 epoch)가 있었으면 장비 판독을 버린다 — 옛 패치로 반영하지 않게."""
-        epoch = self._gate.patch_write_epoch
-        if self._rig_read_cache.synced_patch_epoch != epoch:
-            self._rig_read_cache.invalidate()
-            self._rig_read_cache.synced_patch_epoch = epoch
+        follow_patch_epoch(self._rig_read_cache, self._gate.patch_write_epoch)
 
     def beat_grid_rig_refresh(self) -> dict:
         """「장비 다시 읽기」 — 장비·기종 판독을 버리고 콘솔에서 다시 읽는다(읽기 전용)."""

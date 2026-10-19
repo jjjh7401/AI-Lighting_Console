@@ -104,3 +104,10 @@ class RigReadCache:
     def __len__(self) -> int:
         with self._lock:
             return len(self._entries)
+
+
+def follow_patch_epoch(cache: RigReadCache, epoch: int) -> None:
+    """게이트의 패치 epoch 가 바뀌었으면 장비 판독을 버린다. 세션과 예열이 같은 규칙을 쓴다."""
+    if cache.synced_patch_epoch != epoch:
+        cache.invalidate()
+        cache.synced_patch_epoch = epoch
