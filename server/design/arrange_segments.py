@@ -32,6 +32,9 @@
 - 강조는 임팩트 마디에만 둔다. 후렴·마지막 후렴 구간의 첫 마디에 BLIND, 드롭 구간의 첫 마디에
   STROBE(느린 곡이면 두지 않는다)다. 마디 지도에 리듬 블록이 있으면 BLIND 마디는 그 구간 안 첫 큰
   히트(``kind == "big"``)의 마디이고, 구간 안에 큰 히트가 없으면 구간의 첫 마디 그대로다.
+- 브레이크 마디(``break`` 사건이 덮는 마디)에서는 리듬·강조 줄이 쉬고 FOH(역할 key)·워시·무빙
+  줄은 그대로다 — 저음이 빠지는 마디는 단색 워시로 버틴다는 영상 분석 규칙이다. 기본값이고 곡별
+  정책(``break_hold_wash``)으로 끈다.
 - 예고는 강조가 아니다. 강조 구간(후렴·마지막 후렴·드롭)이 시작하기 바로 앞 마디, 곧 큰 히트
   직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는 쉼과 같다).
 - 칸은 값이 같은 연속 마디의 묶음이고 첫 마디에만 낸다. 값은 라벨·밝기·움직임이고 구간 종류와
@@ -183,6 +186,8 @@ _COLOR_LINE_ROLES = frozenset({"wash"})
 #: 켜는 칸을 창(프레이즈) 시작마다 새로 세우는 리듬 층의 역할. 기본 격자도 같은 「킥 1·2·4박」을
 #: 4마디마다 다시 찍는다. 쉬는 칸은 나누지 않는다.
 _PHRASE_ROLES = frozenset({"back", "side", "mover"})
+#: 브레이크 마디에도 그대로 두는 줄의 역할 — 정지 조명(FOH)·단색 워시·무빙. 나머지 줄은 쉰다.
+_BREAK_HOLD_ROLES = frozenset({"key", "wash", "mover"})
 
 # @MX:DEBT: 브릿지 판정의 「브레이크 뒤 2마디 안」이 곡별 정책이 아니라 모듈 상수다
 # @MX:CEILING: 이 값 하나. 곡마다 다르게 둘 수 없다(REQ-LDARRANGE-004 는 규칙 값을 곡별로 둔다)
@@ -301,6 +306,16 @@ def generate_segment_draft(
                 section_starts=frozenset(section.start_bar for section in sections),
                 phrase_starts=frozenset(window.start_bar for window in windows),
             )
+
+    # 브레이크 마디는 워시·FOH 만 켜 두고 리듬·강조 줄은 쉰다(``break_hold_wash``). 무빙 줄은
+    # 손대지 않는다 — 한 마디 쉼은 사전이동(MIB)에 모자라고, 멈췄다 다시 돌면 켜진 채 웨이브가
+    # 새로 시작한다.
+    if settings.break_hold_wash:
+        rest = _rest_plan(settings)
+        for bar in _break_bars(bar_map, bar_numbers):
+            for track in layout:
+                if track.get("layer_role") not in _BREAK_HOLD_ROLES:
+                    plans[str(track["group_name"])][bar] = rest
 
     # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
     notice = _CellPlan(PRE_HIT_LABEL, settings.rest_percent, None, _KIND_PRE_HIT)
@@ -785,6 +800,20 @@ def _song_start_head(
                 return []
             return list(bar_numbers[index : bar_numbers.index(later)])
     return []
+
+
+def _break_bars(bar_map: Mapping[str, Any], bar_numbers: Sequence[int]) -> list[int]:
+    """마디 지도 브레이크 사건이 덮는 마디(양끝 포함) 가운데 지도에 있는 마디, 작은 마디 순."""
+    present = set(bar_numbers)
+    return sorted(
+        {
+            bar
+            for event in bar_map["events"]
+            if event["kind"] == _BREAK
+            for bar in range(int(event["start_bar"]), int(event["end_bar"]) + 1)
+            if bar in present
+        }
+    )
 
 
 def _is_blind_line(track: Mapping[str, Any]) -> bool:

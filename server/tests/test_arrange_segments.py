@@ -378,8 +378,9 @@ def test_a_lit_rhythm_lane_gets_a_new_cell_at_every_phrase() -> None:
 def test_back_lane_over_the_synthetic_song_is_the_hand_derived_run_list() -> None:
     # 창은 구간 시작부터 4마디씩이고 창 길이에 못 미치는 끝 창은 앞 창에 붙는다(1-6, 7-8, 9-13,
     # 14-17, 18-21, 22-25, 26-32, …). 펄스는 빌드·브릿지(체이스 + 움직임)에서 쉬고, 후렴 18~32 의
-    # 둘째 창(22~25)에서는 보조 자리를 체이스에 넘겨 쉰다(카드 WT-side-allocation).
-    back = _cues(_draft(SYNTHETIC_EVENTS), "BACK")
+    # 둘째 창(22~25)에서는 보조 자리를 체이스에 넘겨 쉰다(카드 WT-side-allocation). 창 돌림만
+    # 보려고 브레이크 쉼 규칙은 끈다(브레이크 쉼은 따로 시험한다).
+    back = _cues(_draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(break_hold_wash=False)), "BACK")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
         (1, PULSE_LABEL),
         (7, PULSE_LABEL),
@@ -485,7 +486,8 @@ def test_color_alone_never_splits_a_run_off_the_wash_line() -> None:
 
 
 def test_a_cell_off_the_wash_line_carries_the_color_of_its_first_bar() -> None:
-    draft = _draft(SYNTHETIC_EVENTS)
+    # 브레이크 33~34 마디의 체이스 칸을 보려고 브레이크 쉼 규칙은 끈다.
+    draft = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(break_hold_wash=False))
     # 얼굴 빛(FOH)은 40마디 내내 같은 값이고(끝 칸 40 은 Release 를 받을 같은 값), 앞빛 역할이라
     # 구간과 상관없이 표준 Warm White 다.
     foh = _cues(draft, "FOH")
@@ -1540,3 +1542,52 @@ def test_lines_that_cannot_aim_and_the_other_moving_lines_keep_their_positions()
     aimed = _draft(SYNTHETIC_EVENTS, layout=_with_pan_tilt(_layout(), {"BACK", "SIDE-ALL"}))
     for name in ("MOVER-U", "MOVER-D", "FOH", "WASH-ALL", "BLIND", "STROBE"):
         assert _cues(aimed, name) == _cues(plain, name)
+
+
+# --- 브레이크 마디: 워시·FOH 만 켜 두기(영상 분석 구간 경계 규칙, 기본값) -------------------------
+
+
+def test_break_bars_rest_the_rhythm_and_accent_lines_and_keep_the_rest() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    for bar in (7, 33, 34):
+        for track in draft["tracks"]:
+            cell = _state(draft, track["group_name"], bar)
+            role = track["layer_role"]
+            if role in ("key", "wash"):
+                assert cell["brightness"]["value_percent"] > 0, (track["group_name"], bar)
+            elif role != "mover":
+                assert cell["label"] == REST_LABEL, (track["group_name"], bar)
+
+
+def test_rhythm_comes_back_on_the_bar_after_a_break() -> None:
+    back = _cues(_draft(SYNTHETIC_EVENTS), "BACK")
+    assert back[7]["label"] == REST_LABEL
+    assert back[8]["label"] == PULSE_LABEL
+
+
+def test_break_hold_can_be_turned_off_per_song() -> None:
+    off = ArrangementPolicy(break_hold_wash=False)
+    assert _state(_draft(SYNTHETIC_EVENTS, policy=off), "BACK", 7)["label"] == PULSE_LABEL
+    assert ArrangementPolicy().break_hold_wash is True
+
+
+def test_break_hold_adds_no_strobe_no_blind_and_leaves_the_movers() -> None:
+    draft = _draft(SYNTHETIC_EVENTS)
+    on = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(break_hold_wash=False))
+    for name in ("STROBE", "BLIND"):
+        for label in (STROBE_LABEL, BLIND_LABEL):
+            assert _hits(draft, name, label) == _hits(on, name, label)
+    for name in ("MOVER-U", "MOVER-D"):
+        assert _cues(draft, name) == _cues(on, name)
+
+
+def test_real_love_attack_break_bars_hold_the_wash() -> None:
+    bar_map = _real_love_attack()
+    draft = generate_segment_draft(bar_map, _layout())
+    breaks = [e for e in bar_map["events"] if e["kind"] == "break"]
+    assert breaks
+    for event in breaks:
+        for track in draft["tracks"]:
+            if track["layer_role"] in ("back", "side", "effect"):
+                cell = _state(draft, track["group_name"], event["start_bar"])
+                assert cell["label"] == REST_LABEL, (track["group_name"], event["start_bar"])
