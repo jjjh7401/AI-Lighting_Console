@@ -20,8 +20,10 @@
 4. 승인 카드 거절, 승인 창이 열린 사이 바뀐 이벤트(송신 직전 재확인), 첫 줄의 실패처럼 나간 줄이
    하나도 없으면 아무것도 확정하지 않고 옮기기 승인도 남기지 않는다.
 5. 승인 창이 열린 사이 다른 연결이 격자를 고친 경우에도 그 고침을 지우지 않는다.
-6. 반영 단계(에미터)가 사전이동 큐(MIB 선행)를 끼우는 줄은 옮기기 전이든 옮긴 뒤든 콘솔을 읽기 전에
-   거절한다 — 칸만 옮기면 그 큐의 이벤트가 옛 자리에 남거나 새로 필요한 큐가 빠진다.
+6. 반영 단계(에미터)가 사전이동 큐(MIB 선행)를 끼우는 줄의 칸을
+   옮기면, 그 큐도 옮긴 자리에 맞춰 함께 옮긴다. 콘솔 이벤트 시각과
+   소유 기록의 열쇠가 따라간다. 큐를 새로 세우거나 지워야 하거나,
+   옮긴 뒤 어두운 시간이 모자라 켜진 채 시작하면 콘솔을 읽기 전에 거절한다.
 7. 줄 일부만 나가고 멈추면 콘솔이 장부보다 앞서 있다 — 격자는 옮긴 대로 두되 소유 기록·칸 기록은
    그대로 둬 옮긴 칸이 「미반영」으로 남고, 옮기기 승인은 줄이 모두 나갔을 때만 남긴다.
 8. 콘솔에 줄이 하나라도 나간 옮기기(끝까지 나간 것도 일부만 나간 것도) 뒤에는 초안 되돌리기·다시하기
@@ -83,10 +85,10 @@ NO_RECORD = (
 )
 NO_TRACK = "콘솔에서 이 줄의 트랙을 찾지 못했습니다"
 NO_EVENT = "콘솔의 이벤트를 시각으로 찾지 못해 옮기지 않았습니다"
-PREMOVE_ROW = (
-    "움직임 준비(MIB 선행) 칸이 있는 줄은 이번 버전에서 칸 옮기기를 막습니다 "
-    "— ⇪ 전체 반영을 사용해 주세요"
-)
+#: 옮긴 뒤 어두운 시간이 모자라 움직임이 켜진 채 시작할 때의 사유 머리 — 뒤에 안내 문장이 붙는다.
+LIT_START_HEAD = "옮긴 자리에서 켜진 채 움직임이 시작됩니다"
+#: 큐를 새로 세우거나 지워야 하는 옮기기의 사유 끝 — 칸 옮기기는 큐의 시각만 고친다.
+PREMOVE_CHANGE_TAIL = "⇪ 전체 반영을 사용해 주세요"
 PARTIAL_SEND = "일부만 콘솔에 반영되었습니다 — ⇪ 전체 반영으로 맞춰 주세요"
 NOTHING_TO_UNDO = "되돌리기할 초안 단계가 없습니다"
 NOTHING_TO_REDO = "다시하기할 초안 단계가 없습니다"
@@ -229,6 +231,13 @@ def _mib_tracks(last_bar: int) -> list[dict]:
 def _mib_record(last_bar: int) -> dict:
     record = _record()
     record["tracks"]["BACK"]["cues"] = {"3": 1, "5": 2, str(last_bar): 3}
+    return record
+
+
+def _mib_record_with_premove(last_bar: int) -> dict:
+    """사전이동 큐가 선 뒤의 소유 기록 — 반영은 큐도 칸처럼 마디 열쇠로 적는다(B 뒤인 6마디)."""
+    record = _mib_record(last_bar)
+    record["tracks"]["BACK"]["cues"] = {"3": 1, "5": 2, "6": 3, str(last_bar): 4}
     return record
 
 
@@ -717,42 +726,182 @@ class TestRefusedByTheOwnedRecord:
 
 
 class TestRowsWithPremoveEvents:
-    """반영 단계가 사전이동 큐를 끼우는 줄은 이번 버전에서 칸 옮기기를 막는다.
+    """반영 단계가 사전이동 큐(MIB 선행)를 끼우는 줄의 칸을 옮기면,
+    그 큐도 옮긴 자리에 맞춰 옮긴다.
 
-    사전이동 큐는 칸이 아니라서 칸 옮기기가 그 이벤트를 따라 옮기지 못한다. 옮기기 전의 줄에
-    사전이동이 있으면 그 이벤트가 옛 자리에 남아 콘솔이 낡은 사전이동을 쏘고, 옮긴 뒤의 줄이
-    사전이동을 새로 요구하면 콘솔에 그 이벤트가 없다. 어느 쪽이든 「옮기기 = 다시 반영」이 깨지므로
-    둘 다 본다."""
+    큐는 칸이 아니라서 칸을 따라가지 않는다. 그래서 옮긴 뒤의 줄에서 큐를
+    다시 짓고(``plan_mib_premoves``), 같은 자리의 옛 큐와 짝지어 콘솔 이벤트
+    시각만 고친다. 소유 기록의 열쇠도 함께 옮긴다. 큐를 새로 세우거나
+    지워야 하는 옮기기는 거절한다. 옮긴 뒤 어두운 시간이 모자라 켜진 채
+    시작하는 옮기기도 거절한다."""
 
     @staticmethod
-    def _assert_refused(h: _Harness, event: dict) -> None:
-        _assert_refused_before_sending(h, event, PREMOVE_ROW)
-        assert event["reason"] == PREMOVE_ROW
+    def _assert_refused(h: _Harness, event: dict, *needles: str) -> None:
+        _assert_refused_before_sending(h, event, *needles)
         assert h.console.reads == []  # 콘솔을 읽기 전에 거절한다
 
-    def test_a_row_that_already_has_a_premove_event_is_refused(self, tmp_path) -> None:
-        # 옮기기 전: C(9마디) 앞의 어둠이 6초라 6마디에 사전이동이 서 있다(콘솔 이벤트 4개).
-        # C 를 7마디로 옮기면 어둠이 2초로 줄어 옮긴 뒤에는 사전이동이 없다 —
-        # 옮기기 전을 봐야 걸린다.
+    @pytest.mark.parametrize(
+        ("to_bar", "lines"),
+        [
+            # 5마디 칸을 4마디로 — 큐는 6마디에서 5마디로 간다(B 뒤의 어둠이 그만큼 길어진다).
+            (
+                4,
+                (
+                    "Set Timecode 5.1.1.1.1.2 Property 'Time' 10.502",
+                    "Set Timecode 5.1.1.1.1.3 Property 'Time' 12.502",
+                ),
+            ),
+            # 5마디 칸을 6마디로 — 큐가 서 있던 6마디에 칸이 들어가고, 큐는 7마디로 비켜 간다.
+            (
+                6,
+                (
+                    "Set Timecode 5.1.1.1.1.2 Property 'Time' 14.502",
+                    "Set Timecode 5.1.1.1.1.3 Property 'Time' 16.502",
+                ),
+            ),
+        ],
+    )
+    def test_moving_the_cell_in_front_moves_the_queue_of_the_cell_after_it(
+        self, tmp_path, to_bar: int, lines: tuple[str, str]
+    ) -> None:
+        # B(5마디, 꺼짐) 뒤의 C(10마디) 큐는 6마디에 서 있다(어둠 8초).
+        # B 를 옮기면 큐도 새 어둠의 첫 마디(B 바로 다음)로 간다.
+        # 칸과 큐가 함께 바뀌니 소유 기록의 열쇠도 같이 옮긴다.
+        assert _back_events(10) == 4
+        h = _build(
+            tmp_path, timeline=_timeline(_mib_tracks(10)), record=_mib_record_with_premove(10)
+        )
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, to_bar)])
+
+        assert event["ok"] is True
+        assert h.console.executed == list(lines)
+        assert _bars(h, "BACK") == [3, to_bar, 10]
+        assert h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"] == {
+            "3": 1,
+            str(to_bar): 2,
+            str(to_bar + 1): 3,
+            "10": 4,
+        }
+        fresh_apply = _emitted_event_ms(h.store.latest["beat_grid"]["tracks"])
+        assert _console_event_ms(h.console, "BACK") == fresh_apply["BACK"]
+
+    def test_moving_the_cell_that_has_the_queue_keeps_the_queue_where_it_is(self, tmp_path) -> None:
+        # C(10마디)를 9마디로 옮겨도 큐는 앞 칸 B 바로 다음인 6마디에 그대로다. 어둠이 6초로 줄어도
+        # 이동 시간 4.6초보다 길어 큐가 살아 있다. 옮길 이벤트는 C 하나다.
+        h = _build(
+            tmp_path, timeline=_timeline(_mib_tracks(10)), record=_mib_record_with_premove(10)
+        )
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 10, 9)])
+
+        assert event["ok"] is True
+        assert h.console.executed == ["Set Timecode 5.1.1.1.1.4 Property 'Time' 20.502"]
+        assert h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"] == {
+            "3": 1,
+            "5": 2,
+            "6": 3,
+            "9": 4,
+        }
+        fresh_apply = _emitted_event_ms(h.store.latest["beat_grid"]["tracks"])
+        assert _console_event_ms(h.console, "BACK") == fresh_apply["BACK"]
+
+    def test_two_cells_moved_in_one_row_move_the_queue_once_and_re_key_it(self, tmp_path) -> None:
+        # B(5마디)를 4마디로, C(10마디)를 9마디로 함께 옮긴다. C 의 큐는 B 바로 다음인 5마디로 가서
+        # 한 번만 옮겨진다. 칸 둘과 큐 하나의 열쇠가 한 번에 바뀌어야 맞는다.
+        h = _build(
+            tmp_path, timeline=_timeline(_mib_tracks(10)), record=_mib_record_with_premove(10)
+        )
+        before = dict(h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"])
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 4), _move("BACK", 10, 9)])
+
+        assert event["ok"] is True
+        assert h.console.executed == [
+            "Set Timecode 5.1.1.1.1.2 Property 'Time' 10.502",
+            "Set Timecode 5.1.1.1.1.4 Property 'Time' 20.502",
+            "Set Timecode 5.1.1.1.1.3 Property 'Time' 12.502",
+        ]
+        assert h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"] == {
+            "3": before["3"],
+            "4": before["5"],
+            "5": before["6"],
+            "9": before["10"],
+        }
+        fresh_apply = _emitted_event_ms(h.store.latest["beat_grid"]["tracks"])
+        assert _console_event_ms(h.console, "BACK") == fresh_apply["BACK"]
+
+    def test_moving_the_cell_before_leaves_no_dark_gap_and_is_refused(self, tmp_path) -> None:
+        # B 를 9마디로 옮기면 C(10마디) 앞에 어둠이 없다.
+        # 큐를 세울 자리가 없어 C 는 켜진 채 움직인다.
+        h = _build(
+            tmp_path, timeline=_timeline(_mib_tracks(10)), record=_mib_record_with_premove(10)
+        )
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 9)])
+
+        self._assert_refused(h, event, LIT_START_HEAD, "10마디 MIB 불가", "어두운 시간이 없습니다")
+
+    def test_shortening_the_dark_gap_of_the_cell_with_a_queue_is_refused(self, tmp_path) -> None:
+        # 옮기기 전: C(9마디) 앞의 어둠이 6초라 6마디에 큐가 서 있다(콘솔 이벤트 4개).
+        # C 를 7마디로 옮기면 어둠이 2초로 줄어 큐를 세울 수 없고, C 는 켜진 채 움직인다.
         assert (_back_events(9), _back_events(7)) == (4, 3)
-        h = _build(tmp_path, timeline=_timeline(_mib_tracks(9)), record=_mib_record(9))
+        h = _build(tmp_path, timeline=_timeline(_mib_tracks(9)), record=_mib_record_with_premove(9))
         assert len(_console_event_ms(h.console, "BACK")) == 4
 
         event = h.session.beat_grid_cell_edit([_move("BACK", 9, 7)])
 
-        self._assert_refused(h, event)
+        assert event["reason"] == (
+            "'BACK' 줄 — 옮긴 자리에서 켜진 채 움직임이 시작됩니다 "
+            "(7마디 MIB 불가 — 어두운 시간 2.0초가 이동 시간 4.6초보다 짧습니다) "
+            "— 옮기지 않았습니다"
+        )
+        self._assert_refused(h, event, LIT_START_HEAD)
 
-    def test_a_move_that_would_create_a_premove_event_is_refused(self, tmp_path) -> None:
-        # 옮기기 전: C(7마디) 앞의 어둠이 2초라 사전이동이 없다(콘솔 이벤트 3개).
-        # C 를 10마디로 옮기면 어둠이 8초가 되어 반영 단계는 6마디에 사전이동을 끼운다 —
-        # 옮기기만 하면 콘솔에는 그 이벤트가 없다. 옮긴 뒤를 봐야 걸린다.
+    def test_a_move_that_would_create_a_queue_is_refused(self, tmp_path) -> None:
+        # 옮기기 전: C(7마디) 앞의 어둠이 2초라 큐가 없다(콘솔 이벤트 3개).
+        # C 를 10마디로 옮기면 어둠이 8초가 되어 6마디에 큐가 서야 한다. 칸 옮기기는 이벤트를 만들지
+        # 않으니 거절하고, ⇪ 전체 반영이 큐를 세우게 한다.
         assert (_back_events(7), _back_events(10)) == (3, 4)
         h = _build(tmp_path, timeline=_timeline(_mib_tracks(7)), record=_mib_record(7))
         assert len(_console_event_ms(h.console, "BACK")) == 3
 
         event = h.session.beat_grid_cell_edit([_move("BACK", 7, 10)])
 
-        self._assert_refused(h, event)
+        self._assert_refused(
+            h, event, "6마디 앞에 사전이동 큐를 새로 세워야 합니다", PREMOVE_CHANGE_TAIL
+        )
+
+    def test_a_real_full_apply_records_the_queue_under_its_bar_and_the_move_follows(
+        self, tmp_path
+    ) -> None:
+        # 진짜 전체 반영은 사전이동 큐를 6마디 열쇠로 기록한다. 옮기기는 그 열쇠를 따라 옮긴다.
+        h = _build(
+            tmp_path,
+            answers=(True, True),
+            timeline=_timeline(_mib_tracks(10)),
+            tree=copy.deepcopy(TestSnapshotLeftByARealFullApply._FRESH_CONSOLE),
+            record=None,
+        )
+        applied = h.session.beat_grid_apply()
+        assert (applied["ok"], applied["completed"]) == (True, "reflected")
+        before = h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"]
+        assert sorted(before) == ["10", "3", "5", "6"]
+        # 가짜 콘솔은 타임코드 노드를 지어 주지 않는다 — 에미터가 낸 이벤트를 채워 둔다.
+        h.console.state_tree.update(
+            _console_tree(_emitted_event_ms(h.store.latest["beat_grid"]["tracks"]))
+        )
+        sent_by_apply = len(h.console.executed)
+
+        event = h.session.beat_grid_cell_edit([_move("BACK", 5, 4)])
+
+        assert event["ok"] is True
+        assert h.console.executed[sent_by_apply:] == [
+            "Set Timecode 5.1.1.1.1.2 Property 'Time' 10.502",
+            "Set Timecode 5.1.1.1.1.3 Property 'Time' 12.502",
+        ]
+        after = h.store.beat_grid_allocation(SONG)["tracks"]["BACK"]["cues"]
+        assert after == {"3": before["3"], "4": before["5"], "5": before["6"], "10": before["10"]}
 
     def test_a_row_with_no_premove_before_or_after_still_moves(self, tmp_path) -> None:
         # 꺼진 칸(B)이 있어도 C 앞의 어둠이 짧으면 사전이동은 없다 — 「MIB 불가」 안내일 뿐이다.
