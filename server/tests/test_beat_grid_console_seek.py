@@ -327,3 +327,108 @@ class TestTickCostAndLandingValue:
 
         assert event["ok"] is False
         assert _cursor_lines(console.executed) == []
+
+
+def _count_owner_checks(monkeypatch, session) -> list[str]:
+    """소유 확인(칸·시퀀스 읽기)이 도는 횟수를 센다 — 원래 함수를 그대로 부른다."""
+    checks: list[str] = []
+    original = session._beat_grid_owned_timecode
+
+    def counted():
+        checks.append("owner")
+        return original()
+
+    monkeypatch.setattr(session, "_beat_grid_owned_timecode", counted)
+    return checks
+
+
+class TestOwnerRememberedDuringPlay:
+    def test_a_second_playing_move_in_the_same_play_does_not_check_the_owner_again(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
+        checks = _count_owner_checks(monkeypatch, session)
+
+        session.beat_grid_console_seek(60.0, playing=True)
+        session.beat_grid_console_seek(62.0, playing=True)
+
+        # 같은 재생 안에서는 소유 확인이 한 번이면 된다. 커서만 옮긴 쓰기는 소유를 바꾸지 않는다.
+        assert len(checks) == 1
+        assert _cursor_lines(console.executed) == [
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 60",
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 62",
+        ]
+
+    def test_an_app_write_that_is_not_a_cursor_move_drops_the_remembered_owner(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
+        checks = _count_owner_checks(monkeypatch, session)
+        session.beat_grid_console_seek(60.0, playing=True)
+        session._beat_grid_send_transport_preapproved((f"Off Timecode {TIMECODE_NUMBER}",))
+        before = len(checks)
+
+        session.beat_grid_console_seek(62.0, playing=True)
+
+        assert len(checks) == before + 1
+
+    def test_the_remembered_owner_is_used_for_thirty_seconds_of_playing_and_no_longer(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        clock = {"now": 0.0}
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: clock["now"])
+        checks = _count_owner_checks(monkeypatch, session)
+        session.beat_grid_console_seek(60.0, playing=True)
+
+        clock["now"] = 29.0
+        session.beat_grid_console_seek(61.0, playing=True)
+        assert len(checks) == 1  # 30초 안에서는 기억한 소유를 쓴다
+
+        clock["now"] = 31.0
+        session.beat_grid_console_seek(62.0, playing=True)
+        assert len(checks) == 2  # 30초가 지나면 다시 확인한다
+
+    def test_a_move_while_paused_always_checks_the_owner(self, tmp_path, monkeypatch) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        _quiet_reads(monkeypatch, session, 60.0)
+        checks = _count_owner_checks(monkeypatch, session)
+
+        session.beat_grid_console_seek(60.0)
+        session.beat_grid_console_seek(62.0)
+
+        assert len(checks) == 2  # 멈춘 자리에서는 기억한 소유를 쓰지 않는다
+
+    def test_a_resync_that_has_to_write_uses_the_remembered_owner_without_checking_again(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, console, _approval, _audit = _owned_session(tmp_path)
+        clock = {"now": 0.0}
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: clock["now"])
+        checks = _count_owner_checks(monkeypatch, session)
+        session.beat_grid_console_seek(60.0, playing=True)
+        monkeypatch.setattr(session, "_beat_grid_timecode_cursor", lambda path: 61.0)
+        before = len(checks)
+        clock["now"] = 2.0  # 2초 뒤 주기 확인 — 커서가 1초 벗어나 있다
+
+        session.beat_grid_console_seek(60.0, playing=True, resync=True)
+
+        assert len(checks) == before
+        assert _cursor_lines(console.executed)[-1] == (
+            f"Set Timecode {TIMECODE_NUMBER} Property 'Cursor' 60"
+        )
+
+    def test_the_owner_checked_by_a_play_that_goes_out_at_once_serves_its_first_move(
+        self, tmp_path, monkeypatch
+    ) -> None:
+        session, _console, _approval, _audit = _owned_session(tmp_path)
+        monkeypatch.setattr(session, "_beat_grid_clock", lambda: 0.0)
+        session.beat_grid_console_play()  # 첫 재생은 세션 승인을 거친다
+        assert session.beat_grid_console_play()["ok"] is True  # 이어서 바로 나가는 재생
+        checks = _count_owner_checks(monkeypatch, session)
+
+        session.beat_grid_console_seek(60.0, playing=True)
+
+        assert checks == []  # 재생이 확인한 소유를 첫 움직임이 그대로 쓴다
