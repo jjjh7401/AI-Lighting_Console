@@ -38,6 +38,9 @@
 - 박 나누기 규칙: 무빙 웨이브 한 바퀴는 ``policy.motion_period_beats`` 박(기본 4)이다. 곡 박자표의
   한 마디 박 수와 같으면 「1마디」로 적는다. 규칙을 끄면(None) ``motion_period_bars`` 마디다. 디머·
   컬러 칸은 초안에 주기 값이 없다(라벨의 박만 있고 효과 주기는 프리셋 계획이 붙인다).
+- 후렴 직전 비움: 후렴·마지막 후렴 바로 앞 마디에서 리듬 줄(BACK·SIDE·역할 없는 줄)과 무빙
+  줄이 쉰다. 무빙은 앞 마디가 이미 어두울 때만이다. 그 마디가 강조 구간 안이면 두지 않는다.
+  기본값이고 곡별 정책(``pre_chorus_blackout``)으로 끈다.
 - 예고는 강조가 아니다. 강조 구간(후렴·마지막 후렴·드롭)이 시작하기 바로 앞 마디, 곧 큰 히트
   직전 마디에 블라인드 줄이 한 마디를 비운다(「3·4박 전부 비움(예고)」, 밝기는 쉼과 같다).
 - 칸은 값이 같은 연속 마디의 묶음이고 첫 마디에만 낸다. 값은 라벨·밝기·움직임이고 구간 종류와
@@ -191,6 +194,8 @@ _COLOR_LINE_ROLES = frozenset({"wash"})
 _PHRASE_ROLES = frozenset({"back", "side", "mover"})
 #: 브레이크 마디에도 그대로 두는 줄의 역할 — 정지 조명(FOH)·단색 워시·무빙. 나머지 줄은 쉰다.
 _BREAK_HOLD_ROLES = frozenset({"key", "wash", "mover"})
+#: 후렴 직전 마디에 비우는 줄의 역할 — 리듬 층(BACK 펄스·SIDE 체이스·역할 없는 줄)과 무빙.
+_PRE_CHORUS_DARK_ROLES = frozenset({"back", "side", None, "mover"})
 
 # @MX:DEBT: 브릿지 판정의 「브레이크 뒤 2마디 안」이 곡별 정책이 아니라 모듈 상수다
 # @MX:CEILING: 이 값 하나. 곡마다 다르게 둘 수 없다(REQ-LDARRANGE-004 는 규칙 값을 곡별로 둔다)
@@ -319,6 +324,22 @@ def generate_segment_draft(
             for track in layout:
                 if track.get("layer_role") not in _BREAK_HOLD_ROLES:
                     plans[str(track["group_name"])][bar] = rest
+
+    # 후렴 직전 마디는 리듬 줄과 무빙 줄이 쉰다(``pre_chorus_blackout``). 워시·FOH·강조 줄은
+    # 그대로다 — 블라인드 줄은 아래 예고 칸이 맡는다. 무빙은 앞 마디가 이미 어두울 때만 비운다:
+    # 켜진 칸 사이에 낀 한 마디 어둠은 사전이동(MIB)에 모자라 반영 단계가 「MIB 불가」를 낸다.
+    if settings.pre_chorus_blackout:
+        rest = _rest_plan(settings)
+        for bar in _pre_chorus_bars(sections):
+            before = _before(bar, bar_numbers)
+            for track in layout:
+                role = track.get("layer_role")
+                by_bar = plans[str(track["group_name"])]
+                if role not in _PRE_CHORUS_DARK_ROLES:
+                    continue
+                if role == "mover" and before is not None and by_bar[before].brightness_percent > 0:
+                    continue
+                by_bar[bar] = rest
 
     # 예고 칸은 강조가 아니라서 강조 규칙(``_cell_plan`` 의 ``is_kick``)을 거치지 않고 따로 놓는다.
     notice = _CellPlan(PRE_HIT_LABEL, settings.rest_percent, None, _KIND_PRE_HIT)
@@ -840,6 +861,16 @@ def _pre_hit_bars(sections: Sequence[SegmentSection]) -> list[int]:
         for before, after in zip(sections, sections[1:], strict=False)
         if after.kind in _HIT_KINDS
         and not (before.kind in _HIT_KINDS and before.start_bar == before.end_bar)
+    ]
+
+
+def _pre_chorus_bars(sections: Sequence[SegmentSection]) -> list[int]:
+    """후렴·마지막 후렴 바로 앞 구간의 끝 마디. 그 앞 구간이 강조 구간(후렴·드롭 등)이면 뺀다 —
+    강조 구간 안에서는 무빙을 비우지 않는다(``_HIT_KINDS``)."""
+    return [
+        before.end_bar
+        for before, after in zip(sections, sections[1:], strict=False)
+        if after.kind in _BLIND_SECTIONS and before.kind not in _HIT_KINDS
     ]
 
 

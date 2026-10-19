@@ -119,6 +119,9 @@ class ArrangementPolicy:
     - ``motion_period_beats``: 박 나누기 규칙 — 구간 생성기 무빙 웨이브의 한 바퀴 박 수(2~4).
       영상 분석에서 박에 맞춘 움직임은 2~4박에 한 바퀴였다(``server/fx/effect_library_data``).
       ``None`` 이면 규칙을 끄고 ``motion_period_bars`` 마디를 쓴다.
+    - ``pre_chorus_blackout``: 후렴·마지막 후렴 바로 앞 마디에서 리듬 줄(BACK·SIDE·역할 없는
+      줄)과 무빙 줄을 비우는 기본 규칙. 감독의 LOVE ATTACK 손 연출(Aside v5)이 두 후렴 앞에서
+      모두 그렇게 했다. 그 마디가 강조 구간 안이면 비우지 않는다. 끄면 예전대로다.
     """
 
     slow_song: bool = False
@@ -133,6 +136,7 @@ class ArrangementPolicy:
     chorus_energy_cut: float = 0.5
     break_hold_wash: bool = True
     motion_period_beats: int | None = 4
+    pre_chorus_blackout: bool = True
 
     def __post_init__(self) -> None:
         if self.window_bars < 1:
