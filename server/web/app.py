@@ -30,7 +30,11 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketState
 
-from server.design.rig_read_cache import RigReadCache
+from server.design.rig_read_cache import (
+    CUE_MONITOR_DEFER_CAP_SECONDS,
+    RigReadCache,
+    wait_while_reading,
+)
 from server.director.director_api import DirectorApiDeps, build_director_router
 from server.llm.types import LLMProvider
 from server.orchestrator.spatial_memory import SpatialMemory
@@ -1157,6 +1161,12 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, {**deps.snapshots.cue, "cached": True})
 
                     def _cue_monitor() -> None:
+                        # 장비 판독(예열·「⇪」·「장비 다시 읽기」) 동안 감시 틱을 뒤로 미룬다.
+                        # 콘솔은 한 번에 한 명령만 받는다(리드 결정, 2026-10-19). 상한이 있어서
+                        # 판독이 길어도 감시가 영영 멈추지 않는다.
+                        wait_while_reading(
+                            rig_read_cache, cap_seconds=CUE_MONITOR_DEFER_CAP_SECONDS
+                        )
                         # latency-1-3: the tick needs the executor NUMBERS and
                         # nothing else, and those change only when the operator
                         # re-patches. Rebuilding the whole dash catalog here

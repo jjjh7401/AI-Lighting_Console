@@ -111,3 +111,17 @@ def follow_patch_epoch(cache: RigReadCache, epoch: int) -> None:
     if cache.synced_patch_epoch != epoch:
         cache.invalidate()
         cache.synced_patch_epoch = epoch
+
+
+#: 장비 판독이 도는 동안 감시 틱을 기다리게 하는 상한(초). 판독이 길어도 감시가 영영 멈추지 않는다.
+CUE_MONITOR_DEFER_CAP_SECONDS = 5.0
+
+
+def wait_while_reading(
+    cache: RigReadCache, *, cap_seconds: float, poll_seconds: float = 0.05
+) -> float:
+    """장비 판독이 도는 동안 기다린다. ``cap_seconds`` 를 넘지 않고, 기다린 초를 돌려준다."""
+    started = time.monotonic()
+    while cache.is_reading() and time.monotonic() - started < cap_seconds:
+        time.sleep(poll_seconds)
+    return time.monotonic() - started

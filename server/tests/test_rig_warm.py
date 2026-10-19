@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import types
 
 import pytest
@@ -9,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from server.design.love_attack_timeline import LOVE_ATTACK_ENTRY_ID, love_attack_library_entry
-from server.design.rig_read_cache import RigReadCache
+from server.design.rig_read_cache import RigReadCache, wait_while_reading
 from server.web import rig_warm
 from server.web.rig_warm import warm_device_layers
 from server.web.session import SongTimelineStore
@@ -106,3 +107,33 @@ def test_loading_a_song_calls_the_open_hook_once() -> None:
     response = TestClient(app).post(f"/api/timelines/{LOVE_ATTACK_ENTRY_ID}/load")
     assert response.status_code == 200
     assert opened == ["open"]
+
+
+def test_the_cue_tick_does_not_wait_when_no_device_read_runs() -> None:
+    assert wait_while_reading(RigReadCache(), cap_seconds=5.0) < 0.5
+
+
+def test_the_cue_tick_waits_for_a_running_device_read_but_no_longer_than_the_cap() -> None:
+    cache = RigReadCache()
+    with cache.reading():
+        waited = wait_while_reading(cache, cap_seconds=0.2)
+    assert 0.15 <= waited < 1.0
+
+
+def test_the_cue_tick_resumes_as_soon_as_the_device_read_ends() -> None:
+    cache = RigReadCache()
+    started = threading.Event()
+    release = threading.Event()
+
+    def device_read() -> None:
+        with cache.reading():
+            started.set()
+            release.wait(timeout=5)
+
+    reader = threading.Thread(target=device_read)
+    reader.start()
+    started.wait(timeout=5)
+    threading.Timer(0.1, release.set).start()
+    waited = wait_while_reading(cache, cap_seconds=5.0)
+    reader.join(timeout=5)
+    assert waited < 2.0
