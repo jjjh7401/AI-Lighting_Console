@@ -25,6 +25,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type PointerEvent as Re
 
 import { PresetPlanButton, PresetPlanPanel } from "./beatgrid/PresetPlanPanel";
 import { PRESET_PLAN_SUMMARY, parsePresetPlan } from "./beatgrid/presetPlan";
+import { WavePresetControls } from "./beatgrid/WavePresetControls";
 import { BeatGridTopBar } from "./BeatGridTopBar";
 import { SongOverview } from "./SongOverview";
 import {
@@ -662,6 +663,8 @@ export interface BeatGridProps {
   onApprovalNoteClick?: () => void;
   /** 「필요한 프리셋 만들기」 — 서버가 계획표(chat_response)를 먼저 보내고 승인 카드를 띄운다. */
   onPresetPlanRequest?: () => void;
+  /** 「웨이브 프리셋 만들기」 — 드로어의 줄 선택으로 고른 줄 이름을 서버에 보낸다. */
+  onWavePresetRequest?: (groupName: string) => void;
   /** 반영 준비 — 상단 바 타임코드 번호(초안에 적힌 값, 없으면 null)와 입력 콜백. */
   timecodeNumber?: number | null;
   onTimecodeSubmit?: (timecodeNumber: number) => void;
@@ -1767,6 +1770,7 @@ export function BeatGrid({
   approvalPending = false,
   onApprovalNoteClick,
   onPresetPlanRequest,
+  onWavePresetRequest,
   timecodeNumber,
   onTimecodeSubmit,
   pendingApplyCount,
@@ -4831,6 +4835,9 @@ export function BeatGrid({
           </h4>
           <div className="fx">누르면 쓰는 막대가 노랗게 · 콘솔 이름(영문) 표시</div>
           {onPresetPlanRequest && <PresetPlanButton onClick={requestPresetPlanByHand} />}
+          {onWavePresetRequest && (
+            <WavePresetControls tracks={grid?.tracks ?? []} onRequest={onWavePresetRequest} />
+          )}
           {presetPlanBusyRefused && (
             <p className="beat-grid-drawer-unread" role="alert">
               지금 서버가 다른 일을 처리하는 중이라 프리셋 계획 요청이 처리되지 않았습니다 — 끝난 뒤 다시 눌러 주세요.

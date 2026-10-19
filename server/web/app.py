@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import logging
 import threading
 import time
@@ -802,11 +803,17 @@ def create_app(deps: WebDeps) -> FastAPI:
                         await _safe_send(websocket, busy_event(_BUSY_MESSAGE))
                         continue
                     if message_type == "beat_grid_apply":
-                        apply_fn = (
-                            session.beat_grid_preset_plan
-                            if message.get("mode") == "preset_plan"
-                            else session.beat_grid_apply
-                        )
+                        if message.get("mode") == "wave_presets":
+                            # 고른 줄 이름을 미리 묶어 넘긴다.
+                            apply_fn = functools.partial(
+                                session.beat_grid_wave_presets, message["group_name"]
+                            )
+                        else:
+                            apply_fn = (
+                                session.beat_grid_preset_plan
+                                if message.get("mode") == "preset_plan"
+                                else session.beat_grid_apply
+                            )
                         # 고른 칸만 반영 — 파서가 mode 'apply' 에서만 cells 를 받는다.
                         apply_kwargs = {"cells": message["cells"]} if message.get("cells") else {}
                         # 앱 「적용」 뒤 같은 칸을 콘솔에 바로 반영 — 파서가 cells 와 함께일
