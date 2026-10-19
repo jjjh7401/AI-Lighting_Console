@@ -380,8 +380,9 @@ def test_back_lane_over_the_synthetic_song_is_the_hand_derived_run_list() -> Non
     # 창은 구간 시작부터 4마디씩이고 창 길이에 못 미치는 끝 창은 앞 창에 붙는다(1-6, 7-8, 9-13,
     # 14-17, 18-21, 22-25, 26-32, …). 펄스는 빌드·브릿지(체이스 + 움직임)에서 쉬고, 후렴 18~32 의
     # 둘째 창(22~25)에서는 보조 자리를 체이스에 넘겨 쉰다(카드 WT-side-allocation). 창 돌림만
-    # 보려고 브레이크 쉼 규칙은 끈다(브레이크 쉼은 따로 시험한다).
-    back = _cues(_draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(break_hold_wash=False)), "BACK")
+    # 보려고 브레이크 쉼·후렴 직전 비움 규칙은 끈다(두 규칙은 따로 시험한다).
+    policy = ArrangementPolicy(break_hold_wash=False, pre_chorus_blackout=False)
+    back = _cues(_draft(SYNTHETIC_EVENTS, policy=policy), "BACK")
     assert [(bar, back[bar]["label"]) for bar in sorted(back)] == [
         (1, PULSE_LABEL),
         (7, PULSE_LABEL),
@@ -464,7 +465,8 @@ def test_a_rest_run_across_sections_and_windows_is_a_single_row() -> None:
 
 
 def test_rests_stay_rows_instead_of_disappearing_from_the_draft() -> None:
-    draft = _draft(SYNTHETIC_EVENTS)
+    # 후렴 직전 비움(17마디)이 SIDE 쉼을 한 마디 앞당기므로 그 규칙은 끄고 본다.
+    draft = _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(pre_chorus_blackout=False))
     assert _cues(draft, "BACK")[14]["label"] == REST_LABEL
     assert _cues(draft, "SIDE-ALL")[18]["label"] == REST_LABEL
     assert _cues(draft, "STROBE")[1]["label"] == REST_LABEL
@@ -1562,7 +1564,10 @@ def test_break_bars_rest_the_rhythm_and_accent_lines_and_keep_the_rest() -> None
 
 
 def test_rhythm_comes_back_on_the_bar_after_a_break() -> None:
-    back = _cues(_draft(SYNTHETIC_EVENTS), "BACK")
+    # 합성 곡의 8마디는 브레이크 다음이면서 후렴(9) 직전이라 후렴 직전 비움 규칙은 끄고 본다.
+    back = _cues(
+        _draft(SYNTHETIC_EVENTS, policy=ArrangementPolicy(pre_chorus_blackout=False)), "BACK"
+    )
     assert back[7]["label"] == REST_LABEL
     assert back[8]["label"] == PULSE_LABEL
 
@@ -1702,3 +1707,71 @@ def test_beat_division_adds_no_lit_starts_or_impossible_premoves() -> None:
     off = _mib_notes(bar_map, ArrangementPolicy(motion_period_beats=None))
     assert len(on) <= len(off)
     assert [note for note in on if "불가" in note] == []
+
+
+# -- 후렴 직전 비움(감독 손 연출 Aside v5 의 17·45마디) -----------------------------------------
+
+_NO_PRE_CHORUS = ArrangementPolicy(pre_chorus_blackout=False)
+
+
+def _accent_bars(draft: dict) -> dict[str, list[int]]:
+    return {
+        track["group_name"]: [
+            cue["bar"]
+            for cue in track["cues"]
+            if cue["direction"]["effect_kind"] in ("strobe", "blind", "pre_hit")
+        ]
+        for track in draft["tracks"]
+        if track["layer_role"] == "effect"
+    }
+
+
+def test_real_love_attack_rhythm_lines_rest_on_the_bar_before_each_chorus() -> None:
+    # 실곡 후렴(18·46) 직전 17·45마디에 BACK·SIDE 가 쉰다. 워시·FOH 는 켜 둔다.
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    for bar in (17, 45):
+        assert _state(draft, "BACK", bar)["label"] == REST_LABEL, bar
+        assert _state(draft, "SIDE-ALL", bar)["label"] == REST_LABEL, bar
+        assert _state(draft, "WASH-ALL", bar)["brightness"]["value_percent"] > 0, bar
+        assert _state(draft, "FOH", bar)["brightness"]["value_percent"] > 0, bar
+    # 끄면 예전대로 17마디 SIDE 체이스가 켜져 있다.
+    off = generate_segment_draft(_real_love_attack(), _layout(), _NO_PRE_CHORUS)
+    assert _state(off, "SIDE-ALL", 17)["label"] == CHASE_LABEL
+
+
+def test_movers_rest_before_a_chorus_only_when_already_dark() -> None:
+    # 무빙은 앞 마디가 이미 어두울 때만 비운다 — 켜진 칸 사이 한 마디 어둠은 MIB 에 모자란다.
+    bar_map = _real_love_attack()
+    on = generate_segment_draft(bar_map, _layout())
+    off = generate_segment_draft(bar_map, _layout(), _NO_PRE_CHORUS)
+    for name in ("MOVER-U", "MOVER-D"):
+        assert _state(on, name, 17) == _state(off, name, 17)  # 16마디가 켜져 있다
+        assert _state(on, name, 45)["label"] == REST_LABEL  # 44마디부터 이미 어둡다
+
+
+def test_a_pre_chorus_bar_inside_a_hit_section_is_left_lit() -> None:
+    # 드롭 끝 마디(66)는 마지막 후렴 직전이지만 드롭 안이라 비우지 않는다.
+    draft = generate_segment_draft(_real_love_attack(), _layout())
+    assert _state(draft, "BACK", 66)["label"] == PULSE_LABEL
+    assert _state(draft, "MOVER-U", 66)["label"] != REST_LABEL
+
+
+def test_an_untyped_line_rests_before_a_chorus_like_a_side_line() -> None:
+    layout = [
+        {**track, "layer_role": None} if track["group_name"] == "SIDE-ALL" else track
+        for track in _layout()
+    ]
+    draft = generate_segment_draft(_real_love_attack(), layout)
+    assert _state(draft, "SIDE-ALL", 17)["label"] == REST_LABEL
+
+
+def test_pre_chorus_blackout_adds_no_strobe_blind_or_mib_trouble() -> None:
+    bar_map = _real_love_attack()
+    on = generate_segment_draft(bar_map, _layout())
+    off = generate_segment_draft(bar_map, _layout(), _NO_PRE_CHORUS)
+    assert _accent_bars(on) == _accent_bars(off)
+    notes_on = _mib_notes(bar_map, ArrangementPolicy())
+    notes_off = _mib_notes(bar_map, _NO_PRE_CHORUS)
+    lit_starts = [note for note in notes_on if "켜진 채" in note]
+    assert len(lit_starts) <= len([note for note in notes_off if "켜진 채" in note])
+    assert [note for note in notes_on if "불가" in note] == []
