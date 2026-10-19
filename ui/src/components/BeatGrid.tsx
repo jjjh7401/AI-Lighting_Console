@@ -137,6 +137,8 @@ import {
   CONSOLE_FOLLOW_OFF_MESSAGE,
   CONSOLE_NO_SONG_AUDIO_MESSAGE,
   CONSOLE_PLAY_WAITING_MESSAGE,
+  CONSOLE_SEEK_DELAY_MISSING_MESSAGE,
+  CONSOLE_SEEK_TIMING_MISSING_MESSAGE,
   consoleAudioPositionSeconds,
   createConsoleFollowRelay,
   releaseBusyRefusedPlay,
@@ -2106,12 +2108,21 @@ export function BeatGrid({
     );
     if (step !== "send" || seekPendingRef.current === null || !onConsoleSeek) return;
     const pending = seekPendingRef.current;
-    seekPendingRef.current = null;
+    // 값을 먼저 정한다. 지연이 없으면 예약을 지우지 않고 잠시 뒤 다시 본다 — 조용히 버리지 않는다.
     const consoleSeconds =
       pending.playing && playingRef.current
         ? consoleLiveSeekSeconds(playbackAnchorRef.current, performance.now(), consoleDelayRef.current)
         : consoleTimecodeSeconds(pending.seconds, consoleDelayRef.current);
-    if (consoleSeconds === null) return;
+    if (consoleSeconds === null) {
+      setConsoleFollowError(CONSOLE_SEEK_DELAY_MISSING_MESSAGE);
+      if (seekTimerRef.current !== null) clearTimeout(seekTimerRef.current);
+      seekTimerRef.current = setTimeout(() => {
+        seekTimerRef.current = null;
+        flushConsoleSeek();
+      }, CONSOLE_SEEK_DEBOUNCE_MS);
+      return;
+    }
+    seekPendingRef.current = null;
     seekInFlightRef.current = true;
     seekPressedRef.current = sendStatus;
     seekBusyAtRef.current = busyCountRef.current;
@@ -2953,8 +2964,10 @@ export function BeatGrid({
     const seekSeconds = barToSeconds(target, secondsPerBar, barZeroStartSeconds);
     if (seekPlan === "seek" && seekSeconds !== null) setPlaybackSeconds(seekSeconds);
     // 콘솔 값은 보내는 순간에 정한다(`flushConsoleSeek`). 여기서 정하면 연타·순서 대기 동안 음원 시계가 흘러 뒤진다.
-    if (seekPlan !== "none" && seekSeconds !== null && consoleDelayRef.current !== null) {
-      scheduleConsoleSeek(seekSeconds, seekPlan === "live");
+    if (seekPlan !== "none") {
+      // 박자 정보가 없으면 보낼 자리를 모른다 — 조용히 건너뛰지 않고 알린다. 지연은 보내는 순간에 본다.
+      if (seekSeconds === null) setConsoleFollowError(CONSOLE_SEEK_TIMING_MISSING_MESSAGE);
+      else scheduleConsoleSeek(seekSeconds, seekPlan === "live");
     }
     if (!playing && consoleFollow && consoleFollowAvailable && relay.timecodePaused) {
       onPreviewBar?.(target);
