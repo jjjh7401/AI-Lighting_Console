@@ -45,6 +45,7 @@ from server.design.beat_grid import (
 from server.design.beat_grid_unverified import unverified_movement_terms
 from server.design.cell_direction import sync_direction_with_edit
 from server.design.cue_sheet_edit import MIB_MODES, TRACKING_VALUES
+from server.design.speed_master_registry import assign_speed_master, is_speed_master
 from server.spatial.position_fx import POSITION_FX_EFFECTS
 
 __all__ = [
@@ -120,7 +121,7 @@ def movement_vocabulary(probe_results: Mapping[object, object]) -> dict[str, obj
 
 
 _BRIGHTNESS_MODES: tuple[str, ...] = ("value", "dimmer_preset", "dimmer_effect")
-_EFFECT_KINDS: tuple[str, ...] = ("position", "color", "dimmer", "mixed")
+_EFFECT_KINDS: tuple[str, ...] = ("position", "color", "dimmer", "mixed", "wave")
 
 _VALUE_PERCENT_MIN, _VALUE_PERCENT_MAX = 0, 100
 
@@ -131,6 +132,7 @@ _KIND_TO_POOL_KEYS: dict[str, tuple[str, ...]] = {
     "color": ("color_effect",),
     "dimmer": ("dimmer_effect_a", "dimmer_effect_b"),
     "mixed": ("mixed_all",),
+    "wave": ("wave_all",),
 }
 
 _PRESET_POOLS_PATH: Path = Path(__file__).resolve().parent / "beat_grid_data" / "preset_pools.yaml"
@@ -140,11 +142,10 @@ _PRESET_POOLS_PATH: Path = Path(__file__).resolve().parent / "beat_grid_data" / 
 
 
 def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
-    """``preset_pools.yaml``을 읽어 ``{"confirmed": bool, "pools": {...}}``를
-    돌려준다. 파일이 없거나 못 읽으면(권한·I/O·파싱 오류) **정직하게**
-    ``{"confirmed": False, "pools": {}}``로 떨어진다 — 지어낸 밴드는
-    0건이다(`beat_grid_probes.read_m1_probe_results`와 같은 실패-경로
-    관행)."""
+    """``preset_pools.yaml``을 읽어 ``{"confirmed": bool, "pools": {...}}``를 돌려준다.
+    파일이 없거나 못 읽으면(권한·I/O·파싱 오류) **정직하게** ``{"confirmed": False, "pools": {}}``로
+    떨어진다 — 지어낸 밴드는 0건이다(`beat_grid_probes.read_m1_probe_results`와 같은 관행).
+    스피드 마스터는 곡마다 앱이 기록해 고르므로 여기서 싣지 않는다(``speed_master_registry``)."""
     target = path if path is not None else _PRESET_POOLS_PATH
     try:
         with target.open("r", encoding="utf-8") as handle:
@@ -158,24 +159,21 @@ def load_preset_pool_policy(path: Path | None = None) -> dict[str, object]:
         "confirmed": bool(document.get("confirmed", False)),
         "pools": dict(pools) if isinstance(pools, Mapping) else {},
     }
-    speed_master = speed_master_of(document)
-    if speed_master is not None:
-        policy["speed_master"] = speed_master
     return policy
 
 
-#: 효과 속도를 묶는 스피드 마스터 번호 범위. 16 은 콘솔 오디오 입력 BPM 마스터라 쓰지 않는다
-#: (REQ-LDRHYTHM-010) — 15 까지만 받는다.
-_SPEED_MASTER_RANGE = range(1, 16)
-
-
 def speed_master_of(policy: Mapping[str, object]) -> int | None:
-    """정책(``preset_pools.yaml``)의 ``speed_master`` — 효과 프리셋 속도를 묶을 스피드 마스터 번호.
-    선언이 없거나 범위(1~15) 밖이면 ``None`` 이고, 그때 효과 프리셋은 ``At Speed`` 로 굽는다."""
+    """이 정책의 곡에 묶을 스피드 마스터 번호 — 처음 필요할 때 배정·기록한다.
+
+    ``with_song_speed_master`` 가 곡을 얹었으면 그 곡의 기록을 읽고, 없으면 빈 번호를 골라 적는다.
+    마스터 하나는 쇼 전체가 공유하므로 번호는 곡마다 따로여야 한다. 곡이 없거나 배정할 수 없거나
+    범위(1~15) 밖이면 ``None`` — 효과는 ``At Speed`` 로 굽고, 웨이브는 만들지 않는다."""
     value = policy.get("speed_master")
-    if isinstance(value, int) and not isinstance(value, bool) and value in _SPEED_MASTER_RANGE:
-        return value
-    return None
+    song = policy.get("speed_master_song")
+    registry = policy.get("speed_master_registry")
+    if value is None and isinstance(song, str) and isinstance(registry, str):
+        value = assign_speed_master(Path(registry), song)
+    return value if is_speed_master(value) else None
 
 
 def validate_preset_pool_assignment(

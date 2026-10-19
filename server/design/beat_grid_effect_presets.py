@@ -216,6 +216,9 @@ def _template_fits(kind: str, fx: Fx) -> bool:
         return set(fx.attributes) <= {"Pan", "Tilt"}
     if kind == "color":
         return all(name.startswith("Color") for name in fx.attributes)
+    if kind == "wave":
+        # 웨이브 번호대(풀 21) — 디머 웨이브(Dimmer)와 컬러 웨이브(Color*)가 맞는다.
+        return all(name == "Dimmer" or name.startswith("Color") for name in fx.attributes)
     return False
 
 
@@ -377,10 +380,9 @@ def speed_master_bpm_lines(
 
     효과 프리셋은 스피드 마스터에 묶여(``At SpeedMaster``) 콘솔에 남으므로, 다시 쓰는 프리셋은
     만들기 줄이 없다 — 그래도 마스터 BPM 은 반영마다 이 곡 BPM 으로 맞춰야 한다(4차 전체 실행
-    D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 스피드 마스터가 선언되지 않았거나 BPM 을
+    D-12: 재사용 반영에 ``Master 3.15 At BPM`` 0건). 이 곡에 스피드 마스터 번호가 없거나 BPM 을
     모르면 빈 묶음이다."""
-    master = speed_master_of(policy)
-    if master is None or bpm is None or not math.isfinite(bpm) or bpm <= 0:
+    if bpm is None or not math.isfinite(bpm) or bpm <= 0:
         return ()
     uses_effect = any(
         _is_pool_slot(cue.get("effect_preset_no"))
@@ -389,7 +391,11 @@ def speed_master_bpm_lines(
         for cue in track.get("cues") or []
         if isinstance(cue, Mapping)
     )
-    return (f"Master 3.{master} At BPM {bpm:g}",) if uses_effect else ()
+    if not uses_effect:
+        # 효과를 쓰지 않는 격자는 스피드 마스터 번호를 정하지 않는다(배정은 필요할 때만).
+        return ()
+    master = speed_master_of(policy)
+    return (f"Master 3.{master} At BPM {bpm:g}",) if master is not None else ()
 
 
 def effect_preset_outcomes(
