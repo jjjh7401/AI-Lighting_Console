@@ -119,6 +119,8 @@ export interface BeatGridTopBarPlaybackProps {
   onToggleConsoleFollow?: () => void;
   /** 콘솔 재생이 거절된 이유(반영 기록 없음 등). 없으면 칸 자체가 없다. */
   consoleFollowError?: string | null;
+  /** 위 문구를 누르면 — 재생 승인 카드를 기다릴 때만 주어진다(전체화면 위 승인 카드로 옮긴다). */
+  onConsoleFollowErrorClick?: () => void;
 }
 
 export interface BeatGridTopBarProps {
@@ -376,9 +378,20 @@ timecodeNumber = null,
                   콘솔 같이 끔
                 </button>
               )}
-              {playback.consoleFollowError && (
-                <span className="beat-grid-audio-error">{playback.consoleFollowError}</span>
-              )}
+              {playback.consoleFollowError &&
+                (playback.onConsoleFollowErrorClick ? (
+                  <button
+                    type="button"
+                    className="beat-grid-audio-error beat-grid-apply-progress-link"
+                    role="status"
+                    title="눌러서 승인 카드로 가기"
+                    onClick={playback.onConsoleFollowErrorClick}
+                  >
+                    {`${playback.consoleFollowError} — 승인 카드 보기`}
+                  </button>
+                ) : (
+                  <span className="beat-grid-audio-error">{playback.consoleFollowError}</span>
+                ))}
               {playback.audioFailureReason && (
                 <span className="beat-grid-audio-error">{playback.audioFailureReason}</span>
               )}

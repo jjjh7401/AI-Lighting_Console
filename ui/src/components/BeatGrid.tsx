@@ -143,6 +143,9 @@ import {
   CONSOLE_SEEK_DELAY_MISSING_MESSAGE,
   CONSOLE_SEEK_TIMING_MISSING_MESSAGE,
   consoleAudioPositionSeconds,
+  consolePlayNote,
+  consoleRunningGraceMs,
+  consoleRunningMismatchShown,
   createConsoleFollowRelay,
   releaseBusyRefusedPlay,
   settleConsoleStop,
@@ -183,7 +186,13 @@ import {
   type LRSplitStage,
   type LRSplitViewedChild,
 } from "./beatgrid/lrSplit";
-import { applyProgressNote, failureNoteVisible } from "./beatgrid/applyProgress";
+import {
+  APPLY_RUN_IDLE,
+  type ApplyRun,
+  applyProgressNote,
+  failureNoteVisible,
+  stepApplyRun,
+} from "./beatgrid/applyProgress";
 // 칸 여러 개 고르기·일괄 바꾸기·칸 단위 반영(카드 WT-cell-apply) — 로직은 전부 아래 새 모듈에 있다.
 import { CellSelectionBar, type BulkChoice } from "./beatgrid/CellSelectionBar";
 import { cueSyncMark, knownKeySet, partialApplyPlan, unsentKeySet } from "./beatgrid/cellApply";
@@ -2074,25 +2083,19 @@ export function BeatGrid({
   // 「⇪ 콘솔에 반영」 진행 표시(카드 apply-latency): 누른 시각, 승인 카드가 뜬 시각, 그리고
   // 누르기 전이나 카드가 뜰 때 화면에 있던 결과(이번 반영의 결과가 아니다). 시계는 진행 문구가
   // 보일 때만 돈다.
-  const [applyRunStartMs, setApplyRunStartMs] = useState<number | null>(null);
-  const [approvalSinceMs, setApprovalSinceMs] = useState<number | null>(null);
-  const [staleSendStatus, setStaleSendStatus] = useState<BeatGridSendStatus | null>(null);
+  // 2026-10-20 실측 — 승인 뒤 명령 1,113개가 74초 동안 나가는 사이 진행 문구가 사라졌다. 승인 결정 뒤 끝 응답이
+  // 올 때까지 「보내는 중」을 이어 보인다(`stepApplyRun`).
+  const [applyRun, setApplyRun] = useState<ApplyRun<BeatGridSendStatus>>(APPLY_RUN_IDLE);
   const [applyNowMs, setApplyNowMs] = useState(() => Date.now());
   useEffect(() => {
-    if (approvalPending) {
-      setApprovalSinceMs((since) => since ?? Date.now());
-      setStaleSendStatus(sendStatus);
-    } else {
-      // 결정이 났거나 새 결과가 왔다 — 진행 문구를 거두고, 이후 결과는 이번 반영의 결과로 본다.
-      setApprovalSinceMs(null);
-      setApplyRunStartMs(null);
-    }
+    setApplyRun((run) => stepApplyRun(run, approvalPending, sendStatus ?? null, Date.now()));
   }, [approvalPending, sendStatus]);
+  const applyRunTicking = applyRun.startedAtMs !== null || applyRun.approvalSinceMs !== null;
   useEffect(() => {
-    if (applyRunStartMs === null && approvalSinceMs === null) return;
+    if (!applyRunTicking) return;
     const timer = window.setInterval(() => setApplyNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [applyRunStartMs, approvalSinceMs]);
+  }, [applyRunTicking]);
   // 칸 단위 반영 결과 알림 + 성공하면 보낸 첫 칸의 마디를 콘솔에서 본다(재생 중이거나 콘솔이 돌고 있을 수 있으면 보지 않는다).
   const cellApplyResult = useCellApplyResult({
     sendStatus,
@@ -2102,9 +2105,8 @@ export function BeatGrid({
   const beginApplyRun = () => {
     const now = Date.now();
     setApplyNowMs(now);
-    setApplyRunStartMs(now);
     // 누르기 전에 화면에 있던 결과는 이번 반영의 결과가 아니다 — 새 결과가 올 때까지 숨긴다.
-    setStaleSendStatus(sendStatus);
+    setApplyRun({ ...APPLY_RUN_IDLE, startedAtMs: now, staleStatus: sendStatus ?? null });
     cellApplyResult.dismiss();
   };
   const requestApply = onApply
@@ -2119,12 +2121,14 @@ export function BeatGrid({
         onApplyCells(cells);
       }
     : undefined;
+  const applySending = !approvalPending && applyRun.sendingSinceMs !== null;
   const applyProgressText = applyProgressNote(
-    approvalPending ? approvalSinceMs : applyRunStartMs,
+    approvalPending ? applyRun.approvalSinceMs : applySending ? applyRun.sendingSinceMs : applyRun.startedAtMs,
     applyNowMs,
     approvalPending,
+    applySending,
   );
-  const applyFailure = failureNoteVisible(approvalPending, sendStatus, staleSendStatus)
+  const applyFailure = failureNoteVisible(approvalPending, sendStatus ?? null, applyRun.staleStatus)
     ? applyFailureNote(sendStatus)
     : null;
   const consoleAudioTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2294,7 +2298,12 @@ export function BeatGrid({
         onConsolePause?.();
         return;
       }
-      if (relay.awaiting) return;
+      if (relay.awaiting) {
+        // 2026-10-20 실측 — 승인 카드를 기다리는 동안 ▶ 를 다시 눌러도 아무 일이 없었다. 다시 보내지는 않고(서버는
+        // `busy` 로 거절한다) 그 승인 카드로 옮겨 초점을 준다.
+        if (approvalPending) onApprovalNoteClick?.();
+        return;
+      }
       if (relay.stopping) {
         relay.playQueued = true;
         return;
@@ -2653,7 +2662,27 @@ export function BeatGrid({
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [playing, grid, secondsPerBar, barZeroStartSeconds]);
+  }, [playing, grid, secondsPerBar, barZeroStartSeconds, axisEnd]);
+
+  // 2차 전체 실행 N11 알림의 시점 — 2026-10-20 실측: 재생 시작(콘솔 출발 뒤 음원이 실측 지연을 기다림)과 곡 끝(정지
+  // 응답 대기)에서 「앱은 멈췄지만 콘솔 정지가 확인되지 않았어요」가 1~2초 깜빡였다. 둘 다 정상 전환이다. 어긋남이
+  // 그 창(지연 + 여유)보다 오래 이어질 때만 알린다.
+  const consoleMismatch = relay.consoleMayRun && !playing;
+  const [consoleMismatchSinceMs, setConsoleMismatchSinceMs] = useState<number | null>(null);
+  const [consoleMismatchNowMs, setConsoleMismatchNowMs] = useState(0);
+  useEffect(() => {
+    if (!consoleMismatch) {
+      setConsoleMismatchSinceMs(null);
+      return undefined;
+    }
+    setConsoleMismatchSinceMs(Date.now());
+    const graceMs = consoleRunningGraceMs(consoleDelayRef.current);
+    const timer = setTimeout(() => setConsoleMismatchNowMs(Date.now()), graceMs + 50);
+    return () => clearTimeout(timer);
+  }, [consoleMismatch]);
+  const consoleRunningVisible =
+    consoleMismatch &&
+    consoleRunningMismatchShown(consoleMismatchSinceMs, consoleMismatchNowMs, consoleDelayRef.current);
 
   const folders = useMemo(() => groupTracksByLayerFolder(grid?.tracks ?? []), [grid]);
   // t537 — M1 상태의 살아있는 소스는 `grid.probe_results`(서버가 progress.md를
@@ -3151,7 +3180,7 @@ export function BeatGrid({
     <section className="beat-grid" aria-label="박자 격자">
       {/* 2차 전체 실행 N11 — 앱은 멈췄는데 콘솔 정지가 확인되지 않았으면 크게 알린다. */}
       <ConsoleRunningBanner
-        visible={relay.consoleMayRun && !playing}
+        visible={consoleRunningVisible}
         timecodeNumber={timecodeNumber ?? null}
         approvalPending={approvalPending}
         onStop={onConsoleStop}
@@ -3196,7 +3225,8 @@ export function BeatGrid({
           consoleFollowDisabledReason: CONSOLE_FOLLOW_DISABLED_REASON,
           consoleFollowOn: consoleFollow,
           onToggleConsoleFollow: consoleFollowAvailable ? toggleConsoleFollow : undefined,
-          consoleFollowError,
+          consoleFollowError: consolePlayNote(consoleFollowError, relay.awaiting, approvalPending),
+          onConsoleFollowErrorClick: relay.awaiting && approvalPending ? onApprovalNoteClick : undefined,
         }}
       />
       {presetPlan && <PresetPlanPanel plan={presetPlan} onClose={() => setPresetPlanPending(null)} />}
