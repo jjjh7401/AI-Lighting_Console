@@ -1084,7 +1084,7 @@ def test_an_unrelated_bug_is_not_swallowed_as_a_console_refusal(name, arguments)
 # precheck_vectorworks_diff · apply_vectorworks_patch · resolve_patch_address ·
 # patch_fixtures/_verify's re-query is covered separately below) plus the
 # single `build_patch_sheet` chokepoint (server/paperwork/data.py) that
-# `build_patch_sheet`(tool) shares with paperwork_api.py/build_magic_sheet/
+# `build_patch_sheet`(tool) shares with build_magic_sheet/
 # bundle.py. Measured (not inferred): none of these carried a sibling
 # `except StateQueryError` before this card, unlike patch_fixtures's first
 # read and import_lxseq_patch above (t181) -- so they died with a raw

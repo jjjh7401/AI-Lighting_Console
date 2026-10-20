@@ -14,8 +14,8 @@ so the T-J executor-layout TOOL — which lives in ``server.orchestrator.tools``
 and needs this exact occupancy check — importing it back from
 ``server.web.layout_occupancy`` would invert that established dependency
 direction (``orchestrator -> web -> orchestrator``). Moving the impure logic
-here keeps the edge one-way; ``server/web/layout_occupancy.py`` now re-exports
-these two names unchanged for any existing or future web-layer caller.
+here keeps the edge one-way. (The old ``server/web/layout_occupancy.py``
+re-export shim has since been removed.)
 
 Same read shape as ``server/web/dash.py::_confirm_executor_no`` and
 ``server/web/cue_monitor.py::build_executor_cue_progress`` (query
