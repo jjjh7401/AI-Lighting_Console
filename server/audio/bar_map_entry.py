@@ -29,6 +29,7 @@ from server.audio.bar_map import (
     compute_bar_energy,
     derive_bars,
     detect_beat_grid,
+    extend_beats_to_duration,
     extract_bar_features,
 )
 from server.audio.bar_map_store import BarMapStoreError, attach_rhythm, build_bar_map_payload
@@ -105,9 +106,9 @@ def synthesize_bar_map(
     """오디오 바이트 + 첫 박 오프셋 → 저장용 마디 지도 사전, 또는 실패 객체.
 
     순서: 오프셋 점검(디코드 전) → ``detect_beat_grid`` → 두 배 BPM 채택이면 거절 →
-    ``derive_bars`` → ``extract_bar_features`` → ``classify_bar_events`` →
-    ``build_bar_map_payload``. 저장되는 ``bpm`` 은 검출기 값이다(결정 E4 (가)) —
-    세션의 BPM 확정값을 읽지 않는다.
+    ``extend_beats_to_duration``(음원 끝까지 박 잇기) → ``derive_bars`` →
+    ``extract_bar_features`` → ``classify_bar_events`` → ``build_bar_map_payload``.
+    저장되는 ``bpm`` 은 검출기 값이다(결정 E4 (가)) — 세션의 BPM 확정값을 읽지 않는다.
 
     예외를 밖으로 내보내지 않는다 — 어떤 입력이든 사전이거나 :class:`BarMapEntryFailure`
     다(내보내면 ``to_thread`` 로 도는 작업이 조용히 죽어 응답이 없다).
@@ -155,7 +156,12 @@ def _synthesize(
             kind=KIND_REJECTED,
         )
 
-    bars = derive_bars(grid.beat_times_ms, first_beat_offset)
+    # @MX:NOTE: [AUTO] 검출기는 끝의 약한 박을 잘라 낸다 — 조용한 아웃트로가 있으면 마디가 음원
+    # 끝보다 앞에서 멈추고, 마디 지도를 읽는 격자·타임코드 Duration·재생 끝이 같이 짧아진다
+    # (카드 WT-song-tail). 검출된 박은 그대로 두고 곡 BPM 간격으로 음원 끝까지 잇는다.
+    beat_times_ms = extend_beats_to_duration(grid.beat_times_ms, grid.bpm, grid.duration_ms)
+
+    bars = derive_bars(beat_times_ms, first_beat_offset)
     if isinstance(bars, BarMapFailure):
         return BarMapEntryFailure(bars.reason)
 
@@ -169,7 +175,7 @@ def _synthesize(
 
     try:
         payload = build_bar_map_payload(
-            grid.beat_times_ms,
+            beat_times_ms,
             first_beat_offset,
             bpm=grid.bpm,
             time_signature=_TIME_SIGNATURE,
