@@ -84,18 +84,64 @@ export function parseTimelineLoadBackupName(text: string): string | null {
   }
 }
 
-/** 불러오기 성공 안내. 서버가 지금 작업본을 백업했으면 어디에 남았는지 같이 말한다. */
-export function timelineLoadedNotice(backupName: string | null): string {
+/** 서버가 불러오기 전에 지금 작업본을 백업하지 **않은** 이유(``backup_skipped``). */
+export type TimelineLoadBackupSkip =
+  | { reason: "same_as_saved"; savedAs: string | null }
+  | { reason: "no_unsaved_edits" };
+
+/** POST /api/timelines/{id}/load 의 ``backup_skipped``. 없거나 모양이 다르면 `null`. */
+export function parseTimelineLoadBackupSkip(text: string): TimelineLoadBackupSkip | null {
+  try {
+    const skip: unknown = (JSON.parse(text) as { backup_skipped?: unknown })?.backup_skipped;
+    if (typeof skip !== "object" || skip === null || !("reason" in skip)) return null;
+    if (skip.reason === "no_unsaved_edits") return { reason: "no_unsaved_edits" };
+    if (skip.reason !== "same_as_saved") return null;
+    const savedAs = "saved_as" in skip && typeof skip.saved_as === "string" ? skip.saved_as : null;
+    return { reason: "same_as_saved", savedAs };
+  } catch {
+    return null;
+  }
+}
+
+/** 불러오기 실패 응답(``{detail: {message}}``)이 말한 이유. 없으면 `null`(화면은 일반 문구). */
+export function parseTimelineLoadError(text: string): string | null {
+  try {
+    const detail: unknown = (JSON.parse(text) as { detail?: unknown })?.detail;
+    if (typeof detail !== "object" || detail === null || !("message" in detail)) return null;
+    return typeof detail.message === "string" && detail.message.trim() ? detail.message : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 불러오기 성공 안내. 서버가 지금 작업본을 백업했으면 어디에 남았는지, 건너뛰었으면 왜인지 말한다.
+ * `asked` 는 이 불러오기 전에 미저장 확인 창을 띄웠는지 — 띄웠다면 백업 얘기를 빠뜨리지 않는다
+ * (2026-10-20 실측: 확인 창은 백업을 약속했는데 항목이 생기지 않았고 안내도 이유를 말하지 않았다). */
+export function timelineLoadedNotice(
+  backupName: string | null,
+  skip: TimelineLoadBackupSkip | null = null,
+  asked = false,
+): string {
   const loaded = "타임라인을 불러왔습니다 — 감독 타임라인에 표시됩니다.";
-  return backupName === null
-    ? loaded
-    : `${loaded} 저장하지 않았던 작업본은 「${backupName}」로 백업했습니다.`;
+  if (backupName !== null) {
+    return `${loaded} 저장하지 않았던 작업본은 「${backupName}」로 백업했습니다.`;
+  }
+  if (skip?.reason === "same_as_saved") {
+    const where = skip.savedAs === null ? "라이브러리에" : `「${skip.savedAs}」로`;
+    return `${loaded} 같은 내용이 이미 ${where} 저장돼 있어 백업을 따로 만들지 않았어요.`;
+  }
+  if (asked) {
+    return `${loaded} 서버의 작업본에는 저장하지 않은 수정이 없어 백업을 따로 만들지 않았어요.`;
+  }
+  return loaded;
 }
 
 // WT-load-unsaved-guard — 「수정됨 · 미저장」 작업본 위에 불러오기를 누르면 먼저 묻는다
-// (2026-10-20 실측: 확인 창 없이 덮여 수정이 사라졌다). 백업 자체는 서버가 한다.
+// (2026-10-20 실측: 확인 창 없이 덮여 수정이 사라졌다). 백업 자체는 서버가 하고, 같은 내용이 이미
+// 저장돼 있으면 새로 남기지 않는다 — 확인 창도 그 경우를 거짓 없이 말한다.
 export const UNSAVED_LOAD_CONFIRM =
-  "저장하지 않은 수정이 있어요. 자동 백업을 남기고 불러올까요?";
+  "저장하지 않은 수정이 있어요. 불러오기 전에 지금 작업본을 자동 백업으로 남겨요" +
+  "(같은 내용이 이미 저장돼 있으면 새로 만들지 않아요). 불러올까요?";
 
 /** 불러와도 되면 `true`. 미저장 작업본이면 `confirm` 으로 묻고, 취소하면 `false`(불러오지 않음).
  * `savedTimeline` 은 이 창에서 마지막으로 저장한 그 작업본 — 그대로면 다시 묻지 않는다. */
@@ -142,17 +188,31 @@ export async function saveTimelineToLibrary(name: string): Promise<boolean> {
   }
 }
 
-export async function loadTimelineFromLibrary(
-  id: string,
-): Promise<{ timeline: SongTimelineView; backupName: string | null } | null> {
+export type TimelineLoadResult =
+  | {
+      ok: true;
+      timeline: SongTimelineView;
+      backupName: string | null;
+      backupSkip: TimelineLoadBackupSkip | null;
+    }
+  | { ok: false; message: string | null };
+
+/** 실패면 서버가 말한 이유(``backup_failed`` 등)를 `message` 에 싣는다 — 없으면 `null`. */
+export async function loadTimelineFromLibrary(id: string): Promise<TimelineLoadResult> {
   try {
     const response = await fetch(apiUrl(`/api/timelines/${id}/load`), { method: "POST" });
-    if (!response.ok) return null;
     const text = await response.text();
+    if (!response.ok) return { ok: false, message: parseTimelineLoadError(text) };
     const timeline = parseTimelineLoadResponse(text);
-    return timeline === null ? null : { timeline, backupName: parseTimelineLoadBackupName(text) };
+    if (timeline === null) return { ok: false, message: null };
+    return {
+      ok: true,
+      timeline,
+      backupName: parseTimelineLoadBackupName(text),
+      backupSkip: parseTimelineLoadBackupSkip(text),
+    };
   } catch {
-    return null;
+    return { ok: false, message: null };
   }
 }
 

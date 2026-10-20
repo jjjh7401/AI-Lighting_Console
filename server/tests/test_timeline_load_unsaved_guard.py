@@ -83,6 +83,47 @@ def test_a_draft_already_saved_as_is_is_not_backed_up_twice(tmp_path):
     assert response.json()["backup"] is None
 
 
+def test_a_skipped_backup_says_which_saved_entry_already_holds_the_draft(tmp_path):
+    # 2026-10-20 헤드리스 E2E 실측: 「수정됨 · 미저장」 판을 확인 창에서 수락했는데
+    # 백업 항목이 생기지 않았고(라이브러리 106→106) 안내도 이유를 말하지 않았다. 같은 내용이
+    # 이미 자동 저장(「… (자동 vN)」)으로 있으면 새로 남기지 않는 것은 맞다 — 그 사실을
+    # 응답이 말해야 화면이 거짓 약속을 하지 않는다.
+    deps = _deps(tmp_path)
+    entry = deps.timeline_library.save("LOVE ATTACK 2026-10-15", _SAVED)
+    draft = dict(_DIRTY_DRAFT)
+    already = deps.timeline_library.auto_save("LOVE ATTACK", dict(draft))
+    deps.song_timeline_store.latest = draft
+    with TestClient(create_app(deps)) as client:
+        response = client.post(f"/api/timelines/{entry['id']}/load")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["backup"] is None
+    assert body["backup_skipped"] == {"reason": "same_as_saved", "saved_as": already["name"]}
+    assert len(_names(deps)) == 2
+
+
+def test_a_backup_is_reported_without_a_skip_reason(tmp_path):
+    deps = _deps(tmp_path)
+    entry = deps.timeline_library.save("LOVE ATTACK 2026-10-15", _SAVED)
+    deps.song_timeline_store.latest = dict(_DIRTY_DRAFT)
+    with TestClient(create_app(deps)) as client:
+        body = client.post(f"/api/timelines/{entry['id']}/load").json()
+    assert body["backup"] is not None
+    assert body["backup_skipped"] is None
+
+
+def test_no_unsaved_edits_on_the_server_is_said_as_such(tmp_path):
+    # 화면은 미저장으로 보고 물었어도 서버 작업본에 미저장 표식이 없으면 백업할 것이 없다 — 그것도
+    # 응답이 말한다(화면이 「백업했다」고도, 아무 말 없이도 넘어가지 않게).
+    deps = _deps(tmp_path)
+    entry = deps.timeline_library.save("LOVE ATTACK 2026-10-15", _SAVED)
+    deps.song_timeline_store.latest = {**_DIRTY_DRAFT, "draft": {"dirty": False}}
+    with TestClient(create_app(deps)) as client:
+        body = client.post(f"/api/timelines/{entry['id']}/load").json()
+    assert body["backup"] is None
+    assert body["backup_skipped"] == {"reason": "no_unsaved_edits"}
+
+
 def test_a_freshly_loaded_timeline_carries_no_unsaved_marker(tmp_path):
     # 미저장 상태에서 저장한 판에는 「draft.dirty」가 같이 저장된다. 불러온 직후는 저장본과 같으니
     # 미저장이 아니다 — 안 그러면 다음 불러오기마다 손대지 않은 판을 또 백업한다.
