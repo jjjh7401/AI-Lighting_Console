@@ -1053,6 +1053,7 @@ export default function App() {
   const timelineLibrarySlot = (
     <TimelineLibrary
       hasTimeline={state.songTimeline.timeline !== null}
+      timeline={state.songTimeline.timeline}
       onLoaded={loadTimelineFromLibrary}
       open={timelineLibraryOpen}
       onOpenChange={setTimelineLibraryOpen}

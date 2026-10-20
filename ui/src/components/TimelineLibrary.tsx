@@ -11,11 +11,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { SongTimelineView } from "../protocol";
 import {
+  confirmLoadIfUnsaved,
   deleteTimelineFromLibrary,
   fetchTimelineList,
   loadTimelineFromLibrary,
   saveTimelineToLibrary,
   timelineItemMeta,
+  timelineLoadedNotice,
   type TimelineLibraryItem,
 } from "../timelineLibrary";
 
@@ -129,11 +131,14 @@ export function TimelineLibraryView({
 
 export function TimelineLibrary({
   hasTimeline,
+  timeline = null,
   onLoaded,
   open: openProp,
   onOpenChange,
 }: {
   hasTimeline: boolean;
+  /** 지금 작업본 — 「수정됨 · 미저장」이면 불러오기 전에 묻는다(WT-load-unsaved-guard). */
+  timeline?: SongTimelineView | null;
   onLoaded: (timeline: SongTimelineView) => void;
   /** 펼침 상태를 부모가 쥘 때(런북의 「펼치기」 손잡이) 넘긴다. 없으면 이 컴포넌트가 스스로 쥔다. */
   open?: boolean;
@@ -153,6 +158,8 @@ export function TimelineLibrary({
   const [draftName, setDraftName] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // 이 창에서 마지막으로 저장한 작업본. 그 뒤로 바뀌지 않았으면 불러오기 전에 다시 묻지 않는다.
+  const [savedTimeline, setSavedTimeline] = useState<SongTimelineView | null>(null);
 
   const refresh = useCallback(async () => {
     setItems(await fetchTimelineList());
@@ -167,25 +174,31 @@ export function TimelineLibrary({
     setNotice(null);
     const ok = await saveTimelineToLibrary(draftName.trim());
     setNotice(ok ? `"${draftName.trim()}" 저장 완료` : "저장하지 못했습니다.");
-    if (ok) setDraftName("");
+    if (ok) {
+      setDraftName("");
+      setSavedTimeline(timeline);
+    }
     await refresh();
     setBusy(false);
-  }, [draftName, refresh]);
+  }, [draftName, refresh, timeline]);
 
   const handleLoad = useCallback(
     async (id: string) => {
+      if (!confirmLoadIfUnsaved(timeline, savedTimeline, (m) => window.confirm(m))) return;
       setBusy(true);
       setNotice(null);
-      const timeline = await loadTimelineFromLibrary(id);
-      if (timeline === null) {
+      const loaded = await loadTimelineFromLibrary(id);
+      if (loaded === null) {
         setNotice("불러오지 못했습니다.");
       } else {
-        onLoaded(timeline);
-        setNotice("타임라인을 불러왔습니다 — 감독 타임라인에 표시됩니다.");
+        onLoaded(loaded.timeline);
+        setNotice(timelineLoadedNotice(loaded.backupName));
+        // 서버가 미저장 작업본을 백업했으면 목록에 그 항목이 새로 생겼다.
+        if (loaded.backupName !== null) await refresh();
       }
       setBusy(false);
     },
-    [onLoaded],
+    [onLoaded, refresh, savedTimeline, timeline],
   );
 
   const handleDelete = useCallback(

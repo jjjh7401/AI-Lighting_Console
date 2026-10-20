@@ -36,6 +36,20 @@ _AUTO_SAVE_NAME = re.compile(r".* \(자동 v\d+\)$")
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
 
 
+def _has_unsaved_edits(current: object, library: SongTimelineLibrary) -> bool:
+    """지금 작업본에 라이브러리에 없는 수정이 있나.
+
+    「수정됨 · 미저장」 표식(``draft.dirty``, ``ChatSession._draft_badge``)이 서 있고, 같은 내용의
+    저장본이 아직 없을 때만 참이다 — 막 「현재 타임라인 저장」을 눌렀다면 백업을 또 남기지 않는다.
+    """
+    if not isinstance(current, Mapping):
+        return False
+    draft = current.get("draft")
+    if not (isinstance(draft, Mapping) and draft.get("dirty") is True):
+        return False
+    return not any(entry.get("timeline") == current for entry in library.items())
+
+
 @dataclass
 class TimelineLibraryDeps:
     store: SongTimelineStore
@@ -90,7 +104,27 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # 자동 저장(``<base> (자동 vN)``) 이름은 감독이 고른 이름이 아니다 — 저장된 곡 이름이
         # 있으면 그대로 둔다(1차 전체 실행 B-02: 「… 분석 전 백업 (자동 v1)」이 제목이 됐다).
         # 곡 이름이 비었거나 일반 설계 이름뿐이면 지금처럼 저장 이름을 쓴다.
+        # WT-load-unsaved-guard — 저장 안 한 수정이 있는 작업본을 말없이 덮지 않는다(2026-10-20
+        # 실측: 「Aside 새 연출 v5」 미저장 수정이 확인 창도 백업도 없이 사라졌다). 먼저 지금
+        # 작업본을 라이브러리에 자동 백업으로 남기고, 못 남기면 불러오지 않는다.
+        current = deps.store.latest
+        backup = None
+        if _has_unsaved_edits(current, deps.library):
+            base = str(current.get("song_title") or "").strip() or "작업본"
+            try:
+                backup = deps.library.auto_save(f"{base} 불러오기 전 백업", dict(current))
+            except (OSError, ValueError) as error:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "error": "backup_failed",
+                        "message": "저장하지 않은 지금 작업본을 백업하지 못해 불러오지 "
+                        f"않았습니다({type(error).__name__}). 지금 작업본은 그대로입니다.",
+                    },
+                ) from error
         timeline = dict(entry["timeline"])
+        # 막 불러온 판은 저장본 그대로다 — 저장 때 같이 담긴 「미저장」 표식은 떼어 낸다.
+        timeline.pop("draft", None)
         old_key = (timeline.get("song_title"), timeline.get("sequence_number"))
         saved_title = str(timeline.get("song_title") or "").strip()
         keep_title = _AUTO_SAVE_NAME.match(str(entry["name"])) is not None and saved_title not in (
@@ -116,7 +150,6 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # 불러와도 지금 작업본의 기록을 버리지 않는다. 안 그러면 다음 계획이 콘솔에 있는 같은
         # 프리셋을 못 알아보고 새 번호에 또 저장한다(2026-10-20 실측: 21개 재사용 0, DIM-100
         # 1.925 → 1.939). 재사용 여부는 콘솔 이름·기록 대조(``preset_plan``)가 가른다.
-        current = deps.store.latest
         previous_grid = current.get("beat_grid") if isinstance(current, Mapping) else None
         if isinstance(previous_grid, Mapping) and isinstance(timeline.get("beat_grid"), Mapping):
             timeline = carry_console_preset_records(previous_grid, timeline)
@@ -148,6 +181,7 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
             "ok": True,
             "item": timeline_entry_summary(entry),
             "timeline": fill_bar_map_header(derived),
+            "backup": timeline_entry_summary(backup) if backup is not None else None,
         }
 
     @router.delete("/api/timelines/{entry_id}")

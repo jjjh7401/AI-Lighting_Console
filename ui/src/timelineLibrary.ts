@@ -73,6 +73,41 @@ export function parseTimelineLoadResponse(text: string): SongTimelineView | null
   return view;
 }
 
+/** POST /api/timelines/{id}/load 가 지금 작업본을 자동 백업했으면 그 이름. 아니면 `null`. */
+export function parseTimelineLoadBackupName(text: string): string | null {
+  try {
+    const backup: unknown = (JSON.parse(text) as { backup?: unknown })?.backup;
+    if (typeof backup !== "object" || backup === null || !("name" in backup)) return null;
+    return typeof backup.name === "string" ? backup.name : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 불러오기 성공 안내. 서버가 지금 작업본을 백업했으면 어디에 남았는지 같이 말한다. */
+export function timelineLoadedNotice(backupName: string | null): string {
+  const loaded = "타임라인을 불러왔습니다 — 감독 타임라인에 표시됩니다.";
+  return backupName === null
+    ? loaded
+    : `${loaded} 저장하지 않았던 작업본은 「${backupName}」로 백업했습니다.`;
+}
+
+// WT-load-unsaved-guard — 「수정됨 · 미저장」 작업본 위에 불러오기를 누르면 먼저 묻는다
+// (2026-10-20 실측: 확인 창 없이 덮여 수정이 사라졌다). 백업 자체는 서버가 한다.
+export const UNSAVED_LOAD_CONFIRM =
+  "저장하지 않은 수정이 있어요. 자동 백업을 남기고 불러올까요?";
+
+/** 불러와도 되면 `true`. 미저장 작업본이면 `confirm` 으로 묻고, 취소하면 `false`(불러오지 않음).
+ * `savedTimeline` 은 이 창에서 마지막으로 저장한 그 작업본 — 그대로면 다시 묻지 않는다. */
+export function confirmLoadIfUnsaved(
+  timeline: SongTimelineView | null,
+  savedTimeline: SongTimelineView | null,
+  confirm: (message: string) => boolean,
+): boolean {
+  if (timeline?.draft?.dirty !== true || timeline === savedTimeline) return true;
+  return confirm(UNSAVED_LOAD_CONFIRM);
+}
+
 /** The one-line entry label: "저장시각 · Sequence N · 구간 5". */
 export function timelineItemMeta(item: TimelineLibraryItem): string {
   const parts: string[] = [];
@@ -107,11 +142,15 @@ export async function saveTimelineToLibrary(name: string): Promise<boolean> {
   }
 }
 
-export async function loadTimelineFromLibrary(id: string): Promise<SongTimelineView | null> {
+export async function loadTimelineFromLibrary(
+  id: string,
+): Promise<{ timeline: SongTimelineView; backupName: string | null } | null> {
   try {
     const response = await fetch(apiUrl(`/api/timelines/${id}/load`), { method: "POST" });
     if (!response.ok) return null;
-    return parseTimelineLoadResponse(await response.text());
+    const text = await response.text();
+    const timeline = parseTimelineLoadResponse(text);
+    return timeline === null ? null : { timeline, backupName: parseTimelineLoadBackupName(text) };
   } catch {
     return null;
   }
