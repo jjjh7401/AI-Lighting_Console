@@ -122,9 +122,9 @@ def build_patch_sheet(
         inventory = read_inventory(port, policy, type_names=type_names)
     except StateQueryError as error:
         # t187 5+1 (2): the single chokepoint every patch-sheet consumer
-        # (tools.py build_patch_sheet · paperwork_api.py · build_magic_sheet ·
-        # bundle.py) shares. No sibling `except StateQueryError` exists
-        # anywhere in server/paperwork or server/web/paperwork_api.py
+        # (tools.py build_patch_sheet · build_magic_sheet · bundle.py)
+        # shares. No sibling `except StateQueryError` exists
+        # anywhere in server/paperwork
         # (measured), so translating here creates no dead code -- unlike
         # the tools.py sites that already special-case StateQueryError.
         # Reuses InventoryReadError (no new exception type) -- t109 already

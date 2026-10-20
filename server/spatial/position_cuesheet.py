@@ -208,9 +208,8 @@ def build_position_cue_sheet(
     ``lit_dimmer_fade`` is R4's optional per-section (dimmer %, fade
     seconds) pair, aligned one-to-one with ``sections`` (SPEC-COPILOT-
     SONGSTD-001 M2). The design layer derives each pair from the section's
-    own D level and hands the finished numbers DOWN
-    (:func:`server.design.position_sheet.build_standard_position_cue_sheet`)
-    — this analysis layer stays stdlib + intra-spatial (AC-SPATIAL-013).
+    own D level and hands the finished numbers DOWN — this analysis layer
+    stays stdlib + intra-spatial (AC-SPATIAL-013).
     Omitted, behaviour is byte-identical to the pre-R4 contract: every lit
     cue stores the flat ``_LIT_DIMMER`` and the caller's own
     ``fade_seconds``. Blackout cues, the skip rule, MIB pre-moves, the
