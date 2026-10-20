@@ -3,18 +3,15 @@
 Static import-boundary scan over the WHOLE server tree: only the safety gate
 package may reach the OSC send surface (``server.bridge`` / ``pythonosc``).
 
-Named exemptions (M4 decision, flagged for check-in ratification):
-``server/tools/osc_smoke.py`` and ``server/tools/responder_roundtrip.py`` are
-NON-PRODUCTION operator diagnostics that exist to exercise the transport
-BENEATH the gate (bridge-level connectivity debugging against a live console).
-Routing them through the gate would require an approval channel in a headless
-diagnostic context and would destroy their diagnostic value. The exemption is
-file-exact: any NEW module under ``server/tools/`` (or anywhere else) touching
-the bridge fails this test.
+Named exemptions: the former ``server/tools/osc_smoke.py`` and
+``server/tools/responder_roundtrip.py`` operator diagnostics were deleted as
+dead code (never imported by the running app), so their exemptions went with
+them. The exemption stays file-exact: any module touching the bridge outside
+the allowed prefixes fails this test.
 
-``server/preshow/osc_check.py`` (SPEC-COPILOT-PRESHOW-001) is the same class
-of exemption: a pre-show diagnostic that reuses the ping/state round-trip
-pattern from ``responder_roundtrip.py`` above. It never sends the ``exec``
+``server/preshow/osc_check.py`` (SPEC-COPILOT-PRESHOW-001) is the one remaining
+exemption: a pre-show diagnostic that reuses the ping/state round-trip
+pattern. It never sends the ``exec``
 verb, so it never executes an end-user MA3 command outside gate screening —
 only liveness (``ping``) and read-only object-tree queries (``state``).
 """
@@ -39,8 +36,6 @@ _ALLOWED_PREFIXES = (
 # File-exact operator-utility exemptions (see module docstring).
 _NAMED_TOOL_EXEMPTIONS = frozenset(
     {
-        "server/tools/osc_smoke.py",
-        "server/tools/responder_roundtrip.py",
         "server/preshow/osc_check.py",
     }
 )

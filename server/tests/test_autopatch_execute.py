@@ -1828,13 +1828,9 @@ _REGISTERED_VWX_IMPORTS = frozenset(
         "server.vwx.columns",
         "server.vwx.diff",
         "server.vwx.luagen",
-        # [round24 후속] 인테이크가 DMX 주소 산술을 mvr 한 자리에서 빌려 쓴다 —
-        # 각자 나누기를 쓰면 그것이 형제 표면이다.
         "server.vwx.mvr",
         "server.vwx.patchplan",
         "server.vwx.reader",
-        # [round24 후속] 인테이크가 「없는 타입」을 막다른 길 대신 조달 단계로 바꾼다.
-        "server.vwx.typesource",
         "server.vwx.rig",
         "server.vwx.typemap",
         "server.vwx.verdicts",
@@ -1938,7 +1934,7 @@ def test_the_frozen_import_registry_is_exactly_what_production_imports():
         "쓰지 않는 등기는 **미리 열어 둔 문**이다 — 지워라."
     )
     # 실측 고정 — 규모가 조용히 부풀지 않는다(round18 실측: 완전 모듈명 22 / 최상위 루트 12).
-    assert len(_REGISTERED_VWX_IMPORTS) == 28
+    assert len(_REGISTERED_VWX_IMPORTS) == 27
     assert len({name.split(".", 1)[0] for name in _REGISTERED_VWX_IMPORTS}) == 15
 
 

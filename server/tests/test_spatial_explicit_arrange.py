@@ -13,8 +13,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from server.lxseq.position_derive import (
@@ -31,7 +29,6 @@ from server.spatial.presets import (
     explicit_placements,
 )
 from server.tests.test_spatial_arrange import ArrangeConsole, arrange, registry, rig
-from server.tools.lxseq_coords_write import parse_coords_sheet
 
 
 def _rows(entries):
@@ -304,54 +301,3 @@ class TestLabelProvenance:
         # 꼬리를 지우는 것은 출처 표기를 지우는 것이다.
         with pytest.raises(ValueError):
             self._derive(label_suffix="   ")
-
-
-class TestCoordsSheetParser:
-    """좌표 CSV 판독 — 조용히 건너뛰지 않는다.
-
-    한 대가 빠진 리그는 좌표가 0 인 리그보다 알아보기 어렵다: 나머지 85대가
-    제자리에 있으면 그 한 대는 눈에 안 띈다. 그래서 결손·비숫자는 거절이다.
-    """
-
-    def test_it_reads_the_four_load_bearing_columns(self):
-        text = "\n".join(
-            [
-                "FID,Group,FixtureType,Position,X,Y,Z",
-                "101,KEY,ETC S4,FOH 브리지,-5.0,-9.0,7.5",
-                "102,KEY,ETC S4,FOH 브리지,-3.0,-9.0,7.5",
-            ]
-        )
-
-        assert parse_coords_sheet(text) == [
-            dict(fid=101, x=-5.0, y=-9.0, z=7.5),
-            dict(fid=102, x=-3.0, y=-9.0, z=7.5),
-        ]
-
-    def test_a_missing_column_is_refused(self):
-        with pytest.raises(ValueError):
-            parse_coords_sheet("FID,X,Y\n101,1.0,2.0\n")
-
-    def test_a_non_numeric_coordinate_is_refused_rather_than_skipped(self):
-        with pytest.raises(ValueError):
-            parse_coords_sheet("FID,X,Y,Z\n101,1.0,2.0,TBD\n")
-
-    def test_an_empty_sheet_is_refused(self):
-        with pytest.raises(ValueError):
-            parse_coords_sheet("FID,X,Y,Z\n")
-
-    def test_the_canonical_rig_sheet_parses_to_eighty_six_rows(self):
-        # 정본에 대고 잰다 — 합성 파일이 「없다」를 만들어 내지 않게.
-        path = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "Lighting_Designer"
-            / "02_RIG팩"
-            / "LXSEQ_RIG_01_ShowBase_r3.coords.csv"
-        )
-        rows = parse_coords_sheet(path.read_text(encoding="utf-8-sig"))
-
-        assert len(rows) == 86
-        assert len(set(row["fid"] for row in rows)) == 86
-        # t221 이 잰 퇴화(전 축 span 0)의 반대 — 이 시트는 폭을 갖는다.
-        assert max(r["x"] for r in rows) - min(r["x"] for r in rows) > 1.0
-        assert max(r["y"] for r in rows) - min(r["y"] for r in rows) > 1.0
