@@ -289,8 +289,9 @@ def main() -> int:
         result = run(gate, out, live=False, deny_all=False)
         result["fake_sent"] = console.sent
     else:
-        from server.safety.bootstrap import build_console_stack
         from server.tools.probe_preflight import preflight
+
+        from server.safety.bootstrap import build_console_stack
 
         pinned = None
         if args.approve:

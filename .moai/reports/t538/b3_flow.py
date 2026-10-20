@@ -19,9 +19,9 @@ sys.path.insert(0, ".")
 sys.path.insert(0, ".moai/reports/t531")
 import m1_common  # noqa: E402
 from m1_common import LISTEN_PORT, LinkTimeouts, Probe, RecordingApproval  # noqa: E402
+from server.tools.probe_preflight import preflight  # noqa: E402
 
 from server.safety.bootstrap import build_console_stack  # noqa: E402
-from server.tools.probe_preflight import preflight  # noqa: E402
 
 ROUNDS = 3
 WAIT = 4.0

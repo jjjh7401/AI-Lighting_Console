@@ -21,10 +21,10 @@ import sys
 sys.path.insert(0, ".")
 sys.path.insert(0, ".moai/reports/t531")
 from m1_common import seq_path, tc_path  # noqa: E402
+from server.tools.probe_preflight import preflight  # noqa: E402
 
 from server.safety.bootstrap import build_console_stack  # noqa: E402
 from server.safety.console import StateQueryError  # noqa: E402
-from server.tools.probe_preflight import preflight  # noqa: E402
 
 TC_NO = 32
 TRACK_SEQS = (226, 227, 228, 229, 230, 231, 232, 233)

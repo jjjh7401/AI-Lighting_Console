@@ -245,9 +245,9 @@ def main() -> int:
 def main_live(args, out: Path, skipped: list[str]) -> int:
     """실기 경로 — m1_common.main_cli 의 deny-all/--approve 와 같은 틀."""
     from m1_common import LISTEN_PORT, LinkTimeouts
+    from server.tools.probe_preflight import preflight
 
     from server.safety.bootstrap import build_console_stack
-    from server.tools.probe_preflight import preflight
 
     pinned = None
     if args.approve:
