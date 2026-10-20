@@ -184,15 +184,21 @@ export function TimelineLibrary({
 
   const handleLoad = useCallback(
     async (id: string) => {
-      if (!confirmLoadIfUnsaved(timeline, savedTimeline, (m) => window.confirm(m))) return;
+      let asked = false;
+      const confirmed = confirmLoadIfUnsaved(timeline, savedTimeline, (m) => {
+        asked = true;
+        return window.confirm(m);
+      });
+      if (!confirmed) return;
       setBusy(true);
       setNotice(null);
       const loaded = await loadTimelineFromLibrary(id);
-      if (loaded === null) {
-        setNotice("불러오지 못했습니다.");
+      if (!loaded.ok) {
+        // 서버가 이유를 말했으면(예: 백업 실패로 불러오지 않음) 그대로 보여 준다.
+        setNotice(loaded.message ?? "불러오지 못했습니다.");
       } else {
         onLoaded(loaded.timeline);
-        setNotice(timelineLoadedNotice(loaded.backupName));
+        setNotice(timelineLoadedNotice(loaded.backupName, loaded.backupSkip, asked));
         // 서버가 미저장 작업본을 백업했으면 목록에 그 항목이 새로 생겼다.
         if (loaded.backupName !== null) await refresh();
       }

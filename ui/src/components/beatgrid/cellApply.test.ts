@@ -6,10 +6,10 @@ import {
   CUE_SYNC_APP_ONLY_LABEL,
   CUE_SYNC_IN_SYNC_LABEL,
   PARTIAL_NOTHING_CHANGED_HINT,
-  PARTIAL_NOTHING_PICKED_HINT,
-  PARTIAL_NO_RECORD_HINT,
   PARTIAL_PICKED_NOTHING_CHANGED_HINT,
   PARTIAL_RECORD_WARNING,
+  PARTIAL_WHOLE_NO_RECORD_NOTE,
+  PARTIAL_WHOLE_RECORD_NOTE,
   SUBSET_RECORD_BASELINE_NOTE,
   cueSyncMark,
   knownKeySet,
@@ -23,37 +23,42 @@ import { CELL_WIRE_MAX, type CueCell } from "./cellSelection";
 const cellOf = (group_name: string, bar: number): CueCell => ({ group_name, bar });
 
 describe("partialApplyPlan — 「⇪ 콘솔에 반영」이 보낼 칸", () => {
-  describe("기준이 없을 때(partial_baseline 이 null/undefined)", () => {
-    it("막고 「전체 다시 반영」을 먼저 누르라고 말한다 — 이 안내는 이때만 나온다", () => {
+  // 2026-10-20 헤드리스 E2E 실측: 마디 맵 분석 → 자동 배치 → 프리셋 승인 → TC 뒤 첫 반영에서 「⇪ 콘솔에 반영」이
+  // 꺼져 있었고 「전체 다시 반영」만 됐다. 바뀐 칸을 가려낼 기준이 없으면 막지 말고 곡 전체를 보낸다(전체 다시 반영과 같다).
+  describe("기준이 없을 때(partial_baseline 이 null/undefined) — 첫 반영", () => {
+    it("막지 않고 곡 전체를 보낸다고 말한다 — 고른 칸이 있어도 같다", () => {
       for (const baseline of [null, undefined]) {
         for (const unsent of [null, undefined, [], [cellOf("A", 1)]]) {
-          const plan = partialApplyPlan(unsent, [cellOf("A", 1)], baseline);
-          expect(plan).toEqual({ kind: "blocked", reason: PARTIAL_NO_RECORD_HINT, why: "no-record" });
+          for (const picks of [[], [cellOf("A", 1)]]) {
+            const plan = partialApplyPlan(unsent, picks, baseline);
+            expect(plan).toEqual({ kind: "whole", note: PARTIAL_WHOLE_NO_RECORD_NOTE, why: "no-record" });
+          }
         }
       }
-      expect(PARTIAL_NO_RECORD_HINT).toBe("이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요");
+      expect(PARTIAL_WHOLE_NO_RECORD_NOTE).toBe("아직 반영 기록이 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요)");
     });
 
-    it("다른 기준의 막힘 이유는 그 안내를 담지 않는다", () => {
+    it("다른 기준의 안내는 그 말을 담지 않는다", () => {
       const others = [
         partialApplyPlan([], [], "snapshot"),
         partialApplyPlan([cellOf("A", 1)], [cellOf("B", 2)], "snapshot"),
         partialApplyPlan(null, [], "record"),
       ];
       for (const plan of others) {
-        expect(plan.kind === "blocked" && plan.reason).not.toContain("아직 반영 기록이 없어요");
+        const text = plan.kind === "blocked" ? plan.reason : plan.note;
+        expect(text).not.toContain("아직 반영 기록이 없어");
       }
     });
   });
 
   describe("칸 기록 기준(snapshot) — 바뀐 칸만", () => {
-    it("기준은 snapshot 인데 unsent 가 목록이 아니면(어긋난 응답) 기준 없음과 같이 막는다", () => {
+    it("기준은 snapshot 인데 unsent 가 목록이 아니면(어긋난 응답) 기준 없음과 같이 곡 전체를 보낸다", () => {
       expect(partialApplyPlan(null, [], "snapshot")).toEqual({
-        kind: "blocked",
-        reason: PARTIAL_NO_RECORD_HINT,
+        kind: "whole",
+        note: PARTIAL_WHOLE_NO_RECORD_NOTE,
         why: "no-record",
       });
-      expect(partialApplyPlan(undefined, [cellOf("A", 1)], "snapshot").kind).toBe("blocked");
+      expect(partialApplyPlan(undefined, [cellOf("A", 1)], "snapshot").kind).toBe("whole");
     });
 
     it("바뀐 칸이 없으면(빈 배열) 「바뀐 칸이 없어요」로 막는다", () => {
@@ -289,11 +294,11 @@ describe("partialApplyPlan — 「⇪ 콘솔에 반영」이 보낼 칸", () => 
       );
     });
 
-    it("기준이 없으면(null/undefined) known_cells 가 있어도 같은 막힘이다", () => {
+    it("기준이 없으면(null/undefined) known_cells 가 있어도 곡 전체를 보낸다", () => {
       for (const baseline of [null, undefined]) {
         expect(partialApplyPlan(UNSENT, [cellOf("A", 1)], baseline, KNOWN)).toEqual({
-          kind: "blocked",
-          reason: PARTIAL_NO_RECORD_HINT,
+          kind: "whole",
+          note: PARTIAL_WHOLE_NO_RECORD_NOTE,
           why: "no-record",
         });
       }
@@ -309,15 +314,17 @@ describe("partialApplyPlan — 「⇪ 콘솔에 반영」이 보낼 칸", () => 
   });
 
   describe("기록 기준(record) — 고른 칸 모두", () => {
-    it("고른 칸이 없으면 막고, 바뀐 칸을 알 수 없으니 먼저 고르라고 말한다", () => {
+    it("고른 칸이 없으면 바뀐 칸을 알 수 없으니 곡 전체를 보낸다 — 칸만 보내려면 고르라고 덧붙인다", () => {
       for (const unsent of [null, undefined, [], [cellOf("A", 1)]]) {
         expect(partialApplyPlan(unsent, [], "record")).toEqual({
-          kind: "blocked",
-          reason: PARTIAL_NOTHING_PICKED_HINT,
+          kind: "whole",
+          note: PARTIAL_WHOLE_RECORD_NOTE,
           why: "nothing-picked",
         });
       }
-      expect(PARTIAL_NOTHING_PICKED_HINT).toBe("고른 칸을 먼저 골라 주세요 — 기록 기준이라 바뀐 칸을 알 수 없어요");
+      expect(PARTIAL_WHOLE_RECORD_NOTE).toBe(
+        "바뀐 칸을 알 수 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요) — 칸만 보내려면 칸을 고르세요",
+      );
     });
 
     it("고른 칸을 모두 보낸다 — unsent 로 거르지 않는다(unsent 는 null 이어도, 목록이어도 같다)", () => {

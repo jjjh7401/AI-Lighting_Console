@@ -36,18 +36,22 @@ _AUTO_SAVE_NAME = re.compile(r".* \(자동 v\d+\)$")
 _DESIGN_INTERVIEW_TITLE = "Design Interview"
 
 
-def _has_unsaved_edits(current: object, library: SongTimelineLibrary) -> bool:
-    """지금 작업본에 라이브러리에 없는 수정이 있나.
+def _backup_skip_reason(current: object, library: SongTimelineLibrary) -> dict | None:
+    """지금 작업본을 불러오기 전에 백업하지 **않는** 이유. 백업해야 하면 ``None``.
 
-    「수정됨 · 미저장」 표식(``draft.dirty``, ``ChatSession._draft_badge``)이 서 있고, 같은 내용의
-    저장본이 아직 없을 때만 참이다 — 막 「현재 타임라인 저장」을 눌렀다면 백업을 또 남기지 않는다.
+    「수정됨 · 미저장」 표식(``draft.dirty``, ``ChatSession._draft_badge``)이 없으면
+    ``no_unsaved_edits``, 같은 내용의 저장본이 이미 있으면 ``same_as_saved`` 와 그 이름이다 —
+    막 「현재 타임라인 저장」을 눌렀거나 콘솔 저장 승인이 자동 저장(``… (자동 vN)``)을 남겼다면
+    백업을 또 남기지 않는다. 이유를 응답에 실어 화면이 「백업했다」고 거짓 안내하지 않게 한다
+    (2026-10-20 실측: 확인 창에서 백업을 약속했는데 항목이 생기지 않았고 이유도 말하지 않았다).
     """
-    if not isinstance(current, Mapping):
-        return False
-    draft = current.get("draft")
+    draft = current.get("draft") if isinstance(current, Mapping) else None
     if not (isinstance(draft, Mapping) and draft.get("dirty") is True):
-        return False
-    return not any(entry.get("timeline") == current for entry in library.items())
+        return {"reason": "no_unsaved_edits"}
+    for entry in library.items():
+        if entry.get("timeline") == current:
+            return {"reason": "same_as_saved", "saved_as": entry.get("name")}
+    return None
 
 
 @dataclass
@@ -109,7 +113,8 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
         # 작업본을 라이브러리에 자동 백업으로 남기고, 못 남기면 불러오지 않는다.
         current = deps.store.latest
         backup = None
-        if _has_unsaved_edits(current, deps.library):
+        backup_skipped = _backup_skip_reason(current, deps.library)
+        if backup_skipped is None and isinstance(current, Mapping):
             base = str(current.get("song_title") or "").strip() or "작업본"
             try:
                 backup = deps.library.auto_save(f"{base} 불러오기 전 백업", dict(current))
@@ -182,6 +187,7 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
             "item": timeline_entry_summary(entry),
             "timeline": fill_bar_map_header(derived),
             "backup": timeline_entry_summary(backup) if backup is not None else None,
+            "backup_skipped": backup_skipped,
         }
 
     @router.delete("/api/timelines/{entry_id}")

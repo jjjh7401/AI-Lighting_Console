@@ -52,14 +52,17 @@ export function ConsoleApplyButton({
   partial,
 }: ConsoleApplyButtonProps) {
   const plan = partial?.plan;
-  const title = plan
-    ? plan.kind === "ready"
-      ? `${CONSOLE_APPLY_LABEL} — ${plan.note}`
-      : plan.reason
-    : titleFor(CONSOLE_APPLY_LABEL, !!onApply);
-  const disabled = plan ? plan.kind !== "ready" : !onApply;
+  // `whole`(바뀐 칸을 가려낼 기준이 없음)이면 이 버튼이 곡 전체 반영(`onApply`)을 부른다 — 「전체 다시 반영」과 같은 길.
+  const title = !plan
+    ? titleFor(CONSOLE_APPLY_LABEL, !!onApply)
+    : plan.kind === "blocked"
+      ? plan.reason
+      : plan.kind === "whole" && !onApply
+        ? titleFor(CONSOLE_APPLY_LABEL, false)
+        : `${CONSOLE_APPLY_LABEL} — ${plan.note}`;
+  const disabled = !plan || plan.kind === "whole" ? !onApply : plan.kind !== "ready";
   const onClick = () => {
-    if (!partial) onApply?.();
+    if (!partial || partial.plan.kind === "whole") onApply?.();
     else if (partial.plan.kind === "ready") partial.onApplyCells(partial.plan.cells);
   };
   return (
@@ -95,7 +98,7 @@ export function ConsoleApplyButton({
         </button>
       )}
       {applyProgress && <ApplyProgressNote text={applyProgress} onClick={onApplyProgressClick} />}
-      {plan && <small className="beat-grid-apply-scope">{plan.kind === "ready" ? plan.note : plan.reason}</small>}
+      {plan && <small className="beat-grid-apply-scope">{plan.kind === "blocked" ? plan.reason : plan.note}</small>}
     </div>
   );
 }
