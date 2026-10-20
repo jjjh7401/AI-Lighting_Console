@@ -5225,6 +5225,11 @@ body {
   color: inherit;
   text-decoration: underline;
 }
+/* 재생 승인 카드를 기다리는 상단 바 문구 — 눌러서 카드로 가되 경고 글씨 모양은 그대로. */
+.beat-grid-audio-error.beat-grid-apply-progress-link {
+  color: var(--warn);
+  font-size: 11px;
+}
 
 /* 카드 t559 — 전체 최대 폭 1640px(화면의 97%), REQ-LDBEAT-016(b)·
    AC-LDBEAT-017(c). 폭은 `min(97vw, 1640px)`로 고정하고 가운데 둔다. */

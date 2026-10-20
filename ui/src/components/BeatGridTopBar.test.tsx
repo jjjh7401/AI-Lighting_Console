@@ -265,6 +265,19 @@ describe("상단 바 — 플레이 묶음 (REQ-LDBEAT-024(a), 카드 t570)", () 
     expect(on).toContain("이 곡을 콘솔에 반영한 기록이 없어");
   });
 
+  it("2026-10-20 실측 — 재생 승인 카드를 기다리는 문구는 눌러서 그 카드로 갈 수 있다", () => {
+    const html = renderTopBar({
+      playback: {
+        ...playback,
+        onToggleConsoleFollow: noop,
+        consoleFollowOn: true,
+        consoleFollowError: "콘솔 재생 승인 카드가 떠 있어요",
+        onConsoleFollowErrorClick: noop,
+      },
+    });
+    expect(html).toMatch(/<button[^>]*>콘솔 재생 승인 카드가 떠 있어요 — 승인 카드 보기<\/button>/);
+  });
+
   it("연결 실패 이유가 있으면 보인다", () => {
     const html = renderTopBar({ playback: { ...playback, audioFailureReason: "x.mp3 을 읽지 못했어요" } });
     expect(html).toContain("x.mp3 을 읽지 못했어요");

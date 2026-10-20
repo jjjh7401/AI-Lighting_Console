@@ -73,6 +73,33 @@ export const CONSOLE_SEEK_DELAY_MISSING_MESSAGE =
  *  기다리지 않게 알린다. */
 export const CONSOLE_PLAY_WAITING_MESSAGE = "콘솔 타임코드 재생 요청을 보냈어요 — 콘솔 응답을 기다리는 중(음원은 콘솔이 출발한 뒤 시작합니다).";
 
+/** 2026-10-20 실측 — ▶ 뒤 승인 카드가 떠 있는데 「콘솔 응답을 기다리는 중」만 보여 무엇을 눌러야 할지 몰랐다. */
+export const CONSOLE_PLAY_APPROVAL_MESSAGE =
+  "콘솔 재생 승인 카드가 떠 있어요 — 오른쪽 위 카드에서 「승인」을 눌러야 콘솔과 음원이 출발합니다.";
+
+/** 상단 바에 보일 콘솔 재생 문구. 재생 응답을 기다리는 중이고 승인 카드가 떠 있으면 대기 문구 대신 카드를
+ * 승인하라고 말한다. 그 밖에는 받은 문구 그대로다. */
+export function consolePlayNote(message: string | null, awaiting: boolean, approvalPending: boolean): string | null {
+  if (awaiting && approvalPending && message === CONSOLE_PLAY_WAITING_MESSAGE) return CONSOLE_PLAY_APPROVAL_MESSAGE;
+  return message;
+}
+
+/** 실측 지연에 더하는 여유(ms) — 정지 응답(커서 두 번 읽기 포함)이 오는 데 걸리는 시간을 덮는다. */
+const CONSOLE_RUNNING_EXTRA_GRACE_MS = 2500;
+
+/** 「앱은 멈췄지만 콘솔은 돌 수 있다」를 알리기 전에 기다릴 시간(ms). 재생 시작 땐 콘솔이 출발한 뒤 음원이 실측
+ * 지연만큼 기다리고, 곡 끝에선 정지 응답이 오기까지 시간이 걸린다 — 둘 다 정상 전환이라 그보다 길게 기다린다. */
+export function consoleRunningGraceMs(delaySeconds: number | null): number {
+  const delayMs = delaySeconds !== null && Number.isFinite(delaySeconds) && delaySeconds > 0 ? delaySeconds * 1000 : 0;
+  return delayMs + CONSOLE_RUNNING_EXTRA_GRACE_MS;
+}
+
+/** 어긋남(콘솔은 돌 수 있는데 앱 재생은 멈춤)이 `sinceMs` 부터 이어졌을 때 지금 알려야 하는가. 정상 전환 창보다
+ * 오래 갈 때만 참이다 — 1~2초 깜빡이는 거짓 경고를 내지 않는다. */
+export function consoleRunningMismatchShown(sinceMs: number | null, nowMs: number, delaySeconds: number | null): boolean {
+  return sinceMs !== null && nowMs - sinceMs >= consoleRunningGraceMs(delaySeconds);
+}
+
 export const CONSOLE_FOLLOW_OFF_MESSAGE =
   "「콘솔 같이」가 꺼져 있어 음원만 재생 중입니다 — 콘솔도 함께 돌리려면 ❚❚ 후 「콘솔 같이」를 켜고 ▶ 를 누르세요.";
 
