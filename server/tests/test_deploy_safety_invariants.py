@@ -140,8 +140,6 @@ _OSC_SEND_SURFACE_PREFIXES = (
 # surface is NOT here and therefore fails closed.
 _NAMED_TOOL_EXEMPTIONS = frozenset(
     {
-        "server/tools/osc_smoke.py",
-        "server/tools/responder_roundtrip.py",
         "server/preshow/osc_check.py",
     }
 )

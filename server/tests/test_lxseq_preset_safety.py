@@ -26,8 +26,6 @@ import base64
 import json
 from pathlib import Path
 
-import pytest
-
 from server.llm.types import ToolCall
 from server.orchestrator.ports import ExecutionResult
 from server.orchestrator.tools import build_toolset
@@ -113,33 +111,6 @@ class TestApplyRequiresApproval:
         """조용히 0건이 되면 사용자는 승인 때문인지 계획이 없어서인지 모른다."""
         payload, _port, _approval = _dispatch(approve=False)
         assert payload.get("approval") == "declined", payload.get("approval")
-
-
-class TestHarnessRefusesWithoutApprove:
-    def test_apply_without_approve_does_not_dispatch(self, monkeypatch):
-        """하네스의 `--approve` 가 **디스패치 자체**를 막아야 한다.
-
-        사고 당시 그 플래그는 승인 통로의 대답만 정했고, 툴이 안 물으니 아무 효과도
-        없었다. 플래그가 막는 것은 대답이 아니라 **행위**여야 한다.
-        """
-        from server.tools import lxseq_presets_e2e as harness
-
-        def _boom(*_a, **_k):
-            raise AssertionError("--approve 없이 콘솔 스택을 세웠다")
-
-        monkeypatch.setattr(harness, "build_console_stack", _boom)
-        with pytest.raises(SystemExit) as exit_info:
-            harness.main(
-                [
-                    "--preset-csv",
-                    str(DIM),
-                    "--listen-port",
-                    "9005",
-                    "--action",
-                    "apply",
-                ]
-            )
-        assert exit_info.value.code != 0
 
 
 class TestPoolListingNormalisation:

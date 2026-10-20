@@ -136,11 +136,6 @@ class TestTheHandoffCarriesTheRecordVerbAndNothingElse:
         for shape in PLAYBACK_VERB_SHAPES:
             assert shape not in rendered, f"branch B hands over no playback verb, found {shape!r}"
 
-    def test_the_probe_module_does_carry_those_shapes_so_the_scan_is_not_vacuous(self):
-        """대조군 — 같은 문자열을 실제로 쓰는 자리가 있어야 위 검사가 눈이 있다."""
-        probe = (SERVER_DIR / "tools" / "musicsync_m3a_probe.py").read_text(encoding="utf-8")
-        assert any(shape.split()[0] in probe for shape in PLAYBACK_VERB_SHAPES)
-
 
 # ---------------------------------------------------------------------------
 # AC-MUSICSYNC-022 — 앱은 `Record Timecode` 를 쏘지 않는다

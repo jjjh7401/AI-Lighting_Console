@@ -23,7 +23,6 @@ from pathlib import Path
 import pytest
 
 from server.vwx import typesource as ts
-from server.vwx.intake import FixtureRequest, LibraryOption, assess
 from server.vwx.mvr import bundled_fixture_type_bytes
 from server.vwx.mvr import read as read_mvr
 
@@ -144,34 +143,3 @@ class TestPlanningForAWholeDrawing:
         plans = ts.plan_for_rows(rows, KNOWN_ON_CONSOLE)
         assert plans
         assert not any(p.available_now for p in plans)
-
-
-class TestIntakeOffersItInsteadOfADeadEnd:
-    """인테이크가 「없는 타입」을 조달 단계와 함께 낸다."""
-
-    LIBRARY = (LibraryOption("Mac Aura XB", "Martin@Mac Aura XB", {"Standard (14 ch)": 14}),)
-
-    def test_an_unknown_type_gets_both_a_question_and_a_plan(self, mvr_bytes: bytes):
-        request = FixtureRequest(
-            instrument_type="Rush Par 2 RGBW Zoom", gdtf_fixture="Martin@Rush Par 2 RGBW Zoom"
-        )
-        result = assess(request, self.LIBRARY, mvr_bytes=mvr_bytes)
-        assert result.ready is False
-        assert any(q.field == "instrument_type" for q in result.questions)
-        assert result.provisioning
-        assert result.provisioning[0].source == ts.SOURCE_BUNDLED_IN_MVR
-
-    def test_a_known_type_needs_no_plan(self):
-        """[비공허] 있는 타입에 조달 계획을 붙이지 않는다."""
-        result = assess(FixtureRequest(instrument_type="Mac Aura XB"), self.LIBRARY)
-        assert result.provisioning == ()
-
-    def test_an_ambiguous_name_asks_rather_than_provisions(self):
-        """후보가 있으면 그건 「없는 타입」이 아니라 「고르지 못한 타입」이다."""
-        library = (
-            LibraryOption("Mac Aura XB", modes={"A": 1}),
-            LibraryOption("Mac Aura PXL", modes={"B": 1}),
-        )
-        result = assess(FixtureRequest(instrument_type="Mac Aura"), library)
-        assert result.provisioning == ()
-        assert any(q.field == "instrument_type" for q in result.questions)

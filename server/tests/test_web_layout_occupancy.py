@@ -1,10 +1,13 @@
-"""Live occupancy fetch for the executor layout planner (T-F, task item 4)."""
+"""Live occupancy fetch for the executor layout planner (T-F, task item 4).
+
+Imports from ``server.orchestrator.layout_occupancy`` (the former ``server.web``
+re-export was removed as dead code)."""
 
 from __future__ import annotations
 
 from server.looks.layout import OCCUPIED, UNCONFIRMED, plan_layout
+from server.orchestrator.layout_occupancy import check_occupancy, fetch_executor_states
 from server.tests.busking_fixtures import make_bundle, make_look
-from server.web.layout_occupancy import check_occupancy, fetch_executor_states
 
 
 class _FakeStatePort:
