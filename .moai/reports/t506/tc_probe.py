@@ -402,8 +402,9 @@ def main() -> int:
         result = run(gate, out, live=False)
         result["fake_sent"] = console.sent
     else:
-        from server.safety.bootstrap import build_console_stack
         from server.tools.probe_preflight import preflight
+
+        from server.safety.bootstrap import build_console_stack
 
         stack = build_console_stack(
             send_host="127.0.0.1",

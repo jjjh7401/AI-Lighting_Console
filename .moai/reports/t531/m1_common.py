@@ -279,8 +279,9 @@ def main_cli(
         return 0
 
     # deny-all / --approve — 실기 경로. 이 카드에서는 호출하지 않는다(설계 유지용).
-    from server.safety.bootstrap import build_console_stack
     from server.tools.probe_preflight import preflight
+
+    from server.safety.bootstrap import build_console_stack
 
     plan = build_plan()
     first_label = plan[0][0]

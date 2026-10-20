@@ -193,8 +193,9 @@ def main() -> int:
         )
         result = run(gate, out, args.phase, deny_all=False, pace=False)
     else:
-        from server.safety.bootstrap import build_console_stack
         from server.tools.probe_preflight import preflight
+
+        from server.safety.bootstrap import build_console_stack
 
         pinned = None
         if args.approve:
