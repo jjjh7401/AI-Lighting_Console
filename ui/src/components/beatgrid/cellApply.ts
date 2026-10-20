@@ -6,12 +6,15 @@
 import type { BeatGridPartialBaseline, BeatGridSubsetStatus } from "../../protocol";
 import { CELL_WIRE_MAX, cellKey, skippedBarNote, wireCells, type CueCell } from "./cellSelection";
 
-/** 기준이 없는 곡 — 칸 단위 반영의 기준(`partial_baseline`)이 `null` 이라 칸 단위로 보낼 수 없다. 이 말은 이때만 보인다. */
-export const PARTIAL_NO_RECORD_HINT = "이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요";
+// 바뀐 칸을 가려낼 기준이 없으면 「⇪ 콘솔에 반영」은 막지 않고 곡 전체를 보낸다(「전체 다시 반영」과 같은 길) — 2026-10-20
+// 헤드리스 E2E 실측: 자동 배치 → 프리셋 승인 → TC 뒤 첫 반영에서 이 버튼이 꺼져 「전체 다시 반영」만 됐다.
+/** 기준이 없는 곡(`partial_baseline` 이 `null`) — 첫 반영이라 곡 전체를 보낸다. 이 말은 이때만 보인다. */
+export const PARTIAL_WHOLE_NO_RECORD_NOTE = "아직 반영 기록이 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요)";
+/** 기록 기준(`"record"`)에서 고른 칸이 없을 때 — 어느 칸이 바뀌었는지 모르니 곡 전체를 보낸다. 칸만 보내려면 고른다. */
+export const PARTIAL_WHOLE_RECORD_NOTE =
+  "바뀐 칸을 알 수 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요) — 칸만 보내려면 칸을 고르세요";
 export const PARTIAL_NOTHING_CHANGED_HINT = "바뀐 칸이 없어요";
 export const PARTIAL_PICKED_NOTHING_CHANGED_HINT = "고른 칸 중 바뀐 칸이 없어요";
-/** 기록 기준(`"record"`)에서 고른 칸이 없을 때 — 어느 칸이 바뀌었는지 모르니 보낼 칸은 사람이 골라야 한다. */
-export const PARTIAL_NOTHING_PICKED_HINT = "고른 칸을 먼저 골라 주세요 — 기록 기준이라 바뀐 칸을 알 수 없어요";
 /** 기록 기준으로 보낼 때의 주의 — 지운 값은 가려내지 못해 콘솔에 남을 수 있다. 보내기 전 안내와 보낸 뒤 결과가 같은 말을 한다. */
 export const PARTIAL_RECORD_WARNING = "지운 값은 콘솔에 남을 수 있어요 — 지운 칸은 「전체 다시 반영」으로";
 
@@ -24,10 +27,17 @@ export type PartialApplyPlan =
       note: string;
     }
   | {
+      /** 바뀐 칸을 가려낼 기준이 없어 곡 전체를 보낸다 — 「전체 다시 반영」과 같은 콜백을 부른다. */
+      kind: "whole";
+      /** 화면에 보이는 한 줄: 왜 곡 전체를 보내는지. */
+      note: string;
+      why: "no-record" | "nothing-picked";
+    }
+  | {
       kind: "blocked";
       /** 버튼 title 과 화면 안내에 쓰는 이유. */
       reason: string;
-      why: "no-record" | "nothing-picked" | "nothing-changed" | "too-many" | "bar-zero";
+      why: "nothing-changed" | "too-many" | "bar-zero";
     };
 
 /** 서버 `known_cells`(`BeatGridView`) — 부분 칸 기록이 아는 칸 `[줄 이름, 마디]` 전수. `null`/`undefined` 는 모든 칸을 안다는 뜻이다
@@ -76,9 +86,9 @@ export function leftOutNote(count: number): string {
 }
 
 /** 「⇪ 콘솔에 반영」이 보낼 칸. 무엇을 기준으로 삼는지는 서버가 정한다(`baseline` = `beat_grid.partial_baseline`):
- * - `null`/`undefined`: 기준이 없어 막는다 — 「전체 다시 반영」을 먼저 눌러야 한다.
+ * - `null`/`undefined`: 기준이 없다(첫 반영) — 곡 전체를 보낸다(`whole`, 「전체 다시 반영」과 같다).
  * - `"record"`: 칸 기록이 없어 바뀐 칸을 모른다. 고른 칸을 **모두** 보낸다(`unsent`·`known` 으로 거르지 않는다). 고른 칸이
- *   없으면 막는다. 지운 값은 가려내지 못해 콘솔에 남을 수 있다 — 안내에 그렇게 적는다.
+ *   없으면 곡 전체를 보낸다(`whole`). 지운 값은 가려내지 못해 콘솔에 남을 수 있다 — 안내에 그렇게 적는다.
  * - `"snapshot"`: `unsent`(마지막 반영 뒤 바뀐 칸)가 목록이다. `known` 은 칸 기록이 **부분**일 때 그 기록이 아는 칸이다
  *   (없으면 모든 칸을 안다). 고른 칸이 있으면 갈라서: 아는 칸인데 안 바뀐 칸은 콘솔과 같아 **뺀다**(안내에 몇 칸 뺐는지 적는다).
  *   바뀐 칸과 모르는 칸(`known` 에 없는 칸 — 콘솔과 같은지 알 수 없다)은 **보낸다**. 고른 칸이 없으면 바뀐 아는 칸 전부다.
@@ -91,7 +101,7 @@ export function partialApplyPlan(
 ): PartialApplyPlan {
   if (baseline === "record") {
     if (picks.length === 0) {
-      return { kind: "blocked", reason: PARTIAL_NOTHING_PICKED_HINT, why: "nothing-picked" };
+      return { kind: "whole", note: PARTIAL_WHOLE_RECORD_NOTE, why: "nothing-picked" };
     }
     const unique = [...new Map(picks.map((cell) => [cellKey(cell), cell] as const)).values()];
     return wirePlan(unique, (sentCells, skippedNote) => {
@@ -101,7 +111,7 @@ export function partialApplyPlan(
     });
   }
   if (baseline !== "snapshot" || unsent === null || unsent === undefined) {
-    return { kind: "blocked", reason: PARTIAL_NO_RECORD_HINT, why: "no-record" };
+    return { kind: "whole", note: PARTIAL_WHOLE_NO_RECORD_NOTE, why: "no-record" };
   }
   const knownKeys = knownKeySet(known);
   const isKnown = (cell: CueCell) => knownKeys === null || knownKeys.has(cellKey(cell));

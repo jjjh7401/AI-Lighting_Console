@@ -12,9 +12,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   PARTIAL_NOTHING_CHANGED_HINT,
-  PARTIAL_NOTHING_PICKED_HINT,
-  PARTIAL_NO_RECORD_HINT,
   PARTIAL_RECORD_WARNING,
+  PARTIAL_WHOLE_NO_RECORD_NOTE,
+  PARTIAL_WHOLE_RECORD_NOTE,
   partialApplyPlan,
   type PartialApplyPlan,
 } from "./cellApply";
@@ -38,7 +38,7 @@ const READY: PartialApplyPlan = partialApplyPlan(
 );
 const NO_RECORD: PartialApplyPlan = partialApplyPlan(null, [], null);
 const NOTHING: PartialApplyPlan = partialApplyPlan([], [], "snapshot");
-// 기록 기준(record) — 칸 기록은 없고 이 곡의 반영 기록만 있다: 칸을 골라야 보낼 수 있고, 고르면 고른 칸을 모두 보낸다.
+// 기록 기준(record) — 칸 기록은 없고 이 곡의 반영 기록만 있다: 안 고르면 곡 전체, 고르면 고른 칸을 모두 보낸다.
 const RECORD_NOTHING_PICKED: PartialApplyPlan = partialApplyPlan(null, [], "record");
 const RECORD_READY: PartialApplyPlan = partialApplyPlan(
   null,
@@ -100,27 +100,34 @@ describe("글자와 구성", () => {
   });
 });
 
-describe("막힐 때", () => {
-  it("반영 기록이 없으면 주 버튼은 꺼지고 title 이 이유를 말하며, 안내 줄에도 같은 말이 보인다", () => {
+// 2026-10-20 헤드리스 E2E 실측: 첫 반영에서 주 버튼이 「고른 칸을 먼저 골라 주세요」로 꺼져 있었고 「전체 다시 반영」만
+// 됐다. 바뀐 칸을 가려낼 기준이 없으면 주 버튼이 곡 전체를 보낸다(「전체 다시 반영」과 같은 콜백).
+describe("바뀐 칸을 가려낼 기준이 없을 때 — 곡 전체", () => {
+  it("반영 기록이 없으면 주 버튼은 켜져 있고 title 과 안내 줄이 곡 전체를 보낸다고 말한다", () => {
     const html = renderMarkup({ onApply: noop, partial: { plan: NO_RECORD, onApplyCells: noop } });
-    expect(html).toContain(`title="${PARTIAL_NO_RECORD_HINT}" disabled`);
-    expect(html).toContain(`<small class="beat-grid-apply-scope">${PARTIAL_NO_RECORD_HINT}</small>`);
-    // 「전체 다시 반영」은 그때 눌러야 하는 버튼이라 켜져 있다.
+    expect(html).toContain(`title="⇪ 콘솔에 반영 — ${PARTIAL_WHOLE_NO_RECORD_NOTE}">`);
+    expect(html).toContain(`<small class="beat-grid-apply-scope">${PARTIAL_WHOLE_NO_RECORD_NOTE}</small>`);
+    expect(html).not.toMatch(/class="tbtn" title="[^"]*" disabled/);
     expect(html).toMatch(/class="tbtn beat-grid-apply-whole" title="[^"]*">전체 다시 반영/);
   });
 
+  it("기록 기준에서 고른 칸이 없으면 주 버튼은 켜져 있고 곡 전체를 보낸다고 말한다", () => {
+    const html = renderMarkup({ onApply: noop, partial: { plan: RECORD_NOTHING_PICKED, onApplyCells: noop } });
+    expect(html).toContain(`title="⇪ 콘솔에 반영 — ${PARTIAL_WHOLE_RECORD_NOTE}">`);
+    expect(html).toContain(`<small class="beat-grid-apply-scope">${PARTIAL_WHOLE_RECORD_NOTE}</small>`);
+    expect(html).not.toMatch(/class="tbtn" title="[^"]*" disabled/);
+  });
+
+  it("전체 반영 콜백이 없으면 주 버튼도 꺼지고 아직 배선 안 됨을 말한다", () => {
+    const html = renderMarkup({ partial: { plan: NO_RECORD, onApplyCells: noop } });
+    expect(html).toMatch(/class="tbtn" title="⇪ 콘솔에 반영 — 아직 배선 안 됨[^"]*" disabled/);
+  });
+});
+
+describe("막힐 때", () => {
   it("바뀐 칸이 없으면 주 버튼은 꺼지고 「바뀐 칸이 없어요」", () => {
     const html = renderMarkup({ onApply: noop, partial: { plan: NOTHING, onApplyCells: noop } });
     expect(html).toContain(`title="${PARTIAL_NOTHING_CHANGED_HINT}" disabled`);
-  });
-
-  it("기록 기준에서 고른 칸이 없으면 주 버튼은 꺼지고 먼저 고르라고 말한다 — 「전체 다시 반영 먼저」 안내는 아니다", () => {
-    const html = renderMarkup({ onApply: noop, partial: { plan: RECORD_NOTHING_PICKED, onApplyCells: noop } });
-    expect(html).toContain(`title="${PARTIAL_NOTHING_PICKED_HINT}" disabled`);
-    expect(html).toContain(`<small class="beat-grid-apply-scope">${PARTIAL_NOTHING_PICKED_HINT}</small>`);
-    expect(html).not.toContain(PARTIAL_NO_RECORD_HINT);
-    // 전체 다시 반영은 늘 켜져 있다.
-    expect(html).toMatch(/class="tbtn beat-grid-apply-whole" title="[^"]*">전체 다시 반영/);
   });
 
   it("기록 기준에서 칸을 골랐으면 주 버튼은 켜져 있고, title 과 안내 줄이 기록 기준·지운 값 주의를 말한다", () => {
@@ -202,13 +209,22 @@ describe("누르기", () => {
   it("막힌 주 버튼은 눌러도 아무것도 안 보낸다 — 빈 칸 목록이 전체 반영으로 새지 않는다", () => {
     const onApply = vi.fn();
     const onApplyCells = vi.fn();
-    mount({ onApply, partial: { plan: NO_RECORD, onApplyCells } });
-    expect(buttonWith("⇪").disabled).toBe(true);
-    act(() => buttonWith("⇪").click());
     mount({ onApply, partial: { plan: NOTHING, onApplyCells } });
+    expect(buttonWith("⇪").disabled).toBe(true);
     act(() => buttonWith("⇪").click());
     expect(onApplyCells).not.toHaveBeenCalled();
     expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it("반영 기록이 없을 때 주 버튼은 인자 없이 전체 반영 콜백을 한 번 부른다 — 칸 단위 콜백은 안 부른다", () => {
+    const onApply = vi.fn();
+    const onApplyCells = vi.fn();
+    mount({ onApply, partial: { plan: NO_RECORD, onApplyCells } });
+    expect(buttonWith("⇪").disabled).toBe(false);
+    act(() => buttonWith("⇪").click());
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply).toHaveBeenCalledWith();
+    expect(onApplyCells).not.toHaveBeenCalled();
   });
 
   it("기록 기준에서 주 버튼은 고른 칸 모두를 칸 단위 콜백으로 한 번 보낸다", () => {
@@ -225,14 +241,14 @@ describe("누르기", () => {
     expect(onApply).not.toHaveBeenCalled();
   });
 
-  it("기록 기준에서 고른 칸이 없을 때 주 버튼을 눌러도 아무것도 안 보낸다", () => {
+  it("기록 기준에서 고른 칸이 없을 때 주 버튼은 곡 전체를 보낸다 — 전체 반영 콜백 한 번", () => {
     const onApply = vi.fn();
     const onApplyCells = vi.fn();
     mount({ onApply, partial: { plan: RECORD_NOTHING_PICKED, onApplyCells } });
-    expect(buttonWith("⇪").disabled).toBe(true);
+    expect(buttonWith("⇪").disabled).toBe(false);
     act(() => buttonWith("⇪").click());
+    expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApplyCells).not.toHaveBeenCalled();
-    expect(onApply).not.toHaveBeenCalled();
   });
 
   it("기록이 없을 때 전체 다시 반영은 눌린다", () => {

@@ -668,7 +668,10 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
   const mainApply = () => panelButtons().find((button) => button.textContent?.includes("⇪")) as HTMLButtonElement;
   const wholeApply = () => panelButtons().find((button) => button.textContent === "전체 다시 반영") as HTMLButtonElement;
   const scope = () => container.querySelector(".beat-grid-apply-scope")?.textContent ?? "";
-  const NO_RECORD_HINT = "이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요";
+  const OLD_NO_RECORD_HINT = "이 곡은 아직 반영 기록이 없어요 — 「전체 다시 반영」을 먼저 누르세요";
+  const NO_RECORD_NOTE = "아직 반영 기록이 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요)";
+  const RECORD_WHOLE_NOTE =
+    "바뀐 칸을 알 수 없어 곡 전체를 보내요 (「전체 다시 반영」과 같아요) — 칸만 보내려면 칸을 고르세요";
   const SIX = [
     ["AAA", 1],
     ["AAA", 3],
@@ -843,15 +846,16 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
   });
 
   describe("기록 기준(record) — 칸 기록은 없고 반영 기록만 있다", () => {
-    it("고른 칸이 없으면 꺼지고, 바뀐 칸을 알 수 없으니 먼저 고르라고 말한다 — 「전체 다시 반영 먼저」 안내가 아니다", () => {
+    // 2026-10-20 헤드리스 E2E 실측: 자동 배치 → 프리셋 승인 → TC 뒤 첫 반영에서 이 버튼이 꺼져 있었다.
+    it("고른 칸이 없으면 켜져 있고, 바뀐 칸을 알 수 없으니 곡 전체를 보낸다 — 전체 반영 콜백 한 번", () => {
       const { handlers } = setup(THREE_BY_THREE(), {}, RECORD);
-      const hint = "고른 칸을 먼저 골라 주세요 — 기록 기준이라 바뀐 칸을 알 수 없어요";
-      expect(mainApply().disabled).toBe(true);
-      expect(mainApply().title).toBe(hint);
-      expect(scope()).toBe(hint);
-      expect(container.textContent).not.toContain(NO_RECORD_HINT);
+      expect(mainApply().disabled).toBe(false);
+      expect(mainApply().title).toBe(`⇪ 콘솔에 반영 — ${RECORD_WHOLE_NOTE}`);
+      expect(scope()).toBe(RECORD_WHOLE_NOTE);
+      expect(container.textContent).not.toContain(OLD_NO_RECORD_HINT);
       expect(wholeApply().disabled).toBe(false);
       act(() => mainApply().click());
+      expect(handlers.onApply).toHaveBeenCalledTimes(1);
       expect(handlers.onApplyCells).not.toHaveBeenCalled();
     });
 
@@ -897,36 +901,40 @@ describe("「⇪ 콘솔에 반영」 — 칸 단위", () => {
   });
 
   describe("기준이 없을 때(partial_baseline null/undefined)", () => {
-    it("반영 기록이 없으면(unsent_cells null, 기준 null) 꺼지고, 「전체 다시 반영」을 먼저 누르라는 안내가 보인다", () => {
+    it("반영 기록이 없으면(unsent_cells null, 기준 null) 켜져 있고, 누르면 곡 전체를 보낸다 — 첫 반영", () => {
       const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: null });
-      expect(mainApply().disabled).toBe(true);
-      expect(mainApply().title).toBe(NO_RECORD_HINT);
-      expect(scope()).toBe(NO_RECORD_HINT);
+      expect(mainApply().disabled).toBe(false);
+      expect(mainApply().title).toBe(`⇪ 콘솔에 반영 — ${NO_RECORD_NOTE}`);
+      expect(scope()).toBe(NO_RECORD_NOTE);
       expect(wholeApply().disabled).toBe(false);
       act(() => mainApply().click());
+      expect(handlers.onApply).toHaveBeenCalledTimes(1);
       expect(handlers.onApplyCells).not.toHaveBeenCalled();
     });
 
-    it("고른 칸이 있어도 같다 — 기준이 없으면 칸 단위로 보낼 수 없다", () => {
+    it("고른 칸이 있어도 같다 — 기준이 없으면 칸 단위로 보낼 수 없어 곡 전체를 보낸다", () => {
       const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: null, partial_baseline: null });
       clickCue(0, 0);
       clickCue(2, 1, { shift: true });
-      expect(mainApply().disabled).toBe(true);
-      expect(scope()).toBe(NO_RECORD_HINT);
+      expect(mainApply().disabled).toBe(false);
+      expect(scope()).toBe(NO_RECORD_NOTE);
       act(() => mainApply().click());
+      expect(handlers.onApply).toHaveBeenCalledTimes(1);
       expect(handlers.onApplyCells).not.toHaveBeenCalled();
     });
 
     it("옛 서버라 필드가 없을 때(둘 다 undefined)도 같다", () => {
       setup(THREE_BY_THREE());
-      expect(mainApply().disabled).toBe(true);
-      expect(mainApply().title).toBe(NO_RECORD_HINT);
+      expect(mainApply().disabled).toBe(false);
+      expect(mainApply().title).toBe(`⇪ 콘솔에 반영 — ${NO_RECORD_NOTE}`);
     });
 
-    it("기준 필드가 없으면 unsent_cells 가 목록이어도 칸 단위로 보내지 않는다", () => {
-      setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
-      expect(mainApply().disabled).toBe(true);
-      expect(mainApply().title).toBe(NO_RECORD_HINT);
+    it("기준 필드가 없으면 unsent_cells 가 목록이어도 칸 단위로 보내지 않는다 — 곡 전체다", () => {
+      const { handlers } = setup(THREE_BY_THREE(), {}, { unsent_cells: UNSENT });
+      expect(mainApply().title).toBe(`⇪ 콘솔에 반영 — ${NO_RECORD_NOTE}`);
+      act(() => mainApply().click());
+      expect(handlers.onApply).toHaveBeenCalledTimes(1);
+      expect(handlers.onApplyCells).not.toHaveBeenCalled();
     });
   });
 
