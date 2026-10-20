@@ -49,6 +49,7 @@ __all__ = [
     "compute_bar_energy",
     "derive_bars",
     "detect_beat_grid",
+    "extend_beats_to_duration",
     "extract_bar_features",
 ]
 
@@ -115,6 +116,9 @@ class BeatGridResult:
     bpm: float
     bpm_confidence: float
     bpm_check: BpmCandidateCheck
+    #: 디코드한 음원 길이(ms). 마디 지도가 곡 끝까지 덮게 하는 데 쓴다
+    #: (:func:`extend_beats_to_duration`). 모르면 ``None`` — 늘리지 않는다.
+    duration_ms: int | None = None
 
 
 @dataclass(frozen=True)
@@ -268,6 +272,7 @@ def detect_beat_grid(audio_bytes: bytes) -> BeatGridResult | BeatGridFailure:
         bpm=bpm_check.adopted_bpm,
         bpm_confidence=confidence,
         bpm_check=bpm_check,
+        duration_ms=decoded.duration_ms,
     )
 
 
@@ -437,6 +442,40 @@ def _check_bpm_half_double(
         adopted_bpm=adopted_bpm,
         rationale=rationale,
     )
+
+
+def extend_beats_to_duration(
+    beat_times_ms: Sequence[int], bpm: float, duration_ms: int | None
+) -> tuple[int, ...]:
+    """검출된 박 뒤로 곡 BPM 간격의 박을 이어 붙여 음원 끝까지 채운다(카드 WT-song-tail).
+
+    박 검출기(``librosa.beat.beat_track``, 기본 ``trim=True``)는 끝의 약한 박을 잘라 낸다 —
+    조용한 아웃트로가 있는 곡은 마지막 박이 음원 끝보다 수십 초 앞에서 멈춘다. 마디 지도는 박으로만
+    마디를 만들므로 그대로 두면 곡 끝 구간에 마디가 없고, 마디 지도를 읽는 배치 격자·타임코드
+    ``Duration``·화면 재생 끝이 모두 그 자리에서 멈춘다.
+
+    순수 함수다. 검출된 박은 그대로 두고, 마지막 박에서 ``60000 / bpm`` ms 간격으로 음원 끝
+    **앞**까지만 더한다(끝을 넘는 박은 만들지 않는다). 박이 없거나 BPM·길이를 모르면 그대로
+    돌려준다.
+    """
+    beats = tuple(int(t) for t in beat_times_ms)
+    if (
+        not beats
+        or duration_ms is None
+        or isinstance(bpm, bool)
+        or not isinstance(bpm, int | float)
+        or not math.isfinite(bpm)
+        or bpm <= 0
+    ):
+        return beats
+    period_ms = 60000.0 / float(bpm)
+    last = beats[-1]
+    extra: list[int] = []
+    step = 1
+    while (t := int(round(last + step * period_ms))) < duration_ms:
+        extra.append(t)
+        step += 1
+    return beats + tuple(extra)
 
 
 def derive_bars(beat_times_ms: Sequence[int], first_beat_offset: int) -> BarMap | BarMapFailure:

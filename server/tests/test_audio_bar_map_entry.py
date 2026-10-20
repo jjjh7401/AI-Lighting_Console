@@ -38,6 +38,7 @@ from server.audio.bar_map import (
     classify_bar_events,
     derive_bars,
     detect_beat_grid,
+    extend_beats_to_duration,
     extract_bar_features,
 )
 from server.audio.bar_map_entry import (
@@ -688,9 +689,11 @@ def test_ac016_real_song_entry_gate(tmp_path: Path) -> None:
     )
 
     # 같은 오디오에 분석기를 직접 부른 결과 — 진입 경로가 거기에 더하거나 빼지 않았는지 대조한다.
+    # 진입 경로처럼 검출 박을 음원 끝까지 이은 격자로 대조한다(카드 WT-song-tail).
     grid = detect_beat_grid(audio)
     assert isinstance(grid, BeatGridResult), grid
-    bars = derive_bars(grid.beat_times_ms, CONFIRMED_FIRST_BEAT_OFFSET)
+    beat_times_ms = extend_beats_to_duration(grid.beat_times_ms, grid.bpm, grid.duration_ms)
+    bars = derive_bars(beat_times_ms, CONFIRMED_FIRST_BEAT_OFFSET)
     assert not isinstance(bars, BarMapFailure), bars
     features = extract_bar_features(audio, bars.bar_boundaries_ms)
     assert not isinstance(features, BarFeaturesFailure), features
@@ -700,8 +703,20 @@ def test_ac016_real_song_entry_gate(tmp_path: Path) -> None:
     detected = [(e["kind"], e["start_bar"]) for e in saved["events"]]
     recall = event_recall(detected, parse_events())
     # 정밀도의 분모는 점 사건(break·kick_entry)만이다(AC-LDBARMAP-007 정밀도 조건).
-    point_events = [(kind, bar) for kind, bar in detected if kind in ("break", "kick_entry")]
+    # 정밀도 근거(정답지)는 검출 박이 있던 마디 1~82 만 다룬다. 음원 끝까지 이은 꼬리 마디의
+    # 사건은 근거가 없어 채점 대상에서 뺀다(카드 WT-song-tail) — 꼬리를 넣은 값도 함께 찍는다.
+    point_events = [
+        (kind, bar)
+        for kind, bar in detected
+        if kind in ("break", "kick_entry") and bar <= AC016_BAR_COUNT
+    ]
     precision = event_precision(point_events, parse_precision_evidence())
+    tail_point_events = [
+        (kind, bar)
+        for kind, bar in detected
+        if kind in ("break", "kick_entry") and bar > AC016_BAR_COUNT
+    ]
+    print(f"AC-016 tail point events (not scored): {tail_point_events}")
 
     print(
         f"AC-016 measured: bars(bar>=1)={len(numbered)} bars(bar==0)={len(pickup)} "
@@ -709,9 +724,16 @@ def test_ac016_real_song_entry_gate(tmp_path: Path) -> None:
         f"recall={recall.matched}/{recall.total} precision={precision}"
     )
 
-    # (1) 마디 수 — 번호가 1, 2, …, 82 로 이어지고(아래 (2)의 순서 대응이 서는 전제),
+    # (1) 마디 수 — 번호가 1, 2, … 로 이어지고 검출된 박의 마디 1~82 가 앞에 있다(아래 (2)의
+    # 순서 대응이 서는 전제). 그 뒤는 음원 끝까지 이은 마디다 — 마지막 마디가 음원 끝을 품는다
+    # (카드 WT-song-tail: 검출기가 끝의 약한 박을 잘라 곡 꼬리가 마디 없이 남았다).
     # 못갖춘마디(마디 0)는 하나이고 박이 1개다.
-    assert [bar["bar"] for bar in numbered] == list(range(1, AC016_BAR_COUNT + 1)), len(numbered)
+    assert [bar["bar"] for bar in numbered] == list(range(1, len(numbered) + 1)), len(numbered)
+    assert len(numbered) >= AC016_BAR_COUNT, len(numbered)
+    assert grid.duration_ms is not None
+    last_start = numbered[-1]["start_ms"]
+    bar_ms = saved["time_signature"][0] * 60000.0 / saved["bpm"]
+    assert last_start <= grid.duration_ms <= last_start + bar_ms, last_start
     assert len(pickup) == 1 and len(pickup[0]["beats_ms"]) == 1, pickup
     # (2) 마디 시작 시각이 정답지 다운비트와 ±60 ms 에서 90 % 이상 적중한다(분모는 정답지 길이).
     assert hit.total == AC016_BAR_COUNT, str(hit)
