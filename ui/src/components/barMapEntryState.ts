@@ -18,11 +18,17 @@ import { BAR_MAP_METER_LABEL } from "../protocol";
 /** 서버 `chat_response.summary` 라벨 — 저장 성공(`session.py` 저장 관문). */
 const SUMMARY_SAVED = "마디 지도 저장";
 
-/** 서버 `chat_response.summary` 라벨 세 개 — 거절. 사유 문장은 `text` 에 있다. */
-const SUMMARIES_REJECTED: ReadonlySet<string> = new Set([
+/** 서버 `chat_response.summary` 라벨 — 서버 문장(`text`)을 그대로 보이고 대기를 끝낸다.
+ * 서버가 이 분석에 보내는 끝 응답 라벨은 여기와 `SUMMARY_SAVED` 가 전부다 — 하나라도 빠지면
+ * 결과가 와도 「분석 중」이 풀리지 않는다(`server/tests/test_bar_map_entry_ui_summaries.py`). */
+const SUMMARIES_SHOW_SERVER_TEXT: ReadonlySet<string> = new Set([
   "마디 지도 분석 거절", // 범위 밖 오프셋, 분석 단계의 거절·실패, 분석 중 곡 교체
   "마디 지도 저장 거절", // 저장 검사(`validate_bar_map`) 실패
   "마디 지도 저장 불가", // 초안 타임라인이 없음
+  // 확정 분석이 있으면 옛 작업본에 붙이지 않고 새 작업본을 연다(`_start_analysis_timeline`).
+  // 성공 문장에 구간 수·마디 범위·백업 위치가 들어 있어 고정 문구 대신 서버 문장을 보인다.
+  "새 분석으로 새 작업본",
+  "새 분석 작업본 만들기 실패", // 옛 작업본 백업 실패 — 바꾸지 않았다
 ]);
 
 /** 이 컨트롤이 문구로 끝내는 `error.kind` 두 개. 그 밖의 종류는 무시한다(REQ-LDBARUI-008). */
@@ -103,7 +109,7 @@ function reduceChatResponse(state: BarMapEntryState, summary: string, text: stri
   // 그래서 여기서는 phase 를 따지지 않고, 어느 쪽에서 왔든 `idle` 로 둔다.
   if (summary === SUMMARY_SAVED) return { ...state, phase: "idle", notice: savedNotice(state.songName) };
   // 거절 사유는 서버 문장 그대로다. 클라이언트가 지어내거나 다듬지 않는다(REQ-LDBARUI-007).
-  if (SUMMARIES_REJECTED.has(summary)) return { ...state, phase: "idle", notice: text };
+  if (SUMMARIES_SHOW_SERVER_TEXT.has(summary)) return { ...state, phase: "idle", notice: text };
   return state;
 }
 

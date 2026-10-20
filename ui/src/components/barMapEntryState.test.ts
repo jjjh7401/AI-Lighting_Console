@@ -230,6 +230,27 @@ describe("AC-LDBARUI-007: rejection labels show the server text verbatim", () =>
   });
 });
 
+// 확정 분석이 있으면 서버는 마디 지도를 옛 작업본에 붙이지 않고 새 작업본을 연다
+// (`session.py` `_start_analysis_timeline`, 리드 지시 2026-10-16). 그 길의 끝 응답 두 개도
+// 대기를 끝내야 한다 — 2026-10-20 실측에서 「새 분석으로 새 작업본」이 25초 만에 왔는데도
+// 화면은 300초 넘게 「분석 중」에 머물렀다.
+describe("새 작업본 길의 끝 응답도 대기를 끝낸다", () => {
+  const LABELS = ["새 분석으로 새 작업본", "새 분석 작업본 만들기 실패"];
+
+  it.each(LABELS)("대기 중에 %s 가 오면 서버 문장을 보이고 대기를 끝낸다", (label) => {
+    const next = barMapEntryReducer(waiting(), rejected(label, "서버가 보낸 결과 문장"));
+    expect(next.phase).toBe("idle");
+    expect(next.notice).toBe("서버가 보낸 결과 문장");
+  });
+
+  it.each(LABELS)("「취소」 뒤에 늦게 온 %s 도 같은 모양으로 보이고 idle 에 머문다", (label) => {
+    const cancelled = run([select(2), sent(), { type: "cancel" }]);
+    const late = barMapEntryReducer(cancelled, rejected(label, "서버가 보낸 결과 문장"));
+    expect(late.phase).toBe("idle");
+    expect(late.notice).toBe("서버가 보낸 결과 문장");
+  });
+});
+
 describe("AC-LDBARUI-008: error kinds", () => {
   it("AC-LDBARUI-008: song_audio_missing while waiting shows the attach-audio line and ends waiting", () => {
     const next = barMapEntryReducer(waiting(), errorOf("song_audio_missing"));
