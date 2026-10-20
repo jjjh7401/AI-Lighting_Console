@@ -122,6 +122,12 @@ class ArrangementPolicy:
     - ``pre_chorus_blackout``: 후렴·마지막 후렴 바로 앞 마디에서 리듬 줄(BACK·SIDE·역할 없는
       줄)과 무빙 줄을 비우는 기본 규칙. 감독의 LOVE ATTACK 손 연출(Aside v5)이 두 후렴 앞에서
       모두 그렇게 했다. 그 마디가 강조 구간 안이면 비우지 않는다. 끄면 예전대로다.
+    - ``ending_follows_music``: 곡 끝을 음악의 실제 끝에 맞추는 기본 규칙(감독 요청 2026-10-21).
+      마디 에너지가 곡 끝까지 바닥에 머무는 조용한 꼬리에서는 리듬·강조 줄이 쉬고, 다른 줄은 꼬리
+      직전 마디의 값을 움직임 없이 붙든다(새로 켜지는 줄 없음). 무음이 시작하는 마디에서 모두
+      꺼진다. 꼬리 직전 마디가 큰 한 방(리듬 블록의 큰 히트, 또는 후렴만큼 큰 마디 뒤 곧바로 무음)
+      이면 그 마디에 강조 칸을 둔다. 곡이 끝까지 크면 아무것도 바꾸지 않는다. 끄면 예전대로
+      꼬리에서도 구간 규칙대로 돈다.
     """
 
     slow_song: bool = False
@@ -137,6 +143,7 @@ class ArrangementPolicy:
     break_hold_wash: bool = True
     motion_period_beats: int | None = 4
     pre_chorus_blackout: bool = True
+    ending_follows_music: bool = True
 
     def __post_init__(self) -> None:
         if self.window_bars < 1:

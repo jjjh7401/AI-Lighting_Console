@@ -53,6 +53,12 @@
   Cue Only(``_with_tracking``).
 - 워시 줄은 구간마다 한 칸이다. 구간 첫 마디의 값이 구간 끝까지 가고, 색이 바뀌는 구간 경계에서만
   나뉜다. 구간 중간 마디의 주석 색은 워시 칸을 쪼개지 않는다(리드 결정 2026-10-16).
+- 곡 끝은 음악을 따른다(``ending_follows_music``, 감독 요청 2026-10-21). 마디 에너지가 곡 끝까지
+  바닥(``_ENDING_QUIET_ENERGY`` 이하)에 머무는 조용한 꼬리에서는 리듬·강조 줄이 쉬고, 나머지 줄은
+  꼬리 직전 마디의 값을 움직임 없이 붙든다 — 새로 켜지는 줄이 없다. 무음(``_ENDING_SILENCE_ENERGY``
+  이하)이 시작하는 마디부터 모두 꺼진다. 꼬리 직전 마디가 큰 한 방이면 그 마디에 강조 칸을 둔다.
+  조용한 꼬리 안의 브레이크 사건은 구간 경계가 아니다(무음을 킥 멈춤으로 읽은 것이다). 곡이 끝까지
+  크면 꼬리가 없어서 아무것도 바꾸지 않는다.
 """
 
 from __future__ import annotations
@@ -71,6 +77,7 @@ from server.design.arrange_generator import (
     _SECTION_DROP,
     _SECTION_LAST_CHORUS,
     _SECTION_VERSE,
+    HOLD_LABEL,
     UNCONFIRMED_NOTE,
     ArrangementDraft,
     ArrangementWindow,
@@ -202,6 +209,22 @@ _PRE_CHORUS_DARK_ROLES = frozenset({"back", "side", None, "mover"})
 # @MX:UPGRADE: 감독이 곡별로 고치려 하면 ``ArrangementPolicy`` 의 필드로 옮긴다
 _BRIDGE_LOOKAHEAD_BARS = 2
 
+# @MX:DEBT: 곡 끝 판정 문턱(조용한 꼬리 0.1·무음 0.01)이 곡별 정책이 아니라 모듈 상수다
+# @MX:CEILING: 곡 안 상대 에너지로 재므로 곡마다 척도는 맞지만, 꼬리 울림이 곡 바닥 10% 위에 머무는
+# 곡(잔향이 긴 발라드 등)은 잦아듦을 꼬리로 읽지 못하고 예전처럼 구간 규칙대로 돈다
+# @MX:UPGRADE: 그런 곡이 실측으로 나오면 ``ArrangementPolicy`` 의 필드로 옮겨 곡별로 고친다
+#: 조용한 꼬리의 마디 에너지 상한(곡 안 상대값 0~1, ``compute_bar_energy``). 곡 끝까지 이어지는
+#: 마디가 모두 이 값 이하면 음악이 잦아든 꼬리다 — 곡에서 가장 조용한 쪽 10%. 킥·스네어가 도는
+#: 마디는 저역 타악이 곡 바닥보다 크게 남아 여기 들지 않는다(LOVE ATTACK 실측: 마지막 후렴 끝
+#: 83마디 0.298, 울림 84~87마디 0.011~0.024).
+_ENDING_QUIET_ENERGY = 0.1
+#: 무음의 마디 에너지 상한(곡 안 상대값). 곡 끝까지 이어지는 마디가 모두 이 값 이하면 음악이
+#: 끝났다 — 곡에서 가장 조용한 마디와 1% 안. 0 하나로 가르면 반올림·잡음 한 자리 차이로 무음을
+#: 놓친다(LOVE ATTACK 실측: 88마디 0.005, 89~92마디 0).
+_ENDING_SILENCE_ENERGY = 0.01
+#: 곡 끝 규칙에서 리듬·강조로 도는 줄의 역할 — 조용한 꼬리에서 쉰다. 역할 없는 줄은 체이스 층이다.
+_ENDING_RHYTHM_ROLES = frozenset({"back", "side", None, "effect"})
+
 
 class SegmentSection(NamedTuple):
     """구간 하나. 두 마디 번호는 양끝을 포함한다."""
@@ -231,6 +254,17 @@ class _Window(NamedTuple):
     lead: str | None
     active: list[str]
     moving: str | None
+
+
+class _MusicEnding(NamedTuple):
+    """마디 에너지로 읽은 곡의 끝. 마디 번호는 마디 지도의 번호다."""
+
+    #: 조용한 꼬리(곡 끝까지 에너지가 바닥인 마디들)의 첫 마디.
+    quiet_start: int
+    #: 무음(곡 끝까지 에너지가 0 가까이)의 첫 마디. 꼬리가 무음까지 가지 않으면 None.
+    silence_start: int | None
+    #: 큰 한 방으로 끝나면 그 마디(꼬리 바로 앞 마디). 아니면 None.
+    impact_bar: int | None
 
 
 # @MX:NOTE: [AUTO] 마디 지도와 트랙 구성만 받는 순수 함수다. 파일이나 콘솔에 닿지 않는다.
@@ -365,6 +399,23 @@ def generate_segment_draft(
                 if bar in plans[name]:
                     plans[name][bar] = head
 
+    # 곡 끝은 음악의 실제 끝을 따른다(``ending_follows_music``). 다른 규칙이 다 정한 뒤에 덮는다 —
+    # 조용한 꼬리에서는 구간 규칙(리듬·강조·워시 구간 칸)보다 음악이 없다는 사실이 앞선다.
+    ending = (
+        _music_ending(bar_map, bar_numbers, settings) if settings.ending_follows_music else None
+    )
+    if ending is not None:
+        # 조용한 꼬리에서는 프레이즈마다 켜는 칸을 다시 세우지 않는다 — 다시 찍을 박이 없다.
+        phrase_starts = frozenset(bar for bar in phrase_starts if bar < ending.quiet_start)
+        for track in layout:
+            name = str(track["group_name"])
+            impact_color = None
+            if ending.impact_bar is not None:
+                hit = ending.impact_bar
+                window = next(w for w in windows if w.start_bar <= hit <= w.end_bar)
+                impact_color = overrides.get((name, hit)) or window.color
+            _follow_music_ending(plans[name], track, ending, bar_numbers, settings, impact_color)
+
     # 색 이름은 이 초안 전체의 색으로 한 번에 정한다 — 같은 색은 어느 칸에서나 같은 이름이다.
     color_names = assign_color_names(
         plan.color_rgb for by_bar in plans.values() for plan in by_bar.values() if plan.color_rgb
@@ -449,36 +500,55 @@ def split_sections(bar_map: Mapping[str, Any]) -> list[SegmentSection]:
     마디 지도에 ``rhythm`` 블록이 있어도 구간 경계는 바뀌지 않는다(사건 경계만 쓴다). 블록이 있든
     없든 경계 집합이 같다. 구간의 ``d_level`` 은 그 시작 마디를 품은 리듬 구간의 등급이며
     메타데이터일 뿐이다. 블록이 없으면 ``d_level`` 은 ``None`` 이다.
+
+    곡 끝 조용한 꼬리(``_quiet_tail_start``) 안에서 시작하는 브레이크 사건은 쓰지 않는다 — 분류기가
+    무음을 4마디마다 킥 멈춤으로 읽은 것이라(LOVE ATTACK 86·90 마디) 구간 경계가 아니다.
     """
     bar_numbers = sorted(int(entry["bar"]) for entry in bar_map["bars"])
+    quiet_start = _quiet_tail_start(bar_map["bars"], _ENDING_QUIET_ENERGY)
     events = [
         _Event(str(event["kind"]), int(event["start_bar"]), int(event["end_bar"]))
         for event in bar_map["events"]
+        if not (
+            event["kind"] == _BREAK
+            and quiet_start is not None
+            and int(event["start_bar"]) >= quiet_start
+        )
     ]
     rhythm_sections = _rhythm_sections(bar_map)
     starts = {bar_numbers[0]}
     starts.update(event.start_bar for event in events)
     starts.update(event.end_bar + 1 for event in events if event.kind == _DROP)
+    if quiet_start is not None:
+        starts.add(quiet_start)
     ordered = sorted(starts & set(bar_numbers))
     ends = [start - 1 for start in ordered[1:]] + [bar_numbers[-1]]
     sections = [
         SegmentSection(
             start,
             end,
-            _section_kind(start, bar_numbers[0], events),
+            _SECTION_OUTRO
+            if start == quiet_start
+            else _section_kind(start, bar_numbers[0], events),
             _d_level_at(start, rhythm_sections),
         )
         for start, end in zip(ordered, ends, strict=True)
     ]
-    # 곡 끝까지 가는 마지막 구간이 브레이크로 시작하고 뒤에 사건이 없으면 아웃트로다(벌스가 아니다).
-    last = sections[-1]
+    # 곡 끝까지 가는 마지막 음악 구간(조용한 꼬리 앞)이 브레이크로 시작하고 뒤에 사건이 없으면
+    # 아웃트로다(벌스가 아니다). 조용한 꼬리는 그 자체로 아웃트로다.
+    music_end = len(sections) - (2 if quiet_start is not None else 1)
+    last = sections[music_end] if music_end >= 0 else None
     if (
-        len(sections) > 1
+        last is not None
+        and len(sections) > 1
         and last.kind == _SECTION_VERSE
         and any(event.kind == _BREAK and event.start_bar == last.start_bar for event in events)
         and all(event.start_bar <= last.start_bar for event in events)
     ):
-        sections[-1] = last._replace(kind=_SECTION_OUTRO)
+        sections[music_end] = last._replace(kind=_SECTION_OUTRO)
+    # 아웃트로 바로 뒤의 조용한 꼬리는 그 아웃트로가 곡 끝까지 이어진 것이다(한 구간).
+    if quiet_start is not None and len(sections) > 1 and sections[-2].kind == _SECTION_OUTRO:
+        sections[-2:] = [sections[-2]._replace(end_bar=sections[-1].end_bar)]
     return sections
 
 
@@ -908,6 +978,90 @@ def _runs(
                 continue
         rows.append((bar, plan))
     return rows
+
+
+def _quiet_tail_start(bars: Sequence[Mapping[str, Any]], ceiling: float) -> int | None:
+    """곡 끝까지 이어지는, 마디 에너지가 ``ceiling`` 이하인 마디들의 첫 마디.
+
+    에너지가 없는 마디를 만나면 거기서 멈춘다(모르는 값을 조용하다고 읽지 않는다). 그런 마디가
+    없거나 곡 전체가 그렇다면(따를 음악의 끝이 없다) ``None`` 이다."""
+    ordered = sorted(bars, key=lambda entry: int(entry["bar"]))
+    start: int | None = None
+    for entry in reversed(ordered):
+        energy = entry.get("energy")
+        if not isinstance(energy, int | float) or isinstance(energy, bool) or energy > ceiling:
+            break
+        start = int(entry["bar"])
+    if start is None or start == int(ordered[0]["bar"]):
+        return None
+    return start
+
+
+def _music_ending(
+    bar_map: Mapping[str, Any], bar_numbers: Sequence[int], settings: ArrangementPolicy
+) -> _MusicEnding | None:
+    """마디 에너지와 리듬 블록의 큰 히트로 곡이 어떻게 끝나는지 읽는다. 조용한 꼬리가 없으면
+    (곡이 끝까지 크면) ``None`` 이다.
+
+    큰 한 방은 꼬리 바로 앞 마디(음악의 마지막 마디)에 리듬 블록의 큰 히트가 있거나, 그 마디가
+    후렴만큼 크고(곡 안 상대 에너지가 ``chorus_energy_cut`` 보다 큼) 곧바로 무음이 이어질 때다."""
+    quiet_start = _quiet_tail_start(bar_map["bars"], _ENDING_QUIET_ENERGY)
+    if quiet_start is None:
+        return None
+    silence_start = _quiet_tail_start(bar_map["bars"], _ENDING_SILENCE_ENERGY)
+    last_music = _before(quiet_start, bar_numbers)
+    if last_music is None:
+        return None
+    energy = next(
+        float(entry["energy"]) for entry in bar_map["bars"] if int(entry["bar"]) == last_music
+    )
+    cut_off_loud = silence_start == quiet_start and energy > settings.chorus_energy_cut
+    impact = last_music if last_music in _big_hit_bars(bar_map) or cut_off_loud else None
+    return _MusicEnding(quiet_start, silence_start, impact)
+
+
+# @MX:NOTE: [AUTO] 다른 마디 규칙(브레이크·후렴 직전·예고·워시 구간 칸)이 다 정한 뒤에 부른다 —
+# 먼저 부르면 워시 구간 칸이 꼬리를 구간 첫 마디 값으로 다시 덮는다.
+def _follow_music_ending(
+    by_bar: dict[int, _CellPlan],
+    track: Mapping[str, Any],
+    ending: _MusicEnding,
+    bar_numbers: Sequence[int],
+    settings: ArrangementPolicy,
+    impact_color: tuple[int, int, int] | None,
+) -> None:
+    """한 줄의 곡 끝 마디 계획을 음악의 끝에 맞춘다.
+
+    - 큰 한 방 마디: 강조 줄에 강조 칸(블라인드, 느린 곡이 아니면 스트로브도) — 드롭 시작·후렴
+      강조와 같은 규칙(``_cell_plan``)이다.
+    - 조용한 꼬리(무음 전): 리듬·강조 줄은 쉰다. 나머지 줄은 꼬리 직전 마디의 값을 붙들고 움직임만
+      멈춘다(무빙 웨이브 → 정지). 꼬리 직전에 꺼져 있던 줄은 꺼진 채다 — 새로 켜지지 않는다.
+    - 무음부터: 모든 줄이 꺼진다.
+    """
+    rest = _rest_plan(settings)
+    if ending.impact_bar is not None and track.get("layer_role") == "effect":
+        impact = _cell_plan(
+            track,
+            active=(),
+            moving=None,
+            is_kick=True,
+            is_drop_start=True,
+            settings=settings,
+            section_color=impact_color or settings.palette.drop,
+        )
+        if impact.brightness_percent > 0:
+            by_bar[ending.impact_bar] = impact
+    before = _before(ending.quiet_start, bar_numbers)
+    held = rest if before is None else by_bar[before]
+    if track.get("layer_role") in _ENDING_RHYTHM_ROLES or held.brightness_percent <= 0:
+        held = rest
+    elif held.movement_shape is not None:
+        held = held._replace(label=HOLD_LABEL, movement_shape=None, kind="hold")
+    for bar in bar_numbers:
+        if bar < ending.quiet_start:
+            continue
+        silent = ending.silence_start is not None and bar >= ending.silence_start
+        by_bar[bar] = rest if silent else held
 
 
 def _tail_bar(bar_map: Mapping[str, Any]) -> int | None:
