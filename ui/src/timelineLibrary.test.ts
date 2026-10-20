@@ -1,10 +1,15 @@
 // Pure-parser tests for the timeline library client (no DOM harness).
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { SongTimelineView } from "./protocol";
 import {
+  confirmLoadIfUnsaved,
   parseTimelineListResponse,
+  parseTimelineLoadBackupName,
   parseTimelineLoadResponse,
   timelineItemMeta,
+  timelineLoadedNotice,
+  UNSAVED_LOAD_CONFIRM,
 } from "./timelineLibrary";
 
 const ITEM = {
@@ -43,6 +48,59 @@ describe("parseTimelineLoadResponse", () => {
   it("rejects payloads without a sections array carrier", () => {
     expect(parseTimelineLoadResponse(JSON.stringify({ timeline: { a: 1 } }))).toBeNull();
     expect(parseTimelineLoadResponse("broken")).toBeNull();
+  });
+});
+
+// WT-load-unsaved-guard — 「수정됨 · 미저장」 작업본 위에 불러오기를 누르면 먼저 묻는다
+// (2026-10-20 실측: 확인 창 없이 덮여 수정이 사라졌다). 취소하면 불러오지 않는다.
+describe("confirmLoadIfUnsaved", () => {
+  const base = { song_title: "t", sequence_number: 210, lifecycle: "verified", sections: [] };
+  const dirty = {
+    ...base,
+    draft: { dirty: true, depth: 3, last_change: [] },
+  } as unknown as SongTimelineView;
+  const clean = {
+    ...base,
+    draft: { dirty: false, depth: 0, last_change: [] },
+  } as unknown as SongTimelineView;
+
+  it("asks before replacing an unsaved draft, and cancel means no load", () => {
+    const confirm = vi.fn(() => false);
+    expect(confirmLoadIfUnsaved(dirty, null, confirm)).toBe(false);
+    expect(confirm).toHaveBeenCalledWith(UNSAVED_LOAD_CONFIRM);
+    expect(UNSAVED_LOAD_CONFIRM).toContain("저장하지 않은 수정");
+    expect(UNSAVED_LOAD_CONFIRM).toContain("자동 백업");
+  });
+
+  it("loads when the director agrees", () => {
+    expect(confirmLoadIfUnsaved(dirty, null, () => true)).toBe(true);
+  });
+
+  it("does not ask for a clean draft, no draft, or a draft just saved as-is", () => {
+    const confirm = vi.fn(() => false);
+    expect(confirmLoadIfUnsaved(clean, null, confirm)).toBe(true);
+    expect(confirmLoadIfUnsaved(null, null, confirm)).toBe(true);
+    expect(confirmLoadIfUnsaved(dirty, dirty, confirm)).toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
+  });
+});
+
+describe("timelineLoadedNotice", () => {
+  it("names the auto backup the server left", () => {
+    const text = JSON.stringify({
+      ok: true,
+      timeline: { sections: [] },
+      backup: { id: "b1", name: "Aside v5 불러오기 전 백업 (자동 v1)" },
+    });
+    expect(timelineLoadedNotice(parseTimelineLoadBackupName(text))).toContain(
+      "「Aside v5 불러오기 전 백업 (자동 v1)」",
+    );
+  });
+
+  it("stays the plain notice when nothing was backed up", () => {
+    const text = JSON.stringify({ ok: true, timeline: { sections: [] }, backup: null });
+    expect(parseTimelineLoadBackupName(text)).toBeNull();
+    expect(timelineLoadedNotice(null)).toBe("타임라인을 불러왔습니다 — 감독 타임라인에 표시됩니다.");
   });
 });
 
