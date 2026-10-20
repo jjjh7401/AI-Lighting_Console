@@ -146,14 +146,23 @@ def carry_console_preset_records(
     새 분석은 칸을 비우지만 콘솔의 프리셋은 그대로 남는다. 기록을 버리면 다음 계획이 재사용할
     근거가 없어 같은 프리셋을 새 번호로 또 저장한다(3차 전체 실행 E-10·I-08: 17개 두 벌, 콘솔은
     같은 이름에 「#숫자」). 다른 곡이어도 부른다 — 기록은 콘솔의 사실이고, 콘솔에 지금 있는지·
-    내용이 같은지는 재사용 판정(``preset_plan``)이 가른다(WT-preset-reuse-cross-song)."""
-    carried = {
-        key: copy.deepcopy(previous_grid[key])
-        for key in CONSOLE_PRESET_RECORD_KEYS
-        if isinstance(previous_grid.get(key), Mapping) and previous_grid[key]
-    }
+    내용이 같은지는 재사용 판정(``preset_plan``)이 가른다(WT-preset-reuse-cross-song).
+
+    번호마다 합친다 — ``timeline`` 이 이미 가진 기록(불러온 작업본의 기록)도 콘솔의 사실이라
+    남기고, 같은 번호는 직전 격자(더 최근)의 기록이 이긴다(WT-preset-reuse)."""
+    grid = timeline["beat_grid"]
+    carried: dict[str, Any] = {}
+    for key in CONSOLE_PRESET_RECORD_KEYS:
+        previous = previous_grid.get(key)
+        if not isinstance(previous, Mapping) or not previous:
+            continue
+        own = grid.get(key)
+        carried[key] = {
+            **(copy.deepcopy(dict(own)) if isinstance(own, Mapping) else {}),
+            **copy.deepcopy(dict(previous)),
+        }
     updated = dict(timeline)
-    updated["beat_grid"] = {**timeline["beat_grid"], **carried}
+    updated["beat_grid"] = {**grid, **carried}
     return updated
 
 

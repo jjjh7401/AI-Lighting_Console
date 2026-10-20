@@ -317,10 +317,15 @@ def _reusable_dimmer_slot(
     name: str,
     percent: int,
     attribute_group_nos: Sequence[tuple[str, tuple[int, ...]]],
+    sub_selections: Sequence[tuple[int, str]] | None = None,
 ) -> str | None:
     """콘솔에 이미 있는 같은 디머 프리셋 번호(「pool.slot」) — 콘솔 이름이 ``name``(콘솔이 붙인
     「#숫자」 허용)이고, 격자의 저장 기록이 같은 값이며 이번에 필요한 속성·그룹을 전부 덮어야
-    한다. 기록이 없는 번호(이 기록을 남기기 전 저장분)는 재사용하지 않는다."""
+    한다. 기록이 없는 번호(이 기록을 남기기 전 저장분)는 재사용하지 않는다.
+
+    ``sub_selections`` 를 주면 서브 광원 범위 줄도 내용이다 — 기록의 범위가 같아야 한다. 범위를
+    남기기 전 기록은 범위 없이 저장한 것으로 본다(실측 1.925: 범위 줄 없이 저장,
+    WT-preset-reuse)."""
     if dimmer_pool is None:
         return None
     records = grid.get(_DIMMER_RECORD_KEY)
@@ -334,6 +339,8 @@ def _reusable_dimmer_slot(
         record = records.get(number)
         if not isinstance(record, Mapping) or record.get("percent") != percent:
             continue
+        if sub_selections is not None and _recorded_sub_selections(record) != tuple(sub_selections):
+            continue
         stored = {
             str(attr): set(nos)
             for attr, nos in record.get("attribute_group_nos") or []
@@ -342,6 +349,26 @@ def _reusable_dimmer_slot(
         if all(set(nos) <= stored.get(attr, set()) for attr, nos in attribute_group_nos):
             return number
     return None
+
+
+def _recorded_sub_selections(record: Mapping[str, object]) -> tuple[tuple[int, str], ...]:
+    """디머 기록의 서브 광원 범위(``[[그룹 번호, 범위], …]``) — 없거나 모양이 틀리면 빈 것."""
+    raw = record.get("sub_selections")
+    if not isinstance(raw, list):
+        return ()
+    return tuple(
+        (int(item[0]), str(item[1]))
+        for item in raw
+        if isinstance(item, list | tuple) and len(item) == 2 and isinstance(item[0], int)
+    )
+
+
+def _sub_selections_for(
+    ranges: Mapping[int, str], group_nos: Sequence[int]
+) -> tuple[tuple[int, str], ...]:
+    """저장 선택의 그룹 가운데 서브 광원 범위가 있는 그룹 — ``with_dimmer_sub_selections`` 와 같은
+    꼴(번호 순)."""
+    return tuple(sorted((number, text) for number, text in ranges.items() if number in group_nos))
 
 
 def _annotated_cells(
@@ -1244,8 +1271,13 @@ def build_preset_plan(
     bpm: float | None = None,
     beats_per_bar: int | None = None,
     group_members: Mapping[str, Sequence[int]] | None = None,
+    dimmer_sub_selections: Mapping[int, str] | None = None,
 ) -> LoveAttackPlan:
     """격자 칸에서 새로 만들 프리셋 계획을 만든다(콘솔 무접촉, 순수 함수).
+
+    ``dimmer_sub_selections`` — 그룹 번호 → 서브 광원 범위(``with_dimmer_sub_selections`` 에 넘길
+    것과 같은 표). 주면 디머 재사용이 범위 줄까지 같은 내용인지 대조한다. ``None`` 이면 대조하지
+    않는다(범위를 모르는 호출자).
 
     - 디머: 칸의 ``brightness.value_percent``를 값으로 묶는다(같은 값 = 한 프리셋).
     - 색·방향: ``annotations``(``preset_plan.yaml``)가 칸에 붙인 색·방향만 쓴다.
@@ -1346,7 +1378,16 @@ def build_preset_plan(
         # 전체 실행 E-10·I-08 — 콘솔에 같은 이름(콘솔이 붙인 「#숫자」 허용)·같은 값·같은 그룹을
         # 덮는 디머 프리셋이 있고 격자가 그 저장을 기록하고 있으면 다시 저장하지 않고 재사용한다.
         reused_slot = (
-            _reusable_dimmer_slot(grid, dimmer_pool, name, percent, attribute_group_nos)
+            _reusable_dimmer_slot(
+                grid,
+                dimmer_pool,
+                name,
+                percent,
+                attribute_group_nos,
+                None
+                if dimmer_sub_selections is None
+                else _sub_selections_for(dimmer_sub_selections, group_nos),
+            )
             if not holds
             else None
         )
@@ -1857,16 +1898,7 @@ def with_dimmer_sub_selections(
     if not range_by_group:
         return plan
     presets = tuple(
-        replace(
-            preset,
-            sub_selections=tuple(
-                sorted(
-                    (number, selection)
-                    for number, selection in range_by_group.items()
-                    if number in preset.group_nos
-                )
-            ),
-        )
+        replace(preset, sub_selections=_sub_selections_for(range_by_group, preset.group_nos))
         if preset.kind == "dimmer"
         and preset.ready
         and any(number in preset.group_nos for number in range_by_group)
@@ -2071,6 +2103,8 @@ def apply_plan_references(
                 "attribute_group_nos": [
                     [attr, list(nos)] for attr, nos in preset.attribute_group_nos
                 ],
+                # 서브 광원 범위 줄도 저장 내용이다 — 다음 계획의 재사용 대조가 읽는다.
+                "sub_selections": [[number, text] for number, text in preset.sub_selections],
             }
             updated[_DIMMER_RECORD_KEY] = dimmer_records
         if preset.kind == "position" and preset.groups and not preset.reused and preset.slot:
