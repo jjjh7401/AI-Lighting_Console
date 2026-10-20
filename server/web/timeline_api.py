@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
 from fastapi import APIRouter, HTTPException
 
+from server.design.analysis_timeline import carry_console_preset_records
 from server.design.beat_grid_ui_values import attach_beat_grid_ui_values
 from server.web.messages import fill_bar_map_header
 from server.web.session import (
@@ -111,6 +112,14 @@ def build_timeline_router(deps: TimelineLibraryDeps) -> APIRouter:
                         mime_type=found.record["mime_type"],
                         data=found.data,
                     )
+        # WT-preset-reuse — 콘솔 프리셋 저장 기록은 작업본이 아니라 콘솔의 사실이다. 옛 작업본을
+        # 불러와도 지금 작업본의 기록을 버리지 않는다. 안 그러면 다음 계획이 콘솔에 있는 같은
+        # 프리셋을 못 알아보고 새 번호에 또 저장한다(2026-10-20 실측: 21개 재사용 0, DIM-100
+        # 1.925 → 1.939). 재사용 여부는 콘솔 이름·기록 대조(``preset_plan``)가 가른다.
+        current = deps.store.latest
+        previous_grid = current.get("beat_grid") if isinstance(current, Mapping) else None
+        if isinstance(previous_grid, Mapping) and isinstance(timeline.get("beat_grid"), Mapping):
+            timeline = carry_console_preset_records(previous_grid, timeline)
         deps.store.latest = timeline
         if deps.on_open is not None:
             deps.on_open()

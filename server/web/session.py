@@ -10523,23 +10523,28 @@ class ChatSession:
         )
         return plan, unread
 
-    def _beat_grid_plan_with_sub_selections(
+    def _beat_grid_dimmer_sub_ranges(
         self,
-        plan: LoveAttackPlan,
         grid: Mapping[str, object],
         group_members: Mapping[str, Sequence[int]],
-    ) -> LoveAttackPlan:
-        """준비된 디머 저장이 쓰는 그룹 가운데 서브 광원 범위가 있는 그룹에 뒤 점 범위를 싣는다.
-        소속은 저장 줄 단계가 이미 읽은 표를 쓰고(다시 읽지 않는다), 장비 능력은 준비된 저장이
-        있을 때만 읽는다 — 저장 후보가 없으면 장비를 읽지 않는다."""
+    ) -> dict[int, str]:
+        """디머 값 칸이 있는 그룹 가운데 서브 광원 범위가 있는 그룹 — 그룹 번호 → 뒤 점 범위.
+        계획 전에 구한다: 저장 줄(``with_dimmer_sub_selections``)과 재사용 내용 대조
+        (``build_preset_plan``)가 같은 표를 쓴다(WT-preset-reuse). 소속은 이미 읽은 표를 쓰고,
+        장비 능력은 디머 값 칸이 있을 때만 읽는다."""
         dimmer_groups = {
-            name
-            for preset in plan.presets
-            if preset.kind == "dimmer" and preset.ready
-            for name in preset.groups
+            str(track.get("group_name"))
+            for track in grid.get("tracks") or []
+            if isinstance(track, Mapping)
+            and any(
+                isinstance(cue, Mapping)
+                and isinstance(cue.get("brightness"), Mapping)
+                and cue["brightness"].get("mode") == "value"
+                for cue in track.get("cues") or []
+            )
         }
         if not dimmer_groups:
-            return plan
+            return {}
         marks = mark_sub_selection_tracks(
             [{"group_name": name} for name in sorted(dimmer_groups)],
             group_members,
@@ -10555,12 +10560,11 @@ class ChatSession:
             for track in grid.get("tracks") or []
             if isinstance(track.get("group_no"), int)
         }
-        range_by_group = {
+        return {
             number_of_name[name]: text
             for name, text in range_of_name.items()
             if name in number_of_name
         }
-        return with_dimmer_sub_selections(plan, range_by_group)
 
     def _beat_grid_preset_grid(
         self, grid: Mapping[str, object], group_members: Mapping[str, Sequence[int]]
@@ -11531,6 +11535,7 @@ class ChatSession:
             group_members = (
                 self._rig_read_cache.get(KIND_MEMBERS, self._group_members_key(group_names)) or {}
             )
+        sub_ranges = self._beat_grid_dimmer_sub_ranges(grid, group_members)
         plan = build_preset_plan(
             self._beat_grid_preset_grid(grid, group_members),
             annotations=load_preset_annotations(timeline.get("song_title")),
@@ -11543,9 +11548,10 @@ class ChatSession:
             bpm=bpm,
             beats_per_bar=beats_per_bar,
             group_members=group_members,
+            dimmer_sub_selections=sub_ranges,
         )
         apply_stage("plan_build")
-        plan = self._beat_grid_plan_with_sub_selections(plan, grid, group_members)
+        plan = with_dimmer_sub_selections(plan, sub_ranges)
         plan = self._beat_grid_preset_plan_stores(plan, grid, all_groups=group_names)
         apply_stage("plan_stores")
         commands = save_commands(plan)
