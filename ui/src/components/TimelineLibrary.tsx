@@ -3,8 +3,7 @@
 //
 // Split for the "no DOM/jsdom test harness" bound (protocol.ts header):
 // TimelineLibraryView is hook-free and directly callable in tests; the named
-// TimelineLibrary owns fetch() + React state, mirroring PaperworkPanel's
-// split. Loading an entry is a REVIEW action only — the server swaps the
+// TimelineLibrary owns fetch() + React state. Loading an entry is a REVIEW action only — the server swaps the
 // shared replay store and the client applies the same projection the
 // song_timeline WebSocket frame would carry. Nothing here fires a console
 // command.

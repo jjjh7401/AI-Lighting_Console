@@ -1196,21 +1196,13 @@ class TestTheOverlapAxisFiresNoCommand:
 # route or a message type added by this axis moves the measured value away from
 # a fixed target instead of moving both sides of the comparison together.
 #
-# P0 W3 (coordinator directive, 2026-08-06) added the paperwork REST surface
-# (``server/web/paperwork_api.py`` — GET /api/paperwork and POST
-# /api/paperwork/{kind}). That is read-only document generation over the
-# ALREADY-SHIPPED ``server/paperwork`` builders, unrelated to the PRECHK/
-# OVERLAP axis this baseline exists to pin. The snapshot is updated to match,
-# per the same rule the client-message snapshot below already records: it is
-# frozen "at the axis's base commit", not frozen against all future web-layer
-# feature work.
+# The snapshot is updated whenever unrelated web-layer feature work adds or
+# removes a route (e.g. the paperwork REST surface was removed), per the same
+# rule the client-message snapshot below already records: it is frozen "at the
+# axis's base commit", not frozen against all future web-layer feature work.
 _EXPECTED_WEB_ROUTES = (
     ("app.py", "app.get", "/healthz"),
     ("app.py", "app.websocket", "/ws"),
-    ("paperwork_api.py", "router.get", "/api/paperwork"),
-    ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/content"),
-    ("paperwork_api.py", "router.get", "/api/paperwork/{kind}/download"),
-    ("paperwork_api.py", "router.post", "/api/paperwork/{kind}"),
     # Preset-pool popup (user direction, 2026-08-15): the dashboard shows pool
     # CATEGORY tiles and opening one fetches its contents on demand here
     # (server/web/presets_api.py). Read-only — no route sends a console
@@ -1228,7 +1220,7 @@ _EXPECTED_WEB_ROUTES = (
     # director-timeline versions (server/web/timeline_api.py). Read-and-
     # projection only — no route sends a console command; unrelated to the
     # PRECHK/OVERLAP axis this baseline pins, snapshot updated per the same
-    # "frozen at the axis's base commit" rule the paperwork rows follow.
+    # "frozen at the axis's base commit" rule above.
     ("timeline_api.py", "router.delete", "/api/timelines/{entry_id}"),
     ("timeline_api.py", "router.get", "/api/timelines"),
     ("timeline_api.py", "router.post", "/api/timelines"),

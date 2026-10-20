@@ -1,8 +1,7 @@
 // Director-timeline library client (save / list / load / delete named
 // versions — 여러 곡을 미리 계획하고 버전별로 보관/불러오기, user request
-// 2026-08-14). Pure parsers + thin fetch wrappers, matching the
-// PaperworkPanel split so everything but fetch() is unit-testable without a
-// DOM harness.
+// 2026-08-14). Pure parsers + thin fetch wrappers, so everything but
+// fetch() is unit-testable without a DOM harness.
 import { apiUrl } from "./launchContext";
 import type { SongTimelineView } from "./protocol";
 

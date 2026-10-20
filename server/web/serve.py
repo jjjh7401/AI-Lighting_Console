@@ -63,7 +63,6 @@ from server.web.launcher import (
 )
 from server.web.measure import RoundTripRecorder
 from server.web.panel import pin_store_path
-from server.web.paperwork_api import PaperworkDeps
 from server.web.presets_api import PresetsDeps
 from server.web.provision_api import ProvisionDeps
 from server.web.question import QuestionChannel
@@ -419,10 +418,6 @@ def build_runtime(args: argparse.Namespace) -> tuple[object, ConsoleStack]:
             provider_config_path=config_path,
         ),
         provision=ProvisionDeps(seed_path=config_path),
-        # W3: paperwork generation surface — the gate's state_port implements
-        # both StateQueryPort and PropertyQueryPort, so one object serves both
-        # roles and the patch-sheet builder picks up property reads for free.
-        paperwork=PaperworkDeps(state_port=stack.gate.state_port),
         # Preset-pool popup: the SAME gate-owned query port — read-only.
         presets=PresetsDeps(state_port=stack.gate.state_port),
         handshake=build_handshake_policy(args),

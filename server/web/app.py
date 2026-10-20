@@ -82,7 +82,6 @@ from server.web.panel import (
     PanelStore,
     PinStore,
 )
-from server.web.paperwork_api import PaperworkDeps, build_paperwork_router
 from server.web.presets_api import PresetsDeps, build_presets_router
 from server.web.provision_api import ProvisionDeps, build_provision_router
 from server.web.question import QuestionChannel
@@ -204,11 +203,6 @@ class WebDeps:
     warm_device_layers_on_start: bool = False
     settings: SettingsDeps | None = None
     provision: ProvisionDeps | None = None
-    # W3 (P0 paperwork UI exposure): the read-only patch-sheet/cue-sheet/
-    # preset-list generation surface. ``None`` = not wired (pre-W3 behaviour
-    # — no /api/paperwork routes are mounted), matching the settings/provision
-    # optional-Deps convention above.
-    paperwork: PaperworkDeps | None = None
     # Preset-pool browsing popup (/api/presets): on-demand, read-only. Same
     # optional-Deps convention; ``None`` = surface absent (older composers).
     presets: PresetsDeps | None = None
@@ -1281,11 +1275,6 @@ def create_app(deps: WebDeps) -> FastAPI:
 
     if deps.provision is not None:
         app.include_router(build_provision_router(deps.provision))
-
-    # W3: paperwork generation surface (/api/paperwork). Registered BEFORE
-    # the catch-all static mount, same reasoning as settings/provision above.
-    if deps.paperwork is not None:
-        app.include_router(build_paperwork_router(deps.paperwork))
 
     # Preset-pool popup surface (/api/presets): the on-demand half of the
     # dashboard's preset design — the dash snapshot shows pool CATEGORY tiles

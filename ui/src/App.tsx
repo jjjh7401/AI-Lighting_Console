@@ -45,7 +45,6 @@ import { CueMonitor } from "./components/CueMonitor";
 import { DashBoard } from "./components/DashBoard";
 import { LockToggle } from "./components/LockToggle";
 import { OnboardingBanner } from "./components/OnboardingBanner";
-import { PaperworkPanel } from "./components/PaperworkPanel";
 import { QuestionCard } from "./components/QuestionCard";
 import { ReviewCard } from "./components/ReviewCard";
 import { RunbookMode } from "./components/RunbookMode";
@@ -538,15 +537,10 @@ export default function App() {
     });
   };
   const [timelineExample, setTimelineExample] = useState(false);
-  // W3 — paperwork panel toggle. Session-volatile (no localStorage), same
-  // default every other App.tsx view preference besides runbookMode uses
-  // (design.md §6 / D5) — runbookMode's persistence is an explicit,
-  // deliberate exception this toggle does not need to repeat.
-  const [paperworkMode, setPaperworkMode] = useState(false);
   // 카드 t537 (REQ-LDBEAT-004(a)(g)) — 박자 격자 전체화면 뷰. 런북 모드
   // 안쪽의 전환이고, 런북 모드 자체(runbookMode)가 꺼지면 같이 꺼진다
   // (아래 toggleRunbookMode는 건드리지 않는다 — 이 상태는 이 전환 전용).
-  // paperworkMode와 같은 이유로 세션-휘발성(localStorage 없음).
+  // 세션-휘발성(localStorage 없음).
   const [beatGridFullscreen, setBeatGridFullscreen] = useState(false);
   // 전체화면 진행 문구(「승인 카드를 기다리는 중」)를 누를 때마다 올려 승인 카드로 옮긴다.
   const [approvalFocusSeq, setApprovalFocusSeq] = useState(0);
@@ -1263,14 +1257,6 @@ export default function App() {
             </button>
           )}
           <button
-            className={`paperwork-toggle${paperworkMode ? " paperwork-toggle-active" : ""}`}
-            onClick={() => setPaperworkMode((active) => !active)}
-            aria-label={paperworkMode ? "페이퍼워크 닫기" : "페이퍼워크 열기"}
-            aria-pressed={paperworkMode}
-          >
-            {paperworkMode ? "✓ 페이퍼워크" : "페이퍼워크"}
-          </button>
-          <button
             className="chat-toggle"
             onClick={() => setChatCollapsed((collapsed) => !collapsed)}
             aria-label={chatCollapsed ? "채팅 펼치기" : "채팅 접기"}
@@ -1406,10 +1392,6 @@ export default function App() {
               the chat column, which is ALWAYS visible here — so a required
               approval still never gets bypassed (contract item 4). */}
           {chatColumn}
-        </div>
-      ) : paperworkMode ? (
-        <div className="paperwork-mode-frame">
-          <PaperworkPanel onClose={() => setPaperworkMode(false)} />
         </div>
       ) : (
         <>
