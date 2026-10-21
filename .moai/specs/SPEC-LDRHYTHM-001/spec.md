@@ -150,3 +150,31 @@ REQ-008 이 명시하듯 이 SPEC 은 룩 전환 빈도(§9) 수치를 올리거
 3. **G5 — Rain 분석 BPM(76.01)의 절반/두 배 오검출 가능성**(§1 인용, 리듬 보고서 §①) — Club Diver 자체의 BPM(139.67, `measured` 소스)은 이번 조사에서 의심 후보로 지목되지 않았으나, M4+ 가 다른 곡으로 확장될 때 참값 대조가 필요하다.
 4. **LOVE ATTACK 원곡 오디오 위치(저장소 밖, 의도적 미커밋)** — 감독 결정(2026-10-06) 이후 실측: `/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3`(4,733,524바이트, sha256 `9ab52dfb8ac5bd8a0dc09d393b33e28ad650c07262371460994300c98581c9fa`, 2026-10-06 `ls -l`+`shasum -a 256`로 이 plan-phase 에서 직접 재실측)에 있다. 기존 8곡(Club Diver 등)이 있는 `src/sample music/`(주 체크아웃) 안에는 **의도적으로** 두지 않는다 — M1 의 BPM·구간 분석 스크립트는 이 저장소 밖 경로를 직접 참조해야 하고, 그 경로가 다른 머신에서 재현되지 않을 수 있음을 M1·M2 산출물에 명시한다.
 5. **"기존 앱 연출"(AC-LDRHYTHM-010 비교 대상)은 t510 기준선으로 가짜 콘솔까지는 생성됐으나, 실제 콘솔에는 아직 재생되지 않았다.** `reports/loveattack-baseline-20261006.md`(+`.html`)와 `.moai/reports/t510/verdict.md`(카드 t510, 2026-10-06)가 LOVE ATTACK 을 현재 렌더러(SPEC-LDRENDER-001 완료 상태)로 돌린 결과다 — 11큐, 가짜 콘솔(FakeConsole) 송신 190줄, 큐별 유지·색·층·페이저 표가 있다. 가짜 콘솔은 페이저 풀에 답하지 않아 페이저 제안 9큐가 송신 0줄로 나왔다는 한계가 명시돼 있다(실기에서는 0이 아닐 수 있음). 이 기준선을 실제 콘솔에 올려 AC-LDRHYTHM-010 의 비교에 쓰려면, M2 와 같은 감독 승인 송신(AC-LDRHYTHM-012 의 승인=송신 규칙)이 선행 조건이다 — 이 송신 작업 자체는 이 SPEC 의 M1~M3 범위(코드 0) 밖이며, AC-LDRHYTHM-010 의 Given 절 선행 조건으로만 명시한다.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위)은 한 글자도 지우거나 고치지 않았다. frontmatter 의 `status`·`version`·`updated` 도 바꾸지 않았다(상태 전이는 후속 sync 단계가 정한다). 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21).
+
+### 전방 참조 — M4+ 앱 구현의 현재 SPEC 위치
+
+이 SPEC 의 §2 와 §4 첫 항목 「Out of Scope — M4+ 앱 구현 자체」는 앱 구현을 다음 SPEC 의 일로 미뤘다. 그 다음 SPEC 은 한동안 없었고, 2026-10-07 HISTORY 가 기록한 방향 전환(손 시연을 접고 런북 모드 앱 SPEC 을 새로 연다) 이후의 앱 코드는 `SPEC-LDBEAT-001` 과 **이 ID 의 태그**를 달고 출하됐다. 인벤토리는 2026-09-28~10-21 사이 PR 99건(앱 코드를 바꾼 것 95건)과 커밋 제목 202개가 이 ID 를 달았다고 측정했다. 그 코드의 현재 동작은 아래 SPEC 이 기술한다.
+
+| 현재 동작 | 기술하는 SPEC |
+|---|---|
+| 프리셋 계획·재사용·웨이브 프리셋·스피드 마스터, 구간 단위 자동 배치·리듬층·곡 끝, 뒤·옆 줄 출력 | `SPEC-LDRHYTHM-002` |
+| 콘솔 반영·소유 기록·타임코드 나눠 담기·「콘솔 같이」·칸 편집·승인 카드 문구 | `SPEC-LDBEAT-002` |
+| 작업본 라이브러리·음원 링크·재접속 뒤 상태·마디 지도 꼬리 | `SPEC-LDBEAT-003` |
+| 박자 격자 화면·박자 전용 에미터·M1 프로브 | `SPEC-LDBEAT-001` |
+| 마디 지도(박·다운비트·마디·사건) 검출과 진입 | `SPEC-LDBARMAP-001`·`-002`·`-003` |
+| 배치 초안 첫 묶음 | `SPEC-LDARRANGE-001` |
+
+### REQ-LDRHYTHM-012 (M4+ 범위 후보) 항목별 — 코드를 읽어 확인한 사실만
+
+- (a) 비트·다운비트·킥 검출: `server/audio/bar_map.py`(`SPEC-LDBARMAP-001`)와 `server/audio/rhythm.py`(`SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-012)가 있다. 본문의 「다운비트 생산자 0건」 전제는 낡았다(HISTORY 2026-10-14 가 이미 기록).
+- (b) 타임코드 이벤트 송신: 박자 격자 에미터 `server/design/beat_grid_emit.py` 가 타임코드와 이벤트를 만든다(`SPEC-LDBEAT-002`). 본문이 인용한 `server/director/emit.py:51` 의 `PLAYBACK_MODES` 는 이제 `server/director/validate/timing.py:44` 에 있고(`("manual_go", "trig_time")`) `emit.py` 는 `06d4f4c6`(2026-10-20)에서 삭제됐다. 본문의 「앱의 재생 경계는 timecode 모드를 거부한다」는 director apply 경로 기준이고, 박자 격자 에미터는 그 경로를 타지 않는 별도 경로다(`SPEC-LDBEAT-001` 확정 결정 ②).
+- (c) `position_fx`·`plan_movement` 연결: `server/design/app_movement.py` 가 `server/spatial/position_fx.py` 를 쓴다(`SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-015 근거). `plan_movement`(`server/looks/movement.py`)의 비테스트 호출처는 이 보강을 쓰며 확인하지 못했다.
+- (d) 장면 연결 규칙을 송신기 레벨 검사로 승격: 대응하는 코드를 찾지 않았다.
+
+### 상태 메모 (변경 아님)
+
+`status: in-progress`·`updated: 2026-10-07` 은 그대로다. M1~M3(대본·시연·규칙화)는 HISTORY 가 기록한 대로 닫혔고 M2 는 접혔다. 인벤토리 §5.2 는 M1~M3 만 닫고 REQ-LDRHYTHM-012 의 M4+ 후보를 위 전방 참조로 넘기며 이 ID 에 앱 코드 변경을 더 붙이지 않는 것을 제안했다. 이 보강은 그 제안을 강제하지 않는다.

@@ -150,3 +150,27 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
    - **세 SPEC 공통 권고 키 이름(카드 t529, `SPEC-LDBEAT-001` v0.2.0 §5 열린 결정 0'·`SPEC-LDBARMAP-001` §5 열린 결정 0과 같은 문면, 확정 아님)**: `timeline["beat_grid"]`(확정 격자 — `SPEC-LDBEAT-001`) · `timeline["bar_map"]`(마디 지도 — `SPEC-LDBARMAP-001`이 옵션 A를 고를 때) · `timeline["arrangement_draft"]`(자동 초안 제안 — 이 SPEC, 「적용」 전에는 `beat_grid`를 건드리지 않는다, REQ-LDARRANGE-009). 세 키의 마디 번호는 같은 번호 공간(§5 항목 1 — 1-base 위상 1, 0 = 못갖춘마디)이다. LDBEAT M2는 아직 미착수(v0.2.0 status: draft)라 저장 위치 확정은 여전히 그 M2의 몫이다.
 3. **[열린 결정] "느린 곡" 판정 기준** (REQ-LDARRANGE-007의 STROBE 게이팅). 배치 규칙서는 "발라드처럼 느린 곡"이라고만 적고 수치 경계를 주지 않는다. 옵션: (a) BPM 임계값(예: `server/audio/analyze.py`가 산출하는 BPM < N) — 단순하지만 BPM은 느낌과 항상 일치하지 않는다(예: 빠른 BPM의 발라드풍 편곡), (b) 감독이 곡별로 직접 지정하는 플래그(곡 메타데이터에 "느린 곡" 불리언) — REQ-LDARRANGE-004의 곡별 기본값 모델과 자연스럽게 맞물린다, (c) 마디 지도(SPEC-LDBARMAP-001)가 산출하는 섹션 특성(예: 드롭/빌드 밀도)으로 추론 — 마디 지도가 아직 없어 이 SPEC의 run-phase 시점에 쓸 수 없을 가능성. 권고: (b)를 1차 기본값으로 채택하고 (a)를 보조 제안으로 노출한다 — 수치 하나로 전곡을 재단하는 위험(REQ-LDARRANGE-004가 경계하는 것과 같은 종류)을 피한다.
 4. **[열린 결정] 무대 패치(좌표·방향)가 그룹-번호 주소를 넘어 역할 배치 자체에 영향을 주는가**. 옵션: (a) 아니다 — 역할 배치는 순수하게 규칙+마디 지도+그룹 번호로 결정되고, 좌표는 LDBEAT 격자나 무대 그림(t525)의 시각화 참고 정보로만 쓰인다, (b) 그렇다 — 예를 들어 무대 앞뒤 추정 방향(현재 이름 추정뿐, t525 "콘솔에서 무대 앞뒤를 따로 읽지는 않았다")이 FOH/BACK 역할의 그룹 선택에 영향을 줄 수 있다. 권고: (a) — 이 SPEC의 범위(§3.6 REQ-LDARRANGE-013)는 이미 (a)로 명시했다. 좌표 기반 배치 정교화가 필요해지면 별도 SPEC으로 분리한다.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위·열린 결정)은 한 글자도 지우거나 고치지 않았다. frontmatter 의 `status: draft`·`version`·`updated` 도 바꾸지 않았다(상태 전이는 후속 sync 단계가 정한다). 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21)와 코드 판독.
+
+### 실제로 출하된 파일
+
+| 파일 | 이 SPEC 과의 관계 |
+|---|---|
+| `server/design/arrange_generator.py` | 이 SPEC 첫 묶음 — 마디 지도와 트랙 구성으로 「트랙 × 마디」 초안(`generate_arrangement_draft`). 구간은 4마디 고정, 모든 마디에 칸을 낸다. 지금은 AI 제안 규칙(`server/design/beat_grid_suggestion_rules.py`)이 이 생성기를 쓴다. |
+| `server/design/arrange_policy.py` | REQ-LDARRANGE-004 — 곡별 불변 규칙 객체 `ArrangementPolicy`. 이 SPEC 이후 필드가 늘었다(`break_hold_wash`·`motion_period_beats`·`pre_chorus_blackout`·`ending_follows_music`·`chorus_energy_cut`, 뒤·옆 줄 기본 위치 상수). |
+| `server/design/arrange_apply.py`, `server/design/arrange_draft_store.py` | 두 번째 묶음 — 보류 초안과 한 번만 꺼내 적용(전부 맞거나 전부 안 바뀜). 세션 진입점 `beat_grid_draft_propose`·`beat_grid_draft_apply`·`beat_grid_draft_reject`. |
+| `server/design/arrange_segments.py` (1,190줄) | **이 SPEC 이 서술하지 않는 생성기** — 마디 지도 사건으로 곡을 구간으로 나눠 줄마다 값이 바뀌는 마디에만 칸을 내는 희소 초안(`generate_segment_draft`). 앱의 「자동 배치」 제안(`beat_grid_draft_propose`)이 실제로 부르는 것은 이쪽이다. |
+| `server/design/grid_shape.py` | 자동 배치 결과를 손으로 설계한 기본 격자와 견주는 읽기 전용 명령줄 도구(앱 호출처 없음). |
+
+시험: `server/tests/test_arrange_generator.py`, `test_arrange_colors.py`, `test_arrange_structured_values.py`, `test_arrange_apply.py`, `test_arrange_draft_wiring.py`, `test_arrange_segments.py`, `test_arrange_side_allocation.py`, `test_arrange_song_ending.py`, `test_grid_shape.py`.
+
+### 범위가 이 SPEC 본문보다 넓어진 곳
+
+인벤토리 §5.1 은 이 SPEC 의 범위를 「배치 초안 생성 + 곡 끝 처리」로 넓히고 `arrange_segments`·`grid_shape`·`arrange_apply`·`arrange_draft_store` 를 등재하라고 제안했다. 구간 단위 생성기의 구간 규칙(구간 종류·주인공 교대·강조), 브레이크·후렴 직전·예고 칸, 박 나누기, 곡 끝이 음악의 실제 끝을 따르는 규칙(2026-10-21 #865)의 현재 동작은 `SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-007~011 이 기술한다. 이 보강은 그 내용을 되풀이하지 않는다.
+
+### 상태 메모 (변경 아님)
+
+`status: draft` 이지만 위 파일들은 출하돼 있고 마지막 이 ID 태그 커밋이 2026-10-15 였다(인벤토리 §2 #57). 인벤토리 §5.2 는 `draft → implemented` 를 제안했다. 이 보강은 상태를 바꾸지 않는다.
