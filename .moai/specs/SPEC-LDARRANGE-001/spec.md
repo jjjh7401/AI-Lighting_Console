@@ -2,9 +2,9 @@
 id: SPEC-LDARRANGE-001
 title: "배치 자동 생성 — 역할×마디 초안"
 version: "0.2.2"
-status: draft
+status: implemented
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-21
 author: jaihyun
 priority: P2
 phase: "Lighting Copilot v1.2 target"
@@ -29,6 +29,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 | 2026-10-10 | **역할 어휘 맞춤(카드 t533).** 직전 행이 적어 둔 미해결을 해소한다 — `SPEC-LDBEAT-001` v0.2.0(PR #572, 카드 t526)이 REQ-LDBEAT-004를 "콘솔 그룹 트랙(줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나) + `rig.py`의 7개 층 역할 이름표 key/back/side/wash/mover/effect/audience"로 재교정했으므로, 이 SPEC도 같은 어휘를 쓰도록 맞춘다. §2 끝에 단위 정정 문단을 추가해 이 문서 전체가 쓰는 "역할×마디"의 뜻을 "콘솔 그룹 트랙(역할 이름표가 붙음) × 마디"로 명시했다. REQ-LDARRANGE-002(생성기가 쓸 트랙 모양·역할 어휘를 LDBEAT와 맞추고, 배치 규칙서 §2의 역할 6종을 트랙 식별자로 금지, 겹치는 그룹 트랙 동시 사용 금지를 흡수)·REQ-LDARRANGE-007(STROBE 게이팅을 "ACCENT 트랙"이 아니라 트랙 비종속 서술로 재작성)을 고쳤다. `acceptance.md` AC-LDARRANGE-003·004(ACCENT 트랙 참조 제거)·014(라벨 집합을 7종 부분집합 + 트랙 식별자가 6종이 아닌지로 재정의, AC 개수 16 불변)를 같은 방향으로 고쳤다. `plan.md` §B 위험 6(역할 어휘 분류축 안내를 반전 — 이제 LDBEAT·LDARRANGE와 `rig.py`는 같은 어휘다)·§C 사전 점검 grep(LDBEAT의 7종 어휘를 확인하도록 교체)·§E M3(그룹 매핑 입력을 7종 트랙으로 교정)·§F 안티패턴·§G 교차 참조(`rig.py` 인용 정정)를 갱신했다. REQ·AC가 구속하는 **뜻**(생성기가 새 역할 발명 금지·STROBE 게이팅·그룹 번호 주소만 사용)은 바뀌지 않았으나 **인용 어휘**가 바뀌었으므로 **plan-audit 재실행이 필요하다**(`progress.md`에 기록). version 0.1.3→0.2.0. |
 | 2026-10-10 | **마디 지도 입력 모양 맞춤(카드 t541, plan 문서만 — 코드 0·콘솔 0).** 생산자 `SPEC-LDBARMAP-001`이 M4(카드 t539, PR #585 `364ab000`)에서 저장 위치(`timeline["bar_map"]`)와 값 모양을 확정했으므로, §5 항목 1의 미러 문단을 같은 문면으로 맞췄다 — `schema_version`(=1)·`first_beat_offset`(단위 박, 0~(분자−1)) 추가, `time_signature`를 `[4, 4]` 고정에서 `[분자, 분모]` 일반형으로, `start_beat`를 1~분자로, 일반화 규칙(곡 길이·박자표·못갖춘마디 가정 금지) 승계. 항목 1 머리를 「생산자 쪽 확정, 소비 방식만 열림」으로 갱신, §2 입력 1의 「저장 위치는 미정」을 갱신(지도 **데이터** 진입 경로는 아직 없음 — 후속 UI 카드), §1 「마디 지도는 아직 없다」에 만료 고지. **REQ·AC 문면 변경 0** — REQ-LDARRANGE-001의 구속(지도 데이터 없이 생성하지 않음)은 그대로 유효. version 0.2.0→0.2.1. |
 | 2026-10-10 | **낡은 문면 인라인 고지(카드 t545, plan 문서만 — 코드 0·콘솔 0).** t529 HISTORY 일괄 만료 고지에만 기대던 「SPEC-LDBARMAP-001 존재하지 않음/미작성」 문면에 제자리 고지를 붙였다 — §0 Tier 근거, REQ-LDARRANGE-001(괄호 → 만료 고지, 근거 칸에 현황: 선행 조건 둘 — 존재·스키마 확정 — 충족, 실제 지도 **데이터**는 아직 없음), `plan.md` §A 전제 SPEC·§D 제약(스키마 확정, 데이터 금지는 유지)·M1 사전 점검, `acceptance.md` AC-LDARRANGE-015(필드명 확정 고지, 이 AC는 스텁 입력에서 접근하지 않는지만 잰다). **뜻 변경 0** — REQ-001의 `While`·`shall not` 절과 AC-015의 Given/When/Then·판정식(`== true`·`== 0`·카운트)은 그대로(바뀐 줄의 규범 표현 개수 대조로 확인) — plan-audit 미실행. 남긴 것: §5 항목 3(c)의 「마디 지도가 아직 없어 run-phase 시점에 쓸 수 없을 가능성」과 `acceptance.md` §(비기능) 스텁 시나리오는 실제 **데이터** 부재·스텁 상태를 가리키므로 지금도 참. REQ/AC 수 불변. version 0.2.1→0.2.2. |
+| 2026-10-21 | 전체 앱 SPEC 정리: server/design/arrange_generator.py·arrange_policy.py·arrange_apply.py·arrange_segments.py·arrange_draft_store.py 와 server/tests/test_arrange_apply.py 존재. 상태 문자열만 낡았음 (status → implemented) |
 
 ## §0. Tier 선택 근거
 

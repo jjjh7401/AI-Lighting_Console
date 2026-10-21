@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-SHOWUI-001
 title: "연출 컨트롤 패널 — 채팅 옆 Show-Control Panel"
 version: "0.2.1"
-status: completed
+status: superseded
 created: 2026-07-22
-updated: 2026-07-23
+updated: 2026-10-21
 author: manager-spec
 priority: P1
 phase: "Post-MVP 연출 UI (v1.1.0 target)"
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-MVP-001, SPEC-COPILOT-DEPLOY-001]
 | 0.1.0 | 2026-07-22 | manager-spec | 최초 작성 (draft). Plan-review gate(DP1) 승인 및 clarification 3건 해소 반영: ① **페이더 v1 제외** — 후속 SPEC으로 이연(초안 REQ-SHOWUI-021 [Where] 조건부 요구 삭제, §D Out of Scope 등재), ② **All Off = bounded enumeration** — 패널이 추적 중인 running executor들에 대한 개별 `Off Executor N` 번들, 광역 `Thru`/`*` 커맨드 금지, 한계(§A) 명시, ③ **편집 모드 v1 = unpin 전용** — rename/reorder 이연, 핀 순서는 append-only. 아티팩트 5종(spec/plan/acceptance/design/progress) 동시 생성. |
 | 0.2.0 | 2026-07-22 | manager-spec | **Plan-audit iteration 1 fold-in (FAIL 0.81 → 필수 교정 6건, 문서 전용).** (F1) **정지 클래스 서로소 분리** — 정지 = 타일별 Off(항상 single-press·zero-step), All Off = 파괴적 발화-클래스(arm→fire 2-step); design.md §5 정지 불릿에서 "전역 All Off" 제거, REQ-012 재작성, AC-011 이진 검증화. (F2) REQ-010 커버 기계 AC 신설(**AC-SHOWUI-015**) + AC-014에 REQ-010 추적 주석. (F3) **REQ-SHOWUI-022 신설** — `panel_execute`/`panel_stop` target의 `parse_client_message`-시점 정수 검증 + 카탈로그/핀 스토어 membership 검증(검증 실패 시 error 이벤트, 번들 미구성·게이트 미호출); AC-005에 거부 케이스 추가. (F4) 복합 REQ 분할 — REQ-004→004(pin)+**023**(unpin), REQ-019→019(모달 금지)+**024**(arm→fire)+**025**(All Off bounded 구성)+**026**(광역 타깃 금지). 잔여 복합 REQ(005/007/014/015)는 각 절이 개별 AC에 매핑되어 있음을 근거로 **singularity debt로 존치**하며 본 HISTORY 행이 그 기록이다. (F5) REQ-014 측별 재서술 — TS 클라이언트 silent-drop(`null`, protocol.ts:128-129) vs 서버 `ProtocolError` 명시 거부(messages.py:46-50, app.py:230-234). (F6) "대기 중인 실행 큐" 서술 삭제(큐는 존재하지 않음, REQ-011) — `panel_stop`은 1-in-flight busy 가드에서 **면제**되며 진행 중 execute와 동시 `gate.screen()` 호출 허용을 명시. ⚠️ **번호 규약**: REQ-SHOWUI-021은 소각(burned — 삭제된 페이더 초안, v0.1.0 HISTORY 참조)으로 **영구 결번**이며 신규 번호는 022부터 이어진다. |
 | 0.2.1 | 2026-07-22 | manager-spec | **Plan-audit iteration 2 PASS(0.93) 후 fix-forward 정리 (비차단, 문서 전용, 재감사 불요).** (R1) 4개 아티팩트 헤더·frontmatter 버전 정렬 — plan.md 헤더가 v0.1.0에 잔류하던 드리프트 해소, spec/acceptance/design 포함 전부 **v0.2.1**로 통일. (R3, gate-인접 정정) REQ-012의 "clearance 소비는 번들 단위이므로 동시 stop 번들과 양립한다(gate.py:269-272)" 서술이 코드와 **정반대**임을 정정 — `screen()`은 동일 세션 키의 clearance Counter를 매 번들마다 **리셋**하므로 두 번째로 screen되는 번들이 첫 번들의 미소비 clearance를 무효화한다. 재작성: `panel_stop`은 busy 가드에서 면제되어 동시 screen 가능하되, clearance가 세션-키드이고 screen()마다 리셋되므로 **실패 방향이 안전(과다 차단이지 우회 아님)**이며 stop-preempts-execute가 의도된 순서임을 명시(거짓 "두 번들 clearance 공존" 전제를 manager-develop에 넘기지 않음). AC-009의 동시성 assert가 기계적 backstop으로 유지. (R2) plan.md의 미분화 "silent-drop" 표현을 REQ-014의 측별 계약(TS null-drop vs 서버 ProtocolError)에 정렬. (R4) AC-011에 REQ-025 양성 구성 assert 추가 — All Off 번들 == 추적 running executor당 정확히 `Off Executor N` 1개. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: SPEC-COPILOT-DASHUI-001 이 같은 화면의 후속 세대. 커밋 ee55f406(2026-07-25)이 ShowPanel/PanelTile 되돌림, 두 파일 모두 ui/src 에 없음 (status → superseded) |
 
 ## A. 개요
 

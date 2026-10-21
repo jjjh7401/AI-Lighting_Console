@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-UNREQ-001
 title: "요청되지 않은 쇼파일 쓰기 — 응용 층에서 잡는다"
 version: "0.1.0"
-status: implemented
+status: completed
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-10-21
 author: orchestrator-direct (lane t86)
 priority: P1
 phase: "Phase 2 안전 계층 — 비가역 쓰기 가드"
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-PRESETGUARD-001, SPEC-COPILOT-WRITEGATE-001, SPEC-C
 | 2026-08-16 | PRESETGUARD-001 완료 — 응용 층에서 **덮어쓰기** 방어(점유 검사 · 되읽기) |
 | 2026-08-25 | LXSEQ-003 M4 중단. 승인 없이 프리셋 1건이 콘솔에 생성됨 |
 | 2026-08-25 | 카드 t86 이 게이트 분류·비용·테스트 파괴를 실측. 본 SPEC 의 전제 전부 |
+| 2026-10-21 | 전체 앱 SPEC 정리: 게이트 v3→v4 출하(86fee6c7, #150), server/safety/blacklist.yaml 반영. 닫는 절차만 빠져 있었음 (status → completed) |
 
 ## A. 개요
 

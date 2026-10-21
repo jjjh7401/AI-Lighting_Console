@@ -22,6 +22,7 @@ depends_on: [SPEC-LDSTORE-001, SPEC-LDCOMPILE-001]
 | 일자 | 내용 |
 |---|---|
 | 2026-09-16 | 최초 작성. `SPEC-LDPLUGIN-001` 을 쪼갠 여섯 자식 중 세 번째, Tier L, `depends_on: [SPEC-LDSTORE-001, SPEC-LDCOMPILE-001]`(둘 다 completed 확인). |
+| 2026-10-21 | 전체 앱 SPEC 정리: 2026-10-20 삭제 파일(emit.py·ops.py·paperwork_api.py·server/tools/*) 중 server/director/emit.py 를 본문이 인용하나 06d4f4c6 에서 제거됨(부분 은퇴, 상태 completed 유지) |
 
 ## 1. 목적과 경계
 

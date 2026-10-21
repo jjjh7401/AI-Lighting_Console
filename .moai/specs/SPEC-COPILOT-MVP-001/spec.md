@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-MVP-001
 title: "Phase 1: 자체 MVP — OSC/Lua 브리지 + 한국어 채팅 UI + 안전 게이트"
 version: "0.3.0"
-status: in-progress
+status: implemented
 created: 2026-07-15
-updated: 2026-07-16
+updated: 2026-10-21
 author: manager-spec
 priority: P1
 phase: "Phase 1 — MVP 코파일럿 (v0.2.0 target)"
@@ -28,6 +28,7 @@ depends_on: [SPEC-COPILOT-EVAL-001]
 | 0.1.3 | 2026-07-15 | manager-spec | clarification gate 해소: plan.md §A 마커 6건 전원 결정 기록으로 대체 (React, Phase 0 버전 승계, 코퍼스 기본값 승인, JSONL 감사 로그 90일, `/copilot/*` OSC 네임스페이스, 왕복 조작적 정의 승인) + acceptance DoD 마커 카운트 정정(m10). 참고: REQ-MVP-001의 `/cmd` → `/copilot/cmd` 정식 개정은 §F fold-in amendment에서 수행 |
 | 0.1.2 | 2026-07-15 | manager-spec | plan-audit iteration 2 (PASS-with-debt 0.92) 지적 반영: invoking_verbs 폐쇄 집합화 + 재귀 상한·순환 감지(MVP-M9), Cmd() 스캔 잔여 위험 명시(m5), GEARS 태그 표준화(m6), 왕복 조작적 정의 축소 해석 명시(m7), AC-MVP-024 결정적 재작업(m9) |
 | 0.1.1 | 2026-07-15 | manager-spec | plan-audit iteration 1 (FAIL 0.59) 지적 반영: 안전 게이트 우회 봉쇄(B.8, MVP-C1), 장애 모드·부분 실행(B.9, MVP-M4), 블랙리스트 폐쇄 집합화(MVP-M1), 백업 정책 재정의(MVP-M5), 왕복 측정 기준 재정의(MVP-M3), 엣지 케이스 REQ 승격(B.10, MVP-m3), get_rig_context 행위 요구(B.11, MVP-M7), Tier L 산출물(design.md/research.md) 추가(MVP-M6) |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: Phase 1 MVP 출하(server/web·orchestrator·safety·bridge 등 인용 경로 66/74 존재), 최근 태그 e103b8af(#641, 2026-10-12). 이후 확장은 후속 SPEC 이 맡음 (status → implemented) |
 
 ## A. 개요
 

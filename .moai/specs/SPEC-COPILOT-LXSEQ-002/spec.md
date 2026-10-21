@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LXSEQ-002
 title: "LX-SEQ 연계 2단계 — RIG GROUP 시트와 001 FID 매핑표에서 onPC 그룹으로"
 version: "0.1.0"
-status: draft
+status: implemented
 created: 2026-08-24
-updated: 2026-08-24
+updated: 2026-10-21
 author: manager-spec
 priority: P1
 phase: "v0.2.0 target — LX-SEQ 연계 2단계(그룹); 3단계 프리셋/FX, 4단계 시퀀스/큐는 후속 SPEC"
@@ -28,6 +28,7 @@ related_specs: [SPEC-COPILOT-LXSEQ-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-
 | 버전 | 날짜 | 작성자 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-24 | manager-spec | 최초 작성 (draft, Tier M). 아티팩트 3종(spec, plan, acceptance)과 progress. REQ **16건**, AC **16건**(실기 1건 포함), 마일스톤 **5개**(M0에서 M4까지), clarification 마커 **2건**(plan.md 의 A.4 — 슬롯 번호 권위, 입력 파일 수). 카드 t18이 「해소」로 적은 두 지뢰(12 대 18, 실기 질문)는 재확인했고, 그 밖에 **판독으로 새로 드러난 사실 4건**을 A.2에 등록한다. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: server/lxseq/group_parser.py·group_mapper.py 와 server/tests/test_lxseq_group_*.py 존재. 상태 문자열만 낡았음 (status → implemented) |
 
 ---
 

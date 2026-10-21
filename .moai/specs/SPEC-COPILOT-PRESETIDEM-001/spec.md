@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-PRESETIDEM-001
 title: "프리셋 임포트를 멱등으로 — 매퍼가 슬롯만 보고 이름을 안 봐서 같은 CSV 가 복제된다"
 version: "0.1.0"
-status: draft
+status: implemented
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-10-21
 author: orchestrator
 priority: P1
 phase: "v0.3.0 — LX-SEQ 연계 후속 결함"
@@ -21,6 +21,12 @@ related_specs: [SPEC-COPILOT-LXSEQ-003, SPEC-COPILOT-UNREQ-001, SPEC-COPILOT-PRE
 > 통째로 복제된다.
 >
 > LXSEQ-003 **밖**이다 — 그 SPEC 의 progress.md:494 가 이미 그렇게 정리했다.
+
+## HISTORY
+
+| 일자 | 내용 |
+|---|---|
+| 2026-10-21 | 전체 앱 SPEC 정리: 커밋 5a6843af(#151) 「매퍼가 이름을 본다」, server/lxseq/preset_mapper.py·server/tests/test_lxseq_preset_mapper.py 존재. 상태 문자열만 낡았음 (status → implemented) |
 
 ## §A 무엇이 틀렸나
 

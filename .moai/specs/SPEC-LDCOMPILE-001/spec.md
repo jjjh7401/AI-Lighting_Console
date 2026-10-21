@@ -16,6 +16,12 @@ tier: L
 
 # SPEC-LDCOMPILE-001
 
+## HISTORY
+
+| 일자 | 내용 |
+|---|---|
+| 2026-10-21 | 전체 앱 SPEC 정리: 2026-10-20 삭제 파일(emit.py·ops.py·paperwork_api.py·server/tools/*) 중 server/director/emit.py 와 server/tools/ldcompile_c6_p1_axis_timing_probe.py 를 plan/progress 가 인용하나 06d4f4c6 에서 제거됨(부분 은퇴, 상태 completed 유지) |
+
 ## 1. 목적과 경계
 
 외부 `lighting-director` 플러그인이 만든 계획을 **판정하고, 실제 콘솔이 보존할 수 있는

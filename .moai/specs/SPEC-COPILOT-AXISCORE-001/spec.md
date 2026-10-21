@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-AXISCORE-001
 title: "축 점수 비교 가능성 — 정규화로 배제 규칙을 불필요하게 만든 뒤 삭제 (Axis Score Comparability)"
 version: "0.2.0"
-status: draft
+status: implemented
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-10-21
 author: manager-spec
 priority: P2
 phase: "Phase 2 공간 인식 — 위상 경합 채점"
@@ -33,6 +33,12 @@ related_specs: [SPEC-COPILOT-GROUPGEN-001, SPEC-COPILOT-SPATIAL-001, SPEC-COPILO
 >
 > **파이프라인의 위치**: `classify()` 내부의 **채점 단계 하나**를 고친다. 검출기 6종도, `TopologyResult`
 > 형상도, `naming.py`도, 쓰기 경로도 건드리지 않는다. 이 모듈은 콘솔 무접촉이다(`tools.py:3464-3469`).
+
+## HISTORY
+
+| 일자 | 내용 |
+|---|---|
+| 2026-10-21 | 전체 앱 SPEC 정리: server/spatial/topology.py 에 반영, server/tests/test_topology.py:628 이 「AXISCORE-001 deleted the exclusion rule」로 인용. 상태 문자열만 낡았음 (status → implemented) |
 
 ## A. 배경
 

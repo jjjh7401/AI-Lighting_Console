@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-BULKGATE-001
 title: "곡 하나가 명령 28개로 나가는데 승인 카드가 없다 — 번들 위험 선언을 게이트에 붙인다"
 version: "0.1.0"
-status: draft
+status: implemented
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-10-21
 author: manager-spec (plan session, t291·t292·t294·t296 후속)
 priority: P0
 phase: "v1.8.3 target"
@@ -30,6 +30,7 @@ related_specs: [SPEC-COPILOT-WRITEGATE-001, SPEC-COPILOT-SONGCUE-001, SPEC-COPIL
 | 날짜 | 버전 | 변경 | 근거 |
 |---|---|---|---|
 | 2026-09-07 | 0.1.0 | 최초 작성 (Tier M) | t291·t294·t296 감사 실측 · t292 비용 실측과 부분 봉합 · 2026-09-07 브라우저 실측 |
+| 2026-10-21 | — | 전체 앱 SPEC 정리: 커밋 161fd1b6(#361, 2026-09-07) 출하, server/tests/test_bulkgate_declaration.py 존재. 상태 문자열만 낡았음 (status → implemented) | 앱 SPEC 인벤토리 |
 
 ---
 
