@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-LXSEQ-001
 title: "LX-SEQ 연계 1단계 — RIG 팩 패치 CSV 가져오기 → 기존 패치 툴로 onPC 패치 (파서 + 매퍼 + 툴 1종)"
 version: "0.2.2"
-status: implemented
+status: completed
 created: 2026-08-21
-updated: 2026-08-21
+updated: 2026-10-21
 author: manager-spec
 priority: P0
 phase: "v0.2.0 target — LX-SEQ 연계 1단계(패치); 2단계 그룹 · 3단계 프리셋/FX · 4단계 시퀀스/큐는 후속 SPEC"
@@ -29,6 +29,7 @@ related_specs: [SPEC-COPILOT-VWX-001, SPEC-COPILOT-AUTOPATCH-001, SPEC-COPILOT-P
 | 0.2.0 | 2026-08-21 | manager-spec | plan-audit 1회차(FAIL 0.86) 델타 수정 + 감독 Kickoff 답 3건 반영. **마커 0건**(plan.md §A.4 ①②③ → 결정 H·I·J로 등록). ① 입력 채널 = `file_content_base64` 인자, 바이트는 UI 파일 선택기만 — 채팅 붙여넣기 금지를 **REQ-LXSEQ-016 `[Unwanted]`** + **AC-LXSEQ-017**로 신설(REQ 15→**16**, AC 16→**17**). ② 이름 접두 `group` 확정(12런; 타입 접두 대안은 **9런** — 10이 아님, D6). ③ **대안 채택**: 모드 미해결 행은 `mode_unresolved` 건너뛰기 + `mode_overrides` 재호출(REQ-LXSEQ-005/010/011 개정, 기본안 `patch_fixtures` 카드 위임 기각). D2 입력 정본 절대경로·사본 계약, D3 AC-003 ④ 겹침 104·105, D4 AC-011 선택자, D7 AC-007 ④ FID 502/`2.030`, O1 REQ-013 `When`, O2 REQ-015 `[Unwanted]`, O8 AC-015 ③ 수치화. |
 | 0.2.1 | 2026-08-21 | manager-spec | **문서 전용 개정(설계 변경 0 · REQ 16 · AC 17 불변).** 감독 판정(칸반 리드 경유): UI 파일 선택기 → 툴 인자 전달 경로(`ui/` + `server/web/session.py`)는 **후속 카드 t10으로 위임** — 본 SPEC은 신규 툴 밖 0-diff 유지. **M4 라이브는 UI가 아니라 툴 직접 호출(채팅/스크립트)로 파일 경로를 지정해 수행**한다. REQ-LXSEQ-010/016의 "바이트는 UI 파일 선택기가 고른 파일에서만" 문구를 "파일(현재: 직접 호출로 지정한 경로 / t10 이후: UI 파일 선택기)에서만 — 채팅 본문 텍스트에서는 절대 아니다"로 완화해 AC-LXSEQ-016과의 모순을 제거; REQ-016에 금지 대상(붙여넣은 텍스트)과 M4 허용 경로(직접 호출 + 서버 파일 읽기)가 충돌하지 않음을 명문화. plan.md §A.2 4 · 결정 H · §A.4 ① · M3 · M4 · §F · §G, acceptance.md AC-016 · AC-017, research.md §4 · §6-6, progress.md 동조. (※ "직접 호출로 지정한 경로를 서버가 읽음" 문구는 0.2.2에서 N1로 정정.) |
 | 0.2.2 | 2026-08-21 | manager-spec | **문서 전용 개정(설계 변경 0 · REQ 16 · AC 17 불변) — plan-audit 2회차(FAIL 0.88) N1·R1·R2·R3·R5 반영.** **N1(blocking, (가)안 채택 — 리드 승인)**: v0.2.1의 "툴을 직접 호출하며 파일 경로를 지정하고 서버가 파일을 읽어 `file_content_base64`를 구성"은 REQ-LXSEQ-010/AC-LXSEQ-017 ①의 닫힌 인자 집합(경로 인자 없음)과 모순이었다 → **현재 절차(t9): 로컬 하네스 스크립트 `server/tools/lxseq_e2e.py`(검증 도구 — 제품 코드 아님)가 정본 CSV 파일을 읽어 base64로 인코딩해 `import_lxseq_patch` 핸들러를 직접 호출한다 — 서버는 파일 경로를 받지 않는다(인자 집합 불변). 채팅 경유 호출은 t10 이후**로 REQ-LXSEQ-010 · REQ-LXSEQ-016 · AC-LXSEQ-016 · AC-LXSEQ-017 주 · plan.md §A.1 4 · 결정 H · §A.4 ① · M4(파일 줄에 스크립트 이름·소유·소재) · §F · §G · research.md §4 · §6-6 · progress.md §0/M0 표를 통일. **R1**: REQ-LXSEQ-008에 `name_prefix_mode="type"`이면 `Group`을 경계에서 제외(실물 CSV 9런) 1문장. **R2**: BACK+SIDE-L 병합 구간 `4.001–325` → 실물 **`4.001–450`**(acceptance AC-009 ①-b · plan §A.4 ② · research §1.1, fixture CSV 직접 재계산). **R3**: 시나리오 5 · AC-006 ③의 `Robe Spiider` 예를 실물 `Mode 1 49ch`/`Ch=49`로(25ch `Extended 25ch`는 MAC Aura XB). **R5**: SPEC 디렉터리 안 stray `.moai/state/*.json` 3건 삭제. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: 파서·매퍼 출하(b2e22b07, #72), 후속 단계 LXSEQ-004 가 2026-10-13 completed 로 닫힘. 닫는 절차만 빠져 있었음 (status → completed) |
 
 ---
 

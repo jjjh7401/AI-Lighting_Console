@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-TRUNCATE-001
 title: "절단 고지의 구조적 강제 — 부분 판독 회신의 형상 분기 (Truncation Disclosure)"
 version: "0.2.0"
-status: draft
+status: implemented
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-10-21
 author: manager-spec
 priority: P1
 phase: "Phase 2 안전 계층 — 판독 완전성 고지"
@@ -24,6 +24,12 @@ related_specs: [SPEC-COPILOT-SPATIAL-001, SPEC-COPILOT-GROUPGEN-001, SPEC-COPILO
 > **툴은 결백하다**: 절단을 보고했고(`truncated: true`), 좌표를 **0건 발명했고**(`unreadable: []`), 설명문은 이미 명령형으로 *"say so"*라 적는다(`tools.py:4868-4870`). 모델이 **금지된 바로 그것**을 했다. 기록된 천장은 **"툴 설명은 지시일 뿐 강제가 아니다"**(`progress.md:499`).
 >
 > **그러므로 성공 기준은 문면 강화가 아니라 형상이다.** 직전 sync가 처방까지 남겼다(`progress.md:502-503`, `:645`): *"회신을 구조적으로 다르게 만들어야 한다 — 부분 리그 상태값, 또는 정렬 결과 자체의 보류."* 본 SPEC은 그 집행이다.
+
+## HISTORY
+
+| 일자 | 내용 |
+|---|---|
+| 2026-10-21 | 전체 앱 SPEC 정리: server/tests/test_truncate_disclosure.py 존재, 수정 커밋 17af4aad(#218). 상태 문자열만 낡았음(확신도 중간) (status → implemented) |
 
 ## A. 배경
 

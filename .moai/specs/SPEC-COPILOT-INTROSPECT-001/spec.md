@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-INTROSPECT-001
 title: "핸들 자기진단 동사 — 콘솔이 실제로 무엇을 노출하는지 되묻는 도구"
 version: "0.1.0"
-status: draft
+status: implemented
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-10-21
 author: manager-spec
 priority: P1
 phase: "Phase 3 관측 계층 — 발견 도구 (재생 상태 축의 선행 SPEC)"
@@ -24,6 +24,7 @@ related_specs: [SPEC-COPILOT-EXECBODY-001, SPEC-COPILOT-PRECHK-001, SPEC-COPILOT
 | 버전 | 날짜 | 작성자 | 변경 내용 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-03 | manager-spec | 최초 작성 (draft, Tier L). 출처: 코디네이터 라이브 실측(2026-08-02, onPC 2.4.2 + 응답기 v1.5.0) — Executor 핸들 대상 후보 프로퍼티 전수 소진 후 `Sequence` 핸들에서 `CurrentCue`가 발견된 사건. 그 사건의 오판("한 핸들에서 후보를 소진했으니 그 정보는 없다")을 구조적으로 제거하는 것이 본 SPEC의 존재 이유다. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: console/lua/copilot_responder.lua 에 introspect 동사 24곳 반영. 상태 문자열만 낡았음(확신도 중간) (status → implemented) |
 
 ## A. 개요
 

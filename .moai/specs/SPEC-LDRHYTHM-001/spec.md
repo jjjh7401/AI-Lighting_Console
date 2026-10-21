@@ -2,9 +2,9 @@
 id: SPEC-LDRHYTHM-001
 title: "리듬 연출 — 대본 우선 설계(LOVE ATTACK)"
 version: "0.2.0"
-status: in-progress
+status: completed
 created: 2026-10-05
-updated: 2026-10-07
+updated: 2026-10-21
 author: jaihyun
 priority: P1
 phase: "Lighting Copilot v1.2 target"
@@ -33,6 +33,7 @@ related_specs: [SPEC-LDRENDER-001, SPEC-LDDESIGN-001, SPEC-COPILOT-FXGEN-001, SP
 | 2026-10-07 | **REQ-LDRHYTHM-012 GEARS shall 복원(카드 t518).** t517 정정 감사(`.moai/reports/t517/plan-audit.md` D1)가 REQ-012 행에 GEARS 키워드 `shall` 이 0건임을 발견했다 — 2026-10-05 iteration 1 D2(비요구사항 참고 각주 분리, 위 HISTORY 참조)에서 주체를 "다음 항목"으로 정리하며 그 과정에 `shall` 자체가 사라진 것으로 보인다. 첫 절("다음 항목은 M4+ 단계의 범위 후보로만 기록된다")에만 `shall` 하나를 복원했다(REQ-LDRHYTHM-011 의 주체-shall 배치와 동일한 자리) — (a)~(d) 항목·참고 각주·근거 칸은 전부 그대로다. REQ/AC 총량(12/12)·ID 변경 없음 — GEARS 문면 교정뿐. |
 | 2026-10-07 | **M3 규칙 확정(카드 t523) — 박자별 효과 배치 규칙 아홉 가지 + 역할별 시퀀스 여섯 종 확정, 방향 전환(손 시연 두 번째 판 접음 → 런북 모드 앱 SPEC 신설).** 감독이 2026-10-07 `reports/effect-arrangement-rules-20261007.md`(+`.html`, 팩토리 리드 작성 — 입력: 전문가 레이어링 조사 `reports/effect-arrangement-research-pro-20261007.md`, K팝 음악방송·콘서트 조사 `reports/effect-arrangement-research-kpop-20261007.md`, t520 판정서 §20(첫 시연 원인·역할별 시퀀스 분리안), 벤치마크 §2.3, M1 대본)로 M3 규칙을 §5 결정과 함께 확정했다 — 규칙 아홉 가지(① 속성마다 맡는 음악 단위가 다름 ② 위치·색은 박마다 바꾸지 않음 ③ 리듬 타는 층은 보통 둘, 드롭·마지막 코러스만 셋 ④ 주인공을 4마디마다 교대 ⑤ 두 무빙은 서로 다르게(콜 앤 리스폰스) ⑥ 정지도 도구 ⑦ FOH 는 벌스부터 끝까지 유지 ⑧ 파스텔은 넓게·원색은 짧게 ⑨ 강조는 한 마디 전 예고+다운비트 적중, 스트로브는 필수가 아님)와 역할별 시퀀스 여섯 종(SCENE·BACK PULSE·SIDE CHASE·MOVER-U MOVE·MOVER-D MOVE·ACCENT)을 §1~§2 에 정리했다. **방향 전환**: 손 시연 두 번째 판(M2 배치 1, 0~25마디, 카드 t520)은 이 결정으로 접힌다(아래 progress.md M3 참조) — 다음 단계는 손 시연이 아니라 **앱 런북 모드 구현(새 SPEC, 카드 t522, plan 만 — run 은 감독 착수 승인 뒤)** 이다. 감독 결정 원문 2건(2026-10-07, 리드 경유 전달, 보고서 §5 verbatim 인용): 스트로브 — 「무조건 스트로버를 쓰는건 아니라는거지. 발라드처럼 느린 노래에는 쓸 필요가 없고 빠른 노래라고 하더라도 무조건 스트로버를 쓰는건 아니거든. 강하고 임팩트가 있는 부분에 한번 강조하듯이 사용하라는 말」 → 빌드업 끝 신규 스트로브를 뺐다(이 곡은 63·67마디 두 곳뿐). 다음 단계 — 「보고서로 만들 이걸 앱의 런모드에 만들어야 하는 거야. 런모드에서 확인하고 수정작업을 하고 콘솔로 보내도록 하는 거」. 조사 원자료 두 편(`reports/effect-arrangement-research-pro-20261007.md`·`reports/effect-arrangement-research-kpop-20261007.md`)과 규칙 보고서(`reports/effect-arrangement-rules-20261007.md`+`.html`) 네 파일을 이 PR 에서 저장소에 실었다. 이 M3 는 기존 REQ-LDRHYTHM-005~007(두 층 모델)·REQ-LDRHYTHM-011(합격 기준)의 규칙화 산출물이며, 새 REQ/AC ID 는 추가하지 않는다 — REQ/AC 총량(12/12)·ID 변경 없음. `status` 는 `in-progress` 로 불변(§ Non-transition frontmatter corrections — status 전이 아닌 본문 교정). |
 | 2026-10-14 | **교차참조(카드 t636).** `SPEC-LDBARMAP-001`(마디 지도, 오프라인)이 REQ-LDRHYTHM-012(a)의 「비트·다운비트·킥 검출」 후보를 실제로 다뤘다 — 산출물 `server/audio/bar_map.py`, 저장 키 `timeline["bar_map"]`(M4 머지 `364ab000`). 이 SPEC의 REQ·AC 문면과 상태는 바꾸지 않았다. 참고: REQ-LDRHYTHM-012(a)의 「다운비트 생산자 0건」 전제는 `SPEC-LDBARMAP-001` M2 머지(`3ce577b8`) 뒤로 낡았다 — 문면은 그대로 두고 기록만 한다. |
+| 2026-10-21 | 전체 앱 SPEC 정리: 이 SPEC 의 범위 M1~M3(대본·시연·규칙화)는 끝남. 앱 구현은 SPEC-LDRHYTHM-002 · SPEC-LDBEAT-002 · SPEC-LDBEAT-003 으로 이어짐 (status → completed) |
 
 ## §0. Tier 선택 근거
 
@@ -150,3 +151,31 @@ REQ-008 이 명시하듯 이 SPEC 은 룩 전환 빈도(§9) 수치를 올리거
 3. **G5 — Rain 분석 BPM(76.01)의 절반/두 배 오검출 가능성**(§1 인용, 리듬 보고서 §①) — Club Diver 자체의 BPM(139.67, `measured` 소스)은 이번 조사에서 의심 후보로 지목되지 않았으나, M4+ 가 다른 곡으로 확장될 때 참값 대조가 필요하다.
 4. **LOVE ATTACK 원곡 오디오 위치(저장소 밖, 의도적 미커밋)** — 감독 결정(2026-10-06) 이후 실측: `/Users/studiox/Music/AI-Lighting_Console-listen/t505/LOVE ATTACK.mp3`(4,733,524바이트, sha256 `9ab52dfb8ac5bd8a0dc09d393b33e28ad650c07262371460994300c98581c9fa`, 2026-10-06 `ls -l`+`shasum -a 256`로 이 plan-phase 에서 직접 재실측)에 있다. 기존 8곡(Club Diver 등)이 있는 `src/sample music/`(주 체크아웃) 안에는 **의도적으로** 두지 않는다 — M1 의 BPM·구간 분석 스크립트는 이 저장소 밖 경로를 직접 참조해야 하고, 그 경로가 다른 머신에서 재현되지 않을 수 있음을 M1·M2 산출물에 명시한다.
 5. **"기존 앱 연출"(AC-LDRHYTHM-010 비교 대상)은 t510 기준선으로 가짜 콘솔까지는 생성됐으나, 실제 콘솔에는 아직 재생되지 않았다.** `reports/loveattack-baseline-20261006.md`(+`.html`)와 `.moai/reports/t510/verdict.md`(카드 t510, 2026-10-06)가 LOVE ATTACK 을 현재 렌더러(SPEC-LDRENDER-001 완료 상태)로 돌린 결과다 — 11큐, 가짜 콘솔(FakeConsole) 송신 190줄, 큐별 유지·색·층·페이저 표가 있다. 가짜 콘솔은 페이저 풀에 답하지 않아 페이저 제안 9큐가 송신 0줄로 나왔다는 한계가 명시돼 있다(실기에서는 0이 아닐 수 있음). 이 기준선을 실제 콘솔에 올려 AC-LDRHYTHM-010 의 비교에 쓰려면, M2 와 같은 감독 승인 송신(AC-LDRHYTHM-012 의 승인=송신 규칙)이 선행 조건이다 — 이 송신 작업 자체는 이 SPEC 의 M1~M3 범위(코드 0) 밖이며, AC-LDRHYTHM-010 의 Given 절 선행 조건으로만 명시한다.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위)은 한 글자도 지우거나 고치지 않았다. 상태 전이는 같은 날 후속 sync 단계(HISTORY 2026-10-21 행)가 `in-progress → completed` 로 반영했다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21).
+
+### 전방 참조 — M4+ 앱 구현의 현재 SPEC 위치
+
+이 SPEC 의 §2 와 §4 첫 항목 「Out of Scope — M4+ 앱 구현 자체」는 앱 구현을 다음 SPEC 의 일로 미뤘다. 그 다음 SPEC 은 한동안 없었고, 2026-10-07 HISTORY 가 기록한 방향 전환(손 시연을 접고 런북 모드 앱 SPEC 을 새로 연다) 이후의 앱 코드는 `SPEC-LDBEAT-001` 과 **이 ID 의 태그**를 달고 출하됐다. 인벤토리는 2026-09-28~10-21 사이 PR 99건(앱 코드를 바꾼 것 95건)과 커밋 제목 202개가 이 ID 를 달았다고 측정했다. 그 코드의 현재 동작은 아래 SPEC 이 기술한다.
+
+| 현재 동작 | 기술하는 SPEC |
+|---|---|
+| 프리셋 계획·재사용·웨이브 프리셋·스피드 마스터, 구간 단위 자동 배치·리듬층·곡 끝, 뒤·옆 줄 출력 | `SPEC-LDRHYTHM-002` |
+| 콘솔 반영·소유 기록·타임코드 나눠 담기·「콘솔 같이」·칸 편집·승인 카드 문구 | `SPEC-LDBEAT-002` |
+| 작업본 라이브러리·음원 링크·재접속 뒤 상태·마디 지도 꼬리 | `SPEC-LDBEAT-003` |
+| 박자 격자 화면·박자 전용 에미터·M1 프로브 | `SPEC-LDBEAT-001` |
+| 마디 지도(박·다운비트·마디·사건) 검출과 진입 | `SPEC-LDBARMAP-001`·`-002`·`-003` |
+| 배치 초안 첫 묶음 | `SPEC-LDARRANGE-001` |
+
+### REQ-LDRHYTHM-012 (M4+ 범위 후보) 항목별 — 코드를 읽어 확인한 사실만
+
+- (a) 비트·다운비트·킥 검출: `server/audio/bar_map.py`(`SPEC-LDBARMAP-001`)와 `server/audio/rhythm.py`(`SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-012)가 있다. 본문의 「다운비트 생산자 0건」 전제는 낡았다(HISTORY 2026-10-14 가 이미 기록).
+- (b) 타임코드 이벤트 송신: 박자 격자 에미터 `server/design/beat_grid_emit.py` 가 타임코드와 이벤트를 만든다(`SPEC-LDBEAT-002`). 본문이 인용한 `server/director/emit.py:51` 의 `PLAYBACK_MODES` 는 이제 `server/director/validate/timing.py:44` 에 있고(`("manual_go", "trig_time")`) `emit.py` 는 `06d4f4c6`(2026-10-20)에서 삭제됐다. 본문의 「앱의 재생 경계는 timecode 모드를 거부한다」는 director apply 경로 기준이고, 박자 격자 에미터는 그 경로를 타지 않는 별도 경로다(`SPEC-LDBEAT-001` 확정 결정 ②).
+- (c) `position_fx`·`plan_movement` 연결: `server/design/app_movement.py` 가 `server/spatial/position_fx.py` 를 쓴다(`SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-015 근거). `plan_movement`(`server/looks/movement.py`)의 비테스트 호출처는 이 보강을 쓰며 확인하지 못했다.
+- (d) 장면 연결 규칙을 송신기 레벨 검사로 승격: 대응하는 코드를 찾지 않았다.
+
+### 상태 메모
+
+2026-10-21 sync 단계가 `in-progress → completed` 로 바꿨다(범위 M1~M3). M1~M3(대본·시연·규칙화)는 HISTORY 가 기록한 대로 닫혔고 M2 는 접혔다. 인벤토리 §5.2 는 M1~M3 만 닫고 REQ-LDRHYTHM-012 의 M4+ 후보를 위 전방 참조로 넘기며 이 ID 에 앱 코드 변경을 더 붙이지 않는 것을 제안했고, 그대로 반영했다.

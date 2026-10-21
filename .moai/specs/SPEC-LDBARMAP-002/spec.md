@@ -271,3 +271,12 @@ depends_on: [SPEC-LDBARMAP-001]
 17. **`keep` + `ambiguous` 결과는 평범한 성공으로 저장된다**(`bar_map.py:342`, `:384`, `:412`). 위험: 박자가 두 배나 절반일 수 있다는 검출기의 의심이 저장값에 남지 않아, 소비자는 의심 없이 그 `bpm`으로 모든 마디 시작을 계산한다. 수용한 이유: `adopt_double`과 달리 `ambiguous`는 `bpm`이 원래 격자 간격과 같아(`adopted_bpm = raw_bpm`) 저장값이 구조적으로 일관되고, 의심은 음악적인 것이지 데이터가 서로 모순되는 것이 아니다. 닫는 변경: 응답 문구에 `ambiguous`를 싣는 요구사항 한 줄을 더하거나(REQ 상한 16개에 이미 닿아 있어 다른 REQ를 합쳐야 한다), 스키마에 필드를 더하는 것(`schema_version` 상승, 이 SPEC 밖).
 18. **다중 연결.** 두 번째 브라우저의 `chat` 등이 같은 타임라인 저장소를 바꿀 수 있고, 그 연결의 `current_task`는 이 연결의 분석 중 상태를 보지 못한다(Gaps 4번, 16번과 같은 뿌리). 분석 중 저장소가 어떻게 바뀌었는지는 곡 열쇠 대조로만 걸러진다.
 19. **P7 번호 공간의 실제 분류기 검증**: AC-005는 분류기를 기록용 대역으로 바꿔(특징을 가로채고 마디 하나에 사건을 주입) 특징 번호와 저장 마디 번호의 대응을 CI에서 잰다. 실제 분류기가 실제 오디오에서 낸 사건의 번호가 맞는지는 로컬 전용 AC-016만 잰다.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위·Gaps)은 한 글자도 지우거나 고치지 않았다. frontmatter 의 `status`·`version`·`updated` 도 바꾸지 않았다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21)와 코드 판독. 이 SPEC 의 진입 경로에 이후 더해진 동작이다.
+
+1. **마디 지도 꼬리 보정(인벤토리 #859, 커밋 `d719978d`, 2026-10-20).** 박 검출기(`librosa.beat.beat_track`, 기본 `trim=True`)가 끝의 약한 박을 잘라 내 조용한 아웃트로 곡의 마디 지도가 음원 끝보다 한참 앞에서 멈췄다. 이제 합성 단계(`synthesize_bar_map`)가 마디를 만들기 전에 검출된 박을 그대로 두고 마지막 박에서 곡 BPM 간격으로 음원 끝 **앞**까지 박을 이어 붙인다(`server/audio/bar_map.py:extend_beats_to_duration`, `BeatGridResult.duration_ms` 기본값 `None` = 늘리지 않음). 본문 제외 범위가 말한 `detect_beat_grid` 자체의 수정은 아니다 — 검출기는 그대로다. 시험: `server/tests/test_bar_map_covers_audio_tail.py`, `test_audio_bar_map_entry.py`. 현재 동작: `SPEC-LDBEAT-003` REQ-LDBEAT3-014.
+2. **분석 중 표시 해제(인벤토리 #860, 커밋 `ab2e82e2`).** 서버가 분석 한 건에 보내는 끝 응답 라벨에 「새 분석으로 새 작업본」·「새 분석 작업본 만들기 실패」가 더해져, 화면 리듀서(`ui/src/components/barMapEntryState.ts`)가 이 둘도 서버 문장을 그대로 보이고 「분석 중」 대기를 푼다. 서버 끝 응답 라벨과 리듀서 라벨의 일치는 경계 계약 시험 `server/tests/test_bar_map_entry_ui_summaries.py` 가 `session.py` 에서 라벨을 모아 맞춘다. 현재 동작: `SPEC-LDBEAT-003` REQ-LDBEAT3-015.
+3. **저장 관문의 분기(2026-10-16 추가).** 이 SPEC 이 서술한 「마디 지도를 현재 타임라인에 저장」은 확정 분석이 있는 곡에서는 옛 작업본에 붙지 않고 새 작업본을 연다(`session.py:_start_analysis_timeline` — 구간은 확정 분석 구간, 격자는 빈 격자, 옛 작업본은 라이브러리에 자동 백업, 못 하면 바꾸지 않음). 현재 동작: `SPEC-LDBEAT-003` REQ-LDBEAT3-013.
+4. **저장 모양의 선택 키 `rhythm`.** 진입 모듈이 마디 지도 저장 모양에 선택 키 `rhythm`(박·히트·구간 특징)을 붙인다(`server/audio/bar_map_entry.py` → `attach_rhythm`). 필수 키 집합(`schema_version`·`bpm`·`time_signature`·`first_beat_offset`·`bars`·`events`)과 `schema_version` 1 은 그대로이고 모르는 최상위 키는 여전히 거절된다(`server/tests/test_rhythm_features.py`). 현재 동작: `SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-012.

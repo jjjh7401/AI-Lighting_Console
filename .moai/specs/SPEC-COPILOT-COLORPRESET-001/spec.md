@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-COLORPRESET-001
 title: "표준 무대 팔레트 컬러 프리셋 10종 — 포지션 프리셋과 동형의 저장·가드·재생성 (Color Preset)"
 version: "0.1.0"
-status: draft
+status: implemented
 created: 2026-08-16
-updated: 2026-08-16
+updated: 2026-10-21
 author: manager-spec
 priority: P2
 phase: "Phase 3 연출 자산 — 프리셋 팔레트 확장"
@@ -102,3 +102,4 @@ related_specs: [SPEC-COPILOT-PRESETGUARD-001, SPEC-COPILOT-PRESETGUARD-002, SPEC
 | 버전 | 일자 | 작성 | 변경 |
 |---|---|---|---|
 | 0.1.0 | 2026-08-16 | manager-spec | 최초 작성 (draft, Tier M). 사용자 인터뷰 3결정 반영: 표준 10색 · 저장만(소비 별도) · 미보유 장비 제외+고지. REQ 8 · 열린 결정 2. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: 커밋 ef0103ab 「표준 팔레트 컬러 프리셋 10종 — M0~M3」, 후속 수정 b0b64467, server/web/session.py·server/tests/test_web_session.py 가 ID 인용. 상태 문자열만 낡았음 (status → implemented) |

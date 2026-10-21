@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-VWX-001
 title: "Vectorworks 연계 1단계 — Instrument Data CSV/엑셀 가져오기 + 설계상 리그 모델 + precheck_patch 대조 리포트"
 version: "0.1.7"
-status: draft
+status: implemented
 created: 2026-08-05
-updated: 2026-08-05
+updated: 2026-10-21
 author: manager-spec
 priority: P0
 phase: "Phase 3 이후 차별화 기능 — P0 신설 항목(Vectorworks 연계 1단계, 자동 패치·MVR은 후속 SPEC으로 분리)"
@@ -33,6 +33,7 @@ related_specs: [SPEC-COPILOT-PRECHK-001, SPEC-COPILOT-OVERLAP-001]
 | 0.1.5 | 2026-08-05 | (run-phase worker) | **조인 키 스코프 결함 수정 — 실사용 리그 대부분이 전멸하던 결함(코디네이터 재현).** `unit_number`를 전역 유일로 취급해 서로 다른 포지션의 동명 유닛(예: `Upstage Truss`의 `1`번과 `FOH`의 `1`번)을 같은 픽스처로 오판정·충돌 거부해 전 행이 탈락하던 결함을 고쳤다. M0 실물 샘플이 이를 못 잡은 이유는 그 샘플이 포지션 1종(`Upstage Truss`)뿐이라 우연히 통과했기 때문이다(Position이 유일했다는 것이 결함을 가린 것이지 해소한 것이 아니다). REQ-VWX-016/AC-VWX-016을 조인 키 우선순위(① `channel` 전역 유일 → ② `(position, unit_number)` 복합 키 → ③ 조인 불가)로 재정의. REQ/AC 개수는 불변(기존 항목의 내용·기대 결과만 갱신). 부수: 손으로 만든 합성 경로 B 워크시트 그리드로 그 휴리스틱 코드 경로가 최초로 실행됨을 확인(구조 탐지·소계 배제 정상 동작) — 합성물이므로 `ASSUMPTION-70`은 여전히 미해소. |
 | 0.1.6 | 2026-08-05 | (run-phase worker) | **실물 샘플 3종(멀티시스템·절대주소전용·헤더없음) 투입 — P0 1건 + P1 2건 수정, ASSUMPTION-69 NEGATIVE 판정, M8 여전히 BLOCKED.** 결함 1(P0): System 2개 이상 관측 시 전 행을 차단하던 REQ-VWX-010을 재정의 — 주소 아이덴티티를 `(system, universe, address)`로 확장해 설계 측 산출(픽스처 목록·수량·내부 충돌·미패치·멀티셀)은 System 수와 무관하게 항상 내고, **콘솔 대조만**(System→콘솔 유니버스 매핑 부재) 별도로 미수행 처리한다(REQ-VWX-023에 멀티시스템 사유를 일반 판독 실패와 구분해 추가). 결함 2(P1): 집계행(SUBTOTAL/TOTAL)·비-DMX 액세서리를 "판독 실패"로 오세던 것을 `excluded_rows`(REQ-VWX-007 확장)로 분리 — `summary_ko`가 "판독 실패 N건 · 제외 M건(...)" 형태로 두 사건을 절대 뭉뚱그리지 않는다. 결함 3(P1): 헤더 없는 경로 A 파일의 행별 실패 폭주(N건)를 파일 단위 판정 1건 + 실행 가능한 해결책으로 압축(REQ-VWX-001 확장) — 헤더 유무 스니퍼 자체는 정확했음을 긍정 증거로 기록. REQ-VWX-014를 "Static Accessory 문자열 리터럴"에서 "실제 DMX 점유(footprint) 기준"으로 재정의 — 같은 `"Accessory"` 리터럴을 쓰는 DMX 소비/비소비 액세서리를 실물로 구분해야 했다. REQ-VWX-016에 액세서리 carve-out 추가(액세서리는 channel 우선순위를 건너뛰고 `(position, unit_number)`로 직행 — 부모와 channel을 공유하는 액세서리가 잘못 접히는 결함 방지). ASSUMPTION-69는 **NEGATIVE로 판정**(Absolute Address 단독으로는 System을 구분할 수 없음을 실물로 확인, System 필드 보존이 유일한 해법). ASSUMPTION-70은 **PARTIAL 유지**(단일 최상단 헤더+인라인 집계행 변형은 이제 실물 확인됐으나, 헤더 반복형·제목행 선행형은 여전히 미검증). M8은 6개 검증 항목이 전부 통과했음에도 ASSUMPTION-70이 부분 미해소이므로 **여전히 BLOCKED로 유지**(§E.2 참조, 판단 근거 기록). REQ/AC 개수는 불변(28/29, 기존 항목 내용만 갱신). |
 | 0.1.7 | 2026-08-05 | (run-phase worker) | **02(절대주소 단독) 재설계 — 거부 대신 근거 등급으로 역산, 대량 탈락 스코프 한정.** REQ-VWX-009 재정의: Universe/DMX Address 쌍이 없고 Absolute Address만 있으면 이제 **항상** `abs=(u-1)*512+a`로 역산한다("전제를 확인할 수 없으니 거부"가 아니라 `server/prechk/patch.py`의 `OverlapBasis` 규약 — 날조 금지이지 파생 금지는 아니다). 파생 근거는 픽스처마다·리그 전체에 등급(`address_basis`: `universe_address_direct` > `absolute_confirmed` > `absolute_back_calculated`, 가장 약한 것이 리그 전체 등급)으로 표기하고, 등급이 역산이면 명시적 전제 문구("Universes pane이 기본 연속 512블록이라는 전제 위에서 역산했다…")를 payload·`summary_ko`에 싣는다. 하드 거부는 Universe/DMX Address와 Absolute가 **둘 다 있는데 어긋나는** 경우(REQ-VWX-027 `address_triple_mismatch`)에만 남는다. 결함 2(P1): 컬럼 해석을 통과한 후보 행 중 주소 해석 단계에서 진짜로 탈락한 행이 있으면(`scope_qualified`) 대조 결과에 스코프 한정을 붙인다(`server/prechk/patch.py`의 `scope_qualified`/`scope_note` 규약을 vwx 자체로 재구현) — 탈락 비율 30% 이상이면 `summary_ko`가 "도면 픽스처 N개"보다 탈락 사실을 먼저 말한다. 집계행·비-DMX 액세서리 같은 의도적 제외는 탈락으로 세지 않는다(분모는 "읽으려 했으나 실패한 행"). `ASSUMPTION-69` 판정을 재작성 — v0.1.6의 "NEGATIVE(미해소)"는 구현(거부)과 판정문이 일치했으나, 이번 재설계로 구현이 "선언된 전제 위에서 역산 지원"으로 바뀌었으므로 판정문도 그에 맞춰 갱신했다(System 구분 불가라는 관측 자체는 유지되지만, "그래서 거부한다"가 아니라 "그래서 System을 근거 축과 별개로 보존해 역산을 지원한다"로 결론이 바뀌었다). REQ/AC 개수는 불변(28/29 — REQ-VWX-009/014/016 등 기존 항목 내용만 갱신, 신규 번호 없음). M8/ASSUMPTION-70은 이 라운드가 손대지 않는다(제목행 선행형 실물 워크시트 부재는 여전히 정확한 기록) — 여전히 BLOCKED/PARTIAL. |
+| — | 2026-10-21 | manager-docs | 전체 앱 SPEC 정리: 코드·테스트 출하 확인(server/vwx/ 17개 파일), 머지 63083a62(2026-08-12). 상태 문자열만 낡았음 (status → implemented) |
 
 ---
 

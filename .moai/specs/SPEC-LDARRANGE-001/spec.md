@@ -2,9 +2,9 @@
 id: SPEC-LDARRANGE-001
 title: "배치 자동 생성 — 역할×마디 초안"
 version: "0.2.2"
-status: draft
+status: implemented
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-21
 author: jaihyun
 priority: P2
 phase: "Lighting Copilot v1.2 target"
@@ -29,6 +29,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 | 2026-10-10 | **역할 어휘 맞춤(카드 t533).** 직전 행이 적어 둔 미해결을 해소한다 — `SPEC-LDBEAT-001` v0.2.0(PR #572, 카드 t526)이 REQ-LDBEAT-004를 "콘솔 그룹 트랙(줄 하나 = 콘솔 그룹 하나 = 시퀀스 하나) + `rig.py`의 7개 층 역할 이름표 key/back/side/wash/mover/effect/audience"로 재교정했으므로, 이 SPEC도 같은 어휘를 쓰도록 맞춘다. §2 끝에 단위 정정 문단을 추가해 이 문서 전체가 쓰는 "역할×마디"의 뜻을 "콘솔 그룹 트랙(역할 이름표가 붙음) × 마디"로 명시했다. REQ-LDARRANGE-002(생성기가 쓸 트랙 모양·역할 어휘를 LDBEAT와 맞추고, 배치 규칙서 §2의 역할 6종을 트랙 식별자로 금지, 겹치는 그룹 트랙 동시 사용 금지를 흡수)·REQ-LDARRANGE-007(STROBE 게이팅을 "ACCENT 트랙"이 아니라 트랙 비종속 서술로 재작성)을 고쳤다. `acceptance.md` AC-LDARRANGE-003·004(ACCENT 트랙 참조 제거)·014(라벨 집합을 7종 부분집합 + 트랙 식별자가 6종이 아닌지로 재정의, AC 개수 16 불변)를 같은 방향으로 고쳤다. `plan.md` §B 위험 6(역할 어휘 분류축 안내를 반전 — 이제 LDBEAT·LDARRANGE와 `rig.py`는 같은 어휘다)·§C 사전 점검 grep(LDBEAT의 7종 어휘를 확인하도록 교체)·§E M3(그룹 매핑 입력을 7종 트랙으로 교정)·§F 안티패턴·§G 교차 참조(`rig.py` 인용 정정)를 갱신했다. REQ·AC가 구속하는 **뜻**(생성기가 새 역할 발명 금지·STROBE 게이팅·그룹 번호 주소만 사용)은 바뀌지 않았으나 **인용 어휘**가 바뀌었으므로 **plan-audit 재실행이 필요하다**(`progress.md`에 기록). version 0.1.3→0.2.0. |
 | 2026-10-10 | **마디 지도 입력 모양 맞춤(카드 t541, plan 문서만 — 코드 0·콘솔 0).** 생산자 `SPEC-LDBARMAP-001`이 M4(카드 t539, PR #585 `364ab000`)에서 저장 위치(`timeline["bar_map"]`)와 값 모양을 확정했으므로, §5 항목 1의 미러 문단을 같은 문면으로 맞췄다 — `schema_version`(=1)·`first_beat_offset`(단위 박, 0~(분자−1)) 추가, `time_signature`를 `[4, 4]` 고정에서 `[분자, 분모]` 일반형으로, `start_beat`를 1~분자로, 일반화 규칙(곡 길이·박자표·못갖춘마디 가정 금지) 승계. 항목 1 머리를 「생산자 쪽 확정, 소비 방식만 열림」으로 갱신, §2 입력 1의 「저장 위치는 미정」을 갱신(지도 **데이터** 진입 경로는 아직 없음 — 후속 UI 카드), §1 「마디 지도는 아직 없다」에 만료 고지. **REQ·AC 문면 변경 0** — REQ-LDARRANGE-001의 구속(지도 데이터 없이 생성하지 않음)은 그대로 유효. version 0.2.0→0.2.1. |
 | 2026-10-10 | **낡은 문면 인라인 고지(카드 t545, plan 문서만 — 코드 0·콘솔 0).** t529 HISTORY 일괄 만료 고지에만 기대던 「SPEC-LDBARMAP-001 존재하지 않음/미작성」 문면에 제자리 고지를 붙였다 — §0 Tier 근거, REQ-LDARRANGE-001(괄호 → 만료 고지, 근거 칸에 현황: 선행 조건 둘 — 존재·스키마 확정 — 충족, 실제 지도 **데이터**는 아직 없음), `plan.md` §A 전제 SPEC·§D 제약(스키마 확정, 데이터 금지는 유지)·M1 사전 점검, `acceptance.md` AC-LDARRANGE-015(필드명 확정 고지, 이 AC는 스텁 입력에서 접근하지 않는지만 잰다). **뜻 변경 0** — REQ-001의 `While`·`shall not` 절과 AC-015의 Given/When/Then·판정식(`== true`·`== 0`·카운트)은 그대로(바뀐 줄의 규범 표현 개수 대조로 확인) — plan-audit 미실행. 남긴 것: §5 항목 3(c)의 「마디 지도가 아직 없어 run-phase 시점에 쓸 수 없을 가능성」과 `acceptance.md` §(비기능) 스텁 시나리오는 실제 **데이터** 부재·스텁 상태를 가리키므로 지금도 참. REQ/AC 수 불변. version 0.2.1→0.2.2. |
+| 2026-10-21 | 전체 앱 SPEC 정리: server/design/arrange_generator.py·arrange_policy.py·arrange_apply.py·arrange_segments.py·arrange_draft_store.py 와 server/tests/test_arrange_apply.py 존재. 상태 문자열만 낡았음 (status → implemented) |
 
 ## §0. Tier 선택 근거
 
@@ -150,3 +151,27 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
    - **세 SPEC 공통 권고 키 이름(카드 t529, `SPEC-LDBEAT-001` v0.2.0 §5 열린 결정 0'·`SPEC-LDBARMAP-001` §5 열린 결정 0과 같은 문면, 확정 아님)**: `timeline["beat_grid"]`(확정 격자 — `SPEC-LDBEAT-001`) · `timeline["bar_map"]`(마디 지도 — `SPEC-LDBARMAP-001`이 옵션 A를 고를 때) · `timeline["arrangement_draft"]`(자동 초안 제안 — 이 SPEC, 「적용」 전에는 `beat_grid`를 건드리지 않는다, REQ-LDARRANGE-009). 세 키의 마디 번호는 같은 번호 공간(§5 항목 1 — 1-base 위상 1, 0 = 못갖춘마디)이다. LDBEAT M2는 아직 미착수(v0.2.0 status: draft)라 저장 위치 확정은 여전히 그 M2의 몫이다.
 3. **[열린 결정] "느린 곡" 판정 기준** (REQ-LDARRANGE-007의 STROBE 게이팅). 배치 규칙서는 "발라드처럼 느린 곡"이라고만 적고 수치 경계를 주지 않는다. 옵션: (a) BPM 임계값(예: `server/audio/analyze.py`가 산출하는 BPM < N) — 단순하지만 BPM은 느낌과 항상 일치하지 않는다(예: 빠른 BPM의 발라드풍 편곡), (b) 감독이 곡별로 직접 지정하는 플래그(곡 메타데이터에 "느린 곡" 불리언) — REQ-LDARRANGE-004의 곡별 기본값 모델과 자연스럽게 맞물린다, (c) 마디 지도(SPEC-LDBARMAP-001)가 산출하는 섹션 특성(예: 드롭/빌드 밀도)으로 추론 — 마디 지도가 아직 없어 이 SPEC의 run-phase 시점에 쓸 수 없을 가능성. 권고: (b)를 1차 기본값으로 채택하고 (a)를 보조 제안으로 노출한다 — 수치 하나로 전곡을 재단하는 위험(REQ-LDARRANGE-004가 경계하는 것과 같은 종류)을 피한다.
 4. **[열린 결정] 무대 패치(좌표·방향)가 그룹-번호 주소를 넘어 역할 배치 자체에 영향을 주는가**. 옵션: (a) 아니다 — 역할 배치는 순수하게 규칙+마디 지도+그룹 번호로 결정되고, 좌표는 LDBEAT 격자나 무대 그림(t525)의 시각화 참고 정보로만 쓰인다, (b) 그렇다 — 예를 들어 무대 앞뒤 추정 방향(현재 이름 추정뿐, t525 "콘솔에서 무대 앞뒤를 따로 읽지는 않았다")이 FOH/BACK 역할의 그룹 선택에 영향을 줄 수 있다. 권고: (a) — 이 SPEC의 범위(§3.6 REQ-LDARRANGE-013)는 이미 (a)로 명시했다. 좌표 기반 배치 정교화가 필요해지면 별도 SPEC으로 분리한다.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위·열린 결정)은 한 글자도 지우거나 고치지 않았다. 상태 전이는 같은 날 후속 sync 단계(HISTORY 2026-10-21 행)가 `draft → implemented` 로 반영했다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21)와 코드 판독.
+
+### 실제로 출하된 파일
+
+| 파일 | 이 SPEC 과의 관계 |
+|---|---|
+| `server/design/arrange_generator.py` | 이 SPEC 첫 묶음 — 마디 지도와 트랙 구성으로 「트랙 × 마디」 초안(`generate_arrangement_draft`). 구간은 4마디 고정, 모든 마디에 칸을 낸다. 지금은 AI 제안 규칙(`server/design/beat_grid_suggestion_rules.py`)이 이 생성기를 쓴다. |
+| `server/design/arrange_policy.py` | REQ-LDARRANGE-004 — 곡별 불변 규칙 객체 `ArrangementPolicy`. 이 SPEC 이후 필드가 늘었다(`break_hold_wash`·`motion_period_beats`·`pre_chorus_blackout`·`ending_follows_music`·`chorus_energy_cut`, 뒤·옆 줄 기본 위치 상수). |
+| `server/design/arrange_apply.py`, `server/design/arrange_draft_store.py` | 두 번째 묶음 — 보류 초안과 한 번만 꺼내 적용(전부 맞거나 전부 안 바뀜). 세션 진입점 `beat_grid_draft_propose`·`beat_grid_draft_apply`·`beat_grid_draft_reject`. |
+| `server/design/arrange_segments.py` (1,190줄) | **이 SPEC 이 서술하지 않는 생성기** — 마디 지도 사건으로 곡을 구간으로 나눠 줄마다 값이 바뀌는 마디에만 칸을 내는 희소 초안(`generate_segment_draft`). 앱의 「자동 배치」 제안(`beat_grid_draft_propose`)이 실제로 부르는 것은 이쪽이다. |
+| `server/design/grid_shape.py` | 자동 배치 결과를 손으로 설계한 기본 격자와 견주는 읽기 전용 명령줄 도구(앱 호출처 없음). |
+
+시험: `server/tests/test_arrange_generator.py`, `test_arrange_colors.py`, `test_arrange_structured_values.py`, `test_arrange_apply.py`, `test_arrange_draft_wiring.py`, `test_arrange_segments.py`, `test_arrange_side_allocation.py`, `test_arrange_song_ending.py`, `test_grid_shape.py`.
+
+### 범위가 이 SPEC 본문보다 넓어진 곳
+
+인벤토리 §5.1 은 이 SPEC 의 범위를 「배치 초안 생성 + 곡 끝 처리」로 넓히고 `arrange_segments`·`grid_shape`·`arrange_apply`·`arrange_draft_store` 를 등재하라고 제안했다. 구간 단위 생성기의 구간 규칙(구간 종류·주인공 교대·강조), 브레이크·후렴 직전·예고 칸, 박 나누기, 곡 끝이 음악의 실제 끝을 따르는 규칙(2026-10-21 #865)의 현재 동작은 `SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-007~011 이 기술한다. 이 보강은 그 내용을 되풀이하지 않는다.
+
+### 상태 메모
+
+위 파일들은 출하돼 있고 마지막 이 ID 태그 커밋이 2026-10-15 였다(인벤토리 §2 #57). 이에 따라 2026-10-21 sync 단계가 `draft → implemented` 로 바꿨다(HISTORY 참조).

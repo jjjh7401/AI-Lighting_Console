@@ -2,9 +2,9 @@
 id: SPEC-COPILOT-TREEID-001
 title: "빌린 인터프리터로 도구를 돌리면 죽는다 — 트리 동일성 가드"
 version: "0.1.0"
-status: draft
+status: superseded
 created: 2026-08-25
-updated: 2026-08-25
+updated: 2026-10-21
 author: orchestrator-direct (lane t80)
 priority: P1
 phase: "개발 도구 무결성 — 증거 생산 경로 방어"
@@ -28,6 +28,7 @@ related_specs: [SPEC-COPILOT-MVP-001, SPEC-COPILOT-LXSEQ-003]
 | — | t54 가 위험을 기록. 다만 `.pth` 내용을 읽고 추론한 것이라 **형태가 틀렸다**(트리 루트가 아니라 스크립트 경로 실행이 실재 위험) |
 | — | t47 이 실기 재현하고 처방을 설계. 노출면을 7개로 셈 |
 | 2026-08-25 | 카드 t80 이 이 트리에서 전제를 재측정 — 노출면 **19개**. 6팔 재현 + 설계 스파이크 3팔 |
+| 2026-10-21 | 전체 앱 SPEC 정리: 가드(server/tools/tree_identity.py)와 테스트가 커밋 06d4f4c6(2026-10-20)로 삭제됨. 코드가 사라져 대체·은퇴 처리 (status → superseded) |
 
 ## A. 개요
 

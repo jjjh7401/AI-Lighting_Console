@@ -1,3 +1,19 @@
+---
+id: SPEC-COPILOT-SONGSTD-001
+title: "곡 단위 조명연출 표준 엔진"
+version: "0.1.0"
+status: implemented
+created: 2026-08-14
+updated: 2026-10-21
+author: jaihyun
+priority: P1
+phase: "Phase 2 연출 계층 — 곡 단위 표준 엔진 (Lighting Copilot v1.0 target)"
+module: "server/design/profile.py, server/design/energy.py, server/design/lint.py, server/design/interview.py, server/audio/analyze.py"
+lifecycle: spec-anchored
+tags: "song-design-standard, music-profile, energy-model, sheet-lint, direction-interview, audio-analysis"
+related_specs: [SPEC-COPILOT-CUETIME-001, SPEC-COPILOT-MUSICSYNC-001, SPEC-LDRENDER-001]
+---
+
 # SPEC-COPILOT-SONGSTD-001 — 곡 단위 조명연출 표준 엔진
 
 - 브랜치: `feature/song-design-standard`
@@ -152,3 +168,35 @@
 M1 표준 엔진 코어 (R1+R2+R3, 순수 함수·유닛) → M2 포지션+디머 표준 시트
 (R4, 라이브 before/after) → M3 컬러 통합 (R5, 라이브) → M4 오디오
 파이프라인 (R6, 회귀+라이브). 각 M 완료 시 커밋·푸시, 함정은 스킬 기록.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문은 한 글자도 지우거나 고치지 않았다. 이 파일에는 frontmatter 가 없어서 이 보강과 함께 맨 위에 frontmatter 를 더했다 — `status` 는 이 SPEC 이 원래 적지 않았으므로 코드가 출하돼 있다는 사실에 맞춰 `implemented` 로 적었다(`completed` 후보는 인벤토리 §5.4 가 말했다. 닫는 전이는 후속 sync 단계가 정한다). `created: 2026-08-14` 는 첫 커밋 `30435a89` 의 날짜이고 이 절의 날짜가 `updated` 다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`)와 코드 판독. 시험은 실행하지 않았다.
+
+### 이 SPEC 의 요구사항이 코드에서 어디에 있는가
+
+| 요구사항 | 코드 | 시험 |
+|---|---|---|
+| R1 음악 프로파일·통합 무드 사전 | `server/design/profile.py`(`MusicProfile`, `resolve_section`, `DirectorOverride`) | `server/tests/test_design_profile.py` |
+| R1c 연출 인터뷰(감독 의도 최우선) | `server/design/interview.py`(`profile.py` 의 `DirectorOverride`·`director_intent` 우선순위를 채움), 소비: `server/design/upload_song_plan.py` | `server/tests/test_design_interview.py` |
+| R2 에너지 모델(D1~D5 → 축 예산) | `server/design/energy.py`(`axis_budget`, `AxisBudget`, `beats_to_seconds`), 소비: `server/design/song_cue_composer.py`, `server/concept/compile.py` | `server/tests/test_design_energy.py` |
+| R3 시트 린트(L1~L14, 차단이 아닌 보고) | `server/design/lint.py`(`lint_sheet`, `LintSheet`), 소비: `song_cue_composer.py`, `server/concept/compile.py` | `server/tests/test_design_lint.py` |
+| R6 음악 파일 분석(DSP 측정) | `server/audio/analyze.py` | `server/tests/test_audio_analyze.py` |
+| R4·R5 표준 적용 포지션+디머 시트·컬러 통합 | 이 보강은 개별 파일을 추적하지 않았다 — R2 의 소비자(`song_cue_composer.py`)가 곡 큐 조립 경로에 있다는 것까지만 읽었다 | 확인하지 못함 |
+
+### 표준 정본이 다른 인접 모듈 — 이 SPEC 소관이 아니다 (인벤토리와 코드가 달랐던 곳)
+
+인벤토리 §3.4 (A) 는 `looks/section_vocab.py`·`looks/section_fade.py`·`design/override_look.py`·`design/sugar_timeline.py`·`design/song_look_memory.py`·`looks/rig_axes.py`·`design/rig_preflight.py`·`spatial/preflight.py` 를 「표준 엔진 SPEC(SONGSTD-001)이 맞는 집」이라고 추정했다. 코드를 읽어 보니 **이 SPEC 의 근거 문서와 다른 문서**를 구현한다.
+
+- 이 SPEC 의 근거는 `docs/proposals/song-lighting-design-standard.md`(표준 v0.5)다. `profile.py`·`energy.py`·`lint.py` 의 독스트링이 그 문서와 `SPEC-COPILOT-SONGSTD-001 M1` 을 인용한다.
+- `section_vocab.py`·`section_fade.py` 는 **`docs/proposals/song-structure-lighting-standard.md`**(정본 §2·§6·§9) 를 인용한다. 이 문서를 인용하는 SPEC 은 `SPEC-LDRENDER-001`·`SPEC-LDCLIMAX-001`·`SPEC-LDDESIGN-001`·`SPEC-LDACCENT-001`·`SPEC-LDRETURN-001`·`SPEC-LDRHYTHM-001` 이다.
+- `song_look_memory.py` 는 카드 t491(감독 결정 2026-10-12, 연속 곡이 앞 곡과 다른 룩으로 열기)을, `override_look.py` 는 `docs/research/ma3-effects/20-…` 를 인용한다.
+- `rig_preflight.py`(t303)는 반영 단계의 그룹 이름 일치를 쇼 전에 점검하는 읽기 전용 모듈이고, `spatial/preflight.py` 는 리서치 18·19번 문서의 체인 순서·나눠떨어짐 점검이다(공간 연출 계열로 보이나 어느 SPEC 소관인지는 확정하지 않았다).
+- `sugar_timeline.py` 는 LX-SEQ 샘플 문서(Maroon 5 — Sugar)를 앱 타임라인 페이로드로 옮겨 적은 것이다.
+
+그래서 이 모듈들은 이 SPEC 에 등재하지 않았다. 추적성 공백은 남아 있다 — 어느 SPEC 이 이 모듈들을 맡을지는 후속 결정이다(`song-structure-lighting-standard.md` 를 인용하는 `SPEC-LDRENDER-001` 계열이 자연스러운 후보로 보이나 이 보강은 정하지 않는다).
+
+### Out of Scope — 이 보강이 하지 않는 일
+
+- 위 본문의 요구사항(R1~R6)·마일스톤을 고치거나 다시 쓰지 않는다. 본문의 「비목표」도 그대로다.
+- R4·R5(표준 적용 시트·컬러 통합)의 코드 추적, 위 인접 모듈을 맡을 SPEC 의 지정, 코드·시험 변경은 하지 않는다.

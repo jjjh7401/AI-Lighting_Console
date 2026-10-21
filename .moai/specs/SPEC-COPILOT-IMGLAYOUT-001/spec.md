@@ -1,3 +1,19 @@
+---
+id: SPEC-COPILOT-IMGLAYOUT-001
+title: "이미지 기반 배치 제안"
+version: "0.2.0"
+status: completed
+created: 2026-08-15
+updated: 2026-10-21
+author: jaihyun
+priority: P2
+phase: "Phase 2 연출 계층 — 공간 인식 연출 (이미지 기반 배치 제안)"
+module: "server/orchestrator/tools.py(analyse_layout_image), server/llm/types.py(ImageAttachment), server/web/messages.py(layout_image_upload), server/spatial/presets.py(triangle)"
+lifecycle: spec-anchored
+tags: "image-layout, vision, layout-image-upload, arrange-fixtures, confidence-discipline"
+related_specs: [SPEC-COPILOT-SPATIAL-001]
+---
+
 # SPEC-COPILOT-IMGLAYOUT-001 — 이미지 기반 배치 제안
 
 status: completed
@@ -94,3 +110,26 @@ base: origin/main (614eab9)
   **사람 입회 없이는 돌리지 않는다** — WRITEGATE M2와 같은 이유: 실제
   쇼파일에 좌표를 쓰는 행위를 무인으로 하는 것은 검증이 아니라 결함의
   재현이다. 구조적 기준(통합 테스트·어댑터 단위·거부 계열)은 전부 충족.
+
+## as-built 보강 (2026-10-21)
+
+> 이 절은 사후 보강이다. 위 본문은 한 글자도 지우거나 고치지 않았다(본문 맨 위의 `status: completed`·`branch`·`base` 줄도 그대로다). 이 파일에는 frontmatter 가 없어서 이 보강과 함께 맨 위에 frontmatter 를 더했다 — `status: completed` 는 본문이 이미 적은 값 그대로이고, `created: 2026-08-15` 는 첫 커밋 `b491b158` 의 날짜이며 이 절의 날짜가 `updated` 다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`)와 코드 판독. 시험은 실행하지 않았다.
+
+### 요구가 코드에서 어디에 있는가
+
+| 본문의 요구 | 코드 | 시험 |
+|---|---|---|
+| 이미지 첨부는 모델 대화 컨텍스트에 base64 를 넣지 않고 세션이 보관하며 비전 호출 시에만 어댑터가 이미지 블록으로 단다 | `server/llm/types.py:ImageAttachment`(`mime_type`, `content_base64` — MIME/크기 검증은 WebSocket 업로드 경계에서 한 번), `UserMessage.images` | `server/tests/test_llm_image_attachments.py`(7개) |
+| 업로드 검증(MIME·base64·크기) 거부 | `server/web/messages.py`(`layout_image_upload` 해석, `MAX_LAYOUT_IMAGE_BYTES` = 5 MiB, `LayoutImageRejectedError`) | `server/tests/test_web_layout_image.py`(16개) |
+| 구조는 읽고 픽셀 수치는 읽지 않는다 / 비전 결과는 제안 / 추측 금지 / `claude_code` 공급자는 정직하게 거부 | `server/orchestrator/tools.py`(`analyse_layout_image`, 별도 `vision_provider`, `_LAYOUT_PATTERNS`, `claude_code` 사전 차단 안내문) | `server/tests/test_layout_image_tool.py`(30개) |
+| 업로드→분석→질문→승인→`arrange_fixtures` 전체 흐름 | 위 경로 + 기존 `arrange_fixtures` 단일 경로 | `server/tests/test_imglayout_flow.py`(`test_upload_analyse_question_arrange_end_to_end`) |
+| `triangle` 패턴(후속 2026-08-16) | `server/spatial/presets.py`(네 모양 `grid`·`row`·`circle`·`triangle`) | `server/tests/test_layout_image_tool.py` 안(`triangle` 전용 시험 이름은 확인하지 못했다) |
+
+### 남은 것
+
+본문 「남은 잔여 (의도적 미실행)」 — 실기 1턴 왕복(업로드→분석→질문 답변→승인 카드 렌더→arrange→재검증)은 사람 입회 없이 돌리지 않는다 — 은 그대로 유효하다. 이 보강은 그것을 실행하지 않았다.
+
+### Out of Scope — 이 보강이 하지 않는 일
+
+- 위 본문의 원칙·비목표·완료 기준을 고치거나 다시 쓰지 않는다.
+- 코드·시험 변경, 실기 콘솔 확인은 하지 않는다.
