@@ -66,7 +66,7 @@
 - **Given** `answer_delta` 와 `chat_response` 를 차례로 받는 화면 상태
 - **When** 조각이 순서대로, 또는 늦게, 또는 종결 프레임과 함께 도착하면
 - **Then** 조각은 이어 붙고, `seq` 가 현재 이하인 조각은 무시되고, 대화록에는 쌓이지 않으며, `chat_response` 가 누적분을 버린다.
-- **시험**: `ui/src/protocol.test.ts`(`describe("answer_delta")` 네 개)
+- **시험**: `ui/src/protocol.test.ts`(`describe("answer_delta")` 다섯 개)
 - **시험 없음**: `error` 종결 프레임이 누적분을 버리는 것을 이름으로 단언하는 시험은 확인하지 못했다(`protocol.ts` 의 `error` 분기가 `streamingAnswer: null` 로 되돌린다).
 
 ## AC-ASBUILT-010 — 공급자 설정 [REQ-ASBUILT-010]

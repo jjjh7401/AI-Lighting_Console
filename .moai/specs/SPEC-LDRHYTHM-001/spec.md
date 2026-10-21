@@ -154,7 +154,7 @@ REQ-008 이 명시하듯 이 SPEC 은 룩 전환 빈도(§9) 수치를 올리거
 
 ## as-built 보강 (2026-10-21)
 
-> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위)은 한 글자도 지우거나 고치지 않았다. frontmatter 의 `status`·`version`·`updated` 도 바꾸지 않았다(상태 전이는 후속 sync 단계가 정한다). 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21).
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위)은 한 글자도 지우거나 고치지 않았다. 상태 전이는 같은 날 후속 sync 단계(HISTORY 2026-10-21 행)가 `in-progress → completed` 로 반영했다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21).
 
 ### 전방 참조 — M4+ 앱 구현의 현재 SPEC 위치
 
@@ -176,6 +176,6 @@ REQ-008 이 명시하듯 이 SPEC 은 룩 전환 빈도(§9) 수치를 올리거
 - (c) `position_fx`·`plan_movement` 연결: `server/design/app_movement.py` 가 `server/spatial/position_fx.py` 를 쓴다(`SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-015 근거). `plan_movement`(`server/looks/movement.py`)의 비테스트 호출처는 이 보강을 쓰며 확인하지 못했다.
 - (d) 장면 연결 규칙을 송신기 레벨 검사로 승격: 대응하는 코드를 찾지 않았다.
 
-### 상태 메모 (변경 아님)
+### 상태 메모
 
-`status: in-progress`·`updated: 2026-10-07` 은 그대로다. M1~M3(대본·시연·규칙화)는 HISTORY 가 기록한 대로 닫혔고 M2 는 접혔다. 인벤토리 §5.2 는 M1~M3 만 닫고 REQ-LDRHYTHM-012 의 M4+ 후보를 위 전방 참조로 넘기며 이 ID 에 앱 코드 변경을 더 붙이지 않는 것을 제안했다. 이 보강은 그 제안을 강제하지 않는다.
+2026-10-21 sync 단계가 `in-progress → completed` 로 바꿨다(범위 M1~M3). M1~M3(대본·시연·규칙화)는 HISTORY 가 기록한 대로 닫혔고 M2 는 접혔다. 인벤토리 §5.2 는 M1~M3 만 닫고 REQ-LDRHYTHM-012 의 M4+ 후보를 위 전방 참조로 넘기며 이 ID 에 앱 코드 변경을 더 붙이지 않는 것을 제안했고, 그대로 반영했다.

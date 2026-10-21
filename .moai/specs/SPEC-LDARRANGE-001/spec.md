@@ -154,7 +154,7 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 
 ## as-built 보강 (2026-10-21)
 
-> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위·열린 결정)은 한 글자도 지우거나 고치지 않았다. frontmatter 의 `status: draft`·`version`·`updated` 도 바꾸지 않았다(상태 전이는 후속 sync 단계가 정한다). 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21)와 코드 판독.
+> 이 절은 사후 보강이다. 위 본문(HISTORY·요구사항·제외 범위·열린 결정)은 한 글자도 지우거나 고치지 않았다. 상태 전이는 같은 날 후속 sync 단계(HISTORY 2026-10-21 행)가 `draft → implemented` 로 반영했다. 출처: SPEC 커버리지 인벤토리(`origin/main` `e4bf3f03`, 2026-10-21)와 코드 판독.
 
 ### 실제로 출하된 파일
 
@@ -172,6 +172,6 @@ depends_on: [SPEC-LDBEAT-001, SPEC-LDBARMAP-001]
 
 인벤토리 §5.1 은 이 SPEC 의 범위를 「배치 초안 생성 + 곡 끝 처리」로 넓히고 `arrange_segments`·`grid_shape`·`arrange_apply`·`arrange_draft_store` 를 등재하라고 제안했다. 구간 단위 생성기의 구간 규칙(구간 종류·주인공 교대·강조), 브레이크·후렴 직전·예고 칸, 박 나누기, 곡 끝이 음악의 실제 끝을 따르는 규칙(2026-10-21 #865)의 현재 동작은 `SPEC-LDRHYTHM-002` REQ-LDRHYTHM2-007~011 이 기술한다. 이 보강은 그 내용을 되풀이하지 않는다.
 
-### 상태 메모 (변경 아님)
+### 상태 메모
 
-`status: draft` 이지만 위 파일들은 출하돼 있고 마지막 이 ID 태그 커밋이 2026-10-15 였다(인벤토리 §2 #57). 인벤토리 §5.2 는 `draft → implemented` 를 제안했다. 이 보강은 상태를 바꾸지 않는다.
+위 파일들은 출하돼 있고 마지막 이 ID 태그 커밋이 2026-10-15 였다(인벤토리 §2 #57). 이에 따라 2026-10-21 sync 단계가 `draft → implemented` 로 바꿨다(HISTORY 참조).
